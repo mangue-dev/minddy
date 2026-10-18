@@ -56,7 +56,9 @@ const liveEditor = () =>
 it("opens the stored instruction with its pills and badges, without reporting an edit", async () => {
   const onChange = vi.fn();
   await render("Ask @Alice to run /review\nThen report.", onChange);
-  expect(host.querySelector("[data-chip=Alice]")).not.toBeNull();
+  // A saved mention is a typed reference: its pill shows what the reader may
+  // see of it (MIN-734), resolved separately; the node keeps the identity.
+  expect(JSON.stringify(liveEditor().getJSON())).toContain('"mentionId":"u1"');
   expect(host.querySelector("[data-skill-chip=review]")).not.toBeNull();
   expect(host.querySelectorAll(".ProseMirror p")).toHaveLength(2);
   expect(onChange).not.toHaveBeenCalled();

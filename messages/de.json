@@ -1091,6 +1091,7 @@
     "categoryDeleted": "Kategorie gelöscht."
   },
   "Common": {
+    "mentionUnavailable": "Nicht verfügbar",
     "cancel": "Abbrechen",
     "readSessionEnded": "Deine Sitzung ist abgelaufen. Melde dich erneut an, um fortzufahren.",
     "readSecondFactor": "Bestätige deine Zwei-Faktor-Authentifizierung, um fortzufahren.",

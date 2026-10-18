@@ -1091,6 +1091,7 @@
     "categoryDeleted": "Categoria cancellata."
   },
   "Common": {
+    "mentionUnavailable": "Non disponibile",
     "cancel": "Annulla",
     "readSessionEnded": "La sessione è scaduta. Accedi di nuovo per continuare.",
     "readSecondFactor": "Conferma l’autenticazione a due fattori per continuare.",

@@ -161,6 +161,7 @@ import {
   ok,
   fail,
   getUserId,
+  mentionsForReader,
   okWithImages,
   requireProject,
   requireUser,
@@ -860,10 +861,15 @@ function withToolCapabilities(server: McpServer): McpServer {
         `MCP tool ${name} has no capability in MCP_TOOL_CAPABILITIES.`,
       );
     }
-    const scoped = (...args: unknown[]) =>
-      runWithToolCapability(capability, () =>
+    const scoped = async (...args: unknown[]) => {
+      const result = await runWithToolCapability(capability, () =>
         (handler as (...a: unknown[]) => unknown)(...args),
       );
+      // Typed mentions in what the agent reads carry the target's current
+      // label, or a neutral one when the caller may not see it (MIN-734).
+      const userId = getUserId((args[1] ?? {}) as ToolExtra);
+      return userId ? mentionsForReader(result as ToolResult, userId) : result;
+    };
     return original(name, config, scoped);
   };
 

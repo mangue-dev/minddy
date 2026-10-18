@@ -3447,3 +3447,16 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   border-radius: 0.25rem;
   background-color: color-mix(in srgb, Highlight 45%, transparent);
 }
+
+/* ─── Mentions inside a selection (MIN-734) ────────────────────────────────
+   A mention pill is an atom: the browser does not paint it as selected text,
+   so a selection seemed to skip it. The editor marks every pill the
+   selection covers (`mention-selected`, components/markdown-mention.tsx), and
+   the chip inside (the element carrying its tone) is overlaid with the
+   selection color, over its own background. */
+.mention-selected [style*="--mention-chip"] {
+  background-image: linear-gradient(
+    color-mix(in srgb, Highlight 55%, transparent),
+    color-mix(in srgb, Highlight 55%, transparent)
+  );
+}

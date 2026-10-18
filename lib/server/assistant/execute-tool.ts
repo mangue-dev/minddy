@@ -71,6 +71,7 @@ import { attachmentOffset, listConversationAttachments, readConversationAttachme
   copyConversationAttachment, viewDocumentImage } from "./conversation-attachments";
 import { insertAttachments } from "@/lib/server/attachments";
 import { imagesIn } from "@/lib/server/document-images";
+import { readResultForReader } from "@/lib/server/mention-access";
 import { FaviconError } from "@/lib/server/favicon";
 import { resolveLinkResource } from "@/lib/server/link-resource";
 import {
@@ -780,7 +781,10 @@ export async function executeTool(
   args: Record<string, unknown>,
   ctx: ToolContext,
 ): Promise<ToolExecution> {
-  const execution = await executeToolUnlisted(toolName, args, ctx);
+  const raw = await executeToolUnlisted(toolName, args, ctx);
+  // Typed mentions in what Numo reads carry the target's current label, or a
+  // neutral one when the user may not see it (MIN-734).
+  const execution = raw.success ? await mentionsForNumo(raw, ctx.userId) : raw;
   if (!execution.success || !DOCUMENT_READ_TOOLS.has(toolName)) return execution;
   const result = execution.result;
   if (!result || typeof result !== "object" || Array.isArray(result)) return execution;
@@ -789,6 +793,21 @@ export async function executeTool(
   // The images the text shows, to open with view_image: their src is a route
   // the model cannot fetch itself.
   return { ...execution, result: { ...result, images, read_images_with: "view_image" } };
+}
+
+async function mentionsForNumo(execution: ToolExecution, userId: string): Promise<ToolExecution> {
+  const mentions = (value: unknown) => {
+    const text = JSON.stringify(value ?? null);
+    return text.includes("](mention:") || text.includes("[@");
+  };
+  if (!mentions(execution.result) && !mentions(execution.modelResult)) return execution;
+  return {
+    ...execution,
+    result: await readResultForReader(userId, execution.result),
+    ...(execution.modelResult !== undefined
+      ? { modelResult: await readResultForReader(userId, execution.modelResult) }
+      : {}),
+  };
 }
 
 async function executeToolUnlisted(

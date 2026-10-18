@@ -91,6 +91,25 @@ export interface PageMention {
 function mentionsIn(doc: unknown, members: Member[]): Map<string, string | null> {
   const scan = contentMentionScanner({ members });
   const found = new Map<string, string | null>();
+  // A typed mention node names its account (MIN-734); only members count.
+  const allowed = new Set(members.map((member) => member.user_id));
+  const blocks = (doc as DocNode | null)?.content;
+  const typed = (node: DocNode | undefined, blockId: string | null) => {
+    if (!node) return;
+    const attrs = node.attrs as Record<string, unknown> | undefined;
+    if ((node as { type?: string }).type === "mention" && attrs?.mentionType === "member" &&
+        typeof attrs.mentionId === "string" && allowed.has(attrs.mentionId) &&
+        !found.has(attrs.mentionId)) {
+      found.set(attrs.mentionId, blockId);
+    }
+    for (const child of (node as { content?: DocNode[] }).content ?? []) typed(child, blockId);
+  };
+  if (Array.isArray(blocks)) {
+    for (const block of blocks) {
+      const id = block.attrs?.[PAGE_BLOCK_ID_ATTRIBUTE];
+      typed(block, typeof id === "string" && id ? id : null);
+    }
+  }
   for (const block of pageBlockTexts(doc)) {
     if (!block.text.includes("@")) continue;
     for (const segment of scan(block.text)) {

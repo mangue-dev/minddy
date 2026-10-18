@@ -253,6 +253,9 @@ const protectedReaderContracts = new Map([
     "decodePageProjection", "decodePullRequestContentRow"]],
   ["lib/server/page-backlinks.ts", ["decodeIssue", "decodeObjective",
     "decodePageProjection"]],
+  // Mention targets (MIN-734): page titles and project names, decoded for an
+  // access-checked reader.
+  ["lib/server/mention-access.ts", ["decodePageProjection", "decodeProjectName"]],
 ]);
 
 const violations = [];

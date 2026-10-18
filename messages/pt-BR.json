@@ -1091,6 +1091,7 @@
     "categoryDeleted": "Categoria excluída."
   },
   "Common": {
+    "mentionUnavailable": "Indisponível",
     "cancel": "Cancelar",
     "readSessionEnded": "Sua sessão terminou. Entre novamente para continuar.",
     "readSecondFactor": "Confirme sua autenticação de dois fatores para continuar.",

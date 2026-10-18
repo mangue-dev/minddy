@@ -1,4 +1,5 @@
 import "server-only";
+import { mentionPlainText, relabelMentions } from "@/lib/mention-link";
 import { createHash } from "node:crypto";
 
 import type { JSONContent } from "@tiptap/core";
@@ -43,12 +44,17 @@ export type { PageSearchHit };
 
 type Service = ReturnType<typeof getServiceClient>;
 
-/** The indexed text of a page body: its markdown projection, nothing else. */
+/**
+ * The indexed text of a page body: its markdown projection, with each typed
+ * mention reduced to a neutral `@…` (MIN-734). Its stored label could name a
+ * target the searcher may not open, and the index feeds the excerpts every
+ * reader of the page sees.
+ */
 export async function pageSearchText(content: unknown): Promise<string> {
   const markdown = await pageBodyToMarkdownServer(
     (content as JSONContent | null) ?? null
   );
-  return markdown.trim();
+  return mentionPlainText(relabelMentions(markdown, () => "…")).trim();
 }
 
 /**

@@ -103,7 +103,8 @@ import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 import type { RecurrenceCadence } from "@/lib/recurrence";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import { hasPlanTasks, planProgress, type PlanProgress } from "@/lib/plan";
-import { plainMarkdown } from "@/lib/plain-markdown";
+import { plainMarkdownParts } from "@/lib/plain-markdown";
+import { PlainPreview } from "@/components/typed-mention-chip";
 import {
   Tooltip,
   TooltipContent,
@@ -726,9 +727,11 @@ export const IssueCardBody = memo(function IssueCardBody({
   const memberList = useMemo(() => [...memberMap.values()], [memberMap]);
   const categoryList = useMemo(() => [...categoryMap.values()], [categoryMap]);
 
+  // Typed mentions stay apart, so the preview never prints their stored
+  // label (MIN-734).
   const description = useMemo(
     () =>
-      issue.description ? plainMarkdown(issue.description.slice(0, 400)) : "",
+      issue.description ? plainMarkdownParts(issue.description.slice(0, 400)) : [],
     [issue.description],
   );
 
@@ -842,9 +845,9 @@ export const IssueCardBody = memo(function IssueCardBody({
         <p className="line-clamp-2 text-sm font-semibold leading-snug">
           {issue.title}
         </p>
-        {description && (
+        {description.length > 0 && (
           <p className="line-clamp-3 text-xs leading-relaxed text-muted-foreground">
-            {description}
+            <PlainPreview parts={description} />
           </p>
         )}
       </div>

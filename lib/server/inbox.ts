@@ -1,6 +1,8 @@
 import { issueStore } from "@/lib/server/issue-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
+import { mentionPlainText } from "@/lib/mention-link";
+import { readResultForReader } from "@/lib/server/mention-access";
 import "server-only";
 import { decodeRoutineTitle } from "@/lib/server/routine-content";
 import { decodePageProjection } from "@/lib/server/page-content";
@@ -290,6 +292,10 @@ export async function readInboxNotifications({
     decodePageProjection(item, userId)))).map((item) => [item.id, item]));
   const projectMap = new Map((projects ?? []).map((item) => [item.id, item]));
   const commentMap = new Map((comments ?? []).map((item) => [item.id, item]));
+  // Excerpts show typed mentions as the reader may see them (MIN-734): the
+  // target's current label, or the neutral one — never the stored label.
+  const readableBodies = await readResultForReader(userId, Object.fromEntries(
+    (comments ?? []).map((item) => [String(item.id), String(item.body ?? "")])));
   const inProject = <T extends { project_id: string }>(
     item: T | undefined,
     projectId: unknown,
@@ -468,7 +474,9 @@ export async function readInboxNotifications({
         api_key_name: keyActor?.name ?? null,
         via_smart_assign: Boolean(n.via_smart_assign),
         via_automation: Boolean(n.via_automation),
-        comment_excerpt: comment ? excerptOf(comment.body as string) : null,
+        comment_excerpt: comment
+          ? excerptOf(mentionPlainText(readableBodies[String(comment.id)] ?? ""))
+          : null,
       };
     });
 

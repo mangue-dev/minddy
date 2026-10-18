@@ -1,3 +1,4 @@
+import { mentionedIds } from "@/lib/mention-link";
 import { scheduleRoutineEvents } from "@/lib/server/routine-hooks";
 import { issueStore } from "@/lib/server/issue-store";
 import { objectiveStore } from "@/lib/server/objective-store";
@@ -81,9 +82,13 @@ export async function addCommentToIssue({
   mcpKeyId?: string | null;
 }): Promise<AddCommentResult> {
   const text = body.trim().slice(0, MAX_COMMENT_LENGTH);
-  const mentioned = (mentionedUserIds ?? []).filter(
-    (v): v is string => typeof v === "string"
-  );
+  // The client's list, and the accounts the text's typed mentions name
+  // (MIN-734) — an agent's comment has no client. Both are filtered to
+  // members below.
+  const mentioned = [...new Set([
+    ...(mentionedUserIds ?? []).filter((v): v is string => typeof v === "string"),
+    ...mentionedIds(text, "member"),
+  ])];
 
   const service = getServiceClient();
 
@@ -295,9 +300,13 @@ export async function addCommentToObjective({
   mcpKeyId?: string | null;
 }): Promise<AddCommentResult> {
   const text = body.trim().slice(0, MAX_COMMENT_LENGTH);
-  const mentioned = (mentionedUserIds ?? []).filter(
-    (v): v is string => typeof v === "string"
-  );
+  // The client's list, and the accounts the text's typed mentions name
+  // (MIN-734) — an agent's comment has no client. Both are filtered to
+  // members below.
+  const mentioned = [...new Set([
+    ...(mentionedUserIds ?? []).filter((v): v is string => typeof v === "string"),
+    ...mentionedIds(text, "member"),
+  ])];
 
   const service = getServiceClient();
 
@@ -474,9 +483,13 @@ export async function addCommentToFeedbackPost({
   // see below. A thread can't be half public.
   let effectiveVisibility: CommentVisibility = visibility;
   const text = body.trim().slice(0, MAX_COMMENT_LENGTH);
-  const mentioned = (mentionedUserIds ?? []).filter(
-    (v): v is string => typeof v === "string"
-  );
+  // The client's list, and the accounts the text's typed mentions name
+  // (MIN-734) — an agent's comment has no client. Both are filtered to
+  // members below.
+  const mentioned = [...new Set([
+    ...(mentionedUserIds ?? []).filter((v): v is string => typeof v === "string"),
+    ...mentionedIds(text, "member"),
+  ])];
 
   const service = getServiceClient();
 

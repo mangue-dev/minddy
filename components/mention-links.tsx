@@ -30,6 +30,12 @@ export interface MentionLinks {
  * canonical destination.
  */
   navigate: (type: MentionTargetType, id: string) => void;
+  /**
+   * The current label of a target these sources already hold (MIN-734), or
+   * `null` when they do not: the pill then asks the server, which answers
+   * only for what the reader may see.
+   */
+  label?: (type: MentionTargetType, id: string) => string | null;
 }
 
 const Context = createContext<MentionLinks | null>(null);

@@ -64,4 +64,12 @@ describe("newlyMentionedUserIds", () => {
   it("laisse « @numo » tranquille — ce n'est pas un compte", () => {
     expect(call("@numo regarde ça")).toEqual([]);
   });
+
+  it("notifies the account a typed mention names, even after a rename (MIN-734)", () => {
+    expect(call("review with [@Jean Old Name](mention:member/jean)")).toEqual(["jean"]);
+  });
+
+  it("ignores a typed mention of someone outside the project", () => {
+    expect(call("review with [@Stranger](mention:member/stranger)")).toEqual([]);
+  });
 });

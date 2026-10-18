@@ -1,5 +1,6 @@
-import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
+import { mentionedIds } from "@/lib/mention-link";
+import { commentStore } from "@/lib/server/comment-store";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -186,7 +187,7 @@ export async function addPageComment({
   // Never both for the same person: a quote already says it all.
   const valid = await projectMemberIds(service, projectId);
   const mentionSet = new Set(
-    mentionedUserIds.filter(
+    [...mentionedUserIds, ...mentionedIds(text, "member")].filter(
       (uid) => typeof uid === "string" && uid !== actorId && valid.has(uid)
     )
   );

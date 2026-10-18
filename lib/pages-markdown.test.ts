@@ -200,19 +200,19 @@ describe("les tâches", () => {
   });
 });
 
-describe("les mentions", () => {
-  it("passent en texte, à la lettre — la pilule se re-déduit", () => {
-    // A mention IS of the text: the node is only a habit, and lib/mention-scan
-    // put it back on rereading. Nothing is lost from the CONTENT.
-    const json = bodyFromMarkdown("Hello");
-    const doc = withMention(json, "MIN-42");
-    expect(bodyToMarkdown(doc)).toBe("Hello @MIN-42");
+describe("mentions", () => {
+  it("write a picked mention as a typed link, and a label-found one as its text", () => {
+    // A picked mention carries its target (MIN-734); one rebuilt from older
+    // `@Label` text stays that text, and lib/mention-scan reads it again.
+    const doc = withMention(bodyFromMarkdown("Hello"), "MIN-42");
+    expect(bodyToMarkdown(doc)).toBe("Hello [@MIN-42](mention:issue/x)");
+    expect(bodyToMarkdown(withMention(bodyFromMarkdown("Hello"), "MIN-42", true))).toBe("Hello @MIN-42");
     expect(roundTrip("Hello @MIN-42")).toBe("Hello @MIN-42");
   });
 
-  it("n'échappent pas un libellé à caractères spéciaux", () => {
-    const doc = withMention(bodyFromMarkdown("Hello"), "Jean*Marc");
-    expect(bodyToMarkdown(doc)).toBe("Hello @Jean*Marc");
+  it("keep special characters of a label as they are", () => {
+    expect(bodyToMarkdown(withMention(bodyFromMarkdown("Hello"), "Jean*Marc", true))).toBe("Hello @Jean*Marc");
+    expect(bodyToMarkdown(withMention(bodyFromMarkdown("Hello"), "Jean*Marc"))).toBe("Hello [@Jean*Marc](mention:issue/x)");
   });
 });
 
@@ -485,14 +485,14 @@ function blockIds(json: unknown): unknown[] {
 }
 
 /** The same document, a note pasted at the end of the first paragraph. */
-function withMention(json: unknown, label: string): Record<string, unknown> {
+function withMention(json: unknown, label: string, legacy = false): Record<string, unknown> {
   const doc = JSON.parse(JSON.stringify(json)) as JsonNode;
   const paragraph = findNode(doc, "paragraph");
   paragraph?.content?.push(
     { type: "text", text: " " } as JsonNode,
     {
       type: "mention",
-      attrs: { mentionType: "issue", mentionId: "x", mentionLabel: label },
+      attrs: { mentionType: "issue", mentionId: "x", mentionLabel: label, ...(legacy ? { legacy: true } : {}) },
     } as JsonNode
   );
   return doc as Record<string, unknown>;

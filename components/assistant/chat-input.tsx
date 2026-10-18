@@ -1,5 +1,6 @@
 "use client";
 
+import { pastedMentionPieces } from "@/lib/mention-paste";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -1155,6 +1156,38 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
      * unique preserves markdown characters and newlines, without
      * import this foreign formatting.
      */
+    /** A pill at the caret, followed by a space (a pasted typed mention). */
+    const insertPill = useCallback(
+      (option: MentionOption) => {
+        const el = editorRef.current;
+        if (!el) return;
+        const selection = window.getSelection();
+        const range = document.createRange();
+        if (selection && selection.rangeCount > 0 &&
+            el.contains(selection.getRangeAt(0).commonAncestorContainer)) {
+          range.setStart(selection.getRangeAt(0).startContainer, selection.getRangeAt(0).startOffset);
+          range.setEnd(selection.getRangeAt(0).endContainer, selection.getRangeAt(0).endOffset);
+        } else {
+          range.selectNodeContents(el);
+          range.collapse(false);
+        }
+        range.deleteContents();
+        const pill = createMentionNode(option);
+        const space = document.createTextNode(" ");
+        range.insertNode(space);
+        range.insertNode(pill);
+        range.setStartAfter(space);
+        range.collapse(true);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+        setIsEmpty(false);
+        syncMentionSlots();
+        publishDraft();
+        el.focus();
+      },
+      [publishDraft, syncMentionSlots],
+    );
+
     const insertPlainText = useCallback(
       (value: string) => {
         const el = editorRef.current;
@@ -1208,13 +1241,30 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         }
 
         // Never let the browser choose `text/html` for a text paste. The plain
-        // representation is the source of truth for markdown messages.
+        // representation is the source of truth for markdown messages — except
+        // for typed mentions (MIN-734), which a copied description, comment or
+        // page carries as `mention:` links: they come back as pills with their
+        // ids, as if picked from the menu.
+        const html = e.clipboardData.getData("text/html");
         const text = e.clipboardData.getData("text/plain") || e.clipboardData.getData("text");
         e.preventDefault();
-        if (!text) return;
-        insertPlainText(text);
+        const pieces = pastedMentionPieces(html, text);
+        if (!pieces.some((piece) => typeof piece !== "string")) {
+          if (text) insertPlainText(text);
+          return;
+        }
+        const known = new Map((mentionables ?? []).map((option) => [`${option.type}:${option.id}`, option]));
+        for (const piece of pieces) {
+          if (typeof piece === "string") {
+            if (piece) insertPlainText(piece);
+            continue;
+          }
+          const option = known.get(`${piece.type}:${piece.id}`);
+          if (option) insertPill(option);
+          else insertPlainText(`@${piece.label}`);
+        }
       },
-      [canAttach, insertPlainText, uploads, userId],
+      [canAttach, insertPill, insertPlainText, mentionables, uploads, userId],
     );
 
     // Dictated text is additive: appended after the existing content, caret at
