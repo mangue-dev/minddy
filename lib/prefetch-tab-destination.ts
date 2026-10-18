@@ -111,7 +111,10 @@ export function prefetchAppTabDestination(
       return;
     }
     case "pull-requests": {
-      if (pullRequestAccountRetryAt(queryClient) > Date.now()) { attempted.delete(href); return; }
+      const prepareList = () => void queryClient.prefetchQuery(
+        allPullRequestsQueryOptions("open", PULL_REQUESTS_PAGE, route.prId ? { pr: route.prId } : undefined));
+      // The list is a database read: a forge pause gates only the detail (MIN-729).
+      if (pullRequestAccountRetryAt(queryClient) > Date.now()) { attempted.delete(href); prepareList(); return; }
       if (route.prId) {
         // One speculative detail per account client; the foreground can join
         // its normal query. No polling or additional plaintext cache.
@@ -121,7 +124,7 @@ export function prefetchAppTabDestination(
           attempted.delete(href);
         });
       }
-      void queryClient.prefetchQuery(allPullRequestsQueryOptions("open", PULL_REQUESTS_PAGE, route.prId ? { pr: route.prId } : undefined));
+      prepareList();
       return;
     }
     case "all": {

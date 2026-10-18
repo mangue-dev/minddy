@@ -3,6 +3,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prefetchAppTabDestination, appTabPreparationQueries, isPreparedAppTabDestination } from "./prefetch-tab-destination";
 import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
+import { ApiError } from "./agent-api";
 
 vi.mock("./app-tab-surfaces", () => ({ prepareAppTabSurface: vi.fn(), isAppTabSurfaceReady: () => true }));
 
@@ -124,6 +125,15 @@ describe("tab destination prefetch", () => {
     await vi.waitFor(() => expect(client.getQueryData(["pull-request", "pr1"])).toEqual({ readSequence: expect.any(Number), readSession: expect.any(String) }));
     prefetchAppTabDestination(client, "/pull-requests?pr=pr1", new Set());
     await vi.waitFor(() => expect(requested()).toHaveLength(2));
+  });
+
+  it("still prepares the PR list during an account forge pause, but not the detail (MIN-729)", async () => {
+    const error = new ApiError("Quota exhausted"); error.status = 429; error.retryAt = Date.now() + 120_000;
+    await client.fetchQuery({ queryKey: ["pr-comments", "other"], queryFn: async () => { throw error; } }).catch(() => {});
+    const attempted = new Set<string>();
+    prefetchAppTabDestination(client, "/pull-requests?pr=pr1", attempted);
+    await vi.waitFor(() => expect(requested()).toEqual(["/api/pull-requests"]));
+    expect(attempted.has("/pull-requests?pr=pr1")).toBe(false);
   });
 
   it("bounds speculative PR details until the shared operation settles", async () => {
