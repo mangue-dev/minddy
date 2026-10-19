@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Input } from "mangue-ui";
+import { Input } from "@/components/ui/input";
 import { FilterSub, MenuToggleRow } from "@/components/filter-menu";
 import type { FeedbackPropertyFilters } from "@/lib/collection-filters";
 import type { Category, Objective } from "@/lib/types";

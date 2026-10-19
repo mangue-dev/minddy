@@ -1,12 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
-
-/**
- * We only test here the KEYS of `PROVIDER_LOGOS`, which are literals of the
- * file. The logos are imported per variant, so they load as plain React
- * components; the mangue-ui barrel is stubbed because it does not load in a
- * node environment.
- */
-vi.mock("mangue-ui", () => ({ cn: (...parts: unknown[]) => parts.filter(Boolean).join(" ") }));
+import { describe, expect, it } from "vitest";
 
 import { DEFAULT_RECOMMENDED_MODELS, parseRecommendedModels } from "@/lib/recommended-models";
 import { BILLING_PLANS } from "@/lib/billing-plans";

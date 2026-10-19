@@ -29,7 +29,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, cn, Spinner } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { Spinner } from "@/components/ui/spinner";
 import {
   AttachButton,
   DropOverlay,
@@ -130,7 +132,7 @@ export function PrCommentComposer({
           // silhouette. That of a LINE remark keeps a radius more
           // tight — it is anchored in the diff, at the size of a line of code,
           // and 24px of corners would weigh more than the box itself. Like the
-          // Numo composer since mango-ui 0.8.0, it is a borderless `bg-control`.
+          // Numo composer, it is a borderless `bg-control`.
           line ? "rounded-lg bg-control" : "rounded-2xl bg-control",
           drop.dragging && "ring-2 ring-brand/20",
         )}

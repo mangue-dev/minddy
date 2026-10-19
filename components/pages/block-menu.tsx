@@ -32,6 +32,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -42,9 +44,9 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-  cn,
-  toast,
-} from "mangue-ui";
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { Kbd } from "@/components/ui/kbd";
 import {
   PAGE_COLORS,

@@ -40,7 +40,7 @@ import { useTranslations } from "next-intl";
 import type { Editor } from "@tiptap/core";
 import type { Node } from "@tiptap/pm/model";
 import { DragHandle } from "@tiptap/extension-drag-handle-react";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { BlockMenu } from "@/components/pages/block-menu";
 import type { PageCommentAnchor } from "@/components/pages/page-comment-bubble";
 import { COMMENTED_BLOCK_CLASS } from "@/components/pages/block-comments";

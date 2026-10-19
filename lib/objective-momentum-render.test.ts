@@ -10,10 +10,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import en from "@/messages/en.json";
 import fr from "@/messages/fr.json";
 import type { Issue, Objective } from "./types";
-
-// Keep layout primitives out of Node SSR; their package entry also imports
-// browser-only emoji data. The card, calculations, and translations stay real.
-vi.mock("mangue-ui", () => ({ cn: (...classes: string[]) => classes.filter(Boolean).join(" ") }));
 vi.mock("@/components/ui/tooltip", () => ({
   TooltipProvider: ({ children }: PropsWithChildren) => children,
   Tooltip: ({ children }: PropsWithChildren) => children,

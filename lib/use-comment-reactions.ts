@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 import { setPrCommentReactionApi, setPrReviewCommentReactionApi, type PrEndpoint } from "./agent-api";
 import { groupReactionsByComment, type ReviewCommentReaction, type ReviewReactionContent } from "./pr-review-reactions";
 import { commentReactionsKey, setPrReactionOptimistically, type ReactionSurface } from "./optimistic/pr-reaction-writes";

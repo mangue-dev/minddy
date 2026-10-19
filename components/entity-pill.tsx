@@ -21,7 +21,7 @@
 // of EACH pill at rest, for a button that you only see on hover.
 
 import type { ReactNode } from "react";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 
 export type PillRadius = "full" | "md";

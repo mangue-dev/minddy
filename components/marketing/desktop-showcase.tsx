@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
-import { cn } from "mangue-ui/lib/utils";
+import { cn } from "@/lib/utils";
 import { ScreenshotSlot } from "./screenshot-slot";
 
 /**

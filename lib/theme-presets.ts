@@ -3,7 +3,7 @@
  * for light mode and one for dark mode.
  *
  * The light/dark/system MODE stays where it was (`lib/account-theme.ts`,
- * mango-ui's `.dark` class). A palette only recolors the mode it belongs to:
+ * the ThemeProvider's `.dark` class). A palette only recolors the mode it belongs to:
  * the account saves a light palette AND a dark palette, and whichever mode is
  * active picks its own. Switching modes, or the OS switching under "system",
  * therefore lands on the palette chosen for that mode — never on one palette
@@ -142,7 +142,7 @@ export const THEME_PRESETS: Record<ThemePresetId, ThemePresetInfo> = {
     label: { name: "minddy" },
     highContrast: false,
     swatch: { background: "#ffffff", sidebar: "#f3f4f6", foreground: "#0a0a0a", primary: "#16181e" },
-    // mango-ui's light `--background`, in hexadecimal: `theme-color` is read
+    // app/tokens.css's light `--background`, in hexadecimal: `theme-color` is read
     // off the page, so it cannot point to a variable (see lib/theme-script.ts).
     chromeColor: "#f5f7fb",
   },
@@ -224,7 +224,7 @@ export const THEME_PRESETS: Record<ThemePresetId, ThemePresetInfo> = {
     label: { name: "minddy" },
     highContrast: false,
     swatch: { background: "#0f0f0f", sidebar: "#0d0e10", foreground: "#fafafa", primary: "#f4f5f8" },
-    // mango-ui's dark `--background`, in hexadecimal.
+    // app/tokens.css's dark `--background`, in hexadecimal.
     chromeColor: "#070809",
   },
   "blue-dark": {

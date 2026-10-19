@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { code } from "@streamdown/code";
 import type { ComponentProps, HTMLAttributes } from "react";
 import { memo } from "react";

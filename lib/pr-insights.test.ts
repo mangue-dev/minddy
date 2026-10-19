@@ -11,15 +11,6 @@ import messages from "@/messages/en.json";
 import { groupReviewThreads } from "@/lib/pr-review-threads";
 import { AI_REVIEW_PROVIDERS } from "@/lib/pr-ai-review/providers";
 
-// Load the real primitives without the unrelated emoji picker barrel export.
-vi.mock("mangue-ui", async () => ({
-  ...await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/button.tsx"),
-  ...await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/badge.tsx"),
-  ...await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/popover.tsx"),
-  ...await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/dropdown-menu.tsx"),
-  ...await vi.importActual<Record<string, unknown>>("mangue-ui/lib/utils.ts"),
-}));
-
 vi.mock("@/components/ui/app-tooltip", () => ({
   AppTooltip: ({ children }: { children: ReactElement }) => children,
 }));

@@ -4,7 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, ArrowRight01Icon, LoaderCircleIcon, Mic01Icon, SquareIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { cn } from "mangue-ui/lib/utils";
+import { cn } from "@/lib/utils";
 import { PriorityIndicator } from "@/components/issue-indicators";
 import { DictateWaveform } from "@/components/ai-elements/dictate-waveform";
 import { useAnalytics } from "@/lib/use-analytics";

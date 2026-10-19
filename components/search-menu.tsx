@@ -18,8 +18,9 @@ import { issueAwareFilter } from "@/lib/issue-search-order";
  * issues last, an exact identifier before all. Other items score as before.
  */
 const searchMenuFilter = issueAwareFilter(defaultFilter);
-import { Command, CommandEmpty, CommandSeparator, cn } from "mangue-ui";
-import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
+import { Command, CommandEmpty, CommandSeparator } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
+import { ResponsivePopover, ResponsivePopoverAnchor, ResponsivePopoverContent, ResponsivePopoverTrigger } from "@/components/ui/responsive-popover";
 import { Kbd } from "@/components/ui/kbd";
 import { PointerAnchor } from "@/components/pointer-anchor";
 import {
@@ -114,7 +115,7 @@ export function SearchMenu({
     : undefined;
 
   const content = (
-    <PopoverContent
+    <ResponsivePopoverContent
       data-floating-surface
       align={align}
       container={container}
@@ -142,17 +143,17 @@ export function SearchMenu({
           {children}
         </CommandList>
       </Command>
-    </PopoverContent>
+    </ResponsivePopoverContent>
   );
 
   // Pointer-anchored mode: a virtual anchor at the viewport point.
   if (position !== undefined) {
     if (!position) return null;
     return (
-      <Popover open={open} onOpenChange={onOpenChange} modal={modal}>
+      <ResponsivePopover open={open} onOpenChange={onOpenChange} modal={modal}>
         <PointerAnchor position={position} />
         {content}
-      </Popover>
+      </ResponsivePopover>
     );
   }
 
@@ -180,10 +181,10 @@ export function SearchMenu({
           }
         },
       })}</TooltipTrigger>
-      {open && <Popover open onOpenChange={onOpenChange} modal={modal}>
-        <PopoverAnchor virtualRef={virtualAnchor} />
+      {open && <ResponsivePopover open onOpenChange={onOpenChange} modal={modal}>
+        <ResponsivePopoverAnchor virtualRef={virtualAnchor} />
         {content}
-      </Popover>}
+      </ResponsivePopover>}
       <TooltipContent className="flex items-center gap-1.5">
         {tooltip}
         {shortcutHint && <Kbd size="sm">{shortcutHint}</Kbd>}
@@ -202,12 +203,12 @@ export function SearchMenu({
   // that we make a `tooltip` conditional, the fault would appear without anything
   // does not link it to this change. What varies here is the OPENING.
   const popover = (
-    <Popover open={open} onOpenChange={onOpenChange} modal={modal}>
-      <PopoverTrigger asChild>
+    <ResponsivePopover open={open} onOpenChange={onOpenChange} modal={modal}>
+      <ResponsivePopoverTrigger asChild>
         <TooltipTrigger asChild>{trigger}</TooltipTrigger>
-      </PopoverTrigger>
+      </ResponsivePopoverTrigger>
       {content}
-    </Popover>
+    </ResponsivePopover>
   );
 
   return (

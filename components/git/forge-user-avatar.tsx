@@ -1,4 +1,4 @@
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/user-avatar";
 import { parseForgeLogin } from "@/lib/repo-providers";
 

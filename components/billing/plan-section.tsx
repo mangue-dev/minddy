@@ -14,10 +14,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  Button,
-  cn,
-  toast,
-} from "mangue-ui";
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   BILLING_PLANS,
   annualPriceEur,

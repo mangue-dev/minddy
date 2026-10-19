@@ -1,13 +1,6 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
-
-// Only the mangue-ui barrel is stubbed. The brand marks are real: importing a
-// variant module must not reach the @lobehub/icons barrel or a brand index,
-// whose Avatar variant loads @lobehub/ui and the emoji-mart catalog.
-vi.mock("mangue-ui", () => ({
-  cn: (...parts: unknown[]) => parts.filter(Boolean).join(" "),
-}));
+import { describe, expect, it } from "vitest";
 
 import { ProviderLogo } from "@/components/model-logo";
 import { McpAgentLogo } from "@/components/mcp-agent-logo";

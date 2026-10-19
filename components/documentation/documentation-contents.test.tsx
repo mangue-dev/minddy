@@ -4,8 +4,6 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { DocumentationContents } from "./documentation-contents";
 
-vi.mock("mangue-ui", () => import("mangue-ui/components/ui/collapsible"));
-
 let root: Root;
 let host: HTMLDivElement;
 let article: HTMLElement;

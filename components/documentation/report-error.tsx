@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
-import { Button } from "mangue-ui";
+import { Button } from "@/components/ui/button";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Flag01Icon } from "@hugeicons/core-free-icons";
 import { useAuthOptional } from "@/lib/auth-context";

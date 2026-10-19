@@ -4,7 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { cn } from "mangue-ui/lib/utils";
+import { cn } from "@/lib/utils";
 import { localizedHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
 

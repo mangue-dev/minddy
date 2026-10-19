@@ -3,7 +3,9 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ImageUploadIcon, ShuffleIcon } from "@hugeicons/core-free-icons";
 import { useRef } from "react";
-import { Button, Spinner, cn } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/user-avatar";
 
 /** Shared Lorelei-or-upload control used during signup and in profile settings. */

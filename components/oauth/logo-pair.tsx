@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { BotIcon, CheckIcon } from "@hugeicons/core-free-icons";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { MinddyLogo } from "@/components/minddy-logo";
 
 /**

@@ -2,10 +2,8 @@
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Button,
-  Spinner,
-} from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useUnlinkPullRequestIssue } from "@/lib/use-unlink-pull-request-issue";
 

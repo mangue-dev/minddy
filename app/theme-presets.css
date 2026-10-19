@@ -476,7 +476,7 @@ html.dark[data-theme-dark="high-contrast-dark"] {
    on white is 1.2:1). These rules apply ONLY under the two high-contrast
    palettes and add what WCAG 1.4.11 asks of them: a visible boundary of at
    least 3:1 for controls and floating surfaces, a visible keyboard focus —
-   mangue-ui's fields and selects declare `outline-none ring-0` — and a
+   The field and select primitives declare `outline-none ring-0` — and a
    current/selected state that does not depend on a faint background.
 
    Outlines rather than borders: they take no layout space, so nothing moves

@@ -15,7 +15,10 @@ vi.mock("./app-tabs-context", () => ({ useOptionalAppTabNavigation: () => ({
 }) }));
 vi.mock("./use-views-query", () => ({ useViewsQuery: () => ({ views: context.views, loading: false }) }));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
-vi.mock("mangue-ui", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  toast: { success: vi.fn(), error: vi.fn() },
+}));
 
 let root: Root;
 let element: HTMLDivElement;

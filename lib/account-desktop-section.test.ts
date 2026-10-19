@@ -23,7 +23,10 @@ vi.stubGlobal(
   },
 );
 
-vi.mock("mangue-ui", async () => {
+// Stubs for the UI primitives the component under test renders.
+const uiStubs = vi.hoisted(() => {
+  let value: Promise<Record<string, unknown>> | undefined;
+  return () => (value ??= (async () => {
   const { createElement: element, Fragment } = await import("react");
   return {
     cn: (...values: unknown[]) => values.filter(Boolean).join(" "),
@@ -56,7 +59,7 @@ vi.mock("mangue-ui", async () => {
     PopoverContent: ({ children }: React.PropsWithChildren) =>
       element("div", null, children),
     // The hint renders its overflow tooltip through `components/ui/tooltip`
-    // (built on mangue-ui). The test needs the tooltip JSX to pass children
+    // (built on Radix). The test needs the tooltip JSX to pass children
     // through, nothing more.
     Tooltip: ({ children }: React.PropsWithChildren) => element(Fragment, null, children),
     TooltipTrigger: ({
@@ -66,6 +69,23 @@ vi.mock("mangue-ui", async () => {
     TooltipContent: ({ children }: React.PropsWithChildren) =>
       element("div", null, children),
   };
+})());
+});
+vi.mock("@/components/ui/button", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Button: stubs.Button };
+});
+vi.mock("@/components/ui/switch", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Switch: stubs.Switch };
+});
+vi.mock("@/components/ui/popover", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Popover: stubs.Popover, PopoverTrigger: stubs.PopoverTrigger, PopoverContent: stubs.PopoverContent };
+});
+vi.mock("@/components/ui/tooltip", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Tooltip: stubs.Tooltip, TooltipTrigger: stubs.TooltipTrigger, TooltipContent: stubs.TooltipContent };
 });
 
 type BridgeMocks = {

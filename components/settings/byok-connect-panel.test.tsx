@@ -14,7 +14,10 @@ vi.mock("@/lib/runtime-config-provider", () => ({ useRuntimeConfig: () => ({ cap
 vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQueries: h.invalidate }) }));
 vi.mock("@/components/model-logo", () => ({ ProviderLogo: () => null }));
 vi.mock("./settings-ui", () => ({ SettingsRow: ({ label, control }: { label: ReactNode; control: ReactNode }) => <div>{label}{control}</div> }));
-vi.mock("mangue-ui", () => {
+// Stubs for the UI primitives the component under test renders.
+const uiStubs = vi.hoisted(() => {
+  let value: Promise<Record<string, unknown>> | undefined;
+  return () => (value ??= (async () => {
   const content = ({ children }: { children: ReactNode }) => <>{children}</>;
   return {
     cn: (...values: unknown[]) => values.filter(Boolean).join(" "), toast: { success: vi.fn(), error: vi.fn() },
@@ -28,6 +31,31 @@ vi.mock("mangue-ui", () => {
     AlertDialogAction: content, AlertDialogCancel: content, AlertDialogContent: content,
     AlertDialogDescription: content, AlertDialogFooter: content, AlertDialogHeader: content, AlertDialogTitle: content,
   };
+})());
+});
+vi.mock("sonner", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), toast: stubs.toast };
+});
+vi.mock("@/components/ui/button", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Button: stubs.Button };
+});
+vi.mock("@/components/ui/input", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Input: stubs.Input };
+});
+vi.mock("@/components/ui/spinner", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Spinner: stubs.Spinner };
+});
+vi.mock("@/components/ui/select", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Select: stubs.Select, SelectTrigger: stubs.SelectTrigger, SelectValue: stubs.SelectValue, SelectLabel: stubs.SelectLabel, SelectSeparator: stubs.SelectSeparator, SelectContent: stubs.SelectContent, SelectGroup: stubs.SelectGroup, SelectItem: stubs.SelectItem };
+});
+vi.mock("@/components/ui/alert-dialog", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), AlertDialog: stubs.AlertDialog, AlertDialogAction: stubs.AlertDialogAction, AlertDialogCancel: stubs.AlertDialogCancel, AlertDialogContent: stubs.AlertDialogContent, AlertDialogDescription: stubs.AlertDialogDescription, AlertDialogFooter: stubs.AlertDialogFooter, AlertDialogHeader: stubs.AlertDialogHeader, AlertDialogTitle: stubs.AlertDialogTitle };
 });
 let root: ReturnType<typeof createRoot>;
 let host: HTMLDivElement;

@@ -7,16 +7,16 @@ import { Cancel01Icon, Copy01Icon, Delete02Icon, MoreHorizontalIcon, CheckIcon }
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { JSONContent } from "@tiptap/core";
 import { useFormatter, useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
 import {
-  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Spinner,
-  toast,
-} from "mangue-ui";
+} from "@/components/ui/dropdown-menu";
+import { Spinner } from "@/components/ui/spinner";
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { resolvePromptCopyAutoStart } from "@/lib/prompt-copy-auto-start";
@@ -54,7 +54,7 @@ export function ScratchpadModal() {
         // scroll box, bounds it — which makes Radix read a click in it as a
         // click outside the dialog. Keep the notebook open for those.
         onInteractOutside={keepOverlayOpenForPopper}
-        className="scratchpad-shell-dialog flex -translate-x-0 -translate-y-0 h-[var(--spacing-dialog-h)] max-h-[calc(100dvh-2rem)] max-w-[calc(100%-2rem)] flex-col overflow-hidden p-0 rounded-(--app-pane-radius) sm:max-h-[var(--spacing-dialog-h)] sm:max-w-[var(--spacing-dialog-w)]"
+        className="scratchpad-shell-dialog flex -translate-x-0 -translate-y-0 h-[var(--spacing-dialog-h)] max-w-[calc(100%-2rem)] flex-col overflow-hidden p-0 rounded-(--app-pane-radius) sm:max-h-[var(--spacing-dialog-h)] sm:max-w-[var(--spacing-dialog-w)]"
       >
         <DialogTitle className="sr-only">{t("title")}</DialogTitle>
         <DialogDescription className="sr-only">

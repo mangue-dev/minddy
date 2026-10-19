@@ -9,7 +9,23 @@ const state = vi.hoisted(() => ({ projects: [{ id: "p", key: "P", name: "Project
   rows: { p: [{ id: "first", name: "First", status: "planned" }, { id: "done", name: "Done", status: "done" }],
     q: [{ id: "other", name: "Other project", status: "planned" }] } as Record<string, { id: string; name: string; status: string }[]>,
   publication: null as unknown }));
-vi.mock("mangue-ui", () => ({ Button: ({ children, onClick }: { children: ReactNode; onClick?: () => void }) => <button onClick={onClick}>{children}</button>, CommandGroup: ({ children }: { children: ReactNode }) => children, CommandItem: ({ children }: { children: ReactNode }) => children, Skeleton: () => null, cn: (...values: unknown[]) => values.filter(Boolean).join(" "), toast: { info: vi.fn() } }));
+vi.mock("@/components/ui/button", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  Button: ({ children, onClick }: { children: ReactNode; onClick?: () => void }) => <button onClick={onClick}>{children}</button>,
+}));
+vi.mock("@/components/ui/command", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  CommandGroup: ({ children }: { children: ReactNode }) => children,
+  CommandItem: ({ children }: { children: ReactNode }) => children,
+}));
+vi.mock("@/components/ui/skeleton", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  Skeleton: () => null,
+}));
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  toast: { info: vi.fn() },
+}));
 vi.mock("@/components/search-menu", () => ({ SearchMenu: () => null }));
 vi.mock("@/components/search-select", () => ({ checkedProps: () => ({}) }));
 vi.mock("@/components/user-avatar", () => ({ UserAvatar: () => null }));

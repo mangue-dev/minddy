@@ -14,7 +14,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Book02Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { ObjectiveIconBadge } from "@/components/objective-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { UserAvatar } from "@/components/user-avatar";

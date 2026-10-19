@@ -33,12 +33,28 @@ vi.mock("@/lib/pages-api", () => ({ createPageApi: mocks.createPage, prepareInit
 vi.mock("@/lib/use-analytics", () => ({ useAnalytics: () => ({ track: mocks.track }) }));
 vi.mock("@/lib/use-track-view", () => ({ useTrackView: vi.fn() }));
 vi.mock("@hugeicons/react", () => ({ HugeiconsIcon: () => null }));
-vi.mock("mangue-ui", () => ({
+vi.mock("@/components/ui/button", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   Button: ({ children, variant: _variant, size: _size, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: string; size?: string }) => <button {...props}>{children}</button>,
+}));
+vi.mock("@/components/ui/input", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
+}));
+vi.mock("@/components/ui/textarea", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   Textarea: (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...props} />,
-  Spinner: () => null, Switch: () => null,
-  cn: (...values: unknown[]) => values.filter(Boolean).join(" "),
+}));
+vi.mock("@/components/ui/spinner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  Spinner: () => null,
+}));
+vi.mock("@/components/ui/switch", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  Switch: () => null,
+}));
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   toast: { success: mocks.toastSuccess, error: mocks.toastError },
 }));
 vi.mock("@/components/ui/tooltip", () => ({

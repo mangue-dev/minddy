@@ -17,15 +17,15 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
 import {
-  Button,
   CommandGroup,
   CommandItem,
   CommandSeparator,
   CommandShortcut,
-  SendButtonWithCost,
-  cn,
-} from "mangue-ui";
+} from "@/components/ui/command";
+import { SendButtonWithCost } from "@/components/ui/send-button-with-cost";
+import { cn } from "@/lib/utils";
 import { AgentBeam } from "@/components/agent-beam";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { MentionChip } from "@/components/mention-chip";
@@ -1471,7 +1471,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         <AgentBeam active={!!beam} keepMounted className="relative z-10 rounded-2xl">
         <div
           className={cn(
-            // No focus ring, no border: since mango-ui 0.8.0 the Numo composer
+            // No focus ring, no border: the Numo composer
             // is a borderless `bg-control` surface (the editor caret is the
             // signal), brand colors are kept for drag feedback only.
             "chat-input-surface relative flex flex-col overflow-hidden rounded-2xl bg-control transition-all",

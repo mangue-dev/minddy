@@ -38,8 +38,8 @@ the height of the panel to demonstrate what the concluding sentence already says
 **Compact — and it's a throwback, dated 2026-08-04.** The panel
 was extended since July 26, for a reason that ceased to be true:
 the spread put Numo in the center and returned the board to the setting.
-`panel-geometry.ts` has since reconnected its size to the dialogue tokens of
-mango-ui — `--spacing-dialog-w/h`, i.e. **90vw × 90vh**, the size of the notebook and
+`panel-geometry.ts` has since reconnected its size to the dialog tokens of
+app/tokens.css — `--spacing-dialog-w/h`, i.e. **90vw × 90vh**, the size of the notebook and
 of project creation. Expanded, the panel now covers the entire screen:
 the board disappears from the image, and the wire folded — six messages including a turn of
 closed work — floats in the bottom two-thirds of white. The capture does not

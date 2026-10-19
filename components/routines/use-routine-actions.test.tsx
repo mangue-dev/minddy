@@ -18,7 +18,14 @@ vi.mock("@/lib/routines-api", () => ({
   runRoutineNowApi: api.runRoutineNowApi,
   deleteRoutineApi: api.deleteRoutineApi,
 }));
-vi.mock("mangue-ui", () => ({ toast: api.toast, ConfirmDeleteDialog: () => null }));
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  toast: api.toast,
+}));
+vi.mock("@/components/ui/confirm-delete-dialog", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  ConfirmDeleteDialog: () => null,
+}));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 
 const routine = (id: string, enabled = true): Routine => ({

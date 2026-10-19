@@ -2,7 +2,7 @@
 
 import { useContext, useState, type ComponentType } from "react";
 import { QueryClientContext } from "@tanstack/react-query";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { projectOrbStyle } from "@/lib/project-orb-colors";
 import { isProtectedProjectIconUrl, useProjectIcon } from "@/lib/use-project-icon";
 
@@ -120,7 +120,7 @@ export function ProjectOrb({
   );
 }
 
-// mangue-ui's <Sidebar> renders `NavItem.icon` as `<Icon className="…" />` with
+// A sidebar renders `NavItem.icon` as `<Icon className="…" />` with
 // no way to pass a seed, so we hand it a per-project component. Cache by
 // seed+icon to keep component identity stable across renders (otherwise the
 // orb remounts).

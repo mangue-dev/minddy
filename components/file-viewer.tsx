@@ -3,7 +3,8 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { useTranslations } from "next-intl";
 import { isPlainNavigationClick } from "@/components/editor-node-link";
-import { Button, useTheme } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { useTheme } from "@/components/theme-provider";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Download01Icon, MoreHorizontalIcon, Delete02Icon } from "@hugeicons/core-free-icons";
 import { ImageViewer, PreviewViewer } from "@/components/image-viewer";

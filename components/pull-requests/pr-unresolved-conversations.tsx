@@ -9,15 +9,15 @@ import {
 } from "@hugeicons/core-free-icons";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
 import {
-  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  Spinner,
-  toast,
-} from "mangue-ui";
+} from "@/components/ui/dropdown-menu";
+import { Spinner } from "@/components/ui/spinner";
+import { toast } from "sonner";
 import { SidePanel, SidePanelBody, SidePanelContent, SidePanelDescription, SidePanelHeader, SidePanelTitle } from "@/components/ui/side-panel";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";

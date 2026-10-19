@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { useTheme } from "mangue-ui/components/theme-provider";
-import { cn } from "mangue-ui/lib/utils";
+import { useTheme } from "@/components/theme-provider";
+import { cn } from "@/lib/utils";
 
 /**
  * The animated background of the landing (MIN-73), mounted twice: under the hero and under

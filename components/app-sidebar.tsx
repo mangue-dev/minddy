@@ -24,23 +24,24 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useLocale, useTranslations } from "next-intl";
 import { documentationPath } from "@/lib/documentation-core.mjs";
+import { Button } from "@/components/ui/button";
 import {
-  Button,
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
   Popover,
   PopoverAnchor,
   PopoverContent,
   PopoverDescription,
   PopoverHeader,
   PopoverTitle,
-  cn,
-  type NavItem,
-  type NavSection,
-} from "mangue-ui";
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import type { NavItem, NavSection } from "@/components/nav-types";
 import { Kbd, KbdSequence } from "@/components/ui/kbd";
 import {
   IssueContextMenu,
@@ -1083,7 +1084,7 @@ export function secondaryNavBackTarget(
 /**
  * The desktop sidebar — the MODULAR primary (MIN-546).
  *
- * Hand-rolled (rather than mangue-ui's <Sidebar>) so the navigation can play
+ * Hand-rolled (rather than a generic sidebar primitive) so the navigation can play
  * its level swaps: the top band (quick actions, then the page's filter strip)
  * and the footer stay put while only the panel between them fades/slides —
  * level 2 enters from the right, level 1 from the left. `modeKey` ("home" |

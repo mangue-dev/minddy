@@ -7,19 +7,17 @@ import { useEffect, useRef, useState, useTransition, type CSSProperties, type Re
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
+import { CommandGroup, CommandItem, CommandSeparator } from "@/components/ui/command";
 import {
-  Button,
-  CommandGroup,
-  CommandItem,
-  CommandSeparator,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  Spinner,
-  Switch,
-  toast,
-} from "mangue-ui";
+} from "@/components/ui/dropdown-menu";
+import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { AgentBeamOverlay } from "@/components/agent-beam";

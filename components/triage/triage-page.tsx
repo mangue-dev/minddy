@@ -14,13 +14,11 @@ import { useRouter } from "next/navigation";
 import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
 import Link from "@/components/app-link";
 import { useTranslations, useFormatter } from "next-intl";
-import {
-  Button,
-  Skeleton,
-  Spinner,
-  cn,
-  toast,
-} from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EmptyScene } from "@/components/empty-scene";
 import { AppContentHeader, APP_CONTENT_HEADER_LEADING_INSET } from "@/components/app-content-header";

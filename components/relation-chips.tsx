@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { cn, Popover, PopoverContent, PopoverTrigger } from "mangue-ui";
+import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Target01Icon } from "@hugeicons/core-free-icons";
 import { issueIdentifier } from "@/lib/issue-constants";

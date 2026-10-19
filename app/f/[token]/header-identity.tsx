@@ -5,14 +5,14 @@ import { Logout01Icon, MessageMultiple01Icon } from "@hugeicons/core-free-icons"
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
 import {
-  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "mangue-ui";
+} from "@/components/ui/dropdown-menu";
 import type { PublicIdentity } from "@/lib/feedback/types";
 import { logoutAction } from "./actions";
 import { FeedbackAuthDialog } from "./feedback-auth";

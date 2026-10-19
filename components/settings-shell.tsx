@@ -12,7 +12,7 @@ import {
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useReducedMotion } from "framer-motion";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { AppIcon } from "@/components/icon";
 import { trackEvent } from "@/lib/analytics";
 import { AppContentHeader } from "@/components/app-content-header";
@@ -345,7 +345,7 @@ function SettingsTabs({
             </ul>
           )
         ) : (
-          /* Cards of ours, and not the `Tabs` of mango-ui: the selection is
+          /* Cards of ours, and not the `Tabs` primitive: the selection is
              drawn by a pellet that SLIDES, that the indicator of the
              library lined with a lined capsule. See SidebarNavRail. */
           <SidebarNavRail

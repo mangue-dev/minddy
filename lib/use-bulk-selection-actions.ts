@@ -20,7 +20,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 import { eventKey } from "@/lib/keyboard/event-key";
 import { isTypingTarget, useChordPrefixForEvents } from "@/lib/keyboard/keyboard-context";
 import {

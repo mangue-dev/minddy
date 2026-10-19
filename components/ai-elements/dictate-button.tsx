@@ -11,14 +11,10 @@ import {
   useState,
   type Ref,
 } from "react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  Spinner,
-  cn,
-  toast,
-} from "mangue-ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { KbdSequence } from "@/components/ui/kbd";
 
 import { DictateWaveform } from "./dictate-waveform";

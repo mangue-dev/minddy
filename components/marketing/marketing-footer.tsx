@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactElement } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { cn } from "mangue-ui/lib/utils";
+import { cn } from "@/lib/utils";
 import { MinddyLogo } from "@/components/minddy-logo";
 import { CopyButton } from "@/components/marketing/copy-button";
 import { localizedHref } from "@/lib/locale-href";

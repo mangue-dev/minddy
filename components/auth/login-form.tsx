@@ -7,7 +7,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { SESSION_EXPIRED_PARAM, SESSION_EXPIRED_VALUE } from "@/lib/signed-out-redirect";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Button, Input, Spinner, toast } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { toast } from "sonner";
 import { MfaChallenge } from "@/components/auth/mfa-challenge";
 import {
   AuthColumn,

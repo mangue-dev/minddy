@@ -3,7 +3,8 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { StickyNote02Icon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
-import { Button, cn } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { KbdSequence } from "@/components/ui/kbd";
 import { useModKey, useModShiftShortcut } from "@/lib/keyboard/use-mod-shortcut";
 import { useScratchpad } from "@/lib/scratchpad-context";

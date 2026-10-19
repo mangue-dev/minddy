@@ -1,4 +1,4 @@
-import { Skeleton } from "mangue-ui";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AppContentHeader } from "@/components/app-content-header";
 
 export default function BillingLoading() {

@@ -17,7 +17,7 @@ import {
 
 const CSS = readFileSync(join(__dirname, "../app/theme-presets.css"), "utf8");
 
-/** Minddy's own values (mangue-ui tokens and the globals.css shell
+/** Minddy's own values (app/tokens.css and the globals.css shell
  * overrides, converted from oklch): what a preset block leaves undeclared. */
 const MINDDY_TOKENS = {
   light: {

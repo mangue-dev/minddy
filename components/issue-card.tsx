@@ -14,7 +14,10 @@ import {
 } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { useTranslations, useFormatter } from "next-intl";
-import { ConfirmDeleteDialog, Spinner, cn, toast } from "mangue-ui";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { AppIcon } from "@/components/icon";
 import { useIssueMenuActionsWithNavigation } from "@/components/use-issue-menu-actions";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
@@ -1295,7 +1298,7 @@ const IssueCardContent = memo(function IssueCardContent({
     // ⚠ Closed, we return the LAST constructed list, not an empty array.
     // `IssueContextMenu` does not unmount its contents when closed — Radix
     // keeps mounted for the duration of its exit animation (`data-closed:animate-out`
-    // in mango-ui) —, so emptying it here would empty the ON-SCREEN menu before
+    // in components/ui) —, so emptying it here would empty the ON-SCREEN menu before
     // that it does not disappear. Before the first opening, the list is empty and
     // nothing has ever been returned: that’s where the economy happens.
     if (!menuPosition) return lastMenuActions.current;

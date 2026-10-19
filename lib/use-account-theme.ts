@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef } from "react";
-import { useTheme } from "mangue-ui/components/theme-provider";
+import { useTheme } from "@/components/theme-provider";
 import { useAuth } from "./auth-context";
 import { useAnalytics } from "./use-analytics";
 import {
@@ -34,7 +34,7 @@ const writeGenerations: Record<keyof ThemeAppearance, number> = {
 /**
  * The theme, as an ACCOUNT setting.
  *
- * Wraps mango-ui's `useTheme`: applying stays local and instant (the provider
+ * Wraps the ThemeProvider's `useTheme`: applying stays local and instant (the provider
  * toggles `<html>` and its localStorage cache), and the chosen value is also
  * written to `user_metadata` so every other device picks it up — the proxy
  * re-asserts it to the layout on the next document, and the pre-paint script

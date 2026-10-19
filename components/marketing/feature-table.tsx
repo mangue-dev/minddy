@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { MinusSignIcon, CheckIcon } from "@hugeicons/core-free-icons";
-import { cn } from "mangue-ui/lib/utils";
+import { cn } from "@/lib/utils";
 import { CARD_TONES } from "./card-tones";
 import { FEATURE_TABLE_PANEL } from "./feature-table-styles";
 

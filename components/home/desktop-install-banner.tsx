@@ -6,7 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
-import { Button, IconButton } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Tooltip,
   TooltipContent,

@@ -10,14 +10,6 @@ import { ToolCallList } from "@/components/assistant/tool-call-display";
 import { liveSecretRevealKey } from "@/components/assistant/secret-callout";
 import { workEventsRevealKey, type WorkEvent } from "./work-event-groups";
 import messages from "@/messages/en.json";
-
-// Load the actual primitives without the package barrel's unrelated emoji picker.
-vi.mock("mangue-ui", async () => ({
-  ...await import("mangue-ui/components/ui/collapsible"),
-  ...await import("mangue-ui/components/ui/button"),
-  ...await import("mangue-ui/components/ui/input"),
-  ...await import("mangue-ui/lib/utils"),
-}));
 vi.mock("@/components/assistant/seed-proposal-card", () => ({ SeedProposalCard: () => null }));
 
 type Call = Parameters<typeof ToolCallList>[0]["items"][number];

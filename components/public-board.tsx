@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { BOARD_COLUMN_CLASS } from "@/lib/board-layout";
 import { visibleStatuses } from "@/lib/view-filter";
 import { IssueCardBody } from "@/components/issue-card";

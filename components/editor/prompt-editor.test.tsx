@@ -11,7 +11,6 @@ import { PromptEditor } from "./prompt-editor";
 
 const translate = vi.hoisted(() => (key: string) => key);
 vi.mock("next-intl", () => ({ useTranslations: () => translate }));
-vi.mock("mangue-ui", () => ({ cn: (...args: unknown[]) => args.filter(Boolean).join(" ") }));
 vi.mock("@/components/pages/page-comment-bubble", () => ({ PageCommentBubble: () => null }));
 vi.mock("@/components/markdown-link-menu", () => ({ MarkdownLinkMenu: () => null }));
 vi.mock("@/components/assistant/skill-preview-dialog", () => ({ SkillPreviewDialog: () => null }));

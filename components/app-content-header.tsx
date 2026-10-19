@@ -1,5 +1,5 @@
 import type { ComponentProps } from "react";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 
 /**
  * Left inset for plain leading content — a title, an identifier, a project

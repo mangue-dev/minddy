@@ -2,7 +2,7 @@
 import type { ReactNode } from "react";
 import { Search01Icon as Search } from "@hugeicons/core-free-icons";
 import Link from "@/components/app-link";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 import { AppIcon } from "@/components/icon";
 import { KbdSequence } from "@/components/ui/kbd";

@@ -17,7 +17,10 @@ const h = vi.hoisted(() => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
-vi.mock("mangue-ui", () => ({ toast: h.toast }));
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  toast: h.toast,
+}));
 vi.mock("./auth-context", () => ({ useAuth: () => ({ user: { id: "alice" } }) }));
 vi.mock("./hidden-projects-api", () => ({
   fetchHiddenProjectIdsApi: h.fetch,

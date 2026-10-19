@@ -13,7 +13,10 @@ const mocks = vi.hoisted(() => ({
 vi.mock("./auth-context", () => ({ useAuth: () => mocks.auth }));
 vi.mock("./projects-context", () => ({ useProjects: () => mocks.projects }));
 vi.mock("./use-analytics", () => ({ useAnalytics: () => ({ track: vi.fn(), setPersonProperties: vi.fn() }) }));
-vi.mock("mangue-ui", () => ({ toast: { error: vi.fn() } }));
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  toast: { error: vi.fn() },
+}));
 
 let root: Root;
 let client: QueryClient;

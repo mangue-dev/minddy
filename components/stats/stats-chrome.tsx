@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { InformationCircleIcon } from "@hugeicons/core-free-icons";
 import type { ReactNode } from "react";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,

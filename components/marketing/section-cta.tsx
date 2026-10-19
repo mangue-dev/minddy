@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { getTranslations } from "next-intl/server";
-import { Button } from "mangue-ui/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { TrackedCta } from "./tracked-cta";
 import { Reveal, RevealHeading } from "./reveal";
 

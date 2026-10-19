@@ -5,7 +5,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { TriangleIcon } from "@hugeicons/core-free-icons";
 
 import { useTranslations } from "next-intl";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { DateTimePicker } from "@/components/date-time-picker";
 import {
   SearchSelect,

@@ -1,7 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Badge, cn } from "mangue-ui";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { parseForgeLogin } from "@/lib/repo-providers";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 

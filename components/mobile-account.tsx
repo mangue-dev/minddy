@@ -5,7 +5,7 @@ import { Analytics01Icon, ComputerIcon, Copy01Icon, CreditCardIcon, Delete02Icon
 import { useMemo, type SVGProps } from "react";
 import { useTranslations } from "next-intl";
 import { useAppRouter } from "@/lib/use-app-router";
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 import type { IconComponent } from "@/components/icon";
 import { useAuth } from "@/lib/auth-context";
 import { useIsAdmin } from "@/lib/use-is-admin";

@@ -19,7 +19,7 @@
  */
 
 import { useEffect, useRef, type RefObject } from "react";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import type { DropPreview } from "@/lib/board-drag";
 
 export type BoardLandingPreview = DropPreview & {

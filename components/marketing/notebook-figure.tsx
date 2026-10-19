@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Checkbox } from "mangue-ui/components/ui/checkbox";
+import { Checkbox } from "@/components/ui/checkbox";
 
 /** Local checklist interaction, using the product's checkbox component. */
 export function NotebookFigure({ title, tasks }: { title: string; tasks: string[] }) {

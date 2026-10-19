@@ -5,14 +5,14 @@ import { AppIcon } from "@/components/icon";
 import { ArrowDown01Icon, CodeSimpleIcon as Code2, Copy01Icon, Search01Icon, TaskDone01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
 import {
-  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  Progress,
-} from "mangue-ui";
+} from "@/components/ui/dropdown-menu";
+import { Progress } from "@/components/ui/progress";
 import { DeferredDocumentEditor } from "@/components/editor/document-editor-lazy";
 import type { DocumentEditorMentions } from "@/components/editor/document-editor";
 import type { DescriptionCollaborationSession } from "@/lib/use-description-collaboration";

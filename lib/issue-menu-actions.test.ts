@@ -17,8 +17,8 @@ const dependencies = vi.hoisted(() => ({
   reuseDestination: vi.fn(() => false),
   toastSuccess: vi.fn(),
 }));
-vi.mock("mangue-ui", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("mangue-ui")>()),
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("sonner")>()),
   toast: { success: dependencies.toastSuccess },
 }));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));

@@ -2,7 +2,7 @@
 
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
+import { ResponsivePopover, ResponsivePopoverContent, ResponsivePopoverTrigger } from "@/components/ui/responsive-popover";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, BulbIcon, Cancel01Icon, Clock01Icon, CollapseIcon, ExpandIcon, Search01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
 import {
@@ -16,13 +16,9 @@ import {
   type ReactNode,
 } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Button,
-  cn,
-  Sheet,
-  SheetContent,
-  SheetTitle,
-} from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { NumoIcon } from "@/components/numo-icon";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 import {
@@ -617,17 +613,17 @@ export const AssistantShell = forwardRef<
   );
 
   // Compact-mode header: no permanent sidebar; conversations live in a
-  // Popover. The new-conversation and close buttons are grouped on the right.
+  // ResponsivePopover. The new-conversation and close buttons are grouped on the right.
   const compactHeader = compact && !embeddedConversationId ? (
     <div
       ref={historyAnchorRef}
       data-mobile-sheet-header
       className="flex shrink-0 items-center gap-1 px-4 py-4"
     >
-      <Popover open={historyOpen} onOpenChange={setHistoryOpen}>
+      <ResponsivePopover open={historyOpen} onOpenChange={setHistoryOpen}>
         <Tooltip>
           <TooltipTrigger asChild>
-            <PopoverTrigger asChild>
+            <ResponsivePopoverTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon-sm"
@@ -635,13 +631,13 @@ export const AssistantShell = forwardRef<
               >
                 <HugeiconsIcon icon={Clock01Icon} className="h-4 w-4" />
               </Button>
-            </PopoverTrigger>
+            </ResponsivePopoverTrigger>
           </TooltipTrigger>
           <TooltipContent side="bottom" sideOffset={6}>
             {t("conversations")}
           </TooltipContent>
         </Tooltip>
-        <PopoverContent
+        <ResponsivePopoverContent
           mobileTitle={t("conversations")}
           side="bottom"
           align="start"
@@ -668,8 +664,8 @@ export const AssistantShell = forwardRef<
               onVisibleCountChange={setVisibleConversationCount}
             />
           </div>
-        </PopoverContent>
-      </Popover>
+        </ResponsivePopoverContent>
+      </ResponsivePopover>
 
       {/* Compact ⇄ expanded toggle — desktop only (mobile is full-bleed). */}
       {onToggleDisplayMode && (
@@ -791,7 +787,7 @@ export const AssistantShell = forwardRef<
         </SecondarySidebar>
       )}
 
-      {/* Mobile sidebar sheet — only outside compact mode (compact uses Popover). */}
+      {/* Mobile sidebar sheet — only outside compact mode (compact uses ResponsivePopover). */}
       {!compact && (
         <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
           <SheetContent side="left" className="w-[280px] p-0 app-desktop:hidden">

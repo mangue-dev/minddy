@@ -13,14 +13,12 @@ vi.mock("@/components/ui/tooltip", () => ({
   TooltipTrigger: ({ children }: { children: React.ReactNode }) => children,
   TooltipContent: () => null,
 }));
-vi.mock("mangue-ui", async () => {
-  const popover = await vi.importActual<Record<string, React.ElementType>>("mangue-ui/components/ui/popover.tsx");
+vi.mock("@/components/ui/command", async (importOriginal) => {
   const { Command } = await import("cmdk");
   return {
-    cn: (...values: unknown[]) => values.filter(Boolean).join(" "),
+    ...(await importOriginal<Record<string, unknown>>()),
     Command, CommandList: Command.List, CommandEmpty: Command.Empty,
     CommandSeparator: Command.Separator,
-    ...popover,
   };
 });
 

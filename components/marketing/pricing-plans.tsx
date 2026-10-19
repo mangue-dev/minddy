@@ -5,7 +5,7 @@ import { ArrowRight01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { cn } from "mangue-ui/lib/utils";
+import { cn } from "@/lib/utils";
 import {
   BILLING_PLANS, annualMonthlyEquivalentEur, annualPriceEur,
   type BillingInterval, type BillingPlanId,

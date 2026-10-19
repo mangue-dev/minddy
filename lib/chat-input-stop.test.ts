@@ -3,7 +3,7 @@
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { TooltipProvider } from "mangue-ui";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const h = vi.hoisted(() => ({
   uploads: {
@@ -21,14 +21,9 @@ vi.mock("./auth-context", () => ({ useAuth: () => ({ user: null }) }));
 vi.mock("./use-attachment-uploads", () => ({ useAttachmentUploads: () => h.uploads }));
 vi.mock("./analytics", () => ({ trackEvent: vi.fn() }));
 // Load the actual primitives without the package barrel's unrelated emoji data.
-vi.mock("mangue-ui", async () => ({
+vi.mock("@/components/theme-provider", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   useTheme: () => ({ resolvedTheme: "light" }),
-  ...await import("mangue-ui/components/ui/button"),
-  ...await import("mangue-ui/components/ui/tooltip"),
-  ...await import("mangue-ui/components/ui/popover"),
-  ...await import("mangue-ui/components/ui/command"),
-  ...await import("mangue-ui/components/ui/send-button-with-cost"),
-  ...await import("mangue-ui/lib/utils"),
 }));
 
 import { ChatInput } from "@/components/assistant/chat-input";

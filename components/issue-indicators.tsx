@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { TriangleIcon } from "@hugeicons/core-free-icons";
-import { cn } from "mangue-ui/lib/utils";
+import { cn } from "@/lib/utils";
 import { useId } from "react";
 import {
   EFFORT_MAP,

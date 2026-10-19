@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { AppIcon } from "@/components/icon";
 import { FileAddIcon as FilePlus, FileEditIcon as FilePen, FileRemoveIcon as FileMinus, FileSymlinkIcon as FileSymlink } from "@hugeicons/core-free-icons";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { FILE_STATUS_LABELS, type FileStatus } from "@/lib/pr-file-tree";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 

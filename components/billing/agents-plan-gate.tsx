@@ -4,7 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { BotIcon } from "@hugeicons/core-free-icons";
 import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
-import { Button } from "mangue-ui";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
 import { usePlanGates } from "@/lib/use-billing-query";
 

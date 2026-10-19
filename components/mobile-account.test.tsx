@@ -7,7 +7,10 @@ import { useMobileAccountIdentity } from "./mobile-account";
 
 const auth = vi.hoisted(() => ({ name: "Camille" as string | undefined }));
 vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: { email: "private@example.com", user_metadata: { name: auth.name } } }) }));
-vi.mock("mangue-ui", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  toast: { error: vi.fn(), success: vi.fn() },
+}));
 
 function Identity() {
   return <output>{JSON.stringify(useMobileAccountIdentity())}</output>;

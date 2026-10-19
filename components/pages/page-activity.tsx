@@ -35,7 +35,8 @@ import { useMemo } from "react";
 import { AppIcon } from "@/components/icon";
 import { LinkOffIcon as Link2Off } from "@hugeicons/core-free-icons";
 import { useQuery } from "@tanstack/react-query";
-import { Spinner, cn } from "mangue-ui";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 
 import { fetchPageApi, fetchPageEventsApi } from "@/lib/pages-api";

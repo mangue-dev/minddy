@@ -9,7 +9,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "mangue-ui/components/ui/select";
+} from "@/components/ui/select";
 import { setLocaleCookie } from "@/lib/set-locale";
 import { switchLocaleHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";

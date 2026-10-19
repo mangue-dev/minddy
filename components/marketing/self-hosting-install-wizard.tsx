@@ -6,9 +6,9 @@ import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, BotIcon, CheckIcon,
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import type { Messages } from "next-intl";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "mangue-ui/components/ui/accordion";
-import { Popover, PopoverContent, PopoverTrigger } from "mangue-ui/components/ui/popover";
-import { cn } from "mangue-ui/lib/utils";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { McpAvatar } from "@/components/actor-avatars";
 import { CopyButton } from "@/components/marketing/copy-button";
 import { CARD_TONES } from "@/components/marketing/card-tones";

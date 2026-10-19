@@ -15,7 +15,7 @@
  *. Same thing for "Modify", and for ESC, which the panel
  * intercepted in capture before the dialog saw it.
  *
- * The selectors are those of Radix (via mango-ui) and Sonner. They describe
+ * The selectors are those of Radix (via components/ui) and Sonner. They describe
  * a library CONVENTION rather than a component of ours: that's why
  * they live here, in one place, rather than copied into each panel.
  */

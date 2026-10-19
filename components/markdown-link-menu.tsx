@@ -7,10 +7,8 @@ import { LinkSquare01Icon, Edit04Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useId, useState } from "react";
 import type { Editor } from "@tiptap/core";
 import { BubbleMenu } from "@tiptap/react/menus";
-import {
-  Button,
-  Input,
-} from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useTranslations } from "next-intl";
 

@@ -29,8 +29,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  cn,
-} from "mangue-ui";
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 import { foldPath } from "@/lib/pages";
 import { isPlainNavigationClick } from "@/components/editor-node-link";
 

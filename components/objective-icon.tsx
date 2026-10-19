@@ -15,7 +15,7 @@
 // neutral: to dye it would be to designate an objective which does not exist.
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Target01Icon } from "@hugeicons/core-free-icons";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 
 /** The color of an objective, including fallback — the same rule as the chips on the
  board (components/issue-property-fields, Dot). */

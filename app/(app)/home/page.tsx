@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { displayName } from "@/lib/display-name";
 import { pickGreeting } from "@/lib/home-greeting";

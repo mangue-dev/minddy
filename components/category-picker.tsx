@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Tag01Icon } from "@hugeicons/core-free-icons";
-import { Button } from "mangue-ui";
+import { Button } from "@/components/ui/button";
 import { useTranslations } from "next-intl";
 import { CategoryPill } from "@/components/category-pill";
 import { SearchMultiSelect, type PickerOption } from "@/components/search-select";

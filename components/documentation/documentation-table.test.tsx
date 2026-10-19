@@ -2,12 +2,10 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { expect, it, vi } from "vitest";
+import { expect, it } from "vitest";
 import { DocumentationTable } from "./documentation-table";
 import { DocumentationDiagram } from "./documentation-diagram";
 import type { DocumentationDiagram as Diagram, DocumentationFigure } from "@/lib/documentation";
-
-vi.mock("mangue-ui", () => import("mangue-ui/lib/utils"));
 
 it("keeps Markdown links, code and alignment in an accessible table", () => {
   const html = renderToStaticMarkup(<ReactMarkdown remarkPlugins={[remarkGfm]} components={{

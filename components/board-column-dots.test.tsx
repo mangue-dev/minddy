@@ -5,8 +5,6 @@ import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { BoardColumnDots } from "./board-column-dots";
 import type { StatusMeta } from "@/lib/issue-constants";
-
-vi.mock("mangue-ui", async () => await import("../node_modules/mangue-ui/src/lib/utils"));
 let root: ReturnType<typeof createRoot>;
 let container: HTMLDivElement;
 let scroller: HTMLDivElement;

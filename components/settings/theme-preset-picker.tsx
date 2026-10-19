@@ -11,7 +11,7 @@ import {
   SelectSeparator,
   SelectTrigger,
   SelectValue,
-} from "mangue-ui";
+} from "@/components/ui/select";
 
 import {
   THEME_PRESET_GROUPS,

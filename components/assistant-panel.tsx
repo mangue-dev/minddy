@@ -6,7 +6,7 @@ import { focusMobileSheet } from "@/lib/mobile-sheet-focus";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Sheet, SheetTitle } from "mangue-ui";
+import { Sheet, SheetTitle } from "@/components/ui/sheet";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 import type { OpenAssistantOptions } from "@/lib/assistant-panel-context";
 import {

@@ -32,7 +32,10 @@ vi.mock("./assistant-api", () => ({ fetchActiveConversation: h.active, setActive
 vi.mock("./auth-context", () => ({ useAuth: () => h.auth }));
 vi.mock("next-intl", () => ({ useLocale: () => "en" }));
 vi.mock("next/navigation", () => ({ useRouter: () => h.router }));
-vi.mock("mangue-ui/components/theme-provider", () => ({ useTheme: () => h.theme }));
+vi.mock("@/components/theme-provider", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  useTheme: () => h.theme,
+}));
 vi.mock("./set-locale", () => ({ setLocaleCookie: async () => {} }));
 import { AssistantChatProvider, useAssistantChatContext, useAssistantUnreadResponseConversationId } from "./assistant-chat-context";
 

@@ -5,11 +5,9 @@ import { MailValidation01Icon } from "@hugeicons/core-free-icons";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import {
-  Button,
-  Input,
-  Spinner,
-} from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { requestOtpAction, verifyOtpAction } from "./actions";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";

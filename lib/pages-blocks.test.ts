@@ -85,7 +85,7 @@ describe("le registre des blocs de page", () => {
   });
 
   // MIN-274: the view of a task is that of the NOTEBOOK, and it pulls the barrel
-  // `mangue-ui`. A block file naming it would make the registry
+  // client UI primitives. A block file naming it would make the registry
   // unimportable outside browser — this entire file would no longer load, and
   // this is what makes it the safeguard (see lib/cx.ts). Hence the sharing: the
   // node to the register, the view injected by the surface.

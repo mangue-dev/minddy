@@ -19,7 +19,7 @@ import * as React from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { TriangleIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
-import { CommandGroup, CommandItem } from "mangue-ui";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { useChordPrefixForEvents } from "@/lib/keyboard/keyboard-context";
 import { useHoverKeys } from "@/lib/keyboard/hover-keys";
 import { selectionKeysActive } from "@/lib/keyboard/selection-keys";

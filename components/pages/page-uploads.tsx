@@ -39,7 +39,7 @@ import {
 } from "react";
 import type { Editor } from "@tiptap/core";
 import { useTranslations } from "next-intl";
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 import { compressImage } from "@/lib/image-compress";
 import {
   MAX_PAGE_FILE_BYTES,

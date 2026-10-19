@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { WorkflowCircle01Icon } from "@hugeicons/core-free-icons";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { NumoFace } from "@/components/numo-face";
 import { McpAgentLogo } from "@/components/mcp-agent-logo";
 import { SmartAssignIcon, SmartFillIcon } from "@/components/smart-icons";

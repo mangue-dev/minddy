@@ -2,12 +2,10 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Button,
-  Input,
-  Spinner,
-  toast,
-} from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { usePrMembersQuery } from "@/lib/use-pr-members-query";

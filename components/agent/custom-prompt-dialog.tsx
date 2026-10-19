@@ -3,9 +3,7 @@
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Textarea,
-} from "mangue-ui";
+import { Textarea } from "@/components/ui/textarea";
 import { FormDialog } from "@/components/form-dialog";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
 

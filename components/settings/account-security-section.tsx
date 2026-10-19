@@ -5,7 +5,12 @@ import { CheckIcon, ComputerIcon, Copy01Icon, Download01Icon, SmartPhone01Icon }
 import {useState} from "react";
 import {useFormatter, useTranslations} from "next-intl";
 import {useQueryClient} from "@tanstack/react-query";
-import {AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Badge, Button, Checkbox, Spinner, toast} from "mangue-ui";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Spinner } from "@/components/ui/spinner";
+import { toast } from "sonner";
 import {useAuth} from "@/lib/auth-context";
 import {SettingsGroup, SettingsEmpty, SettingsListRow, SettingsRow} from "@/components/settings/settings-ui";
 import {SETTINGS_SECTIONS} from "@/lib/settings-sections";

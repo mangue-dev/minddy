@@ -18,7 +18,10 @@ vi.mock("./agent-api", async (importOriginal) => ({
   fetchPrReviewCommentsApi: (...args: unknown[]) => mocks.fetchReview(...args),
   fetchPullRequestCommentsApi: (...args: unknown[]) => mocks.fetchConversation(...args),
 }));
-vi.mock("mangue-ui", () => ({ toast: { error: (...args: unknown[]) => mocks.error(...args) } }));
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  toast: { error: (...args: unknown[]) => mocks.error(...args) },
+}));
 
 function deferred<T>() {
   let resolve!: (value: T) => void;

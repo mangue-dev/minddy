@@ -24,19 +24,19 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Button } from "@/components/ui/button";
 import {
-  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Input,
-  SplitButton,
-  Textarea,
-  cn,
-  toast,
-} from "mangue-ui";
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { SplitButton } from "@/components/ui/split-button";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   StatusIndicator,

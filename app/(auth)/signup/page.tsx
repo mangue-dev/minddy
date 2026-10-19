@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { Spinner } from "mangue-ui";
+import { Spinner } from "@/components/ui/spinner";
 import { SignupWizard } from "@/components/auth/signup-wizard";
 import { resolveInvitationToken } from "@/lib/server/invitation-token";
 

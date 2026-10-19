@@ -7,7 +7,7 @@
 // virtual anchor reports the point itself, whatever the surrounding layout.
 
 import * as React from "react";
-import { PopoverAnchor } from "@/components/ui/responsive-popover";
+import { ResponsivePopoverAnchor } from "@/components/ui/responsive-popover";
 
 export function PointerAnchor({ position }: { position: { x: number; y: number } }) {
   const latest = React.useRef(position);
@@ -15,5 +15,5 @@ export function PointerAnchor({ position }: { position: { x: number; y: number }
   const virtualRef = React.useRef({
     getBoundingClientRect: () => new DOMRect(latest.current.x, latest.current.y, 0, 0),
   });
-  return <PopoverAnchor virtualRef={virtualRef} />;
+  return <ResponsivePopoverAnchor virtualRef={virtualRef} />;
 }

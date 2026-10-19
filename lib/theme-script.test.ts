@@ -118,7 +118,7 @@ describe("buildThemeScript — resolution order", () => {
   });
 
   it("mirrors the account theme back into localStorage", () => {
-    // Without this, mango-ui's provider reads the stale cache on mount and
+    // Without this, the ThemeProvider reads the stale cache on mount and
     // flips <html> back right after hydration — a flash of the wrong theme.
     const result = run(
       buildThemeScript({ defaultTheme: "dark", accountTheme: "light" }),
@@ -231,7 +231,7 @@ describe("buildThemeScript — account palettes (MIN-696)", () => {
       "data-theme-dark": "nord-dark",
       "data-transparency": "off",
     });
-    // The bar takes the ACTIVE palette's chrome, not mango-ui's dark.
+    // The bar takes the ACTIVE palette's chrome, not the token dark.
     expect(result.themeColor).toBe("#272c36");
   });
 

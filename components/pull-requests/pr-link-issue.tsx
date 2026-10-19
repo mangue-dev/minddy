@@ -7,14 +7,11 @@ import { Link02Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import {
-  Button,
-  Spinner,
-  toast,
-  cn,
-  CommandGroup,
-  CommandItem,
-} from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { PickerOption } from "@/components/search-select";
 import { SearchMenu } from "@/components/search-menu";

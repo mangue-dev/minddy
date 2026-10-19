@@ -17,7 +17,7 @@ import {
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 import { useProjects } from "@/lib/projects-context";
 import { capabilitiesForProject } from "@/lib/use-project-capabilities";
 import { useTranslations } from "next-intl";

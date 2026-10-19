@@ -10,8 +10,8 @@ import {
   type NodeViewProps,
 } from "@tiptap/react";
 import { useTranslations } from "next-intl";
-// `cx` and not `cn` of mango-ui: the barrel draws the emoji selector, and the
-// block register would cease to be importable outside the browser (see cx.ts).
+// `cx` and not `cn`: block views keep a dependency-free class join so the
+// block register stays importable outside the browser (see lib/cx.ts).
 import { cx } from "@/components/pages/blocks/cx";
 import {
   NODE_LINK_CLASS,

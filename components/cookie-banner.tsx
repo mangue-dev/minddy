@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Button } from "mangue-ui/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { readConsent, writeConsent, type CookieConsent } from "@/lib/cookie-consent";
 import { isDesktop } from "@/lib/desktop/bridge";
 import { useAnalytics } from "@/lib/use-analytics";

@@ -1,7 +1,7 @@
 /**
  * The HORIZONTAL tabs of the product, tightened.
  *
- * mango-ui draws a SCREEN tab bar: 40 px high in `line`,
+ * The `Tabs` primitive draws a SCREEN tab bar: 40 px high in `line`,
  * `px-4` per tab, and one `flex-1` which stretches them all to the same width — in
  * a `w-full` list, two labels take up half a column each. Our
  * tabs live IN a column, above content that begins

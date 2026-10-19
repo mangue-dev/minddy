@@ -21,7 +21,7 @@ import { Extension, type Editor, type Range } from "@tiptap/core";
 import { ReactRenderer } from "@tiptap/react";
 import { Suggestion, type SuggestionProps } from "@tiptap/suggestion";
 import { PluginKey } from "@tiptap/pm/state";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import {
   insertBlock,
   slashItems,

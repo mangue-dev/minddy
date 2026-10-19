@@ -5,19 +5,15 @@ import { ArrowDown01Icon, CodeSimpleIcon as Code2, Copy01Icon, LinkSquare01Icon,
 import { useState } from "react";
 import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
-import {
-  Badge,
-  Button,
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-  ConfirmDeleteDialog,
-  Input,
-  Skeleton,
-  Spinner,
-  Switch,
-  cn,
-} from "mangue-ui";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 import { ssoEnvLine } from "@/lib/feedback/env-lines";
 import { useIntegrationsQuery } from "@/lib/use-integrations-query";
 import {

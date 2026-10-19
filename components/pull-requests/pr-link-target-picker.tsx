@@ -3,7 +3,8 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { GitPullRequestDraftIcon, GitPullRequestIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
-import { CommandGroup, CommandItem, Spinner } from "mangue-ui";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
+import { Spinner } from "@/components/ui/spinner";
 import { CommandAnchor } from "@/components/command-anchor";
 import type { PullRequestListItem } from "@/lib/agent-api";
 import { useAllPullRequestsQuery } from "@/lib/use-agent-runs";

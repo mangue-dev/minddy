@@ -7,8 +7,10 @@ import { AppIcon } from "@/components/icon";
 import { ArrowUpDownIcon, GaugeIcon as CircleGauge, CheckIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, Command, CommandItem, cn } from "mangue-ui";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
+import { Button } from "@/components/ui/button";
+import { Command, CommandItem } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
+import { ResponsivePopover, ResponsivePopoverContent, ResponsivePopoverTrigger } from "@/components/ui/responsive-popover";
 
 import {
   DEFAULT_MAX_SPEND_PERCENT,
@@ -53,8 +55,8 @@ export function SpendCapCombobox({
     percent >= NO_SPEND_CAP_PERCENT ? t("spendCapNone") : t("spendCapValue", { percent });
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+    <ResponsivePopover open={open} onOpenChange={setOpen}>
+      <ResponsivePopoverTrigger asChild>
         <Button
           type="button"
           variant="ghost"
@@ -68,10 +70,10 @@ export function SpendCapCombobox({
           <span className="max-w-[9rem] truncate">{labelFor(value)}</span>
           <HugeiconsIcon icon={ArrowUpDownIcon} className="size-3 shrink-0 opacity-50" />
         </Button>
-      </PopoverTrigger>
+      </ResponsivePopoverTrigger>
       {/* `rounded-xl`: it is `Command` which paints the surface and it already imposes
  20px. With the 8px removal from the list, the options (12px) are concentric. */}
-      <PopoverContent className="w-72 rounded-xl p-0" align="start">
+      <ResponsivePopoverContent className="w-72 rounded-xl p-0" align="start">
         <Command shouldFilter={false}>
           {/* `p-1`: same 8px indent on ALL FOUR sides. */}
           <CommandList className="p-1">
@@ -103,7 +105,7 @@ export function SpendCapCombobox({
             ))}
           </CommandList>
         </Command>
-      </PopoverContent>
-    </Popover>
+      </ResponsivePopoverContent>
+    </ResponsivePopover>
   );
 }

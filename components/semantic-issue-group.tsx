@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { defaultFilter, useCommandState } from "cmdk";
-import { CommandGroup, CommandItem } from "mangue-ui";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { semanticExtras } from "@/lib/issue-semantic-query";
 import { orderIssuesForSearch } from "@/lib/issue-search-order";
 import { useSemanticIssueSearch } from "@/lib/use-semantic-issue-search";

@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 import type { Page } from "./pages";
 import type { PageSummary } from "./pages-api";
 import type {

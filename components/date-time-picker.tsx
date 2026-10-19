@@ -6,7 +6,7 @@
 // and renders one of four triggers via `variant`. Values are ISO strings
 // (local wall-clock time preserved); `null` means unset.
 
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
+import { ResponsivePopover, ResponsivePopoverContent, ResponsivePopoverTrigger } from "@/components/ui/responsive-popover";
 import { PointerAnchor } from "@/components/pointer-anchor";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { RepeatIcon } from "@hugeicons/core-free-icons";
@@ -21,16 +21,16 @@ import {
   it as rdpIt,
   ptBR as rdpPtBR,
 } from "react-day-picker/locale";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
-  SegmentedControl,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Switch,
-  cn,
-} from "mangue-ui";
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 import { Kbd } from "@/components/ui/kbd";
 import { DATE_ONLY, dueDateFormat, dueDateHasTime, parseDueDate } from "@/lib/due-date";
 import {
@@ -426,7 +426,7 @@ export function DateTimePicker({
       : tooltip;
 
   const popover = (
-    <Popover open={open} onOpenChange={setOpen}>
+    <ResponsivePopover open={open} onOpenChange={setOpen}>
       {variant === "anchored" ? (
         <PointerAnchor position={anchor ?? { x: 0, y: 0 }} />
       ) : (
@@ -434,11 +434,11 @@ export function DateTimePicker({
         // the opening which varies, the more the shape of the tree. The variant
         // “anchored” remains separate — it has no trigger at all, it’s
         // another structure and not an execution switch.
-        <PopoverTrigger asChild>
+        <ResponsivePopoverTrigger asChild>
           <TooltipTrigger asChild>{trigger}</TooltipTrigger>
-        </PopoverTrigger>
+        </ResponsivePopoverTrigger>
       )}
-      <PopoverContent
+      <ResponsivePopoverContent
         mobileTitle={ariaLabel ?? placeholder ?? t("placeholder")}
         align={
           variant === "field" || variant === "ghost" || variant === "anchored"
@@ -564,8 +564,8 @@ export function DateTimePicker({
             </button>
           )}
         </div>
-      </PopoverContent>
-    </Popover>
+      </ResponsivePopoverContent>
+    </ResponsivePopover>
   );
 
   // Unconditional rendering, controlled opening — same reason as `SearchMenu`, same

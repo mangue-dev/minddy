@@ -4,7 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon, Settings01Icon } from "@hugeicons/core-free-icons";
 import { useAppRouter } from "@/lib/use-app-router";
 import { useTranslations } from "next-intl";
-import { CommandGroup, CommandItem } from "mangue-ui";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { McpServiceLogo } from "@/components/mcp-service-logo";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { mcpPresetForUrl } from "@/lib/mcp-catalog";

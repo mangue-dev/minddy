@@ -6,8 +6,6 @@ import ReactMarkdown from "react-markdown";
 import { expect, it, vi } from "vitest";
 import { DocumentationHelpResponse, documentationHelpLinkComponents, rehypeDocumentationSectionReferences } from "./documentation-help-links";
 
-vi.mock("mangue-ui", () => import("mangue-ui/lib/utils"));
-
 const sections = [
   { id: "create-an-issue", title: "Create an issue", level: 2 },
   { id: "implementation-plans", title: "Implementation plans", level: 3 },

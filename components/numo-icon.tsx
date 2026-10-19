@@ -2,7 +2,7 @@
 
 import { useEffect, useId } from "react";
 import { useAnimate, useReducedMotion } from "framer-motion";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { NumoFace, type NumoFaceProps } from "./numo-face";
 
 export type NumoState = "idle" | "thinking";

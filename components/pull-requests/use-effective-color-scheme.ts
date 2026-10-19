@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTheme } from "mangue-ui";
+import { useTheme } from "@/components/theme-provider";
 
 type ColorScheme = "light" | "dark";
 

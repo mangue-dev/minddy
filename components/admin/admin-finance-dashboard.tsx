@@ -4,16 +4,12 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, Refresh01Icon, WorkHistoryIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
-import {
-  Badge,
-  Button,
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-  Skeleton,
-  Spinner,
-  cn,
-} from "mangue-ui";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
 import { ModelBadge } from "@/components/model-badge";
 import {
   Metric,

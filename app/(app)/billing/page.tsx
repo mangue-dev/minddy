@@ -4,7 +4,8 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, toast } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { AppContentHeader } from "@/components/app-content-header";
 import {
   BillingLimits,

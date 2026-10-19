@@ -19,11 +19,9 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useAppNavigation, useAppRouter } from "@/lib/use-app-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations, useLocale } from "next-intl";
-import {
-  AppShell,
-  cn,
-  toast,
-} from "mangue-ui";
+import { AppShell } from "@/components/app-shell";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   AppIcon,
   dataIcon,
@@ -149,7 +147,7 @@ function projectChip(project: Project) {
   );
 }
 
-// mangue-ui's MobileNav renders nav/command icons itself as components, so
+// The mobile menu renders nav/command icons itself as components, so
 // Hugeicons icon DATA must be bridged into components at that boundary only.
 function menuIcon(icon: AppIcon): IconComponent {
   return Array.isArray(icon) ? dataIcon(icon) : (icon as IconComponent);

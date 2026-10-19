@@ -3,7 +3,7 @@
 import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { PlainMarkdownLink } from "@/components/markdown-link";
@@ -17,11 +17,6 @@ import {
   markdownLinkIconUrl,
   markdownLinkPresentation,
 } from "@/lib/markdown-link";
-
-vi.mock("mangue-ui", () => ({
-  cn: (...classes: Array<string | undefined>) =>
-    classes.filter(Boolean).join(" "),
-}));
 
 describe("Markdown links", () => {
   it("routes public web links through the same-origin favicon endpoint", () => {

@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { Spinner } from "mangue-ui";
+import { Spinner } from "@/components/ui/spinner";
 import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
 
 /**

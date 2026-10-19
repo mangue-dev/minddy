@@ -7,11 +7,6 @@ import { renderToString } from "react-dom/server";
 import { IssueActionsMenu, IssueContextMenu } from "@/components/issue-context-menu";
 
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
-// Exercise the real Radix-backed dropdown without loading unrelated emoji assets.
-vi.mock("mangue-ui", async () => ({
-  ...await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/dropdown-menu.tsx"),
-  cn: (...values: unknown[]) => values.filter(Boolean).join(" "),
-}));
 vi.mock("@/components/search-menu", () => ({
   DropdownSearchRow: ({ children }: { children: ReactNode }) => createElement("div", null, children),
   searchInputClass: "",

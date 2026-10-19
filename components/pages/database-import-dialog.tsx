@@ -7,7 +7,9 @@ import { createUuid } from "@/lib/create-uuid";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, Input, toast } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 import {
   WizardDialog,
   type WizardStep,

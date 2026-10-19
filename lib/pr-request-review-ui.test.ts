@@ -8,11 +8,8 @@ import { PrRequestReview } from "@/components/pull-requests/pr-request-review";
 import messages from "@/messages/en.json";
 
 const h = vi.hoisted(() => ({ members: [{ login: "author", avatar_url: null, name: null }, { login: "ada", avatar_url: null, name: "Ada" }], loading: false, request: vi.fn(), membersQuery: vi.fn() }));
-vi.mock("mangue-ui", async () => ({
-  ...await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/button.tsx"),
-  ...await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/dialog.tsx"),
-  ...await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/input.tsx"),
-  ...await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/spinner.tsx"),
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 vi.mock("@/lib/use-pr-members-query", () => ({ usePrMembersQuery: (...args: unknown[]) => {

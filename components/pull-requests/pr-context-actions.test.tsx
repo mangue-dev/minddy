@@ -18,7 +18,10 @@ vi.mock("@/lib/assistant-panel-context", () => ({ useAssistantPanelActions: () =
 vi.mock("@/lib/agent-api", () => ({ actOnPullRequestApi: state.act, prEndpoint: (id: string) => `/api/pull-requests/${id}` }));
 vi.mock("@/lib/pull-request-query", () => ({ pullRequestQueryOptions: (id: string) => ({ queryKey: ["pull-request", id], queryFn: () => state.detail() }) }));
 vi.mock("@/lib/pr-activity-query", () => ({ prReviewCommentsQueryOptions: (endpoint: string | null) => ({ queryKey: ["pr-review-comments", endpoint], queryFn: () => state.reviews() }) }));
-vi.mock("mangue-ui", async () => {
+// Stubs for the UI primitives the component under test renders.
+const uiStubs = vi.hoisted(() => {
+  let value: Promise<Record<string, unknown>> | undefined;
+  return () => (value ??= (async () => {
   const { createElement } = await import("react");
   const Box = ({ children }: { children?: ReactNode }) => createElement("div", null, children);
   return {
@@ -27,6 +30,15 @@ vi.mock("mangue-ui", async () => {
     AlertDialogAction: ({ children, onClick }: { children: ReactNode; onClick: () => void }) =>
       createElement("button", { "data-confirm": true, onClick }, children),
   };
+})());
+});
+vi.mock("sonner", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), toast: stubs.toast };
+});
+vi.mock("@/components/ui/alert-dialog", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), AlertDialog: stubs.AlertDialog, AlertDialogContent: stubs.AlertDialogContent, AlertDialogHeader: stubs.AlertDialogHeader, AlertDialogTitle: stubs.AlertDialogTitle, AlertDialogDescription: stubs.AlertDialogDescription, AlertDialogFooter: stubs.AlertDialogFooter, AlertDialogCancel: stubs.AlertDialogCancel, AlertDialogAction: stubs.AlertDialogAction };
 });
 
 const item = (pr_state: PullRequestListItem["pr_state"] = "open"): PullRequestListItem => ({

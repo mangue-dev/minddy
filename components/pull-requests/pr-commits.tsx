@@ -5,12 +5,8 @@ import { useMemo, useRef, useState } from "react";
 import { AppIcon } from "@/components/icon";
 import { ArrowDown01Icon, ShieldCheckIcon as ShieldCheck } from "@hugeicons/core-free-icons";
 import { useFormatter, useTranslations } from "next-intl";
-import {
-  Badge,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "mangue-ui";
+import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AuthorNames, AuthorStack } from "@/components/git/author-stack";
 import { useForgeNow } from "@/lib/use-forge-now";
 import { normalizeForgeInstant } from "@/lib/forge-time";

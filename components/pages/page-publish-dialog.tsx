@@ -6,14 +6,12 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { MIN_SHARE_PASSWORD_LENGTH } from "@/lib/share-password";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Button,
-  Checkbox,
-  Input,
-  SegmentedControl,
-  Spinner,
-  toast,
-} from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Spinner } from "@/components/ui/spinner";
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   deletePageShareApi,

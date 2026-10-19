@@ -2,7 +2,7 @@
 
 import { useState, type ComponentPropsWithoutRef } from "react";
 import { useTranslations } from "next-intl";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 /** Expand forge images using the same authenticated source as their thumbnail. */
@@ -41,7 +41,7 @@ export function MarkdownImage({
       />
       {canPreview && (
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent aria-describedby={undefined} className="dialog-pane-mirror flex h-[var(--spacing-dialog-h)] max-h-[calc(100dvh-2rem)] max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden p-0 -translate-x-0 -translate-y-0 rounded-(--app-pane-radius) sm:max-h-[var(--spacing-dialog-h)] sm:max-w-[var(--spacing-dialog-w)]">
+          <DialogContent aria-describedby={undefined} className="dialog-pane-mirror flex h-[var(--spacing-dialog-h)] max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden p-0 -translate-x-0 -translate-y-0 rounded-(--app-pane-radius) sm:max-h-[var(--spacing-dialog-h)] sm:max-w-[var(--spacing-dialog-w)]">
             <div className="flex h-16 shrink-0 items-center border-b border-border px-5 pr-14">
               <DialogTitle className="truncate text-sm font-medium">{label}</DialogTitle>
             </div>

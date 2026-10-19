@@ -3,8 +3,11 @@
 import {useEffect, useState} from "react";
 import {useLocale, useTranslations} from "next-intl";
 import {useRouter} from "next/navigation";
-import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SegmentedControl, Switch, toast} from "mangue-ui";
-import type {SegmentedControlOption} from "mangue-ui";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
+import type { SegmentedControlOption } from "@/components/ui/segmented-control";
 
 import {useAuth} from "@/lib/auth-context";
 import {setLocaleCookie} from "@/lib/set-locale";

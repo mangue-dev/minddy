@@ -52,7 +52,7 @@ export interface PageExtensionsOptions {
 
   /**
  * The node views that SURFACE brings, by node name. Same reason as
- * `mention`, and same form: a view that fires the `mangue-ui` barrel cannot
+ * `mention`, and same form: a view that pulls the client UI primitives cannot
  * be named by a block file without making the register unimportable
  * outside the browser. This is where the task shared with the notebook goes through
  * (`taskItem`, cf. components/scratchpad/task-item-view.tsx).

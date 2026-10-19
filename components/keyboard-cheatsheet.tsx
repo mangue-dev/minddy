@@ -8,9 +8,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Search01Icon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
-import {
-  Input,
-} from "mangue-ui";
+import { Input } from "@/components/ui/input";
 import { SidePanel, SidePanelBody, SidePanelContent, SidePanelDescription, SidePanelHeader, SidePanelTitle } from "@/components/ui/side-panel";
 import { KbdSequence } from "@/components/ui/kbd";
 import { useCheatsheet } from "@/lib/keyboard/keyboard-context";

@@ -12,12 +12,14 @@ vi.mock("@/components/actor-avatars", () => ({ McpAvatar: () => null }));
 vi.mock("@/components/marketing/copy-button", () => ({
   CopyButton: ({ text }: { text: string }) => createElement("button", { "data-copy": text }, "Copy"),
 }));
-vi.mock("mangue-ui/components/ui/popover", () => ({
+vi.mock("@/components/ui/popover", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   Popover: ({ children }: { children: React.ReactNode }) => children,
   PopoverTrigger: ({ children }: { children: React.ReactNode }) => children,
   PopoverContent: () => null,
 }));
-vi.mock("mangue-ui/components/ui/accordion", () => ({
+vi.mock("@/components/ui/accordion", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   Accordion: ({ children }: { children: React.ReactNode }) => children,
   AccordionItem: ({ children }: { children: React.ReactNode }) => children,
   AccordionTrigger: ({ children }: { children: React.ReactNode }) => children,

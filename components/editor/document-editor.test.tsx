@@ -10,7 +10,6 @@ import { DocumentEditor, type DocumentEditorApi } from "./document-editor";
 
 const translate = vi.hoisted(() => (key: string) => key);
 vi.mock("next-intl", () => ({ useTranslations: () => translate }));
-vi.mock("mangue-ui", () => ({ cn: (...args: unknown[]) => args.filter(Boolean).join(" ") }));
 vi.mock("@/components/pages/block-gutter", () => ({
   BlockGutter: () => createElement("div", { "data-testid": "gutter" }),
 }));

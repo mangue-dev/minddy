@@ -8,15 +8,12 @@ import { createUuid } from "@/lib/create-uuid";
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Button,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  Spinner,
-  SplitButton,
-  Switch,
-  toast,
-} from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { DropdownMenuItem, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
+import { Spinner } from "@/components/ui/spinner";
+import { SplitButton } from "@/components/ui/split-button";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { CreationRelationPills, CreationRelationsCompact } from "@/components/creation-relations";

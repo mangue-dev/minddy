@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Copy01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState, type ComponentProps } from "react";
-import { cn } from "mangue-ui/lib/utils";
+import { cn } from "@/lib/utils";
 
 /**
  * “Copy” button of a public site configuration block (MIN-93).

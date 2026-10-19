@@ -4,15 +4,15 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, Settings01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import Link from "@/components/app-link";
 import { useFormatter, useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
 import {
-  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "mangue-ui";
+} from "@/components/ui/dropdown-menu";
 import { ProgressRing } from "@/components/progress-ring";
 import { addDays } from "@/lib/cycle";
 import type { BoardCycles, CycleInfo } from "@/lib/types";

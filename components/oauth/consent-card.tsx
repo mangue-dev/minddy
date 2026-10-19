@@ -1,7 +1,8 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Shield01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { getTranslations } from "next-intl/server";
-import { Button, Card, CardContent } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { OAuthLogoPair } from "@/components/oauth/logo-pair";
 
 /**

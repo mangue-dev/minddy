@@ -5,20 +5,18 @@ import { AppIcon } from "@/components/icon";
 import { AlertCircleIcon, ArrowDown01Icon, ArrowRight01Icon, Clock01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Badge,
-  Button,
-  Checkbox,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  Spinner,
-  cn,
-} from "mangue-ui";
+} from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { PointerAnchor } from "@/components/pointer-anchor";
 import { ChecksDonut } from "@/components/pull-requests/pr-insights";

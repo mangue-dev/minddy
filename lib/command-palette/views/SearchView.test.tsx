@@ -12,8 +12,6 @@ import { usePaletteStore } from "../store";
 import type { PaletteItem } from "../types";
 import type { ResultsListProps } from "../components/ResultsList";
 import { SearchView } from "./SearchView";
-
-vi.mock("mangue-ui", async () => await import("../../../node_modules/mangue-ui/src/lib/utils"));
 vi.mock("../styles/SearchView.module.css", () => ({ default: {} }));
 vi.mock("../components/SearchBar", () => ({ SearchBar: () => null }));
 vi.mock("../components/Footer", () => ({ Footer: () => null }));

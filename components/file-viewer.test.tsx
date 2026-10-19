@@ -5,8 +5,8 @@ import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { FileViewer } from "./file-viewer";
 
-vi.mock("mangue-ui", async () => ({
-  ...await import("../node_modules/mangue-ui/src/components/ui/button"),
+vi.mock("@/components/theme-provider", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   useTheme: () => ({ resolvedTheme: "dark" }),
 }));
 vi.mock("./markdown", () => ({ Markdown: ({ children }: { children: ReactNode }) => <article>{children}</article> }));

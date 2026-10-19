@@ -7,14 +7,14 @@ import { usePathname } from "next/navigation";
 import { useAppRouter } from "@/lib/use-app-router";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
 import {
-  Button,
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  cn,
-} from "mangue-ui";
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 import { useProjects } from "@/lib/projects-context";
 import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";

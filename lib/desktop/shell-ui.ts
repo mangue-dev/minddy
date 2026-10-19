@@ -17,11 +17,11 @@ export function desktopShellBrandHtml(): string {
 }
 
 /**
- * Offline-safe subset of minddy and mangue-ui's visual contract.
+ * Offline-safe subset of minddy's visual contract.
  *
  * These documents cannot load the product stylesheet because they are rendered
  * precisely when the selected server is unavailable. Keep this small token and
- * primitive set aligned with app/globals.css and mangue-ui's button/input styles.
+ * primitive set aligned with app/globals.css and the button/input styles of components/ui.
  */
 export function desktopShellStyles(interFontDataUrl?: string): string {
   const fontFace =

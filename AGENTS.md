@@ -6,15 +6,16 @@ agent reads the same rules. Edit both files together;
 
 ## Architecture and entry points
 
-Minddy is a Next.js App Router application with React, Tailwind CSS, and
-`mangue-ui`. Supabase provides Postgres, Auth, Storage, and Realtime. The optional
-Electron shell has a separate package and build under `desktop/`.
+Minddy is a Next.js App Router application with React, Tailwind CSS, and its
+own UI components. Supabase provides Postgres, Auth, Storage, and Realtime. The
+optional Electron shell has a separate package and build under `desktop/`.
 
 | Area | Source of truth |
 | --- | --- |
 | Authenticated product routes | `app/(app)/` |
 | Marketing and legal routes | `app/(marketing)/`, `app/(legal)/`, `lib/public-routes.ts` |
 | HTTP APIs and public capabilities | `app/api/`, `app/f/`, `app/p/` |
+| UI primitives and design tokens | `components/ui/`, `app/tokens.css` |
 | Reusable UI and client behavior | `components/`, `lib/` |
 | Rich text editor engine (every surface) and its block catalog | `components/editor/`, `components/pages/blocks/` |
 | Server business logic | `lib/server/` |
@@ -105,6 +106,19 @@ make the exception obvious from its surrounding code or fixture path.
   edits or invented review dates. Unresolved documentation gaps caused by the
   change block completion.
 
+## UI components
+
+Minddy owns its UI primitives: `components/ui/` holds one implementation per
+component (Radix-based controls, dialogs, sheets, menus, tooltips) and
+`app/tokens.css` the design tokens that `app/globals.css` imports. Change a
+primitive in its file rather than wrapping or re-exporting it under the same
+name elsewhere; a variant with different behavior gets its own name, as
+`ResponsivePopover` does next to `Popover`. Import primitives from their module
+(`@/components/ui/button`, `@/lib/utils` for `cn`, `sonner` for `toast`); there
+is no UI barrel. The former `mangue-ui` package is no longer a dependency, and
+`lib/ui-components-ownership.test.ts` fails if it returns. The persisted theme
+key `mangue-ui-theme` is kept for existing preferences.
+
 ## Internationalization: catalog and call-site contract
 
 Visible interface copy uses `next-intl`. The supported locales are `en`, `fr`,
@@ -171,11 +185,6 @@ change, synchronize both lockfiles using the pinned pnpm version and
 `npm install --package-lock-only --legacy-peer-deps`. Review the lockfile diff;
 preserve `pnpm.packageExtensions`, overrides, and patched dependencies.
 
-`mangue-ui` declares the libraries Minddy also imports (`framer-motion`,
-`sonner`, `cmdk`, `@lobehub/icons`, Hugeicons) as peer dependencies, so both
-share one copy without overrides or patches;
-`lib/mangue-ui-shared-dependencies.test.ts` fails if a second copy returns.
-Change a shared library's major version in mangue-ui's peer range first.
 `@lobehub/icons` is imported per logo file, which needs React alone, so
 `pnpm.packageExtensions` marks its `@lobehub/ui` and `antd` peers optional.
 

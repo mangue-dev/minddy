@@ -10,7 +10,7 @@ import Cursor from "@lobehub/icons/es/Cursor/components/Mono";
 import GeminiColor from "@lobehub/icons/es/Gemini/components/Color";
 import OpenCode from "@lobehub/icons/es/OpenCode/components/Mono";
 import Windsurf from "@lobehub/icons/es/Windsurf/components/Mono";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import type { McpAgentId } from "@/lib/mcp-agents";
 
 type AgentLogoComponent = ComponentType<

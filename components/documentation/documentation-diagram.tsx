@@ -1,4 +1,4 @@
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { DocumentationTable } from "./documentation-table";
 import { CARD_TONES } from "@/components/marketing/card-tones";
 import type { DocumentationDiagram as Diagram, DocumentationFigure } from "@/lib/documentation";

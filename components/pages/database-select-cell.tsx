@@ -6,7 +6,7 @@ import { createUuid } from "@/lib/create-uuid";
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useTranslations } from "next-intl";
-import { CommandGroup, CommandItem, CommandSeparator } from "mangue-ui";
+import { CommandGroup, CommandItem, CommandSeparator } from "@/components/ui/command";
 import { SearchMenu } from "@/components/search-menu";
 import { checkedProps, PickerCreateRow } from "@/components/search-select";
 import { pickFreeCategoryColor } from "@/lib/category-colors";

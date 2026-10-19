@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { useAppRouter } from "@/lib/use-app-router";
 import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
-import { Button } from "mangue-ui";
+import { Button } from "@/components/ui/button";
 import { ProjectTrashDialog } from "@/components/projects/project-trash-dialog";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";

@@ -57,7 +57,10 @@ vi.mock("@/components/settings/settings-ui", () => ({
   SettingsListRow: ({ title, subtitle, action }: { title: ReactNode; subtitle: ReactNode; action: ReactNode }) =>
     <li><span>{title} — {subtitle}</span>{action}</li>,
 }));
-vi.mock("mangue-ui", () => {
+// Stubs for the UI primitives the component under test renders.
+const uiStubs = vi.hoisted(() => {
+  let value: Promise<Record<string, unknown>> | undefined;
+  return () => (value ??= (async () => {
   const Dialog = createContext<(open: boolean) => void>(() => {});
   const content = ({ children }: { children: ReactNode }) => <>{children}</>;
   const Button = ({ variant: _variant, size: _size, ...props }: ComponentProps<"button"> & { variant?: string; size?: string }) =>
@@ -75,6 +78,31 @@ vi.mock("mangue-ui", () => {
       return <button onClick={() => setOpen(false)}>{children}</button>;
     },
   };
+})());
+});
+vi.mock("sonner", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), toast: stubs.toast };
+});
+vi.mock("@/components/ui/badge", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Badge: stubs.Badge };
+});
+vi.mock("@/components/ui/checkbox", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Checkbox: stubs.Checkbox };
+});
+vi.mock("@/components/ui/spinner", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Spinner: stubs.Spinner };
+});
+vi.mock("@/components/ui/button", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Button: stubs.Button };
+});
+vi.mock("@/components/ui/alert-dialog", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), AlertDialog: stubs.AlertDialog, AlertDialogContent: stubs.AlertDialogContent, AlertDialogHeader: stubs.AlertDialogHeader, AlertDialogFooter: stubs.AlertDialogFooter, AlertDialogTitle: stubs.AlertDialogTitle, AlertDialogDescription: stubs.AlertDialogDescription, AlertDialogAction: stubs.AlertDialogAction, AlertDialogCancel: stubs.AlertDialogCancel };
 });
 
 const currentSession = {

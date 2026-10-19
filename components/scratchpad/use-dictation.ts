@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 
 /**
  * Voice dictation for the task notebook — the same recording pipeline as the

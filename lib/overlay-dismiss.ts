@@ -3,7 +3,7 @@ import { hasVisibleOverlay } from "./visible-overlays";
 // Radix portals popper content (dropdown / select / popover) OUTSIDE a Dialog or
 // SidePanel's DOM. So the pointer-down that opens or dismisses a nested popper
 // can read as "outside" to the overlay and close it too — closing the dropdown
-// AND the whole modal/panel at once. mangue-ui only guards this in its drawer
+// AND the whole modal/panel at once. The primitives only guard this in their drawer
 // (mobile) branch; on desktop the Radix layer stacking still lets it slip
 // through, so we guard `onInteractOutside` at the call sites.
 

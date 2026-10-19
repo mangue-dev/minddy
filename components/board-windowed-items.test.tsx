@@ -9,7 +9,6 @@ import type { BoardLandingPreview } from "./board-drop-indicator";
 
 const drag = vi.hoisted(() => ({ active: null as { id: string } | null }));
 vi.mock("@dnd-kit/core", () => ({ useDndContext: () => drag }));
-vi.mock("mangue-ui", () => ({ cn: (...values: unknown[]) => values.filter(Boolean).join(" ") }));
 
 class GeometryObserver {
   static observers = new Set<GeometryObserver>();

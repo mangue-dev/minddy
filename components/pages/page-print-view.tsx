@@ -5,7 +5,7 @@ import { File02Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Spinner } from "mangue-ui";
+import { Spinner } from "@/components/ui/spinner";
 import type { JSONContent } from "@tiptap/core";
 
 import { pageDatabaseDocument } from "@/lib/page-database-document";

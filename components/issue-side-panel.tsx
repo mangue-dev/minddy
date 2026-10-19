@@ -8,16 +8,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAppRouter } from "@/lib/use-app-router";
 import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
-  Button,
-  ConfirmDeleteDialog,
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-  cn,
-  toast,
-} from "mangue-ui";
+} from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { SidePanel, SidePanelBody, SidePanelClose, SidePanelContent, SidePanelFooter, SidePanelTitle } from "@/components/ui/side-panel";
 import {
   AssigneeValue,

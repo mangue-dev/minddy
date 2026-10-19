@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type RefObject } from "react";
 import { useTranslations } from "next-intl";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import type { StatusMeta } from "@/lib/issue-constants";
 
 /** One page per column exists only below the board's 640px breakpoint. */

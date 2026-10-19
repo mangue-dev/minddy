@@ -2,7 +2,8 @@
 
 import {useEffect, useState} from "react";
 import {useTranslations} from "next-intl";
-import {Switch, toast} from "mangue-ui";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
 
 import {useAuth} from "@/lib/auth-context";
 import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";

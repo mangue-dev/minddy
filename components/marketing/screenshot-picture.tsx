@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ComponentProps } from "react";
 import { ScreenshotPreview } from "./screenshot-preview";
-import { cn } from "mangue-ui/lib/utils";
+import { cn } from "@/lib/utils";
 
 /**
  * The `<picture>` of a capture, and its fade on charge (MIN-73, MIN-88).

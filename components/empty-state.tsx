@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 
 type EmptyStateProps = {
   /** Icon element sized by the caller (size-6 for lucide icons). */

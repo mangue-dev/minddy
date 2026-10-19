@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "mangue-ui";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TAB_LIST_DENSE, TAB_TRIGGER_DENSE } from "@/components/tab-bar";
 import { EFFORT_MAP } from "@/lib/issue-constants";
 import { durationParts, fmtNum } from "@/lib/stats-derive";

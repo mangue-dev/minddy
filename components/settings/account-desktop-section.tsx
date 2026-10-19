@@ -3,7 +3,8 @@
 import {useEffect, useState} from "react";
 import {useTranslations} from "next-intl";
 
-import {Button, Switch} from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 
 import {getDesktopBridge} from "@/lib/desktop/bridge";
 import type {DesktopBridge} from "@/lib/desktop/bridge";

@@ -6,17 +6,17 @@ import { Add01Icon, CancelCircleIcon as CircleSlash, RepeatIcon, UserIcon } from
 import { useCallback, useEffect, useState, type SVGProps } from "react";
 import Link from "@/components/app-link";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  Badge,
-  Button,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Skeleton,
-  toast,
-} from "mangue-ui";
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 import { EmptyScene } from "@/components/empty-scene";
 import { SettingsGroup, SettingsListRow } from "@/components/settings/settings-ui";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";

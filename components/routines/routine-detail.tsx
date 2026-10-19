@@ -9,19 +9,19 @@ import { Alert01Icon, ArrowLeft01Icon, ArrowRight01Icon, Delete02Icon, MoreHoriz
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "@/components/app-link";
 import { useFormatter, useLocale, useNow, useTranslations } from "next-intl";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  Badge,
-  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Skeleton,
-  Switch,
-  cn,
-  toast,
-} from "mangue-ui";
+} from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { AssistantShell } from "@/components/assistant/assistant-shell";
 import { AppContentHeader, APP_CONTENT_HEADER_LEADING_INSET } from "@/components/app-content-header";
 import { EmptyScene } from "@/components/empty-scene";

@@ -6,12 +6,10 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, CheckIcon, SquareIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Button,
-  IconButton,
-  Input,
-  cn,
-} from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { AppIcon } from "@/components/icon";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
@@ -188,7 +186,7 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
       );
     }
     // Classic radio: ring + space + full dot when checked. Ink
-    // (`primary`), like mango-ui's Checkbox — no branding color.
+    // (`primary`), like the Checkbox primitive — no branding color.
     return (
       <span
         aria-hidden

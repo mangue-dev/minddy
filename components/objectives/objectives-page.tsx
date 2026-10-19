@@ -10,14 +10,11 @@ import { AppTabRouteBoundary, useAppTabActive, useAppTabRoute } from "@/lib/app-
 import { useOptionalAppTabNavigation } from "@/lib/app-tab-navigation-context";
 import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
-import {
-  Button,
-  CommandGroup,
-  CommandItem,
-  Skeleton,
-  cn,
-  toast,
-} from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { Kbd } from "@/components/ui/kbd";
 import { useProjects } from "@/lib/projects-context";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";

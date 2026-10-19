@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, Spinner, toast } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { toast } from "sonner";
 import { Github, Gitlab } from "@/components/git/provider-icons";
 import { startGitIdentityConnectApi } from "@/lib/git-integration-api";
 import { getRepoProvider } from "@/lib/repo-providers";

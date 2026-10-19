@@ -3,7 +3,9 @@
 import { createContext, useContext, useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Popover, PopoverContent, PopoverTrigger, cn } from "mangue-ui";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { PropertyRow, TRIGGER } from "@/components/issue-property-fields";
 
 export type PrInsightTone = "danger" | "progress" | "success" | "neutral";

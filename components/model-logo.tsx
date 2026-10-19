@@ -35,7 +35,7 @@ import TencentColor from "@lobehub/icons/es/Tencent/components/Color";
 import UpstageColor from "@lobehub/icons/es/Upstage/components/Color";
 import XiaomiMiMo from "@lobehub/icons/es/XiaomiMiMo/components/Mono";
 import ZhipuColor from "@lobehub/icons/es/Zhipu/components/Color";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { providerFromModel } from "@/lib/model-display";
 
 /**

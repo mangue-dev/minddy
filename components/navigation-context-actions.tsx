@@ -1,7 +1,7 @@
 "use client";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Link02Icon, LinkSquare01Icon } from "@hugeicons/core-free-icons";
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { useMemo } from "react";
 import { normalizeAppTabLocation } from "@/lib/app-tab-location";

@@ -3,7 +3,10 @@
 import { AppIcon } from "@/components/icon";
 import { ArrowDown01Icon, GitMergeIcon as GitMerge, GitPullRequestClosedIcon as GitPullRequestClosed, GitPullRequestDraftIcon as GitPullRequestDraft, GitPullRequestIcon as GitPullRequest } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
-import { Badge, Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, cn } from "mangue-ui";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 import type { EditablePrState } from "@/lib/pr-state-transition";
 import type { PullRequestListItem } from "@/lib/agent-api";
 

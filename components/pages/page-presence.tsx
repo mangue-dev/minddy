@@ -16,7 +16,7 @@
 
 import { createContext, useContext, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";

@@ -1,9 +1,7 @@
 "use client";
 
 import type { ComponentProps, FormEvent, ReactNode } from "react";
-import {
-  Button,
-} from "mangue-ui";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { SendShortcutTooltip } from "@/components/send-shortcut";

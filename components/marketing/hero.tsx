@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowUpRight01Icon, Download01Icon } from "@hugeicons/core-free-icons";
 import { getLocale, getTranslations } from "next-intl/server";
-import { Button } from "mangue-ui/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Github } from "@/components/git/provider-icons";
 import { TrackedCta } from "./tracked-cta";
 import { ScreenshotSlot } from "./screenshot-slot";

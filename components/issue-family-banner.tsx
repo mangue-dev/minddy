@@ -4,7 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import Link from "@/components/app-link";
-import { Button } from "mangue-ui";
+import { Button } from "@/components/ui/button";
 import { AppContentHeader } from "@/components/app-content-header";
 import { ProgressRing } from "@/components/progress-ring";
 import { issueIdentifier } from "@/lib/issue-constants";

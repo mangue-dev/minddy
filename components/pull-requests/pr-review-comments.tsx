@@ -5,19 +5,17 @@ import { ArrowDown01Icon, ArrowRight01Icon, ArrowTurnDownIcon, CheckIcon, Copy01
 import { useCallback, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useFormatter, useNow, useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
 import {
-  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  Spinner,
-  cn,
-  toast,
-} from "mangue-ui";
+} from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { DocumentEditor } from "@/components/editor/document-editor";
 import { PrCommentComposer } from "@/components/pull-requests/pr-comment-composer";
 import { PrHunk } from "@/components/pull-requests/pr-hunk";

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 import type {
   FeedbackVoiceDraft,
   FeedbackVoicePatch,

@@ -2,7 +2,7 @@
 // lib/scratchpad-prompt.ts then done with strings.
 //
 // Separate from the view (components/scratchpad/task-item-view.tsx) for the same
-// reason that the schema was from its view: the view draws `mangue-ui` and does not
+// reason that the schema was from its view: the view draws client UI and does not
 // only displays in a browser, whereas this only speaks to ProseMirror and
 // therefore plays on a real document, in a test. It is the channel through which a
 // task arrives at the agent with his section — if he makes a mistake, no one will

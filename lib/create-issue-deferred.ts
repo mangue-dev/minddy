@@ -1,4 +1,4 @@
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 import type { QueryClient } from "@tanstack/react-query";
 
 import { createIssueApi } from "@/lib/issues-api";

@@ -55,7 +55,10 @@ vi.mock("@/components/feedback/feedback-filter-menu", async () => {
       "data-review": String(props.onlyToReview) }, JSON.stringify(props.properties));
   } };
 });
-vi.mock("mangue-ui", async () => {
+// Stubs for the UI primitives the component under test renders.
+const uiStubs = vi.hoisted(() => {
+  let value: Promise<Record<string, unknown>> | undefined;
+  return () => (value ??= (async () => {
   const { createElement, useLayoutEffect } = await import("react");
   const Box = ({ children }: { children?: React.ReactNode }) => createElement("div", null, children);
   const Button = ({ children, onClick, disabled, ...props }: Record<string, any>) => createElement("button",
@@ -69,6 +72,51 @@ vi.mock("mangue-ui", async () => {
     DropdownMenuTrigger: Box, Input: (props: Record<string, any>) => createElement("input", props),
     Skeleton, Spinner: Box, SplitButton: Button, Switch: Box,
     cn: (...classes: unknown[]) => classes.filter(Boolean).join(" "), toast: { error: vi.fn(), success: vi.fn() } };
+})());
+});
+vi.mock("@/components/ui/badge", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Badge: stubs.Badge };
+});
+vi.mock("@/components/ui/button", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Button: stubs.Button };
+});
+vi.mock("@/components/ui/command", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), CommandGroup: stubs.CommandGroup, CommandItem: stubs.CommandItem, CommandSeparator: stubs.CommandSeparator };
+});
+vi.mock("@/components/ui/confirm-delete-dialog", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), ConfirmDeleteDialog: stubs.ConfirmDeleteDialog };
+});
+vi.mock("@/components/ui/dropdown-menu", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), DropdownMenu: stubs.DropdownMenu, DropdownMenuContent: stubs.DropdownMenuContent, DropdownMenuItem: stubs.DropdownMenuItem, DropdownMenuTrigger: stubs.DropdownMenuTrigger };
+});
+vi.mock("@/components/ui/input", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Input: stubs.Input };
+});
+vi.mock("@/components/ui/skeleton", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Skeleton: stubs.Skeleton };
+});
+vi.mock("@/components/ui/spinner", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Spinner: stubs.Spinner };
+});
+vi.mock("@/components/ui/split-button", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), SplitButton: stubs.SplitButton };
+});
+vi.mock("@/components/ui/switch", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Switch: stubs.Switch };
+});
+vi.mock("sonner", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), toast: stubs.toast };
 });
 vi.mock("@/components/ui/dialog", async () => {
   const { createElement } = await import("react");

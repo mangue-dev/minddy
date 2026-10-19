@@ -1,7 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, type UIEvent } from "react";
-import { Skeleton } from "mangue-ui";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AppContentHeader } from "@/components/app-content-header";
 import {
   BOARD_COLUMN_CLASS,

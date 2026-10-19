@@ -13,7 +13,8 @@ import {
   ViewIcon,
   ViewOffIcon,
 } from "@hugeicons/core-free-icons";
-import { ConfirmDeleteDialog, toast } from "mangue-ui";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { toast } from "sonner";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { ContextMenuAction } from "@/components/issue-context-menu";

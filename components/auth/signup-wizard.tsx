@@ -9,7 +9,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
-import { Button, Input, Spinner } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import { WizardStepper } from "@/components/wizard/wizard-stepper";
 import { UserAvatarPicker } from "@/components/user-avatar-picker";
 import {

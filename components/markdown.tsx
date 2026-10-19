@@ -6,7 +6,7 @@ import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { ReadOnlyCodeBlock } from "@/components/assistant/shared-code-renderer";
 import { MarkdownImage } from "@/components/markdown-image";
 import { MarkdownLink, PlainMarkdownLink } from "@/components/markdown-link";

@@ -16,7 +16,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
-import { Button } from "mangue-ui";
+import { Button } from "@/components/ui/button";
 import type { PageBlockConflict } from "@/lib/pages-merge";
 
 /** The start of the text of a block — enough to recognize it on the page. */

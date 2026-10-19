@@ -16,7 +16,7 @@ import dynamic from "next/dynamic";
  * allowed in a Server Component, and the layouts mounting this are ones.
  */
 const Toaster = dynamic(
-  () => import("mangue-ui/components/ui/sonner").then((m) => m.Toaster),
+  () => import("@/components/ui/sonner").then((m) => m.Toaster),
   { ssr: false },
 );
 

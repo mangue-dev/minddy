@@ -28,7 +28,7 @@ import type { Locale } from "@/i18n/config";
  */
 
 const RESEND_URL = "https://api.resend.com/emails";
-/** Minddy's palette (`app/globals.css` + mango-ui tokens, light theme),
+/** Minddy's palette (`app/globals.css` + `app/tokens.css`, light theme),
  * in hexadecimal because email clients do not read `oklch()`. */
 const INK = "#16181e"; // --primary
 const TITLE = "#0a0a0a"; // --foreground

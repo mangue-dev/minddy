@@ -5,7 +5,9 @@ import { ArrowTurnDownIcon, Delete02Icon, LockIcon } from "@hugeicons/core-free-
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
-import { Button, Spinner, cn } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";

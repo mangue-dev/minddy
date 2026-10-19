@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { GitMergeIcon, Target01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
-import { Button } from "mangue-ui";
+import { Button } from "@/components/ui/button";
 import {
   ALL_STATUSES,
   PRIORITIES,

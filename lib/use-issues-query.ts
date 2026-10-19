@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef } from "react";
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 import { createIssueDeferred } from "@/lib/create-issue-deferred";
 import {
   createIssueApi,

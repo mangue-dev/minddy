@@ -2,7 +2,7 @@
 
 import { RelationObjectiveLabel } from "@/components/relation-objective-label";
 import { useTranslations } from "next-intl";
-import { CommandGroup, CommandItem } from "mangue-ui";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { CommandAnchor } from "@/components/command-anchor";
 import { SemanticIssueGroup } from "@/components/semantic-issue-group";
 import { StatusIndicator } from "@/components/issue-indicators";

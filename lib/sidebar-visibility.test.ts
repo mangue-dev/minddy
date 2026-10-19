@@ -17,8 +17,8 @@ vi.mock("framer-motion", async (importOriginal) => ({
   useReducedMotion: () => viewport.reducedMotion,
 }));
 vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => false }));
-vi.mock("mangue-ui", () => ({
-  cn: (...classes: Array<string | false | undefined>) => classes.filter(Boolean).join(" "),
+vi.mock("@/lib/use-media-query", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   useMediaQuery: () => viewport.compact,
 }));
 vi.mock("@/components/ui/tooltip", () => ({

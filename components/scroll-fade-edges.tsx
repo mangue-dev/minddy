@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 
 /**
  * The edge fade of a scroller, drawn NEXT to it rather than PLACED ON it.

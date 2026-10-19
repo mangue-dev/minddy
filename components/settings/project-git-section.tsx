@@ -7,7 +7,11 @@ import { useCallback, useEffect, useRef, useState, type ReactNode, type SVGProps
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, ConfirmDeleteDialog, Spinner, Switch, toast } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
 import { Github, Gitlab } from "@/components/git/provider-icons";
 import { ProviderConnectButtons } from "@/components/git/provider-connect-buttons";
 import { SearchSelect } from "@/components/search-select";

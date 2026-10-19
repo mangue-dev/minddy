@@ -1,5 +1,6 @@
 import type { ComponentProps } from "react";
-import { Skeleton as BaseSkeleton, cn } from "mangue-ui";
+import { Skeleton as BaseSkeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { AppContentHeader, APP_CONTENT_HEADER_LEADING_INSET } from "@/components/app-content-header";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 

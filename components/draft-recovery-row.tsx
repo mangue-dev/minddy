@@ -5,7 +5,8 @@ import { AppIcon } from "@/components/icon";
 import { Cancel01Icon, Clock01Icon as FileClock } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { cn, AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "mangue-ui";
+import { cn } from "@/lib/utils";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import {
   Tooltip,
   TooltipContent,

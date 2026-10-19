@@ -1,19 +1,15 @@
 "use client";
 
 import * as React from "react";
-import {
-  Tooltip as MangueTooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger as MangueTooltipTrigger,
-} from "mangue-ui";
+import { Tooltip as TooltipPrimitive } from "radix-ui";
+import { cn } from "@/lib/utils";
 import {
   createWindowRefocusTracker,
   shouldOpenTooltipOnFocus,
 } from "@/lib/tooltip-focus";
 
 /**
- * Minddy's tooltip wrapper adds two guards around the `mangue-ui` primitive.
+ * Minddy's tooltip primitives, built on Radix with two guards.
  *
  * Radix opens a tooltip whenever its trigger receives focus. Browsers restore
  * focus when a background tab becomes active again, which used to reopen a
@@ -23,10 +19,8 @@ import {
  * Some persistent controls enable a tooltip by changing `open` from `false` to
  * `undefined`. Passing that transition directly to Radix switches the primitive
  * between controlled and uncontrolled state, producing a warning on every
- * sidebar expansion. The wrapper below always controls the primitive while
+ * sidebar expansion. `Tooltip` below always controls the primitive while
  * preserving the intended opt-in behavior.
- *
- * Import tooltip primitives from this module, never directly from `mangue-ui`.
  */
 
 const tracker = createWindowRefocusTracker();
@@ -57,12 +51,33 @@ function isFocusVisible(element: Element): boolean {
   }
 }
 
+/**
+ * The application mounts a single `TooltipProvider` at its root.
+ *
+ * Radix scopes its skip-delay (once one tooltip is open, the next ones appear
+ * instantly) to a provider, so one provider per tooltip would make every hover
+ * pay the full delay again. A tooltip without a provider above it makes Radix
+ * throw, so a missing root provider surfaces on the first render.
+ */
+export function TooltipProvider({
+  delayDuration = 200,
+  ...props
+}: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
+  return (
+    <TooltipPrimitive.Provider
+      data-slot="tooltip-provider"
+      delayDuration={delayDuration}
+      {...props}
+    />
+  );
+}
+
 export function Tooltip({
   open,
   defaultOpen,
   onOpenChange,
   ...props
-}: React.ComponentProps<typeof MangueTooltip>) {
+}: React.ComponentProps<typeof TooltipPrimitive.Root>) {
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(
     defaultOpen ?? false,
   );
@@ -72,7 +87,8 @@ export function Tooltip({
   }, [open]);
 
   return (
-    <MangueTooltip
+    <TooltipPrimitive.Root
+      data-slot="tooltip"
       {...props}
       open={open ?? uncontrolledOpen}
       onOpenChange={(nextOpen) => {
@@ -86,9 +102,10 @@ export function Tooltip({
 export function TooltipTrigger({
   onFocus,
   ...props
-}: React.ComponentProps<typeof MangueTooltipTrigger>) {
+}: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
   return (
-    <MangueTooltipTrigger
+    <TooltipPrimitive.Trigger
+      data-slot="tooltip-trigger"
       onFocus={(event) => {
         onFocus?.(event);
         if (event.defaultPrevented) return;
@@ -106,4 +123,26 @@ export function TooltipTrigger({
   );
 }
 
-export { TooltipContent, TooltipProvider };
+export function TooltipContent({
+  className,
+  sideOffset = 5,
+  children,
+  ...props
+}: React.ComponentProps<typeof TooltipPrimitive.Content>) {
+  return (
+    <TooltipPrimitive.Portal>
+      <TooltipPrimitive.Content
+        data-slot="tooltip-content"
+        sideOffset={sideOffset}
+        className={cn(
+          "z-[60] max-w-[220px] rounded-md bg-foreground px-2.5 py-2 text-xs leading-snug text-background text-left animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
+          className,
+        )}
+        {...props}
+      >
+        {children}
+        <TooltipPrimitive.Arrow className="fill-foreground" />
+      </TooltipPrimitive.Content>
+    </TooltipPrimitive.Portal>
+  );
+}

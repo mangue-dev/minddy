@@ -1,7 +1,7 @@
 "use client";
 
 import { useMobileLayout } from "@/lib/use-mobile-layout";
-import { CommandGroup, CommandItem } from "mangue-ui";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { SearchMenu } from "@/components/search-menu";
 import { actionMenuItems } from "@/lib/visible-overlays";
 
@@ -12,7 +12,7 @@ import { actionMenuItems } from "@/lib/visible-overlays";
 // filter actions (can be deactivated in short menus);
 // • IssueActionsMenu — anchored to a trigger (the “⋯” button of the issue panel).
 // An action carrying `children` becomes a side flyout submenu
-// (inline accordion on mobile, managed by mangue-ui).
+// (inline accordion on mobile, managed by the dropdown-menu primitive).
 //
 // Search (when enabled) filters top level entries
 // (label + keywords), like the old cmdk version. Filtering keeps the focus
@@ -32,7 +32,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "mangue-ui";
+} from "@/components/ui/dropdown-menu";
 import { Kbd } from "@/components/ui/kbd";
 import { DropdownSearchRow, searchInputClass } from "@/components/search-menu";
 

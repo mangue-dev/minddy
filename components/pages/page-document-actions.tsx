@@ -4,7 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Copy01Icon, Delete02Icon, Download01Icon, File02Icon, FileDownloadIcon, GlobeIcon, PrinterIcon, StarIcon, StarOffIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { PagePublishDialog } from "@/components/pages/page-publish-dialog";
 import { PageAgentCopyDialog } from "@/components/pages/page-agent-copy-dialog";

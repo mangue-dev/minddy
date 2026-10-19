@@ -1,7 +1,7 @@
 "use client";
 
 import { OTPInput, REGEXP_ONLY_DIGITS, type SlotProps } from "input-otp";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 
 /**
  * Entering a six-digit code — two groups of three, separated by a hyphen

@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 import { applyBriefApi, type SeedCommitResponse } from "@/lib/seed-api";
 import type { SeedProposal } from "@/lib/seed/types";
 

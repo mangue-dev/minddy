@@ -17,7 +17,10 @@ vi.mock("@/components/ui/tooltip", () => ({
   TooltipTrigger: ({ children }: { children: React.ReactNode }) => children,
   TooltipContent: () => null,
 }));
-vi.mock("mangue-ui", () => {
+// Stubs for the UI primitives the component under test renders.
+const uiStubs = vi.hoisted(() => {
+  let value: Promise<Record<string, unknown>> | undefined;
+  return () => (value ??= (async () => {
   const Wrapper = ({ children }: { children: React.ReactNode }) => <div>{children}</div>;
   return {
     Button: ({ children, variant: _variant, size: _size, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: string; size?: string }) => <button {...props}>{children}</button>,
@@ -28,6 +31,43 @@ vi.mock("mangue-ui", () => {
     Skeleton: () => null, Spinner: () => null, Switch: () => null,
     cn: (...values: unknown[]) => values.filter(Boolean).join(" "), toast: { success: vi.fn(), error: vi.fn() },
   };
+})());
+});
+vi.mock("@/components/ui/button", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Button: stubs.Button };
+});
+vi.mock("@/components/ui/input", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Input: stubs.Input };
+});
+vi.mock("@/components/ui/badge", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Badge: stubs.Badge };
+});
+vi.mock("@/components/ui/select", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Select: stubs.Select, SelectContent: stubs.SelectContent, SelectItem: stubs.SelectItem, SelectTrigger: stubs.SelectTrigger, SelectValue: stubs.SelectValue };
+});
+vi.mock("@/components/ui/sheet", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Sheet: stubs.Sheet, SheetContent: stubs.SheetContent, SheetDescription: stubs.SheetDescription, SheetHeader: stubs.SheetHeader, SheetTitle: stubs.SheetTitle };
+});
+vi.mock("@/components/ui/skeleton", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Skeleton: stubs.Skeleton };
+});
+vi.mock("@/components/ui/spinner", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Spinner: stubs.Spinner };
+});
+vi.mock("@/components/ui/switch", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Switch: stubs.Switch };
+});
+vi.mock("sonner", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), toast: stubs.toast };
 });
 import { AdminUsersDashboard } from "./admin-users-dashboard";
 

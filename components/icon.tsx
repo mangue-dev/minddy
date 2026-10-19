@@ -65,7 +65,7 @@ export function AppIcon({
 
 /**
  * Bridge icon DATA into a React component, for contracts that render the icon
- * themselves as a component (mangue-ui `NavItem`, `CommandMenuItem`…).
+ * themselves as a component (`NavItem` of components/nav-types.ts, command-menu items…).
  */
 export function dataIcon(icon: IconSvgElement): IconComponent {
   const DataIcon = ({

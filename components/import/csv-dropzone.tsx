@@ -4,7 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { FileUploadIcon } from "@hugeicons/core-free-icons";
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 
 /**
  * The CSV drop zone, and the link to the template — the only gesture of

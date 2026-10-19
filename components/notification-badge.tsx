@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { countLabel } from "@/components/nav-badge";
 
 /**

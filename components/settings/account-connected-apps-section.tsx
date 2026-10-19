@@ -5,7 +5,9 @@ import { AppWindowIcon as AppWindow, GlobeIcon } from "@hugeicons/core-free-icon
 import { useState } from "react";
 import { useTranslations, useFormatter } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, ConfirmDeleteDialog, toast } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { toast } from "sonner";
 import { revokeOAuthGrantApi, type OAuthGrant } from "@/lib/oauth-grants-api";
 import { oauthGrantsQueryKey, useOAuthGrantsQuery } from "@/lib/use-oauth-grants-query";
 import { isMcpAgentId } from "@/lib/mcp-agents";

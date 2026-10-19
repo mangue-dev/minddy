@@ -4,7 +4,7 @@ import { createUuid } from "@/lib/create-uuid";
 
 import { useCallback, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 import { forgeAttachmentMarkdown } from "@/lib/forge-image-assets";
 import { compressImage } from "@/lib/image-compress";
 import { MAX_ATTACHMENT_UPLOAD_BYTES, MAX_ATTACHMENT_UPLOAD_MB } from

@@ -1,5 +1,5 @@
 import { Children, cloneElement, isValidElement, type CSSProperties, type ReactNode } from "react";
-import { cn } from "mangue-ui/lib/utils";
+import { cn } from "@/lib/utils";
 import { CARD_TONES } from "@/components/marketing/card-tones";
 import { FEATURE_TABLE_PANEL, FEATURE_TABLE_SEPARATOR } from "@/components/marketing/feature-table-styles";
 

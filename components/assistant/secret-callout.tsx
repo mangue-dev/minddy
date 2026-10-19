@@ -4,7 +4,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Copy01Icon, Key02Icon, CheckIcon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, Input } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { REDACTED_MARK } from "@/lib/server/agent/redact";
 import { ssoEnvLine } from "@/lib/feedback/env-lines";
 import {

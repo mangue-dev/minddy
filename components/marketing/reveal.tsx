@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, type CSSProperties, type ReactNode, type Ref } from "react";
-import { cn } from "mangue-ui/lib/utils";
+import { cn } from "@/lib/utils";
 
 /**
  * Appearances in the landing scroll (MIN-73).

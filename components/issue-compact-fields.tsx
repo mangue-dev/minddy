@@ -9,7 +9,8 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Tag01Icon, Target01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
-import { cn, Switch } from "mangue-ui";
+import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
 import { useId } from "react";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { SmartFillIcon } from "@/components/smart-icons";

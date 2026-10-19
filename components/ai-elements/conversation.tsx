@@ -2,7 +2,8 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
-import { Button, cn } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { useScrollFade } from "@/lib/use-scroll-fade";

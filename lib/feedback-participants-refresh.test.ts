@@ -11,10 +11,20 @@ vi.mock("@/components/settings/settings-ui", () => ({
   SettingsGroup: ({ children }: { children: ReactNode }) => createElement("section", null, children),
   SettingsEmpty: ({ children }: { children: ReactNode }) => createElement("p", null, children),
 }));
-vi.mock("mangue-ui", () => ({
+vi.mock("@/components/ui/input", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   Input: (props: { onChange: typeof input.onChange; value: string }) => { input.onChange = props.onChange; return createElement("input", { value: props.value, readOnly: true }); },
+}));
+vi.mock("@/components/ui/button", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   Button: ({ children, onClick, disabled }: { children: ReactNode; onClick: () => void; disabled: boolean }) => createElement("button", { onClick, disabled }, children),
+}));
+vi.mock("@/components/ui/confirm-delete-dialog", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   ConfirmDeleteDialog: () => null,
+}));
+vi.mock("@/components/ui/spinner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   Spinner: () => createElement("div", { "data-spinner": true }),
 }));
 afterEach(() => vi.unstubAllGlobals());

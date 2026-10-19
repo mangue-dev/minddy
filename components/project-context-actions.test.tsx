@@ -25,10 +25,12 @@ vi.mock("@/lib/use-pages-query", () => ({ useCreatePage: () => vi.fn() }));
 vi.mock("@/lib/use-hidden-projects", () => ({ useHiddenProjects: () => ({
   isHidden: (id: string) => state.hidden.has(id), setProjectHidden: state.setProjectHidden,
 }) }));
-vi.mock("mangue-ui", () => ({
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   toast: state.toast,
-  // The trash dialog and the hide confirmation both use it; the title's
-  // namespace tells them apart.
+}));
+vi.mock("@/components/ui/confirm-delete-dialog", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   ConfirmDeleteDialog: (props: { open: boolean; onConfirm: () => Promise<void>; title: string }) => {
     if (props.title.startsWith("Nav.")) state.hideDialog = props;
     else state.dialog = props;

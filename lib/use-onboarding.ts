@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, createElement, useContext, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 import { useAuth } from "./auth-context";
 import { useProjects } from "./projects-context";
 import { useHomeSummaryQuery } from "./use-home-summary-query";

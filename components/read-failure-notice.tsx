@@ -2,8 +2,8 @@
 
 import { useEffect, useReducer } from "react";
 import { useTranslations } from "next-intl";
-import { Button } from "mangue-ui/components/ui/button";
-import { cn } from "mangue-ui/lib/utils";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { readFailureKind, readFailureRetryAt } from "@/lib/read-failure";
 import { signInRedirectAfterSignOut } from "@/lib/signed-out-redirect";
 

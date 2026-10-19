@@ -27,7 +27,10 @@ vi.mock("./issues-api", () => ({
   updateIssueApi: vi.fn(),
   deleteIssueApi: (...args: unknown[]) => mocks.deleteIssue(...args),
 }));
-vi.mock("mangue-ui", () => ({ toast: { error: vi.fn() } }));
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  toast: { error: vi.fn() },
+}));
 
 let client: QueryClient;
 let hook: ReturnType<typeof useGlobalBoardQuery>;

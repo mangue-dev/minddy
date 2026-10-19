@@ -12,20 +12,18 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "@/components/app-link";
 import { useAppRouter } from "@/lib/use-app-router";
 import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
-  Button,
-  ConfirmDeleteDialog,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  cn,
-  toast,
-} from "mangue-ui";
+} from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { AppContentHeader } from "@/components/app-content-header";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the objectives route —

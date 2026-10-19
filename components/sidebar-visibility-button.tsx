@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { AppIcon } from "@/components/icon";
 import { PanelLeftCloseIcon, PanelLeftOpenIcon } from "@hugeicons/core-free-icons";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { KbdSequence } from "@/components/ui/kbd";
 import { SIDEBAR_TOOLTIP_DELAY_MS } from "@/lib/sidebar-control-styles";

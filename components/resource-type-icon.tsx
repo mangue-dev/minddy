@@ -1,4 +1,4 @@
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { AppIcon } from "@/components/icon";
 import { ArchiveIcon as FileArchive, AudioLinesIcon as FileAudio, BracesIcon as Braces, FileCodeIcon as FileCode2, FileTextIcon as FileText, FileTypeIcon as FileType2, FileVideoIcon as FileVideo, ImageIcon, PaperclipIcon as Paperclip, PresentationIcon as Presentation, SheetIcon as FileSpreadsheet } from "@hugeicons/core-free-icons";
 

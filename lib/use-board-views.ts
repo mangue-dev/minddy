@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useOptionalAppTabNavigation } from "./app-tabs-context";
 import { useTranslations } from "next-intl";
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 import {
   DEFAULT_CONFIG,
   configsEqual,

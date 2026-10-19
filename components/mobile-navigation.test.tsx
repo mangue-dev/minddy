@@ -23,12 +23,6 @@ vi.mock("./app-sidebar", () => ({
 }));
 vi.mock("./mobile-nav-actions", () => ({ MobileNavActions: () => null }));
 vi.mock("@/components/icon", () => ({ AppIcon: (props: { className?: string }) => <svg aria-hidden className={props.className} /> }));
-vi.mock("mangue-ui", async () => ({
-  ...await import("../node_modules/mangue-ui/src/components/ui/dialog"),
-  ...await import("../node_modules/mangue-ui/src/components/ui/sheet"),
-  ...await import("../node_modules/mangue-ui/src/components/ui/button"),
-  ...await import("../node_modules/mangue-ui/src/lib/utils"),
-}));
 vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => navigation.mobile }));
 const activeElement = <T extends HTMLElement>(selector: string) => [...document.querySelectorAll<T>(selector)].find((node) => !node.closest("[inert]"))!;
 const activePanel = () => activeElement<HTMLElement>("[data-mobile-sidebar-panel]");

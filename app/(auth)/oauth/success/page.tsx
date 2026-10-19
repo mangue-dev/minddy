@@ -6,7 +6,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "mangue-ui";
+} from "@/components/ui/card";
 import { appPageMetadata } from "@/lib/app-metadata";
 import { getClient } from "@/lib/server/oauth/clients";
 import { OAuthSuccessCard } from "@/components/oauth/success-card";

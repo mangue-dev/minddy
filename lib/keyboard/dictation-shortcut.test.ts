@@ -9,11 +9,8 @@ import { DictateButton } from "@/components/ai-elements/dictate-button";
 
 vi.mock("next-intl", () => ({ useLocale: () => "en", useTranslations: () => (key: string) => key }));
 // Use the real Radix popover/tooltip primitives, including their portals and refs.
-vi.mock("mangue-ui", async () => ({
-  ...(await vi.importActual<Record<string, unknown>>("mangue-ui/lib/utils.ts")),
-  ...(await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/popover.tsx")),
-  ...(await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/tooltip.tsx")),
-  ...(await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/spinner.tsx")),
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   toast: { error: vi.fn(), info: vi.fn() },
 }));
 
@@ -76,7 +73,7 @@ function mic(name: string, disabled = false, hideWhenIdle = false) {
 }
 
 function surface(slot: string, child: React.ReactNode, style?: React.CSSProperties, state = "open") {
-  // Match the DOM contract of mangue-ui's portaled Dialog/SidePanelContent.
+  // Match the DOM contract of the portaled Dialog/SidePanelContent primitives.
   return createPortal(createElement("div", {
     role: slot === "alert-dialog-content" ? "alertdialog" : "dialog",
     "data-slot": slot, "data-state": state, style: { position: "fixed", zIndex: 50, ...style },

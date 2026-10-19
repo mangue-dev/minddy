@@ -5,7 +5,7 @@ import { Cancel01Icon, Search01Icon } from "@hugeicons/core-free-icons";
 import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
 
 import { useEffect, useRef } from "react";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { isTypingTarget } from "@/lib/keyboard/keyboard-context";
 import { eventKey } from "@/lib/keyboard/event-key";
 import { moveSidebarFilterResultFocus } from "@/lib/keyboard/sidebar-filter-navigation";

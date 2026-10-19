@@ -5,7 +5,7 @@ import { Activity01Icon, AnalyticsDownIcon, AnalyticsUpIcon, CancelCircleIcon as
 import { AppIcon } from "@/components/icon";
 import { useMemo } from "react";
 import { useFormatter, useNow, useTimeZone, useTranslations } from "next-intl";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,

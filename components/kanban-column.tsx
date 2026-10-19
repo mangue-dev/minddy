@@ -5,7 +5,7 @@ import { Add01Icon } from "@hugeicons/core-free-icons";
 import { memo, useCallback, useRef } from "react";
 import { useAppRouter } from "@/lib/use-app-router";
 import { useDroppable } from "@dnd-kit/core";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { BOARD_COLUMN_CLASS } from "@/lib/board-layout";
 import type { DropPreview } from "@/lib/board-drag";
 import {

@@ -1,10 +1,9 @@
 @import "tailwindcss";
-@import "mangue-ui/tokens.css";
+@import "./tokens.css";
 /* Per-mode palettes chosen on the account (MIN-696). Their selectors outweigh
    the mode overrides below, so the import can stay with the others. */
 @import "./theme-presets.css";
 @import "streamdown/styles.css";
-@source "../node_modules/mangue-ui/src";
 /* Streamdown (Numo markdown rendering): without these @sources, Tailwind does not generate
    classes used by components and everything renders in unstyled boxes. */
 @source "../node_modules/streamdown/dist/*.js";
@@ -104,21 +103,6 @@ html[data-desktop-app] .sidebar-nav-hotzone {
   }
 }
 
-/* Desktop dropdowns keep their density even on a touch-capable wide viewport. */
-:root[data-app-layout="desktop"] {
-  [data-slot="dropdown-menu-item"],
-  [data-slot="dropdown-menu-checkbox-item"],
-  [data-slot="dropdown-menu-radio-item"],
-  [data-slot="dropdown-menu-sub-trigger"] {
-    padding-block: 0.375rem !important;
-  }
-}
-
-/* Keep tooltip copy aligned to a consistent reading edge. */
-[data-slot="tooltip-content"] {
-  text-align: left;
-}
-
 /* Keyboard keys need fonts that DRAW the shortcut glyphs (⌘ ⌥ ⇧ ⌃ ⏎ live in
    the Miscellaneous Technical block, U+2300–23FF) — Inter, the app's sans,
    has none of them, so every modifier fell back to an arbitrary font with
@@ -140,7 +124,12 @@ html[data-desktop-app] .sidebar-nav-hotzone {
    still letting the surrounding surface show through. The stronger blur gives
    the translucent surface its separation without turning every menu into a
    heavy glass panel. The filter is limited to these short-lived surfaces and
-   does not use `will-change`, which would keep large compositor layers alive. */
+   does not use `will-change`, which would keep large compositor layers alive.
+
+   One system for primitives and app surfaces alike (`[data-floating-surface]`,
+   `[role="menu"]`), which is why it lives here and not in each primitive; the
+   palettes of app/theme-presets.css override it for transparency off and high
+   contrast. */
 :is(
   [data-slot="popover-content"],
   [data-slot="dropdown-menu-content"],
@@ -188,13 +177,6 @@ html[data-desktop-app] .sidebar-nav-hotzone {
   [data-floating-surface],
   [role="menu"]
 ) [data-slot="command"] {
-  background-color: transparent;
-}
-
-/* Select's scroll controls are part of the same surface and should not paint
-   an opaque strip over the translucent list. */
-[data-slot="select-content"]
-  :is([data-slot="select-scroll-up-button"], [data-slot="select-scroll-down-button"]) {
   background-color: transparent;
 }
 
@@ -272,14 +254,6 @@ a.markdown-link[data-documentation-citation]::before {
   unicode-range: U+2190-21FF, U+27F0-27FF;
 }
 
-/* ── Your theme ───────────────────────────────────────────────────────────────
-   This file is yours. Override any mangue-ui token here — your values win by
-   cascade (they come after the @import). The whole library recolors from
-   --primary, and your own `bg-primary` / `text-foreground` utilities use the
-   same variables. Change or delete the block below to make it your own. */
-:root { --primary: oklch(0.21 0.012 265); }                          /* ink, white text on top */
-.dark { --primary: oklch(0.97 0.004 265); --primary-foreground: oklch(0.18 0.01 265); }
-
 /* ── The Mention Pill (components/mention-chip.tsx) ───────────────────────
    It is TINTED BY TYPE: the background and the text are the same rested color
    with two lights, the one that sinks into the page and the one that can be read on it.
@@ -340,36 +314,27 @@ a.markdown-link[data-documentation-citation]::before {
   --mention-page: oklch(0.55 0.2 277);
 }
 
-/* ── The thumb of a checked switch (mango-ui Switch) ──────────────────────
-   Same cause as the pill above, and this is the price of our --primary
-   of ink. The checked track is in --primary; mango-ui painted the thumb in
-   --card in light and --foreground in DARK, which works with its shade of
-   mark but not here: in dark our ink is almost white, so thumb
-   white on white track — the switched switch was only a bar
-   pleine, sans rien qui bouge dedans.
-
-   What lands ON --primary has a color intended for that: --primary-
-   foreground. It applies to both themes (white on light ink, ink
-   on dark white), so the rule is not conditioned by the theme. She doesn't
-   key only in checked state: unchecked, the track is neutral and the thumb clear
-   original is the correct one. */
-[data-slot="switch"][data-state="checked"] [data-slot="switch-thumb"] {
-  background-color: var(--primary-foreground);
-}
-
 /* ── A ghost stays transparent ──────────────────────────────────────────────
-   mango-ui 0.8.0 paints the ghost variant `bg-background` — it assumes the
+   The button primitive paints the ghost variant `bg-background` — it assumes the
    button rests on a surface of its own color. On minddy's gray chrome that
    makes every quiet chrome button (new ticket, usage, scratchpad, board
    filter, create objective…) read as a floating white pill. A ghost's whole
-   point is to borrow the surface it sits on, so restore transparency: the
-   variant keeps its hover / expanded feedback (`hover:bg-control-hover`,
-   `aria-expanded:bg-control-hover`), and the off-layer rule beats the
-   `bg-background` utility compiled by the dependency. Explicit `bg-*` classes
-   a caller passes are lost in the process — they carried the same 0.7-era
-   look (white on white), not a different one.
+   point is to borrow the surface it sits on.
 
-   Keyed on `data-variant` alone, NOT on `[data-slot="button"]`: a ghost
+   This out-of-layer rule beats every background UTILITY on a ghost button,
+   whatever its state: the variant's own `hover:bg-control-hover` and
+   `aria-expanded:bg-control-hover`, and the `bg-*` / `hover:bg-*` classes call
+   sites pass, so ghost buttons show no hover background. Only `!important`
+   utilities (`disabled:bg-control!`) and more specific out-of-layer rules
+   (`.code-block-node-actions button:hover`, `.page-callout-icon-button:hover`)
+   paint one.
+
+   It stays here rather than in `buttonVariants` on purpose: moving it into a
+   utility would revive those hover and call-site backgrounds (about thirty
+   call sites, some through shared class constants), which is a design change
+   to make deliberately, not as a side effect.
+
+   Keyed on `data-variant` alone, not on the button's `data-slot`: a ghost
    wrapped in `TooltipTrigger asChild` (every sidebar button) carries the
    tooltip's `data-slot="tooltip-trigger"` instead. `button` bounds the rule
    to buttons — menu items and chips use their own data-variant values. */
@@ -466,7 +431,7 @@ button[data-variant="ghost"] {
   --app-tab-background: color-mix(in oklab, var(--sidebar-accent) 55%, transparent);
   --app-tab-active-background: var(--background);
 
-  /* mango-ui 0.8.0 fills its borderless controls with an opaque gray
+  /* The primitives fill their borderless controls with an opaque gray
      (--control oklch(0.935)) that reads heavy next to our white surfaces —
      inputs and outline buttons sat as dark chips on the page. Since the
      controls carry no border anymore, the fill must stay whisper-light to
@@ -510,7 +475,7 @@ button[data-variant="ghost"] {
    The chrome — tab strip, sidebar, and the bands they leave at the bottom and
    on the right — fills the window with --sidebar and carries no borders: the
    shared surface makes it one continuous frame. The content column (header
-   clearance + <main>, mangue-ui app-shell's right child) floats over it as a
+   clearance + <main>, the AppShell's right child) floats over it as a
    rounded card, clear of the right and bottom window edges, flush against the
    top bar above and the sidebar on its left. Desktop only; in mobile layout the
    shell keeps its classic full-bleed layout and floating pill navigation.
@@ -586,7 +551,7 @@ button[data-variant="ghost"] {
   .dialog-pane-mirror {
     position: fixed !important;
     inset: 44px 12px 36px 320px !important;
-    /* mangue-ui centers the dialog with the INDIVIDUAL properties
+    /* The dialog primitive is centered with the INDIVIDUAL properties
        (`-translate-x/y-1/2` in Tailwind v4 = `translate`), and its open/close
        animation runs on scale — neither is reached by `transform: none`. */
     transform: none !important;
@@ -611,13 +576,8 @@ button[data-variant="ghost"] {
   }
 }
 
-/* Use Inter for headings too — Space Grotesk is no longer loaded, so remap the
-   `font-display` utility (mangue-ui points it at --font-space-grotesk). */
-@theme inline {
-  --font-display: var(--font-inter);
-}
 
-/* Add your own tokens and reuse mangue-ui's anywhere. */
+/* Application tokens; the design tokens live in app/tokens.css. */
 :root {
   --ticket-urgent: oklch(0.62 0.24 25);
 }
@@ -640,11 +600,11 @@ button[data-variant="ghost"] {
    PLEASE NOTE: styling a scrollbar causes it to lose its OVERLAY mode.
    On macOS, where it floated above the content without taking anything from it, it
    now reserves its 10 px as soon as there is something to scroll. This is the price of one
-   bar that belongs to us; `no-scrollbar` (mango-ui) stays where we prefer
+   bar that belongs to us; `no-scrollbar` (app/tokens.css) stays where we prefer
    have nothing at all, like the columns of the board.
 
    The thumb (`--scrollbar-thumb`, `--scrollbar-thumb-hover`) and the utility
-   `scrollbar-quiet` come from mango-ui since 0.5.0. What remains here is
+   `scrollbar-quiet` come from app/tokens.css. What remains here is
    the only thing that the library leaves to the app: the decision to apply this
    bar on ALL surfaces, via the universal selector. */
 @layer base {
@@ -690,24 +650,6 @@ button[data-variant="ghost"] {
     outline: 2px solid transparent;
     outline-offset: 2px;
   }
-}
-
-/* ─── Tabs: no focus ring ───────────────────────────────────────────── */
-
-/* The same Chromium behavior the base rule above mutes for the UA outline
-   also re-lights the focus RINGS of the tab triggers: click a tab (mouse
-   focus — nothing shows), then press Shift, Space or any other key for its
-   own sake, and Chromium re-evaluates `:focus-visible` on that keydown —
-   the trigger lights its blue ring although the keyboard never navigated.
-   A tab already shows its selection; it must not grow a second state just
-   because a key was pressed. Drop the ring and the border tint on the
-   panel tabs (mangue-ui `TabsTrigger`). Declared out of any layer on
-   purpose: the trigger's ring utilities live in the utilities layer, and an
-   out-of-layer rule beats them regardless of specificity — the same trick
-   as the finger-target rules below. */
-[data-slot="tabs-trigger"]:focus-visible {
-  --tw-ring-shadow: 0 0 0 #0000;
-  border-color: transparent;
 }
 
 /* ─── Numo (assistant) ──────────────────────────────────────────────── */
@@ -1088,10 +1030,9 @@ button[data-variant="ghost"] {
    Exporting `viewport` from the root layout (app/layout.tsx) renders the page with full bleed,
    which finally gives a value to the `env(safe-area-inset-*)` already written in the
    deposit. The counterpart is immediate: what touched an edge of the screen
-   Now touch the notch or the home indicator bar. This block pays
-   this counterpart for the surfaces which come from mango-ui — we do not patch
-   not node_modules, we aim for its `data-slot`, exactly as does the
-   release of the movable bar just above.
+   Now touch the notch or the home indicator bar. The centered dialogs take
+   the insets off their own cap (components/ui/dialog.tsx, alert-dialog.tsx);
+   the shell and the sheets are handled here.
 
    `display: standalone` in app/manifest.json: minddy is installing. This is where
    the TOP inset exists — in a Safari tab, the URL bar already occupies the
@@ -1109,29 +1050,15 @@ button[data-variant="ghost"] {
   padding-right: env(safe-area-inset-right);
 }
 
-/* mango-ui dialogs are centered and capped at
-   `max-h-[calc(100dvh-2rem)]`. Once the 100 dvh is extended under the notch, a
-   HIGH box — the one that reaches its ceiling — ends 1 rem from an edge that
-   is no longer the useful edge: its last row of buttons is found under the
-   home indicator bar, where the finger can do nothing more.
-
-   We remove the two insets from the ceiling, and NOTHING ELSE. The box remains
-   centered in the entire window: reducing its height by (top + bottom) spreads its
-   two edges of half of this sum, which largely clears each inset
-   taken separately. Above all, we do not touch the `translate`: Tailwind v4 y
-   compiles `-translate-x-1/2 -translate-y-1/2`, and rewriting it here would decenter
-   the box instead of shifting it. */
-[data-slot="dialog-content"],
-[data-slot="alert-dialog-content"] {
-  max-height: calc(
-    100dvh - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)
-  );
-}
-
 /* The drawers are GLUED to their edge — `inset-y-0 h-full` on the left and
    right, `bottom-0` at the bottom — so nothing separates them from anything. A
-   padding, not a margin: the bottom of the drawer must continue to run until the
-   bord, seul son contenu recule. */
+   padding, not a margin: the drawer's background runs to the edge, only its
+   content moves back.
+
+   These rules stay out of components/ui/sheet.tsx on purpose. They must beat a
+   call site's `p-0` (an out-of-layer rule does, a utility would not), and lose
+   to the mobile sheet rules below that set their own bottom padding (an
+   `!important` utility would win there). No class expresses both. */
 [data-slot="sheet-content"][data-side="bottom"] {
   padding-bottom: env(safe-area-inset-bottom);
 }
@@ -1149,165 +1076,24 @@ button[data-variant="ghost"] {
   padding-right: env(safe-area-inset-right);
 }
 
-/* ─── Finger: 44 px targets and return to press ──────────────────────────
-   Two defects that the dev station never shows, because they don't exist
-   than on the finger. This entire block is under `pointer: coarse`: the mouse feeling
-   ne bouge pas d'un pixel.
-
-   First the SIZE. Mango-ui buttons are 32 px (`sm`, `icon-sm`),
-   36 px (`default`, `icon`) or 40 px (`lg`, `icon-lg`) — neither reaches the
-   44 px that Apple's recommendations like those of Google require, and
-   it is the round of toolbar icons that suffers the most: a cross
-   of 32 px, we miss it. You can't just make them bigger — mango-ui lives
-   in node_modules, and especially minddy is a DENSE interface: pass each
-   button at 44 px reflowered each toolbar in the app.
-
-   Hence the pseudo-element: the target grows, the drawing does not move. `max()`
-   does the sorting by itself — a button already wider than 44 px keeps its width,
-   a smaller button is taken to 44. No size is written in hard copy here,
-   so nothing to retouch if mango-ui changes its heights.
-
-   The counterpart is known and assumed: two neighboring and tight buttons see
-   their targets overlap, and it is the last one in the DOM order that takes
-   recovery. 44 px that step on a little is better than 32 px
-   that we miss - but this is the reason why we do not extend it to links in
-   line (`data-variant="link"`), whose target would overflow its paragraph.
-
-   `position: relative` is placed in `@layer base` ON PURPOSE, and not here: a
-   button positioned by a Tailwind utility (`absolute`, `fixed`, `sticky` —
-   the “go back to the bottom” arrow of the conversation thread, the closing cross
-   of a drawer) must keep ITS positioning. A utility lives in
-   @layer utilities and therefore beats @layer base; he wins, and the anchoring of the
-   pseudo-element is safe anyway, since a positioned element is already
-   a container block. A non-layer rule would have overwritten both. */
+/* ─── Finger (MIN-284) ─────────────────────────────────────────────────────
+   The touch targets, press feedback and tap delay of the primitives live in
+   the primitives themselves (components/ui/touch-target.ts). What remains here
+   is page-wide: the tap highlight, and the zoom-on-focus guard of hand-written
+   fields. */
 @layer base {
-  [data-slot="button"] {
-    position: relative;
-  }
-
   /* The gray halo that WebKit and Chrome Android paints over anything you type.
-     He arrives late, he overflows the border radius, and he has nothing left to
-     dire maintenant que l'appui a son propre retour (plus bas). */
+     It arrives late, overflows the border radius, and has nothing left to say
+     now that a press has its own feedback (components/ui/touch-target.ts). */
   html {
     -webkit-tap-highlight-color: transparent;
   }
 }
 
 @media (pointer: coarse) {
-  [data-slot="button"]:not([data-variant="link"])::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    translate: -50% -50%;
-    width: max(100%, 44px);
-    height: max(100%, 44px);
-  }
-
-  /* Then the RETURN. Without it, a pressed button responds nothing as long as the screen
-     has not changed: hovering does not exist with your finger, and the app seems dull.
-     A depression of 3% is enough — this is the range where the eye registers the
-     gesture without seeing it. `Button` already carries `transition-all`, so there is nothing
-     to add on the transition side, and `scale` (the property, not the function) does not
-     Don't touch the `transform` that Tailwind writes elsewhere.
-
-     `:disabled` porte `pointer-events: none`, mais un bouton rendu par `asChild`
-     on a tag <a> cannot be `:disabled` — it has `aria-disabled`.
-     Both are therefore excluded. */
-  @media (prefers-reduced-motion: no-preference) {
-    [data-slot="button"]:not(
-        [data-variant="link"],
-        :disabled,
-        [aria-disabled="true"]
-      ):active {
-      scale: 0.97;
-    }
-  }
-
-  /* What hits and isn't a button. Two families, two treatments —
-      and it’s geometry that decides, not taste.
-
-      ISOLATED COMMANDS expand by pseudo-element, like buttons:
-      nothing around them hits, so overflow costs nothing.
-      mango-ui still extends the box to check (`after:-inset-x-3
-      after:-inset-y-2` on a 16px square); we take HIS instead
-      than to install a second one — an off-layer rule beats the `after:` utility
-      who wrote it. The slider thumb lost its own `::after` in 0.8.0 and is
-      centered in a full-height track, so it receives the centered `max()` form
-      below — robust against the thumb's real geometry. The switch does not
-      have one either; it receives the same treatment, in `absolute` so as not
-      to become an element of its own flex and push its thumb. 20 px high by
-      36, this is the smallest target of the product. */
-  [data-slot="checkbox"]::after {
-    inset: -14px; /* 16 + 2×14 = 44 */
-  }
-  [data-slot="slider-thumb"]::after,
-  [data-slot="switch"]::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    translate: -50% -50%;
-    width: max(100%, 44px);
-    height: max(100%, 44px);
-  }
-  [data-slot="switch"] {
-    position: relative;
-  }
-
-  /* A tab is wide but low. We therefore only extend it HEIGHT, and by
-     `::before`: the `::after` of the trigger is reserved for the tab line
-     active. Since mango-ui 0.6.0 this trait lives on a sliding indicator at
-     side and no longer on the trigger — we keep `::before` anyway, to
-     remain indifferent to the day he returns to him. With the tabs side by side
-     coast, this vertical strip does not cover any neighbors. */
-  [data-slot="tabs-trigger"]::before {
-    content: "";
-    position: absolute;
-    inset-block: 50%;
-    inset-inline: 0;
-    margin-block: -22px;
-  }
-
-  /* LIST ROWS cannot overflow: two neighboring lines
-     which overlap, it is the line next to us that we open. There, we grow up to
-     for real. A list scrolls — a few more pixels per line doesn't cost
-     nothing, unlike a toolbar, and that's why the buttons
-     did not have this treatment. This covers menus, selectors, and
-     mobile bar full screen search sheet (cmdk). */
-  [data-slot="dropdown-menu-item"],
-  [data-slot="dropdown-menu-checkbox-item"],
-  [data-slot="dropdown-menu-radio-item"],
-  [data-slot="dropdown-menu-sub-trigger"],
-  [data-slot="select-item"],
-  [data-slot="command-item"] {
-    min-height: 44px;
-  }
-
-  /* The delay of 300 ms. A touch browser waits, after a press, to see
-     if a second one arrives — a double-tap zooms in. On a target that does not zoom,
-     this wait is pure delay: the button is pressed, and the app does not respond
-     only a third of a second later. `manipulation` keeps scrolling and
-     pinch, and abandons the double-tap. Focused on what is happening, not on the
-     page: double-tap-to-zoom remains available on the content, where it
-     provides a service (a capture, a table, a block of code). */
-  [data-slot="button"],
-  [data-slot="switch"],
-  [data-slot="checkbox"],
-  [data-slot="tabs-trigger"],
-  [data-slot="dropdown-menu-item"],
-  [data-slot="dropdown-menu-checkbox-item"],
-  [data-slot="dropdown-menu-radio-item"],
-  [data-slot="dropdown-menu-sub-trigger"],
-  [data-slot="select-item"],
-  [data-slot="select-trigger"],
-  [data-slot="command-item"] {
-    touch-action: manipulation;
-  }
-
   /* Zoom to focus. iOS zooms into ANY field whose font is
      under 16 px — and it does not zoom out when exiting: the page remains crooked,
-     the user must pinch to return. mango-ui understood it (his fields
+     the user must pinch to return. The primitives handle it (their fields
      are in `text-base md:text-sm`, therefore 16 px on mobile), but the fields
      handwritten on the product, they are in `text-sm` — the title of a cycle,
      the title of a brief, the times of the date picker.
@@ -1414,7 +1200,7 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
   }
 }
 
-/* Mobile full-screen search sheet: mangue-ui's <CommandList> ships a default
+/* Mobile full-screen search sheet: the <CommandList> primitive ships a default
    max-height (max-h-72 ≈ 288px) sized for the desktop popover. In the full-
    screen sheet that squishes the command palette into the top third with a big
    empty void below — most options end up hidden behind a scroll, so it reads as
@@ -1434,7 +1220,7 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
 
 /* ─── Selection of chat bubble text (agent + Numo) ────────
    Two rules prevent selection: the global reset `user-select: none` of
-   mango-ui, AND — above all — Streamdown (markdown rendering of the wizard) which poses
+   app/tokens.css, AND — above all — Streamdown (markdown rendering of the wizard) which poses
    `style="user-select:none"` INLINE on its content. An inline style beats all
    non-`!important` CSS rule (no matter how specific), hence the `!important` here:
    this is the only way to re-authorize the selection on the bubbles `.chat-selectable`
@@ -1455,7 +1241,7 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
 
 /* Every diff surface is selectable, including PR files, review hunks, commit
    sheets, and agent-side diffs. The renderer receives the same override inside
-   its shadow root because the mangue-ui reset otherwise crosses the host. */
+   its shadow root because the app/tokens.css reset otherwise crosses the host. */
 .diff-selectable,
 .diff-selectable *:not(button):not(input):not(textarea) {
   user-select: text !important;
@@ -1502,7 +1288,7 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
 }
 
 /* Stylish tooltip of the “copy section” button (replaces the native title) —
-   same skin as <TooltipContent> of mango-ui (dark bubble + arrow). */
+   same skin as <TooltipContent> of components/ui/tooltip.tsx (dark bubble + arrow). */
 .scratchpad-editor .scratchpad-section-tip {
   position: absolute;
   z-index: 60;
@@ -1928,29 +1714,6 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
       0 0 0 2px var(--ring),
       0 0 0 7px color-mix(in oklab, var(--ring) 22%, transparent);
   }
-}
-
-/* ─── The shimmer sweeps in the direction of playback ────────────────────────────
-   `text-shimmer` (mango-ui) is the “it’s running” signal from Numo surfaces:
-   the flying action of a tool call, the header of a working accordion, the
-   title of a block of reasoning, the line of a PR rereading. A band
-   clear crosses an extinguished text - and until now she crossed it from RIGHT to
-   LEFT, backwards reading.
-
-   The cause is a sign, not a duration. With `background-size: 300%`, a
-   `background-position` of X% shifts the image by (width − 3×width)·X, so
-   towards the LEFT as X grows: at 0% the band (in the middle of the gradient)
-   is 1.5 widths TO THE RIGHT of the text, at 100% it is 0.5 widths to the left.
-   Swiping with the text therefore means going from 100% to 0%.
-
-   Swapping the two terminals is enough, and you only need to touch them: this is
-   because the tape is outside the text AT BOTH ends the extremes are
-   identical and the loop has no seam. We redefine the only
-   keyframes, not the utility — mango-ui arrives via the @import at the top, this
-   rule is lower, she wins. To be removed when mango-ui > 0.5.0 the door. */
-@keyframes text-shimmer {
-  from { background-position: 100% center; }
-  to { background-position: 0% center; }
 }
 
 /* ─── Text and background colors of pages (MIN-268) ────────────────────
@@ -2620,14 +2383,6 @@ html[data-desktop-platform="darwin"]
     .desktop-palette-overlay
   ) {
   -webkit-app-region: no-drag;
-}
-
-/* Full-window backdrop filters force the browser to recomposite the complete
-   board during modal and side-panel animations. Their translucent scrims make
-   the tiny blur imperceptible, so keep the scrim and avoid the dropped frames. */
-:is([data-slot="dialog-overlay"], [data-slot="side-panel-overlay"]) {
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
 }
 
 /* The sidebar inset now contains creation actions beneath the application bar. */

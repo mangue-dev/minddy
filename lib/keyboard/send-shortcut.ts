@@ -19,7 +19,7 @@
  *
  * The rule lives here, outside of any component, for two reasons: it is pure —
  * it can be tested without mounting a DOM — and the surfaces that READ it (the tooltip
- * and the pellets of [components/send-shortcut.tsx]) pull mango-ui behind
+ * and the pellets of [components/send-shortcut.tsx]) pull the UI primitives behind
  * them, which a test node has no use for. The two halves of the gesture remain
  * therefore united, without the key depending on the covering.
  *

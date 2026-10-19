@@ -8,10 +8,6 @@ import { MentionSuggestions, type MentionOption } from "@/components/mention-sug
 import { isPersistableKey } from "./query-provider";
 import { projectIconQueryKey } from "./use-project-icon";
 
-vi.mock("mangue-ui", () => ({
-  cn: (...classes: unknown[]) => classes.filter(Boolean).join(" "),
-}));
-
 const projectId = "11111111-1111-4111-8111-111111111111";
 const iconUrl = `/api/projects/${projectId}/icon/content?v=1`;
 const nextIconUrl = `/api/projects/${projectId}/icon/content?v=2`;

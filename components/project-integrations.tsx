@@ -8,13 +8,11 @@ import { Add01Icon, MessageMultiple01Icon, Plug01Icon, WebhookIcon } from "@huge
 import { useState } from "react";
 import { useTranslations, useFormatter } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  Badge,
-  Button,
-  ConfirmDeleteDialog,
-  cn,
-  toast,
-} from "mangue-ui";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   revokeIntegrationApi,
   updateIntegrationWebhookApi,

@@ -66,7 +66,7 @@ vi.mock("@/components/secondary-sidebar", () => ({
 }));
 // Keep real command options and the page's controlled menu state; omit portal positioning.
 vi.mock("@/components/search-menu", async () => {
-  const { Command, CommandList } = await vi.importActual<typeof import("mangue-ui")>("mangue-ui/components/ui/command.tsx");
+  const { Command, CommandList } = await vi.importActual<typeof import("@/components/ui/command")>("@/components/ui/command");
   return { SearchMenu: ({ open, onOpenChange, trigger, children }: SearchMenuProps) => (
     <div>
       <div onClick={() => onOpenChange(!open)}>{trigger}</div>
@@ -74,12 +74,6 @@ vi.mock("@/components/search-menu", async () => {
     </div>
   ) };
 });
-vi.mock("mangue-ui", async () => ({
-  ...await vi.importActual<Record<string, unknown>>("mangue-ui/lib/utils.ts"),
-  ...await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/button.tsx"),
-  ...await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/command.tsx"),
-  ...await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/spinner.tsx"),
-}));
 
 function item(state: PullRequestListItem["pr_state"] = "open", prId = "pr"): PullRequestListItem {
   return {

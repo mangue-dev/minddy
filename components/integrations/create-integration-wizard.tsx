@@ -8,7 +8,10 @@ import { ObjectiveValue, PropertyRow } from "@/components/issue-property-fields"
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, Input, Textarea, toast } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 import { type SceneIcon } from "@/components/illustrations/iso-icon";
 
 function sceneIcon(icon: IconSvgElement): SceneIcon {

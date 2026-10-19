@@ -4,7 +4,7 @@
  *
  * Stored in the `user_metadata` of the Supabase account, like [locale] and
  * its neighbors. The localStorage key `mangue-ui-theme` remains, but as a
- * CACHE: mango-ui's ThemeProvider reads and writes it, anonymous visitors
+ * CACHE: the ThemeProvider reads and writes it, anonymous visitors
  * (marketing site, public boards) keep using it alone. A signed-in account
  * gets its saved theme re-asserted on every document load:
  *
@@ -51,7 +51,7 @@ export function resolveAccountTheme(
   return isAccountTheme(value) ? value : null;
 }
 
-/** The device's cached preference, i.e. what mango-ui persists. Pure twin of
+/** The device's cached preference, i.e. what the ThemeProvider persists. Pure twin of
  * the read ThemeInitScript does before the first paint; used at sign-in to
  * claim an existing device choice as the account setting (legacy accounts). */
 export function resolveStoredAccountTheme(

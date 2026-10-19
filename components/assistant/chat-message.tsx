@@ -14,7 +14,9 @@ import ReactMarkdown from "react-markdown";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
-import { IconButton, cn, toast } from "mangue-ui";
+import { IconButton } from "@/components/ui/icon-button";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import type {
   AssistantMention,
   AssistantMessage,

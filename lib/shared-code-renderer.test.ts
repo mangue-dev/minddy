@@ -12,7 +12,10 @@ import {
   PageCodeRenderer,
 } from "@/components/assistant/shared-code-renderer";
 
-vi.mock("mangue-ui", async () => {
+// Stubs for the UI primitives the component under test renders.
+const uiStubs = vi.hoisted(() => {
+  let value: Promise<Record<string, unknown>> | undefined;
+  return () => (value ??= (async () => {
   const { createElement, forwardRef } = await import("react");
   const Control = forwardRef<
     HTMLButtonElement,
@@ -26,6 +29,15 @@ vi.mock("mangue-ui", async () => {
     Button: Control,
     IconButton: Control,
   };
+})());
+});
+vi.mock("@/components/ui/button", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Button: stubs.Button };
+});
+vi.mock("@/components/ui/icon-button", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), IconButton: stubs.IconButton };
 });
 
 vi.mock("@/components/ui/tooltip", async () => {

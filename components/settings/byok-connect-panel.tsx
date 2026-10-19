@@ -12,8 +12,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  Button,
-  Input,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
   Select,
   SelectContent,
   SelectGroup,
@@ -22,10 +24,10 @@ import {
   SelectSeparator,
   SelectTrigger,
   SelectValue,
-  Spinner,
-  cn,
-  toast,
-} from "mangue-ui";
+} from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 import { SettingsRow } from "./settings-ui";
 import { numoPreferencesQueryKey } from "@/lib/use-numo-preferences-query";

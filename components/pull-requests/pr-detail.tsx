@@ -7,22 +7,24 @@ import { AppIcon } from "@/components/icon";
 import { ArrowLeft01Icon, ArrowUp01Icon, Cancel01Icon, Copy01Icon, Edit04Icon, HistoryIcon, Link02Icon, LinkSquare01Icon, Message01Icon, MessageSquareQuoteIcon, MoreHorizontalIcon, CheckIcon, ViewIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
 import {
-  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Spinner,
+} from "@/components/ui/dropdown-menu";
+import { Spinner } from "@/components/ui/spinner";
+import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-  Textarea,
-  cn,
-  toast,
-} from "mangue-ui";
+} from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { AppContentHeader, APP_CONTENT_HEADER_LEADING_INSET } from "@/components/app-content-header";
@@ -429,7 +431,7 @@ export function ThreadComment({
   return (
     <article
       data-testid={isDescription ? "pr-description" : "pr-activity-message"}
-      // chat-selectable: the global reset of mangue-ui kills text selection;
+      // chat-selectable: the global reset of app/tokens.css kills text selection;
       // the message card must read like a text surface, copyable like on the
       // forge.
       className={cn("chat-selectable group min-w-0", !isDescription && "overflow-clip rounded-lg border border-border bg-card shadow-xs")}

@@ -13,7 +13,10 @@ import type { Issue } from "./types";
 const chord = vi.hoisted(() => ({ current: null as string | null }));
 vi.mock("next/navigation", () => ({ usePathname: () => "/all" }));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
-vi.mock("mangue-ui", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  toast: { error: vi.fn(), success: vi.fn() },
+}));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: null }) }));
 vi.mock("@/lib/keyboard/keyboard-context", () => ({

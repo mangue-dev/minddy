@@ -12,16 +12,39 @@ vi.mock("./supabase", () => ({ getSupabase: () => ({ auth: {
   getSession: async () => ({ data: { session: { user: { id: "owner" } } }, error: null }),
 } }) }));
 
-vi.mock("mangue-ui", async () => {
+// Stubs for the UI primitives the component under test renders.
+const uiStubs = vi.hoisted(() => {
+  let value: Promise<Record<string, unknown>> | undefined;
+  return () => (value ??= (async () => {
   const { createElement: h } = await import("react");
   const wrapper = ({ children }: { children: import("react").ReactNode }) => h("div", null, children);
   const Button = ({ children, onClick }: { children: import("react").ReactNode; onClick?: () => void }) => h("button", { onClick }, children);
   const item = ({ children, onSelect }: { children: import("react").ReactNode; onSelect?: () => void }) => h("button", { onClick: onSelect }, children);
-  const exports: Record<string, unknown> = { Button, DropdownMenuItem: item,
+  return { Button, DropdownMenuItem: item,
     DropdownMenu: wrapper, DropdownMenuTrigger: wrapper, DropdownMenuContent: wrapper,
     Dialog: wrapper, DialogContent: wrapper, DialogHeader: wrapper, DialogTitle: wrapper, DialogFooter: wrapper, Spinner: wrapper,
     cn: (...classes: unknown[]) => classes.filter(Boolean).join(" "), toast: { error: vi.fn() } };
-  return exports;
+})());
+});
+vi.mock("@/components/ui/button", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Button: stubs.Button };
+});
+vi.mock("@/components/ui/dropdown-menu", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), DropdownMenuItem: stubs.DropdownMenuItem, DropdownMenu: stubs.DropdownMenu, DropdownMenuTrigger: stubs.DropdownMenuTrigger, DropdownMenuContent: stubs.DropdownMenuContent };
+});
+vi.mock("@/components/ui/dialog", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Dialog: stubs.Dialog, DialogContent: stubs.DialogContent, DialogHeader: stubs.DialogHeader, DialogTitle: stubs.DialogTitle, DialogFooter: stubs.DialogFooter };
+});
+vi.mock("@/components/ui/spinner", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Spinner: stubs.Spinner };
+});
+vi.mock("sonner", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), toast: stubs.toast };
 });
 vi.mock("@/components/markdown", () => ({ Markdown: ({ children }: { children: string }) => createElement("p", null, children) }));
 vi.mock("@/components/git/forge-user-avatar", () => ({ ForgeUserAvatar: () => null }));

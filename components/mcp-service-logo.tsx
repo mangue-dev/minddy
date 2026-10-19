@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Plug01Icon } from "@hugeicons/core-free-icons";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { BrandLogo, type BrandMark } from "@/components/brand-logo";
 
 // Official provider assets and provenance: public/mcp-providers/sources.json.
