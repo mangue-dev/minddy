@@ -9,7 +9,8 @@ import {
 import type { StatsHeatmap } from "@/lib/types";
 import { ActivityHeatmap } from "./activity-heatmap";
 
-/** The annual activity story: one readable sentence followed by the calendar. */
+/** The annual activity story: one readable sentence followed by the calendar.
+ *  Streaks live in the profile's figure strip (MIN-737). */
 export function StatsHero({
   heatmap,
   joinedDate,
@@ -17,7 +18,6 @@ export function StatsHero({
   issues,
   tasks,
   activeDays,
-  streak,
 }: {
   heatmap: StatsHeatmap;
   joinedDate: string | null;
@@ -25,15 +25,14 @@ export function StatsHero({
   issues: number;
   tasks: number;
   activeDays: number;
-  streak: { current: number; longest: number };
 }) {
   const t = useTranslations("Stats");
   const breakdown = t("activityBreakdown", { issues, tasks, days: activeDays });
 
   return (
     <section aria-label={t("yearStory")}>
-      <div className="mb-5 px-1">
-        <p className="max-w-4xl font-display text-3xl font-semibold leading-tight tracking-[-0.025em] sm:text-4xl">
+      <div className="mb-4 px-1">
+        <p className="max-w-4xl font-display text-xl font-semibold leading-tight tracking-[-0.02em] sm:text-2xl">
           <Tooltip>
             <TooltipTrigger asChild>
               <button
@@ -49,11 +48,6 @@ export function StatsHero({
           <span className="text-muted-foreground">
             {t("heroTotalLabel", { count: total })}
           </span>
-        </p>
-        <p className="mt-3 text-sm text-muted-foreground">
-          {t("streakStory", { count: streak.current })}
-          <span aria-hidden> · </span>
-          {t("streakRecord", { count: streak.longest })}
         </p>
       </div>
 

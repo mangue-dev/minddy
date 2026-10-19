@@ -13,7 +13,7 @@ const requested=process.env.DOC_CAPTURE_SCREENS?.split(',');
 function translate(v,m){if(typeof v==='string')return m[v]??v;if(Array.isArray(v))return v.map(x=>translate(x,m));if(v&&typeof v==='object')return Object.fromEntries(Object.entries(v).map(([k,x])=>[k,translate(x,m)]));return v;}
 const root=`/projects/${projectId}`;
 const screens=[
- ['statistics','/statistics',async(p,m)=>{await p.getByRole('region',{name:m.Stats.yearStory,exact:true}).first().waitFor();},p=>p.locator('main')],
+ // The statistics figure moved to documentation-refresh (personal-statistics-workflow, MIN-737).
  ['first-project',root,async(p,_m)=>{await p.getByText('DOC-1',{exact:true}).first().click();await p.getByRole('dialog').first().getByRole('tab').first().click();},p=>p.getByRole('dialog').first()],
  ['objectives',`${root}/objectives`,async(p,m,fixture)=>{await p.getByRole('button',{name:m.Objectives.newObjective,exact:true}).first().click();await p.getByPlaceholder(m.Objectives.namePlaceholder,{exact:true}).fill(fixture.mapping['Make the website usable without a mouse']);},p=>p.getByRole('dialog')],
  ['cycle','/all?view=cycle',async p=>{await p.getByText('DOC-2',{exact:true}).first().waitFor();},p=>p.locator('main')],

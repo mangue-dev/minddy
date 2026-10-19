@@ -35,8 +35,10 @@ import { useMembersQuery } from "@/lib/use-members-query";
 import { usePlanGates } from "@/lib/use-billing-query";
 import {
   SettingsEmpty,
+  SettingsGroup,
   SettingsListRow,
 } from "@/components/settings/settings-ui";
+import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName as resolveDisplayName } from "@/lib/display-name";
 import { isMemberRole, type MemberRole, type ProjectRole } from "@/lib/project-roles";
@@ -228,13 +230,17 @@ export function ProjectMembers({
   const isBusy = (id: string | undefined) => id !== undefined && busyId === id;
 
   return (
-    <div className="flex flex-col gap-4">
+    <>
       {isOwner && (
-        <>
+        <SettingsGroup title={t("inviteByEmail")} variant="block">
           <form onSubmit={handleInvite} className="flex flex-col gap-2">
-            <div className="flex items-end gap-2">
-              <div className="flex flex-1 flex-col gap-1.5">
-                <label htmlFor="invite-email" className="text-sm font-medium">
+            {/* On a phone the address takes its own line; role and Invite
+                follow beneath it. */}
+            <div className="flex flex-wrap items-end gap-2 sm:flex-nowrap">
+              <div className="flex min-w-0 basis-full flex-col gap-1.5 sm:flex-1 sm:basis-0">
+                {/* The card title already says it; the label stays for
+                    screen readers. */}
+                <label htmlFor="invite-email" className="sr-only">
                   {t("inviteByEmail")}
                 </label>
                 <Input
@@ -269,13 +275,13 @@ export function ProjectMembers({
               />
             )}
           </form>
-          <p className="-mt-2 text-xs text-muted-foreground">
+          <p className="mt-2 text-xs text-muted-foreground">
             {t("inviteHint")} {t("rolesHint")}
           </p>
           {/* As long as the list loads, `guestsUsed` is 0 because we haven't received ANYTHING yet — not because the project is empty. Showing the
  counter there would announce "0 guests of 2" to a full project, a half second, each time the tab is opened. */}
           {!loading && maxMembersPerProject != null && (
-            <p className="-mt-3 text-xs text-muted-foreground">
+            <p className="mt-1 text-xs text-muted-foreground">
               {limitReached ? (
                 <>
                   {t("inviteLimitReached", { limit: maxMembersPerProject })}{" "}
@@ -296,11 +302,13 @@ export function ProjectMembers({
               )}
             </p>
           )}
-        </>
+        </SettingsGroup>
       )}
 
-      <div className="flex flex-col gap-1">
-        <p className="text-sm font-medium">{t("membersLabel")}</p>
+      <SettingsGroup
+        anchor={SETTINGS_SECTIONS.projectMembers}
+        title={loading ? t("membersLabel") : `${t("membersLabel")} · ${members.length}`}
+      >
         {loading ? (
           <SettingsEmpty>{tc("loading")}</SettingsEmpty>
         ) : (
@@ -378,20 +386,19 @@ export function ProjectMembers({
             })}
           </div>
         )}
-      </div>
+      </SettingsGroup>
 
       {isOwner && invitations.length > 0 && (
-        <div className="flex flex-col gap-1">
-          <p className="text-sm font-medium">{t("pendingInvitations")}</p>
+        <SettingsGroup
+          title={t("pendingInvitations")}
+          help={t("pendingInvitationsHint")}
+        >
           {/* The wait is said ONCE, for the entire list, and never by
  line (MIN-197). A status per line — “waiting for registration”
  versus “waiting for response” — would answer the question “does this
  address have a minddy account?” » for any address
  that we enter: an account enumeration oracle. The inviter needs to know that an invitation can wait for a registration; he does not need to know WHICH one does. */}
-          <p className="text-xs text-muted-foreground">
-            {t("pendingInvitationsHint")}
-          </p>
-          <div className="mt-1 flex flex-col divide-y divide-border">
+          <div className="flex flex-col divide-y divide-border">
             {invitations.map((inv) => {
               const busy = isBusy(inv.id);
               const role: MemberRole = inv.role === "reader" ? "reader" : "member";
@@ -440,7 +447,7 @@ export function ProjectMembers({
               );
             })}
           </div>
-        </div>
+        </SettingsGroup>
       )}
 
       <Dialog
@@ -565,6 +572,6 @@ export function ProjectMembers({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

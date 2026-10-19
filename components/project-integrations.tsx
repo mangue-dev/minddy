@@ -1,10 +1,10 @@
 "use client";
 
-import { ObjectiveValue, PropertyRow } from "@/components/issue-property-fields";
+import { ObjectiveValue } from "@/components/issue-property-fields";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { updateIntegrationObjectiveApi } from "@/lib/integrations-api";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, MessageMultiple01Icon, Plug01Icon, WebhookIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Delete02Icon, Target02Icon, MessageMultiple01Icon, MoreHorizontalIcon, Plug01Icon, WebhookIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations, useFormatter } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
@@ -22,9 +22,15 @@ import {
   useIntegrationsQuery,
 } from "@/lib/use-integrations-query";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   SettingsEmpty,
   SettingsGroup,
-  SettingsListRow,
 } from "@/components/settings/settings-ui";
 import { WizardDialog } from "@/components/wizard/wizard-dialog";
 import { CreateIntegrationWizard } from "@/components/integrations/create-integration-wizard";
@@ -37,11 +43,6 @@ import { normalizeWebhookUrl } from "@/lib/webhook-url";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { EmptyScene } from "@/components/empty-scene";
 import type { Integration, IntegrationKind } from "@/lib/types";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 /**
  * The TYPE of a key decides what it is allowed to write — tickets in
@@ -147,8 +148,10 @@ function WebhookDialog({
   );
 }
 
-/** Status badge of the last webhook delivery (green 2xx, red otherwise). */
-function WebhookStatusDot({ integration }: { integration: Integration }) {
+/** The last webhook delivery, said in words next to a colored dot (green
+    accepted, red refused, gray nothing sent yet) — the dot alone used to be
+    the only signal, behind a tooltip. */
+function WebhookStatus({ integration }: { integration: Integration }) {
   const t = useTranslations("Settings");
   const format = useFormatter();
   if (!integration.webhook_url) return null;
@@ -168,24 +171,41 @@ function WebhookStatusDot({ integration }: { integration: Integration }) {
       })
     : t("webhookNoDelivery");
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <HugeiconsIcon icon={WebhookIcon} className="size-3.5" />
-          <span
-            className={cn(
-              "size-1.5 rounded-full",
-              !status
-                ? "bg-muted-foreground/40"
-                : healthy
-                  ? "bg-green-500"
-                  : "bg-destructive",
-            )}
-          />
-        </span>
-      </TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
-    </Tooltip>
+    <span className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+      <span
+        aria-hidden
+        className={cn(
+          "size-2 shrink-0 rounded-full",
+          !status
+            ? "bg-muted-foreground/40"
+            : healthy
+              ? "bg-green-500"
+              : "bg-destructive",
+        )}
+      />
+      <span className="truncate">{label}</span>
+    </span>
+  );
+}
+
+/** A labelled detail under an integration, aligned with its name. */
+function IntegrationDetail({
+  icon,
+  label,
+  children,
+}: {
+  icon: typeof WebhookIcon;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex min-h-9 flex-wrap items-center justify-between gap-x-4 gap-y-1 pl-11">
+      <span className="flex items-center gap-2 text-sm">
+        <HugeiconsIcon icon={icon} className="size-4 text-muted-foreground" aria-hidden />
+        {label}
+      </span>
+      <div className="flex min-w-0 items-center">{children}</div>
+    </div>
   );
 }
 
@@ -201,7 +221,6 @@ export function ProjectIntegrations({
   const format = useFormatter();
   const queryClient = useQueryClient();
 
-  const tField = useTranslations("Field");
   const { objectives } = useObjectivesQuery(projectId);
   const { integrations, loading } = useIntegrationsQuery(projectId);
 
@@ -225,6 +244,11 @@ export function ProjectIntegrations({
     }
   };
 
+  // Working keys first; revoked ones stay listed below, dimmed, as a record.
+  const sorted = [...integrations].sort(
+    (a, b) => Number(!!a.revoked_at) - Number(!!b.revoked_at),
+  );
+
   const lastUsed = (integration: Integration) =>
     integration.last_used_at
       ? t("integrationLastUsed", {
@@ -239,7 +263,7 @@ export function ProjectIntegrations({
     <SettingsGroup
       anchor={SETTINGS_SECTIONS.projectIntegrations}
       title={t("integrationsTab")}
-      variant="block"
+      help={t("integrationsSectionDesc")}
       /* The gesture lives at the end of the title; when there is nothing to list, it moves down
  in the scene and is not shown twice. */
       action={
@@ -252,7 +276,7 @@ export function ProjectIntegrations({
       }
     >
       {!isOwner && (
-        <p className="mb-4 text-xs text-muted-foreground">
+        <p className="py-3 text-xs text-muted-foreground">
           {t("integrationsOwnerOnlyHint")}
         </p>
       )}
@@ -269,94 +293,131 @@ export function ProjectIntegrations({
           )}
         </EmptyScene>
       ) : (
-        <div className="flex flex-col divide-y divide-border">
-          {integrations.map((integration) => (
-            <SettingsListRow
-              key={integration.id}
-              avatar={
-                <span
-                  className={cn(
-                    "flex size-8 shrink-0 items-center justify-center rounded-full",
-                    KIND_STYLES[integration.kind].avatar,
-                  )}
+        <ul className="flex flex-col divide-y divide-border">
+          {sorted.map((integration) => {
+            const revoked = !!integration.revoked_at;
+            const objective = objectives.find((o) => o.id === integration.objective_id);
+            const badges = (
+              <>
+                <Badge
+                  variant="secondary"
+                  className={cn("h-6", KIND_STYLES[integration.kind].badge)}
                 >
-                  {integration.kind === "feedback" ? (
-                    <HugeiconsIcon icon={MessageMultiple01Icon} className="size-4" />
-                  ) : (
-                    <HugeiconsIcon icon={Plug01Icon} className="size-4" />
-                  )}
-                </span>
-              }
-              title={
-                <span className="flex items-center gap-2">
-                  <span className="truncate">{integration.name}</span>
-                  <code className="shrink-0 font-mono text-xs font-normal text-muted-foreground">
-                    {integration.key_prefix}…
-                  </code>
-                </span>
-              }
-              subtitle={
-                format.dateTime(new Date(integration.created_at), {
-                  dateStyle: "medium",
-                }) +
-                " · " +
-                lastUsed(integration)
-              }
-              action={
-                <>
-                  {/* The two states of the key — what it does, and whether it lives
- yet — held opposite its name. */}
-                  <Badge
-                    variant="secondary"
-                    className={cn("h-6", KIND_STYLES[integration.kind].badge)}
-                  >
-                    {t(`integrationKind_${integration.kind}`)}
+                  {t(`integrationKind_${integration.kind}`)}
+                </Badge>
+                {revoked && (
+                  <Badge variant="destructive" className="h-6">
+                    {t("integrationRevokedBadge")}
                   </Badge>
-                  {integration.revoked_at && (
-                    <Badge variant="destructive" className="h-6">
-                      {t("integrationRevokedBadge")}
-                    </Badge>
-                  )}
-                  {integration.kind === "feedback" && (isOwner && !integration.revoked_at ?
-                    <PropertyRow label={tField("objective")}>
-                      <ObjectiveValue value={integration.objective_id} objectives={objectives}
-                        onChange={async (value) => {
-                          try { await updateIntegrationObjectiveApi(projectId, integration.id, value); invalidate(); }
-                          catch (error) { toast.error((error as Error).message); }
-                        }} />
-                    </PropertyRow> : <span className="text-sm text-muted-foreground">
-                      {objectives.find((o) => o.id === integration.objective_id)?.name}
-                    </span>)}
-                  <WebhookStatusDot integration={integration} />
-                  {isOwner && !integration.revoked_at && (
-                    <>
-                      {/* Webhooks follow issue events: reserved for issue keys. */}
-                      {integration.kind === "issues" && (
+                )}
+              </>
+            );
+            return (
+              <li
+                key={integration.id}
+                className={cn("flex flex-col gap-1 py-3.5", revoked && "opacity-60")}
+              >
+                <div className="flex items-center gap-3">
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "flex size-8 shrink-0 items-center justify-center rounded-full",
+                      KIND_STYLES[integration.kind].avatar,
+                    )}
+                  >
+                    <HugeiconsIcon
+                      icon={integration.kind === "feedback" ? MessageMultiple01Icon : Plug01Icon}
+                      className="size-4"
+                    />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="truncate text-sm font-medium">{integration.name}</span>
+                      <code className="shrink-0 font-mono text-xs text-muted-foreground">
+                        {integration.key_prefix}…
+                      </code>
+                    </div>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {[
+                        format.dateTime(new Date(integration.created_at), { dateStyle: "medium" }),
+                        lastUsed(integration),
+                      ].join(" · ")}
+                    </p>
+                    <div className="mt-1.5 flex items-center gap-2 sm:hidden">{badges}</div>
+                  </div>
+                  {/* What the key does, and whether it still works: on the
+                      right from `sm` up, under the name on a phone so the
+                      name keeps the width. */}
+                  <div className="hidden shrink-0 items-center gap-2 sm:flex">{badges}</div>
+                  {isOwner && !revoked && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
                         <Button
                           type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setWebhookFor(integration)}
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={t("integrationActions", { name: integration.name })}
                         >
-                          <HugeiconsIcon icon={WebhookIcon} />
-                          {t("webhookButton")}
+                          <HugeiconsIcon icon={MoreHorizontalIcon} />
                         </Button>
-                      )}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setToRevoke(integration)}
-                      >
-                        {t("integrationRevoke")}
-                      </Button>
-                    </>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {/* Webhooks follow issue events: reserved for issue keys. */}
+                        {integration.kind === "issues" && (
+                          <>
+                            <DropdownMenuItem onSelect={() => setWebhookFor(integration)}>
+                              <HugeiconsIcon icon={WebhookIcon} />
+                              {t("webhookConfigure")}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                          </>
+                        )}
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onSelect={() => setToRevoke(integration)}
+                        >
+                          <HugeiconsIcon icon={Delete02Icon} />
+                          {t("integrationRevoke")}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   )}
-                </>
-              }
-            />
-          ))}
-        </div>
+                </div>
+
+                {/* Feedback keys file what they receive under an objective;
+                    the picker can create one in place. */}
+                {integration.kind === "feedback" && !revoked && (
+                  <IntegrationDetail icon={Target02Icon} label={t("integrationObjectiveLabel")}>
+                    {isOwner ? (
+                      <ObjectiveValue
+                        value={integration.objective_id}
+                        objectives={objectives}
+                        projectId={projectId}
+                        onChange={async (value) => {
+                          try {
+                            await updateIntegrationObjectiveApi(projectId, integration.id, value);
+                            invalidate();
+                          } catch (error) {
+                            toast.error((error as Error).message);
+                          }
+                        }}
+                      />
+                    ) : (
+                      <span className="text-sm text-muted-foreground">
+                        {objective?.name ?? tc("none")}
+                      </span>
+                    )}
+                  </IntegrationDetail>
+                )}
+                {integration.kind === "issues" && !revoked && integration.webhook_url && (
+                  <IntegrationDetail icon={WebhookIcon} label={t("webhookButton")}>
+                    <WebhookStatus integration={integration} />
+                  </IntegrationDetail>
+                )}
+              </li>
+            );
+          })}
+        </ul>
       )}
 
       <CreateIntegrationWizard

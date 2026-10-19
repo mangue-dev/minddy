@@ -5,10 +5,10 @@ import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { objectiveColor } from "./objective-icon";
 import type { Project } from "@/lib/types";
-import { BOARD_ICON, ROUTINE_ICON, STATISTICS_ICON } from "@/components/feature-icons";
+import { BOARD_ICON, ROUTINE_ICON } from "@/components/feature-icons";
 
 const icons = { home: Home01Icon, all: BOARD_ICON, tickets: BOARD_ICON, inbox: InboxIcon, routines: ROUTINE_ICON,
-  "pull-requests": GitPullRequestIcon, statistics: STATISTICS_ICON, trash: Delete02Icon, settings: Settings01Icon, billing: CreditCardIcon,
+  "pull-requests": GitPullRequestIcon, trash: Delete02Icon, settings: Settings01Icon, billing: CreditCardIcon,
   admin: Shield01Icon, pages: File02Icon, objectives: Target01Icon, feedback: MessageMultiple01Icon, triage: CircleDotDashedIcon };
 
 export function AppTabIcon({ section, project, projectId, objectiveColor: color }: {

@@ -17,7 +17,7 @@ describe("MCP authorization launch", () => {
     expect(target).not.toBeNull();
     await target!.authorize("connection-id", getUrl);
     expect(openExternal).toHaveBeenCalledWith(
-      "https://preview.minddy.app/settings?tab=mcp-clients&mcp_authorize=connection-id&mcp_desktop=1",
+      "https://preview.minddy.app/settings?tab=agent&mcp_authorize=connection-id&mcp_desktop=1",
     );
     expect(open).not.toHaveBeenCalled();
     expect(getUrl).not.toHaveBeenCalled();

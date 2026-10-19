@@ -955,6 +955,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         // The tab is a search term in its own right: “cycles” must
         // find “Cadence”, which doesn’t have the word anywhere.
         s.tabLabel,
+        // A single setting is also found by the card that holds it.
+        ...(s.parentTitle ? [s.parentTitle] : []),
         ...(project ? [project.name, project.key] : []),
       ],
       // No trailing text: the tab name is noise on the row (it is in the

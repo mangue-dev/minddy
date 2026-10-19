@@ -2,31 +2,28 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Delete02Icon, LogOutIcon } from "@hugeicons/core-free-icons";
-import {useEffect, useState} from "react";
+import {useState} from "react";
 import { useAppRouter } from "@/lib/use-app-router";
 import {useTranslations} from "next-intl";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import {useAuth} from "@/lib/auth-context";
 import {useProjects} from "@/lib/projects-context";
 import {removeMemberApi} from "@/lib/members-api";
-import {isValidKey, normalizeKey} from "@/lib/project-key";
-import {projectOrbSeed} from "@/lib/project-orb-colors";
-import {ProjectIconPicker} from "@/components/project-icon-picker";
+import {normalizeKey} from "@/lib/project-key";
+import {ProjectIdentityHeader} from "@/components/settings/project-identity-header";
 import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
-import {ProjectVisibilitySection} from "@/components/settings/project-visibility-section";
+import {ProjectVisibilityRow} from "@/components/settings/project-visibility-section";
 import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
 import type { Project } from "@/lib/types";
 
 /**
- * “General” tab of a project's settings: its identity (name, key, icon),
- * the personal Hide project preference (both branches, MIN-692) and the
- * danger zone. Two branches — owner, which modifies and deletes ;
- * member, which reads and exits. Excerpt from page (MIN-167), where he lived in JSX
- * inline with its own form state.
+ * “General” tab of a project's settings: its identity as a header — icon,
+ * name, key and a few figures, edited in place like the account profile
+ * (MIN-737) — then the danger zone, which gathers what takes the project
+ * out of view: hiding it for yourself (both branches, MIN-692), then moving
+ * it to trash (owner) or leaving it (member).
  */
 export function ProjectGeneralSection({
   project,
@@ -44,43 +41,16 @@ export function ProjectGeneralSection({
   const { user } = useAuth();
   const { updateProject, refetch } = useProjects();
 
-  const [name, setName] = useState(project.name);
-  const [key, setKey] = useState(project.key);
-  const [saving, setSaving] = useState(false);
   const [leaving, setLeaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  // Sync the form once the project resolves (or changes via Realtime).
-  useEffect(() => {
-    setName(project.name);
-    setKey(project.key);
-    setError(null);
-  }, [project.name, project.key]);
-
-  const dirty = name.trim() !== project.name || normalizeKey(key) !== project.key;
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    const trimmedName = name.trim();
-    const finalKey = normalizeKey(key);
-    if (!trimmedName) {
-      setError(t("nameRequired"));
-      return;
-    }
-    if (!isValidKey(finalKey)) {
-      setError(t("keyInvalid"));
-      return;
-    }
-    setSaving(true);
-    try {
-      await updateProject(project.id, { name: trimmedName, key: finalKey });
-      toast.success(t("projectUpdated"));
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setSaving(false);
-    }
+  // Name and key save on their own, where they are shown (MIN-737).
+  const saveName = async (next: string) => {
+    await updateProject(project.id, { name: next });
+    toast.success(t("projectUpdated"));
+  };
+  const saveKey = async (next: string) => {
+    await updateProject(project.id, { key: normalizeKey(next) });
+    toast.success(t("projectUpdated"));
   };
 
   const handleLeave = async () => {
@@ -98,121 +68,58 @@ export function ProjectGeneralSection({
     }
   };
 
+  const header = (
+    <ProjectIdentityHeader
+      project={project}
+      onSaveName={isOwner ? saveName : undefined}
+      onSaveKey={isOwner ? saveKey : undefined}
+    />
+  );
+
   if (!isOwner) {
     return (
       <>
+        {header}
+
+        {/* Everything that takes the project out of view, in one place:
+            hide it for yourself, or leave it. */}
         <SettingsGroup
-          anchor={SETTINGS_SECTIONS.projectGeneral}
-          title={t("generalSectionTitle")}
+          anchor={SETTINGS_SECTIONS.projectDanger}
+          tone="destructive"
+          title={t("dangerZoneTitle")}
         >
+          <ProjectVisibilityRow project={project} />
           <SettingsRow
-            label={t("nameLabel")}
-            control={<span className="text-sm">{project.name}</span>}
-          />
-          <SettingsRow
-            label={t("keyLabel")}
+            anchor={SETTINGS_SECTIONS.projectLeave}
+            label={t("leaveProjectLabel")}
             control={
-              <Badge variant="secondary" className="font-mono">
-                {project.key}
-              </Badge>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={leaving}
+                onClick={() => void handleLeave()}
+              >
+                {leaving ? <Spinner /> : <HugeiconsIcon icon={LogOutIcon} />}
+                {t("leave")}
+              </Button>
             }
           />
         </SettingsGroup>
-
-        <ProjectVisibilitySection project={project} />
-
-        {/* The gesture lives in the header: the group has only one action, and a
- row that repeats word for word the title above it. */}
-        <SettingsGroup
-          anchor={SETTINGS_SECTIONS.projectLeave}
-          title={t("leaveProjectLabel")}
-          action={
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={leaving}
-              onClick={() => void handleLeave()}
-            >
-              {leaving ? <Spinner /> : <HugeiconsIcon icon={LogOutIcon} />}
-              {t("leave")}
-            </Button>
-          }
-        />
       </>
     );
   }
 
   return (
     <>
-      {/* The `<form>` wraps the card so Enter in a field submits,
- as before — the submit button lives in the footer of the group. */}
-      <form onSubmit={handleSave}>
-        <SettingsGroup
-          anchor={SETTINGS_SECTIONS.projectGeneral}
-          title={t("generalSectionTitle")}
-          footer={
-            <>
-              {error && <p className="mr-auto text-sm text-destructive">{error}</p>}
-              <Button type="submit" disabled={saving || !dirty}>
-                {saving && <Spinner />}
-                {tc("save")}
-              </Button>
-            </>
-          }
-        >
-          <SettingsRow
-            htmlFor="settings-name"
-            label={t("nameLabel")}
-            control={
-              <Input
-                id="settings-name"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-64"
-              />
-            }
-          />
-
-          <SettingsRow
-            htmlFor="settings-key"
-            label={t("keyLabel")}
-            control={
-              <Input
-                id="settings-key"
-                required
-                value={key}
-                onChange={(e) => setKey(normalizeKey(e.target.value))}
-                className="w-28 font-mono uppercase tracking-wide"
-                maxLength={5}
-              />
-            }
-          />
-
-          <SettingsRow
-            label={t("iconLabel")}
-            control={
-              /* The project exists: each gesture writes immediately and the refreshed cache
- `projects` renders the new icon — nothing to remember here. */
-              <ProjectIconPicker
-                projectId={project.id}
-                seed={projectOrbSeed(project)}
-                iconUrl={project.icon_url}
-                onChanged={() => {}}
-              />
-            }
-          />
-        </SettingsGroup>
-      </form>
-
-      <ProjectVisibilitySection project={project} />
+      {header}
 
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.projectDanger}
         tone="destructive"
         title={t("dangerZoneTitle")}
       >
+        <ProjectVisibilityRow project={project} />
         <SettingsRow
           label={t("deleteProjectLabel")}
           hint={t("deleteProjectHint")}

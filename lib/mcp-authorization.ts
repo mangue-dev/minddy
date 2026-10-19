@@ -20,7 +20,7 @@ export function prepareMcpAuthorization() {
       async authorize(connectionId: string, _getUrl: () => Promise<string>) {
         // Start OAuth in the browser session that will receive its callback.
         const url = new URL("/settings", window.location.origin);
-        url.searchParams.set("tab", "mcp-clients");
+        url.searchParams.set("tab", "agent");
         url.searchParams.set(MCP_AUTHORIZATION_PARAM, connectionId);
         url.searchParams.set(MCP_DESKTOP_PARAM, "1");
         desktop.openExternal(url.href);

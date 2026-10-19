@@ -140,6 +140,34 @@ export function SettingsGroup({
 }
 
 /**
+ * A catalog destination WITHOUT the card frame: the profile header and its
+ * statistics (MIN-737) are a page of their own rather than rows of options,
+ * but ⌘K must still be able to land on them and highlight them.
+ */
+export function SettingsBlock({
+  anchor,
+  label,
+  className,
+  children,
+}: {
+  anchor: SettingsSectionId;
+  /** Accessible name of the region. */
+  label?: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section
+      id={settingsSectionAnchor(anchor)}
+      aria-label={label}
+      className={cn("scroll-mt-20 rounded-xl", className)}
+    >
+      {children}
+    </section>
+  );
+}
+
+/**
  * One-line row hint (MIN-593): a description that wraps to several lines
  * breaks the rhythm of the card. The hint is clamped to a single line; when
  * the text does not fit, it is truncated with an ellipsis and readable via a
@@ -201,6 +229,7 @@ function OneLineHint({ hint }: { hint: ReactNode }) {
  * (a group of buttons, a list of gestures).
  */
 export function SettingsRow({
+  anchor,
   label,
   hint,
   help,
@@ -210,6 +239,9 @@ export function SettingsRow({
   className,
   children,
 }: {
+  /** Catalog entry for ONE setting (MIN-737): ⌘K and the settings filter can
+   *  then land on the row itself rather than on its whole card. */
+  anchor?: SettingsSectionId;
   label: ReactNode;
   hint?: ReactNode;
   help?: ReactNode;
@@ -226,7 +258,16 @@ export function SettingsRow({
     </>
   );
   return (
-    <div className={cn("flex flex-col gap-2.5 py-3.5", className)}>
+    <div
+      id={anchor ? settingsSectionAnchor(anchor) : undefined}
+      className={cn(
+        "flex flex-col gap-2.5 py-3.5",
+        // Scroll margin only: a rounded row would bend the separator that
+        // `divide-y` draws on its top edge.
+        anchor && "scroll-mt-20",
+        className,
+      )}
+    >
       <Field orientation={orientation}>
         <FieldContent>
           {htmlFor ? (

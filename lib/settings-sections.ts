@@ -1,8 +1,8 @@
 import type { AppIcon } from "@/components/icon";
 import { useMemo } from "react";
-import { AppWindowIcon as AppWindow, AiAutoRotateIcon as CycleIcon, Analytics01Icon, BellRingIcon as BellRing, CalendarClockIcon, CodeSimpleIcon as Code2, Download, GitBranchIcon as GitBranch, ImportIcon, InboxIcon as Inbox, Keyboard, KeyRoundIcon as KeyRound, Languages, ListPlus, LockIcon, LogOut, MessageMultiple01Icon as MessagesSquare, Palette, PlugIcon as Plug, RepeatIcon as Repeat, Settings02Icon as Settings2, ShieldOff, Sparkles, TagsIcon as Tags, TicketIcon as Ticket, Trash2, TriangleAlertIcon, Upload04Icon as Upload, ViewOffIcon, UserGroupIcon as Users, UserIcon as User } from "@hugeicons/core-free-icons";
+import { AppWindowIcon as AppWindow, AiAutoRotateIcon as CycleIcon, Analytics01Icon, BlurIcon, ChartLineData01Icon, Copy01Icon, LaptopIcon, Link01Icon, Moon02Icon, PlayIcon, SearchList01Icon, Sun01Icon, UserCheck01Icon, BellRingIcon as BellRing, CalendarClockIcon, CodeSimpleIcon as Code2, Download, GitBranchIcon as GitBranch, ImportIcon, InboxIcon as Inbox, Keyboard, KeyRoundIcon as KeyRound, Languages, ListPlus, LockIcon, LogOut, MessageMultiple01Icon as MessagesSquare, Palette, PlugIcon as Plug, RepeatIcon as Repeat, Settings02Icon as Settings2, ShieldOff, Sparkles, TagsIcon as Tags, TicketIcon as Ticket, Trash2, TriangleAlertIcon, Upload04Icon as Upload, ViewOffIcon, UserGroupIcon as Users, UserIcon as User } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
-import { SmartAssignIcon } from "@/components/smart-icons";
+import { SmartAssignIcon, SmartFillIcon } from "@/components/smart-icons";
 
 /**
  * The catalog of settings sections — the table that the ⌘K palette reads and
@@ -28,13 +28,24 @@ export type AccountSettingsTab =
   | "profile"
   | "security"
   | "preferences"
+  | "hidden-projects"
+  | "issues"
+  | "smart-fill"
   | "cycles"
   | "inbox"
-  | "mcp"
-  | "mcp-clients"
-  | "git"
   | "agent"
+  | "mcp"
+  | "git"
   | "data";
+
+/**
+ * Former `/settings?tab=` values and the tab that now holds their cards
+ * (MIN-737). Shared links, bookmarks and restored app tabs keep landing on
+ * the right content instead of falling back to the profile.
+ */
+export const ACCOUNT_SETTINGS_TAB_ALIASES: Readonly<Record<string, AccountSettingsTab>> = {
+  "mcp-clients": "agent",
+};
 
 /** The `/projects/<id>/settings` tabs. */
 export type ProjectSettingsTab =
@@ -55,12 +66,29 @@ export type ProjectSettingsTab =
  */
 export const SETTINGS_SECTIONS = {
   accountProfile: "account-profile",
+  accountStatistics: "account-statistics",
   accountSecurity: "account-security",
   accountSessions: "account-sessions",
   accountAppearance: "account-appearance",
-  accountIssues: "account-issues",
+  accountLanguage: "account-language",
+  accountTheme: "account-theme",
+  accountThemeLight: "account-theme-light",
+  accountThemeDark: "account-theme-dark",
+  accountTransparency: "account-transparency",
   accountKeyboard: "account-keyboard",
   accountHiddenProjects: "account-hidden-projects",
+  accountDesktop: "account-desktop",
+  // The id predates MIN-737, when the card held every issue preference. It
+  // now names the Assignment card; keeping it preserves palette favorites.
+  accountIssues: "account-issues",
+  accountStartingWork: "account-starting-work",
+  accountAutoAssignStart: "account-auto-assign-start",
+  accountPromptAutoStart: "account-prompt-auto-start",
+  accountSmartFill: "account-smart-fill",
+  accountSmartFillScope: "account-smart-fill-scope",
+  accountSmartFillRelations: "account-smart-fill-relations",
+  accountIssueIndexing: "account-issue-indexing",
+  accountNumoStatus: "account-numo-status",
   accountCyclesEnable: "account-cycles",
   accountCyclesCadence: "account-cycles-cadence",
   accountCyclesCapture: "account-cycles-capture",
@@ -111,8 +139,12 @@ export type SettingsSection = {
   scope: "account" | "project";
   tab: AccountSettingsTab | ProjectSettingsTab;
   icon: AppIcon;
-  /** The title of the card, WORD FOR WORD — the paddle line announces what it lands on. */
+  /** The title of the card or row, WORD FOR WORD — the palette line
+   *  announces what it lands on. */
   title: string;
+  /** For a single setting (a row inside a card): the card that contains it,
+   *  shown as context in the settings filter and searchable in ⌘K. */
+  parentTitle?: string;
   /** The tab that contains it, displayed in dim context next to the title. */
   tabLabel: string;
   /** Search terms, FR **and** EN: they are not displayed, so the two
@@ -159,18 +191,22 @@ export function useSettingsSections(): SettingsSection[] {
   const tNav = useTranslations("Nav");
   const tRecurrence = useTranslations("Recurrence");
   const tSettings = useTranslations("Settings");
+  const tLanguage = useTranslations("Language");
+  const tStats = useTranslations("Stats");
 
   return useMemo(() => {
     const accountTabs: Record<AccountSettingsTab, string> = {
       profile: tAccount("profileTab"),
       security: tAccount("securityTab"),
       preferences: tAccount("preferencesTab"),
+      "hidden-projects": tAccount("hiddenProjectsTitle"),
+      issues: tAccount("issuesTab"),
+      "smart-fill": tAccount("smartFillTab"),
       cycles: tAccount("cyclesTab"),
       inbox: tAccount("inboxTab"),
-      mcp: tAccount("mcpTab"),
-      "mcp-clients": tAccount("mcpClientsTab"),
-      git: tAccount("gitTab"),
       agent: tAccount("agentTab"),
+      mcp: tAccount("mcpTab"),
+      git: tAccount("gitTab"),
       data: tAccount("dataTab"),
     };
     const projectTabs: Record<ProjectSettingsTab, string> = {
@@ -201,7 +237,7 @@ export function useSettingsSections(): SettingsSection[] {
     });
 
     return [
-      // ── Compte ──────────────────────────────────────────────────────────
+      // ── Account ─────────────────────────────────────────────────────────
       account({
         id: SETTINGS_SECTIONS.accountProfile,
         tab: "profile",
@@ -210,6 +246,21 @@ export function useSettingsSections(): SettingsSection[] {
         keywords: [
           "profil", "profile", "nom", "name", "pseudo", "username",
           "avatar", "photo", "email", "adresse", "identité", "identite",
+          "modifier", "edit",
+        ],
+      }),
+      // Statistics moved into the profile (MIN-737): the words people used to
+      // reach the former page must still land on it.
+      account({
+        id: SETTINGS_SECTIONS.accountStatistics,
+        tab: "profile",
+        icon: ChartLineData01Icon,
+        title: tStats("title"),
+        keywords: [
+          "statistiques", "statistics", "stats", "activité", "activite",
+          "activity", "série", "serie", "streak", "historique", "history",
+          "rythme", "rhythm", "charge", "workload", "terminés", "termines",
+          "completed",
         ],
       }),
       account({
@@ -242,22 +293,65 @@ export function useSettingsSections(): SettingsSection[] {
         title: tNav("appearance"),
         keywords: [
           "apparence", "appearance", "thème", "theme", "sombre", "dark",
-          "clair", "light", "langue", "language", "français", "francais",
-          "english", "anglais", "préférences", "preferences",
+          "clair", "light", "langue", "language", "préférences", "preferences",
+        ],
+      }),
+      // Single settings of the Appearance card: each one is a word people
+      // type, and landing on the row beats landing on a five-row card.
+      account({
+        id: SETTINGS_SECTIONS.accountLanguage,
+        tab: "preferences",
+        icon: Languages,
+        title: tLanguage("title"),
+        parentTitle: tNav("appearance"),
+        keywords: [
+          "langue", "language", "français", "francais", "english", "anglais",
+          "deutsch", "español", "espanol", "italiano", "português", "portugues",
+          "traduction", "translation",
         ],
       }),
       account({
-        id: SETTINGS_SECTIONS.accountIssues,
+        id: SETTINGS_SECTIONS.accountTheme,
         tab: "preferences",
-        icon: Ticket,
-        title: tNav("tickets"),
+        icon: Sun01Icon,
+        title: tAccount("themeTitle"),
+        parentTitle: tNav("appearance"),
         keywords: [
-          "tickets", "issues", "assignation", "assign", "auto-assign",
-          "statut", "status", "prompt", "démarrer", "demarrer", "start",
-          "préférences", "preferences",
-          "smart-fill", "smart fill", "smartfill", "remplissage", "remplir",
-          "priorité", "priorite", "priority", "effort", "catégories",
-          "categories", "objectif", "objective",
+          "thème", "theme", "sombre", "dark", "clair", "light", "système",
+          "systeme", "system", "mode",
+        ],
+      }),
+      account({
+        id: SETTINGS_SECTIONS.accountThemeLight,
+        tab: "preferences",
+        icon: Palette,
+        title: tAccount("themeLightPresetTitle"),
+        parentTitle: tNav("appearance"),
+        keywords: [
+          "palette", "couleurs", "colors", "colours", "clair", "light",
+          "thème", "theme",
+        ],
+      }),
+      account({
+        id: SETTINGS_SECTIONS.accountThemeDark,
+        tab: "preferences",
+        icon: Moon02Icon,
+        title: tAccount("themeDarkPresetTitle"),
+        parentTitle: tNav("appearance"),
+        keywords: [
+          "palette", "couleurs", "colors", "colours", "sombre", "dark",
+          "thème", "theme",
+        ],
+      }),
+      account({
+        id: SETTINGS_SECTIONS.accountTransparency,
+        tab: "preferences",
+        icon: BlurIcon,
+        title: tAccount("themeTransparencyTitle"),
+        parentTitle: tNav("appearance"),
+        keywords: [
+          "transparence", "transparency", "verre", "glass", "flou", "blur",
+          "vibrancy",
         ],
       }),
       account({
@@ -276,13 +370,110 @@ export function useSettingsSections(): SettingsSection[] {
       }),
       account({
         id: SETTINGS_SECTIONS.accountHiddenProjects,
-        tab: "preferences",
+        tab: "hidden-projects",
         icon: ViewOffIcon,
         title: tAccount("hiddenProjectsTitle"),
         keywords: [
           "projets masqués", "projets masques", "hidden projects", "masquer",
           "hide", "réafficher", "reafficher", "show", "afficher", "unhide",
           "sidebar", "barre latérale", "navigation", "projet", "project",
+        ],
+      }),
+      account({
+        id: SETTINGS_SECTIONS.accountDesktop,
+        tab: "preferences",
+        icon: LaptopIcon,
+        title: tAccount("desktopSectionTitle"),
+        keywords: [
+          "bureau", "desktop", "application", "app", "mac", "macos",
+          "windows", "linux", "télécharger", "telecharger", "download",
+          "installer", "install", "version", "mise à jour", "mise a jour",
+          "update", "serveur", "server", "aperçu", "apercu", "preview",
+        ],
+      }),
+      account({
+        id: SETTINGS_SECTIONS.accountIssues,
+        tab: "issues",
+        icon: UserCheck01Icon,
+        title: tAccount("assignmentTitle"),
+        keywords: [
+          "assignation", "assignment", "assigner", "assign", "auto-assign",
+          "créer", "creer", "create", "tickets", "issues", "moi", "me",
+        ],
+      }),
+      account({
+        id: SETTINGS_SECTIONS.accountStartingWork,
+        tab: "issues",
+        icon: PlayIcon,
+        title: tAccount("startingWorkTitle"),
+        keywords: [
+          "démarrer", "demarrer", "start", "commencer", "en cours",
+          "in progress", "tickets", "issues",
+        ],
+      }),
+      account({
+        id: SETTINGS_SECTIONS.accountAutoAssignStart,
+        tab: "issues",
+        icon: UserCheck01Icon,
+        title: tAccount("autoAssignStartLabel"),
+        parentTitle: tAccount("startingWorkTitle"),
+        keywords: [
+          "assignation", "assignment", "assigner", "assign", "démarrer",
+          "demarrer", "start", "auto-assign",
+        ],
+      }),
+      account({
+        id: SETTINGS_SECTIONS.accountPromptAutoStart,
+        tab: "issues",
+        icon: Copy01Icon,
+        title: tAccount("promptAutoStartLabel"),
+        parentTitle: tAccount("startingWorkTitle"),
+        keywords: [
+          "prompt", "copier", "copy", "démarrer", "demarrer", "start",
+          "agent", "tâche", "tache", "task", "carnet", "notebook",
+        ],
+      }),
+      account({
+        id: SETTINGS_SECTIONS.accountSmartFill,
+        tab: "smart-fill",
+        icon: SmartFillIcon,
+        title: tAccount("smartFillTitle"),
+        keywords: [
+          "smart fill", "smart-fill", "smartfill", "remplissage", "remplir",
+          "fill", "priorité", "priorite", "priority", "effort",
+          "catégories", "categories", "objectif", "objective", "ia", "ai",
+        ],
+      }),
+      account({
+        id: SETTINGS_SECTIONS.accountSmartFillScope,
+        tab: "smart-fill",
+        icon: ListPlus,
+        title: tAccount("smartFillScopeTitle"),
+        keywords: [
+          "smart fill", "smart-fill", "smartfill", "créés", "crees",
+          "created", "triage", "remplir", "fill",
+        ],
+      }),
+      account({
+        id: SETTINGS_SECTIONS.accountSmartFillRelations,
+        tab: "smart-fill",
+        icon: Link01Icon,
+        title: tAccount("smartFillRelationsTitle"),
+        keywords: [
+          "smart fill", "smart-fill", "relations", "liens", "links",
+          "lier", "link", "liés", "lies", "related", "doublons",
+          "duplicates",
+        ],
+      }),
+      account({
+        id: SETTINGS_SECTIONS.accountIssueIndexing,
+        tab: "smart-fill",
+        icon: SearchList01Icon,
+        title: tAccount("issueIndexingTitle"),
+        keywords: [
+          "indexation", "indexing", "index", "indexer", "recherche",
+          "search", "sémantique", "semantique", "semantic", "vecteurs",
+          "vectors", "embeddings", "smart fill",
         ],
       }),
       account({
@@ -339,6 +530,33 @@ export function useSettingsSections(): SettingsSection[] {
         ],
       }),
       account({
+        id: SETTINGS_SECTIONS.accountAiProvider,
+        tab: "agent",
+        icon: KeyRound,
+        title: tAccount("aiProviderTitle"),
+        keywords: [
+          "ia", "ai", "clé", "cle", "key", "api", "byok", "openai",
+          "anthropic", "provider", "quota", "budget",
+        ],
+      }),
+      account({
+        id: SETTINGS_SECTIONS.accountMcpClients,
+        tab: "agent",
+        icon: Plug,
+        title: tAccount("mcpClientsTab"),
+        keywords: ["mcp", "numo", "notion", "linear", "google", "connectors", "oauth"],
+      }),
+      account({
+        id: SETTINGS_SECTIONS.accountNumoStatus,
+        tab: "agent",
+        icon: Ticket,
+        title: tAccount("numoIssuesTitle"),
+        keywords: [
+          "numo", "statut", "status", "tickets créés", "tickets crees",
+          "created issues", "triage", "backlog", "assistant",
+        ],
+      }),
+      account({
         id: SETTINGS_SECTIONS.accountMcp,
         tab: "mcp",
         icon: Plug,
@@ -347,13 +565,6 @@ export function useSettingsSections(): SettingsSection[] {
           "mcp", "agent", "claude", "cursor", "windsurf", "codex", "opencode",
           "connecter", "connect", "serveur", "server", "oauth",
         ],
-      }),
-      account({
-        id: SETTINGS_SECTIONS.accountMcpClients,
-        tab: "mcp-clients",
-        icon: Plug,
-        title: tAccount("mcpClientsTab"),
-        keywords: ["mcp", "numo", "notion", "linear", "google", "connectors", "oauth"],
       }),
       account({
         id: SETTINGS_SECTIONS.accountConnectedApps,
@@ -366,11 +577,6 @@ export function useSettingsSections(): SettingsSection[] {
           "revoke", "déconnecter", "deconnecter", "disconnect",
         ],
       }),
-      // Only one card since the merger: connection to the repository and
-      // authorization to act on your behalf are two levels of the SAME account, and
-      // two separate cards required them to be glued together head on. Keywords
-      // the two are therefore united there — “act in my name” must always fall
-      // on this map.
       account({
         id: SETTINGS_SECTIONS.accountGitConnections,
         tab: "git",
@@ -383,16 +589,6 @@ export function useSettingsSections(): SettingsSection[] {
           "identité", "identite", "identity", "en mon nom", "in my name",
           "autoriser", "authorize", "révoquer", "revoquer", "revoke",
           "pull request", "pr",
-        ],
-      }),
-      account({
-        id: SETTINGS_SECTIONS.accountAiProvider,
-        tab: "agent",
-        icon: KeyRound,
-        title: tAccount("aiProviderTitle"),
-        keywords: [
-          "ia", "ai", "clé", "cle", "key", "api", "byok", "openai",
-          "anthropic", "provider", "quota", "budget",
         ],
       }),
       account({
@@ -453,7 +649,8 @@ export function useSettingsSections(): SettingsSection[] {
         id: SETTINGS_SECTIONS.projectVisibility,
         tab: "general",
         icon: ViewOffIcon,
-        title: tSettings("visibilityTitle"),
+        title: tSettings("hideProjectLabel"),
+        parentTitle: tSettings("dangerZoneTitle"),
         keywords: [
           "masquer", "hide", "cacher", "visibilité", "visibilite",
           "visibility", "sidebar", "barre latérale", "navigation",
@@ -466,6 +663,7 @@ export function useSettingsSections(): SettingsSection[] {
         icon: LogOut,
         audience: "member",
         title: tSettings("leaveProjectLabel"),
+        parentTitle: tSettings("dangerZoneTitle"),
         keywords: [
           "quitter", "leave", "partir", "projet", "project", "membre",
           "member",
@@ -475,7 +673,6 @@ export function useSettingsSections(): SettingsSection[] {
         id: SETTINGS_SECTIONS.projectDanger,
         tab: "general",
         icon: TriangleAlertIcon,
-        audience: "owner",
         title: tSettings("dangerZoneTitle"),
         keywords: [
           "supprimer", "delete", "zone sensible", "danger", "corbeille",
@@ -619,5 +816,7 @@ export function useSettingsSections(): SettingsSection[] {
     tNav,
     tRecurrence,
     tSettings,
+    tLanguage,
+    tStats,
   ]);
 }

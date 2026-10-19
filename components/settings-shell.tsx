@@ -31,6 +31,7 @@ import {
   type SettingsSection,
   type SettingsSectionId,
 } from "@/lib/settings-sections";
+import { takeSettingsSectionFocus } from "@/lib/settings-section-focus";
 
 export type SettingsTab = {
   value: string;
@@ -49,6 +50,8 @@ type SettingsShellProps = {
   title: string;
   defaultTab: string;
   tabs: SettingsTab[];
+  /** Former `?tab=` values mapped to the tab that now holds their cards. */
+  tabAliases?: Readonly<Record<string, string>>;
   /**
    * “Filter the 18 settings…”. A FUNCTION, not a string: the namespace
    * differs (account / project) so the translation comes from the page, but the
@@ -147,6 +150,7 @@ export function SettingsShell({
   title,
   defaultTab,
   tabs,
+  tabAliases,
   audience,
   filterPlaceholder,
   browse,
@@ -160,6 +164,7 @@ export function SettingsShell({
         title={title}
         defaultTab={defaultTab}
         tabs={tabs}
+        tabAliases={tabAliases}
         audience={audience}
         filterPlaceholder={filterPlaceholder}
       />
@@ -171,6 +176,7 @@ function SettingsTabs({
   title,
   defaultTab,
   tabs,
+  tabAliases,
   audience,
   filterPlaceholder,
   browse,
@@ -190,7 +196,8 @@ function SettingsTabs({
     [visibleTabs],
   );
 
-  const tabParam = searchParams.get("tab");
+  const rawTabParam = searchParams.get("tab");
+  const tabParam = (rawTabParam && tabAliases?.[rawTabParam]) || rawTabParam;
   const fallback = validValues.has(defaultTab)
     ? defaultTab
     : (visibleTabs[0]?.value ?? defaultTab);
@@ -228,6 +235,18 @@ function SettingsTabs({
     id: SettingsSectionId;
     nonce: number;
   } | null>(null);
+
+  // A tab opened from the ⌘T palette arrives without `?section=` (tabs do
+  // not persist it) but with the section queued: take it once on mount.
+  useEffect(() => {
+    if (browse) return;
+    const queued = takeSettingsSectionFocus();
+    if (!queued) return;
+    setFocus((prev) => ({
+      id: queued as SettingsSectionId,
+      nonce: (prev?.nonce ?? 0) + 1,
+    }));
+  }, [browse]);
   const consumed = useRef<string | null>(null);
 
   useEffect(() => {
@@ -280,7 +299,12 @@ function SettingsTabs({
     // The keywords in the catalog carry BOTH languages: “security” is
     // found from an English screen, and “security” from a French one.
     return searchable.filter((s) =>
-      matchesFilter(query, [s.title, s.tabLabel, ...s.keywords]),
+      matchesFilter(query, [
+        s.title,
+        s.tabLabel,
+        ...(s.parentTitle ? [s.parentTitle] : []),
+        ...s.keywords,
+      ]),
     );
   }, [query, searchable]);
 
@@ -333,10 +357,10 @@ function SettingsTabs({
                       <span className="min-w-0 flex-1 truncate text-sm">
                         {section.title}
                       </span>
-                      {/* The tab that contains it, in dim context — the same
-                          reading only on the paddle line. */}
-                      <span className="shrink-0 text-xs text-muted-foreground">
-                        {section.tabLabel}
+                      {/* Where it lives, in dim context: the card for a single
+                          setting, the tab for a card. */}
+                      <span className="max-w-[45%] shrink-0 truncate text-xs text-muted-foreground">
+                        {section.parentTitle ?? section.tabLabel}
                       </span>
                     </button>
                   </li>

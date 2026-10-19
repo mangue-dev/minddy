@@ -100,6 +100,7 @@ import { moveIssueGroupsToEnd } from "@/lib/command-palette/group-order";
 import type { PaletteStrings } from "@/lib/command-palette/i18n";
 import { createMinddyEntityActionsProvider } from "@/lib/command-palette/registry/providers/MinddyEntityActionsProvider";
 import { paletteDestinationHref } from "@/lib/palette-destination";
+import { queueSettingsSectionFocus } from "@/lib/settings-section-focus";
 import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 import type {
@@ -387,8 +388,11 @@ export function CommandPalette({
           // never the translated wording, which would fragment the stats.
           track("command_executed", { command_id: it.key, category: cat });
           const destination = paletteDestinationHref(it.href);
-          if (destinationOnly && destination) onDestinationSelect?.(destination);
-          else it.onSelect?.();
+          if (destinationOnly && destination) {
+            // A settings row lands on its card in the new tab too.
+            queueSettingsSectionFocus(it.href);
+            onDestinationSelect?.(destination);
+          } else it.onSelect?.();
         },
       };
     },

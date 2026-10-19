@@ -6,18 +6,19 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
+import { SettingsRow } from "@/components/settings/settings-ui";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { useHiddenProjects } from "@/lib/use-hidden-projects";
 import type { Project } from "@/lib/types";
 
 /**
- * "Hide project" in the General tab (MIN-692). Rendered for the owner and
- * for every member alike, since it is a preference of the reader, not a
- * project setting: it sits apart from Leave and the danger zone, and the same
+ * "Hide project" (MIN-692), a row of the General tab's danger zone (MIN-737)
+ * next to Leave project or Move to trash: the three gestures that take a
+ * project out of view. Rendered for the owner and every member alike, since
+ * it is a preference of the reader, not a project setting; the same
  * preference drives the sidebar menu and Account settings → Hidden projects.
  */
-export function ProjectVisibilitySection({ project }: { project: Project }) {
+export function ProjectVisibilityRow({ project }: { project: Project }) {
   const t = useTranslations("Settings");
   const { isHidden, setProjectHidden } = useHiddenProjects();
   const [saving, setSaving] = useState(false);
@@ -33,8 +34,8 @@ export function ProjectVisibilitySection({ project }: { project: Project }) {
   };
 
   return (
-    <SettingsGroup anchor={SETTINGS_SECTIONS.projectVisibility} title={t("visibilityTitle")}>
       <SettingsRow
+        anchor={SETTINGS_SECTIONS.projectVisibility}
         label={t(hidden ? "projectHiddenLabel" : "hideProjectLabel")}
         hint={t(hidden ? "projectHiddenHint" : "hideProjectHint")}
         control={
@@ -50,6 +51,5 @@ export function ProjectVisibilitySection({ project }: { project: Project }) {
           </Button>
         }
       />
-    </SettingsGroup>
   );
 }

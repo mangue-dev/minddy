@@ -1,19 +1,23 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, CodeSimpleIcon as Code2, Copy01Icon, LinkSquare01Icon, MessageMultiple01Icon, Refresh01Icon, CheckIcon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, Cancel01Icon, Copy01Icon, LinkSquare01Icon, MessageMultiple01Icon, MoreHorizontalIcon, Refresh01Icon, CheckIcon, Settings02Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
-import { cn } from "@/lib/utils";
 import { ssoEnvLine } from "@/lib/feedback/env-lines";
 import { useIntegrationsQuery } from "@/lib/use-integrations-query";
 import {
@@ -21,7 +25,6 @@ import {
   BoardVisibilityRows,
   FeedbackTranslationGroup,
   NumoReviewGroup,
-  StatusPill,
   useFeedbackBoardSettings,
   type BoardSettings,
 } from "@/components/feedback/feedback-settings-shared";
@@ -120,7 +123,8 @@ export function ProjectFeedbackSettings({
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    // The same gap between cards as every other settings tab.
+    <div className="flex flex-col gap-8">
       {/* The SAME place in the tree as in the “nothing open” branch
           above: turning on the board at the first step flips the page
           from one branch to another, and a wizard reassembled at that moment would leave again
@@ -134,21 +138,16 @@ export function ProjectFeedbackSettings({
 
       {/* ── The complete route, in mind: it is through this that we configure ── */}
       {isOwner && (
-        <div className="flex items-start justify-between gap-4 rounded-lg border border-brand/25 bg-brand/5 p-4">
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <p className="text-sm font-medium">{t("feedbackSetupTitle")}</p>
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              {t("feedbackSetupDesc")}
-            </p>
-          </div>
-          <Button
-            size="sm"
-            className="shrink-0"
-            onClick={() => setWizardOpen(true)}
-          >
-            {t("feedbackSetupButtonAgain")}
-          </Button>
-        </div>
+        <SettingsGroup
+          title={t("feedbackSetupTitle")}
+          help={t("feedbackSetupDesc")}
+          action={
+            <Button variant="outline" size="sm" onClick={() => setWizardOpen(true)}>
+              <HugeiconsIcon icon={Settings02Icon} />
+              {t("feedbackSetupButtonAgain")}
+            </Button>
+          }
+        />
       )}
 
       {/* Public feedback board */}
@@ -157,60 +156,30 @@ export function ProjectFeedbackSettings({
         title={t("feedbackChannelBoardTitle")}
         help={t("feedbackChannelBoardHelp")}
         action={
-          <>
-            <StatusPill
-              active={boardOn}
-              label={boardOn ? t("feedbackActive") : t("feedbackInactive")}
-            />
-            <Switch
-              checked={boardOn}
-              disabled={!isOwner || busy}
-              onCheckedChange={(v) => {
-                void patchBoard({ enabled: v });
-              }}
-              aria-label={t("feedbackChannelBoardTitle")}
-            />
-          </>
+          <Switch
+            checked={boardOn}
+            disabled={!isOwner || busy}
+            onCheckedChange={(v) => {
+              void patchBoard({ enabled: v });
+            }}
+            aria-label={t("feedbackChannelBoardTitle")}
+          />
         }
       >
         {boardOn && board && (
           <>
-            <div className="flex flex-col gap-3 py-3.5">
-              {publicUrl && (
-                <div className="flex flex-col gap-1.5">
-                  <p className="text-sm font-medium">{t("feedbackUrl")}</p>
-                  <PublicUrlLink url={publicUrl} />
-                </div>
-              )}
-            </div>
+            {publicUrl && <PublicUrlRow url={publicUrl} />}
 
-            {/* Visitor identity */}
-            <SettingsRow
-              label={t("feedbackIdentityTitle")}
-              help={t("feedbackIdentityHelp")}
-              control={
-                <span
-                  className={cn(
-                    "text-xs font-medium",
-                    board.sso_configured ? "text-brand" : "text-muted-foreground",
-                  )}
-                >
-                  {board.sso_configured
-                    ? t("feedbackIdentitySso")
-                    : t("feedbackIdentityEmail")}
-                </span>
-              }
-            >
-              {isOwner && (
-                <SsoSetup
-                  board={board}
-                  busy={busy}
-                  onPost={post}
-                  publicUrl={publicUrl}
-                  origin={origin}
-                />
-              )}
-            </SettingsRow>
+            {/* Visitor identity: the mode in force, and the SSO gestures for
+                the owner. */}
+            <SsoRow
+              board={board}
+              isOwner={isOwner}
+              busy={busy}
+              onPost={post}
+              publicUrl={publicUrl}
+              origin={origin}
+            />
 
             {/* Public comments, views tabs, pages tabs, categories — the same
                 rows as the “What the public sees” step of the wizard. */}
@@ -239,35 +208,16 @@ export function ProjectFeedbackSettings({
         anchor={SETTINGS_SECTIONS.projectFeedbackApi}
         title={t("feedbackChannelApiTitle")}
         help={t("feedbackChannelApiHelp")}
-        /* The gesture lives at the end of the title; without an active key it goes down into the
-           scene and is not shown twice — like the Integrations tab. */
-        action={
-          feedbackKeyCount > 0 ? (
-            <>
-              <StatusPill active label={t("feedbackActive")} />
-              <ManageKeysButton projectId={projectId} />
-            </>
-          ) : undefined
-        }
       >
-        {feedbackKeyCount === 0 ? (
-          // The wording “none” in the plural IS the sentence in the scene: the
-          // to say it twice is to see it diverge.
-          <EmptyScene
-            size="compact"
-            icon={Code2}
-            title={t("feedbackApiKeysCount", { count: 0 })}
-          >
-            <ManageKeysButton projectId={projectId} />
-          </EmptyScene>
-        ) : (
-          <p className="py-3.5 text-xs text-muted-foreground">
-            {t("feedbackApiKeysCount", { count: feedbackKeyCount })}
-          </p>
-        )}
+        {/* One row, whatever the count: the keys themselves live in the
+            Integrations tab, where they are created and revoked. */}
+        <SettingsRow
+          label={t("feedbackApiKeysCount", { count: feedbackKeyCount })}
+          control={<ManageKeysButton projectId={projectId} />}
+        />
       </SettingsGroup>
 
-      {/* ── Revue par Numo : s'applique aux trois canaux ────────────────── */}
+      {/* ── Numo review: applies to the three channels ────────────────── */}
       <NumoReviewGroup
         projectId={projectId}
         isOwner={isOwner}
@@ -317,8 +267,7 @@ function FeedbackWizardMount({
   );
 }
 
-/** Referral to the Integrations tab, where keys are created and revoked —
- * card header when there is one, in the empty scene when there is none. */
+/** Referral to the Integrations tab, where keys are created and revoked. */
 function ManageKeysButton({ projectId }: { projectId: string }) {
   const t = useTranslations("Settings");
   return (
@@ -330,22 +279,48 @@ function ManageKeysButton({ projectId }: { projectId: string }) {
   );
 }
 
-/** SSO block (owner). Not configured → activation button + “Recommended”.
- * Configured → secret copyable, technical details collapsed, refresh/disable.
+/** The public address of the board: shown as the row's hint, opened in a
+ *  new tab or copied from the row's controls. */
+function PublicUrlRow({ url }: { url: string }) {
+  const t = useTranslations("Settings");
+  return (
+    <SettingsRow
+      label={t("feedbackUrl")}
+      hint={<span className="font-mono">{url.replace(/^https?:\/\//, "")}</span>}
+      control={
+        <>
+          <CopyButton value={url} />
+          <Button variant="outline" size="sm" asChild>
+            <a href={url} target="_blank" rel="noreferrer">
+              <HugeiconsIcon icon={LinkSquare01Icon} />
+              {t("feedbackOpenBoard")}
+            </a>
+          </Button>
+        </>
+      }
+    />
+  );
+}
+
+/** Visitor identity (MIN-37). The hint says which mode is in force; the
+ * owner enables SSO from the row, and once it is on manages it from a menu
+ * (regenerate, disable) while the signing secret sits under the row.
  *
  * The secret is displayed and copied as an ENVIRONMENT LINE
  * (`MINDDY_SSO_SECRET=…`), no bare key: that's the only thing we do with it,
  * and the integration prompt no longer carries the secret — it names this
- * variable and rely on it. Pasting the key alone in a `.env` would not work
- * not ; so what is shown is exactly what is expected there. */
-function SsoSetup({
+ * variable and relies on it. Pasting the key alone in a `.env` would not
+ * work, so what is shown is exactly what is expected there. */
+function SsoRow({
   board,
+  isOwner,
   busy,
   onPost,
   publicUrl,
   origin,
 }: {
   board: BoardSettings;
+  isOwner: boolean;
   busy: boolean;
   onPost: (action: string) => Promise<boolean>;
   publicUrl: string | null;
@@ -356,11 +331,15 @@ function SsoSetup({
   const [reveal, setReveal] = useState(false);
   const [confirmRotate, setConfirmRotate] = useState(false);
 
-  const envLine = board.sso_secret ? ssoEnvLine(board.sso_secret) : null;
+  const envLine = isOwner && board.sso_secret ? ssoEnvLine(board.sso_secret) : null;
 
-  if (!envLine) {
-    return (
-      <div className="flex items-center gap-2">
+  let control: React.ReactNode = null;
+  if (isOwner && !envLine) {
+    control = (
+      <>
+        {/* A plain label, not a pill: next to the button a pill read as a
+            second button. */}
+        <span className="text-xs font-medium text-brand">{t("feedbackSsoRecommended")}</span>
         <Button
           variant="outline"
           size="sm"
@@ -370,116 +349,107 @@ function SsoSetup({
           {busy && <Spinner />}
           {t("feedbackSsoGenerate")}
         </Button>
-        <Badge variant="secondary" className="border-brand/30 text-brand">
-          {t("feedbackSsoRecommended")}
-        </Badge>
-      </div>
+      </>
+    );
+  } else if (envLine) {
+    control = (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            disabled={busy}
+            aria-label={t("feedbackSsoActions")}
+          >
+            <HugeiconsIcon icon={MoreHorizontalIcon} />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onSelect={() => setConfirmRotate(true)}>
+            <HugeiconsIcon icon={Refresh01Icon} />
+            {t("feedbackSsoRotate")}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            variant="destructive"
+            onSelect={() => void onPost("clear_sso")}
+          >
+            <HugeiconsIcon icon={Cancel01Icon} />
+            {t("feedbackSsoClear")}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     );
   }
 
   return (
-    <div className="flex flex-col gap-2.5 rounded-lg border border-brand/25 bg-brand/5 p-3">
-      <p className="text-xs font-medium text-muted-foreground">
-        {t("feedbackSsoSecretLabel")}
-      </p>
-      <div className="flex items-center gap-2">
-        <Input
-          readOnly
-          type={reveal ? "text" : "password"}
-          value={envLine}
-          className="font-mono text-xs"
-        />
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={reveal ? t("feedbackSsoHide") : t("feedbackSsoReveal")}
-          onClick={() => setReveal((r) => !r)}
-        >
-          {reveal ? <HugeiconsIcon icon={ViewOffIcon} className="size-4" /> : <HugeiconsIcon icon={ViewIcon} className="size-4" />}
-        </Button>
-        <CopyButton value={envLine} />
-      </div>
+    <SettingsRow
+      label={t("feedbackIdentityTitle")}
+      help={t("feedbackIdentityHelp")}
+      hint={board.sso_configured ? t("feedbackIdentitySso") : t("feedbackIdentityEmail")}
+      control={control}
+    >
+      {envLine && (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs text-muted-foreground">{t("feedbackSsoSecretLabel")}</p>
+          <div className="flex items-center gap-2">
+            <Input
+              readOnly
+              aria-label={t("feedbackSsoSecretLabel")}
+              type={reveal ? "text" : "password"}
+              value={envLine}
+              className="font-mono text-xs"
+            />
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={reveal ? t("feedbackSsoHide") : t("feedbackSsoReveal")}
+              onClick={() => setReveal((r) => !r)}
+            >
+              <HugeiconsIcon icon={reveal ? ViewOffIcon : ViewIcon} className="size-4" />
+            </Button>
+            <CopyButton value={envLine} />
+          </div>
 
-      <Collapsible>
-        <CollapsibleTrigger className="group flex items-center gap-1 text-xs text-muted-foreground outline-hidden transition-colors hover:text-foreground">
-          <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 transition-transform group-data-[state=open]:rotate-180" />
-          {t("feedbackSsoDetails")}
-        </CollapsibleTrigger>
-        <CollapsibleContent className="flex flex-col gap-2 pt-2">
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            {t("feedbackSsoSnippetHint")}
-          </p>
-          <code className="block overflow-x-auto rounded-md border border-border bg-muted px-3 py-2 font-mono text-xs">
-            {publicUrl ?? `${origin}/f/…`}?sso=&lt;jwt&gt;
-          </code>
-        </CollapsibleContent>
-      </Collapsible>
+          <Collapsible>
+            <CollapsibleTrigger className="group flex items-center gap-1 text-xs text-muted-foreground outline-hidden transition-colors hover:text-foreground focus-visible:text-foreground">
+              <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 transition-transform group-data-[state=open]:rotate-180" />
+              {t("feedbackSsoDetails")}
+            </CollapsibleTrigger>
+            <CollapsibleContent className="flex flex-col gap-2 pt-2">
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                {t("feedbackSsoSnippetHint")}
+              </p>
+              <code className="block overflow-x-auto rounded-md border border-border bg-muted px-3 py-2 font-mono text-xs">
+                {publicUrl ?? `${origin}/f/…`}?sso=&lt;jwt&gt;
+              </code>
+            </CollapsibleContent>
+          </Collapsible>
 
-      <div className="flex items-center justify-end gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={busy}
-          onClick={() => setConfirmRotate(true)}
-        >
-          <HugeiconsIcon icon={Refresh01Icon} className="size-3.5" />
-          {t("feedbackSsoRotate")}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          disabled={busy}
-          onClick={() => void onPost("clear_sso")}
-          className="text-destructive hover:text-destructive"
-        >
-          {t("feedbackSsoClear")}
-        </Button>
-      </div>
-
-      <ConfirmDeleteDialog
-        open={confirmRotate}
-        onOpenChange={setConfirmRotate}
-        title={t("feedbackSsoRotateConfirmTitle")}
-        description={t("feedbackSsoRotateConfirmDesc")}
-        confirmLabel={t("feedbackSsoRotate")}
-        cancelLabel={tc("cancel")}
-        onConfirm={async () => {
-          await onPost("rotate_sso");
-        }}
-      />
-    </div>
-  );
-}
-
-/** Public board URL rendered as a real link (opens a tab) + copy —
- *  replaces the former read-only field. */
-function PublicUrlLink({ url }: { url: string }) {
-  const display = url.replace(/^https?:\/\//, "");
-  return (
-    <div className="flex items-center gap-2">
-      <a
-        href={url}
-        target="_blank"
-        rel="noreferrer"
-        className="group flex min-w-0 flex-1 items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 font-mono text-xs transition-colors hover:border-brand/40 hover:text-brand"
-      >
-        <span className="truncate">{display}</span>
-        <HugeiconsIcon icon={LinkSquare01Icon} className="size-3.5 shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
-      </a>
-      <CopyButton value={url} />
-    </div>
+          <ConfirmDeleteDialog
+            open={confirmRotate}
+            onOpenChange={setConfirmRotate}
+            title={t("feedbackSsoRotateConfirmTitle")}
+            description={t("feedbackSsoRotateConfirmDesc")}
+            confirmLabel={t("feedbackSsoRotate")}
+            cancelLabel={tc("cancel")}
+            onConfirm={async () => {
+              await onPost("rotate_sso");
+            }}
+          />
+        </div>
+      )}
+    </SettingsRow>
   );
 }
 
 function CopyButton({ value }: { value: string }) {
+  const tc = useTranslations("Common");
   const [copied, setCopied] = useState(false);
   return (
     <Button
       variant="ghost"
       size="icon-sm"
-      aria-label="Copy"
+      aria-label={copied ? tc("copied") : tc("copy")}
       onClick={() => {
         void navigator.clipboard.writeText(value);
         setCopied(true);

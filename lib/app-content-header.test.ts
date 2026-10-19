@@ -19,10 +19,6 @@ const billing = readFileSync(
   join(process.cwd(), "app/(app)/billing/page.tsx"),
   "utf8",
 );
-const statistics = readFileSync(
-  join(process.cwd(), "app/(app)/statistics/page.tsx"),
-  "utf8",
-);
 const admin = readFileSync(
   join(process.cwd(), "components/admin/admin-dashboard.tsx"),
   "utf8",
@@ -59,7 +55,7 @@ describe("application content header", () => {
   });
 
   it("uses fixed headers and faded scroll panes on account-level pages", () => {
-    for (const page of [billing, statistics, admin]) {
+    for (const page of [billing, admin]) {
       expect(page).toContain("<AppContentHeader");
       expect(page).toContain("useScrollFade<HTMLDivElement>()");
       expect(page).toContain("{...contentFade.scrollProps}");
@@ -67,7 +63,6 @@ describe("application content header", () => {
 
     expect(billing).toContain('t("manageSubscription")');
     expect(billing).not.toContain('t("pageTitle")');
-    expect(statistics).not.toContain('t("subtitle")');
     expect(admin).not.toContain('className="md:hidden"\n          contentClassName');
   });
 

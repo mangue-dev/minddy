@@ -31,6 +31,14 @@ describe("new-tab palette destinations", () => {
     expect(paletteDestinationHref(href)).toBeNull();
   });
 
+  it("opens a settings card in a new tab without persisting its one-shot section", () => {
+    expect(paletteDestinationHref("/settings?tab=smart-fill&section=account-smart-fill-relations"))
+      .toBe("/settings?tab=smart-fill");
+    expect(paletteDestinationHref("/settings?section=account-statistics")).toBe("/settings");
+    expect(paletteDestinationHref("/projects/project-1/settings?tab=members&section=project-members"))
+      .toBe("/projects/project-1/settings?tab=members");
+  });
+
   it("canonicalizes board-view selections without dropping their scope", () => {
     expect(paletteDestinationHref("/projects/project-1/?view=view-1&family=parent-1"))
       .toBe("/projects/project-1?family=parent-1&view=view-1");

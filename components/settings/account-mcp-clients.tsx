@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, Alert01Icon, MoreHorizontalIcon, CheckIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Alert01Icon, CheckIcon, Delete02Icon, FlashIcon, MoreHorizontalIcon, PencilEdit02Icon, RefreshIcon, ToggleOffIcon, ToggleOnIcon } from "@hugeicons/core-free-icons";
 import {useCallback, useEffect, useId, useState} from "react";
 import {useQueryClient} from "@tanstack/react-query";
 import {useSearchParams} from "next/navigation";
@@ -390,6 +390,7 @@ export function AccountMcpClients() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={() => edit(connection)}>
+                <HugeiconsIcon icon={PencilEdit02Icon} />
                 {t("edit")}
               </DropdownMenuItem>
               {connection.auth_mode === "oauth" &&
@@ -397,12 +398,14 @@ export function AccountMcpClients() {
                   <DropdownMenuItem
                     onSelect={() => void authorize(connection.id)}
                   >
+                    <HugeiconsIcon icon={RefreshIcon} />
                     {t("reconnect")}
                   </DropdownMenuItem>
                 )}
               <DropdownMenuItem
                 onSelect={() => void testConnection(connection.id)}
               >
+                <HugeiconsIcon icon={FlashIcon} />
                 {t("test")}
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -412,15 +415,17 @@ export function AccountMcpClients() {
                   })
                 }
               >
+                <HugeiconsIcon icon={connection.enabled ? ToggleOffIcon : ToggleOnIcon} />
                 {connection.enabled ? t("disable") : t("enable")}
               </DropdownMenuItem>
               <DropdownMenuItem
-                className="text-destructive"
+                variant="destructive"
                 onSelect={async () => {
                   if (await mutate(`${endpoint}/${connection.id}`, "DELETE"))
                     toast.success(t("removed"));
                 }}
               >
+                <HugeiconsIcon icon={Delete02Icon} />
                 {t("remove")}
               </DropdownMenuItem>
             </DropdownMenuContent>

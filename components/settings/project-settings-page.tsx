@@ -97,29 +97,17 @@ export default function ProjectSettingsPage({ browse, projectId }: { browse?: Si
       value: "categories",
       label: t("categoriesTab"),
       icon: Tags,
-      content: (
-        <SettingsGroup
-          anchor={SETTINGS_SECTIONS.projectCategories}
-          title={t("categoriesTab")}
-          variant="block"
-        >
-          <ProjectCategories projectId={project.id} />
-        </SettingsGroup>
-      ),
+      // The section renders its own card: "New category" lives on its
+      // title line and opens a row inside the list.
+      content: <ProjectCategories projectId={project.id} />,
     },
     {
       value: "members",
       label: t("membersTab"),
       icon: Users,
-      content: (
-        <SettingsGroup
-          anchor={SETTINGS_SECTIONS.projectMembers}
-          title={t("membersTab")}
-          variant="block"
-        >
-          <ProjectMembers projectId={project.id} enabled />
-        </SettingsGroup>
-      ),
+      // The section renders its own cards: invite, members, pending
+      // invitations.
+      content: <ProjectMembers projectId={project.id} enabled />,
     },
     {
       value: "recurrences",

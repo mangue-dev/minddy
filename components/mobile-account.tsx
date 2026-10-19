@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
-import { Analytics01Icon, ComputerIcon, CreditCardIcon, Delete02Icon, LogOutIcon, MoonIcon, Settings01Icon, Shield01Icon, Sun01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { ComputerIcon, CreditCardIcon, Delete02Icon, LogOutIcon, MoonIcon, Settings01Icon, Shield01Icon, Sun01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useMemo, type SVGProps } from "react";
 import { useTranslations } from "next-intl";
 import { useAppRouter } from "@/lib/use-app-router";
@@ -52,7 +52,6 @@ export function useAccountActions(): {
         label: t("account"),
         items: [
           { key: "m-trash", label: t("trash"), icon: dataIcon(Delete02Icon), href: "/trash" },
-          { key: "m-stats", label: t("statistics"), icon: dataIcon(Analytics01Icon), href: "/statistics" },
           { key: "m-billing", label: t("billing"), icon: dataIcon(CreditCardIcon), href: "/billing" },
           { key: "m-settings", label: t("accountSettings"), icon: dataIcon(Settings01Icon), href: "/settings" },
           ...(isAdmin
@@ -76,14 +75,6 @@ export function useAccountActions(): {
         href: "/trash",
         keywords: ["trash", "corbeille", "deleted", "supprimé", "supprime", "restore", "restaurer"],
         onSelect: () => router.push("/trash"),
-      },
-      {
-        key: "cmd-stats",
-        label: t("statistics"),
-        icon: dataIcon(Analytics01Icon),
-        href: "/statistics",
-        keywords: ["statistics", "stats", "statistiques"],
-        onSelect: () => router.push("/statistics"),
       },
       {
         key: "cmd-billing",

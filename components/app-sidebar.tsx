@@ -74,7 +74,6 @@ import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import { NewMenu } from "@/components/new-menu";
 import { SidebarOnboarding } from "@/components/sidebar-onboarding";
 import { UsageIndicator } from "@/components/usage-indicator";
-import { STATISTICS_ICON } from "@/components/feature-icons";
 import {
   SIDEBAR_COMPACT_CONTROL_CLASS,
   SIDEBAR_TOOLTIP_DELAY_MS,
@@ -619,7 +618,6 @@ function AccountButton({
       ...(hasManagedService ? [{ href: "/billing", label: t("billing"), icon: CreditCardIcon }] : []),
       { href: "/settings", label: t("accountSettings"), icon: Settings01Icon },
       { href: "/trash", label: t("trash"), icon: Delete02Icon },
-      { href: "/statistics", label: t("statistics"), icon: STATISTICS_ICON },
       ...(isAdmin ? [{ href: "/admin", label: t("adminDashboard"), icon: Shield01Icon }] : []),
     ];
     return <>
@@ -704,12 +702,6 @@ function AccountButton({
                 <Link href="/trash">
                   <HugeiconsIcon icon={Delete02Icon} />
                   {t("trash")}
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/statistics">
-                  <HugeiconsIcon icon={STATISTICS_ICON} />
-                  {t("statistics")}
                 </Link>
               </DropdownMenuItem>
               {isAdmin && (

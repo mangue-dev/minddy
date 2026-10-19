@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Download01Icon } from "@hugeicons/core-free-icons";
 import {useEffect, useState} from "react";
 import {useTranslations} from "next-intl";
 
@@ -10,22 +12,24 @@ import {getDesktopBridge} from "@/lib/desktop/bridge";
 import type {DesktopBridge} from "@/lib/desktop/bridge";
 import {desktopChannelForOrigin} from "@/lib/desktop/channel";
 import type {DesktopChannel} from "@/lib/desktop/channel";
+import Link from "@/components/app-link";
 import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
+import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
+import {useAnalytics} from "@/lib/use-analytics";
 
 /**
- * Account → Preferences: the CHANNEL of the desktop app (MIN-352).
+ * Account → Preferences: the desktop app, in ONE card everywhere (MIN-737).
  *
- * ## It only exists in the app, and without anchor
+ * In the app it carries the server, the update channel (MIN-352) and the
+ * version: the origin that serves this page is the server, so there is no
+ * round trip and no second state to keep in sync with the loaded URL. On the
+ * web it carries the download link (MIN-292), which used to sit in the profile
+ * card. The card therefore exists in every context, which is what lets it
+ * hold a catalog anchor that ⌘K can land on.
  *
- * No entry in `SETTINGS_SECTIONS`, unlike all its neighbors, and
- * this is not an oversight: the catalog feeds ⌘K, which runs everywhere. An
- * entry here would give every person on the web a palette row that
- * opens preferences and doesn't highlight anything — exactly the default that
- * `settings-sections.test.ts` exists to prevent. A card that only appears in one context has no place in a table read by all contexts. it is the origin which serves this page.
- * No round trip to do, and above all no second state to keep synchronous
- * with the URL actually loaded. `null` — the dev on `localhost`, or any
- * just the browser — removes the card rather than displaying a
- * switch which would not move.
+ * The download row is FIXED, without a button to dismiss it: this is the
+ * place people come back to after dismissing the welcome banner. It stays
+ * visible on Windows and Linux, where its label says the app is for macOS.
  */
 export function AccountDesktopSection() {
   const ta = useTranslations("Account");
@@ -38,8 +42,13 @@ export function AccountDesktopSection() {
   } | null>(null);
   const [switching, setSwitching] = useState(false);
   const [checking, setChecking] = useState(false);
+  // Whether the bridge was looked for: before that, rendering the download
+  // row would make it flash inside the app.
+  const [mounted, setMounted] = useState(false);
+  const { track } = useAnalytics();
 
   useEffect(() => {
+    setMounted(true);
     const bridge = getDesktopBridge();
     if (!bridge) return;
     setDesktop({
@@ -49,7 +58,33 @@ export function AccountDesktopSection() {
     });
   }, []);
 
-  if (!desktop) return null;
+  if (!desktop) {
+    if (!mounted) return null;
+    return (
+      <SettingsGroup
+        anchor={SETTINGS_SECTIONS.accountDesktop}
+        title={ta("desktopSectionTitle")}
+      >
+        <SettingsRow
+          label={ta("desktopAppLabel")}
+          hint={ta("desktopAppHint")}
+          control={
+            <Button asChild variant="outline" size="sm">
+              <Link
+                href="/download"
+                onClick={() =>
+                  track("desktop_install_prompt_clicked", { surface: "settings" })
+                }
+              >
+                <HugeiconsIcon icon={Download01Icon} />
+                {ta("desktopAppCta")}
+              </Link>
+            </Button>
+          }
+        />
+      </SettingsGroup>
+    );
+  }
 
   // The main process reloads the window on the other origin, so this document
   // disappears. Keep the switch on the requested value during that handoff.
@@ -72,6 +107,7 @@ export function AccountDesktopSection() {
 
   return (
     <SettingsGroup
+      anchor={SETTINGS_SECTIONS.accountDesktop}
       title={ta("desktopSectionTitle")}
     >
       <SettingsRow

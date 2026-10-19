@@ -29,62 +29,21 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Project icon (MIN-62): user-submitted image, site favicon
- * live, or return to generated orb. Shared between the “Icon” step of the
- * creation wizard (`centered`, large thumbnail above the field) and the general
- * settings tab (compact row). Checked: the parent provides `iconUrl` and
- * receives the new choice via `onChanged`.
- *
- * `projectId: null` = DRAFT mode (wizard): the project does not exist yet,
- * so nothing is stored — we only resolve the favicon or compress the
- * file for the preview, and `onChanged` provides enough to replay the real import once the project is created (see {@link ProjectIconChoice}).
- *
- * Without an imported icon, it's the orb that we see, and the only way we have on
- * is to restart its draw - the button then takes the place of
- * "Withdraw", which would have nothing to withdraw.
- *
- * The file sending is not announced: it's the PREVIEW that is the button. On
- * hover it is covered with a veil and an icon, and the whole picker accepts the
- * drag and drop. An icon is something that is replaced twice in the life
- * of a project — giving it one more field and one more button would weigh down two screens
- * permanently for a rare gesture.
+ * The icon gestures of a project — import a site's favicon, upload a file,
+ * remove the icon, redraw the orb — shared by this picker and the project
+ * header of the settings (MIN-737), which offers them from a menu.
  */
-
-/** What the parent should remember from the choice — and play again, if there is no plan yet. */
-export type ProjectIconChoice =
-  /** Favicon of a site: this is the SITE that we keep, the import will re-resolve it. */
-  | { kind: "site"; previewUrl: string; siteUrl: string }
-  /** File sent: `previewUrl` is the image already compressed (data URL in draft). */
-  | { kind: "file"; previewUrl: string }
-  | { kind: "none" };
-
-export function ProjectIconPicker({
+export function useProjectIconActions({
   projectId,
-  seed,
-  iconUrl,
   onChanged,
   onSeedChanged,
-  centered = false,
 }: {
   projectId: string | null;
-  /** Generated orb seed — `projectOrbSeed(project)`, or the draft id. */
-  seed: string;
-  iconUrl: string | null;
   onChanged: (choice: ProjectIconChoice) => void;
-  /**
- * The draw has been restarted. The existing project does not need it - the cache
- * `projects` refreshed sends the new seed back to it - but the DRAFT
- * if: nothing is stored as long as the project does not exist, it is up to the wizard of
- * to remember it and put it on creation.
- */
   onSeedChanged?: (seed: string) => void;
-  centered?: boolean;
 }) {
   const t = useTranslations("Projects");
-  const tCommon = useTranslations("Common");
   const queryClient = useQueryClient();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [siteUrl, setSiteUrl] = useState("");
   const [importing, setImporting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -95,9 +54,10 @@ export function ProjectIconPicker({
   const refresh = () =>
     void queryClient.invalidateQueries({ queryKey: ["projects"] });
 
-  const handleImport = async () => {
-    const url = siteUrl.trim();
-    if (!url || busy) return;
+  /** Resolves `true` once the favicon is imported, `false` otherwise. */
+  const handleImport = async (rawUrl: string): Promise<boolean> => {
+    const url = rawUrl.trim();
+    if (!url || busy) return false;
     setImporting(true);
     try {
       if (projectId === null) {
@@ -109,8 +69,10 @@ export function ProjectIconPicker({
         onChanged({ kind: "site", previewUrl: icon_url, siteUrl: url });
         refresh();
       }
+      return true;
     } catch (err) {
       toast.error((err as Error).message);
+      return false;
     } finally {
       setImporting(false);
     }
@@ -188,6 +150,88 @@ export function ProjectIconPicker({
       setRerolling(false);
     }
   };
+
+  return {
+    handleImport,
+    handleFile,
+    handleRemove,
+    handleReroll,
+    busy,
+    importing,
+    uploading,
+    removing,
+    rerolling,
+  };
+}
+
+/**
+ * Project icon (MIN-62): user-submitted image, site favicon
+ * live, or return to generated orb. Shared between the “Icon” step of the
+ * creation wizard (`centered`, large thumbnail above the field) and the general
+ * settings tab (compact row). Checked: the parent provides `iconUrl` and
+ * receives the new choice via `onChanged`.
+ *
+ * `projectId: null` = DRAFT mode (wizard): the project does not exist yet,
+ * so nothing is stored — we only resolve the favicon or compress the
+ * file for the preview, and `onChanged` provides enough to replay the real import once the project is created (see {@link ProjectIconChoice}).
+ *
+ * Without an imported icon, it's the orb that we see, and the only way we have on
+ * is to restart its draw - the button then takes the place of
+ * "Withdraw", which would have nothing to withdraw.
+ *
+ * The file sending is not announced: it's the PREVIEW that is the button. On
+ * hover it is covered with a veil and an icon, and the whole picker accepts the
+ * drag and drop. An icon is something that is replaced twice in the life
+ * of a project — giving it one more field and one more button would weigh down two screens
+ * permanently for a rare gesture.
+ */
+
+/** What the parent should remember from the choice — and play again, if there is no plan yet. */
+export type ProjectIconChoice =
+  /** Favicon of a site: this is the SITE that we keep, the import will re-resolve it. */
+  | { kind: "site"; previewUrl: string; siteUrl: string }
+  /** File sent: `previewUrl` is the image already compressed (data URL in draft). */
+  | { kind: "file"; previewUrl: string }
+  | { kind: "none" };
+
+export function ProjectIconPicker({
+  projectId,
+  seed,
+  iconUrl,
+  onChanged,
+  onSeedChanged,
+  centered = false,
+}: {
+  projectId: string | null;
+  /** Generated orb seed — `projectOrbSeed(project)`, or the draft id. */
+  seed: string;
+  iconUrl: string | null;
+  onChanged: (choice: ProjectIconChoice) => void;
+  /**
+ * The draw has been restarted. The existing project does not need it - the cache
+ * `projects` refreshed sends the new seed back to it - but the DRAFT
+ * if: nothing is stored as long as the project does not exist, it is up to the wizard of
+ * to remember it and put it on creation.
+ */
+  onSeedChanged?: (seed: string) => void;
+  centered?: boolean;
+}) {
+  const t = useTranslations("Projects");
+  const tCommon = useTranslations("Common");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [siteUrl, setSiteUrl] = useState("");
+  const {
+    handleImport: importSite,
+    handleFile,
+    handleRemove,
+    handleReroll,
+    busy,
+    importing,
+    uploading,
+    removing,
+    rerolling,
+  } = useProjectIconActions({ projectId, onChanged, onSeedChanged });
+  const handleImport = () => importSite(siteUrl);
 
   const { dragging, handlers } = useFileDrop((files) => void handleFile(files[0]));
 

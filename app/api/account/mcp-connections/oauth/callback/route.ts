@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   // cookie live there. The deployment URL would cross origins and log the
   // browser out.
   const returnUrl = new URL("/settings", oauthAppOrigin());
-  returnUrl.searchParams.set("tab", "mcp-clients");
+  returnUrl.searchParams.set("tab", "agent");
   try {
     if (!session.userId || request.nextUrl.searchParams.has("error"))
       throw new Error("OAuth authorization canceled");
