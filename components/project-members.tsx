@@ -42,9 +42,12 @@ import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName as resolveDisplayName } from "@/lib/display-name";
 import { isMemberRole, type MemberRole, type ProjectRole } from "@/lib/project-roles";
-import type { Member } from "@/lib/types";
+import type { Collaborator, Member } from "@/lib/types";
+import { useCollaboratorsQuery } from "@/lib/use-collaborators-query";
+import { matchCollaborators } from "@/lib/collaborator-search";
+import { CollaboratorSuggestions } from "@/components/collaborator-suggestions";
 
-function displayName(m: Member): string {
+function displayName(m: Pick<Member, "email" | "full_name">): string {
   return resolveDisplayName(m);
 }
 
@@ -153,6 +156,7 @@ export function ProjectMembers({
     isOwner,
     loading,
     invite,
+    inviteCollaborator,
     cancelInvitation,
     removeMember,
     updateMemberRole,
@@ -172,6 +176,17 @@ export function ProjectMembers({
     maxMembersPerProject != null && guestsUsed >= maxMembersPerProject;
 
   const [email, setEmail] = useState("");
+  // Someone from my other projects, picked by name (MIN-689): invited by
+  // account, the server resolving and checking their address.
+  const [selected, setSelected] = useState<Collaborator | null>(null);
+  const collaborators = useCollaboratorsQuery(enabled && isOwner);
+  const suggestions =
+    selected || limitReached || !email.trim()
+      ? []
+      : matchCollaborators(collaborators, email, {
+          userIds: members.map((m) => m.user_id),
+          emails: invitations.map((i) => i.invited_email),
+        });
   const [inviteRole, setInviteRole] = useState<MemberRole>("member");
   const [inviteCanComment, setInviteCanComment] = useState(false);
   const [inviting, setInviting] = useState(false);
@@ -186,14 +201,31 @@ export function ProjectMembers({
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     const value = email.trim();
-    if (!value) return;
+    if (!selected && !value) return;
+    // A name rather than an address: it must designate one person of the list.
+    if (!selected && !value.includes("@")) {
+      if (suggestions.length === 1) {
+        setSelected(suggestions[0]);
+        setEmail("");
+      } else {
+        toast.error(t("inviteChooseOrEmail"));
+      }
+      return;
+    }
+    const access = {
+      role: inviteRole,
+      can_comment: inviteRole === "reader" && inviteCanComment,
+    };
     setInviting(true);
     try {
-      await invite(value, {
-        role: inviteRole,
-        can_comment: inviteRole === "reader" && inviteCanComment,
-      });
-      toast.success(t("invitationSent", { email: value }));
+      if (selected) {
+        await inviteCollaborator(selected.user_id, access);
+        toast.success(t("invitationSent", { email: displayName(selected) }));
+        setSelected(null);
+      } else {
+        await invite(value, access);
+        toast.success(t("invitationSent", { email: value }));
+      }
       setEmail("");
     } catch (err) {
       toast.error((err as Error).message);
@@ -232,7 +264,7 @@ export function ProjectMembers({
   return (
     <>
       {isOwner && (
-        <SettingsGroup title={t("inviteByEmail")} variant="block">
+        <SettingsGroup title={t("inviteCardTitle")} variant="block">
           <form onSubmit={handleInvite} className="flex flex-col gap-2">
             {/* On a phone the address takes its own line; role and Invite
                 follow beneath it. */}
@@ -241,16 +273,37 @@ export function ProjectMembers({
                 {/* The card title already says it; the label stays for
                     screen readers. */}
                 <label htmlFor="invite-email" className="sr-only">
-                  {t("inviteByEmail")}
+                  {t("inviteFieldLabel")}
                 </label>
-                <Input
-                  id="invite-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder={t("invitePlaceholder")}
-                  disabled={limitReached}
-                />
+                {selected ? (
+                  <div className="flex h-9 items-center gap-2 rounded-md border border-border pl-2 pr-1">
+                    <UserAvatar seed={selected.avatar_seed} className="size-6" />
+                    <span className="min-w-0 flex-1 truncate text-sm">{displayName(selected)}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={t("inviteClearSelection", { name: displayName(selected) })}
+                      onClick={() => setSelected(null)}
+                    >
+                      <HugeiconsIcon icon={Cancel01Icon} />
+                    </Button>
+                  </div>
+                ) : (
+                  <Input
+                    id="invite-email"
+                    type="text"
+                    autoComplete="off"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder={t("inviteSearchPlaceholder")}
+                    disabled={limitReached}
+                    role="combobox"
+                    aria-expanded={suggestions.length > 0}
+                    aria-controls="invite-suggestions"
+                    aria-autocomplete="list"
+                  />
+                )}
               </div>
               <RoleSelect
                 value={inviteRole}
@@ -275,6 +328,19 @@ export function ProjectMembers({
               />
             )}
           </form>
+          {suggestions.length > 0 && (
+            <div className="mt-2">
+              <CollaboratorSuggestions
+                id="invite-suggestions"
+                label={t("inviteSuggestionsLabel")}
+                suggestions={suggestions}
+                onPick={(c) => {
+                  setSelected(c);
+                  setEmail("");
+                }}
+              />
+            </div>
+          )}
           <p className="mt-2 text-xs text-muted-foreground">
             {t("inviteHint")} {t("rolesHint")}
           </p>

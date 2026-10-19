@@ -12,8 +12,11 @@ import { catalog } from "../../lib/messages.mjs";
 const OUT = "captures/shots/project-wizard-members/out";
 const VIEWPORT = { width: 1280, height: 860 };
 const NAME = "Northwind";
+/** Beacon and Aurora, the demo account's projects. */
+const DEMO_PROJECTS = ["64502d4d-8670-4039-b54d-7db39712671c", "6cd36606-c297-4920-8ce3-31b5f3697be8"];
 const SESSION_CACHES = ["/api/me/local-snapshots", "/api/me/app-tabs"];
-const INVITEES = ["ana.costa@example.com", "li.wei@example.com"];
+/** Typed as an address: someone from outside the demo world. */
+const EXTERNAL = "li.wei@example.com";
 
 async function capture({ locale, theme }) {
   const messages = await catalog(locale);
@@ -54,16 +57,24 @@ async function capture({ locale, theme }) {
     await cta.click(); // seed (Skip) → members
     await page.getByText(messages.Projects.wizardMembersTitle, { exact: true }).waitFor();
 
+    // People from the demo account's other projects are proposed by name:
+    // pick the first one, then type an outside address.
+    const suggestions = page.getByRole("listbox", { name: messages.Projects.wizardMembersSuggestionsLabel });
+    await suggestions.waitFor({ timeout: 15_000 });
+    const firstOption = suggestions.getByRole("option").first();
+    const picked = (await firstOption.textContent())?.trim() ?? "";
+    await firstOption.getByRole("button").click();
     const field = page.locator("#project-invitee");
-    for (const email of INVITEES) {
-      await field.fill(email);
-      await field.press("Enter");
-    }
+    await field.fill(EXTERNAL);
+    await field.press("Enter");
     const list = page.getByRole("list", { name: messages.Projects.wizardMembersListLabel });
     await list.waitFor();
     const queued = await list.getByRole("listitem").allTextContents();
-    if (queued.join("|") !== INVITEES.join("|")) {
-      throw new Error(`Queued addresses differ: ${queued.join(", ")}`);
+    if (queued.length !== 2 || queued[0].trim() !== picked || !queued[1].includes(EXTERNAL)) {
+      throw new Error(`Unexpected queue: ${queued.join(" | ")} (picked ${picked})`);
+    }
+    if ((await suggestions.getByRole("option").count()) === 0) {
+      throw new Error("No other collaborator left to show under the field.");
     }
     if ((await cta.textContent())?.trim() === messages.Common.skip) {
       throw new Error("The CTA still says Skip with addresses queued.");
@@ -88,4 +99,54 @@ async function capture({ locale, theme }) {
   }
 }
 
+/**
+ * The same search in Project settings → Members: in a demo project, someone
+ * from the account's other projects who is not there yet is proposed by name.
+ */
+async function captureSettings({ locale, theme }) {
+  const messages = await catalog(locale);
+  const { browser, context, page } = await openPage({ theme, locale, viewport: VIEWPORT });
+  try {
+    await context.route("**/api/**", (route) => {
+      const request = route.request();
+      const path = new URL(request.url()).pathname;
+      if (request.method() === "GET" || SESSION_CACHES.some((p) => path.startsWith(p))) return route.fallback();
+      return route.abort("blockedbyclient");
+    });
+    await page.goto(`${CAPTURE.baseUrl}/home`, { waitUntil: "domcontentloaded" });
+    await settle(page);
+    const target = await page.evaluate(async (projectIds) => {
+      const { collaborators } = await (await fetch("/api/me/collaborators")).json();
+      for (const id of projectIds) {
+        const { members, invitations } = await (await fetch(`/api/projects/${id}/members`)).json();
+        const present = new Set(members.map((m) => m.user_id));
+        const invited = new Set(invitations.map((i) => i.invited_email));
+        const free = collaborators.find((c) => !present.has(c.user_id) && !invited.has(c.email) && c.full_name);
+        if (free) return { projectId: id, name: free.full_name };
+      }
+      return null;
+    }, DEMO_PROJECTS);
+    if (!target) throw new Error("Every collaborator is already in the demo projects: nothing to propose.");
+    await page.goto(`${CAPTURE.baseUrl}/projects/${target.projectId}/settings?tab=members`, { waitUntil: "domcontentloaded" });
+    const field = page.locator("#invite-email");
+    await field.waitFor({ timeout: 20_000 });
+    await field.fill(target.name.split(" ")[0]);
+    const list = page.getByRole("listbox", { name: messages.Members.inviteSuggestionsLabel });
+    await list.waitFor({ timeout: 10_000 });
+    await page.mouse.move(8, 8);
+    await settle(page);
+    const out = `${OUT}/${locale}-${theme}-settings.png`;
+    // The innermost block holding the card title, the form and the list.
+    const card = page.locator("div")
+      .filter({ has: page.getByText(messages.Members.inviteCardTitle, { exact: true }) })
+      .filter({ has: list })
+      .last();
+    await shoot(card, out);
+    console.log(`${locale}/${theme}: ${out}`);
+  } finally {
+    await browser.close();
+  }
+}
+
 await capture({ locale: "en", theme: "light" });
+await captureSettings({ locale: "en", theme: "light" });

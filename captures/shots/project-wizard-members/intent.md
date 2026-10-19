@@ -1,9 +1,11 @@
 # Project wizard — Members step
 
 ## What the image must show
-The project creation wizard on its **Invite your team** step (MIN-689), with
-two addresses already queued in the list, each with its remove button, and an
-empty field ready for a third. The stepper shows the step between the primer
+The project creation wizard on its **Invite your team** step (MIN-689):
+- under the field, the **From your projects** list proposing people who joined
+  the demo account's other projects, with avatar, name and email;
+- the queue holding one of them, picked by name (avatar and real name shown),
+  and one outside address typed by hand, each with its remove button. The stepper shows the step between the primer
 and the finishing touches. The CTA reads **Continue**, not Skip: something has
 been added.
 

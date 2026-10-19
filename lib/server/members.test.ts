@@ -98,6 +98,10 @@ function table(name: string, rows: () => Row[]) {
     filters.push((row) => row[column] === value);
     return query;
   };
+  query.in = (column: string, values: unknown[]) => {
+    filters.push((row) => values.includes(row[column]));
+    return query;
+  };
   query.is = (column: string, value: unknown) => {
     filters.push((row) => (row[column] ?? null) === value);
     return query;
@@ -250,6 +254,11 @@ vi.mock("@/lib/server/auth-users", () => ({
   }),
 }));
 
+vi.mock("@/lib/server/avatar-seeds", () => ({
+  fetchAvatarSeeds: async (_service: unknown, ids: string[]) =>
+    new Map(ids.map((id) => [id, `seed-${id}`])),
+}));
+
 vi.mock("@/lib/server/entitlements", () => ({
   getMemberLimit: async () => memberLimit,
 }));
@@ -280,6 +289,8 @@ import {
   updateInvitationRole,
   updateMemberRole,
 } from "./members";
+import { listCollaborators } from "./collaborators";
+import { getServiceClient } from "@/lib/supabase-service";
 
 const OWNER = "11111111-1111-4111-8111-111111111111";
 const PROJECT = "22222222-2222-4222-8222-222222222222";
@@ -778,5 +789,103 @@ describe("project roles (MIN-693)", () => {
       removeMember({ projectId: PROJECT, actorId: READER, userId: READER })
     ).resolves.toEqual({ ok: true });
     expect(memberRows.map((row) => row.user_id)).toEqual([MEMBER]);
+  });
+});
+
+describe("inviting a collaborator by account (MIN-689)", () => {
+  const OTHER_PROJECT = "44444444-4444-4444-8444-444444444444";
+  const STRANGER = "55555555-5555-4555-8555-555555555555";
+  const FRIEND_OWNER = "66666666-6666-4666-8666-666666666666";
+  const confirmed = (id: string, email: string, name?: string) =>
+    adminAccounts.set(id, {
+      id, email, email_confirmed_at: "2026-01-01T00:00:00Z",
+      user_metadata: name ? { display_name: name } : {},
+    });
+
+  beforeEach(() => {
+    projectRows.push({ id: OTHER_PROJECT, owner_id: OWNER, name: "Beacon", deleted_at: null });
+    confirmed(MEMBER, "ana@example.test", "Ana");
+    accounts.set("ana@example.test", { id: MEMBER });
+  });
+
+  it("invites someone who joined another of the owner's projects, at their verified address", async () => {
+    memberRows = [{ id: "m1", project_id: OTHER_PROJECT, user_id: MEMBER, role: "member" }];
+    const result = await inviteMember({ projectId: PROJECT, actorId: OWNER, userId: MEMBER });
+    expect(result).toMatchObject({ ok: true, invitation: { invited_email: "ana@example.test" } });
+    expect(invitationRows).toHaveLength(1);
+    expect(invitationRows[0]).toMatchObject({ project_id: PROJECT, invited_user_id: MEMBER });
+  });
+
+  it("counts a reader as a collaborator", async () => {
+    memberRows = [{ id: "m1", project_id: OTHER_PROJECT, user_id: MEMBER, role: "reader" }];
+    await expect(inviteMember({ projectId: PROJECT, actorId: OWNER, userId: MEMBER }))
+      .resolves.toMatchObject({ ok: true });
+  });
+
+  it("counts the owner of a project the inviter joined", async () => {
+    projectRows.push({ id: "p-friend", owner_id: FRIEND_OWNER, name: "Friend", deleted_at: null });
+    memberRows = [{ id: "m1", project_id: "p-friend", user_id: OWNER, role: "member" }];
+    confirmed(FRIEND_OWNER, "friend@example.test");
+    await expect(inviteMember({ projectId: PROJECT, actorId: OWNER, userId: FRIEND_OWNER }))
+      .resolves.toMatchObject({ ok: true, invitation: { invited_email: "friend@example.test" } });
+  });
+
+  it("refuses someone who was only invited, never joined", async () => {
+    invitationRows = [{
+      id: "inv", project_id: OTHER_PROJECT, invited_email: "ana@example.test", invited_user_id: MEMBER,
+      status: "pending", expires_at: new Date(Date.now() + 86_400_000).toISOString(),
+    }];
+    await expect(inviteMember({ projectId: PROJECT, actorId: OWNER, userId: MEMBER }))
+      .resolves.toMatchObject({ ok: false, status: 404, errorKey: "collaboratorNotFound" });
+    expect(invitationRows).toHaveLength(1);
+  });
+
+  it("refuses an account without a verified email", async () => {
+    memberRows = [{ id: "m1", project_id: OTHER_PROJECT, user_id: MEMBER, role: "member" }];
+    adminAccounts.set(MEMBER, { id: MEMBER, email: "ana@example.test" });
+    await expect(inviteMember({ projectId: PROJECT, actorId: OWNER, userId: MEMBER }))
+      .resolves.toMatchObject({ ok: false, status: 404, errorKey: "collaboratorNotFound" });
+  });
+
+  it("refuses a stranger and a membership in a trashed project the same way", async () => {
+    confirmed(STRANGER, "stranger@example.test");
+    memberRows = [{ id: "m1", project_id: "p-elsewhere", user_id: STRANGER, role: "member" }];
+    await expect(inviteMember({ projectId: PROJECT, actorId: OWNER, userId: STRANGER }))
+      .resolves.toMatchObject({ ok: false, status: 404, errorKey: "collaboratorNotFound" });
+
+    projectRows.find((row) => row.id === OTHER_PROJECT)!.deleted_at = "2026-10-01T00:00:00Z";
+    memberRows = [{ id: "m1", project_id: OTHER_PROJECT, user_id: MEMBER, role: "member" }];
+    await expect(inviteMember({ projectId: PROJECT, actorId: OWNER, userId: MEMBER }))
+      .resolves.toMatchObject({ ok: false, status: 404, errorKey: "collaboratorNotFound" });
+    expect(invitationRows).toHaveLength(0);
+  });
+
+  it("checks ownership of the target project before anything else", async () => {
+    memberRows = [
+      { id: "m1", project_id: OTHER_PROJECT, user_id: MEMBER, role: "member" },
+      { id: "m2", project_id: PROJECT, user_id: MEMBER, role: "member" },
+    ];
+    await expect(inviteMember({ projectId: PROJECT, actorId: MEMBER, userId: OWNER }))
+      .resolves.toMatchObject({ ok: false, status: 403, errorKey: "ownerOnlyInvite" });
+  });
+
+  it("lists joined collaborators only, verified, without the caller, by name", async () => {
+    confirmed(STRANGER, "zed@example.test", "Zed");
+    adminAccounts.set(FRIEND_OWNER, { id: FRIEND_OWNER, email: "unverified@example.test" });
+    memberRows = [
+      { id: "m1", project_id: OTHER_PROJECT, user_id: STRANGER, role: "reader" },
+      { id: "m2", project_id: PROJECT, user_id: MEMBER, role: "member" },
+      { id: "m3", project_id: PROJECT, user_id: FRIEND_OWNER, role: "member" },
+    ];
+    invitationRows = [{
+      id: "inv", project_id: PROJECT, invited_email: "pending@example.test", invited_user_id: "pending-user",
+      status: "pending", expires_at: new Date(Date.now() + 86_400_000).toISOString(),
+    }];
+    confirmed("pending-user", "pending@example.test", "Pending");
+    const list = await listCollaborators(getServiceClient(), OWNER);
+    expect(list).toEqual([
+      { user_id: MEMBER, email: "ana@example.test", full_name: null, avatar_seed: `seed-${MEMBER}` },
+      { user_id: STRANGER, email: "zed@example.test", full_name: null, avatar_seed: `seed-${STRANGER}` },
+    ]);
   });
 });

@@ -3,6 +3,7 @@ import {
   draftIconUrl,
   draftOrbSeed,
   normalizeInvitees,
+  normalizeInviteeUsers,
   projectDraftFromRow,
   projectDraftToRow,
   stepIndexOf,
@@ -29,6 +30,7 @@ const draft: ProjectDraftInput = {
   smartAssignEnabled: false,
   autoAssignEnabled: true,
   invitees: ["ana@example.com", "li@example.com"],
+  inviteeUsers: [{ userId: "u-1", email: "bo@example.com", name: "Bo", avatarSeed: "seed-1" }],
 };
 
 /** What the route returns for this draft. */
@@ -70,6 +72,7 @@ describe("projectDraftFromRow / projectDraftToRow", () => {
     expect(back.autoAssignEnabled).toBe(false);
     // Written before the members step existed: nobody to invite.
     expect(back.invitees).toEqual([]);
+    expect(back.inviteeUsers).toEqual([]);
   });
 
   it("cleans a malformed invitee list instead of replaying it", () => {
@@ -121,6 +124,23 @@ describe("projectDraftFromRow / projectDraftToRow", () => {
 describe("normalizeInvitees", () => {
   it("trims, lowercases and removes duplicates while keeping the order", () => {
     expect(normalizeInvitees(["B@example.com", " a@example.com", "b@example.com "])).toEqual(["b@example.com", "a@example.com"]);
+  });
+});
+
+describe("normalizeInviteeUsers", () => {
+  it("keeps well-formed picks once each and fills the display fallbacks", () => {
+    expect(normalizeInviteeUsers([
+      { userId: "u-1", email: " Bo@Example.com ", name: "Bo", avatarSeed: "s" },
+      { userId: "u-1", email: "bo@example.com", name: "Bo again", avatarSeed: "s" },
+      { userId: "u-2", email: "cy@example.com", name: "  ", avatarSeed: 7 },
+      { email: "no-id@example.com" },
+      "u-3",
+      null,
+    ])).toEqual([
+      { userId: "u-1", email: "bo@example.com", name: "Bo", avatarSeed: "s" },
+      { userId: "u-2", email: "cy@example.com", name: null, avatarSeed: "u-2" },
+    ]);
+    expect(normalizeInviteeUsers({ userId: "u-1" })).toEqual([]);
   });
 });
 

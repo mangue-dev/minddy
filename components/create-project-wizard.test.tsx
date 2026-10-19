@@ -5,7 +5,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import en from "@/messages/en.json";
-import type { Project } from "@/lib/types";
+import type { Collaborator, Project } from "@/lib/types";
 import { projectDraftFromRow, projectDraftToRow, type ProjectDraft } from "@/lib/project-draft";
 import { takeSeedHandoff } from "@/lib/project-seed-handoff";
 import type { WizardStep } from "@/components/wizard/wizard-dialog";
@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   prepareBrief: vi.fn(), saveDraft: vi.fn(), projects: [] as Project[],
   invite: vi.fn(), memberLimit: null as number | null, events: [] as string[],
   closeDialog: null as { onSave: () => void; onDiscard: () => void } | null,
+  inviteCollaborator: vi.fn(), collaborators: [] as Collaborator[],
 }));
 vi.mock("@/lib/use-app-router", () => ({ useAppRouter: () => ({ push: mocks.push }) }));
 vi.mock("next-intl", () => ({
@@ -25,9 +26,15 @@ vi.mock("next-intl", () => ({
     Object.entries(values).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, String(value)).replaceAll(`{${name}, number}`, String(value)),
       (en[namespace] as Record<string, string>)[key] ?? key),
 }));
-vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQueries: mocks.invalidate }) }));
+vi.mock("@tanstack/react-query", () => ({
+  useQueryClient: () => ({ invalidateQueries: mocks.invalidate }),
+  useQuery: () => ({ data: mocks.collaborators }),
+}));
 vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: { id: "owner", email: "Owner@Example.com" } }) }));
-vi.mock("@/lib/members-api", () => ({ inviteMemberApi: mocks.invite }));
+vi.mock("@/lib/members-api", () => ({
+  inviteMemberApi: mocks.invite, inviteCollaboratorApi: mocks.inviteCollaborator, fetchCollaboratorsApi: vi.fn(),
+}));
+vi.mock("@/components/user-avatar", () => ({ UserAvatar: ({ seed }: { seed: string }) => <span data-avatar={seed} /> }));
 vi.mock("@/lib/use-billing-query", () => ({ usePlanGates: () => ({ maxMembersPerProject: mocks.memberLimit }) }));
 vi.mock("@/lib/projects-context", () => ({ useProjects: () => ({
   projects: mocks.projects, createProject: mocks.createProject, updateProject: mocks.updateProject,
@@ -104,7 +111,7 @@ const draft: ProjectDraft = {
   id: "11111111-1111-4111-8111-111111111111", name: "New project", key: "NEW",
   orbSeed: null, keyTouched: true, step: "seed", origin: "new", seed: null,
   icon: { kind: "none" }, repo: null, smartAssignEnabled: true,
-  autoAssignEnabled: false, invitees: [], updatedAt: "2026-10-06T10:00:00Z",
+  autoAssignEnabled: false, invitees: [], inviteeUsers: [], updatedAt: "2026-10-06T10:00:00Z",
 };
 
 beforeEach(() => {
@@ -121,6 +128,10 @@ beforeEach(() => {
   mocks.updateProject.mockResolvedValue(undefined);
   mocks.deleteDraft.mockResolvedValue(undefined);
   mocks.memberLimit = null;
+  mocks.collaborators = [];
+  mocks.inviteCollaborator.mockImplementation(async (_projectId: string, userId: string) => {
+    mocks.events.push(`invite-user:${userId}`);
+  });
   mocks.events = [];
   mocks.createProject.mockImplementation(async () => {
     mocks.events.push("create");
@@ -334,7 +345,8 @@ async function pressEnterInInvitee() {
   });
 }
 
-const queued = () => [...host.querySelectorAll("li")].map((li) => li.textContent);
+const queued = () => [...host.querySelectorAll(`[aria-label="${en.Projects.wizardMembersListLabel}"] li`)].map((li) => li.textContent);
+const suggested = () => [...host.querySelectorAll('[role="option"]')].map((li) => li.textContent);
 const inviteeError = () => host.querySelector("#project-invitee-error")?.textContent ?? null;
 
 describe("member invitations", () => {
@@ -473,5 +485,77 @@ describe("member invitations", () => {
     await mount({ step: "finish", invitees: ["owner@example.com", "ana@example.com"] });
     await submit();
     expect(mocks.invite).toHaveBeenCalledExactlyOnceWith(draft.id, "ana@example.com");
+  });
+});
+
+describe("inviting people from other projects", () => {
+  const ana: Collaborator = { user_id: "u-ana", email: "ana@example.com", full_name: "Ana Costa", avatar_seed: "seed-ana" };
+  const bo: Collaborator = { user_id: "u-bo", email: "bo@example.com", full_name: "Bo Lind", avatar_seed: "seed-bo" };
+  beforeEach(() => {
+    mocks.collaborators = [ana, bo];
+  });
+
+  it("proposes collaborators by name and queues the pick with their avatar and real name", async () => {
+    await mount({ step: "members" });
+    expect(suggested()).toEqual(["Ana Costaana@example.com", "Bo Lindbo@example.com"]);
+    await typeInvitee("cost");
+    expect(suggested()).toEqual(["Ana Costaana@example.com"]);
+    await act(() => host.querySelector<HTMLButtonElement>('[role="option"] button')!.click());
+    expect(queued()).toEqual(["Ana Costaana@example.com"]);
+    expect(host.querySelector(`[aria-label="${en.Projects.wizardMembersListLabel}"] [data-avatar="seed-ana"]`)).toBeTruthy();
+    expect(suggested()).toEqual(["Bo Lindbo@example.com"]);
+    expect(host.querySelector<HTMLInputElement>("#project-invitee")!.value).toBe("");
+    expect(mocks.inviteCollaborator).not.toHaveBeenCalled();
+  });
+
+  it("picks the only match on Enter, and the collaborator behind a typed address", async () => {
+    await mount({ step: "members" });
+    await typeInvitee("bo l");
+    await pressEnterInInvitee();
+    await typeInvitee("ANA@example.com");
+    await pressEnterInInvitee();
+    expect(queued()).toEqual(["Bo Lindbo@example.com", "Ana Costaana@example.com"]);
+    await typeInvitee("bo@example.com");
+    await pressEnterInInvitee();
+    expect(inviteeError()).toBe(en.Projects.wizardMembersDuplicate.replace("{email}", "Bo Lind"));
+  });
+
+  it("asks to choose when a name matches several people or nobody", async () => {
+    await mount({ step: "members" });
+    await typeInvitee("o");
+    await pressEnterInInvitee();
+    expect(inviteeError()).toBe(en.Projects.wizardMembersInvalid);
+    expect(queued()).toEqual([]);
+  });
+
+  it("saves picks with the draft and invites them by account after creation", async () => {
+    await mount({ step: "members" });
+    await typeInvitee("ana");
+    await pressEnterInInvitee();
+    await typeInvitee("li@example.com");
+    await pressEnterInInvitee();
+    await act(async () => mocks.closeDialog!.onSave());
+    expect(mocks.saveDraft).toHaveBeenCalledWith(expect.objectContaining({
+      invitees: ["li@example.com"],
+      inviteeUsers: [{ userId: "u-ana", email: "ana@example.com", name: "Ana Costa", avatarSeed: "seed-ana" }],
+    }));
+
+    const saved = mocks.saveDraft.mock.calls[0][0];
+    await act(() => root.unmount());
+    root = createRoot(host);
+    await mount({ ...projectDraftFromRow({ ...projectDraftToRow(saved), updated_at: draft.updatedAt }), step: "finish" });
+    await submit();
+    expect(mocks.events).toEqual(["create", "invite-user:u-ana", "invite:li@example.com"]);
+    expect(mocks.inviteCollaborator).toHaveBeenCalledExactlyOnceWith(draft.id, "u-ana");
+  });
+
+  it("names a refused collaborator in the failure notification", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mocks.inviteCollaborator.mockRejectedValueOnce(new Error("This person is not part of your projects."));
+    await mount({ step: "finish", inviteeUsers: [{ userId: "u-ana", email: "ana@example.com", name: "Ana Costa", avatarSeed: "seed-ana" }] });
+    await submit();
+    const description = renderToStaticMarkup(mocks.toastError.mock.calls[0][1].description);
+    expect(description).toContain("Ana Costa — This person is not part of your projects.");
+    expectNormalNavigation();
   });
 });

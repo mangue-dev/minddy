@@ -2,7 +2,7 @@
 
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, FileUploadIcon, InformationCircleIcon, Layers01Icon, Refresh01Icon, SparklesIcon, UserAdd01Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, FileUploadIcon, Mail01Icon, InformationCircleIcon, Layers01Icon, Refresh01Icon, SparklesIcon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { createUuid } from "@/lib/create-uuid";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -36,7 +36,15 @@ import {
   uploadProjectIconDataUrlApi,
 } from "@/lib/projects-api";
 import { createPageApi, prepareInitialBriefApi } from "@/lib/pages-api";
-import { inviteMemberApi } from "@/lib/members-api";
+import { inviteCollaboratorApi, inviteMemberApi } from "@/lib/members-api";
+import { useCollaboratorsQuery } from "@/lib/use-collaborators-query";
+import { matchCollaborators } from "@/lib/collaborator-search";
+import { displayName } from "@/lib/display-name";
+import { UserAvatar } from "@/components/user-avatar";
+import {
+  CollaboratorName,
+  CollaboratorSuggestions,
+} from "@/components/collaborator-suggestions";
 import { usePlanGates } from "@/lib/use-billing-query";
 import { isValidEmail } from "@/lib/signup-wizard";
 import {
@@ -44,9 +52,11 @@ import {
   MAX_INITIAL_BRIEF_CHARS,
   normalizeInviteEmail,
   normalizeInvitees,
+  normalizeInviteeUsers,
   setPendingDraftId,
   stepIndexOf,
   stepsFor,
+  type DraftInviteeUser,
   type DraftRepo,
   type DraftSeed,
   type ProjectDraft,
@@ -74,7 +84,7 @@ import { CloseProjectDraftDialog } from "@/components/close-project-draft-dialog
 import { OnboardingJoinDialog } from "@/components/home/onboarding-join-dialog";
 import { useAnalytics } from "@/lib/use-analytics";
 import { useTrackView } from "@/lib/use-track-view";
-import type { CandidateRepo } from "@/lib/types";
+import type { CandidateRepo, Collaborator } from "@/lib/types";
 import {
   Tooltip,
   TooltipContent,
@@ -114,9 +124,11 @@ import {
  * After project creation, the brief becomes a wiki page and CSV imports
  * continue on the new project board through `?setup=import`.
  *
- * The members step only queues addresses: no account lookup, no request. The
- * invitations go out once the project exists, through the same endpoint as
- * the members settings, which stays the judge of limits and duplicates.
+ * The members step only queues people: an address, or someone who already
+ * joined another of the owner's projects, found by name. The invitations go
+ * out once the project exists, through the same endpoint as the members
+ * settings, which stays the judge of limits, duplicates and who counts as a
+ * collaborator.
  */
 
 /** Resumption of the wizard on a draft — resumed manually, or after a redirect. */
@@ -228,15 +240,20 @@ export function CreateProjectWizard({
   const [smartAssignEnabled, setSmartAssignEnabled] = useState(true);
   const [autoAssignEnabled, setAutoAssignEnabled] = useState(false);
 
-  // “Members” stage. Addresses wait here, normalized, until the project exists;
-  // `inviteeInput` is the one being typed, not yet added.
+  // “Members” stage. Addresses and picked collaborators wait here until the
+  // project exists; `inviteeInput` is the name or address being typed.
   const [invitees, setInvitees] = useState<string[]>([]);
+  const [inviteeUsers, setInviteeUsers] = useState<DraftInviteeUser[]>([]);
   const [inviteeInput, setInviteeInput] = useState("");
   const [inviteeError, setInviteeError] = useState<string | null>(null);
   // The owner takes no guest slot: the plan limit counts invitees only, as the
   // server counts non-owner members plus pending invitations.
+  const queuedCount = invitees.length + inviteeUsers.length;
   const inviteLimitReached =
-    maxMembersPerProject != null && invitees.length >= maxMembersPerProject;
+    maxMembersPerProject != null && queuedCount >= maxMembersPerProject;
+  // People who joined another of my projects, proposed by name. Read only:
+  // picking one sends nothing until Finish, where the server checks again.
+  const collaborators = useCollaboratorsQuery(open);
 
   const steps = useMemo(() => stepsFor(origin), [origin]);
   const step: ProjectWizardStep = steps[Math.min(stepIndex, steps.length - 1)];
@@ -284,6 +301,7 @@ export function CreateProjectWizard({
     setSmartAssignEnabled(true);
     setAutoAssignEnabled(false);
     setInvitees([]);
+    setInviteeUsers([]);
     setInviteeInput("");
     setInviteeError(null);
   }, []);
@@ -312,6 +330,7 @@ export function CreateProjectWizard({
     setSmartAssignEnabled(draft.smartAssignEnabled);
     setAutoAssignEnabled(draft.autoAssignEnabled);
     setInvitees(draft.invitees);
+    setInviteeUsers(draft.inviteeUsers);
     setInviteeInput("");
     setInviteeError(null);
     setDraftExists(true);
@@ -350,6 +369,7 @@ export function CreateProjectWizard({
     smartAssignEnabled,
     autoAssignEnabled,
     invitees,
+    inviteeUsers,
   });
 
   /** Closes for good: nothing left waiting, everything reset. */
@@ -440,35 +460,68 @@ export function CreateProjectWizard({
   };
 
   // ── “Members” stage ──────────────────────────────────────────────────────
-  /** Who may be queued: a plausible address, not the owner, not twice. */
+  /** Who may be queued by address: plausible, and not the owner. */
   const isInvitable = (email: string) =>
     isValidEmail(email) &&
     email !== normalizeInviteEmail(user?.email ?? "");
 
+  const isQueued = (email: string) =>
+    invitees.includes(email) || inviteeUsers.some((u) => u.email === email);
+
+  /** Collaborators matching what is typed, minus those already queued. */
+  const suggestions = inviteLimitReached
+    ? []
+    : matchCollaborators(collaborators, inviteeInput, {
+        userIds: inviteeUsers.map((u) => u.userId),
+        emails: invitees,
+      });
+
+  const pickCollaborator = (c: Collaborator) => {
+    if (inviteLimitReached) return;
+    setInviteeUsers((list) => [
+      ...list,
+      { userId: c.user_id, email: c.email, name: c.full_name, avatarSeed: c.avatar_seed },
+    ]);
+    setInviteeInput("");
+    setInviteeError(null);
+  };
+
   /**
-   * Adds the typed address to the queue. Returns `false` when it is refused,
-   * with the reason shown under the field — so that “Continue” never drops an
-   * address the user typed without saying so.
+   * Adds what is typed to the queue. Returns `false` when it is refused, with
+   * the reason shown under the field — so that “Continue” never drops what the
+   * user typed without saying so. An address that belongs to a collaborator,
+   * or a name only one collaborator matches, queues that person.
    */
   const addInvitee = (): boolean => {
     const email = normalizeInviteEmail(inviteeInput);
     if (!email) return true;
-    if (!isValidEmail(email)) {
-      setInviteeError(t("wizardMembersInvalid"));
-      return false;
-    }
-    if (email === normalizeInviteEmail(user?.email ?? "")) {
-      setInviteeError(t("wizardMembersSelf"));
-      return false;
-    }
-    if (invitees.includes(email)) {
-      setInviteeError(t("wizardMembersDuplicate", { email }));
+    const known = collaborators.find((c) => c.email === email);
+    if (isQueued(email)) {
+      setInviteeError(
+        t("wizardMembersDuplicate", { email: known ? displayName(known, email) : email }),
+      );
       return false;
     }
     if (inviteLimitReached) {
       setInviteeError(
         tMembers("inviteLimitReached", { limit: maxMembersPerProject ?? 0 }),
       );
+      return false;
+    }
+    if (known) {
+      pickCollaborator(known);
+      return true;
+    }
+    if (!isValidEmail(email)) {
+      if (suggestions.length === 1) {
+        pickCollaborator(suggestions[0]);
+        return true;
+      }
+      setInviteeError(t("wizardMembersInvalid"));
+      return false;
+    }
+    if (email === normalizeInviteEmail(user?.email ?? "")) {
+      setInviteeError(t("wizardMembersSelf"));
       return false;
     }
     setInvitees((list) => [...list, email]);
@@ -752,15 +805,26 @@ export function CreateProjectWizard({
     // already invited) does not stop the next ones, and none of them undoes
     // the project. A success means an invitation was recorded, not that its
     // email was delivered.
-    const toInvite = normalizeInvitees(invitees).filter(isInvitable);
+    // Picked collaborators go by account: the server resolves their address
+    // and checks again that they joined one of my projects.
+    const toInvite = [
+      ...normalizeInviteeUsers(inviteeUsers).map((u) => ({
+        label: displayName({ full_name: u.name, email: u.email }, u.email),
+        send: () => inviteCollaboratorApi(created.id, u.userId),
+      })),
+      ...normalizeInvitees(invitees).filter(isInvitable).map((email) => ({
+        label: email,
+        send: () => inviteMemberApi(created.id, email),
+      })),
+    ];
     if (toInvite.length > 0) {
-      const failed: { email: string; message: string }[] = [];
-      for (const email of toInvite) {
+      const failed: { label: string; message: string }[] = [];
+      for (const { label, send } of toInvite) {
         try {
-          await inviteMemberApi(created.id, email);
+          await send();
         } catch (err) {
           console.error("[create-project-wizard] invitation failed:", err);
-          failed.push({ email, message: (err as Error).message });
+          failed.push({ label, message: (err as Error).message });
         }
       }
       void queryClient.invalidateQueries({ queryKey: ["members", created.id] });
@@ -771,9 +835,9 @@ export function CreateProjectWizard({
           description: (
             <div className="flex flex-col gap-1">
               <ul className="flex flex-col gap-0.5">
-                {failed.map(({ email, message }) => (
-                  <li key={email} className="break-words">
-                    {email} — {message}
+                {failed.map(({ label, message }) => (
+                  <li key={label} className="break-words">
+                    {label} — {message}
                   </li>
                 ))}
               </ul>
@@ -1235,17 +1299,17 @@ export function CreateProjectWizard({
       id: "members",
       title: t("wizardMembersTitle"),
       subtitle: t("wizardMembersDesc"),
-      submitLabel: skipLabel(invitees.length === 0 && !inviteeInput.trim()),
+      submitLabel: skipLabel(queuedCount === 0 && !inviteeInput.trim()),
       content: (
         <div className="flex flex-col gap-3">
           <div className="flex items-end gap-2">
             <div className="flex min-w-0 flex-1 flex-col gap-1.5">
               <label htmlFor="project-invitee" className="sr-only">
-                {tMembers("inviteByEmail")}
+                {t("wizardMembersFieldLabel")}
               </label>
               <Input
                 id="project-invitee"
-                type="email"
+                type="text"
                 autoComplete="off"
                 autoFocus={allowInputAutoFocus()}
                 value={inviteeInput}
@@ -1261,7 +1325,11 @@ export function CreateProjectWizard({
                     addInvitee();
                   }
                 }}
-                placeholder={tMembers("invitePlaceholder")}
+                placeholder={t("wizardMembersPlaceholder")}
+                role="combobox"
+                aria-expanded={suggestions.length > 0}
+                aria-controls="project-invitee-suggestions"
+                aria-autocomplete="list"
                 aria-invalid={inviteeError ? true : undefined}
                 aria-describedby={inviteeError ? "project-invitee-error" : undefined}
                 disabled={inviteLimitReached}
@@ -1282,13 +1350,42 @@ export function CreateProjectWizard({
               {inviteeError}
             </p>
           )}
-          {invitees.length > 0 && (
+          <CollaboratorSuggestions
+            id="project-invitee-suggestions"
+            label={t("wizardMembersSuggestionsLabel")}
+            suggestions={suggestions}
+            onPick={pickCollaborator}
+          />
+          {queuedCount > 0 && (
             <ul
               className="flex flex-col divide-y divide-border rounded-2xl border border-border"
               aria-label={t("wizardMembersListLabel")}
             >
+              {inviteeUsers.map((u) => (
+                <li key={u.userId} className="flex items-center gap-3 py-2 pl-4 pr-2">
+                  <UserAvatar seed={u.avatarSeed} className="size-7" />
+                  <CollaboratorName collaborator={{ email: u.email, full_name: u.name }} />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={t("wizardMembersRemove", {
+                      email: displayName({ full_name: u.name, email: u.email }, u.email),
+                    })}
+                    onClick={() => {
+                      setInviteeUsers((list) => list.filter((x) => x.userId !== u.userId));
+                      setInviteeError(null);
+                    }}
+                  >
+                    <HugeiconsIcon icon={Cancel01Icon} />
+                  </Button>
+                </li>
+              ))}
               {invitees.map((email) => (
-                <li key={email} className="flex items-center gap-2 py-2 pl-4 pr-2">
+                <li key={email} className="flex items-center gap-3 py-2 pl-4 pr-2">
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                    <HugeiconsIcon icon={Mail01Icon} className="size-3.5" aria-hidden />
+                  </span>
                   <span className="min-w-0 flex-1 truncate text-left text-sm">
                     {email}
                   </span>
@@ -1317,7 +1414,7 @@ export function CreateProjectWizard({
                   {inviteLimitReached
                     ? tMembers("inviteLimitReached", { limit: maxMembersPerProject })
                     : tMembers("guestCount", {
-                        used: invitees.length,
+                        used: queuedCount,
                         limit: maxMembersPerProject,
                       })}
                 </span>
@@ -1350,9 +1447,9 @@ export function CreateProjectWizard({
                 <span className="font-mono">{key}</span>
                 {repo ? ` · ${repo.fullName}` : ` · ${t("wizardNoRepo")}`}
               </p>
-              {invitees.length > 0 && (
+              {queuedCount > 0 && (
                 <p className="truncate text-xs text-muted-foreground">
-                  {t("wizardMembersSummary", { count: invitees.length })}
+                  {t("wizardMembersSummary", { count: queuedCount })}
                 </p>
               )}
             </div>

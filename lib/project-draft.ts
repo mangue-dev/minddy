@@ -73,6 +73,14 @@ export type DraftSeed =
   | { kind: "brief"; text: string }
   | { kind: "import" };
 
+/** A collaborator queued in the members step (see `ProjectDraft.inviteeUsers`). */
+export interface DraftInviteeUser {
+  userId: string;
+  email: string;
+  name: string | null;
+  avatarSeed: string;
+}
+
 export interface ProjectDraft {
   /** Id of the future project, taken from the client side: this is the seed of the default orb. */
   id: string;
@@ -103,6 +111,12 @@ export interface ProjectDraft {
    * sent while the project is a draft: the invitations go out once it exists.
    */
   invitees: string[];
+  /**
+   * People picked by name among those who joined another of the owner's
+   * projects. Only `userId` is sent: the server resolves their address. The
+   * name and avatar are kept for display when the draft is resumed.
+   */
+  inviteeUsers: DraftInviteeUser[];
   /** Last written (ISO) — the order of the sidebar, from most recent. */
   updatedAt: string;
 }
@@ -142,6 +156,7 @@ export function projectDraftFromRow(row: ProjectDraftRow): ProjectDraft {
     smartAssignEnabled: data.smartAssignEnabled !== false,
     autoAssignEnabled: data.autoAssignEnabled === true,
     invitees: normalizeInvitees(data.invitees),
+    inviteeUsers: normalizeInviteeUsers(data.inviteeUsers),
     updatedAt: row.updated_at,
   };
 }
@@ -168,6 +183,7 @@ export function projectDraftToRow(draft: ProjectDraftInput): {
       smartAssignEnabled: draft.smartAssignEnabled,
       autoAssignEnabled: draft.autoAssignEnabled,
       invitees: normalizeInvitees(draft.invitees),
+      inviteeUsers: normalizeInviteeUsers(draft.inviteeUsers),
     },
   };
 }
@@ -198,6 +214,26 @@ export function normalizeInvitees(value: unknown): string[] {
     .map(normalizeInviteEmail)
     .filter(Boolean);
   return [...new Set(emails)];
+}
+
+/** Picked collaborators from whatever the draft holds: well-formed and unique. */
+export function normalizeInviteeUsers(value: unknown): DraftInviteeUser[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const users: DraftInviteeUser[] = [];
+  for (const item of value) {
+    const user = item as Partial<DraftInviteeUser> | null;
+    if (!user || typeof user.userId !== "string" || !user.userId || typeof user.email !== "string") continue;
+    if (seen.has(user.userId)) continue;
+    seen.add(user.userId);
+    users.push({
+      userId: user.userId,
+      email: normalizeInviteEmail(user.email),
+      name: typeof user.name === "string" && user.name.trim() ? user.name : null,
+      avatarSeed: typeof user.avatarSeed === "string" && user.avatarSeed ? user.avatarSeed : user.userId,
+    });
+  }
+  return users;
 }
 
 function normalizeStep(value: unknown): ProjectWizardStep {
