@@ -227,16 +227,6 @@ describe("runDecision", () => {
     });
   });
 
-  it("runs the LLM directly when the kill-switch is off, without touching the decision model", async () => {
-    getAppConfigValuesMock.mockResolvedValue({ jev_decisions_enabled: "false" });
-    runLlmDecisionMock.mockResolvedValue({
-      priority: { value: "high", probability: null, confidence: null },
-    });
-    const outcome = await runDecision(SPEC, { billTo: BILL_TO });
-    expect(runModelDecisionMock).not.toHaveBeenCalled();
-    expect(outcome).toMatchObject({ engine: "llm", fallbackReason: "model_disabled" });
-  });
-
   it("refuses a malformed spec without calling any engine", async () => {
     const outcome = await runDecision(
       { ...SPEC, state: {} },
@@ -262,14 +252,6 @@ describe("runDecision", () => {
     expect(llmCtx.projectId).toBe("project-1");
   });
 
-  it("carries seq 0 to the LLM when it runs directly (no decision-model line before it)", async () => {
-    getAppConfigValuesMock.mockResolvedValue({ jev_decisions_enabled: "false" });
-    runLlmDecisionMock.mockResolvedValue({
-      priority: { value: "high", probability: null, confidence: null },
-    });
-    await runDecision(SPEC, { billTo: BILL_TO });
-    expect(runLlmDecisionMock.mock.calls[0][1].seq).toBe(0);
-  });
 });
 
 describe("shadow sampling (MIN-567)", () => {
@@ -320,7 +302,7 @@ describe("shadow sampling (MIN-567)", () => {
   });
 
   it("NEVER samples a decision that already fell back to the LLM", async () => {
-    // Unavailable, under the floor, switched off: whatever the reason, the
+    // Unavailable, under the floor, LLM-first: whatever the reason, the
     // LLM decided for real — there is nothing left to compare against.
     getAppConfigValuesMock.mockResolvedValue({ jev_shadow_sample_rate: "1" });
     runModelDecisionMock.mockResolvedValue(null);
@@ -340,7 +322,7 @@ describe("shadow sampling (MIN-567)", () => {
     await runDecision(SPEC, { billTo: BILL_TO });
     expect(afterOrNowMock).not.toHaveBeenCalled();
     getAppConfigValuesMock.mockResolvedValue({
-      jev_decisions_enabled: "false",
+      jev_llm_first: "smart_fill",
       jev_shadow_sample_rate: "1",
     });
     await runDecision(SPEC, { billTo: BILL_TO });
@@ -387,9 +369,8 @@ describe("LLM-first switch (MIN-567)", () => {
 });
 
 describe("loadDecisionModelSettings", () => {
-  it("defaults to enabled, floor 0.55, shadow rate 0.05, no LLM-first use case", async () => {
+  it("defaults to floor 0.55, shadow rate 0.05, no LLM-first use case", async () => {
     await expect(loadDecisionModelSettings()).resolves.toEqual({
-      enabled: true,
       confidenceFloor: 0.55,
       shadowSampleRate: 0.05,
       llmFirstUseCases: [],
@@ -402,7 +383,6 @@ describe("loadDecisionModelSettings", () => {
       jev_shadow_sample_rate: "0.5",
     });
     await expect(loadDecisionModelSettings()).resolves.toEqual({
-      enabled: true,
       confidenceFloor: 0.7,
       shadowSampleRate: 0.5,
       llmFirstUseCases: [],
@@ -412,7 +392,6 @@ describe("loadDecisionModelSettings", () => {
       jev_shadow_sample_rate: "-3",
     });
     await expect(loadDecisionModelSettings()).resolves.toEqual({
-      enabled: true,
       confidenceFloor: 1,
       shadowSampleRate: 0,
       llmFirstUseCases: [],
@@ -430,13 +409,6 @@ describe("loadDecisionModelSettings", () => {
     await expect(loadDecisionModelSettings()).resolves.toMatchObject({
       llmFirstUseCases: [],
     });
-  });
-
-  it("reads anything but exactly 'false' as enabled", async () => {
-    getAppConfigValuesMock.mockResolvedValue({ jev_decisions_enabled: "false" });
-    expect((await loadDecisionModelSettings()).enabled).toBe(false);
-    getAppConfigValuesMock.mockResolvedValue({ jev_decisions_enabled: " false " });
-    expect((await loadDecisionModelSettings()).enabled).toBe(false);
   });
 });
 

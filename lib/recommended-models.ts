@@ -72,9 +72,8 @@ export const DEFAULT_RECOMMENDED_MODELS: string[] = [
  *
  * `null` is a verdict, not an error: the server responds with a fallback — a
  * broken setting should not empty the picker — and the admin API with a 400, so that
- * no one saves a list that will never be used. Same parser of
- * both sides, as for subagent favorites: what the admin
- * screen accepts is exactly what the picker will read.
+ * no one saves a list that will never be used. Same parser on
+ * both sides: what the admin screen accepts is exactly what the picker will read.
  *
  * Duplicates are overwritten rather than refused: twice the same id in a
  * `CommandItem` would give two identical lines of which only one reacts.

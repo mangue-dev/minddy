@@ -3,7 +3,7 @@ import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/supabase-service";
-import { aiModelFallback, stripModelSuffix } from "@/lib/ai-model-config";
+import { stripModelSuffix } from "@/lib/ai-model-config";
 import { afterOrNow } from "@/lib/server/after-safe";
 import { getAppConfigValues, setAppConfigValue } from "@/lib/server/app-config";
 import { resolveAiRuntime } from "@/lib/server/ai-runtime";
@@ -199,16 +199,6 @@ export function storedBlockingEdge(
 }
 
 // ── Settings ────────────────────────────────────────────────────────────────
-
-async function platformEnabled(): Promise<{ indexing: boolean; relations: boolean }> {
-  const cfg = await getAppConfigValues(["smart_fill_relations_enabled", "smart_fill_enabled"]).catch(
-    () => ({}) as Record<string, string | null>
-  );
-  const indexing =
-    (cfg["smart_fill_relations_enabled"] ?? aiModelFallback("smart_fill_relations_enabled")) !== "false";
-  const smartFill = (cfg["smart_fill_enabled"] ?? aiModelFallback("smart_fill_enabled")) !== "false";
-  return { indexing, relations: indexing && smartFill };
-}
 
 async function readMeta(userId: string): Promise<Record<string, unknown> | null> {
   const { data, error } = await getServiceClient().auth.admin.getUserById(userId);
@@ -502,8 +492,6 @@ export async function runIssueAiPass(input: {
 }): Promise<IssueAiPassResult> {
   const result: IssueAiPassResult = { indexed: false, candidates: 0, decided: 0, applied: 0 };
   try {
-    const platform = await platformEnabled();
-    if (!platform.indexing) return { ...result, skipped: "platform_disabled" };
     const access = await getProjectAccess(input.payerId, input.projectId);
     if (!access?.canWrite) return { ...result, skipped: "no_access" };
     // Preferences are read NOW, not when the work was queued: turning a
@@ -511,7 +499,7 @@ export async function runIssueAiPass(input: {
     const meta = await readMeta(input.payerId);
     if (!meta) return { ...result, skipped: "no_account" };
     let indexing = resolveIssueIndexing(meta);
-    const relations = input.inferRelations && platform.relations && resolveSmartFillRelations(meta);
+    const relations = input.inferRelations && resolveSmartFillRelations(meta);
 
     const service = getServiceClient();
     const subject = await readIssue(service, input.issueId, input.projectId);
@@ -797,9 +785,6 @@ export async function runIssueIndexBackfill(limit = 100): Promise<{
   reencoded: number;
   wrapped: boolean;
 }> {
-  // With the feature turned off, the walk still converts clear vectors to
-  // encrypted ones; it only stops creating new vectors.
-  const platform = await platformEnabled();
   const service = getServiceClient();
   const cfg = await getAppConfigValues([BACKFILL_CURSOR_KEY]).catch(() => ({}) as Record<string, string | null>);
   const cursor = cfg[BACKFILL_CURSOR_KEY] ?? "";
@@ -843,7 +828,7 @@ export async function runIssueIndexBackfill(limit = 100): Promise<{
     return !meta || resolveIssueIndexing(meta);
   };
   let indexed = 0;
-  for (const [projectId, projectIssues] of platform.indexing ? byProject : new Map<string, IssueContent[]>()) {
+  for (const [projectId, projectIssues] of byProject) {
     const { data: project } = await service
       .from("projects")
       .select("owner_id")

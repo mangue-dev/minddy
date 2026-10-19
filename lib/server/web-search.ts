@@ -44,7 +44,6 @@ const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 /** `app_config` keys (adjustable from /admin, see lib/ai-model-config.ts). */
 export const WEB_SEARCH_MODEL_CONFIG_KEY = "web_search_model";
-export const WEB_SEARCH_ENABLED_CONFIG_KEY = "web_search_enabled";
 
 /** Exa plan per search, as billed by OpenRouter (USD, indicative). */
 export const WEB_SEARCH_USD_PER_CALL = 0.005;
@@ -97,24 +96,9 @@ function cap(text: string, max: number): string {
 }
 
 /** Web search settings (app_config cache of 60 s). */
-export async function getWebSearchSettings(): Promise<{
-  enabled: boolean;
-  model: string;
-}> {
-  const cfg = await getAppConfigValues([
-    WEB_SEARCH_ENABLED_CONFIG_KEY,
-    ...modelConfigKeys(WEB_SEARCH_MODEL_CONFIG_KEY),
-  ]);
-  return {
-    // Absent = enabled (mirror of admin registry fallback).
-    enabled: cfg[WEB_SEARCH_ENABLED_CONFIG_KEY]?.trim() !== "false",
-    model: resolveFromValues(WEB_SEARCH_MODEL_CONFIG_KEY, cfg).model,
-  };
-}
-
-/** The admin flag alone — to decide whether to OFFER the tool or not. */
-export async function isWebSearchEnabled(): Promise<boolean> {
-  return (await getWebSearchSettings()).enabled;
+export async function getWebSearchSettings(): Promise<{ model: string }> {
+  const cfg = await getAppConfigValues(modelConfigKeys(WEB_SEARCH_MODEL_CONFIG_KEY));
+  return { model: resolveFromValues(WEB_SEARCH_MODEL_CONFIG_KEY, cfg).model };
 }
 
 /**
@@ -301,12 +285,6 @@ export async function runWebSearchTool(params: {
   signal?: AbortSignal;
 }): Promise<{ result: unknown; success: boolean }> {
   const settings = await getWebSearchSettings();
-  if (!settings.enabled) {
-    return {
-      result: { error: "Web search is disabled on this instance." },
-      success: false,
-    };
-  }
 
   const runtime = params.userId
     ? await resolveAiRuntime({

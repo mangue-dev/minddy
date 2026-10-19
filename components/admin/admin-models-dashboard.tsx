@@ -9,8 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import type { MessageKey } from "@/lib/i18n-keys";
 import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
@@ -26,8 +24,6 @@ import {isModelCatalogCapability} from "@/lib/model-catalog-capability";
 import type {ByokCatalogProvider} from "@/lib/byok-model-catalog";
 import {AI_MODEL_CONFIG_FIELDS, AI_MODEL_CONFIG_GROUPS, isSuffixableField, modelSuffixKey, MODEL_SUFFIXES} from "@/lib/ai-model-config";
 import type {AiConfigField, AiConfigGroup, ModelSuffix} from "@/lib/ai-model-config";
-import {DEFAULT_SUBAGENT_FAVORITES, parseSubagentFavorites, SUBAGENT_THINKING_EFFORTS} from "@/lib/subagent-favorites";
-import type {FavoriteSubagentModel, SubagentThinkingEffort} from "@/lib/subagent-favorites";
 import {DEFAULT_RECOMMENDED_MODELS, parseRecommendedModels} from "@/lib/recommended-models";
 import {REASONING_LEVELS, toReasoningLevel} from "@/lib/agent-reasoning";
 import {formatMultiplier} from "@/lib/model-multiplier";
@@ -103,7 +99,6 @@ export function AdminModelsDashboard() {
     const map: Record<AiConfigGroup, AiConfigField[]> = {
       assistant: [],
       automations: [],
-      agent: [],
       byok: [],
       voice: [],
       feedback: [],
@@ -215,7 +210,6 @@ export function AdminModelsDashboard() {
 const MODEL_GROUP_SECTIONS: Record<AiConfigGroup, AdminSectionId> = {
   assistant: ADMIN_SECTIONS.modelsAssistant,
   automations: ADMIN_SECTIONS.modelsAutomations,
-  agent: ADMIN_SECTIONS.modelsAgent,
   byok: ADMIN_SECTIONS.modelsByok,
   voice: ADMIN_SECTIONS.modelsVoice,
   feedback: ADMIN_SECTIONS.modelsFeedback,
@@ -396,12 +390,6 @@ function ConfigRow({
   }
 
   switch (field.kind) {
-    case "flag":
-      return <FlagRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} />;
-    case "favorites":
-      return (
-        <FavoritesRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} />
-      );
     case "recommended":
       return (
         <RecommendedRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} />
@@ -489,7 +477,7 @@ function ReasoningRow({
  * then follows the fault produced instead of being fixed on its current value.
  *
  * No more “Save” button: a choice in a list is a unique act,
- * it registers on selection (like the `FlagRow` switch).
+ * it registers on selection.
  *
  * Below, the OpenRouter routing shortcut (MIN-263): it does NOT change
  * model, it orders the providers of that one. Hence the second list rather
@@ -640,50 +628,6 @@ function SuffixSelect({
   );
 }
 
-function FlagRow({
-  field,
-  label,
-  desc,
-  value,
-  onSaved,
-}: {
-  field: AiConfigField;
-  label: string;
-  desc: string | null;
-  value: string | null;
-  onSaved: (key: string, value: string) => void;
-}) {
-  const resolved = (value ?? field.fallback) === "true";
-  const [checked, setChecked] = useState(resolved);
-  useEffect(() => setChecked(resolved), [resolved]);
-
-  const toggle = async (next: boolean) => {
-    setChecked(next); // optimistic
-    try {
-      await patchConfig(field.key, next ? "true" : "false");
-      onSaved(field.key, next ? "true" : "false");
-    } catch (e) {
-      setChecked(!next);
-      toast.error((e as Error).message);
-    }
-  };
-
-  return (
-    <SettingsRow
-      htmlFor={`cfg-${field.key}`}
-      label={label}
-      hint={desc ?? undefined}
-      control={
-        <Switch
-          id={`cfg-${field.key}`}
-          checked={checked}
-          onCheckedChange={(v) => void toggle(v)}
-        />
-      }
-    />
-  );
-}
-
 /**
  * A model id ENTERED, not chosen: the border defects of BYOK providers
  * live in the provider namespace (`claude-sonnet-5`, not
@@ -755,208 +699,10 @@ function ModelIdRow({
   );
 }
 
-/** Value of `Select` for “no recommended level” (an item cannot be empty). */
-const INHERIT_EFFORT = "__inherit__";
-
-/** Reflection level label keys — typed table, no assembled key. */
-const EFFORT_LABEL_KEYS: Record<SubagentThinkingEffort, AdminKey> = {
-  low: "favorites.effortLow",
-  medium: "favorites.effortMedium",
-  high: "favorites.effortHigh",
-};
-
 /**
- * The “Favorites for sub-agents” list (MIN-112): what the parent agent reads in
- * its prompt to decide what to start a girl on.
- *
- * Two things distinguish it from other lines. First it is recorded IN BATCH:
- * a favorite is only useful when complete (the model without its usage advice says nothing),
- * therefore “Save” button rather than a recording of your choice. Then the
- * `use_case` is from the PROMPT, not from the UI: it leaves as is in the system prompt of the
- * parent — written in English, and addressed to a model who chooses, not to a human who
- * bed. “Reset” clears the `app_config` line: the setting follows the
- * defect produced instead of being fixed on its current value.
- */
-function FavoritesRow({
-  field,
-  label,
-  desc,
-  value,
-  onSaved,
-}: {
-  field: AiConfigField;
-  label: string;
-  desc: string | null;
-  value: string | null;
-  onSaved: (key: string, value: string) => void;
-}) {
-  const t = useTranslations("Admin");
-  const tAgent = useTranslations("Agent");
-  const saved = (value ?? "").trim();
-  // The SAME parser as the runtime: what the screen shows is what the agent will read.
-  const savedList = useMemo(
-    () => parseSubagentFavorites(saved) ?? DEFAULT_SUBAGENT_FAVORITES,
-    [saved],
-  );
-  const [list, setList] = useState<FavoriteSubagentModel[]>(savedList);
-  useEffect(() => setList(savedList), [savedList]);
-  const [busy, setBusy] = useState(false);
-
-  const dirty = JSON.stringify(list) !== JSON.stringify(savedList);
-  const incomplete = list.some((f) => !f.id);
-
-  const patchAt = (index: number, next: Partial<FavoriteSubagentModel>) =>
-    setList((prev) => prev.map((f, i) => (i === index ? { ...f, ...next } : f)));
-
-  const write = async (next: string) => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      await patchConfig(field.key, next);
-      onSaved(field.key, next);
-      toast.success(t("saved"));
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  // Emptied list = return to product fallback: we delete the line rather than
-  // to save an empty array, which the runtime would replace anyway.
-  const save = () => void write(list.length > 0 ? JSON.stringify(list) : "");
-
-  return (
-    /* The only vertical row on the dashboard: a LIST of favorites, with
- its own long text — it doesn't fit at the end of one line. */
-    <SettingsRow label={label} hint={desc ?? undefined} orientation="vertical">
-      <div className="space-y-3">
-        {list.map((favorite, index) => (
-          <div
-            key={index}
-            className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3"
-          >
-            <div className="flex items-center gap-2">
-              <div className="min-w-0 flex-1">
-                <ModelCombobox
-                  scope="platform"
-                  value={favorite.id}
-                  onChange={(id) =>
-                    patchAt(index, { id, label: formatModelName(id) || id })
-                  }
-                  disabled={busy}
-                  defaultLabel={t("favorites.pickModel")}
-                  placeholder={tAgent("modelSearchPlaceholder")}
-                  emptyLabel={tAgent("modelSearchEmpty")}
-                  loadingLabel={tAgent("modelSearchLoading")}
-                  freeTextLabel={(query) => tAgent("modelUseCustom", { model: query })}
-                />
-              </div>
-              <Select
-                value={favorite.thinking_effort ?? INHERIT_EFFORT}
-                disabled={busy}
-                onValueChange={(next) =>
-                  patchAt(index, {
-                    thinking_effort:
-                      next === INHERIT_EFFORT ? undefined : (next as SubagentThinkingEffort),
-                  })
-                }
-              >
-                <SelectTrigger className="w-40 shrink-0">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={INHERIT_EFFORT}>{t("favorites.effortInherit")}</SelectItem>
-                  {SUBAGENT_THINKING_EFFORTS.map((effort) => (
-                    <SelectItem key={effort} value={effort}>
-                      {t(EFFORT_LABEL_KEYS[effort])}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="shrink-0 text-muted-foreground"
-                disabled={busy}
-                aria-label={t("favorites.remove")}
-                onClick={() => setList((prev) => prev.filter((_, i) => i !== index))}
-              >
-                <HugeiconsIcon icon={Delete02Icon} className="size-4" />
-              </Button>
-            </div>
-            <Textarea
-              value={favorite.use_case}
-              disabled={busy}
-              rows={2}
-              spellCheck={false}
-              placeholder={t("favorites.useCasePlaceholder")}
-              onChange={(e) => patchAt(index, { use_case: e.target.value })}
-            />
-          </div>
-        ))}
-
-        {list.length === 0 ? (
-          <p className="text-xs text-muted-foreground">{t("favorites.empty")}</p>
-        ) : null}
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={busy}
-            onClick={() => setList((prev) => [...prev, { id: "", label: "", use_case: "" }])}
-          >
-            <HugeiconsIcon icon={Add01Icon} className="size-4" />
-            {t("favorites.add")}
-          </Button>
-          {dirty ? (
-            <>
-              <Button type="button" size="sm" disabled={busy || incomplete} onClick={save}>
-                {t("favorites.save")}
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                disabled={busy}
-                onClick={() => setList(savedList)}
-              >
-                {t("favorites.cancel")}
-              </Button>
-            </>
-          ) : saved ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled={busy}
-              onClick={() => void write("")}
-            >
-              {t("favorites.reset")}
-            </Button>
-          ) : null}
-          {busy ? <Spinner className="shrink-0" /> : null}
-        </div>
-        {incomplete ? (
-          <p className="text-xs text-muted-foreground">{t("favorites.incomplete")}</p>
-        ) : null}
-      </div>
-    </SettingsRow>
-  );
-}
-
-/**
- * The list of RECOMMENDED models: what the user's picker shows
- * opening, before any keystroke (see lib/recommended-models.ts).
- *
- * Not to be confused with the favorites just above, despite the resemblance of
- * the screen: the favorites are from PROMPT, read by a parent agent who chooses on
- * what to throw a girl; these are from the UI, read by a human. Hence the form
- * poorer — an id is enough, there is neither usage advice to write nor level of
- * reflection to be resolved, the picker already knows how to display a name, a logo and a cost.
+ * The list of RECOMMENDED models: what the user's picker shows on
+ * opening, before any keystroke (see lib/recommended-models.ts). An id is
+ * enough: the picker already knows how to display a name, a logo and a cost.
  *
  * What we regulate here is a SET, not a sequence: the ORDER is calculated,
  * from least expensive to most expensive, here as in the picker (`resolveRecommended`).
@@ -968,10 +714,9 @@ function FavoritesRow({
  * A model for which we do not know the price is placed at the end of the list, due to lack of
  * know where to put it — same rule on both sides.
  *
- * BATCH saving like favorites, for the same reason: a list to
- * half rewritten is not a state we want to serve. “Reset” clears
- * the `app_config` line — the setting again follows the fault produced instead
- * to be stuck on the selection of the day.
+ * Saved IN BATCH: a half-rewritten list is not a state we want to serve.
+ * “Reset” clears the `app_config` line — the setting again follows the
+ * product default instead of staying stuck on the selection of the day.
  */
 function RecommendedRow({
   field,

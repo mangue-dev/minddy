@@ -46,7 +46,6 @@ export type DecisionEngine = "model" | "llm";
  * contract.
  */
 export type DecisionFallbackReason =
-  | "model_disabled"
   | "model_unavailable"
   | "model_low_confidence"
   /**

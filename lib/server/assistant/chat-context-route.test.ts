@@ -25,7 +25,7 @@ vi.mock("@/lib/server/agent/models-catalog", () => ({
 vi.mock("@/lib/server/assistant/prompt-context", () => ({ gatherProjectPromptContext: async ({ project }: { project: object }) => ({ ...project, statusCounts: {}, recentIssues: [], members: [], objectives: [], categories: [] }) }));
 vi.mock("@/lib/server/short-title", () => ({ fallbackShortTitle: () => "Conversation", generateShortTitle: async () => null }));
 vi.mock("@/lib/server/ai-usage", () => ({ newRunId: () => "run", recordAiUsage: async () => {} }));
-vi.mock("@/lib/server/web-search", () => ({ isWebSearchEnabled: async () => true, withoutWebSearch: (tools: unknown) => tools }));
+vi.mock("@/lib/server/web-search", () => ({ withoutWebSearch: (tools: unknown) => tools }));
 vi.mock("@/lib/server/assistant/reasoning", () => ({ getAssistantReasoningLevel: async () => "off" }));
 vi.mock("@/lib/server/assistant/loop", () => ({ processChat: h.process, modelSupportsCaching: async () => false, getModelInputModalities: async () => new Set(["text"]) }));
 vi.mock("@/lib/server/repository-skills", () => ({ loadProjectRepositorySkills: h.loadSkills }));

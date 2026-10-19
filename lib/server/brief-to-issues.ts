@@ -1,7 +1,6 @@
 import "server-only";
 
 import { getAppConfigValues } from "@/lib/server/app-config";
-import { aiModelFallback } from "@/lib/ai-model-config";
 import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
 import { forcedToolCall } from "@/lib/server/feedback/forced-tool-call";
 import { ISSUE_EFFORTS, ISSUE_PRIORITIES } from "@/lib/issue-validation";
@@ -27,14 +26,12 @@ import { MAX_BRIEF_CHARS, type SeedProposal } from "@/lib/seed/types";
  * instructions, forced output limits what a malicious paragraph can
  * get to a bad proposal, and this proposal is read on the screen.
  *
- * A failure (missing key, flag cut, timeout, invalid JSON) makes `null` :
+ * A failure (missing key, timeout, invalid JSON) makes `null` :
  * the primer is reproposed, and the new project remains perfectly usable without.
  */
 
 /** `app_config` key of the model that cuts a brief. */
 export const BRIEF_MODEL_KEY = "brief_model";
-/** `app_config` key for the global pass switch. */
-export const BRIEF_ENABLED_KEY = "brief_enabled";
 
 /**
  * The output grows with the brief: forty tickets with their description
@@ -159,10 +156,7 @@ export async function proposeBacklogFromBrief({
   const text = brief.trim().slice(0, MAX_BRIEF_CHARS);
   if (!text) return null;
 
-  const cfg = await getAppConfigValues([...modelConfigKeys(BRIEF_MODEL_KEY), BRIEF_ENABLED_KEY]);
-  if ((cfg[BRIEF_ENABLED_KEY] ?? aiModelFallback(BRIEF_ENABLED_KEY)) === "false") {
-    return null;
-  }
+  const cfg = await getAppConfigValues(modelConfigKeys(BRIEF_MODEL_KEY));
   const { model } = resolveFromValues(BRIEF_MODEL_KEY, cfg);
 
   // The markers frame the data: the model knows where the brief begins and

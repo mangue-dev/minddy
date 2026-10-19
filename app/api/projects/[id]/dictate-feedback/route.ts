@@ -11,7 +11,6 @@ import {
   planLimitResponse,
 } from "@/lib/server/plan-limit-error";
 import {
-  feedbackVoiceEnabled,
   normalizeVoiceDraft,
   normalizeVoiceHistory,
   normalizeVoiceTranscript,
@@ -62,10 +61,6 @@ export async function POST(
       { error: "Too many requests", retry_after: rateLimit.retryAfter },
       { status: 429, headers: { "Retry-After": String(rateLimit.retryAfter) } }
     );
-  }
-
-  if (!(await feedbackVoiceEnabled())) {
-    return NextResponse.json({ error: "Dictation not configured" }, { status: 503 });
   }
 
   let body: {

@@ -96,6 +96,7 @@ export interface NumoTurnIntent {
   locale: string;
   timezone: string;
   numoDefaultStatus: NumoDefaultStatus;
+  /** Always true since the admin switch was removed (MIN-733); turns queued before may carry false. */
   webSearchEnabled: boolean;
   /** Preserve comment-origin semantics for activity. */
   triggerSource?: "chat" | "mention";

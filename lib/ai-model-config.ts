@@ -16,7 +16,6 @@
  */
 import { AGENT_PROVIDERS } from "@/lib/agent-providers";
 import { BYOK_MODEL_KEYS, byokFeatureDefaultModelKey } from "@/lib/ai-surfaces";
-import { DEFAULT_SUBAGENT_FAVORITES } from "@/lib/subagent-favorites";
 import { DEFAULT_RECOMMENDED_MODELS } from "@/lib/recommended-models";
 import { DEFAULT_REASONING_LEVEL } from "@/lib/agent-reasoning";
 import {
@@ -29,23 +28,20 @@ import {
  * `model` → id `provider/model` chosen in the platform key catalog;
  * `modelId` → id entered as is, in the namespace of a BYOK provider (`gpt-…`,
  * `claude-…`): the platform catalog would write invalid ids;
- * `favorites` → JSON list of `FavoriteSubagentModel`;
  * `recommended` → JSON list of ids, in the order of display of the picker ;
- * `reasoning` → one of the shared Numo reasoning levels;
- * `flag` → “true”/”false” switch.
+ * `reasoning` → one of the shared Numo reasoning levels.
+ *
+ * There is no on/off switch here: every AI feature is always on (MIN-733).
  */
 export type AiConfigKind =
   | "model"
   | "modelId"
   | "reasoning"
-  | "favorites"
-  | "recommended"
-  | "flag";
+  | "recommended";
 
 export type AiConfigGroup =
   | "assistant"
   | "automations"
-  | "agent"
   | "byok"
   | "voice"
   | "feedback"
@@ -96,6 +92,14 @@ export function isModelSuffix(value: string): value is ModelSuffix {
   return (MODEL_SUFFIXES as readonly string[]).includes(value);
 }
 
+/**
+ * Origin (×1) of the model cost multiplier that plan caps are expressed in
+ * (`lib/model-multiplier.ts`, `BillingPlan.maxModelMultiplier`). A code
+ * constant, not an admin knob: the caps in `lib/billing-plans.ts` are
+ * calibrated against this model's price, so the two change together.
+ */
+export const PRICING_BASELINE_MODEL = "deepseek/deepseek-v4-flash";
+
 export const ASSISTANT_REASONING_CONFIG_KEY = "assistant_reasoning_level";
 
 /** The global decision model (MIN-694); historical key name, see the registry entry. */
@@ -116,9 +120,7 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   // the hand, on its sole title + its description, and which gives priority, effort,
   // categories and objective. He holds the person in front of his screen (the line
   // is only inserted once completed): it therefore needs a FAST model, not
-  // a clever model — the task is tidying up, not reasoning. The flag
-  // cuts it everywhere at once, and the form falls back to hand entry.
-  { key: "smart_fill_enabled", kind: "flag", fallback: "true", group: "automations" },
+  // a clever model — the task is tidying up, not reasoning.
   { key: "smart_fill_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations" },
   // Smart Fill relations (lib/server/issue-relation-inference.ts, MIN-717):
   // issues are indexed AFTER they are saved, and a bounded decision pass
@@ -126,9 +128,7 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   // is blocked by the issue. Its own embedding model, never the feedback
   // one: changing it versions the issue index (provider:model:dimensions)
   // and old vectors are never compared with new ones. The relation model is
-  // the LLM fallback of the global decision model. The flag cuts indexing
-  // and relation inference everywhere at once; creation is unaffected.
-  { key: "smart_fill_relations_enabled", kind: "flag", fallback: "true", group: "automations" },
+  // the LLM fallback of the global decision model.
   {
     key: "issue_embedding_model",
     kind: "model",
@@ -143,17 +143,12 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   { key: "conversation_title_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
   // Correspondance des colonnes d'un import CSV (lib/server/import-mapping-ai.ts) :
   // ONE call per file submitted, never per line — the model only sees one
-  // column summary. It is the price of an import which loses nothing, and the
-  // flag cuts it everywhere at once (the import then falls back onto its tables
-  // alias, as before).
-  { key: "import_map_enabled", kind: "flag", fallback: "true", group: "automations" },
+  // column summary. It is the price of an import which loses nothing.
   { key: "import_map_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations" },
   // Breaking a brief into objectives + tickets (lib/server/brief-to-issues.ts,
   // MIN-172): ONE call per pasted brief, never per ticket — the model renders the
   // lot entier d'un coup, ce que vingt `create_issue` en file ne feraient ni au
-  // same price nor at the same latency. The flag cuts her everywhere at once:
-  // the start of a new project then falls on import and manual entry.
-  { key: "brief_enabled", kind: "flag", fallback: "true", group: "automations" },
+  // same price nor at the same latency.
   { key: "brief_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations" },
   // AI decision layer (MIN-557, MIN-694): ONE decision model for the whole
   // instance — Smart Fill, Smart Assign and the feedback review all read it,
@@ -164,12 +159,10 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   // The picker lists only models publishing the `decisions` output modality,
   // and the save probes the candidate before writing it. The `jev_*` key
   // names are historical, kept so existing rows carry over; Jev stays the
-  // default. The flag is an incident kill-switch, NOT a product setting —
-  // per MIN-557 there is no “fast/normal” switch in the UI; the callers fall
-  // back to their LLM pass when it is off. No suffix (MIN-263): the chat
+  // default. Per MIN-557 there is no “fast/normal” switch; `jev_llm_first`
+  // (outside this registry) sends a use case straight to its LLM pass. No suffix (MIN-263): the chat
   // routing shortcuts mean nothing on the decisions endpoint, and a failed
   // decision replays as a NEW call, never as a variant id.
-  { key: "jev_decisions_enabled", kind: "flag", fallback: "true", group: "automations" },
   {
     key: DECISION_MODEL_CONFIG_KEY,
     kind: "model",
@@ -179,43 +172,22 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
     noSuffix: true,
   },
   // Web search (tool `web_search` from Numo and agents): the model that reads
-  // the results of the OpenRouter plugin. The flag cuts her everywhere at once.
-  { key: "web_search_enabled", kind: "flag", fallback: "true", group: "assistant" },
+  // the results of the OpenRouter plugin.
   { key: "web_search_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
-  // Cloud Code Agent (MIN-46) — pricing baseline and suggested initial value.
-  // Each account stores its explicit provider-bound worker choice separately;
-  // launches never use this platform setting as an autonomous fallback.
-  // No suffix (MIN-263).
-  {
-    key: "agent_model",
-    kind: "model",
-    fallback: "deepseek/deepseek-v4-flash",
-    group: "agent",
-    noSuffix: true,
-  },
   // Commit message of a merge generated with "Numo" (MIN-548): ONE call per
   // merge prepared, on the diff of the PR + its commits, and which returns
   // the title and the message in a single forced call. The admin model is
   // the only lever — the gesture merges AS SOON AS the generation lands, so
   // a clever model is not needed; a fast, cheap one is.
-  { key: "merge_message_model", kind: "model", fallback: "z-ai/glm-5.3", group: "agent" },
-  // Favorites served at parent prompt for `spawn_agent` (MIN-112).
-  {
-    key: "agent_subagent_favorites",
-    kind: "favorites",
-    fallback: JSON.stringify(DEFAULT_SUBAGENT_FAVORITES),
-    group: "agent",
-  },
-  // RECOMMENDED models, shown at the top of the picker when opened
-  // (see lib/recommended-models.ts). Not to be confused with favorites
-  // above, which are from PROMPT: these are from the UI, read by a human who
-  // chooses what to launch its agent on. They don't restrict anything — the catalog
-  // integer remains a search.
+  { key: "merge_message_model", kind: "model", fallback: "z-ai/glm-5.3", group: "automations" },
+  // RECOMMENDED models, shown at the top of the model picker when opened
+  // (see lib/recommended-models.ts), read by a human choosing a model. They
+  // don't restrict anything — the whole catalog remains searchable.
   {
     key: "recommended_models",
     kind: "recommended",
     fallback: JSON.stringify(DEFAULT_RECOMMENDED_MODELS),
-    group: "agent",
+    group: "assistant",
   },
   // Voice (speech-to-text → destination-aware cleanup and structured drafts)
   { key: "dictate_model", kind: "model", fallback: "google/gemini-3.1-flash-lite", group: "voice" },
@@ -226,18 +198,9 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
     group: "voice",
     catalogCapability: "transcription",
   },
-  // Landing dictation demo (MIN-150): the only AI call we offer to a
-  // visitor WITHOUT ACCOUNT. The flag cuts it everywhere at once, without
-  // deployment — this is the last resort safeguard if the endpoint is open
-  // gets shot (the others, by IP and by day, are in the way).
-  { key: "demo_dictation_enabled", kind: "flag", fallback: "true", group: "voice" },
-  // Board de feedback
-  { key: "feedback_classify_enabled", kind: "flag", fallback: "true", group: "feedback" },
-  // Dictate feedback, on the public board as well as in the dashboard. It turns on
-  // the two voice models (`transcription_model` then `dictate_model`):
-  // it's the same take, stored in other fields. The flag cuts it
-  // everywhere at once — the microphone disappears, the writing remains.
-  { key: "feedback_voice_enabled", kind: "flag", fallback: "true", group: "feedback" },
+  // Feedback board. Dictating feedback, on the public board as well as in the
+  // dashboard, runs the two voice models (`transcription_model` then
+  // `dictate_model`): it's the same take, stored in other fields.
   { key: "feedback_analysis_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "feedback" },
   {
     key: "feedback_embedding_model",
@@ -248,10 +211,9 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   },
   // FAQ ask box (MIN-590): an AI answer to a visitor's own question, offered
   // on every public page that carries a FAQ section. It is anonymous traffic
-  // on the public site — like the landing demo it is bounded by an IP meter,
-  // a per-instance daily ceiling and this master switch, and it stays on the
+  // on the public site — like the landing demo it is bounded by an IP meter
+  // and a per-instance daily ceiling, and it stays on the
   // cheap fast model of the registry: one small completion per question.
-  { key: "faq_ask_enabled", kind: "flag", fallback: "true", group: "site" },
   { key: "faq_ask_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "site" },
 ];
 
@@ -292,7 +254,6 @@ for (const provider of AGENT_PROVIDERS.filter((entry) => entry.id !== "openroute
 export const AI_MODEL_CONFIG_GROUPS: AiConfigGroup[] = [
   "assistant",
   "automations",
-  "agent",
   "byok",
   "voice",
   "feedback",
@@ -364,10 +325,6 @@ export const AI_MODEL_CONFIG_KEYS = new Set([
 
 export function getAiConfigField(key: string): AiConfigField | undefined {
   return AI_MODEL_CONFIG_FIELDS.find((f) => f.key === key);
-}
-
-export function isFlagKey(key: string): boolean {
-  return getAiConfigField(key)?.kind === "flag";
 }
 
 /**

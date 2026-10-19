@@ -40,8 +40,8 @@ import { FAQ_KEYS, PRICING_FAQ_KEYS, MCP_FAQ_KEYS } from "@/components/marketing
  *
  * It is minddy's second AI endpoint open to an anonymous visitor, after the
  * landing dictation demo (`app/api/demo/dictate/route.ts`), and it follows the
- * same four safeguards: a same-origin check, an hourly IP limit, a
- * per-instance daily ceiling, and the `faq_ask_enabled` admin switch. The
+ * same three safeguards: a same-origin check, an hourly IP limit and a
+ * per-instance daily ceiling. The
  * model is the admin-configured `faq_ask_model`; the call stays on the
  * platform key (BYOK does not exist for an anonymous visitor) and its cost is
  * recorded under the `faq_ask` feature, billed to the platform.
@@ -118,13 +118,7 @@ export async function POST(request: NextRequest) {
   }
 
   const locale = resolveFaqLocale(body.locale);
-  const cfg = await getAppConfigValues([
-    "faq_ask_enabled",
-    ...modelConfigKeys("faq_ask_model"),
-  ]);
-  if ((cfg.faq_ask_enabled ?? "true").trim() === "false") {
-    return NextResponse.json({ error: "unavailable" }, { status: 503 });
-  }
+  const cfg = await getAppConfigValues(modelConfigKeys("faq_ask_model"));
 
   const { namespace, keys } = SECTION_KEYS[section];
   const t = await getTranslations({ locale, namespace });

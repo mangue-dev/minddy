@@ -1,6 +1,5 @@
 import "server-only";
 
-import { aiModelFallback } from "@/lib/ai-model-config";
 import { newRunId, type AiUsageBillTo } from "@/lib/server/ai-usage";
 import { afterOrNow } from "@/lib/server/after-safe";
 import { getAppConfigValues } from "@/lib/server/app-config";
@@ -69,11 +68,6 @@ export const DEFAULT_DECISION_CONFIDENCE_FLOOR = 0.55;
 export const DEFAULT_DECISION_SHADOW_SAMPLE_RATE = 0.05;
 
 export interface DecisionModelSettings {
-  /**
-   * `jev_decisions_enabled` — the incident kill-switch laid down by MIN-561,
-   * NOT a product setting: off means "LLM everywhere, today's behavior".
-   */
-  enabled: boolean;
   /** Decision-model answers under this global confidence are discarded for the LLM pass. */
   confidenceFloor: number;
   /**
@@ -113,15 +107,11 @@ function parseUseCaseList(value: string | null | undefined): DecisionUseCase[] {
  */
 export async function loadDecisionModelSettings(): Promise<DecisionModelSettings> {
   const cfg = await getAppConfigValues([
-    "jev_decisions_enabled",
     "jev_confidence_floor",
     "jev_shadow_sample_rate",
     "jev_llm_first",
   ]).catch(() => ({}) as Record<string, string | null>);
   return {
-    enabled:
-      (cfg["jev_decisions_enabled"] ?? aiModelFallback("jev_decisions_enabled")).trim() !==
-      "false",
     confidenceFloor: parseFloatClamped(cfg["jev_confidence_floor"], DEFAULT_DECISION_CONFIDENCE_FLOOR),
     shadowSampleRate: parseFloatClamped(
       cfg["jev_shadow_sample_rate"],
@@ -178,9 +168,7 @@ export async function runDecision(
   let modelRan = false;
   let discardedModelAnswers: DecisionAnswers | null = null;
   let discardedModel: string | null = null;
-  if (!settings.enabled) {
-    fallbackReason = "model_disabled";
-  } else if (settings.llmFirstUseCases.includes(spec.useCase)) {
+  if (settings.llmFirstUseCases.includes(spec.useCase)) {
     fallbackReason = "llm_first";
   } else {
     modelRan = true;

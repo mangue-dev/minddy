@@ -53,9 +53,9 @@ import { resolveByokFeatureDefaultModel } from "@/lib/server/ai-runtime";
  * otherwise an empty list (free entry remains authorized downstream).
  *
  * The multiplier is NEVER hidden with the list: it is recalculated at
- * each call from the current baseline (`app_config.agent_model`, that a
- * admin changes whenever he wants). Frozen in the cache, it would have continued for an hour
- * to locate the models on a scale that no longer exists.
+ * each call from the pricing baseline (`PRICING_BASELINE_MODEL`). Frozen in
+ * the cache, it would keep locating models for an hour on the scale of a
+ * baseline that a release has since changed.
  */
 
 export interface AgentModelEntry {

@@ -8,7 +8,7 @@ import {
 } from "@/lib/model-multiplier";
 import { getResolvedBilling, type ResolvedBilling } from "@/lib/server/billing-accounts";
 import { PlanLimitError } from "@/lib/server/plan-limit-error";
-import { getRootDefaultModel } from "./model";
+import { PRICING_BASELINE_MODEL } from "@/lib/ai-model-config";
 import { getOpenRouterModelInfo } from "./openrouter-index";
 
 /**
@@ -20,8 +20,8 @@ import { getOpenRouterModelInfo } from "./openrouter-index";
  * product does not limit their model choice.
  *
  * 2. **What the user chooses, not what Minddy resolves internally.** The cap
- * applies to the account's explicit worker model. The instance pricing
- * baseline (`agent_model`) is never itself an account selection.
+ * applies to the account's explicit model. The instance pricing baseline
+ * (`PRICING_BASELINE_MODEL`) is never itself an account selection.
  *
  * We never refuse on ignorance: unknown prices (model absent from the index,
  * endpoint which publishes nothing) → authorized. The platform usage budget
@@ -39,8 +39,7 @@ export interface ModelPlanLimit {
 
 /** Minddy's default model price — the origin of the scale (×1). */
 export async function getBaselinePricing(): Promise<ModelPricing | null> {
-  const baseline = await getRootDefaultModel();
-  return (await getOpenRouterModelInfo(baseline))?.pricing ?? null;
+  return (await getOpenRouterModelInfo(PRICING_BASELINE_MODEL))?.pricing ?? null;
 }
 
 /** The ceiling applicable to this account, and the baseline to locate the models. */

@@ -141,7 +141,6 @@ function emptyReport(): ReviewReport {
 }
 
 interface ReviewSettings {
-  enabled: boolean;
   model: string;
   autoThreshold: number;
   suggestFloor: number;
@@ -150,15 +149,12 @@ interface ReviewSettings {
 
 async function loadSettings(): Promise<ReviewSettings> {
   const cfg = await getAppConfigValues([
-    "feedback_classify_enabled",
     ...modelConfigKeys("feedback_analysis_model"),
     "feedback_merge_auto_threshold",
     "feedback_merge_suggest_floor",
     "feedback_analysis_batch_size",
   ]);
   return {
-    // Kill-switch global : n'importe quoi d'autre que "false" reste actif.
-    enabled: (cfg["feedback_classify_enabled"] ?? "true").trim() !== "false",
     model: resolveFromValues("feedback_analysis_model", cfg).model,
     autoThreshold: parseFloatOr(cfg["feedback_merge_auto_threshold"], DEFAULT_AUTO_THRESHOLD),
     suggestFloor: parseFloatOr(cfg["feedback_merge_suggest_floor"], DEFAULT_SUGGEST_FLOOR),
@@ -216,13 +212,11 @@ async function projectReviewSettings(
 }
 
 /**
- * Is the journal equipped for this project? Instance kill-switch AND setting of
- * owner. When it is not, retaining pending posts would have no
+ * Is the journal equipped for this project? The owner's setting decides. When it is not, retaining pending posts would have no
  * sense — no one will come to publish them: the creation publishes them immediately
  * (see `createFeedbackPost`).
  */
 export async function isFeedbackReviewEnabled(projectId: string): Promise<boolean> {
-  if (!(await loadSettings()).enabled) return false;
   return (await projectReviewSettings(projectId)).reviewEnabled;
 }
 
@@ -291,7 +285,6 @@ async function publishWithoutReview(postId: string): Promise<void> {
 export async function runFeedbackReview(): Promise<ReviewReport> {
   const report = emptyReport();
   const settings = await loadSettings();
-  if (!settings.enabled) return report;
 
   const service = getServiceClient();
   const { data: claimed, error } = await service.rpc("claim_feedback_posts_for_review", {
@@ -341,7 +334,6 @@ export async function reviewFeedbackPost(
 ): Promise<ReviewReport> {
   const report = emptyReport();
   const settings = await loadSettings();
-  if (!settings.enabled) return report;
 
   // Mode BEFORE the claim: a post that we are not going to review should not be seen
   // set a lease of 15 min — otherwise the recovery by the cron would be delayed
@@ -604,8 +596,7 @@ async function reviewVerdictFor(
   // The LLM-first switch (MIN-567) applies to this bespoke flow too: a use
   // case listed in `jev_llm_first` skips the decision-model stage entirely —
   // the review is structurally bad at it, the operator said so, config only.
-  const modelStageRan =
-    decisions.enabled && !decisions.llmFirstUseCases.includes("feedback_review");
+  const modelStageRan = !decisions.llmFirstUseCases.includes("feedback_review");
   if (modelStageRan) {
     const result = await runModelDecision(prepared.spec, {
       runId,

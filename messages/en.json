@@ -4147,10 +4147,7 @@
       },
       "automations": {
         "title": "Automations",
-        "desc": "Smart assignment, smart fill, briefs and imports."
-      },
-      "agent": {
-        "title": "Numo code work"
+        "desc": "Smart assignment, smart fill, briefs, imports and merge commit messages."
       },
       "byok": {
         "title": "Personal keys",
@@ -4182,33 +4179,17 @@
         "label": "Fallback model",
         "desc": "Used when the Numo model is left empty."
       },
-      "agent_model": {
-        "label": "Code-worker pricing baseline",
-        "desc": "Reference model used to calculate plan multipliers. It does not replace the model selected in each account."
-      },
-      "agent_subagent_favorites": {
-        "label": "Sub-agent favorite models",
-        "desc": "What the agent reads to pick what to run a sub-agent on. It may use any model in the catalogue; these are the ones we recommend. The use case goes into its prompt verbatim: write it in English, for a model that picks."
-      },
       "recommended_models": {
         "label": "Recommended models",
-        "desc": "The short list the model picker opens on, everywhere in the app, before anyone types. It hides nothing: searching still reaches the whole catalogue, and a last line opens up more. Order is computed from price, cheapest first, so you only pick WHICH models to recommend. A model above the Pro plan cap (×40) is launchable by nobody."
+        "desc": "The short list the model picker opens on, everywhere in the app, before anyone types. It hides nothing: searching still reaches the whole catalogue, and a last line opens up more. Order is computed from price, cheapest first, so you only pick WHICH models to recommend. Nobody can select a model above the Pro plan cap (×40)."
       },
       "smart_assign_model": {
         "label": "Smart assignment",
         "desc": "Assigns an issue that leaves triage with nobody on it."
       },
-      "smart_fill_enabled": {
-        "label": "Smart-fill",
-        "desc": "Lets the create-issue form fill priority, effort, categories and objective on its own. Off here, the toggle disappears from every account."
-      },
       "smart_fill_model": {
         "label": "Smart-fill model",
         "desc": "Reads a new issue's title and description and fills its fields. Someone is waiting on it: pick a fast model."
-      },
-      "smart_fill_relations_enabled": {
-        "label": "Smart Fill relations",
-        "desc": "Indexes issues after they are saved and lets Smart Fill link related issues and dependencies. Off here, indexing and relation suggestions stop everywhere; issue creation is unaffected."
       },
       "issue_embedding_model": {
         "label": "Issue embeddings",
@@ -4222,10 +4203,6 @@
         "label": "Conversation titles",
         "desc": "Names a Numo conversation in a few words, from its first message. A small model is enough."
       },
-      "web_search_enabled": {
-        "label": "Web search",
-        "desc": "Gives Numo and the agents a web search tool (OpenRouter plugin). Each search costs about $0.005, counted against the usage of whoever triggers it."
-      },
       "web_search_model": {
         "label": "Web search model",
         "desc": "Reads the search results and writes the answer. A small model is enough."
@@ -4238,18 +4215,6 @@
         "label": "Speech-to-text",
         "desc": "Converts dictation audio into text."
       },
-      "demo_dictation_enabled": {
-        "label": "Landing page voice demo",
-        "desc": "Lets a visitor with no account try dictation on the home page, on a fictional issue. The only AI call minddy gives away: about $0.0003 a go, capped at ten per IP per hour and 500 a day. Off, the demo says it is unavailable."
-      },
-      "feedback_classify_enabled": {
-        "label": "Automatic classification",
-        "desc": "Sorts incoming feedback into categories, drops spam, hides sensitive content and publishes the rest to the board. Without it, every post waits for manual review."
-      },
-      "feedback_voice_enabled": {
-        "label": "Dictated feedback",
-        "desc": "Opens the mic in both feedback composers; the public board and internal capture. The take is transcribed, then Numo writes it into the title and body; the spend goes to whoever speaks, or to the board owner for a visitor. Turned off, the mic disappears and typing stays."
-      },
       "feedback_analysis_model": {
         "label": "Feedback analysis",
         "desc": "Merges obvious duplicates on the board and suggests merges for the rest."
@@ -4258,17 +4223,9 @@
         "label": "Feedback embeddings",
         "desc": "Vectorizes feedback to measure similarity."
       },
-      "import_map_enabled": {
-        "label": "CSV import mapping",
-        "desc": "Lets Numo match the columns of an imported CSV onto minddy's fields. One call per file dropped, on a summary of the columns; never on the rows. Off, the import falls back to matching header names."
-      },
       "import_map_model": {
         "label": "CSV import mapping model",
         "desc": "Reads the column headers, their distinct values and a few samples, and proposes where each column goes. The user sees the proposal and can correct it before importing."
-      },
-      "brief_enabled": {
-        "label": "Brief breakdown",
-        "desc": "Lets a pasted brief become a proposal of objectives and issues when a project starts. One call per brief, never per issue. Off, a new project starts from an import or from issues typed by hand."
       },
       "brief_model": {
         "label": "Brief breakdown model",
@@ -4277,17 +4234,9 @@
       "merge_message_model": {
         "label": "Model for generated merge commits"
       },
-      "jev_decisions_enabled": {
-        "label": "AI decisions",
-        "desc": "Turns the AI decision layer on or off everywhere at once. Off, every decision call falls back to its LLM pass. Incident kill-switch, not a product setting."
-      },
       "jev_model": {
         "label": "Decision model",
         "desc": "The one model answering every AI decision of the instance: Smart Fill, Smart Assign and the feedback review. Only decision models are listed, and each choice is test-called before it is saved. The confidence threshold was calibrated on Jev: another model may fall back to the LLM more or less often."
-      },
-      "faq_ask_enabled": {
-        "label": "FAQ question box",
-        "desc": "Lets a visitor with no account ask their own question in the FAQ section of a page and get an AI answer grounded in the product documentation. The only spend besides the landing demo offered to anonymous traffic: one small completion per question, capped at ten per IP per hour and 1000 a day. Off, the box disappears from every FAQ."
       },
       "faq_ask_model": {
         "label": "FAQ question box model",
@@ -4461,21 +4410,6 @@
       "totalProjects": "Projects",
       "totalIssues": "Issues",
       "issuesPerProject": "Issues per project"
-    },
-    "favorites": {
-      "pickModel": "Pick a model",
-      "useCasePlaceholder": "When to pick this model; in English, read by the agent.",
-      "add": "Add a model",
-      "save": "Save",
-      "cancel": "Cancel",
-      "reset": "Back to the default favorites",
-      "remove": "Remove this model",
-      "empty": "No favorites: the agent will pick from the catalogue on its own. Saving an empty list hands the setting back to the default favorites.",
-      "incomplete": "Pick a model for every favorite before saving.",
-      "effortInherit": "No level advised",
-      "effortLow": "Low thinking",
-      "effortMedium": "Medium thinking",
-      "effortHigh": "High thinking"
     },
     "recommended": {
       "pickModel": "Pick a model",

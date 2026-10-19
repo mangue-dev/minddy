@@ -1,12 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
-import { getAppConfigValue } from "@/lib/server/app-config";
 import { assertPublicHttpUrl } from "@/lib/server/safe-fetch";
-import {
-  AGENT_MODEL_CONFIG_KEY,
-  AGENT_ROOT_MODEL_FALLBACK,
-} from "@/lib/agent-models";
 import {
   DEFAULT_AGENT_PROVIDER,
   isLocalAgentProvider,
@@ -34,14 +29,6 @@ import type { ModelCatalogCapability } from "@/lib/model-catalog-capability";
  * if present (unlimited use, at own expense), otherwise the OpenRouter platform key
  * OPENROUTER_API_KEY (capped monthly, see quota.ts).
  */
-
-/** Root pricing baseline (admin). */
-export async function getRootDefaultModel(): Promise<string> {
-  return (
-    (await getAppConfigValue(AGENT_MODEL_CONFIG_KEY))?.trim() ||
-    AGENT_ROOT_MODEL_FALLBACK
-  );
-}
 
 // ── Endpoint (provider + base URL + key) ─────────────────────────────────────
 
