@@ -1,6 +1,5 @@
 "use client";
 
-import { CommandList } from "@/components/ui/command";
 
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -9,12 +8,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandInput,
-  CommandItem,
-} from "@/components/ui/command";
+import { CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
+import { SearchMenu } from "@/components/search-menu";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -138,7 +133,8 @@ export function AttachButton({
 /**
  * The « + » of a surface that takes BOTH halves of a resource (MIN-184):
  * a dropdown with *Attachment* — the same hidden file input as AttachButton —
- * and *Link*, which opens {@link AddLinkDialog}.
+ * and *Link*, which opens {@link AddLinkDialog}. With a project, *Page* opens
+ * the searchable page picker under the same button.
  *
  * One button rather than two: the two gestures produce the same thing, and the
  * sidebar row has one slot for « add something here ».
@@ -168,7 +164,11 @@ export function AddResourceButton({
   const t = useTranslations("Resources");
   const inputRef = useRef<HTMLInputElement>(null);
   const [linkOpen, setLinkOpen] = useState(false);
-  const [pageOpen, setPageOpen] = useState(false);
+  // The page picker hangs under this button once the menu has closed: the
+  // anchor point is read from the trigger at that moment.
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const pagePendingRef = useRef(false);
+  const [pageAnchor, setPageAnchor] = useState<{ x: number; y: number } | null>(null);
   const pages = !!onPage && !!projectId;
 
   return (
@@ -189,6 +189,7 @@ export function AddResourceButton({
           <TooltipTrigger asChild>
             <DropdownMenuTrigger asChild>
               <Button
+                ref={triggerRef}
                 type="button"
                 variant="ghost"
                 size="icon-sm"
@@ -202,7 +203,19 @@ export function AddResourceButton({
           </TooltipTrigger>
           <TooltipContent>{t("add")}</TooltipContent>
         </Tooltip>
-        <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuContent
+          align="end"
+          className="w-44"
+          onCloseAutoFocus={(event) => {
+            if (!pagePendingRef.current) return;
+            // Opening the page picker: focus belongs to its search field, not
+            // to the trigger, whose refocus would read as an outside click.
+            pagePendingRef.current = false;
+            event.preventDefault();
+            const rect = triggerRef.current?.getBoundingClientRect();
+            if (rect) setPageAnchor({ x: rect.right, y: rect.bottom + 4 });
+          }}
+        >
           <DropdownMenuItem onSelect={() => inputRef.current?.click()}>
             <HugeiconsIcon icon={AttachmentIcon} className="size-4" />
             <span>{t("addFile")}</span>
@@ -212,7 +225,7 @@ export function AddResourceButton({
             <span>{t("addLink")}</span>
           </DropdownMenuItem>
           {pages && (
-            <DropdownMenuItem onSelect={() => setPageOpen(true)}>
+            <DropdownMenuItem onSelect={() => { pagePendingRef.current = true; }}>
               <HugeiconsIcon icon={File02Icon} className="size-4" />
               <span>{t("addPage")}</span>
             </DropdownMenuItem>
@@ -221,9 +234,9 @@ export function AddResourceButton({
       </DropdownMenu>
       <AddLinkDialog open={linkOpen} onOpenChange={setLinkOpen} onSubmit={onLink} />
       {pages && (
-        <AddPageDialog
-          open={pageOpen}
-          onOpenChange={setPageOpen}
+        <PagePickerMenu
+          anchor={pageAnchor}
+          onClose={() => setPageAnchor(null)}
           projectId={projectId as string}
           onSelect={onPage as (page: PickedPage) => void}
         />
@@ -241,55 +254,59 @@ export interface PickedPage {
 }
 
 /**
- * "Choose a page": the project's wiki tree, flat in its display order
- * and indented by depth, in the same cmdk shell as the others
- * app selectors
+ * "Choose a page": the project's wiki tree, flat in its display order, in the
+ * same searchable dropdown as the app's other pickers (the relation picker's
+ * issue search, for one) — a popover under the "+" on desktop, a bottom sheet
+ * on phones.
  *
  * The tree comes from the project cache ([use-pages-query](../lib/use-pages-query.ts)),
  * the one that the sidebar, the breadcrumbs and the subpage block already read: a
- * page renamed elsewhere is searched here under its new name, without request for
- * more. The cache is only requested when OPENING the dialog (`open` conditions the
- * mount) — the sidebar of a ticket does not have to load the wiki to display a
- * button.
+ * page renamed elsewhere is searched here under its new name, without another
+ * request. The cache is only requested when the menu OPENS (the options mount
+ * with it) — the sidebar of a ticket does not have to load the wiki to display
+ * a button.
  */
-export function AddPageDialog({
-  open,
-  onOpenChange,
+function PagePickerMenu({
+  anchor,
+  onClose,
   projectId,
   onSelect,
 }: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  anchor: { x: number; y: number } | null;
+  onClose: () => void;
   projectId: string;
   onSelect: (page: PickedPage) => void;
 }) {
   const t = useTranslations("Resources");
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg" aria-describedby={undefined}>
-        <DialogTitle className="sr-only">{t("pageDialogTitle")}</DialogTitle>
-        <Command>
-          <CommandInput placeholder={t("pageSearchPlaceholder")} />
-          <CommandList className="p-1">
-            {open && (
-              <PageOptions
-                projectId={projectId}
-                onSelect={(page) => {
-                  onOpenChange(false);
-                  onSelect(page);
-                }}
-              />
-            )}
-          </CommandList>
-        </Command>
-      </DialogContent>
-    </Dialog>
+    <SearchMenu
+      open={anchor !== null}
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+      position={anchor}
+      align="end"
+      modal
+      hideEmpty
+      searchPlaceholder={t("pageSearchPlaceholder")}
+      contentClassName="w-72"
+    >
+      {anchor && (
+        <PageOptions
+          projectId={projectId}
+          onSelect={(page) => {
+            onClose();
+            onSelect(page);
+          }}
+        />
+      )}
+    </SearchMenu>
   );
 }
 
 /**
  * The list itself — separated so that the request only starts once the
- * dialog is opened (the hook is only mounted then).
+ * menu is opened (the hook is only mounted then).
  *
  * FLAT list: pages scroll in sidebar order, but without
  * nesting removal. What we're doing here is CHOOSING a page, not finding your way to
@@ -316,7 +333,7 @@ function PageOptions({
   }
 
   return (
-    <>
+    <CommandGroup>
       <CommandEmpty>{t("noPages")}</CommandEmpty>
       {rows.map((page) => (
         <CommandItem
@@ -333,7 +350,7 @@ function PageOptions({
           <span className="truncate">{page.title.trim() || t("untitledPage")}</span>
         </CommandItem>
       ))}
-    </>
+    </CommandGroup>
   );
 }
 

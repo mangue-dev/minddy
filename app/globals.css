@@ -2965,7 +2965,6 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     overscroll-behavior: contain;
     padding: 0 2px 1rem;
   }
-  .creation-dictation { margin-bottom: 1rem; }
   .creation-field-label {
     display: block;
     margin: 1rem 0 0.5rem;
@@ -3023,7 +3022,8 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     min-width: 44px;
   }
   .creation-submit { width: 100%; }
-  .creation-submit > *, .creation-submit button[type="submit"] { flex: 1; }
+  .creation-submit > :not(.creation-dictation), .creation-submit button[type="submit"] { flex: 1; }
+  .creation-submit > .creation-dictation { flex: none; }
 }
 
 :root[data-app-layout="mobile"] {

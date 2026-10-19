@@ -568,6 +568,10 @@ export interface Project {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  /** Last issue number reserved by `next_issue_number()`: the next issue gets
+      `issue_seq + 1`. Realtime patches it into the project list on every
+      reservation. Absent on rows that did not come from a full project read. */
+  issue_seq?: number;
   /** The viewer's role in this project (MIN-693), set by project list and
       bootstrap reads. Absent on rows that did not come from such a read. */
   my_role?: ProjectRole;
