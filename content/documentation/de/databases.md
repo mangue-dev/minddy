@@ -17,12 +17,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 12,
+  "revision": 13,
+  "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-18",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate",
+    "version": "0.11.1 candidate; MIN-684 page promotion",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -52,14 +52,17 @@
       "components/date-time-picker.tsx",
       "lib/page-databases.ts",
       "scripts/page-database-date-times.integration.test.mjs",
-      "content/documentation/reviews/database-property-types-2026-10-18.json"
+      "content/documentation/reviews/database-property-types-2026-10-18.json",
+      "components/pages/page-promotion-context.tsx",
+      "components/pages/page-promotion-context.test.tsx",
+      "content/documentation/reviews/min-684-promote-page.md"
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:/root (optional-time and option-control source, component and isolated SQL review; unchanged claims retain prior evidence); agent:/root (MIN-690 recapture of create-a-database-steps on next dev at 8371778c4 with a throwaway database, record content/documentation/reviews/database-property-types-2026-10-18.json; other figures unchanged, evidence retained)",
-    "language": "agent:/root (de changed-passage and figure parity self-review); agent:/root (de updated alt text for the column type picker; agent review, not human acceptance)",
-    "date": "2026-10-18"
+    "revision": 13,
+    "fact": "agent:/root (optional-time and option-control source, component and isolated SQL review; unchanged claims retain prior evidence); agent:/root (MIN-690 recapture of create-a-database-steps on next dev at 8371778c4 with a throwaway database, record content/documentation/reviews/database-property-types-2026-10-18.json; other figures unchanged, evidence retained); agent:/root (MIN-684 page promotion: source and focused unit-test review of the menu entries, reader gating, save-before-promote and the Numo request; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (de changed-passage and figure parity self-review); agent:/root (de updated alt text for the column type picker; agent review, not human acceptance); agent:/root (de translation of the MIN-684 single-entry promotion passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "pages"
@@ -83,7 +86,7 @@
       "src": "/documentation/de/database-setup-cards.png",
       "alt": "Komponentenvorschau der Karten zur Einrichtung einer neuen Datenbank mit Numo oder zum Import einer vorhandenen Datenbank.",
       "caption": "Vorschläge für eine neue Datenbank mit Demonstrationsdaten. Wählen Sie Numo oder Import, oder schließen Sie die Karten, um manuell fortzufahren.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -100,7 +103,7 @@
       "src": "/documentation/de/database-property-types.png",
       "alt": "Auswahl des Spaltentyps mit Suchfeld sowie Text, Zahl, Auswahl, Datum, Personen und Kontrollkästchen.",
       "caption": "Wähle einen Typ, der zu den gespeicherten Werten passt.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -117,7 +120,7 @@
       "src": "/documentation/de/database-entry.png",
       "alt": "Demoeintrag mit Beschreibung, Dauer 2.5, aktiviertem Kontrollkästchen und leerer Auswahl.",
       "caption": "Öffne einen Eintrag, um den vollständigen Text zu lesen und typisierte Werte zu bearbeiten.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -133,7 +136,7 @@
       "src": "/documentation/de/database-conversion-warning.png",
       "alt": "Umwandlungswarnung: Der Wechsel von Text zu Zahl leert eine inkompatible Zelle; Abbrechen und Bestätigen sind verfügbar.",
       "caption": "Prüfe die tatsächliche Zahl inkompatibler Zellen vor der Bestätigung. Abbrechen erhält die bisherigen Werte.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -149,7 +152,7 @@
       "src": "/documentation/de/database-import-review.png",
       "alt": "Importprüfung einer lokalen CSV-Datei: zwei Eintragsseiten und zwei Eigenschaftsspalten mit der Importschaltfläche.",
       "caption": "Prüfe die eingelesenen Einträge und die Spaltenzahl vor dem Import in die leere Datenbank.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -165,7 +168,7 @@
       "src": "/documentation/de/database-options.png",
       "alt": "Komponentenvorschau von Optionen bearbeiten mit deutschen Statusoptionen, Pfeilen nach oben und unten, Papierkörben und einer Erklärung zum Löschen.",
       "caption": "Bearbeite Namen, Farben und Reihenfolge der Optionen gemeinsam. Der Papierkorb entfernt eine Option aus dem Entwurf; Speichern übernimmt die Änderungen. Mit Demonstrationsdaten.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -182,7 +185,7 @@
       "src": "/documentation/de/database-date-time.png",
       "alt": "Komponentenvorschau der Datumsauswahl mit dem ausgewählten 12. Oktober 2026, aktivierter Uhrzeit und Zeit auf 14:30.",
       "caption": "Aktiviere „Fügen Sie eine Uhrzeit hinzu“, um eine Uhrzeit einzugeben. Diese Komponentenvorschau verwendet Demonstrationsdaten und die Zeitzone des Geräts.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -252,6 +255,8 @@ Ein leerer Eintrag zeigt im Inhalt einen Platzhalter für den Schreibbereich. Be
 Öffne einen Eintrag, um seine vollständige Seite in einem schwebenden Panel zu bearbeiten. „Vergrößern“ öffnet ihn als vollständige Seite, nachdem ausstehendes Speichern des Dokuments beendet ist. Schlägt Speichern fehl, bleibt das Panel zur Fehlerbehebung offen. Ein leerer Eintrag bleibt bis zum Löschen in der Datenbank.
 
 Verwende Zeilen-Kontrollkästchen für die Auswahl und Shift-Klick für einen Bereich. Der Griff öffnet Aktionen und kann Einträge in manueller Reihenfolge umordnen. Das + am Zeilenrand fügt unter dem Eintrag ein; Option/Alt fügt oberhalb ein. Benachbartes Einfügen wechselt zurück zur manuellen Reihenfolge und entfernt Filter, damit der neue Eintrag sichtbar ist.
+
+Im Griffmenü eines einzelnen Eintrags kann der Eigentümer oder ein Mitglied **Zu Problem hochstufen** wählen, damit Numo diesen Eintrag mit Inhalt und Eigenschaften in ein Problem umwandelt. Der Eintrag bleibt in der Datenbank. Bezieht sich das Menü auf mehrere ausgewählte Zeilen, fehlt die Aktion; eine Sammel-Hochstufung gibt es nicht, also stufe jeden Eintrag einzeln hoch. Die [Seitenanleitung](/de/dokumentation/pages#promote-page-to-issue) beschreibt die Rückfragen von Numo und was zu tun ist, wenn der Eintrag vorher nicht gespeichert werden kann.
 
 ### Darstellungseinstellungen {#database-display}
 

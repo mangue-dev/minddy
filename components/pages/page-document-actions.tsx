@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { PagePublishDialog } from "@/components/pages/page-publish-dialog";
 import { PageAgentCopyDialog } from "@/components/pages/page-agent-copy-dialog";
+import { usePromotePage } from "@/components/pages/page-promotion-context";
+import { NumoIcon } from "@/components/numo-icon";
 import { downloadPageExportApi } from "@/lib/pages-api";
 import { descendantIds } from "@/lib/pages";
 import { buildPageAgentPrompt } from "@/lib/page-agent-prompt";
@@ -68,6 +70,7 @@ export function usePageDocumentMenu({
   const modShortcut = useModShiftShortcut("L");
   // Project readers (MIN-693) keep only reading gestures: copy and export.
   const { canWrite } = useProjectCapabilities(projectId);
+  const promotePage = usePromotePage(projectId);
   const [target, setTarget] = useState<{ id: string; title: string } | null>(null);
   const [publishOpen, setPublishOpen] = useState(false);
   // The page targeted by “Copy for agent”, and where the gesture came from —
@@ -240,6 +243,14 @@ export function usePageDocumentMenu({
         },
         copyForAgent,
         {
+          // The notebook's gesture, for a whole page (MIN-684).
+          id: "promote-to-issue",
+          label: t("promoteToIssue"),
+          keywords: ["ticket", "issue", "promote", "promouvoir", "convertir", "convert", "numo"],
+          icon: <NumoIcon animated={false} className="size-4" />,
+          onSelect: () => void promotePage(page),
+        },
+        {
           id: "publish",
           label: t("publish"),
           icon: <HugeiconsIcon icon={GlobeIcon} className="size-4" />,
@@ -264,6 +275,7 @@ export function usePageDocumentMenu({
       download,
       print,
       openAgentCopy,
+      promotePage,
       modShortcut,
       onCreateChild,
       onToggleFavorite,

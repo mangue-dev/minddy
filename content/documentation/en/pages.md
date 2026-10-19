@@ -21,12 +21,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 12,
+  "revision": 13,
+  "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680); MIN-693 project roles; MIN-718 hybrid issue search; MIN-688 live collaboration",
+    "version": "0.11.1 candidate (MIN-680); MIN-693 project roles; MIN-718 hybrid issue search; MIN-688 live collaboration; MIN-684 page promotion",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -71,14 +71,18 @@
       "docs/page-collaboration.md",
       "lib/use-page-collaboration.ts",
       "lib/page-collaboration-stream.ts",
-      "content/documentation/reviews/min-688-live-collaboration.md"
+      "content/documentation/reviews/min-688-live-collaboration.md",
+      "components/pages/page-promotion-context.tsx",
+      "components/pages/page-promotion-context.test.tsx",
+      "components/pages/page-database-view.tsx",
+      "content/documentation/reviews/min-684-promote-page.md"
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-688 live collaboration: source, convergence/authority unit tests and a rollback-only database probe; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (en changed-text and retained-meaning self-review); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-718 added passages with catalog UI labels; agent review, not human acceptance); agent:/root (en MIN-688 rewritten saving, presence and conflict passages; agent review, not human acceptance)",
-    "date": "2026-10-17"
+    "revision": 13,
+    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-688 live collaboration: source, convergence/authority unit tests and a rollback-only database probe; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-684 page promotion: source and focused unit-test review of the menu entries, reader gating, save-before-promote and the Numo request; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (en changed-text and retained-meaning self-review); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-718 added passages with catalog UI labels; agent review, not human acceptance); agent:/root (en MIN-688 rewritten saving, presence and conflict passages; agent review, not human acceptance); agent:/root (en MIN-684 promotion section with catalog UI labels; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "notifications-and-inbox",
@@ -113,7 +117,7 @@
       "src": "/documentation/en/page-create-menu.png",
       "alt": "Page creation menu offering New page and New database.",
       "caption": "Use the project page controls to choose a document or a database.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -129,7 +133,7 @@
       "src": "/documentation/en/page-editor.png",
       "alt": "Demonstration page with headings, paragraphs, task checkboxes and an issue mention.",
       "caption": "Headings, task blocks and the AUR-2 mention keep the page structured. This is demonstration content.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -145,7 +149,7 @@
       "src": "/documentation/en/page-comments.png",
       "alt": "Page activity dialog with a demonstration edit event and an empty comment composer.",
       "caption": "Read page activity and write a comment in the composer. No comment has been submitted in this example.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -161,7 +165,7 @@
       "src": "/documentation/en/page-file-states.png",
       "alt": "Demo page with an unfinished upload and a saved 67-byte file offering Download.",
       "caption": "Check the actual file state: the second attachment is available, while the first unfinished upload is not.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -177,7 +181,7 @@
       "src": "/documentation/en/page-history-preview.png",
       "alt": "Versions tab with an expanded earlier state, its author, Restore and the 30-day retention notice.",
       "caption": "Preview a saved state and compare it with the current page before restoring.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -193,7 +197,7 @@
       "src": "/documentation/en/page-publish.png",
       "alt": "Page publication dialog with Private selected and password or bearer-link alternatives.",
       "caption": "Private keeps the page within the project. Review the intended audience before changing publication.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -209,7 +213,7 @@
       "src": "/documentation/en/page-export.png",
       "alt": "Document export menu with Markdown (.md) and Print / PDF.",
       "caption": "Choose Markdown to download the document, or Print / PDF to open the printable view.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -225,7 +229,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Remove.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -266,6 +270,17 @@ Deletion sends supported page work to trash. Check the selected branch before de
 
 
 ![Page creation menu offering New page and New database.](/documentation/en/page-create-menu.png)
+
+## Promote a page to an issue {#promote-page-to-issue}
+
+When a page describes work to do, the owner or a Member can turn it into an issue with Numo. Readers do not see this action. Promotion needs available AI usage or a compatible personal key.
+
+1. Choose **Promote to issue** from the page’s menu in the page tree (`…` or a right-click on the row) or from the `…` menu of the open page (**Page options**). The same action is offered for a database entry opened in the side panel, and in the handle menu of a single entry, as described in the [Databases guide](/docs/databases#entry-actions).
+2. If the open page has unsaved changes, minddy saves them first. If that save fails, minddy reports that the page could not be saved and Numo does not open. Promote the page again once it has saved.
+3. Numo opens in the page’s project with the page as context and receives a request to read its title, its content and, for a database entry, its properties. When the page is unclear, or when a database leaves the issue’s scope ambiguous, Numo asks questions before creating anything. Answer them in the conversation.
+4. Numo creates one issue and attaches the page to it. Open the issue and check its identifier, scope, properties and the attached page.
+
+Unlike a promoted notebook task, the page is not removed: it stays in its place in the tree, with its content and subpages. If creation fails or the result is unclear after a network error, search for the issue before promoting the page again.
 
 ## Write a page with blocks and mentions {#page-editor}
 

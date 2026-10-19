@@ -17,12 +17,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 12,
+  "revision": 13,
+  "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-18",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate",
+    "version": "0.11.1 candidate; MIN-684 page promotion",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -52,14 +52,17 @@
       "components/date-time-picker.tsx",
       "lib/page-databases.ts",
       "scripts/page-database-date-times.integration.test.mjs",
-      "content/documentation/reviews/database-property-types-2026-10-18.json"
+      "content/documentation/reviews/database-property-types-2026-10-18.json",
+      "components/pages/page-promotion-context.tsx",
+      "components/pages/page-promotion-context.test.tsx",
+      "content/documentation/reviews/min-684-promote-page.md"
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:/root (optional-time and option-control source, component and isolated SQL review; unchanged claims retain prior evidence); agent:/root (MIN-690 recapture of create-a-database-steps on next dev at 8371778c4 with a throwaway database, record content/documentation/reviews/database-property-types-2026-10-18.json; other figures unchanged, evidence retained)",
-    "language": "agent:/root (it changed-passage and figure parity self-review); agent:/root (it updated alt text for the column type picker; agent review, not human acceptance)",
-    "date": "2026-10-18"
+    "revision": 13,
+    "fact": "agent:/root (optional-time and option-control source, component and isolated SQL review; unchanged claims retain prior evidence); agent:/root (MIN-690 recapture of create-a-database-steps on next dev at 8371778c4 with a throwaway database, record content/documentation/reviews/database-property-types-2026-10-18.json; other figures unchanged, evidence retained); agent:/root (MIN-684 page promotion: source and focused unit-test review of the menu entries, reader gating, save-before-promote and the Numo request; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (it changed-passage and figure parity self-review); agent:/root (it updated alt text for the column type picker; agent review, not human acceptance); agent:/root (it translation of the MIN-684 single-entry promotion passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "pages"
@@ -83,7 +86,7 @@
       "src": "/documentation/it/database-setup-cards.png",
       "alt": "Anteprima del componente con le schede per configurare una nuova banca dati con Numo o importarne una esistente.",
       "caption": "Suggerimenti per una nuova banca dati con dati dimostrativi. Scegli Numo o l’importazione, oppure chiudi le schede per continuare manualmente.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -100,7 +103,7 @@
       "src": "/documentation/it/database-property-types.png",
       "alt": "Selettore del tipo di colonna con un campo di ricerca, testo, numero, selezioni, date, persone e casella di controllo.",
       "caption": "Scegli un tipo adatto ai valori da conservare.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -117,7 +120,7 @@
       "src": "/documentation/it/database-entry.png",
       "alt": "Voce dimostrativa con descrizione, durata 2.5, casella selezionata e selezione vuota.",
       "caption": "Apri una voce per leggere il testo completo e modificare i valori in base al tipo.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -133,7 +136,7 @@
       "src": "/documentation/it/database-conversion-warning.png",
       "alt": "Avviso di conversione: il passaggio da Testo a Numero svuota una cella incompatibile, con pulsanti per annullare o confermare.",
       "caption": "Controlla il numero effettivo di celle incompatibili prima di confermare. Annulla conserva i valori attuali.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -149,7 +152,7 @@
       "src": "/documentation/it/database-import-review.png",
       "alt": "Verifica di un CSV locale: due pagine di voci e due colonne, con il pulsante Importa database.",
       "caption": "Controlla le voci analizzate e il numero di colonne prima di importare nel database vuoto.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -165,7 +168,7 @@
       "src": "/documentation/it/database-options.png",
       "alt": "Anteprima del componente Modifica opzioni con stati in italiano, frecce verso l’alto e il basso, cestini e la spiegazione dell’eliminazione.",
       "caption": "Modifica insieme nomi, colori e ordine delle opzioni. Il cestino rimuove un’opzione dalla bozza; Salva applica le modifiche. Sono mostrati dati dimostrativi.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -182,7 +185,7 @@
       "src": "/documentation/it/database-date-time.png",
       "alt": "Anteprima del selettore di data con il 12 ottobre 2026 selezionato, Aggiungere un’ora attivo e Tempo impostato su 14:30.",
       "caption": "Attiva Aggiungere un’ora per inserire un’ora. Questa anteprima del componente usa dati dimostrativi e il fuso orario del dispositivo.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -252,6 +255,8 @@ Il contenuto di una voce vuota mostra un segnaposto per individuare l’area di 
 Apri una voce per modificarne la pagina completa in un pannello flottante. «Espandi» la apre come pagina completa dopo la fine dei salvataggi del documento in attesa. Se il salvataggio fallisce, il pannello resta aperto per risolverlo. Una voce vuota resta nel database finché non viene eliminata.
 
 Usa le caselle delle righe per selezionare e Shift-clic per un intervallo. La maniglia apre le azioni e può riordinare le voci in ordine manuale. Il + nel margine inserisce sotto una voce; Option/Alt inserisce sopra. L’inserimento adiacente torna all’ordine manuale e rimuove i filtri per rendere visibile la nuova voce.
+
+Dal menu della maniglia di una singola voce, il proprietario o un Membro può scegliere **Promuovi a ticket** perché Numo trasformi quella voce, il suo contenuto e le sue proprietà in un ticket. La voce resta nel database. L’azione non compare quando il menu riguarda più righe selezionate: non esiste una promozione multipla, quindi promuovi ogni voce separatamente. La [guida alle pagine](/it/documentazione/pages#promote-page-to-issue) descrive le domande di Numo e cosa fare se la voce non può essere salvata prima.
 
 ### Preferenze di visualizzazione {#database-display}
 

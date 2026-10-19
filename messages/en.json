@@ -2144,6 +2144,8 @@
     "waitForUploads": "Wait for the image to finish uploading.",
     "uploadEmpty": "{name} is empty",
     "promotePrompt": "Turn this task from the page “{page}” of my project into an issue:\n\n{note}\n\nIf the task isn't clear enough to make a good issue, read the rest of the page for context, and ask me questions before creating it. Once the issue exists, tick that task off on the page; it lives in the issue now.",
+    "promoteToIssue": "Promote to issue",
+    "promotePagePrompt": "Turn the page “{page}” of my project into an issue.\n\nRead the page first: its title and content and, for a database entry, its properties. If the page isn't clear enough to make a good issue, or if it is a database and you can't tell what the issue should cover, ask me questions before creating it. Once the issue exists, attach the page to it; the page stays where it is.",
     "subpageUntitled": "Untitled page",
     "insertBlock": "Insert a block below",
     "blockMenu": "Block options",

@@ -80,6 +80,7 @@ describe("page interface regressions", () => {
       "new-subpage",
       "favorite",
       "copy-for-agent",
+      "promote-to-issue",
       "publish",
       "export",
       "trash",

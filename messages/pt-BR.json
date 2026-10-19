@@ -2144,6 +2144,8 @@
     "waitForUploads": "Aguarde o envio da imagem terminar.",
     "uploadEmpty": "{name} está vazio",
     "promotePrompt": "Transforme esta tarefa da página “{page}” do meu projeto em um problema:\n\n{note}\n\nSe a tarefa não estiver clara o suficiente para criar um bom problema, leia o restante da página para obter contexto e faça perguntas antes de criá-lo. Assim que o problema existir, marque a tarefa como concluída na página; agora ela está no problema.",
+    "promoteToIssue": "Promover a problema",
+    "promotePagePrompt": "Transforme a página “{page}” do meu projeto em um problema.\n\nLeia a página primeiro: o título, o conteúdo e, se for uma entrada de banco de dados, as propriedades. Se a página não estiver clara o suficiente para criar um bom problema, ou se for um banco de dados e não estiver claro o que o problema deve cobrir, faça-me perguntas antes de criá-lo. Assim que o problema existir, anexe a página a ele; a página continua onde está.",
     "subpageUntitled": "Página sem título",
     "insertBlock": "Insira um bloco abaixo",
     "blockMenu": "Opções de bloqueio",
