@@ -2,7 +2,7 @@
 
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { FileUploadIcon, InformationCircleIcon, Layers01Icon, Refresh01Icon, SparklesIcon, UserAdd01Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, FileUploadIcon, InformationCircleIcon, Layers01Icon, Refresh01Icon, SparklesIcon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { createUuid } from "@/lib/create-uuid";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -36,9 +36,14 @@ import {
   uploadProjectIconDataUrlApi,
 } from "@/lib/projects-api";
 import { createPageApi, prepareInitialBriefApi } from "@/lib/pages-api";
+import { inviteMemberApi } from "@/lib/members-api";
+import { usePlanGates } from "@/lib/use-billing-query";
+import { isValidEmail } from "@/lib/signup-wizard";
 import {
   clearPendingDraftId,
   MAX_INITIAL_BRIEF_CHARS,
+  normalizeInviteEmail,
+  normalizeInvitees,
   setPendingDraftId,
   stepIndexOf,
   stepsFor,
@@ -77,8 +82,8 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Project creation wizard (MIN-62, MIN-171): Where do we start? → Project →
- * Icon → Git repository → Primer → Finishings.
+ * Project creation wizard (MIN-62, MIN-171, MIN-689): Where do we start? →
+ * Project → Icon → Git repository → Primer → Members → Finishings.
  * The form is that of all minddy wizards — modal, progression,
  * animation, and buttons: `WizardDialog` (components/wizard/wizard-dialog.tsx).
  * This file only describes its steps and what they trigger.
@@ -108,6 +113,10 @@ import {
  * The seed step collects a pasted brief or CSV without writing anything.
  * After project creation, the brief becomes a wiki page and CSV imports
  * continue on the new project board through `?setup=import`.
+ *
+ * The members step only queues addresses: no account lookup, no request. The
+ * invitations go out once the project exists, through the same endpoint as
+ * the members settings, which stays the judge of limits and duplicates.
  */
 
 /** Resumption of the wizard on a draft — resumed manually, or after a redirect. */
@@ -140,6 +149,7 @@ export function CreateProjectWizard({
   const tSettings = useTranslations("Settings");
   const tCommon = useTranslations("Common");
   const tIssue = useTranslations("Issue");
+  const tMembers = useTranslations("Members");
   const locale = useLocale();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -151,6 +161,7 @@ export function CreateProjectWizard({
     deleteProjectDraft,
   } = useProjects();
   const { track } = useAnalytics();
+  const { maxMembersPerProject } = usePlanGates();
   const createdProjectRef = useRef<Awaited<ReturnType<typeof createProject>> | null>(null);
 
   const [stepIndex, setStepIndex] = useState(0);
@@ -217,6 +228,16 @@ export function CreateProjectWizard({
   const [smartAssignEnabled, setSmartAssignEnabled] = useState(true);
   const [autoAssignEnabled, setAutoAssignEnabled] = useState(false);
 
+  // “Members” stage. Addresses wait here, normalized, until the project exists;
+  // `inviteeInput` is the one being typed, not yet added.
+  const [invitees, setInvitees] = useState<string[]>([]);
+  const [inviteeInput, setInviteeInput] = useState("");
+  const [inviteeError, setInviteeError] = useState<string | null>(null);
+  // The owner takes no guest slot: the plan limit counts invitees only, as the
+  // server counts non-owner members plus pending invitations.
+  const inviteLimitReached =
+    maxMembersPerProject != null && invitees.length >= maxMembersPerProject;
+
   const steps = useMemo(() => stepsFor(origin), [origin]);
   const step: ProjectWizardStep = steps[Math.min(stepIndex, steps.length - 1)];
 
@@ -262,6 +283,9 @@ export function CreateProjectWizard({
     setCsvLost(false);
     setSmartAssignEnabled(true);
     setAutoAssignEnabled(false);
+    setInvitees([]);
+    setInviteeInput("");
+    setInviteeError(null);
   }, []);
 
   // Resumption of a draft: it takes its place again, and we reopen where we
@@ -287,6 +311,9 @@ export function CreateProjectWizard({
     setCsvLost(draft.seed?.kind === "import");
     setSmartAssignEnabled(draft.smartAssignEnabled);
     setAutoAssignEnabled(draft.autoAssignEnabled);
+    setInvitees(draft.invitees);
+    setInviteeInput("");
+    setInviteeError(null);
     setDraftExists(true);
     setStepIndex(
       resume.fromGit
@@ -322,6 +349,7 @@ export function CreateProjectWizard({
     repo,
     smartAssignEnabled,
     autoAssignEnabled,
+    invitees,
   });
 
   /** Closes for good: nothing left waiting, everything reset. */
@@ -408,6 +436,49 @@ export function CreateProjectWizard({
    * “Skip”, the link to Numo): the choice is counted once, there. */
   const leaveSeedStep = (chosen: DraftSeed | null) => {
     track("project_wizard_seed_chosen", { seed: chosen?.kind ?? "none" });
+    setStepIndex((i) => i + 1);
+  };
+
+  // ── “Members” stage ──────────────────────────────────────────────────────
+  /** Who may be queued: a plausible address, not the owner, not twice. */
+  const isInvitable = (email: string) =>
+    isValidEmail(email) &&
+    email !== normalizeInviteEmail(user?.email ?? "");
+
+  /**
+   * Adds the typed address to the queue. Returns `false` when it is refused,
+   * with the reason shown under the field — so that “Continue” never drops an
+   * address the user typed without saying so.
+   */
+  const addInvitee = (): boolean => {
+    const email = normalizeInviteEmail(inviteeInput);
+    if (!email) return true;
+    if (!isValidEmail(email)) {
+      setInviteeError(t("wizardMembersInvalid"));
+      return false;
+    }
+    if (email === normalizeInviteEmail(user?.email ?? "")) {
+      setInviteeError(t("wizardMembersSelf"));
+      return false;
+    }
+    if (invitees.includes(email)) {
+      setInviteeError(t("wizardMembersDuplicate", { email }));
+      return false;
+    }
+    if (inviteLimitReached) {
+      setInviteeError(
+        tMembers("inviteLimitReached", { limit: maxMembersPerProject ?? 0 }),
+      );
+      return false;
+    }
+    setInvitees((list) => [...list, email]);
+    setInviteeInput("");
+    setInviteeError(null);
+    return true;
+  };
+
+  const leaveMembersStep = () => {
+    if (!addInvitee()) return;
     setStepIndex((i) => i + 1);
   };
 
@@ -677,6 +748,43 @@ export function CreateProjectWizard({
         }),
       );
     }
+    // Invitations go out last, one by one: a refusal (plan limit, rate limit,
+    // already invited) does not stop the next ones, and none of them undoes
+    // the project. A success means an invitation was recorded, not that its
+    // email was delivered.
+    const toInvite = normalizeInvitees(invitees).filter(isInvitable);
+    if (toInvite.length > 0) {
+      const failed: { email: string; message: string }[] = [];
+      for (const email of toInvite) {
+        try {
+          await inviteMemberApi(created.id, email);
+        } catch (err) {
+          console.error("[create-project-wizard] invitation failed:", err);
+          failed.push({ email, message: (err as Error).message });
+        }
+      }
+      void queryClient.invalidateQueries({ queryKey: ["members", created.id] });
+      if (failed.length > 0) {
+        // Persistent: it names who was not invited, and the wizard is about
+        // to close — a toast that fades would leave no trace of it.
+        toast.error(t("wizardMembersFailedTitle", { count: failed.length }), {
+          description: (
+            <div className="flex flex-col gap-1">
+              <ul className="flex flex-col gap-0.5">
+                {failed.map(({ email, message }) => (
+                  <li key={email} className="break-words">
+                    {email} — {message}
+                  </li>
+                ))}
+              </ul>
+              <p>{t("wizardMembersFailedHint")}</p>
+            </div>
+          ),
+          duration: Infinity,
+        });
+      }
+    }
+
     // The icon and settings are applied after creation: the cached list
     // already dates back before.
     void queryClient.invalidateQueries({ queryKey: ["projects"] });
@@ -684,6 +792,7 @@ export function CreateProjectWizard({
       has_git_link: !!repo,
       smart_assign_enabled: smartAssignEnabled,
       auto_assign_enabled: autoAssignEnabled,
+      invitations: toInvite.length,
     });
     toast.success(t("wizardDoneToast", { name: created.name }));
     setSubmitting(false);
@@ -1122,6 +1231,103 @@ export function CreateProjectWizard({
         ),
     },
 
+    members: {
+      id: "members",
+      title: t("wizardMembersTitle"),
+      subtitle: t("wizardMembersDesc"),
+      submitLabel: skipLabel(invitees.length === 0 && !inviteeInput.trim()),
+      content: (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-end gap-2">
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <label htmlFor="project-invitee" className="sr-only">
+                {tMembers("inviteByEmail")}
+              </label>
+              <Input
+                id="project-invitee"
+                type="email"
+                autoComplete="off"
+                autoFocus={allowInputAutoFocus()}
+                value={inviteeInput}
+                onChange={(e) => {
+                  setInviteeInput(e.target.value);
+                  setInviteeError(null);
+                }}
+                onKeyDown={(e) => {
+                  // Enter adds the address and stays: the wizard's own Enter
+                  // would move on before the next address is typed.
+                  if (e.key === "Enter" && inviteeInput.trim()) {
+                    e.preventDefault();
+                    addInvitee();
+                  }
+                }}
+                placeholder={tMembers("invitePlaceholder")}
+                aria-invalid={inviteeError ? true : undefined}
+                aria-describedby={inviteeError ? "project-invitee-error" : undefined}
+                disabled={inviteLimitReached}
+              />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => addInvitee()}
+              disabled={inviteLimitReached || !inviteeInput.trim()}
+            >
+              <HugeiconsIcon icon={UserAdd01Icon} />
+              {t("wizardMembersAdd")}
+            </Button>
+          </div>
+          {inviteeError && (
+            <p id="project-invitee-error" className="text-xs text-destructive">
+              {inviteeError}
+            </p>
+          )}
+          {invitees.length > 0 && (
+            <ul
+              className="flex flex-col divide-y divide-border rounded-2xl border border-border"
+              aria-label={t("wizardMembersListLabel")}
+            >
+              {invitees.map((email) => (
+                <li key={email} className="flex items-center gap-2 py-2 pl-4 pr-2">
+                  <span className="min-w-0 flex-1 truncate text-left text-sm">
+                    {email}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={t("wizardMembersRemove", { email })}
+                    onClick={() => {
+                      setInvitees((list) => list.filter((e) => e !== email));
+                      setInviteeError(null);
+                    }}
+                  >
+                    <HugeiconsIcon icon={Cancel01Icon} />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="text-left text-xs text-muted-foreground">
+            {t("wizardMembersHint")}
+            {maxMembersPerProject != null && (
+              <>
+                {" "}
+                <span className="tabular-nums">
+                  {inviteLimitReached
+                    ? tMembers("inviteLimitReached", { limit: maxMembersPerProject })
+                    : tMembers("guestCount", {
+                        used: invitees.length,
+                        limit: maxMembersPerProject,
+                      })}
+                </span>
+              </>
+            )}
+          </p>
+        </div>
+      ),
+    },
+
     finish: {
       id: "finish",
       title: t("wizardFinishTitle"),
@@ -1144,6 +1350,11 @@ export function CreateProjectWizard({
                 <span className="font-mono">{key}</span>
                 {repo ? ` · ${repo.fullName}` : ` · ${t("wizardNoRepo")}`}
               </p>
+              {invitees.length > 0 && (
+                <p className="truncate text-xs text-muted-foreground">
+                  {t("wizardMembersSummary", { count: invitees.length })}
+                </p>
+              )}
             </div>
           </div>
           <label className="flex items-start justify-between gap-4 rounded-2xl border border-border p-4">
@@ -1198,6 +1409,7 @@ export function CreateProjectWizard({
         onSubmit={(id) => {
           if (id === "project") submitProjectStep();
           else if (id === "seed") leaveSeedStep(seed);
+          else if (id === "members") leaveMembersStep();
           else if (id === "finish") void finish();
           else setStepIndex((i) => i + 1);
         }}

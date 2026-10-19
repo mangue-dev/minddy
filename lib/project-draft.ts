@@ -31,6 +31,7 @@ export const PROJECT_WIZARD_STEPS = [
   "icon",
   "git",
   "seed",
+  "members",
   "finish",
 ] as const;
 export type ProjectWizardStep = (typeof PROJECT_WIZARD_STEPS)[number];
@@ -45,8 +46,8 @@ export { MAX_INITIAL_BRIEF_CHARS } from "./project-brief";
  */
 export function stepsFor(origin: ProjectOrigin | null): ProjectWizardStep[] {
   return origin
-    ? ["origin", "project", "icon", "git", "seed", "finish"]
-    : ["origin", "project", "icon", "git", "finish"];
+    ? ["origin", "project", "icon", "git", "seed", "members", "finish"]
+    : ["origin", "project", "icon", "git", "members", "finish"];
 }
 
 /** The index to reopen the wizard for this draft (0 if the step is unknown). */
@@ -97,6 +98,11 @@ export interface ProjectDraft {
   repo: DraftRepo | null;
   smartAssignEnabled: boolean;
   autoAssignEnabled: boolean;
+  /**
+   * Addresses to invite, normalized (trimmed, lowercased, unique). Nothing is
+   * sent while the project is a draft: the invitations go out once it exists.
+   */
+  invitees: string[];
   /** Last written (ISO) — the order of the sidebar, from most recent. */
   updatedAt: string;
 }
@@ -135,6 +141,7 @@ export function projectDraftFromRow(row: ProjectDraftRow): ProjectDraft {
     // fall back on the same default, not on `false`.
     smartAssignEnabled: data.smartAssignEnabled !== false,
     autoAssignEnabled: data.autoAssignEnabled === true,
+    invitees: normalizeInvitees(data.invitees),
     updatedAt: row.updated_at,
   };
 }
@@ -160,6 +167,7 @@ export function projectDraftToRow(draft: ProjectDraftInput): {
       repo: draft.repo,
       smartAssignEnabled: draft.smartAssignEnabled,
       autoAssignEnabled: draft.autoAssignEnabled,
+      invitees: normalizeInvitees(draft.invitees),
     },
   };
 }
@@ -172,6 +180,24 @@ export function draftIconUrl(draft: ProjectDraft): string | null {
 /** The draft orb seed — the counterpart to `projectOrbSeed`. */
 export function draftOrbSeed(draft: ProjectDraft): string {
   return draft.orbSeed || draft.id;
+}
+
+/** The form an address is compared and stored in, as the server does. */
+export function normalizeInviteEmail(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+/**
+ * A clean invitee list from whatever the draft holds: strings only, normalized,
+ * without blanks or duplicates. A draft from before the step reads as empty.
+ */
+export function normalizeInvitees(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const emails = value
+    .filter((email): email is string => typeof email === "string")
+    .map(normalizeInviteEmail)
+    .filter(Boolean);
+  return [...new Set(emails)];
 }
 
 function normalizeStep(value: unknown): ProjectWizardStep {

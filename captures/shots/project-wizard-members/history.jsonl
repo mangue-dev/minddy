@@ -1,0 +1,1 @@
+{"date":"2026-10-19","commit":"0667725bd","variants":["en-light","en-light-finish"],"verdict":"ok","note":"Members step with two queued .example addresses and Continue CTA; finishing step shows 2 invitations to send. Local dev server on uncommitted MIN-689 changes; no project writes."}
