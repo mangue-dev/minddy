@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 18,
-  "sourceRevision": 18,
+  "revision": 19,
+  "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-18",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work; MIN-693 project roles; MIN-717 Smart Fill relations; MIN-718 hybrid issue search; MIN-728 one editor engine",
+    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work; MIN-693 project roles; MIN-717 Smart Fill relations; MIN-718 hybrid issue search; MIN-728 one editor engine; MIN-733 always-on AI features",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -117,10 +117,10 @@
     ]
   },
   "review": {
-    "revision": 18,
-    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; es translation of removal edits; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-717 Smart Fill relations source review inherited from en revision 14; es translation of added passages; no browser walkthrough); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-728 one editor engine: source and unit-test review of the shared editor on this surface; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-734 typed mentions: source and unit-test review of the mention format, rendering and access rules; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (Command/Ctrl+K opens the selection actions: source and unit-test review of bulk-actions-context and use-command-palette-launcher; no browser walkthrough; unchanged evidence retained)",
-    "language": "agent:/root (es new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_es (es translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root/min693_es with agent:/root (es MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (es translation of MIN-717 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es translation of the MIN-728 passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es added sentences, catalog UI labels and retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-18"
+    "revision": 19,
+    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; es translation of removal edits; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-717 Smart Fill relations source review inherited from en revision 14; es translation of added passages; no browser walkthrough); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-728 one editor engine: source and unit-test review of the shared editor on this surface; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-734 typed mentions: source and unit-test review of the mention format, rendering and access rules; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (Command/Ctrl+K opens the selection actions: source and unit-test review of bulk-actions-context and use-command-palette-launcher; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-733 removal of the instance AI switches: source and unit-test review of the admin registry and every former switch reader; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (es new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_es (es translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root/min693_es with agent:/root (es MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (es translation of MIN-717 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es translation of the MIN-728 passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es added sentences, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (es removal of the sentences describing instance AI switches; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [
     "feedback",
@@ -165,7 +165,7 @@
       "src": "/documentation/es/new-issue.png",
       "alt": "Borrador sin enviar con título, descripción y propiedades que se pueden elegir manualmente.",
       "caption": "Describe el resultado esperado y elige las propiedades útiles antes de crear el ticket.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -181,7 +181,7 @@
       "src": "/documentation/es/triage-incoming.png",
       "alt": "Incidencia entrante de demostración DOC-11 con informe, propiedades y controles de duplicado, Rechazar y Aceptar.",
       "caption": "Lee el informe recibido antes de aceptarlo, rechazarlo o enlazar un duplicado.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -197,7 +197,7 @@
       "src": "/documentation/es/issue-statuses.png",
       "alt": "Los ocho estados del ticket en el selector, con el estado de backlog seleccionado.",
       "caption": "La marca indica el estado actual. Elige el que corresponda al estado real del trabajo.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -213,7 +213,7 @@
       "src": "/documentation/es/work-resources.png",
       "alt": "Diálogo para añadir un enlace con una dirección de contacto de ejemplo.",
       "caption": "Revisa el destino antes de añadir el recurso. Este enlace de ejemplo no se ha enviado.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -229,7 +229,7 @@
       "src": "/documentation/es/work-dependencies.png",
       "alt": "Búsqueda de una incidencia bloqueante por identificador.",
       "caption": "Elige el sentido de la relación antes de su destino. El selector se muestra sin enviar la relación.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -245,7 +245,7 @@
       "src": "/documentation/es/work-sub-issues.png",
       "alt": "Campo para crear una subincidencia en una incidencia principal de demostración.",
       "caption": "El campo crea una hija de esta incidencia; cada hija conserva su estado y conversación.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -261,7 +261,7 @@
       "src": "/documentation/es/work-implementation-plan.png",
       "alt": "Plan de demostración con dos tareas de trabajo completadas de seis.",
       "caption": "El plan guardado distingue pasos completados, activos y pendientes. Su progreso no demuestra que se ejecutara la tarea de código ficticia.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -277,7 +277,7 @@
       "src": "/documentation/es/issue-date-recurrence.png",
       "alt": "Selector de fecha en modo recurrente con vista previa semanal los domingos y hora opcional.",
       "caption": "El modo recurrente muestra la frecuencia semanal. Confirma la primera fecha antes de crear el ticket.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -293,7 +293,7 @@
       "src": "/documentation/es/import-issues-preview-workflow.png",
       "alt": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas.",
       "caption": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas. No se envió la importación; la planificación opcional con IA se bloqueó para la captura.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -310,7 +310,7 @@
       "src": "/documentation/es/file-preview.png",
       "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar y Eliminar.",
       "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Eliminar.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -462,7 +462,7 @@ Rellenado inteligente compara la incidencia con cinco candidatas como máximo de
 
 Los vínculos añadidos así aparecen en las relaciones de la incidencia como cualquier otro, y el historial indica Smart-fill como autor. Comprueba la dirección de una dependencia como harías con las tuyas. Para quitar un vínculo, usa los controles de relaciones: Rellenado inteligente no vuelve a añadir un vínculo quitado para ese par. Para dejar de recibir vínculos nuevos, desactiva **Vincular incidencias relacionadas** en [tus preferencias](#smart-fill-preferences). Las incidencias creadas antes de esta función, las importadas y las sincronizadas desde un repositorio se indexan poco a poco en segundo plano, pero nunca reciben vínculos automáticos.
 
-La indexación y las decisiones de relación usan IA. Cuentan en la parte **Automatizaciones** de la cuenta a la que corresponde la pasada: la cuenta a la que se cobra el Rellenado inteligente de la incidencia nueva, normalmente quien la creó; quien edita, en una edición; y el propietario del proyecto, en la indexación en segundo plano. El historial de uso muestra la indexación como **Smart-fill · índice de incidencias**. Una decisión de relación aparece como **Decisión de IA** cuando la resuelve el modelo de decisión, y como **Smart-fill · relaciones** cuando la resuelve el modelo de respaldo. Si ese presupuesto se agota o el proveedor falla, la pasada se omite y la incidencia no cambia. La administración de la instancia también puede desactivar la función para todos. [La búsqueda de incidencias por el sentido](/docs/navigation#search-by-meaning) usa el mismo índice: cada búsqueda nueva cuenta en la parte **Automatizaciones** de la cuenta que busca y aparece como **Búsqueda de incidencias**.
+La indexación y las decisiones de relación usan IA. Cuentan en la parte **Automatizaciones** de la cuenta a la que corresponde la pasada: la cuenta a la que se cobra el Rellenado inteligente de la incidencia nueva, normalmente quien la creó; quien edita, en una edición; y el propietario del proyecto, en la indexación en segundo plano. El historial de uso muestra la indexación como **Smart-fill · índice de incidencias**. Una decisión de relación aparece como **Decisión de IA** cuando la resuelve el modelo de decisión, y como **Smart-fill · relaciones** cuando la resuelve el modelo de respaldo. Si ese presupuesto se agota o el proveedor falla, la pasada se omite y la incidencia no cambia. [La búsqueda de incidencias por el sentido](/docs/navigation#search-by-meaning) usa el mismo índice: cada búsqueda nueva cuenta en la parte **Automatizaciones** de la cuenta que busca y aparece como **Búsqueda de incidencias**.
 
 ## Dividir una incidencia en subincidencias {#sub-issues}
 

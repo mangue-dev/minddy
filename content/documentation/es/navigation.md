@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 10,
+  "revision": 11,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-18",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search; MIN-726 issue search order",
+    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search; MIN-726 issue search order; MIN-733 always-on AI features",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -60,10 +60,10 @@
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; es translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-695 badge propagation: source and unit-test review of app-shell-chrome, app-sidebar, mobile-navigation, app-tab-strip and lib/app-tab-indicators; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (es changed-passage parity and label review); agent:/root (es translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (es translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es MIN-695 badge paragraph, catalog UI labels and retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-18"
+    "revision": 11,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; es translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-695 badge propagation: source and unit-test review of app-shell-chrome, app-sidebar, mobile-navigation, app-tab-strip and lib/app-tab-indicators; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-733 removal of the instance AI switches: source and unit-test review of the admin registry and every former switch reader; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (es changed-passage parity and label review); agent:/root (es translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (es translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es MIN-695 badge paragraph, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (es removal of the sentences describing instance AI switches; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [
     "views",
@@ -84,7 +84,7 @@
       "src": "/documentation/es/work-navigation.png",
       "alt": "Navegación del proyecto junto al tablero de incidencias de demostración.",
       "caption": "La barra del proyecto da acceso a incidencias, objetivos, páginas y clasificación de entradas.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -100,7 +100,7 @@
       "src": "/documentation/es/work-search.png",
       "alt": "Resultados de búsqueda del identificador de una incidencia de demostración.",
       "caption": "La paleta encuentra la incidencia por identificador junto a las páginas del proyecto; abrir un resultado conserva sus reglas de acceso.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -180,7 +180,7 @@ La búsqueda por el sentido tiene estos límites:
 
 - La búsqueda necesita al menos dos palabras, o una palabra de al menos seis letras. Los identificadores como `MIN-42`, `#42` o `42`, y las búsquedas muy cortas, solo usan la búsqueda de texto.
 - Se basa en el índice que Rellenado inteligente construye con el título y la descripción de las incidencias. Una incidencia aún no indexada, o cuyo autor desactivó [**Indexar incidencias**](/docs/issues#smart-fill-preferences), solo se encuentra por sus palabras. Las incidencias de la papelera nunca aparecen.
-- Si desactivaste **Indexar incidencias** en **Configuración de la cuenta** → **Preferencias**, tus búsquedas solo comparan palabras. Lo mismo ocurre cuando la administración de la instancia desactivó **Relaciones de Smart Fill**, cuando tu presupuesto de IA está agotado o cuando el proveedor no responde en pocos segundos. Los resultados de texto se mantienen y no se muestra ningún error.
+- Si desactivaste **Indexar incidencias** en **Configuración de la cuenta** → **Preferencias**, tus búsquedas solo comparan palabras. Lo mismo ocurre cuando tu presupuesto de IA está agotado o cuando el proveedor no responde en pocos segundos. Los resultados de texto se mantienen y no se muestra ningún error.
 - Una consulta `@` cuyo texto ya coincide con una persona, un proyecto o una página no se busca por el sentido. En un proyecto con más de 3000 incidencias indexadas, solo se comparan las 3000 indexadas más recientemente; las demás se encuentran por sus palabras.
 
 Cada búsqueda nueva usa una llamada de IA, que cuenta en tu parte **Automatizaciones** y aparece en el historial de uso como **Búsqueda de incidencias**. Una búsqueda repetida en unos 15 minutos normalmente no se cobra de nuevo.

@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 10,
+  "revision": 11,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-18",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search; MIN-726 issue search order",
+    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search; MIN-726 issue search order; MIN-733 always-on AI features",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -60,10 +60,10 @@
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; fr translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-695 badge propagation: source and unit-test review of app-shell-chrome, app-sidebar, mobile-navigation, app-tab-strip and lib/app-tab-indicators; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root (fr changed-passage parity and label review); agent:/root (fr translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (fr translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr MIN-695 badge paragraph, catalog UI labels and retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-18"
+    "revision": 11,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; fr translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-695 badge propagation: source and unit-test review of app-shell-chrome, app-sidebar, mobile-navigation, app-tab-strip and lib/app-tab-indicators; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-733 removal of the instance AI switches: source and unit-test review of the admin registry and every former switch reader; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root (fr changed-passage parity and label review); agent:/root (fr translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (fr translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr MIN-695 badge paragraph, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (fr removal of the sentences describing instance AI switches; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [
     "views",
@@ -84,7 +84,7 @@
       "src": "/documentation/fr/work-navigation.png",
       "alt": "Navigation du projet à côté du tableau de tickets de démonstration.",
       "caption": "La barre du projet donne accès aux tickets, objectifs, pages et arrivées en triage.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -100,7 +100,7 @@
       "src": "/documentation/fr/work-search.png",
       "alt": "Résultats de recherche pour l’identifiant d’un ticket de démonstration.",
       "caption": "La palette retrouve le ticket par identifiant avec les pages du projet ; ouvrir un résultat conserve ses règles d’accès.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -180,7 +180,7 @@ La recherche par le sens a ces limites :
 
 - La requête doit compter au moins deux mots, ou un mot d’au moins six lettres. Les identifiants comme `MIN-42`, `#42` ou `42`, ainsi que les requêtes très courtes, n’utilisent que la recherche textuelle.
 - Elle s’appuie sur l’index que Smart-fill construit à partir du titre et de la description des tickets. Un ticket pas encore indexé, ou dont l’auteur a désactivé [**Indexer les tickets**](/docs/issues#smart-fill-preferences), n’est trouvé que par ses mots. Les tickets de la corbeille n’apparaissent jamais.
-- Si vous avez désactivé **Indexer les tickets** dans **Paramètres du compte** → **Préférences**, vos recherches ne comparent que les mots. Il en va de même quand l’administrateur de l’instance a désactivé **Relations Smart Fill**, quand votre budget IA est épuisé ou quand le fournisseur ne répond pas en quelques secondes. Les résultats textuels restent et aucune erreur n’est affichée.
+- Si vous avez désactivé **Indexer les tickets** dans **Paramètres du compte** → **Préférences**, vos recherches ne comparent que les mots. Il en va de même quand votre budget IA est épuisé ou quand le fournisseur ne répond pas en quelques secondes. Les résultats textuels restent et aucune erreur n’est affichée.
 - Une requête `@` dont le texte correspond déjà à une personne, un projet ou une page n’est pas cherchée par le sens. Dans un projet de plus de 3 000 tickets indexés, seuls les 3 000 indexés le plus récemment sont comparés ; les autres sont trouvés par leurs mots.
 
 Chaque nouvelle requête utilise un appel d’IA, compté dans votre part **Automatisations** et affiché dans l’historique d’usage sous **Recherche de tickets**. Une requête répétée dans les 15 minutes environ n’est normalement pas facturée à nouveau.
