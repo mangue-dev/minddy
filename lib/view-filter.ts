@@ -11,6 +11,73 @@ import type { Issue, IssueRelation, SortDirection, ViewConfig, ViewSort } from "
     to the viewing user (on public shares: to the view owner). */
 export const ME_ASSIGNEE = "@me";
 
+/** The status columns a view shows when it has no status filter of its own
+    (MIN-736): the open work. Done and Canceled come back by selecting them in
+    the status filter. A view that stores a status filter keeps it. */
+export const DEFAULT_STATUS_FILTER: readonly IssueStatus[] = [
+  "backlog",
+  "todo",
+  "in_progress",
+  "in_review",
+];
+
+/** Is this status selection the default one (absent, empty, or exactly the
+    open statuses in any order)? */
+export function isDefaultStatusFilter(
+  status: readonly IssueStatus[] | undefined
+): boolean {
+  if (!status?.length) return true;
+  const set = new Set(status);
+  return (
+    set.size === DEFAULT_STATUS_FILTER.length &&
+    DEFAULT_STATUS_FILTER.every((s) => set.has(s))
+  );
+}
+
+/** The statuses a selection actually lets through: the selection itself,
+    else the default open statuses. */
+export function effectiveStatuses(
+  status: readonly IssueStatus[] | null | undefined
+): readonly IssueStatus[] {
+  return status?.length ? status : DEFAULT_STATUS_FILTER;
+}
+
+/** The statuses a config actually lets through. */
+export function effectiveStatusFilter(config: ViewConfig): readonly IssueStatus[] {
+  return effectiveStatuses(config.filters.status);
+}
+
+/** The status columns a selection renders, in board order. Boards without
+    a saved view (objective, issue family, cycle) use it directly. */
+export function statusColumns(
+  status: readonly IssueStatus[] | null | undefined
+): StatusMeta[] {
+  const set = new Set(effectiveStatuses(status));
+  return STATUSES.filter((s) => set.has(s.value));
+}
+
+/** A status selection as it should be stored: the default selection is
+    stored as no filter, so views keep following the default. */
+export function storedStatusFilter(
+  status: IssueStatus[]
+): IssueStatus[] | undefined {
+  return isDefaultStatusFilter(status) ? undefined : status;
+}
+
+/** Toggle one status in a selection that starts from the effective one:
+    without a stored filter the open statuses are checked, so a first click
+    adds Done or Canceled to them (MIN-736). The default selection comes
+    back as undefined, i.e. no stored filter. */
+export function toggleStatusFilter(
+  status: readonly IssueStatus[] | null | undefined,
+  value: IssueStatus
+): IssueStatus[] | undefined {
+  const set = new Set(effectiveStatuses(status));
+  if (set.has(value)) set.delete(value);
+  else set.add(value);
+  return storedStatusFilter([...set]);
+}
+
 export const DEFAULT_CONFIG: ViewConfig = {
   filters: {},
   sort: "smart",
@@ -26,11 +93,11 @@ export function lockToMe(config: ViewConfig): ViewConfig {
   return { ...config, filters: { ...config.filters, assignee: [ME_ASSIGNEE] } };
 }
 
-/** Is a config equivalent to the empty default? */
+/** Is a config equivalent to the default? */
 export function isDefaultConfig(config: ViewConfig): boolean {
   const f = config.filters;
   const empty =
-    !f.status?.length &&
+    isDefaultStatusFilter(f.status) &&
     !f.priority?.length &&
     !f.assignee?.length &&
     !f.effort?.length;
@@ -80,7 +147,7 @@ export function normalizeConfig(c: ViewConfig): string {
     arr && arr.length ? [...arr].map((v) => (v === null ? "∅" : v)).sort() : undefined;
   const f = c.filters;
   return JSON.stringify({
-    status: norm(f.status),
+    status: isDefaultStatusFilter(f.status) ? undefined : norm(f.status),
     priority: norm(f.priority),
     assignee: norm(f.assignee),
     effort: norm(f.effort),
@@ -103,7 +170,7 @@ export function configsEqual(a: ViewConfig, b: ViewConfig): boolean {
 export function activeFilterCount(config: ViewConfig): number {
   const f = config.filters;
   let n = 0;
-  if (f.status?.length) n++;
+  if (!isDefaultStatusFilter(f.status)) n++;
   if (f.priority?.length) n++;
   if (f.assignee?.length) n++;
   if (f.effort?.length) n++;
@@ -271,13 +338,14 @@ export function filterIssues(
   const assignee = f.assignee?.map((v) =>
     v === ME_ASSIGNEE ? (ctx.myUserId ?? ME_ASSIGNEE) : v
   );
+  const status = effectiveStatusFilter(config);
   return issues.filter((i) => {
     if (config.display.hideDone && i.status === "done") return false;
     // MIN-136: maintenance that comes back every week is not what we
     // comes to read on a board. Only the LIVE ticket of a series bears the
     // cadence — past occurrences remain visible.
     if (config.display.hideRecurring && i.recurrence) return false;
-    if (f.status?.length && !f.status.includes(i.status)) return false;
+    if (!status.includes(i.status)) return false;
     if (f.priority?.length && !f.priority.includes(i.priority)) return false;
     if (assignee?.length && !assignee.includes(i.assignee_id)) return false;
     if (f.effort?.length && (i.effort === null || !f.effort.includes(i.effort)))
@@ -292,13 +360,10 @@ export function filterIssues(
   });
 }
 
-/** Which status columns to render (status filter narrows them; hideDone drops Done). */
+/** Which status columns to render: the effective status filter (the open
+    statuses by default) narrows them; hideDone drops Done. */
 export function visibleStatuses(config: ViewConfig): StatusMeta[] {
-  let list = STATUSES;
-  if (config.filters.status?.length) {
-    const set = new Set(config.filters.status);
-    list = list.filter((s) => set.has(s.value));
-  }
+  let list = statusColumns(config.filters.status);
   if (config.display.hideDone) {
     list = list.filter((s) => s.value !== "done");
   }

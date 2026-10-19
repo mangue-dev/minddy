@@ -17,6 +17,7 @@ export function IssueFamilyBoardHeader({
   childCount,
   percent,
   exitHref,
+  actions,
 }: {
   parent: Issue;
   projectKey: string;
@@ -26,6 +27,8 @@ export function IssueFamilyBoardHeader({
   percent: number;
   /** The same board without the family scope — the back button's destination. */
   exitHref: string;
+  /** Board controls at the header's far edge (the status filter). */
+  actions?: React.ReactNode;
 }) {
   const t = useTranslations("IssueFamily");
 
@@ -54,6 +57,7 @@ export function IssueFamilyBoardHeader({
           {t("childCount", { count: childCount })}
         </p>
       </div>
+      {actions && <div className="ml-auto flex shrink-0 items-center">{actions}</div>}
     </AppContentHeader>
   );
 }

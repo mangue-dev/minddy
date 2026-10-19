@@ -43,11 +43,7 @@ import { usePublishCurrentView } from "@/lib/current-view-context";
 import { buildViewHref } from "@/lib/view-href";
 import { boardViewTabHref } from "@/lib/board-view-tab";
 import { ME_ASSIGNEE, filterIssues, visibleStatuses } from "@/lib/view-filter";
-import {
-  STATUSES,
-  issueIdentifier,
-  type IssueStatus,
-} from "@/lib/issue-constants";
+import { issueIdentifier, type IssueStatus } from "@/lib/issue-constants";
 import {
   useAssistantContext,
   useAssistantPanelActions,
@@ -60,6 +56,8 @@ import { BOARD_ICON } from "@/components/feature-icons";
 import { BoardToolbar } from "@/components/board-toolbar";
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { ObjectiveBoardHeader } from "@/components/objective-banner";
+import { StatusFilterMenu } from "@/components/status-filter-menu";
+import { useAppTabLocalState } from "@/lib/app-tab-local-state";
 import { IssueFamilyBoardHeader } from "@/components/issue-family-banner";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { BoardLoadingSkeleton } from "@/components/board-loading-skeleton";
@@ -447,22 +445,36 @@ function ProjectBoard() {
     [issues, activeObjective]
   );
 
-  const boardIssues = activeFamily
-    ? activeFamily.issues
-    : activeObjective
-      ? objectiveIssues
-      : normalIssues;
+  // The objective and family boards have no saved view: their own status
+  // filter (MIN-736) shows the open columns until Done or Canceled is chosen.
+  const [scopedStatusFilter, setScopedStatusFilter] = useAppTabLocalState<
+    IssueStatus[] | null
+  >("project-scoped-board-status", null);
+  const scopedStatuses = useMemo(
+    () => familyBoardStatuses(scopedStatusFilter),
+    [scopedStatusFilter],
+  );
+  const scopedStatusMenu = (
+    <StatusFilterMenu
+      status={scopedStatusFilter}
+      onChange={(next) => setScopedStatusFilter(next ?? null)}
+    />
+  );
+  const boardIssues = useMemo(() => {
+    if (!activeFamily && !activeObjective) return normalIssues;
+    const scoped = activeFamily ? activeFamily.issues : objectiveIssues;
+    const shown = new Set(scopedStatuses.map((s) => s.value));
+    return scoped.filter((i) => shown.has(i.status));
+  }, [activeFamily, activeObjective, objectiveIssues, normalIssues, scopedStatuses]);
   const statuses = useMemo(
     () =>
       // Family mode renders the same kanban sweep as the objective page
       // (see familyBoardStatuses): no `triage`, no `duplicate` column —
       // members parked there stay on the full board.
-      activeFamily
-        ? familyBoardStatuses()
-        : activeObjective
-          ? STATUSES
-          : visibleStatuses(config),
-    [activeFamily, activeObjective, config],
+      activeFamily || activeObjective
+        ? scopedStatuses
+        : visibleStatuses(config),
+    [activeFamily, activeObjective, scopedStatuses, config],
   );
   // Objective mode no longer forces a manual order (MIN-510): it follows the
   // board's sort, with "smart" — the app-wide default — standing in for the
@@ -762,6 +774,7 @@ function ProjectBoard() {
                 ) ?? 0
               }
               exitHref={issueFamilyBoardExitHref(projectId, searchParams)}
+              actions={scopedStatusMenu}
             />
           ) : activeObjective ? (
             <ObjectiveBoardHeader
@@ -778,6 +791,7 @@ function ProjectBoard() {
                     null
                   : null
               }
+              actions={scopedStatusMenu}
             />
           ) : (
             <BoardToolbar

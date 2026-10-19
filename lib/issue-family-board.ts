@@ -1,5 +1,6 @@
 import type { Issue } from "@/lib/types";
-import { STATUSES, type StatusMeta } from "@/lib/issue-constants";
+import type { IssueStatus, StatusMeta } from "@/lib/issue-constants";
+import { statusColumns } from "@/lib/view-filter";
 
 export const ISSUE_FAMILY_PARAM = "family";
 
@@ -10,10 +11,13 @@ type FamilyIssue = Pick<Issue, "id" | "parent_id">;
  * board — the objective page included — WITHOUT `triage` and `duplicate`.
  * A member parked in one of those two statuses reads as unsorted/closed
  * work, not as a column of its own; it stays on the full board, where its
- * column exists.
+ * column exists. Like every board, it shows the open statuses unless the
+ * status filter selects others (MIN-736).
  */
-export function familyBoardStatuses(): StatusMeta[] {
-  return STATUSES;
+export function familyBoardStatuses(
+  status?: readonly IssueStatus[] | null
+): StatusMeta[] {
+  return statusColumns(status);
 }
 
 function boardParams(search: string | URLSearchParams): URLSearchParams {
