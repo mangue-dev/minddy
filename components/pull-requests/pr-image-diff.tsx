@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Spinner } from "@/components/ui/spinner";
+import { ImageViewer } from "@/components/image-viewer";
 import { prFileRawUrl, type PrEndpoint, type PullRequestFile } from "@/lib/agent-api";
 
 /**
@@ -104,11 +105,14 @@ function formatBytes(bytes: number, locale: string): string {
 
 /** One of the two sides: the checkerboard, the image, and its legend. */
 function ImagePane({
+  fileName,
   label,
   version,
   tone,
   locale,
 }: {
+  /** Path of the file in the pull request, which names the expanded image. */
+  fileName: string;
   label: string;
   version: Version;
   /** Color of the border: the front is read in red, the after in green, like the diff. */
@@ -116,6 +120,10 @@ function ImagePane({
   locale: string;
 }) {
   const t = useTranslations("PullRequests");
+  const tResources = useTranslations("Resources");
+  // Keyed by the image it opened: a new version of the side closes the reader.
+  const [openedUrl, setOpenedUrl] = useState<string | null>(null);
+  const previewLabel = `${fileName} · ${label}`;
 
   const caption =
     version.status === "ready"
@@ -155,13 +163,30 @@ function ImagePane({
         {version.status === "loading" ? (
           <Spinner className="size-4 text-muted-foreground" />
         ) : version.status === "ready" && version.url ? (
-          // eslint-disable-next-line @next/next/no-img-element -- blob: local, hors optimiseur
-          <img
-            src={version.url}
-            alt={label}
-            className="max-h-72 max-w-full object-contain"
-            style={{ imageRendering: version.width && version.width < 64 ? "pixelated" : undefined }}
-          />
+          <>
+            <button
+              type="button"
+              aria-label={`${tResources("preview")}: ${previewLabel}`}
+              aria-haspopup="dialog"
+              className="block max-w-full cursor-zoom-in rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              onClick={() => setOpenedUrl(version.url ?? null)}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- local blob URL, outside the optimizer */}
+              <img
+                src={version.url}
+                alt={label}
+                className="max-h-72 max-w-full object-contain"
+                style={{ imageRendering: version.width && version.width < 64 ? "pixelated" : undefined }}
+              />
+            </button>
+            <ImageViewer
+              src={version.url}
+              alt={label}
+              label={previewLabel}
+              open={openedUrl === version.url}
+              onOpenChange={(open) => setOpenedUrl(open ? version.url ?? null : null)}
+            />
+          </>
         ) : (
           <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
             <HugeiconsIcon icon={ImageNotFound01Icon} className="size-3.5" />
@@ -199,6 +224,7 @@ export function PrImageDiff({
     return (
       <div className="p-3">
         <ImagePane
+          fileName={file.filename}
           label={file.status === "added" ? t("imageAdded") : t("imageRemoved")}
           version={only}
           tone={file.status === "added" ? "head" : "base"}
@@ -210,8 +236,8 @@ export function PrImageDiff({
 
   return (
     <div className="flex flex-col gap-3 p-3 sm:flex-row">
-      <ImagePane label={t("imageBefore")} version={base} tone="base" locale={locale} />
-      <ImagePane label={t("imageAfter")} version={head} tone="head" locale={locale} />
+      <ImagePane fileName={file.filename} label={t("imageBefore")} version={base} tone="base" locale={locale} />
+      <ImagePane fileName={file.filename} label={t("imageAfter")} version={head} tone="head" locale={locale} />
     </div>
   );
 }

@@ -3,7 +3,8 @@
 import { useEditorEditable } from "@/components/editor/use-editor-editable";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ImageNotFound01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useId, useRef, useState } from "react";
+import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import type { NodeViewRenderer } from "@tiptap/core";
 import {
   NodeViewWrapper,
@@ -20,6 +21,7 @@ import {
   clampImageWidth,
 } from "@/components/pages/blocks/image";
 import { FileViewer } from "@/components/file-viewer";
+import { IMAGE_HERO_TRANSITION } from "@/components/image-viewer";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { fileDownloadHref } from "@/lib/page-files";
 import { usePageUploadsContext } from "@/components/pages/page-uploads";
@@ -99,12 +101,17 @@ export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }
   /* ── Preview on click ───────────────────────── ────────────────────────── */
 
   const [zoomed, setZoomed] = useState(false);
+  // The opened image flies from the block and back, as in the documentation.
+  const heroId = useId();
+  const reducedMotion = useReducedMotion();
+  const layoutId = src && !reducedMotion ? `editor-image-${heroId}` : undefined;
   const displayed = src ?? upload?.previewUrl ?? null;
   const failed = upload?.status === "failed";
   // Neither address nor sending: the block survived a tab closed in the middle of sending.
   const abandoned = !src && !upload;
 
   return (
+    <LayoutGroup id={heroId}>
     <NodeViewWrapper
       as="div"
       ref={wrapper}
@@ -133,6 +140,9 @@ export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }
           <button type="button" disabled={!src} aria-label={t("imageOpen")} aria-haspopup="dialog"
             className="block w-full text-left disabled:cursor-default"
             onClick={() => { if (src) setZoomed(true); }}>
+          <motion.span layoutId={layoutId} className="block"
+            animate={{ opacity: zoomed ? 0 : 1 }}
+            transition={{ ...IMAGE_HERO_TRANSITION, opacity: { duration: reducedMotion ? 0 : 0.12 } }}>
           <img
             src={displayed}
             alt={alt}
@@ -166,6 +176,7 @@ export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }
               !src && "opacity-60"
             )}
           />
+          </motion.span>
           </button>
 
           {upload?.status === "uploading" && (
@@ -254,6 +265,7 @@ export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }
         mimeType="image/png"
         open={zoomed}
         onOpenChange={setZoomed}
+        layoutId={layoutId}
         onRemove={editable ? () => setConfirmRemove(true) : undefined}
       />}
       {/* Removing from the viewer asks first (MIN-742). */}
@@ -269,6 +281,7 @@ export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }
       />}
 
     </NodeViewWrapper>
+    </LayoutGroup>
   );
 }
 
