@@ -463,8 +463,8 @@ describe("reviewFeedbackPost — the decision-model first filter (MIN-565)", () 
     expect(report.posts_reviewed).toBe(1);
   });
 
-  it("skips the decision model entirely under the kill switch, behaving like today", async () => {
-    getAppConfigValuesMock.mockResolvedValue({ jev_decisions_enabled: "false" });
+  it("starts the run with the LLM when the decision model is skipped", async () => {
+    getAppConfigValuesMock.mockResolvedValue({ jev_llm_first: "feedback_review" });
     forcedToolCallMock.mockResolvedValue(llmArgs());
 
     const report = await reviewFeedbackPost("post-new", "project-1");

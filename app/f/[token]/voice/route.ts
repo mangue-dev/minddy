@@ -8,7 +8,6 @@ import {
 } from "@/lib/server/feedback/identity";
 import {
   FEEDBACK_VOICE_MAX_AUDIO_BYTES,
-  feedbackVoiceEnabled,
   transcribeFeedbackAudio,
 } from "@/lib/server/feedback/voice";
 import { recordAiUsage, newRunId } from "@/lib/server/ai-usage";
@@ -64,10 +63,6 @@ export async function POST(
   const session = await getFeedbackSession(ctx.board.id, cookie);
   if (!session) {
     return NextResponse.json({ error: "notAuthenticated" }, { status: 401 });
-  }
-
-  if (!(await feedbackVoiceEnabled())) {
-    return NextResponse.json({ error: "unavailable" }, { status: 503 });
   }
 
   const rate = await consumeFeedbackVoiceLimit({

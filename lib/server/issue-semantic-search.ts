@@ -1,8 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { aiModelFallback, stripModelSuffix } from "@/lib/ai-model-config";
-import { getAppConfigValues } from "@/lib/server/app-config";
+import { stripModelSuffix } from "@/lib/ai-model-config";
 import { resolveAiRuntime } from "@/lib/server/ai-runtime";
 import { hasUsageBudget } from "@/lib/server/usage";
 import { cosineSimilarity, requestEmbeddings } from "@/lib/server/embeddings";
@@ -28,7 +27,6 @@ import { isSemanticQuery, normalizeSemanticQuery } from "@/lib/issue-semantic-qu
  *   once, and issues not reindexed yet stay reachable lexically.
  * - **Opt-out.** A user who turned off "Index issues" has refused embeddings:
  *   no query vector is created for them, and lexical search is all they get.
- *   The platform switch `smart_fill_relations_enabled` cuts it too.
  * - **Cost.** One embedding call per distinct query, billed to the searching
  *   user under `issue_search`, after their budget check. The query vector is
  *   cached per user and per embedding target, so a repeated query, the same
@@ -42,7 +40,6 @@ import { isSemanticQuery, normalizeSemanticQuery } from "@/lib/issue-semantic-qu
 export type SemanticSearchStatus =
   | "ok"
   | "skipped_query"
-  | "disabled"
   | "opted_out"
   | "budget_exhausted"
   | "unavailable"
@@ -92,12 +89,6 @@ function cacheSet(key: string, value: { vector: number[]; version: string }) {
 }
 
 async function enabledForUser(userId: string): Promise<SemanticSearchStatus | null> {
-  const cfg = await getAppConfigValues(["smart_fill_relations_enabled"]).catch(
-    () => ({}) as Record<string, string | null>
-  );
-  if ((cfg["smart_fill_relations_enabled"] ?? aiModelFallback("smart_fill_relations_enabled")) === "false") {
-    return "disabled";
-  }
   const { data, error } = await getServiceClient().auth.admin.getUserById(userId);
   if (error || !data.user) return "unavailable";
   if (!resolveIssueIndexing((data.user.user_metadata ?? {}) as Record<string, unknown>)) return "opted_out";

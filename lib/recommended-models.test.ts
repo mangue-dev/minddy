@@ -53,11 +53,11 @@ describe("le repli produit", () => {
     }
   });
 
-  it("s'ouvre sur le modèle par défaut de minddy", () => {
+  it("opens on minddy's default model", () => {
     // The instance default MUST be advised: this is what the picker checks
     // on opening, and a list that does not contain it opens with a
     // selection where the current choice is nowhere.
-    expect(DEFAULT_RECOMMENDED_MODELS).toContain(aiModelFallback("agent_model"));
+    expect(DEFAULT_RECOMMENDED_MODELS).toContain(aiModelFallback("assistant_model"));
   });
 
   it("stays under the cap of the most generous plan", () => {

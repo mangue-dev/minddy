@@ -4147,10 +4147,7 @@
       },
       "automations": {
         "title": "Automatizaciones",
-        "desc": "Asignación inteligente, llenado inteligente, slips e importaciones."
-      },
-      "agent": {
-        "title": "Trabajo de código de Numo"
+        "desc": "Asignación inteligente, llenado inteligente, briefs, importaciones y mensajes de commit de fusión."
       },
       "byok": {
         "title": "Claves personales",
@@ -4182,33 +4179,17 @@
         "label": "Modelo de retroceso",
         "desc": "Utilizado cuando el modelo Numo está vacío."
       },
-      "agent_model": {
-        "label": "Referencia de precio del agente de código",
-        "desc": "Modelo de referencia usado para calcular los multiplicadores de los planes. No sustituye el modelo elegido en cada cuenta."
-      },
-      "agent_subagent_favorites": {
-        "label": "Modelos favoritos de sub-agentes",
-        "desc": "Lo que lee el agente para elegir qué ejecutar un subagente. Puede utilizar cualquier modelo en el catálogo; estos son los que recomendamos. El caso de uso va en su prompt literal: escríbalo en inglés, para un modelo que elija."
-      },
       "recommended_models": {
         "label": "Modelos recomendados",
-        "desc": "La lista corta en la que se abre el selector de modelos, en todas partes de la aplicación, antes de que alguien tipifique. No oculta nada: la búsqueda todavía llega a todo el catálogo, y una última línea se abre más. El pedido se calcula a partir del precio, más barato primero, por lo que sólo elige QUIENes modelos recomendar. Un modelo por encima del cap Pro plan (×40) es lanzable por nadie."
+        "desc": "La lista corta en la que se abre el selector de modelos, en todas partes de la aplicación, antes de que alguien tipifique. No oculta nada: la búsqueda todavía llega a todo el catálogo, y una última línea se abre más. El pedido se calcula a partir del precio, más barato primero, por lo que sólo elige QUIENes modelos recomendar. Nadie puede seleccionar un modelo por encima del límite del plan Pro (×40)."
       },
       "smart_assign_model": {
         "label": "Asignación inteligente",
         "desc": "Asigna una incidencia que sale de Clasificación sin nadie asignado."
       },
-      "smart_fill_enabled": {
-        "label": "Rellenado inteligente",
-        "desc": "Permite que el formulario para crear incidencias complete automáticamente la prioridad, el esfuerzo, las categorías y el objetivo. Si se desactiva aquí, el selector desaparece de todas las cuentas."
-      },
       "smart_fill_model": {
         "label": "Modelo de llenado inteligente",
         "desc": "Lee el título y la descripción de una incidencia nueva y completa sus campos. Hay alguien esperando el resultado: elige un modelo rápido."
-      },
-      "smart_fill_relations_enabled": {
-        "label": "Relaciones de Smart Fill",
-        "desc": "Indexa las incidencias después de guardarlos y deja que Smart Fill vincule incidencias relacionadas y dependencias. Desactivado aquí, la indexación y las relaciones se detienen en todas partes; la creación no se ve afectada."
       },
       "issue_embedding_model": {
         "label": "Embeddings de incidencias",
@@ -4222,10 +4203,6 @@
         "label": "Títulos de conversación",
         "desc": "Nombres de una conversación de Numo en unas pocas palabras, desde su primer mensaje. Un pequeño modelo es suficiente."
       },
-      "web_search_enabled": {
-        "label": "Búsqueda en la Web",
-        "desc": "Proporciona a Numo y a los agentes una herramienta de búsqueda web (plugin de OpenRouter). Cada búsqueda cuesta unos 0,005 $ y se descuenta del uso de quien la inicia."
-      },
       "web_search_model": {
         "label": "Modelo de búsqueda web",
         "desc": "Lee los resultados de la búsqueda y escribe la respuesta. Un modelo pequeño es suficiente."
@@ -4238,18 +4215,6 @@
         "label": "De habla a texto",
         "desc": "Convierte audio de dictado en texto."
       },
-      "demo_dictation_enabled": {
-        "label": "Demostración de voz de la página de aterrizaje",
-        "desc": "Permite que un visitante sin cuenta pruebe el dictado en la página de inicio con una incidencia ficticia. Es la única llamada de IA que minddy ofrece gratis: unos 0,0003 $ por intento, con un límite de diez por IP y hora y 500 al día. Si se desactiva, la demostración indica que no está disponible."
-      },
-      "feedback_classify_enabled": {
-        "label": "Clasificación automática",
-        "desc": "Clasifica las sugerencias entrantes por categorías, descarta el spam, oculta el contenido sensible y publica el resto en el tablero. Si se desactiva, todas las publicaciones esperan una revisión manual."
-      },
-      "feedback_voice_enabled": {
-        "label": "Sugerencia dictada",
-        "desc": "Activa el micrófono en ambos formularios de sugerencias: el tablero público y la captura interna. La grabación se transcribe y Numo la convierte en un título y un cuerpo; el uso se atribuye a quien habla o, si es un visitante, a la persona propietaria del tablero. Si se desactiva, el micrófono desaparece y se mantiene la entrada por teclado."
-      },
       "feedback_analysis_model": {
         "label": "Análisis de la sugerencia",
         "desc": "fusión de duplicados obvios en el tablero y sugiere fusión para el resto."
@@ -4258,17 +4223,9 @@
         "label": "Embeddings de sugerencias",
         "desc": "Vectoriza la sugerencia para medir la similitud."
       },
-      "import_map_enabled": {
-        "label": "Cartografía de importación de CSV",
-        "desc": "Deja que Numo coincida con las columnas de un CSV importado en los campos de minddy. Una llamada por archivo se derramó, en un resumen de las columnas; nunca en las filas. Desactivado, la importación cae de nuevo a los nombres de encabezado correspondientes."
-      },
       "import_map_model": {
         "label": "CSV importar el modelo de mapeo",
         "desc": "Lee los encabezados de la columna, sus valores distintos y algunas muestras, y propone a dónde va cada columna. El usuario ve la propuesta y puede corregirla antes de importarla."
-      },
-      "brief_enabled": {
-        "label": "Breve desglose",
-        "desc": "Convierte un brief pegado en una propuesta de objetivos e incidencias al iniciar un proyecto. Realiza una llamada por brief, nunca por incidencia. Si se desactiva, los proyectos nuevos parten de una importación o de incidencias introducidas a mano."
       },
       "brief_model": {
         "label": "Modelo de desglose breve",
@@ -4277,17 +4234,9 @@
       "merge_message_model": {
         "label": "Modelo para commits de fusión generados"
       },
-      "jev_decisions_enabled": {
-        "label": "Decisiones de IA",
-        "desc": "Activa o desactiva la capa de decisión de IA en todas partes a la vez. Desactivada, cada llamada de decisión recurre a su pasada LLM. Interruptor de incidentes, no un ajuste del producto."
-      },
       "jev_model": {
         "label": "Modelo de decisión",
         "desc": "El único modelo que responde a todas las decisiones de IA de la instancia: Smart Fill, Smart Assign y la revisión de comentarios. Solo se proponen modelos de decisión, y cada elección se prueba con una llamada antes de guardarse. El umbral de confianza se calibró con Jev: otro modelo puede recurrir al LLM con más o menos frecuencia."
-      },
-      "faq_ask_enabled": {
-        "label": "Recuadro de preguntas FAQ",
-        "desc": "Permite a un visitante sin cuenta hacer su propia pregunta en la sección FAQ de una página y recibir una respuesta de IA basada en la documentación del producto. El único gasto, junto con la demo de la landing, ofrecido al tráfico anónimo: una pequeña completación por pregunta, limitada a diez por IP y hora, 1000 al día. Desactivado, el recuadro desaparece de todas las FAQ."
       },
       "faq_ask_model": {
         "label": "Modelo del recuadro FAQ",
@@ -4461,21 +4410,6 @@
       "totalProjects": "Proyectos",
       "totalIssues": "Incidencias",
       "issuesPerProject": "Incidencias por proyecto"
-    },
-    "favorites": {
-      "pickModel": "Elige un modelo",
-      "useCasePlaceholder": "Cuándo elegir este modelo; en inglés, leído por el agente.",
-      "add": "Añadir un modelo",
-      "save": "Guardar",
-      "cancel": "Cancelar",
-      "reset": "Volver a los favoritos predeterminados",
-      "remove": "Quitar este modelo",
-      "empty": "No hay favoritos: el agente elegirá del catálogo por sí mismo. Guardar una lista vacía entrega la configuración de nuevo a los favoritos predeterminados.",
-      "incomplete": "Elige un modelo para cada favorito antes de guardar.",
-      "effortInherit": "No se recomienda ningún nivel",
-      "effortLow": "De bajo pensamiento",
-      "effortMedium": "Medio pensamiento",
-      "effortHigh": "Alto pensamiento"
     },
     "recommended": {
       "pickModel": "Elige un modelo",

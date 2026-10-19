@@ -100,9 +100,9 @@ describe("registre", () => {
     }
   });
 
-  it("laisse l'agent de code et la review de PR hors du dispositif", () => {
+  it("keeps fields marked noSuffix out of the routing suffixes", () => {
     // The fallback “play again without the `:`” does not hold up for them.
-    for (const key of ["agent_model"]) {
+    for (const key of AI_MODEL_CONFIG_FIELDS.filter((f) => f.noSuffix).map((f) => f.key)) {
       expect(isModelSuffixKey(modelSuffixKey(key))).toBe(false);
       expect(AI_MODEL_CONFIG_KEYS.has(modelSuffixKey(key))).toBe(false);
     }

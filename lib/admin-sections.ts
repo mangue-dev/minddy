@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Activity, BotIcon as Bot, DollarCircleIcon as CircleDollarSign, FlowIcon as Workflow, GaugeIcon, Globe, KeyRoundIcon as KeyRound, LayoutDashboardIcon, MessageSquareHeartIcon, Mic01Icon as Mic, PieChart, ReceiptText, Rocket, Sparkles, UserGroupIcon as Users, WalletCards } from "@hugeicons/core-free-icons";
+import { Activity, DollarCircleIcon as CircleDollarSign, FlowIcon as Workflow, GaugeIcon, Globe, KeyRoundIcon as KeyRound, LayoutDashboardIcon, MessageSquareHeartIcon, Mic01Icon as Mic, PieChart, ReceiptText, Rocket, Sparkles, UserGroupIcon as Users, WalletCards } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import type { AppIcon } from "@/components/icon";
 import type { MessageKey } from "@/lib/i18n-keys";
@@ -27,7 +27,6 @@ export const ADMIN_SECTIONS = {
   financeLogs: "finance-logs",
   modelsAssistant: "models-assistant",
   modelsAutomations: "models-automations",
-  modelsAgent: "models-agent",
   modelsByok: "models-byok",
   modelsVoice: "models-voice",
   modelsFeedback: "models-feedback",
@@ -60,7 +59,6 @@ const MODEL_GROUP_SECTIONS: Record<
 > = {
   assistant: { id: ADMIN_SECTIONS.modelsAssistant, icon: Sparkles },
   automations: { id: ADMIN_SECTIONS.modelsAutomations, icon: Workflow },
-  agent: { id: ADMIN_SECTIONS.modelsAgent, icon: Bot },
   byok: { id: ADMIN_SECTIONS.modelsByok, icon: KeyRound },
   voice: { id: ADMIN_SECTIONS.modelsVoice, icon: Mic },
   feedback: { id: ADMIN_SECTIONS.modelsFeedback, icon: MessageSquareHeartIcon },

@@ -3,10 +3,10 @@
  * the plan caps (`BillingPlan.maxModelMultiplier`).
  *
  * Definition: average of entry and exit prices per million tokens,
- * compared to that of MINDDY'S DEFAULT MODEL (`app_config.agent_model`).
- * The baseline is therefore always worth ×1, and the entire scale is recalculated alone on
- * day when the admin changes this default — a hard-written multiplier table
- * would have lied from the generation of models following.
+ * compared to that of MINDDY'S PRICING BASELINE (`PRICING_BASELINE_MODEL` in
+ * `lib/ai-model-config.ts`). The baseline is therefore always worth ×1, and the
+ * entire scale is recalculated from live prices — a hard-written multiplier
+ * table would have lied from the next generation of models.
  *
  * The average (input + output) / 2 is deliberately crude: the true ratio
  * depends on the shape of the traffic (an agent reads much more than it writes, and the

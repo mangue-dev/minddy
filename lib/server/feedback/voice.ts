@@ -50,9 +50,6 @@ import {
  */
 
 
-/** Admin switch — mutes the microphone on both surfaces at once. */
-export const FEEDBACK_VOICE_ENABLED_KEY = "feedback_voice_enabled";
-
 /**
  * 10 MB, the same limit as `/api/transcribe`: at the rate pinned on the client side
  * (48 kb/s), it's worth ~28 minutes of recording time. A return never does the same —
@@ -218,12 +215,6 @@ export function normalizeVoiceDraft(value: unknown): FeedbackVoiceDraft {
     title: typeof raw.title === "string" ? raw.title.slice(0, FEEDBACK_TITLE_MAX) : "",
     body: typeof raw.body === "string" ? raw.body.slice(0, FEEDBACK_BODY_MAX) : "",
   };
-}
-
-/** The admin flag, read once per call (values ​​are cached). */
-export async function feedbackVoiceEnabled(): Promise<boolean> {
-  const cfg = await getAppConfigValues([FEEDBACK_VOICE_ENABLED_KEY]);
-  return (cfg[FEEDBACK_VOICE_ENABLED_KEY] ?? "true").trim() !== "false";
 }
 
 /**

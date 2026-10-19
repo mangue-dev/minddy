@@ -22,7 +22,6 @@ import { validateMessageContext } from "@/lib/server/assistant/message-context";
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
 import { fallbackShortTitle } from "@/lib/server/short-title";
 import { ensureUsageBudget } from "@/lib/server/usage";
-import { isWebSearchEnabled } from "@/lib/server/web-search";
 import { getServiceClient } from "@/lib/supabase-service";
 import { encodeConversationTitle, shouldProtectConversationTitle } from
   "./conversation-title-content";
@@ -204,7 +203,7 @@ export async function startNumoIntent(
         locale: input.locale,
         timezone: input.timezone ?? "",
         numoDefaultStatus: resolveNumoDefaultStatus(input.userMetadata),
-        webSearchEnabled: await isWebSearchEnabled(),
+        webSearchEnabled: true,
         triggerSource: input.triggerSource ?? "chat",
         ...(input.routine
           ? {

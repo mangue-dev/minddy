@@ -110,7 +110,7 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     id: "openrouter",
     label: "OpenRouter",
     baseUrl: "https://openrouter.ai/api/v1",
-    // No own default: takes over the root default app_config.agent_model,
+    // No own default: takes over the platform settings of each call type,
     // exactly like the minddy quota (same OpenRouter endpoint).
     keyPlaceholder: "sk-or-v1-…",
     logoModel: "openrouter/x",

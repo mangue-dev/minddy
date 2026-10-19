@@ -7,7 +7,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
   meta: {} as Record<string, unknown>,
-  flag: null as string | null,
   budget: true,
   runtime: { provider: "openrouter", model: "openai/text-embedding-3-small" } as { provider: string; model: string } | null,
   vectors: [] as { issue_id: string; project_id: string; index_version: string; embedding: number[] }[],
@@ -24,9 +23,6 @@ vi.mock("@/lib/server/supabase-fetch", () => ({
 }));
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/server/app-config", () => ({
-  getAppConfigValues: async () => (h.flag ? { smart_fill_relations_enabled: h.flag } : {}),
-}));
 vi.mock("@/lib/server/usage", () => ({ hasUsageBudget: async () => h.budget }));
 vi.mock("@/lib/server/ai-runtime", () => ({ resolveAiRuntime: async () => h.runtime }));
 vi.mock("@/lib/server/embeddings", () => ({
@@ -69,7 +65,6 @@ const search = (query = "single sign-on for enterprise customers", projectIds = 
 beforeEach(() => {
   clearSemanticQueryCache();
   h.meta = {};
-  h.flag = null;
   h.budget = true;
   h.runtime = { provider: "openrouter", model: "openai/text-embedding-3-small" };
   h.deleted = new Set();
@@ -126,7 +121,6 @@ describe("searchIssuesSemantically", () => {
   });
 
   it.each([
-    ["disabled", () => { h.flag = "false"; }],
     ["opted_out", () => { h.meta = { issue_indexing: false }; }],
     ["budget_exhausted", () => { h.budget = false; }],
     ["unavailable", () => { h.runtime = null; }],

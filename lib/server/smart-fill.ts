@@ -3,8 +3,6 @@ import { objectiveStore } from "@/lib/server/objective-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
-import { getAppConfigValues } from "@/lib/server/app-config";
-import { aiModelFallback } from "@/lib/ai-model-config";
 import { hasUsageBudget } from "@/lib/server/usage";
 import { runDecision } from "@/lib/server/decisions/runner";
 import { buildSmartFillSpec } from "@/lib/server/decisions/prepare";
@@ -382,7 +380,7 @@ export function smartFillAnswersToRaw(answers: DecisionAnswers): Record<string, 
  * ([runner.ts](decisions/runner.ts)): the decision model first (one fast call on the same
  * structured state), the existing LLM pass as fallback — unchanged, replayed
  * verbatim by the spec's recipe — and the empty patch when BOTH engines fail,
- * the same degradation as before. The gates stay here: the flag, the budget
+ * the same degradation as before. The gates stay here: the budget
  * of the actor (the one who armed the pass pays for whichever engine
  * answers), and the context gathering.
  */
@@ -402,12 +400,6 @@ export async function runSmartFill({
 }): Promise<SmartFillPatch> {
   if (!billToUserId || !title.trim()) return {};
   try {
-    const config = await getAppConfigValues(["smart_fill_enabled"]);
-    const enabled = (config["smart_fill_enabled"] ?? aiModelFallback("smart_fill_enabled")) !== "false";
-    if (!enabled) {
-      console.warn("[smart-fill] skipped: platform_disabled");
-      return {};
-    }
     // The budget of THE ONE WHO ARMED the scale, as for dictation. Dry, we
     // does not fill out — and the ticket is still born.
     if (!(await hasUsageBudget(billToUserId, "automations", "smart_fill_model"))) {

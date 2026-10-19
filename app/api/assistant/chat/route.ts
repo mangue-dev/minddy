@@ -25,7 +25,6 @@ import { fallbackShortTitle, generateShortTitle } from "@/lib/server/short-title
 import { encodeConversationTitle, shouldProtectConversationTitle } from
   "@/lib/server/numo/conversation-title-content";
 import { newRunId } from "@/lib/server/ai-usage";
-import { isWebSearchEnabled } from "@/lib/server/web-search";
 import { parseResourcesInput } from "@/lib/server/attachments";
 import { resolveNumoDefaultStatus } from "@/lib/numo-default-status";
 import {
@@ -532,7 +531,6 @@ export async function POST(request: NextRequest) {
     createdConversationId = created ? reservedConversationId : null;
     if (created) pendingTitle = { conversationId: reservedConversationId, fallback: title };
   }
-  const webSearchEnabled = await isWebSearchEnabled();
   const timezone =
     typeof body.timezone === "string" && body.timezone.length <= 64
       ? body.timezone
@@ -551,7 +549,7 @@ export async function POST(request: NextRequest) {
         locale,
         timezone,
         numoDefaultStatus,
-        webSearchEnabled,
+        webSearchEnabled: true,
         ...(pageContext?.documentation ? { documentation: { articleId: pageContext.documentation.articleId,
           ...(pageContext.documentation.selfHosting ? { selfHosting: pageContext.documentation.selfHosting } : {}) } } : {}),
         ...(routineContinuation

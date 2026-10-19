@@ -6,9 +6,9 @@ const { getResolvedBilling, getOpenRouterModelInfo } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/server/billing-accounts", () => ({ getResolvedBilling }));
-vi.mock("./model", () => ({ getRootDefaultModel: vi.fn(async () => "minddy/default") }));
 vi.mock("./openrouter-index", () => ({ getOpenRouterModelInfo }));
 
+import { PRICING_BASELINE_MODEL } from "@/lib/ai-model-config";
 import { ensureModelInPlan } from "./model-plan";
 
 const PRICING = { inputUsdPerMTok: 1, outputUsdPerMTok: 1 };
@@ -20,7 +20,7 @@ beforeEach(() => {
   });
   getOpenRouterModelInfo.mockReset();
   getOpenRouterModelInfo.mockImplementation(async (model: string) =>
-    model === "minddy/default"
+    model === PRICING_BASELINE_MODEL
       ? { pricing: PRICING }
       : { pricing: { inputUsdPerMTok: 2, outputUsdPerMTok: 2 } },
   );

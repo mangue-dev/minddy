@@ -37,10 +37,13 @@ vi.mock("@/lib/server/ai-usage", async (original) => ({
     for (const row of Array.isArray(input) ? input : [input]) ledger.push(row as never);
   },
 }));
-// MINDDY_RELATION_EVAL_ENGINE=llm turns the decision model off, measuring the LLM fallback alone.
+// MINDDY_RELATION_EVAL_ENGINE=llm lists every use case LLM-first, measuring the LLM fallback alone.
 vi.mock("@/lib/server/app-config", () => ({
-  getAppConfigValues: async () =>
-    process.env.MINDDY_RELATION_EVAL_ENGINE === "llm" ? { jev_decisions_enabled: "false" } : {},
+  getAppConfigValues: async () => {
+    if (process.env.MINDDY_RELATION_EVAL_ENGINE !== "llm") return {};
+    const { DECISION_USE_CASES } = await import("@/lib/server/decisions/types");
+    return { jev_llm_first: DECISION_USE_CASES.join(",") };
+  },
   setAppConfigValue: async () => {},
 }));
 vi.mock("@/lib/server/agent/model", async (original) => ({

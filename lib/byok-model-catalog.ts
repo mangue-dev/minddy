@@ -86,7 +86,7 @@ export function isByokCatalogProvider(value: string | null | undefined): value i
 }
 
 /**
- * The call-type tail of a BYOK config key (`agent_model`,
+ * The call-type tail of a BYOK config key (`assistant_model`,
  * `transcription_model`…), or `null` for other shapes.
  *
  * Keys are matched longest-first so future overlapping names cannot produce

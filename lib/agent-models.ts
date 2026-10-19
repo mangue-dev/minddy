@@ -2,10 +2,7 @@
  * Shared registry (client + server) of models and settings of the agent of
  * cloud code (MIN-46). NO server-only import: the model picker (UI) and the
  * server-side resolution (`lib/server/agent/model.ts`) both import it.
- *
- * The root model below remains a pricing baseline.
  */
-import { aiModelFallback } from "@/lib/ai-model-config";
 
 export interface AgentModelOption {
   /** id OpenRouter au format `provider/model`. */
@@ -15,19 +12,6 @@ export interface AgentModelOption {
   /** short note (cost / usage). */
   hint?: string;
 }
-
-// ── app_config keys (admin overload without redeploy) ──────────────────────────
-/** Root model used as the plan-pricing baseline, not as a worker fallback. */
-export const AGENT_MODEL_CONFIG_KEY = "agent_model";
-// The old fixed monthly cap (`agent_monthly_cap_usd`, $10) is replaced
-// from MIN-72 by the PLAN usage budget (lib/billing-plans.ts).
-
-/**
- * Pricing baseline if `app_config.agent_model` is absent. The id itself lives in
- * the admin registry (`lib/ai-model-config.ts`), along with all the others — we don't rewrite it here. Mirror the migration seed 20260806090000_agent_runs.sql:
- * keep both in sync.
- */
-export const AGENT_ROOT_MODEL_FALLBACK = aiModelFallback(AGENT_MODEL_CONFIG_KEY);
 
 /**
  * Curated labels from a handful of top models. The picker (launch +

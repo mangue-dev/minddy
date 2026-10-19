@@ -4147,10 +4147,7 @@
       },
       "automations": {
         "title": "Automazioni",
-        "desc": "Assunzione intelligente, riempimento intelligente, slip e importazioni."
-      },
-      "agent": {
-        "title": "Lavoro sul codice di Numo"
+        "desc": "Assegnazione intelligente, riempimento intelligente, brief, importazioni e messaggi di commit di merge."
       },
       "byok": {
         "title": "Chiavi personali",
@@ -4182,33 +4179,17 @@
         "label": "Modello di ribaltamento",
         "desc": "Utilizzato quando il modello Numo è lasciato vuoto."
       },
-      "agent_model": {
-        "label": "Riferimento prezzi per gli agenti di codice",
-        "desc": "Modello di riferimento usato per calcolare i moltiplicatori dei piani. Non sostituisce il modello scelto in ogni account."
-      },
-      "agent_subagent_favorites": {
-        "label": "Modelli preferiti di Sub-agent",
-        "desc": "Quello che l'agente legge per scegliere cosa eseguire un sub-agente su. Può utilizzare qualsiasi modello nel catalogo; questi sono quelli che consigliamo. Il caso di utilizzo va nella sua prompta letteralmente: scriverlo in inglese, per un modello che sceglie."
-      },
       "recommended_models": {
         "label": "Modelli consigliati",
-        "desc": "La lista corta che il selettore di modelli apre, ovunque nell'app, prima che qualcuno digiti. Non nasconde nulla: la ricerca raggiunge ancora l'intero catalogo, e un'ultima linea si apre di più. L'ordine è calcolato dal prezzo, più economico prima, quindi si sceglie solo i modelli da consigliare. Un modello sopra il tappo Pro plan (×40) è lanciabile da nessuno."
+        "desc": "La lista corta che il selettore di modelli apre, ovunque nell'app, prima che qualcuno digiti. Non nasconde nulla: la ricerca raggiunge ancora l'intero catalogo, e un'ultima linea si apre di più. L'ordine è calcolato dal prezzo, più economico prima, quindi si sceglie solo i modelli da consigliare. Nessuno può selezionare un modello oltre il limite del piano Pro (×40)."
       },
       "smart_assign_model": {
         "label": "Assunzione intelligente",
         "desc": "Assegna un ticket che lascia il triage con nessuno sopra."
       },
-      "smart_fill_enabled": {
-        "label": "Riempimento intelligente",
-        "desc": "Lascia che il modulo crea-issue riempia la priorità, lo sforzo, le categorie e l'obiettivo da solo. Qui, la commutazione scompare da ogni account."
-      },
       "smart_fill_model": {
         "label": "Modello Smart-fill",
         "desc": "Legge il titolo e la descrizione di un nuovo ticket e ne compila i campi. Qualcuno ne attende il risultato: scegli un modello veloce."
-      },
-      "smart_fill_relations_enabled": {
-        "label": "Relazioni di Smart Fill",
-        "desc": "Indicizza i ticket dopo il salvataggio e lascia che Smart Fill colleghi ticket correlati e dipendenze. Disattivato qui, indicizzazione e relazioni si fermano ovunque; la creazione non cambia."
       },
       "issue_embedding_model": {
         "label": "Embedding dei ticket",
@@ -4222,10 +4203,6 @@
         "label": "Titoli di conversazione",
         "desc": "Nomina una conversazione di Numo in poche parole, dal suo primo messaggio. Un piccolo modello è sufficiente."
       },
-      "web_search_enabled": {
-        "label": "Ricerca web",
-        "desc": "Conferisce a Numo e agli agenti uno strumento di ricerca web (plugin OpenRouter). Ogni ricerca costa circa $0.05, contato contro l'uso di chi lo attiva."
-      },
       "web_search_model": {
         "label": "Modello di ricerca web",
         "desc": "Legge i risultati della ricerca e scrive la risposta. Basta un piccolo modello."
@@ -4238,18 +4215,6 @@
         "label": "Discorso a testo",
         "desc": "Converte l'audio della dettatura in testo."
       },
-      "demo_dictation_enabled": {
-        "label": "Demo voce della pagina di atterraggio",
-        "desc": "Consente a un visitatore senza account di provare la dettatura nella home page con un ticket fittizio. È l'unica chiamata AI offerta da minddy: circa 0,0003 $ per prova, con un limite di dieci per IP ogni ora e 500 al giorno. Se disattivata, la demo indica che non è disponibile."
-      },
-      "feedback_classify_enabled": {
-        "label": "Classificazione automatica",
-        "desc": "Classifica i feedback in arrivo, elimina lo spam, nasconde i contenuti sensibili e pubblica il resto sulla bacheca. Se disattivata, ogni richiesta attende la revisione manuale."
-      },
-      "feedback_voice_enabled": {
-        "label": "Feedback dittato",
-        "desc": "Attiva il microfono in entrambi i moduli di feedback: sulla bacheca pubblica e nell'inserimento interno. L'audio viene trascritto, poi Numo lo trasforma in titolo e testo; il consumo viene attribuito a chi parla o, per un visitatore, al proprietario della bacheca. Se disattivata, il microfono scompare e resta la digitazione."
-      },
       "feedback_analysis_model": {
         "label": "Analisi dei commenti",
         "desc": "Mescola ovvi duplicati sul tabellone e suggerisce fusioni per il resto."
@@ -4258,17 +4223,9 @@
         "label": "Integrazioni di feedback",
         "desc": "Vectorizza il feedback per misurare la somiglianza."
       },
-      "import_map_enabled": {
-        "label": "Mappatura importazione CSV",
-        "desc": "Lascia che Numo corrisponda alle colonne di un CSV importato sui campi di minddy. Una chiamata per file è caduta, su un riassunto delle colonne; mai sulle righe. Off, l'importazione rientra nei nomi di intestazione corrispondenti."
-      },
       "import_map_model": {
         "label": "Modello di mappatura CSV",
         "desc": "Legge le intestazioni delle colonne, i loro valori distinti e alcuni campioni, e propone dove va ogni colonna. L'utente vede la proposta e può correggerla prima di importare."
-      },
-      "brief_enabled": {
-        "label": "Breve ripartizione",
-        "desc": "Un breve incollato diventa una proposta di obiettivi e ticket quando un progetto inizia. Una chiamata per breve, mai per ticket. Off, un nuovo progetto parte da un'importazione o da ticket digitati a mano."
       },
       "brief_model": {
         "label": "Modello di ripartizione breve",
@@ -4277,17 +4234,9 @@
       "merge_message_model": {
         "label": "Modello per i commit di unione generati"
       },
-      "jev_decisions_enabled": {
-        "label": "Decisioni IA",
-        "desc": "Attiva o disattiva ovunque in una volta il livello di decisione IA. Disattivato, ogni chiamata di decisione ripiega sul suo passaggio LLM. Interruttore per gli incidenti, non un'impostazione di prodotto."
-      },
       "jev_model": {
         "label": "Modello di decisione",
         "desc": "L'unico modello che risponde a tutte le decisioni IA dell'istanza: Smart Fill, Smart Assign e la revisione dei feedback. Vengono proposti solo modelli di decisione, e ogni scelta viene provata con una chiamata prima di essere salvata. La soglia di confidenza è stata calibrata su Jev: un altro modello può ripiegare sull'LLM più o meno spesso."
-      },
-      "faq_ask_enabled": {
-        "label": "Riquadro domande FAQ",
-        "desc": "Permette a un visitatore senza account di porre la propria domanda nella sezione FAQ di una pagina e di ricevere una risposta dell'IA basata sulla documentazione del prodotto. L'unica spesa, insieme alla demo della landing, offerta al traffico anonimo: una piccola completamento per domanda, limitata a dieci per IP all'ora, 1000 al giorno. Disattivato, il riquadro scompare da tutte le FAQ."
       },
       "faq_ask_model": {
         "label": "Modello del riquadro FAQ",
@@ -4461,21 +4410,6 @@
       "totalProjects": "Progetti",
       "totalIssues": "Ticket",
       "issuesPerProject": "Ticket per progetto"
-    },
-    "favorites": {
-      "pickModel": "Scegli un modello",
-      "useCasePlaceholder": "Quando scegliere questo modello; in inglese, letto dall'agente.",
-      "add": "Aggiungere un modello",
-      "save": "Salva",
-      "cancel": "Annulla",
-      "reset": "Torna ai preferiti predefiniti",
-      "remove": "Rimuovi questo modello",
-      "empty": "Nessun favorito: l'agente sceglierà il catalogo da solo. Salvare una lista vuota riporta la configurazione ai preferiti predefiniti.",
-      "incomplete": "Scegli un modello per ogni preferito prima di salvare.",
-      "effortInherit": "Nessun livello consigliato",
-      "effortLow": "Pensare a basso",
-      "effortMedium": "Ragionamento medio",
-      "effortHigh": "Alti pensieri"
     },
     "recommended": {
       "pickModel": "Scegli un modello",

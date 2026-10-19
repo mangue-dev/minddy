@@ -363,13 +363,6 @@ describe("runSmartFill — decision layer", () => {
     await expect(run()).resolves.toEqual({});
   });
 
-  it("skips everything when the flag is off — no budget read, no runner call", async () => {
-    getAppConfigValuesMock.mockResolvedValue({ smart_fill_enabled: "false" });
-    await expect(run()).resolves.toEqual({});
-    expect(hasUsageBudgetMock).not.toHaveBeenCalled();
-    expect(runDecisionMock).not.toHaveBeenCalled();
-  });
-
   it("skips everything when the budget is dry — no runner call", async () => {
     hasUsageBudgetMock.mockResolvedValue(false);
     await expect(run()).resolves.toEqual({});

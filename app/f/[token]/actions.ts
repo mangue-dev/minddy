@@ -24,7 +24,6 @@ import {
 import { votePost, unvotePost } from "@/lib/server/feedback/votes";
 import { embedText, matchFeedbackPosts } from "@/lib/server/embeddings";
 import {
-  feedbackVoiceEnabled,
   normalizeVoiceDraft,
   normalizeVoiceHistory,
   normalizeVoiceTranscript,
@@ -292,8 +291,6 @@ export async function dictateFeedbackAction(
   const resolved = await resolveSession(token);
   if (!resolved) return { ok: false, error: "notAuthenticated" };
   const { ctx, session } = resolved;
-
-  if (!(await feedbackVoiceEnabled())) return { ok: false, error: "unavailable" };
 
   const rate = await consumeFeedbackVoiceLimit({
     boardId: ctx.board.id,

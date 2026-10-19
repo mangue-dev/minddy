@@ -11,12 +11,10 @@ import {
   AI_MODEL_CONFIG_KEYS,
   AI_MODEL_SUFFIX_KEYS,
   getAiConfigField,
-  isFlagKey,
   isModelSuffix,
   isModelSuffixKey,
   MODEL_SUFFIXES,
 } from "@/lib/ai-model-config";
-import { parseSubagentFavorites } from "@/lib/subagent-favorites";
 import { parseRecommendedModels } from "@/lib/recommended-models";
 import { isReasoningLevel, REASONING_LEVELS } from "@/lib/agent-reasoning";
 import { validateDecisionModelChoice } from "@/lib/server/decisions/model-validation";
@@ -34,7 +32,7 @@ const DECISION_MODEL_ERRORS = {
  * getClaims), then require the caller to be a minddy admin. Returns the error
  * response to short-circuit with, or null when the caller is cleared.
  */
-/** Roomy bound — the longest legitimate value is the favorites JSON list. */
+/** Roomy bound — the longest legitimate value is the recommended-models JSON list. */
 const MAX_VALUE_LENGTH = 10_000;
 
 async function requireAdmin(request: NextRequest): Promise<NextResponse | null> {
@@ -62,11 +60,10 @@ export async function GET(request: NextRequest) {
 
 /**
  * PATCH /api/admin/app-config — set one AI knob. Only registry keys are
- * writable; flags must be "true"/"false", and a favorites list must survive the
- * runtime parser (`parseSubagentFavorites`) — otherwise we would store a value
- * the run silently ignores, replacing it with the built-in defaults. Any other
- * key accepts an EMPTY value, which clears the row so the registry fallback
- * applies again — that's the picker's "default model" option (MIN-90).
+ * writable; a recommended-models list must survive the runtime parser
+ * (`parseRecommendedModels`) — otherwise we would store a value the picker
+ * silently ignores, replacing it with the built-in defaults. Any key accepts
+ * an EMPTY value, which clears the row so the registry fallback applies again — that's the picker's "default model" option (MIN-90).
  */
 export async function PATCH(request: NextRequest) {
   const denied = await requireAdmin(request);
@@ -98,14 +95,6 @@ export async function PATCH(request: NextRequest) {
 
   const trimmed = value.trim();
   const kind = getAiConfigField(key)?.kind;
-  if (kind === "flag") {
-    if (trimmed !== "true" && trimmed !== "false") {
-      return NextResponse.json(
-        { error: "Flag must be 'true' or 'false'" },
-        { status: 400 }
-      );
-    }
-  }
   if (kind === "reasoning" && trimmed && !isReasoningLevel(trimmed)) {
     return NextResponse.json(
       { error: `Reasoning level must be one of: ${REASONING_LEVELS.join(", ")}` },
@@ -120,14 +109,8 @@ export async function PATCH(request: NextRequest) {
       { status: 400 }
     );
   }
-  if (kind === "favorites" && trimmed && parseSubagentFavorites(trimmed) === null) {
-    return NextResponse.json(
-      { error: "Favorites must be a JSON array with at least one entry carrying an id" },
-      { status: 400 }
-    );
-  }
-  // Same rule, same reason: what the runtime ignores when reading, we
-  // refuses to write, rather than saving a setting without effect.
+  // What the runtime ignores when reading, we refuse to write, rather than
+  // saving a setting without effect.
   if (kind === "recommended" && trimmed && parseRecommendedModels(trimmed) === null) {
     return NextResponse.json(
       { error: "Recommended models must be a JSON array with at least one model id" },
@@ -178,7 +161,7 @@ export async function PATCH(request: NextRequest) {
   try {
     // Model emptied = return to register default: delete the line instead
     // than write the fault id there, so that the setting follows its developments.
-    if (!isFlagKey(key) && !trimmed) await clearAppConfigValue(key);
+    if (!trimmed) await clearAppConfigValue(key);
     else await setAppConfigValue(key, trimmed);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Save failed";

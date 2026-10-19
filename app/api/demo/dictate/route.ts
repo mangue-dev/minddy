@@ -58,10 +58,9 @@ import { resolvePolishedDictation } from "@/lib/dictation-context";
  * project or writes an issue. Its only persistent effects are reading the AI
  * configuration and recording platform-funded usage.
  *
- * Four safeguards bound that usage: a same-origin check, an hourly IP limit,
- * a per-instance daily ceiling, and the `demo_dictation_enabled` admin switch.
- * The first three live in `lib/server/demo-dictation.ts` and are covered by
- * its tests. Bot detection could be added later if these inexpensive controls
+ * Three safeguards bound that usage: a same-origin check, an hourly IP limit
+ * and a per-instance daily ceiling. They live in `lib/server/demo-dictation.ts`
+ * and are covered by its tests. Bot detection could be added later if these inexpensive controls
  * stop being sufficient.
  *
  * The client cannot submit arbitrary text. The model sees either recognized
@@ -128,13 +127,9 @@ export async function POST(request: NextRequest) {
   }
 
   const cfg = await getAppConfigValues([
-    "demo_dictation_enabled",
     ...modelConfigKeys("transcription_model"),
     ...modelConfigKeys("dictate_model"),
   ]);
-  if ((cfg.demo_dictation_enabled ?? "true").trim() === "false") {
-    return NextResponse.json({ error: "unavailable" }, { status: 503 });
-  }
 
   // ── The entrance: a microphone, or an example sentence ──────────────
   const runId = newRunId();

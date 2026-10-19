@@ -4147,10 +4147,7 @@
       },
       "automations": {
         "title": "Automatisierungen",
-        "desc": "Intelligente Zuweisung, intelligentes Ausfüllen, Briefings und Importe."
-      },
-      "agent": {
-        "title": "Numo-Codearbeit"
+        "desc": "Intelligente Zuweisung, intelligentes Ausfüllen, Briefings, Importe und Merge-Commit-Nachrichten."
       },
       "byok": {
         "title": "Persönliche Schlüssel",
@@ -4182,33 +4179,17 @@
         "label": "Fallback-Modell",
         "desc": "Wird verwendet, wenn das Numo-Modell leer bleibt."
       },
-      "agent_model": {
-        "label": "Preisreferenz für Code-Agenten",
-        "desc": "Referenzmodell zur Berechnung der Tarifmultiplikatoren. Es ersetzt nicht das in jedem Konto ausgewählte Modell."
-      },
-      "agent_subagent_favorites": {
-        "label": "Lieblingsmodelle des Subagenten",
-        "desc": "Was der Agent liest, um auszuwählen, worauf ein Subagent ausgeführt werden soll. Es kann jedes im Katalog aufgeführte Modell verwendet werden; Dies sind diejenigen, die wir empfehlen. Der Anwendungsfall geht wörtlich in seine Eingabeaufforderung ein: Schreiben Sie ihn auf Englisch für ein Modell, das auswählt."
-      },
       "recommended_models": {
         "label": "Empfohlene Modelle",
-        "desc": "Die kurze Liste, die der Modellauswahl überall in der App öffnet, bevor jemand etwas eingibt. Es verbirgt sich nichts: Die Suche erreicht immer noch den gesamten Katalog, und eine letzte Zeile öffnet mehr. Die Bestellung wird anhand des Preises berechnet, das günstigste zuerst, sodass Sie nur WELCHE Modelle auswählen, die Sie empfehlen möchten. Ein Modell über der Obergrenze des Pro-Plans (×40) kann von niemandem gestartet werden."
+        "desc": "Die kurze Liste, die der Modellauswahl überall in der App öffnet, bevor jemand etwas eingibt. Es verbirgt sich nichts: Die Suche erreicht immer noch den gesamten Katalog, und eine letzte Zeile öffnet mehr. Die Bestellung wird anhand des Preises berechnet, das günstigste zuerst, sodass Sie nur WELCHE Modelle auswählen, die Sie empfehlen möchten. Ein Modell über der Obergrenze des Pro-Plans (×40) kann niemand auswählen."
       },
       "smart_assign_model": {
         "label": "Intelligente Zuweisung",
         "desc": "Weist ein Problem zu, das die Triage verlässt, ohne dass jemand eingeschaltet ist it."
       },
-      "smart_fill_enabled": {
-        "label": "Smart-Fill",
-        "desc": "Ermöglicht dem Formular zum Erstellen eines Problems, Priorität, Aufwand, Kategorien und Ziel selbstständig auszufüllen. Ab hier verschwindet der Schalter aus jedem Konto."
-      },
       "smart_fill_model": {
         "label": "Smart-Fill-Modell",
         "desc": "Liest den Titel und die Beschreibung eines neuen Problems und füllt seine Felder aus. Jemand wartet darauf: Wählen Sie ein schnelles Modell."
-      },
-      "smart_fill_relations_enabled": {
-        "label": "Smart-Fill-Beziehungen",
-        "desc": "Indexiert Probleme nach dem Speichern und lässt Smart Fill verwandte Probleme und Abhängigkeiten verknüpfen. Hier ausgeschaltet, stoppen Indexierung und Beziehungsvorschläge überall; das Erstellen bleibt unberührt."
       },
       "issue_embedding_model": {
         "label": "Problem-Embeddings",
@@ -4222,10 +4203,6 @@
         "label": "Konversationstitel",
         "desc": "Benennt eine Numo Konversation in wenigen Worten, beginnend mit der ersten Nachricht. Ein kleines Modell reicht aus."
       },
-      "web_search_enabled": {
-        "label": "Websuche",
-        "desc": "Stellt Numo und den Agenten ein Websuchtool zur Verfügung (OpenRouter Plugin). Jede Suche kostet etwa 0,005 US-Dollar, angerechnet auf die Nutzung desjenigen, der sie auslöst."
-      },
       "web_search_model": {
         "label": "Websuchmodell",
         "desc": "Liest die Suchergebnisse und schreibt die Antwort. Ein kleines Modell reicht aus."
@@ -4238,18 +4215,6 @@
         "label": "Speech-to-Text",
         "desc": "Konvertiert Diktat-Audio in Text."
       },
-      "demo_dictation_enabled": {
-        "label": "Zielseiten-Sprachdemo",
-        "desc": "Ermöglicht Besuchern ohne Konto, auf der Startseite das Diktat mit einem fiktiven Problem auszuprobieren. Dies ist der einzige von minddy kostenlos angebotene KI-Aufruf: etwa 0,0003 $ pro Durchgang, begrenzt auf zehn Aufrufe pro IP-Adresse und Stunde sowie 500 pro Tag. Ist die Funktion deaktiviert, zeigt die Demo an, dass sie nicht verfügbar ist."
-      },
-      "feedback_classify_enabled": {
-        "label": "Automatische Klassifizierung",
-        "desc": "Sortiert eingehendes Feedback in Kategorien, löscht Spam, verbirgt vertrauliche Inhalte und veröffentlicht den Rest im Forum. Ohne sie wartet jeder Beitrag auf eine manuelle Überprüfung."
-      },
-      "feedback_voice_enabled": {
-        "label": "Diktiertes Feedback",
-        "desc": "Öffnet das Mikrofon in beiden Feedback-Formularen: auf dem öffentlichen Board und bei der internen Erfassung. Die Aufnahme wird transkribiert und von Numo in Titel und Text übertragen. Die Nutzung wird der sprechenden Person oder bei einem Besucher dem Board-Eigentümer angerechnet. Bei deaktivierter Funktion verschwindet das Mikrofon; die Texteingabe bleibt erhalten."
-      },
       "feedback_analysis_model": {
         "label": "Feedback-Analyse",
         "desc": "Führt offensichtliche Duplikate auf der Tafel zusammen und schlägt Zusammenführungen für den Rest vor."
@@ -4258,17 +4223,9 @@
         "label": "Feedback-Einbettungen",
         "desc": "Vektorisiert Feedback, um Ähnlichkeit zu messen."
       },
-      "import_map_enabled": {
-        "label": "CSV-Importzuordnung",
-        "desc": "Lässt Numo die Spalten eines importierten CSV mit den Feldern von minddy abgleichen. Pro Datei wurde ein Aufruf für eine Zusammenfassung der Spalten abgebrochen. niemals in den Reihen. Aus, der Import greift auf übereinstimmende Header-Namen zurück."
-      },
       "import_map_model": {
         "label": "CSV Importzuordnungsmodell",
         "desc": "Liest die Spaltenüberschriften, ihre unterschiedlichen Werte und einige Beispiele und schlägt vor, wohin jede Spalte geht. Der Benutzer sieht den Vorschlag und kann ihn vor dem Importieren korrigieren."
-      },
-      "brief_enabled": {
-        "label": "Briefaufschlüsselung",
-        "desc": "Wandelt beim Start eines Projekts ein eingefügtes Briefing in einen Vorschlag mit Zielen und Problemen um. Ein Aufruf pro Briefing, niemals pro Problem. Ist die Funktion deaktiviert, beginnt ein neues Projekt mit einem Import oder mit manuell eingegebenen Problemen."
       },
       "brief_model": {
         "label": "Brief-Aufschlüsselungsmodell",
@@ -4277,17 +4234,9 @@
       "merge_message_model": {
         "label": "Modell für generierte Merge-Commits"
       },
-      "jev_decisions_enabled": {
-        "label": "KI-Entscheidungen",
-        "desc": "Schaltet die KI-Entscheidungsschicht überall auf einmal ein oder aus. Ausgeschaltet fällt jeder Entscheidungsaufruf auf seinen LLM-Durchlauf zurück. Notschalter für Störungen, keine Produkteinstellung."
-      },
       "jev_model": {
         "label": "Entscheidungsmodell",
         "desc": "Das eine Modell, das alle KI-Entscheidungen der Instanz beantwortet: Smart Fill, Smart Assign und die Prüfung von Feedback. Es werden nur Entscheidungsmodelle angeboten, und jede Auswahl wird vor dem Speichern mit einem Testaufruf geprüft. Die Konfidenzschwelle wurde auf Jev kalibriert: Ein anderes Modell kann häufiger oder seltener auf das LLM zurückfallen."
-      },
-      "faq_ask_enabled": {
-        "label": "FAQ-Fragenfeld",
-        "desc": "Erlaubt einem Besucher ohne Konto, im FAQ-Abschnitt einer Seite eine eigene Frage zu stellen und eine KI-Antwort auf Basis der Produktdokumentation zu erhalten. Die einzige Ausgabe neben der Landing-Demo, die für anonymen Verkehr geboten wird: eine kleine Completion pro Frage, begrenzt auf zehn pro IP und Stunde, 1000 pro Tag. Aus, verschwindet das Feld aus allen FAQs."
       },
       "faq_ask_model": {
         "label": "FAQ-Fragenfeld-Modell",
@@ -4461,21 +4410,6 @@
       "totalProjects": "Projekte",
       "totalIssues": "Probleme",
       "issuesPerProject": "Probleme pro Projekt"
-    },
-    "favorites": {
-      "pickModel": "Wählen Sie ein Modell aus",
-      "useCasePlaceholder": "Wann sollte dieses Modell ausgewählt werden? auf Englisch, vom Agenten gelesen.",
-      "add": "Modell hinzufügen",
-      "save": "Speichern",
-      "cancel": "Abbrechen",
-      "reset": "Zurück zu den Standardfavoriten",
-      "remove": "Dieses Modell entfernen",
-      "empty": "Keine Favoriten: Der Agent wählt selbstständig aus dem Katalog aus. Wenn Sie eine leere Liste speichern, wird die Einstellung auf die Standardfavoriten zurückgesetzt.",
-      "incomplete": "Wählen Sie vor dem Speichern ein Modell für jeden Favoriten aus.",
-      "effortInherit": "Keine Stufe empfohlen",
-      "effortLow": "Geringe Denkweise",
-      "effortMedium": "Mittlere Denkweise",
-      "effortHigh": "Hohe Denkweise"
     },
     "recommended": {
       "pickModel": "Wählen Sie ein Modell aus",

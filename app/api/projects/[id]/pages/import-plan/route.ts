@@ -5,14 +5,10 @@ import { getProjectAccess } from "@/lib/server/project-access";
 import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
 import { hasUsageBudget } from "@/lib/server/usage";
 import { getAppConfigValues } from "@/lib/server/app-config";
-import { aiModelFallback } from "@/lib/ai-model-config";
 import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
 import { forcedToolCall } from "@/lib/server/feedback/forced-tool-call";
 import { readBoundedRequestBody } from "@/lib/server/forge-relay/request-body";
-import {
-  IMPORT_MAP_ENABLED_KEY,
-  IMPORT_MAP_MODEL_KEY,
-} from "@/lib/server/import-mapping-ai";
+import { IMPORT_MAP_MODEL_KEY } from "@/lib/server/import-mapping-ai";
 
 const type = z.enum([
   "title",
@@ -64,15 +60,7 @@ export async function POST(
     const input = inputSchema.parse(JSON.parse(incoming.body));
     if (!(await hasUsageBudget(auth.user.id, "automations", "import_map_model")))
       return NextResponse.json({ types: null });
-    const config = await getAppConfigValues([
-      ...modelConfigKeys(IMPORT_MAP_MODEL_KEY),
-      IMPORT_MAP_ENABLED_KEY,
-    ]);
-    if (
-      (config[IMPORT_MAP_ENABLED_KEY] ??
-        aiModelFallback(IMPORT_MAP_ENABLED_KEY)) === "false"
-    )
-      return NextResponse.json({ types: null });
+    const config = await getAppConfigValues(modelConfigKeys(IMPORT_MAP_MODEL_KEY));
     const { model } = resolveFromValues(IMPORT_MAP_MODEL_KEY, config);
     const proposal = await forcedToolCall(
       model,

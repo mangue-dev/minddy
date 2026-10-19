@@ -23,8 +23,6 @@ const REQUIRED_APP_CONFIG = [
   "smart_assign_model",
   "feedback_analysis_model",
   "feedback_embedding_model",
-  "feedback_classify_enabled",
-  "agent_model",
 ];
 const REQUIRED_TABLES = ["projects", "issues", "attachments", "feedback_posts", "pages", "conversations"];
 
