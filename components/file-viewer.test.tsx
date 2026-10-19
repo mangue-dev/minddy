@@ -51,7 +51,9 @@ it("escapes transformed panes, treats text as inert content and restores scroll 
   document.body.style.overflow = "scroll";
   await render();
   const dialog = document.querySelector("dialog")!;
-  expect(dialog.parentElement).toBe(document.body);
+  // Its own host at the body's end, outside every pane and overlay.
+  expect(dialog.parentElement?.hasAttribute("data-preview-viewer")).toBe(true);
+  expect(dialog.parentElement?.parentElement).toBe(document.body);
   expect(dialog.open).toBe(true);
   expect(document.body.style.overflow).toBe("hidden");
   expect(dialog.querySelector("pre")?.textContent).toContain("<script>unsafe()</script>");
@@ -61,6 +63,7 @@ it("escapes transformed panes, treats text as inert content and restores scroll 
   await act(() => root.render(null));
   expect(document.body.style.overflow).toBe("scroll");
   expect(document.activeElement).toBe(origin);
+  expect(document.querySelector("[data-preview-viewer]")).toBeNull();
 });
 
 it("keeps menu actions inside the modal, supports keyboard navigation and removes only on selection", async () => {
@@ -85,7 +88,7 @@ it("keeps menu actions inside the modal, supports keyboard navigation and remove
   await key(document.querySelectorAll('[role="menuitem"]')[1], " ");
   expect(remove).toHaveBeenCalledOnce();
   await flush();
-  expect(document.querySelector("dialog")?.open).toBe(false);
+  expect(document.querySelector("dialog")).toBeNull();
 });
 
 it("offers download without removal in a read-only reader and closes on native cancel", async () => {
@@ -93,6 +96,7 @@ it("offers download without removal in a read-only reader and closes on native c
   const iframe = document.querySelector("iframe")!;
   expect(iframe.getAttribute("sandbox")).toBe("");
   expect(iframe.src).toContain("theme=dark");
+  expect(iframe.closest(".overflow-y-auto")).toBeNull();
   expect(document.querySelector("pre")).toBeNull();
   await click(document.querySelector('button[aria-haspopup="menu"]')!);
   expect(document.querySelectorAll('[role="menuitem"]')).toHaveLength(1);
@@ -101,7 +105,7 @@ it("offers download without removal in a read-only reader and closes on native c
   await act(() => document.querySelector("dialog")!.dispatchEvent(event));
   expect(event.defaultPrevented).toBe(true);
   await flush();
-  expect(document.querySelector("dialog")?.open).toBe(false);
+  expect(document.querySelector("dialog")).toBeNull();
   expect(document.body.style.overflow).toBe("");
 });
 
@@ -171,4 +175,79 @@ it("lets Escape close only its actions menu", async () => {
   await key(menu.querySelector('[role="menuitem"]')!, "Escape");
   expect(dialog.querySelector('[role="menu"]')).toBeNull();
   expect(dialog.open).toBe(true);
+});
+
+it("stays open on content, margin and image clicks: only Close dismisses it (MIN-686)", async () => {
+  await render("diagram.png", "image/png");
+  const dialog = document.querySelector("dialog")!;
+  await click(dialog.querySelector("img")!);
+  await click(dialog.querySelector("img")!.parentElement!.parentElement!);
+  await click(dialog.querySelector("div")!);
+  await flush();
+  expect(dialog.open).toBe(true);
+  await click(dialog.querySelector("[data-preview-close]")!);
+  await flush();
+  expect(document.querySelector("dialog")).toBeNull();
+  expect(document.querySelector("[data-preview-viewer]")).toBeNull();
+});
+
+it("keeps its interactions from the modal layer below (MIN-686)", async () => {
+  // A Radix modal below dismisses on document pointer-down and focus-in, and
+  // its scroll lock cancels document wheel and touch moves.
+  const below = vi.fn();
+  const names = ["pointerdown", "focusin", "wheel", "touchmove", "click", "keydown"];
+  for (const name of names) document.addEventListener(name, below);
+  try {
+    await render("notes.md", "text/markdown");
+    const dialog = document.querySelector("dialog")!;
+    const article = dialog.querySelector("article")!;
+    for (const name of ["pointerdown", "wheel", "touchmove", "click"]) {
+      await act(() => article.dispatchEvent(new Event(name, { bubbles: true, cancelable: true })));
+    }
+    await key(article, "j");
+    await act(() => (dialog.querySelector("[data-preview-close]") as HTMLElement).focus());
+    expect(below).not.toHaveBeenCalled();
+    // React handlers inside the reader still run.
+    await click(dialog.querySelector('[aria-label="File actions"]')!);
+    expect(dialog.querySelector('[role="menu"]')).not.toBeNull();
+    // A pointer-down elsewhere in the reader still closes its menu.
+    await act(() => article.dispatchEvent(new Event("pointerdown", { bubbles: true })));
+    expect(dialog.querySelector('[role="menu"]')).toBeNull();
+    expect(dialog.open).toBe(true);
+    // Long text scrolls inside the reader's bounded body.
+    expect(article.closest(".overflow-y-auto")?.className).toContain("absolute inset-0");
+  } finally {
+    for (const name of names) document.removeEventListener(name, below);
+  }
+});
+
+it("shows PDFs from a local blob, outside the sandbox the PDF viewer refuses (MIN-686)", async () => {
+  const create = vi.fn((_blob: Blob) => "blob:pdf");
+  const revoke = vi.fn();
+  Object.defineProperty(URL, "createObjectURL", { configurable: true, value: create });
+  Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: revoke });
+  vi.mocked(fetch).mockResolvedValueOnce({ ok: true, blob: async () => new Blob(["%PDF-"]) } as Response);
+  await render("brief.pdf", "application/pdf");
+  const iframe = document.querySelector("iframe")!;
+  expect(fetch).toHaveBeenCalledWith("/api/attachments/file?path=notes&preview=1", expect.anything());
+  expect(create.mock.calls[0][0].type).toBe("application/pdf");
+  expect(iframe.getAttribute("src")).toBe("blob:pdf");
+  expect(iframe.hasAttribute("sandbox")).toBe(false);
+  await act(() => root.render(null));
+  expect(revoke).toHaveBeenCalledWith("blob:pdf");
+});
+
+it("highlights no item when the menu opens with the pointer (MIN-686)", async () => {
+  await render();
+  const trigger = document.querySelector('button[aria-haspopup="menu"]')!;
+  await act(() => trigger.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 })));
+  const menu = document.querySelector<HTMLElement>('[role="menu"]')!;
+  const items = menu.querySelectorAll<HTMLElement>('[role="menuitem"]');
+  expect(document.activeElement).toBe(menu);
+  await key(menu, "ArrowDown");
+  expect(document.activeElement).toBe(items[0]);
+  await act(() => trigger.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 })));
+  await act(() => trigger.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 })));
+  await key(document.querySelector('[role="menu"]')!, "ArrowUp");
+  expect(document.activeElement).toBe(document.querySelectorAll('[role="menuitem"]')[items.length - 1]);
 });

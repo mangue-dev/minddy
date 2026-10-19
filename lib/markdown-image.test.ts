@@ -1,23 +1,20 @@
 // @vitest-environment jsdom
 
-import { act, createElement, type ReactNode } from "react";
+import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Markdown } from "@/components/markdown";
 import { PrEndpointProvider } from "./pr-endpoint-context";
 
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
-vi.mock("@/components/ui/dialog", async (importOriginal) => ({
-  ...(await importOriginal<Record<string, unknown>>()),
-  Dialog: ({ open, children }: { open: boolean; children: ReactNode }) => open ? children : null,
-  DialogContent: ({ children }: { children: ReactNode }) => createElement("div", { role: "dialog" }, children),
-  DialogTitle: ({ children }: { children: ReactNode }) => createElement("h2", null, children),
-}));
+vi.mock("framer-motion", async () => ({ ...await vi.importActual("framer-motion"), useReducedMotion: () => true }));
 
 let host: HTMLDivElement;
 let root: Root;
 beforeEach(() => {
   (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+  HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
+  HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); };
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
@@ -40,9 +37,12 @@ describe("pull request image previews", () => {
     const click = new MouseEvent("click", { bubbles: true, cancelable: true });
     await act(() => { thumbnail.dispatchEvent(click); });
     expect(click.defaultPrevented).toBe(true);
-    const preview = document.querySelector('[role="dialog"] img')!;
+    const preview = document.querySelector("dialog[open] img")!;
     expect(preview.getAttribute("src")).toBe(thumbnail.getAttribute("src"));
     expect(preview.getAttribute("src")).toBe("/api/pull-requests/pr/image?asset=11111111-2222-3333-4444-555555555555");
+    // The shared reader: a click on the expanded image keeps it open.
+    await act(() => { (preview as HTMLElement).click(); });
+    expect(document.querySelector("dialog[open] img")).not.toBeNull();
   });
 
   it.each(["Enter", " "])("opens an image with the %s key", async (key) => {
@@ -53,7 +53,7 @@ describe("pull request image previews", () => {
     const thumbnail = host.querySelector("img")!;
     expect(thumbnail.getAttribute("tabindex")).toBe("0");
     await act(() => { thumbnail.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true })); });
-    expect(document.querySelector('[role="dialog"] img')?.getAttribute("src")).toBe("https://example.com/capture.png");
+    expect(document.querySelector("dialog[open] img")?.getAttribute("src")).toBe("https://example.com/capture.png");
   });
 
   it("keeps images outside pull requests as ordinary Markdown content", async () => {
@@ -61,6 +61,6 @@ describe("pull request image previews", () => {
     const thumbnail = host.querySelector("img")!;
     expect(thumbnail.hasAttribute("tabindex")).toBe(false);
     await act(() => { thumbnail.click(); });
-    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.querySelector("dialog")).toBeNull();
   });
 });

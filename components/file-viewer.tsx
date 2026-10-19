@@ -9,6 +9,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Download01Icon, MoreHorizontalIcon, Delete02Icon, Edit04Icon } from "@hugeicons/core-free-icons";
 import { ImageViewer, PreviewViewer } from "@/components/image-viewer";
 import { Markdown } from "@/components/markdown";
+import { normalizeMimeType } from "@/lib/inline-safe";
 import { attachmentPreviewKind, isCsvAttachment, isMarkdownFileName, isPlainTextAttachment, withAttachmentPreviewTheme, type AttachmentPreviewKind } from "@/lib/attachment-preview";
 
 function TextAttachmentPreview({ src, markdown }: { src: string; markdown: boolean }) {
@@ -59,11 +60,56 @@ function TextAttachmentPreview({ src, markdown }: { src: string; markdown: boole
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-background p-6 sm:p-8">
+    // Absolutely placed in the reader's bounded body: it scrolls inside the
+    // reader while the filename and the actions stay in view.
+    <div className="absolute inset-0 overflow-y-auto overscroll-contain bg-background p-6 sm:p-8">
       {markdown ? <Markdown breaks={false} className="mx-auto max-w-4xl">{content}</Markdown>
         : <pre className="whitespace-pre-wrap break-words font-mono text-sm">{content}</pre>}
     </div>
   );
+}
+
+/**
+ * The browser's PDF viewer refuses sandboxed documents, and the preview
+ * response is always sandboxed. The bytes are read once and shown from a
+ * local blob typed `application/pdf`, which only the PDF viewer can render.
+ */
+function PdfAttachmentPreview({ src, fileName }: { src: string; fileName: string }) {
+  const t = useTranslations("Resources");
+  const [url, setUrl] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let objectUrl: string | null = null;
+    void fetch(src, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("File preview request failed");
+        return response.blob();
+      })
+      .then((blob) => {
+        if (controller.signal.aborted) return;
+        objectUrl = URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
+        setUrl(objectUrl);
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted || (error instanceof Error && error.name === "AbortError")) return;
+        setFailed(true);
+      });
+    return () => {
+      controller.abort();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [src]);
+
+  if (!url) {
+    return (
+      <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
+        {failed ? t("previewFailed") : t("previewLoading")}
+      </div>
+    );
+  }
+  return <iframe src={url} title={fileName} className="h-full w-full border-0 bg-white" />;
 }
 
 function AttachmentPreview({
@@ -99,6 +145,9 @@ function AttachmentPreview({
       />
     );
   }
+  if (normalizeMimeType(mimeType) === "application/pdf") {
+    return <PdfAttachmentPreview key={src} src={src} fileName={fileName} />;
+  }
   return (
     <iframe
       src={withAttachmentPreviewTheme(src, resolvedTheme)}
@@ -127,17 +176,22 @@ function FilePreviewActions({ close, downloadHref, fileName, onRemove, onRename 
   const trigger = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
   const focusLast = useRef(false);
+  // A pointer opening focuses the menu itself, so no item looks selected
+  // before the arrow keys move to one; a keyboard opening focuses an item.
+  const openedWithPointer = useRef(false);
   const dismiss = () => { setExpanded(false); trigger.current?.focus(); };
 
   useEffect(() => {
     if (!expanded) return;
     const items = menu.current?.querySelectorAll<HTMLElement>("[role=menuitem]");
-    items?.[focusLast.current ? items.length - 1 : 0]?.focus();
+    if (openedWithPointer.current) menu.current?.focus();
+    else items?.[focusLast.current ? items.length - 1 : 0]?.focus();
     const outside = (event: PointerEvent) => {
       if (event.target instanceof Node && !container.current?.contains(event.target)) setExpanded(false);
     };
-    document.addEventListener("pointerdown", outside);
-    return () => document.removeEventListener("pointerdown", outside);
+    // Capture phase: the reader stops its events before they bubble to the document.
+    document.addEventListener("pointerdown", outside, true);
+    return () => document.removeEventListener("pointerdown", outside, true);
   }, [expanded]);
 
   const download = async (event: MouseEvent<HTMLAnchorElement>) => {
@@ -172,7 +226,8 @@ function FilePreviewActions({ close, downloadHref, fileName, onRemove, onRename 
     const index = items.indexOf(document.activeElement as HTMLElement);
     if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
       event.preventDefault();
-      const next = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1
+      const next = event.key === "Home" || (index < 0 && event.key === "ArrowDown") ? 0
+        : event.key === "End" || (index < 0 && event.key === "ArrowUp") ? items.length - 1
         : (index + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
       items[next]?.focus();
     }
@@ -189,13 +244,14 @@ function FilePreviewActions({ close, downloadHref, fileName, onRemove, onRename 
     <Button data-preview-close type="button" variant="outline" className="min-h-12 min-w-40 rounded-full px-8" onClick={close}>{common("close")}</Button>
     <Button ref={trigger} type="button" variant="outline" size="icon" className="size-12 rounded-full"
       aria-label={t("actions")} aria-haspopup="menu" aria-expanded={expanded} aria-controls={expanded ? menuId : undefined}
-      onClick={() => { focusLast.current = false; setExpanded(value => !value); }}
-      onKeyDown={event => { if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); focusLast.current = event.key === "ArrowUp"; setExpanded(true); } }}>
+      // `detail` counts pointer clicks; Enter and Space dispatch a click with 0.
+      onClick={event => { openedWithPointer.current = event.detail > 0; focusLast.current = false; setExpanded(value => !value); }}
+      onKeyDown={event => { if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); openedWithPointer.current = false; focusLast.current = event.key === "ArrowUp"; setExpanded(true); } }}>
       <HugeiconsIcon icon={MoreHorizontalIcon} className="size-5" aria-hidden />
     </Button>
-    {expanded && <div ref={menu} id={menuId} role="menu" aria-label={t("actions")}
+    {expanded && <div ref={menu} id={menuId} role="menu" aria-label={t("actions")} tabIndex={-1}
       onKeyDown={navigate} onBlur={event => { if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) setExpanded(false); }}
-      className="absolute right-0 bottom-full z-10 mb-2 min-w-48 rounded-xl bg-popover p-2 text-popover-foreground shadow-md ring-1 ring-foreground/10">
+      className="absolute right-0 bottom-full z-10 mb-2 min-w-48 outline-none rounded-xl bg-popover p-2 text-popover-foreground shadow-md ring-1 ring-foreground/10">
       <a role="menuitem" tabIndex={-1} href={downloadHref} download={fileName} aria-disabled={downloading} onClick={download}
         className="flex min-h-10 items-center gap-2 rounded-sm px-2 text-sm hover:bg-accent focus:bg-accent focus:outline-none">
         <HugeiconsIcon icon={Download01Icon} className="size-4" aria-hidden />{t("download")}
@@ -219,7 +275,7 @@ function FilePreviewActions({ close, downloadHref, fileName, onRemove, onRename 
 }
 
 /** One full-screen reader for stored issue resources and page files. */
-export function FileViewer({ src, downloadHref, fileName, mimeType, open, onOpenChange, onRemove, onRename }: {
+export function FileViewer({ src, downloadHref, fileName, mimeType, open, onOpenChange, onRemove, onRename, layoutId }: {
   src: string;
   downloadHref: string;
   fileName: string;
@@ -229,16 +285,18 @@ export function FileViewer({ src, downloadHref, fileName, mimeType, open, onOpen
   /** Asked once the viewer has closed; the caller confirms (MIN-742). */
   onRemove?: () => void;
   onRename?: () => void;
+  /** An image flies from and back to the thumbnail carrying the same layout id. */
+  layoutId?: string;
 }) {
   const kind = attachmentPreviewKind(mimeType, fileName);
   if (!kind) return null;
   const action = (close: () => void) => <FilePreviewActions close={close} downloadHref={downloadHref} fileName={fileName} onRemove={onRemove} onRename={onRename} />;
   const props = { label: fileName, open, onOpenChange, action };
-  if (kind === "image") return <ImageViewer {...props} src={src} alt={fileName} />;
+  if (kind === "image") return <ImageViewer {...props} src={src} alt={fileName} layoutId={layoutId} />;
   return <PreviewViewer {...props}>
     <div className="flex h-full min-h-0 w-full max-w-6xl flex-col overflow-hidden border border-border bg-background shadow-lg">
       <div className="shrink-0 truncate border-b border-border px-5 py-3 text-sm font-medium">{fileName}</div>
-      <div className="min-h-0 flex-1"><AttachmentPreview kind={kind} src={src} fileName={fileName} mimeType={mimeType} /></div>
+      <div className="relative min-h-0 flex-1"><AttachmentPreview kind={kind} src={src} fileName={fileName} mimeType={mimeType} /></div>
     </div>
   </PreviewViewer>;
 }
