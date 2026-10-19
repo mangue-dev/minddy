@@ -29,7 +29,7 @@ const [heading, name, csv] = examples[locale];
 const entry = `import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { NextIntlClientProvider } from "next-intl";
-import { ThemeProvider } from "mangue-ui";
+import { ThemeProvider } from "./components/theme-provider";
 import { FileViewer } from "./components/file-viewer";
 function Demo() {
  const [open,setOpen] = useState(false);
@@ -45,12 +45,11 @@ function Demo() {
 createRoot(document.getElementById("root")).render(<Demo/>);`;
 // esbuild's tsconfig resolves the application alias to source modules.
 await build({ stdin: {contents:entry, resolveDir:root, loader:"tsx"}, bundle:true, platform:"browser", format:"esm", jsx:"automatic", outfile:resolve(output,"reader.js"),
- define:{"process.env.NODE_ENV":'"production"'}, logLevel:"warning",
- plugins:[{name:"design-utility",setup(builder){builder.onResolve({filter:/^mangue-ui\/lib\/utils$/},()=>({path:resolve(root,"node_modules/mangue-ui/src/lib/utils.ts")}));}}] });
+ define:{"process.env.NODE_ENV":'"production"'}, logLevel:"warning" });
 await build({ entryPoints:["lib/server/csv-preview.ts"], bundle:true, platform:"node", format:"esm", outfile:resolve(output,"csv.mjs"), external:["papaparse"],
  plugins:[{name:"server-only-stub",setup(builder){builder.onResolve({filter:/^server-only$/},()=>({path:resolve(root,"test/server-only-stub.ts")}));}}] });
 const { renderCsvPreview } = await import(pathToFileURL(resolve(output,"csv.mjs")).href);
-const css = await postcss([tailwind({base:root})]).process(`@import "tailwindcss" source(none);\n@import "mangue-ui/tokens.css";\n@source "${resolve(root,"components/image-viewer.tsx")}";\n@source "${resolve(root,"components/file-viewer.tsx")}";\n@source "${resolve(root,"node_modules/mangue-ui/src/components/ui/button.tsx")}";\nbody {font-family:system-ui,sans-serif;background:var(--background);color:var(--foreground);} h1 {font-size:24px;margin-bottom:24px;}`, {from:resolve(root,"file-preview-scoped.css")});
+const css = await postcss([tailwind({base:root})]).process(`@import "tailwindcss" source(none);\n@import "${resolve(root,"app/tokens.css")}";\n@source "${resolve(root,"components/image-viewer.tsx")}";\n@source "${resolve(root,"components/file-viewer.tsx")}";\n@source "${resolve(root,"components/ui/button.tsx")}";\nbody {font-family:system-ui,sans-serif;background:var(--background);color:var(--foreground);} h1 {font-size:24px;margin-bottom:24px;}`, {from:resolve(root,"file-preview-scoped.css")});
 const html = `<!doctype html><html lang="${locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${css.css}</style></head><body><div id="root"></div><script type="module" src="/reader.js"></script></body></html>`;
 const server = createServer(async (req,res)=>{
  const path = new URL(req.url,"http://localhost").pathname;

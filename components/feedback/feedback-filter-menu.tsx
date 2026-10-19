@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
-import { Button, DropdownMenuSeparator } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { FilterIcon, CancelCircleIcon as Ban } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";

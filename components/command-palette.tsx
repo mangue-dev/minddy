@@ -39,7 +39,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
 import { useAppRouter } from "@/lib/use-app-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 import { useAccountTheme } from "@/lib/use-account-theme";
 import {
   CommandPalette as CommandPaletteShell,

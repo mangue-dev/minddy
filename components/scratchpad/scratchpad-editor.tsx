@@ -9,7 +9,7 @@ import {
   reconcileBodyBlocks,
 } from "@/lib/pages-markdown";
 import { useTranslations } from "next-intl";
-import { Spinner } from "mangue-ui";
+import { Spinner } from "@/components/ui/spinner";
 import {
   removeSettledTasks,
   scratchpadSectionSubtree,

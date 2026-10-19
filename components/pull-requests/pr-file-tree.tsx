@@ -4,7 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Popover, PopoverContent, PopoverTrigger } from "mangue-ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { PullRequestFile } from "@/lib/agent-api";
 import { buildFileTree, type FileTreeNode } from "@/lib/pr-file-tree";
 import { DiffCounters, FileStatusIcon } from "@/components/pull-requests/pr-file-marks";

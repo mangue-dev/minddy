@@ -1,4 +1,4 @@
-import { cn } from "mangue-ui/lib/utils";
+import { cn } from "@/lib/utils";
 
 /** A static brand asset and its optional dark-background variant. */
 export interface BrandMark {

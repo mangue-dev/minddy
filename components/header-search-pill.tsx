@@ -9,11 +9,11 @@ import { Kbd } from "@/components/ui/kbd";
 import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
 
 /**
- * A single command-palette row. Superset of mangue-ui's `CommandMenuItem`: adds
+ * A single command-palette row. Superset of a plain command-menu item: adds
  * a `meta` slot rendered right-aligned (e.g. an issue identifier badge or a
  * project chip), mirroring how AutoKap tags each result with its project. This
  * is the shared "command list" contract consumed by both the mobile nav search
- * (mangue-ui MobileNav) and the desktop command palette (command-palette.tsx).
+ * (mobile navigation) and the desktop command palette (command-palette.tsx).
  */
 export interface PaletteItem {
   key: string;
@@ -25,7 +25,7 @@ export interface PaletteItem {
    * Keyboard shortcut shown right-aligned on the desktop row (e.g. ["G", "H"]
    * for the G→H chord, ["?"] for the cheat sheet). Each entry renders as a Kbd
    * chip; the mobile search ignores this field. Named `keys` (not `shortcut`)
-   * because mangue-ui's CommandMenuItem already reserves `shortcut?: string`.
+   * because a plain command-menu item already reserves `shortcut?: string`.
    */
   keys?: string[];
   /** Secondary text, SOUGHT-AFTER but less strong than a title — an extract from a

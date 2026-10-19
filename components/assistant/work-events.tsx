@@ -4,7 +4,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger, cn } from "mangue-ui";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 import { groupWorkEvents, workEventsRevealKey, type WorkEvent } from "@/lib/work-event-groups";
 import {
   summarizeToolCalls,

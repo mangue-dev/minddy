@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Editor, Extensions, JSONContent } from "@tiptap/react";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import {
   RichEditor,
   editorMarkdown,

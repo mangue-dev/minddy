@@ -4,10 +4,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Copy01Icon, Share01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Button,
-  toast,
-} from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth-context";
 import { AppTooltip } from "@/components/ui/app-tooltip";

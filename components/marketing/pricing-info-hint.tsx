@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { InformationCircleIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "mangue-ui/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 /**
  * The little "i" in the lines of the price table: the detail of a line reads

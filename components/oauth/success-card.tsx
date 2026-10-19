@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Card, CardContent } from "mangue-ui";
+import { Card, CardContent } from "@/components/ui/card";
 import { OAuthLogoPair } from "@/components/oauth/logo-pair";
 import { AutoRedirect } from "@/components/oauth/auto-redirect";
 

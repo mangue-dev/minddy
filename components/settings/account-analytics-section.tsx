@@ -4,7 +4,7 @@ import {useRuntimeConfig} from "@/lib/runtime-config-provider";
 
 import {useEffect, useState} from "react";
 import {useLocale, useTranslations} from "next-intl";
-import {Switch} from "mangue-ui";
+import { Switch } from "@/components/ui/switch";
 
 import Link from "@/components/app-link";
 

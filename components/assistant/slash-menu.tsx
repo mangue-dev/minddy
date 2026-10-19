@@ -7,7 +7,7 @@ import { type CSSProperties, useMemo } from "react";
 import { AppIcon } from "@/components/icon";
 import { LayersIcon as Layers, PencilEdit01Icon as SquarePen } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import type { AssistantCommandId } from "@/lib/assistant-types";
 import type { RepositorySkillSummary } from "@/lib/repository-skills";
 

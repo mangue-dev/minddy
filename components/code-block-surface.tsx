@@ -12,7 +12,9 @@ import {
   type ReactNode,
 } from "react";
 import { useTranslations } from "next-intl";
-import { Button, IconButton, cn } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
+import { cn } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,

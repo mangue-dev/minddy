@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 import { globalBoardQueryFn } from "./global-board-api";
 import { refreshGlobalIssueSnapshot } from "./global-issues-api";
 import { createIssueDeferred } from "@/lib/create-issue-deferred";

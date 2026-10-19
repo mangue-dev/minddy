@@ -1,4 +1,5 @@
-import { Skeleton, cn } from "mangue-ui";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { AppContentHeader } from "@/components/app-content-header";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { BoardLoadingSkeleton } from "@/components/board-loading-skeleton";

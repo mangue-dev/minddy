@@ -1,4 +1,4 @@
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 
 /**
  * Shared geometry of Numo's floating panel: compact widget style
@@ -41,7 +41,7 @@ export function panelSheetClassName(displayMode: PanelDisplayMode): string {
     // No focus halo on the shell: the Radix FocusScope rests on the
     // focus on the content of the Sheet as soon as it escapes (e.g. the input emptied after
     // sending), which triggered the browser's default white outline
-    // around the entire panel. Same bias as DialogContent (mango-ui).
+    // around the entire panel. Same bias as DialogContent (components/ui/dialog.tsx).
     "outline-none",
     // Compact ⇄ extended fluid morph — see globals.css `.assistant-panel-morph`.
     "assistant-panel-morph",

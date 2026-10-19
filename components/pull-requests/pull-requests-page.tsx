@@ -13,12 +13,9 @@ import { canConsumePrDeepLink } from "@/lib/pr-navigation";
 import { AppTabRouteBoundary, useAppTabActive, useAppTabRoute } from "@/lib/app-tab-route-context";
 import { useFormatter, useTranslations } from "next-intl";
 import { type InfiniteData, useQueryClient } from "@tanstack/react-query";
-import {
-  Button,
-  CommandGroup,
-  CommandItem,
-  cn,
-} from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 import { PrDetailSkeleton, PrListSkeleton } from "@/components/pull-requests/pr-loading-skeleton";
 import { EmptyScene } from "@/components/empty-scene";
 import { ReadFailureNotice } from "@/components/read-failure-notice";

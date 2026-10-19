@@ -10,7 +10,7 @@ import {
 } from "react";
 import { COMPACT_DESKTOP_QUERY } from "./app-layout";
 import { useMobileLayout } from "./use-mobile-layout";
-import { useMediaQuery } from "mangue-ui";
+import { useMediaQuery } from "@/lib/use-media-query";
 
 /** Persisted choice — survives reloads; the sidebar never reclaims space on
  * its own after a round trip. The preference is read as an external store,

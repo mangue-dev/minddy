@@ -3,7 +3,10 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
-import { Badge, Button, Spinner, cn } from "mangue-ui";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
 import { CsvDropzone } from "@/components/import/csv-dropzone";
 import { ImportMappingEditor } from "@/components/settings/import-mapping-editor";
 import { useCsvImport } from "@/lib/use-csv-import";

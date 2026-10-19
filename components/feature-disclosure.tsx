@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon } from "@hugeicons/core-free-icons";
 import type { ReactEventHandler, ReactNode, Ref } from "react";
-import { cn } from "mangue-ui/lib/utils";
+import { cn } from "@/lib/utils";
 import styles from "@/components/marketing/feature-disclosure.module.css";
 
 /** Shared native card disclosure for the landing and release changelog. */

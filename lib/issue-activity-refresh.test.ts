@@ -13,10 +13,13 @@ vi.mock("@/components/assistant/tool-call-display", () => ({ toolRunningLabel: (
 vi.mock("@/components/actor-avatars", () => ({ AutomationAvatar: () => null, McpAvatar: () => null, NumoAvatar: () => null, SmartAssignAvatar: () => null, SmartFillAvatar: () => null }));
 vi.mock("@/components/resources", () => ({}));
 vi.mock("@/components/one-line", () => ({ OneLine: ({ children }: { children: import("react").ReactNode }) => createElement("p", null, children) }));
-vi.mock("mangue-ui", () => ({
+vi.mock("@/components/ui/skeleton", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   Skeleton: () => createElement("div", { "data-skeleton": true }),
+}));
+vi.mock("@/components/ui/button", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   Button: ({ children }: { children: import("react").ReactNode }) => createElement("button", null, children),
-  cn: (...values: unknown[]) => values.filter(Boolean).join(" "),
 }));
 afterEach(() => vi.unstubAllGlobals());
 

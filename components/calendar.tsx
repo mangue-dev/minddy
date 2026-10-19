@@ -1,7 +1,7 @@
 "use client";
 
 // Themed calendar built on react-day-picker. Self-contained (no external
-// stylesheet): every part is styled with mangue-ui design tokens so it matches
+// stylesheet): every part is styled with the design tokens of app/tokens.css so it matches
 // the app in light and dark, and reads cleanly on desktop and mobile.
 
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -13,7 +13,7 @@ import {
   getDefaultClassNames,
   type DayPickerProps,
 } from "react-day-picker";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 
 export type CalendarProps = DayPickerProps;
 

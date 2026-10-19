@@ -3,7 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { useTranslations } from "next-intl";
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 import { useAuth } from "./auth-context";
 import { myInvitationsQueryOptions, respondInvitationApi } from "./invitations-api";
 const MY_INVITATIONS_KEY = myInvitationsQueryOptions.queryKey;

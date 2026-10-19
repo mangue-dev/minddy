@@ -27,10 +27,28 @@ vi.mock("@/lib/projects-context", () => ({ useProjects: () => ({
 vi.mock("@/lib/members-api", () => ({ removeMemberApi: state.removeMember }));
 vi.mock("@/lib/use-members-query", () => ({ useMembersQuery: () => ({ members: [] }) }));
 vi.mock("@/lib/assistant-panel-context", () => ({ useAssistantContext: () => {} }));
-vi.mock("mangue-ui", () => ({
+vi.mock("@/components/ui/button", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   Button: ({ children, onClick, disabled }: ComponentProps<"button">) => createElement("button", { onClick, disabled }, children),
+}));
+vi.mock("@/components/ui/confirm-delete-dialog", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   ConfirmDeleteDialog: ({ onConfirm }: { onConfirm: () => Promise<void> }) => { state.confirmDelete = onConfirm; return null; },
-  Badge: () => null, Input: () => null, Spinner: () => null,
+}));
+vi.mock("@/components/ui/badge", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  Badge: () => null,
+}));
+vi.mock("@/components/ui/input", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  Input: () => null,
+}));
+vi.mock("@/components/ui/spinner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  Spinner: () => null,
+}));
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 vi.mock("@/components/settings/settings-ui", () => ({

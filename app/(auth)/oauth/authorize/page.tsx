@@ -7,7 +7,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "mangue-ui";
+} from "@/components/ui/card";
 import { appPageMetadata } from "@/lib/app-metadata";
 import { createServerSupabase } from "@/lib/supabase-server";
 import {

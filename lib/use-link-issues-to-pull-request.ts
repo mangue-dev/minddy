@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 import { ALL_PULL_REQUESTS_QUERY_KEY } from "./pull-request-list-cache";
 import { linkPullRequestIssueApi, unlinkPullRequestIssueApi, type IssuePr } from "./agent-api";
 import type { IssuePrPayload } from "./issue-pr-store";

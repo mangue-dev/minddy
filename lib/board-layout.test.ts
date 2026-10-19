@@ -21,16 +21,16 @@ import { BOARD_COLUMN_CLASS, BOARD_SCROLLER_CLASS } from "./board-layout";
  * in ticket cards stretched above 1200 px.
  *
  * Rereading the classes doesn't check that. What verifies it: compiling them for
- * true, with the mango-ui tokens, then replay the cascade at five widths of
+ * true, with the design tokens, then replay the cascade at five widths of
  * window. The test fails both if someone removes the `max-desktop:` and if
- * a mango-ui bump moves the threshold.
+ * a token change moves the threshold.
  */
 
 const require = createRequire(import.meta.url);
 
 /** What 1rem is worth in a media query: the default ROOT font size.
     This is what makes it possible to compare the levels in `rem` of the heart to the threshold in `px`
-    of mango-ui — the comparison that Tailwind, precisely, does not make. */
+    of app/tokens.css — the comparison that Tailwind, precisely, does not make. */
 const REM = 16;
 
 /**
@@ -52,7 +52,7 @@ async function buildCss(candidates: string[]): Promise<string> {
       content: readFileSync(file, "utf8"),
     };
   };
-  const tokens = readFileSync(require.resolve("mangue-ui/tokens.css"), "utf8").replace(
+  const tokens = readFileSync(path.join(process.cwd(), "app/tokens.css"), "utf8").replace(
     /^\s*@import\s[^;]*;\s*$/gm,
     "",
   );

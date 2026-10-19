@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { NextIntlClientProvider } from "next-intl";
-import { TooltipProvider } from "mangue-ui";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { PrUnlinkConfirmationProvider } from "@/components/pull-requests/pr-unlink-confirmation";
 import { PrLinkedIssues } from "@/components/pull-requests/pr-linked-issues";
 import { PrLinkIssue } from "@/components/pull-requests/pr-link-issue";
@@ -21,14 +21,8 @@ vi.mock("@tanstack/react-query", async (importOriginal) => ({
   useQuery: () => ({ data: { issues: [] }, isPending: false }),
 }));
 // Import the actual primitives without the barrel's unrelated emoji JSON dependency.
-vi.mock("mangue-ui", async () => ({
-  ...(await vi.importActual<Record<string, unknown>>("mangue-ui/lib/utils.ts")),
-  ...(await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/button.tsx")),
-  ...(await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/command.tsx")),
-  ...(await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/popover.tsx")),
-  ...(await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/tooltip.tsx")),
-  ...(await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/spinner.tsx")),
-  ...(await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/dialog.tsx")),
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 

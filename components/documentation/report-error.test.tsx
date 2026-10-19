@@ -19,10 +19,16 @@ vi.mock("@/components/form-dialog", () => ({
     open: boolean; title: string; children: React.ReactNode; onSubmit: () => Promise<void>; submitDisabled: boolean; onCancel: () => void;
   }) => open ? <div role="dialog" aria-label={title}>{children}<button disabled={submitDisabled} onClick={() => void onSubmit()}>Submit</button><button onClick={onCancel}>Cancel</button></div> : null,
 }));
-vi.mock("mangue-ui", async () => ({
-  ...await import("mangue-ui/components/ui/button"),
+vi.mock("@/components/ui/input", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} onInput={props.onChange as never} />,
+}));
+vi.mock("@/components/ui/textarea", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   Textarea: (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...props} />,
+}));
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 

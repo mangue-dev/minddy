@@ -6,8 +6,10 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowUpDownIcon, BrainIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, Command, CommandItem, cn } from "mangue-ui";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
+import { Button } from "@/components/ui/button";
+import { Command, CommandItem } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
+import { ResponsivePopover, ResponsivePopoverContent, ResponsivePopoverTrigger } from "@/components/ui/responsive-popover";
 import { GENERIC_REASONING_LEVELS, type ReasoningLevel } from "@/lib/agent-reasoning";
 import type { MessageKey } from "@/lib/i18n-keys";
 import {
@@ -92,13 +94,13 @@ export function ReasoningCombobox({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <ResponsivePopover open={open} onOpenChange={setOpen}>
       {/* `shrink-0` and not `shrink`: the labels form a CLOSED set of seven
  short words, the longest of which ("Without reasoning") fits well.
  Nothing here justifies cutting back — it's the composer's bar which
  was compressing the chip. The model name next to it keeps its truncation:
  it is of arbitrary length. */}
-      <PopoverTrigger asChild>
+      <ResponsivePopoverTrigger asChild>
         <Button
           type="button"
           variant="ghost"
@@ -117,18 +119,18 @@ export function ReasoningCombobox({
           <span className="whitespace-nowrap text-left">{label}</span>
           <HugeiconsIcon icon={ArrowUpDownIcon} className="size-3 shrink-0 opacity-50" />
         </Button>
-      </PopoverTrigger>
+      </ResponsivePopoverTrigger>
       {/* The name of the level is enough to designate it: the list is short, ordered from
  lightest to heaviest, and it is this ORDER which says what they are worth
  in relation to each other. A gloss under each line extended
  the menu by seven sentences to repeat that.
- No imposed width: `PopoverContent` is already `w-max`, so the
+ No imposed width: `ResponsivePopoverContent` is already `w-max`, so the
  box is sized on ITS contents. We only give it a floor,
  so that it is not reduced to “Light”. The `w-72` from before, then the
  `w-48` that I had put, gave back the ellipse that we have just removed as soon as a translation extends a level. */}
       {/* `rounded-xl`: it is `Command` which paints the surface and it is already imposed
  20px. With the 8px removal from the list, the options (12px) are concentric. */}
-      <PopoverContent className="min-w-44 rounded-xl p-0" align="start">
+      <ResponsivePopoverContent className="min-w-44 rounded-xl p-0" align="start">
         <Command shouldFilter={false}>
           {/* `p-1`: same 8px indentation on FOUR sides as the others
               pickers du composer. */}
@@ -148,7 +150,7 @@ export function ReasoningCombobox({
             ))}
           </CommandList>
         </Command>
-      </PopoverContent>
-    </Popover>
+      </ResponsivePopoverContent>
+    </ResponsivePopover>
   );
 }

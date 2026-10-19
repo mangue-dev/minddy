@@ -13,7 +13,7 @@ const screenshots = resolve(root, "docs/screenshots/pr-documentation-cleanup");
 await mkdir(output, { recursive: true });
 await mkdir(screenshots, { recursive: true });
 const sources = ["components/documentation/documentation-table.tsx", "components/documentation/documentation-diagram.tsx", "components/marketing/card-tones.ts", "components/marketing/feature-table-styles.ts"];
-const css = await postcss([tailwind({ base: root })]).process(`@import "tailwindcss" source(none);\n@import "mangue-ui/tokens.css";\n${sources.map(source => `@source "${resolve(root, source)}";`).join("\n")}\nbody { font-family: system-ui, sans-serif; padding: 24px; background: var(--background); color: var(--foreground); } main { max-width: 740px; margin: auto; } h1 { font-size: 28px; font-weight: 600; } h2 { font-size: 20px; margin-top: 32px; }`, { from: resolve(root, "documentation-scoped-preview.css") });
+const css = await postcss([tailwind({ base: root })]).process(`@import "tailwindcss" source(none);\n@import "${resolve(root, "app/tokens.css")}";\n${sources.map(source => `@source "${resolve(root, source)}";`).join("\n")}\nbody { font-family: system-ui, sans-serif; padding: 24px; background: var(--background); color: var(--foreground); } main { max-width: 740px; margin: auto; } h1 { font-size: 28px; font-weight: 600; } h2 { font-size: 20px; margin-top: 32px; }`, { from: resolve(root, "documentation-scoped-preview.css") });
 const entry = `import React from "react"; import { renderToStaticMarkup } from "react-dom/server";
 import ReactMarkdown from "react-markdown"; import remarkGfm from "remark-gfm";
 import { DocumentationTable } from "./components/documentation/documentation-table";
@@ -22,7 +22,6 @@ export function render(markdown, figures) { return renderToStaticMarkup(<main><h
 const bundle = resolve(output, "renderer.mjs");
 await build({ stdin: { contents: entry, resolveDir: root, loader: "tsx" }, bundle: true, platform: "node", format: "esm", jsx: "automatic", outfile: bundle,
   external: ["react", "react-dom/server", "react/jsx-runtime", "react-markdown", "remark-gfm"],
-  plugins: [{ name: "scoped-design-utility", setup(builder) { builder.onResolve({ filter: /^mangue-ui(?:\/lib\/utils)?$/ }, () => ({ path: resolve(root, "node_modules/mangue-ui/src/lib/utils.ts") })); } }],
 });
 const { render } = await import(pathToFileURL(bundle).href);
 const article = JSON.parse((await readFile("content/documentation/en/choose-an-instance.md", "utf8")).split("---")[1]);

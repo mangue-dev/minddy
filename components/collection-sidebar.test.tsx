@@ -7,7 +7,10 @@ import { SecondarySidebarProvider, useSecondarySidebar } from "@/lib/secondary-s
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/home" }));
 vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => true }));
-vi.mock("mangue-ui", () => ({ cn: (...values: unknown[]) => values.filter(Boolean).join(" "), useMediaQuery: () => true }));
+vi.mock("@/lib/use-media-query", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  useMediaQuery: () => true,
+}));
 const menu = vi.hoisted(() => ({ position: null as unknown, actions: [] as { id: string }[] }));
 vi.mock("@/components/issue-context-menu", () => ({ IssueContextMenu: (props: { position: unknown; actions: { id: string }[] }) => {
   menu.position = props.position; menu.actions = props.actions; return null;

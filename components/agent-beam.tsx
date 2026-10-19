@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { BorderBeam, type BorderBeamSize } from "border-beam";
-import { useTheme } from "mangue-ui";
+import { useTheme } from "@/components/theme-provider";
 
 /** Settings common to both forms of the border (envelope and layer). */
 const BEAM_TUNING = { duration: 4, colorVariant: "colorful" } as const;
@@ -14,7 +14,7 @@ const BEAM_TUNING = { duration: 4, colorVariant: "colorful" } as const;
  * children as is (no wrapper). `className` carries the RADIUS of the beam (to be aligned
  * on that of the wrapped element, e.g. `rounded-xl` / `rounded-2xl`).
  *
- * The theme is resolved by the APP (mango-ui's useTheme), not by the
+ * The theme is resolved by the APP (the ThemeProvider's useTheme), not by the
  * `theme="auto"` of border-beam: its “auto” hook reads `matchMedia` in
  * its state initialization — server “dark”, first client render =
  * SYSTEM preference → the generated <style> differs and React regenerates the whole tree
@@ -98,7 +98,7 @@ function PersistentAgentBeam({
  * side panel: the portal teleports the item out of the `AgentBeam`, which
  * then collapses to 0x0 in the page flow and no longer paints anything. To return
  * as the LAST child of the container (so it passes above the content), which
- * must be set — `fixed` for both mango-ui surfaces.
+ * must be set — `fixed` for both components/ui surfaces.
  *
  * The positioning goes through `style` and not through classes: the
  * style that `border-beam` generates (`[data-beam] { position: relative }`) is OFF
@@ -106,7 +106,7 @@ function PersistentAgentBeam({
  *
  * The radius is MEASURED on the container rather than passed through the call site:
  * autodetection of `border-beam` reads first child, and there is none
- * here. Measuring it also follows the real container — mango-ui does not expose its
+ * here. Measuring it also follows the real container — the primitive does not expose its
  * rays (`rounded-[2rem]` of the modal, `rounded-2xl` of the panel) nor the toggle
  * in the bottom sheet, where they change.
  */
@@ -163,7 +163,7 @@ function MountedAgentBeamOverlay({
     // `offsetParent`, not `parentElement`: this is the element on which
     // `inset: 0` is really set, so the one whose radius must be copied. THE
     // two coincide on the side panel, but not on the bottom modal
-    // sheet, where mango-ui slides a scrolling div without radius or position.
+    // sheet, where the primitive slides a scrolling div without radius or position.
     const box = node?.offsetParent ?? node?.parentElement;
     if (!box) return;
     const r = Number.parseFloat(getComputedStyle(box).borderTopLeftRadius);

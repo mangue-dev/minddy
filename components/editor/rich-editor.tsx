@@ -42,7 +42,7 @@ import { BlockRange } from "@/components/editor/block-range";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import type { EditorView } from "@tiptap/pm/view";
 import { useTranslations } from "next-intl";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import {
   MENTION_HYDRATION_META,
   MentionNode,
@@ -447,7 +447,7 @@ export function RichEditor({
         // and nothing that affects the document.
         // The TASKS view is that of the notebook (MIN-274): same menu ⋯, same
         // hover shortcuts, even right click. She injects herself here rather than
-        // to live in the block file, because it pulls `mangue-ui` and
+        // to live in the block file, because it pulls the client UI primitives and
         // that the register must remain importable outside the browser (cf.
         // components/pages/blocks/task-list.ts).
         // Same thing for the SUB-PAGE, and for an even harder reason:

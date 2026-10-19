@@ -8,7 +8,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
-import { Badge, Button, cn } from "mangue-ui";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { StatusIndicator } from "@/components/issue-indicators";
 import { ProjectOrb } from "@/components/project-orb";
 import { orbSeedOr } from "@/lib/project-orb-colors";
@@ -56,7 +58,7 @@ const STATUS_BADGE_CLASSES: Record<FeedbackPostStatus, string | null> = {
 /**
  * The status badge of a return, shared by the public board and the team view.
  *
- * It borrows the SHAPE of the badges from the rest of the app (`Badge` from mangue-ui, the
+ * It borrows the SHAPE of the badges from the rest of the app (`Badge` from components/ui, the
  * same height as on pull requests and agent sessions) rather than the
  * micro-pastille qu'il portait : quatre listes qui se ressemblent doivent se
  * look like, and an 11 px badge in the middle of 12 badges reads like a

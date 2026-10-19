@@ -1,4 +1,4 @@
-import { Skeleton } from "mangue-ui";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AppContentHeader, APP_CONTENT_HEADER_LEADING_INSET } from "@/components/app-content-header";
 import { StatsSkeleton } from "@/components/stats/stats-skeleton";
 

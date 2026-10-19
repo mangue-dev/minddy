@@ -3,7 +3,7 @@
 import { LayersIcon as Layers } from "@hugeicons/core-free-icons";
 import type { Editor, JSONContent } from "@tiptap/core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { SkillPreviewDialog } from "@/components/assistant/skill-preview-dialog";
 import { onEditorDom } from "@/components/editor/editor-dom";
 import { PromptSkillNode } from "@/components/editor/prompt-skill-node";

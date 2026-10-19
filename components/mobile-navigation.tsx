@@ -16,7 +16,7 @@ import { MobileNavActions } from "./mobile-nav-actions";
 import { MobileSidebarReveal } from "./mobile-sidebar-reveal";
 import { SidebarFrame, SidebarRows, SidebarTopBand, SidebarBackRow, ProjectContextRow } from "./app-sidebar";
 import { MobileSheetScrollArea } from "./ui/mobile-sheet";
-import { type NavSection, type NavItem } from "mangue-ui";
+import type { NavSection, NavItem } from "@/components/nav-types";
 import type { Project } from "@/lib/types";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { useMobileSecondarySidebar } from "@/lib/secondary-sidebar-context";

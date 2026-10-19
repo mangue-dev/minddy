@@ -1,7 +1,7 @@
 "use client";
 
 import { lazy, Suspense, useEffect, useState } from "react";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import type {
   DocumentEditorMentions,
   DocumentEditorProps,

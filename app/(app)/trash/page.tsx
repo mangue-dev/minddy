@@ -4,18 +4,18 @@ import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { CircleIcon, DatabaseIcon, Delete02Icon, File02Icon, MessageMultiple01Icon, MoreHorizontalIcon, Target01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState, type SVGProps } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
-  Button,
-  ConfirmDeleteDialog,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Skeleton,
-  cn,
-  toast,
-} from "mangue-ui";
+} from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 import { AppIcon } from "@/components/icon";
 

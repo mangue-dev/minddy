@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { MinddyLogo } from "@/components/minddy-logo";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import type { PublicSiteTab } from "@/lib/feedback/types";

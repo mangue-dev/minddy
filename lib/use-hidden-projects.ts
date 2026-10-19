@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { useAuth } from "./auth-context";
 import { fetchHiddenProjectIdsApi, setProjectHiddenApi } from "./hidden-projects-api";

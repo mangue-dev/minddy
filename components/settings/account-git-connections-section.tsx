@@ -5,7 +5,11 @@ import { GitBranchIcon as GitBranch } from "@hugeicons/core-free-icons";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, ConfirmDeleteDialog, Spinner, cn, toast } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { Github, Gitlab } from "@/components/git/provider-icons";
 import {
   disconnectGitConnectionApi,

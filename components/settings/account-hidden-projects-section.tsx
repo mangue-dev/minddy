@@ -4,7 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ViewIcon } from "@hugeicons/core-free-icons";
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { Button } from "mangue-ui";
+import { Button } from "@/components/ui/button";
 import Link from "@/components/app-link";
 import { ProjectOrb } from "@/components/project-orb";
 import { SettingsEmpty, SettingsGroup, SettingsListRow } from "@/components/settings/settings-ui";

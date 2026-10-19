@@ -1,4 +1,4 @@
-import { cn } from "mangue-ui/lib/utils";
+import { cn } from "@/lib/utils";
 import { MINDDY_LOGO_PATH, MINDDY_LOGO_VIEWBOX } from "@/lib/brand";
 
 /**

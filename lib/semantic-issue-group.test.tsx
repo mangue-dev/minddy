@@ -20,9 +20,17 @@ vi.mock("@/lib/use-semantic-issue-search", () => ({
     return { ids: h.ids, pending: false };
   },
 }));
-vi.mock("mangue-ui", async () => {
+// Stubs for the UI primitives the component under test renders.
+const uiStubs = vi.hoisted(() => {
+  let value: Promise<Record<string, unknown>> | undefined;
+  return () => (value ??= (async () => {
   const { Command } = await import("cmdk");
   return { CommandGroup: Command.Group, CommandItem: Command.Item };
+})());
+});
+vi.mock("@/components/ui/command", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), CommandGroup: stubs.CommandGroup, CommandItem: stubs.CommandItem };
 });
 
 import { Command } from "cmdk";

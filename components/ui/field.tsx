@@ -1,27 +1,22 @@
 "use client";
 
 import type { ComponentProps } from "react";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 
 /**
- * `Field` — the shadcn/ui form LAYOUT primitive, copied
- * here (MIN-167).
+ * `Field` — the shadcn/ui form LAYOUT primitive (MIN-167).
  *
- * Why it is not in `mangue-ui`: the lib has been checked out from AutoKap
- * before shadcn added `Field`. It therefore exposes excellent CONTROLS
- * (Switch, Select, Input, Card…) but no grammar for SETTING them — no
- * `Field`, no `FormRow`. Result: each settings screen wrote its own
+ * The controls (Switch, Select, Input, Card…) had no grammar for laying them
+ * out — no `Field`, no `FormRow` — so each settings screen wrote its own
  * `flex`, and six authors wrote six different ones. This is the root cause
  * that MIN-167 fixes.
  *
- * Two assumed deviations from the original:
- * - `cva` is replaced by class tables (no dependencies added —
- * the repository maintains two lockfiles, c. already
- * a `id`).
+ * Deviation from the shadcn original: `cva` is replaced by class tables.
  *
  * The `responsive` orientation is what the ticket asked for: key on the left,
- * value on the right on the same line, stacked below `@md`. It relies on a CONTAINER query — the width of the group, not the width of the
- * window — so `Field responsive` must live under a `FieldGroup`.
+ * value on the right on the same line, stacked below `@md`. It relies on a
+ * CONTAINER query — the width of the group, not the width of the window — so
+ * `Field responsive` must live under a `FieldGroup`.
  */
 
 type FieldOrientation = "vertical" | "horizontal" | "responsive";

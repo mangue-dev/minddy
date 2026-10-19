@@ -8,7 +8,10 @@ import { NavigationContext } from "@/lib/app-tab-navigation-context";
 import type { AppTabsSession } from "@/lib/app-tabs-session";
 
 const state = vi.hoisted(() => ({ allowed: true, selected: null as string | null, select: (_id: string | null) => {}, publication: null as unknown }));
-vi.mock("mangue-ui", () => ({ Button: ({ children }: { children: ReactNode }) => <div>{children}</div>, cn: (...values: unknown[]) => values.filter(Boolean).join(" ") }));
+vi.mock("@/components/ui/button", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  Button: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+}));
 vi.mock("next/navigation", () => ({ usePathname: () => { throw new Error("Retained routines must not read the live route"); }, useSearchParams: () => { throw new Error("Retained routines must not read live selection"); } }));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("@/lib/use-billing-query", () => ({ usePlanGates: () => ({ loading: false, agentsAllowed: state.allowed }) }));

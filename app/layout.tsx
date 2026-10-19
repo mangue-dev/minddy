@@ -10,7 +10,7 @@ import {
   getTimeZone,
   getTranslations,
 } from "next-intl/server";
-import { ThemeProvider } from "mangue-ui/components/theme-provider";
+import { ThemeProvider } from "@/components/theme-provider";
 import { BrowserIntlProvider } from "@/components/browser-intl-provider";
 import { CookieBanner } from "@/components/cookie-banner";
 import { DesktopChrome } from "@/components/desktop-chrome";
@@ -69,7 +69,7 @@ const instrumentSerif = Instrument_Serif({
    `cover` makes the page full bleed and gives the insets their true value:
    this is the line that puts all this work already written into operation. What affects a
    edge of the screen must therefore, from here, carry its inset — see the block of
-   safe areas in app/globals.css for mango-ui surfaces.
+   safe areas in app/globals.css for the components/ui surfaces.
 
    We do not touch `maximumScale` NOR `userScalable`: restricting the zoom is a
    accessibility flaw, and none of the fixes above need it.

@@ -7,9 +7,9 @@ import { PrReadinessBadge } from "./pr-readiness";
 import type { PullRequestReadiness } from "@/lib/pr-readiness";
 
 // The full design system pulls in emoji data that Node cannot import without attributes.
-vi.mock("mangue-ui", () => ({
+vi.mock("@/components/ui/badge", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
-  cn: (...names: unknown[]) => names.filter(Boolean).join(" "),
 }));
 vi.mock("@/components/pull-requests/pr-insights", () => ({ ChecksDonut: () => null }));
 

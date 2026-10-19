@@ -43,7 +43,10 @@ vi.mock("@/components/billing/usage-budget", () => ({
       createElement("button", { onClick: onRetry }, "retryUsage"),
     ),
 }));
-vi.mock("mangue-ui", () => {
+// Stubs for the UI primitives the component under test renders.
+const uiStubs = vi.hoisted(() => {
+  let value: Promise<Record<string, unknown>> | undefined;
+  return () => (value ??= (async () => {
   const Container = ({ children }: { children?: ReactNode }) => children;
   const Button = ({
     children,
@@ -74,6 +77,19 @@ vi.mock("mangue-ui", () => {
     cn: (...values: Array<string | boolean | null | undefined>) =>
       values.filter(Boolean).join(" "),
   };
+})());
+});
+vi.mock("@/components/ui/button", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Button: stubs.Button };
+});
+vi.mock("@/components/ui/collapsible", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Collapsible: stubs.Collapsible, CollapsibleContent: stubs.CollapsibleContent, CollapsibleTrigger: stubs.CollapsibleTrigger };
+});
+vi.mock("@/components/ui/select", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Select: stubs.Select, SelectContent: stubs.SelectContent, SelectItem: stubs.SelectItem, SelectTrigger: stubs.SelectTrigger, SelectValue: stubs.SelectValue };
 });
 
 const { UsageHistorySection } = await import(

@@ -6,33 +6,32 @@ import { describe, expect, it } from "vitest";
 import { THEME_PRESETS } from "./theme-presets";
 
 /**
- * MIN-284 — finger comfort is also a contract between two packages.
+ * MIN-284 — finger comfort, checked where it lives.
  *
- * mangue-ui lives in node_modules, so we do not patch it. `app/globals.css`
- * corrects it REMOTELY by targeting its `data-slot` attributes and geometry:
- * touch targets are enlarged to 44 px, press feedback is restored, and safe
- * areas are made visible by the root layout's `viewport-fit=cover` setting.
+ * The primitives of `components/ui/` carry their own touch behavior under a
+ * coarse pointer (components/ui/touch-target.ts): 44 px targets, press
+ * feedback, no tap delay. `app/globals.css` keeps what is page-wide: the safe
+ * areas revealed by the root layout's `viewport-fit=cover`, the tap highlight
+ * and the zoom-on-focus guard of hand-written fields.
  *
- * Nothing connects the two at runtime. A mangue-ui update that renames a
- * `data-slot`, removes `data-side` from a drawer, or changes a dialog's maximum
- * height does not break anything visible from a development workstation. The
- * rules simply stop matching, and the app becomes difficult to use on a phone —
- * exactly the kind of regression no one sees with a mouse.
- *
- * This test rereads both sources and fails the second they no longer say
- * the same thing. As for `lib/mobile-nav-clearance.test.ts`, the instruction is
- * then to UPDATE globals.css to match mangue-ui, not to relax the test.
+ * None of this is visible from a development workstation: a renamed
+ * `data-slot`, a lost class or a changed size breaks nothing with a mouse, and
+ * the app becomes difficult to use on a phone. This test rereads the sources
+ * and fails the second they stop saying the same thing. The instruction is then
+ * to UPDATE the code to keep the behavior, not to relax the test.
  */
 
 const REPO = process.cwd();
-const UI = (name: string) => join(REPO, `node_modules/mangue-ui/src/components/ui/${name}.tsx`);
+const UI = (name: string) => join(REPO, `components/ui/${name}.tsx`);
 const GLOBALS = join(REPO, "app/globals.css");
+const TOKENS = join(REPO, "app/tokens.css");
+const TOUCH = join(REPO, "components/ui/touch-target.ts");
 const LAYOUT = join(REPO, "app/layout.tsx");
 
 const read = (path: string) => readFileSync(path, "utf8");
 
-describe("zones de sécurité", () => {
-  it("le root layout rend la page à fond perdu", () => {
+describe("safe areas", () => {
+  it("renders the page full bleed from the root layout", () => {
     const layout = read(LAYOUT);
     // Without `cover`, the window is confined to the safe area and all seven
     // `env(safe-area-inset-*)` values in the repository are 0. This line enables
@@ -44,7 +43,7 @@ describe("zones de sécurité", () => {
     expect(layout).toContain('interactiveWidget: "resizes-content"');
   });
 
-  it("le root layout ne bride pas le zoom", () => {
+  it("does not restrict zoom in the root layout", () => {
     // A `maximumScale` or `userScalable: false` slipped here would be a
     // accessibility flaw, and no MIN-284 patch needs it.
     // We are looking for the KEY, not the mention in this comment that explains
@@ -54,18 +53,18 @@ describe("zones de sécurité", () => {
     expect(layout).not.toContain("userScalable:");
   });
 
-  it("les boîtes de dialogue plafonnent toujours à la hauteur qu'on recalcule", () => {
-    // globals.css recomputes this maximum by subtracting the insets. If mangue-ui
-    // changes the formula, our rule will no longer correct the right value.
+  it("caps centered dialogs above the notch and the home indicator", () => {
+    // A tall box that reaches its ceiling must not end under the home
+    // indicator once 100dvh extends under it: both insets come off the cap, and
+    // the box stays centered (the `translate` is untouched).
     for (const file of ["dialog", "alert-dialog"]) {
-      expect(read(UI(file))).toContain("max-h-[calc(100dvh-2rem)]");
+      expect(read(UI(file))).toContain(
+        "max-h-[calc(100dvh_-_2rem_-_env(safe-area-inset-top)_-_env(safe-area-inset-bottom))]",
+      );
     }
-    expect(read(GLOBALS)).toContain(
-      "100dvh - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)",
-    );
   });
 
-  it("les tiroirs annoncent toujours leur bord", () => {
+  it("keeps announcing which edge a sheet is attached to", () => {
     // `data-side` is the only way to know WHICH edge a drawer is attached to,
     // and therefore which inset to apply.
     expect(read(UI("sheet"))).toContain("data-side={side}");
@@ -74,15 +73,15 @@ describe("zones de sécurité", () => {
     expect(css).toContain('[data-slot="sheet-content"][data-side="top"]');
   });
 
-  it("le shell dégage l'encoche et les bords en paysage", () => {
+  it("clears the notch and the landscape edges around the shell", () => {
     expect(read(GLOBALS)).toMatch(
       /\.app-shell \{\s*padding-top: env\(safe-area-inset-top\);/,
     );
   });
 });
 
-describe("cibles de toucher", () => {
-  it("aucune taille de bouton n'atteint 44 px — la règle a toujours lieu d'être", () => {
+describe("touch targets", () => {
+  it("keeps every button size under 44 px, so the hit area is still needed", () => {
     const button = read(UI("button"));
     // The six sizes of `buttonVariants`, in Tailwind units (1 = 0.25rem = 4px).
     // The day one of them reaches 11 (44px), the extended target becomes
@@ -99,7 +98,7 @@ describe("cibles de toucher", () => {
     for (const height of heights) expect(button).toMatch(height);
   });
 
-  it("le bouton expose toujours les attributs que la règle vise", () => {
+  it("keeps the attributes the button's touch classes are keyed on", () => {
     const button = read(UI("button"));
     expect(button).toContain('data-slot="button"');
     // `data-variant` carries the exclusion for inline links, whose target would
@@ -108,48 +107,48 @@ describe("cibles de toucher", () => {
     expect(button).toContain("link:");
   });
 
-  it("globals.css étend la cible sans toucher au dessin", () => {
-    const css = read(GLOBALS);
+  it("grows the button target without moving its drawing", () => {
+    const touch = read(TOUCH);
     // `max()` does the sorting: values above 44 keep their size, and the rest
-    // grow to it. No height is hard-coded, so a mangue-ui size change needs no
+    // grow to it. No height is hard-coded, so a primitive size change needs no
     // adjustment — only the test above will notice it.
-    expect(css).toContain("width: max(100%, 44px)");
-    expect(css).toContain("height: max(100%, 44px)");
-    expect(css).toContain('[data-slot="button"]:not([data-variant="link"])::after');
+    expect(touch).toMatch(/COARSE_BUTTON_HIT_AREA =\s*"[^"]*not-data-\[variant=link\]:pointer-coarse:after:w-\[max\(100%,44px\)\]/);
+    expect(touch).toContain("not-data-[variant=link]:pointer-coarse:after:h-[max(100%,44px)]");
+    expect(read(UI("button"))).toMatch(/`\$\{COARSE_BUTTON_TOUCH_ACTION\} \$\{COARSE_BUTTON_HIT_AREA\} \$\{COARSE_BUTTON_PRESS\}/);
     // The button keeps the positioning supplied by its utilities: `relative` is
-    // deliberately set in `@layer base`, so a Tailwind `absolute` can win.
-    expect(css).toMatch(/@layer base \{\s*\[data-slot="button"\] \{\s*position: relative;/);
+    // deliberately set in `@layer base`, so a Tailwind `absolute` can win — also
+    // under a coarse pointer.
+    const tokens = read(TOKENS);
+    expect(tokens).toMatch(/@layer base \{[\s\S]*?\[data-slot="button"\] \{\s*position: relative;/);
+    expect(tokens).not.toMatch(/@media \(pointer: coarse\) \{\s*\[data-slot="button"\]/);
   });
 
-  it("les commandes isolées gardent la géométrie sur laquelle on a calculé", () => {
-    // We REUSE mangue-ui's pseudo-element instead of adding a second one: if its
-    // base size changes, our negative `inset` values will no longer produce 44 px.
+  it("keeps the geometry the isolated controls' targets are computed on", () => {
+    // The checkbox REUSES its own pseudo-element: on a 16 px square, a -14 px
+    // inset gives 16 + 2×14 = 44. If its base size changes, the inset no longer
+    // produces 44 px.
     const checkbox = read(UI("checkbox"));
     expect(checkbox).toContain('data-slot="checkbox"');
-    expect(checkbox).toMatch(/size-4 .*after:absolute after:-inset-x-3 after:-inset-y-2/);
-    expect(read(GLOBALS)).toContain("inset: -14px; /* 16 + 2×14 = 44 */");
+    expect(checkbox).toMatch(/size-4 .*after:absolute after:-inset-x-3 after:-inset-y-2 pointer-coarse:after:-inset-\[14px\]/);
 
+    // The slider thumb and the switch carry no `::after` of their own, so the
+    // centered hit area is the only one.
     const slider = read(UI("slider"));
     expect(slider).toContain('data-slot="slider-thumb"');
-    // Since 0.8.0 the thumb carries no `::after` of its own (the handle is
-    // centered in a full-height track), so our extension stays conflict-free.
-    expect(slider).not.toMatch(/data-slot="slider-thumb"[\s\S]*?after:/);
-    expect(read(GLOBALS)).toContain('[data-slot="slider-thumb"]::after,');
-    expect(read(GLOBALS)).toContain("width: max(100%, 44px);");
-
-    // The switch has no `::after` to reuse, so we add one. If mangue-ui ever adds
-    // one too, the two would conflict.
+    expect(slider).toMatch(/className=\{`relative block h-4 w-0 [^`]*\$\{COARSE_HIT_AREA\}/);
     const switchUi = read(UI("switch"));
     expect(switchUi).toContain('data-slot="switch"');
     expect(switchUi).toMatch(/h-5 w-\[34px\]/);
-    expect(switchUi).not.toContain("after:");
+    expect(switchUi).toContain("${COARSE_HIT_AREA}");
+    expect(switchUi.replace(/\$\{COARSE_HIT_AREA\}/g, "")).not.toContain("after:");
+    expect(read(TOUCH)).toMatch(/COARSE_HIT_AREA =\s*"[^"]*pointer-coarse:after:w-\[max\(100%,44px\)\]/);
   });
 
-  it("la cible de l'onglet passe par `::before`, jamais par `::after`", () => {
+  it("grows the tab target through `::before`, never `::after`", () => {
     // The active-tab indicator is drawn by an `after:` utility, so we do not put
     // ours in the same place.
     //
-    // Since mangue-ui 0.6.0 this trait MOVED: it is no longer on the
+    // This trait MOVED: it is no longer on the
     // trigger but on an indicator that slides from one tab to another
     // (`data-slot="tabs-indicator"`, the `line` variant that minddy uses
     // everywhere). The trigger's `::after` is therefore free today. **We keep
@@ -158,75 +157,74 @@ describe("cibles de toucher", () => {
     const tabs = read(UI("tabs"));
     expect(tabs).toContain('data-slot="tabs-indicator"');
     expect(tabs).toMatch(/after:absolute .*after:bg-foreground/);
-    expect(read(GLOBALS)).toContain('[data-slot="tabs-trigger"]::before');
+    expect(tabs).toContain("pointer-coarse:before:absolute pointer-coarse:before:inset-y-1/2 pointer-coarse:before:inset-x-0 pointer-coarse:before:-my-[22px]");
   });
 
-  it("les rangées de liste grandissent pour de vrai", () => {
+  it("grows list rows for real", () => {
     // A row cannot overflow onto its neighbor without expanding the actual
     // row: that is the only place where we change its real height.
-    const css = read(GLOBALS);
-    for (const slot of [
-      "dropdown-menu-item",
-      "dropdown-menu-checkbox-item",
-      "dropdown-menu-radio-item",
-      "dropdown-menu-sub-trigger",
-      "select-item",
-      "command-item",
-    ]) {
-      expect(css).toContain(`[data-slot="${slot}"]`);
-      // The slot still exists on the mangue-ui side.
-      const file = slot.startsWith("dropdown") ? "dropdown-menu" : slot.split("-")[0];
-      expect(read(UI(file))).toContain(`data-slot="${slot}"`);
+    expect(read(TOUCH)).toContain('COARSE_ROW = "pointer-coarse:min-h-11 '); // 11 × 4 = 44 px
+    const rows: Record<string, number> = { "dropdown-menu": 4, select: 1, command: 1 };
+    for (const [file, count] of Object.entries(rows)) {
+      expect(read(UI(file)).split("max-[1199px]:min-h-10 ${COARSE_ROW}").length - 1).toBe(count);
     }
-    expect(css).toContain("min-height: 44px;");
   });
 
   it("keeps dropdown options compact in desktop layout", () => {
-    const css = read(GLOBALS);
-    expect(css).toContain(':root[data-app-layout="desktop"]');
-    expect(css).toContain('[data-slot="dropdown-menu-item"]');
-    expect(css).toContain("padding-block: 0.375rem !important;");
-    // The dependency keeps its touch setting until 1200 px, so the override
-    // above is necessary for the application's actual breakpoint.
-    expect(read(UI("dropdown-menu"))).toContain("max-[1199px]:min-h-10");
+    // The rows keep their touch height until 1200 px; in the desktop layout
+    // (a touch-capable wide screen included) their padding stays dense, even
+    // over a call site's own padding.
+    const menu = read(UI("dropdown-menu"));
+    expect(menu).toContain("max-[1199px]:min-h-10");
+    expect(menu.split("${COARSE_ROW} app-desktop:py-1.5!").length - 1).toBe(4);
   });
 });
 
-describe("retour au toucher", () => {
-  it("l'appui enfonce le bouton, et seulement au doigt", () => {
-    const css = read(GLOBALS);
-    // The whole block lives under `pointer: coarse`, so the mouse experience is
-    // unchanged. It also disappears when the user requests reduced motion.
-    expect(css).toContain("@media (pointer: coarse)");
-    expect(css).toContain("@media (prefers-reduced-motion: no-preference)");
-    expect(css).toMatch(/\):active \{\s*scale: 0\.97;/);
+describe("touch feedback", () => {
+  it("presses the button down, and only under a finger", () => {
+    // Under `pointer: coarse` only, so the mouse experience is unchanged, and
+    // never when the user requests reduced motion (`motion-safe`).
+    expect(read(TOUCH)).toContain(
+      '"data-[slot=button]:not-data-[variant=link]:pointer-coarse:motion-safe:not-disabled:not-aria-disabled:active:[scale:0.97]"',
+    );
   });
 
-  it("le bouton sait déjà animer cet enfoncement", () => {
-    // `transition-all` comes from mangue-ui: without it, the `scale` would jump
+  it("lets the button animate that press", () => {
+    // `transition-all` comes from the primitive: without it, the `scale` would jump
     // instead of animating. Nothing in globals.css would provide that transition.
     expect(read(UI("button"))).toContain("transition-all");
   });
 
-  it("le halo gris du navigateur est éteint", () => {
+  it("turns off the browser's gray tap highlight", () => {
     // The browser highlight appears late and exceeds the border radius — it is
     // unnecessary now that a press has its own feedback.
     expect(read(GLOBALS)).toContain("-webkit-tap-highlight-color: transparent;");
   });
 
-  it("le délai du double-tap est levé sur ce qui se tape", () => {
+  it("lifts the double-tap delay on what gets tapped", () => {
     // …and ONLY there: the double-tap-to-zoom must remain available on
     // the content (a capture, a table, a block of code).
-    const css = read(GLOBALS);
-    expect(css).toContain("touch-action: manipulation;");
-    expect(css).not.toMatch(/^(html|body)[^{]*\{[^}]*touch-action/m);
+    expect(read(TOUCH)).toContain('COARSE_TOUCH_ACTION = "pointer-coarse:touch-manipulation"');
+    for (const file of ["switch", "checkbox", "tabs", "select", "dropdown-menu", "command", "button"]) {
+      expect(read(UI(file))).toMatch(/touch-manipulation|COARSE_(ROW|TOUCH_ACTION|BUTTON_TOUCH_ACTION)/);
+    }
+    expect(read(GLOBALS)).not.toMatch(/^(html|body)[^{]*\{[^}]*touch-action/m);
+  });
+
+  it("leaves the primitives' touch behavior to the primitives", () => {
+    // globals.css must not patch these slots from the outside again: change
+    // the component instead.
+    const css = read(GLOBALS).replace(/\/\*[\s\S]*?\*\//g, "");
+    for (const slot of ["button", "checkbox", "switch", "switch-thumb", "slider-thumb", "tabs-trigger", "select-item", "command-item", "dropdown-menu-item"]) {
+      expect(css).not.toContain(`[data-slot="${slot}"]`);
+    }
   });
 });
 
-describe("les autres pièges du tactile", () => {
-  it("aucun champ ne descend sous 16 px au doigt", () => {
+describe("other touch pitfalls", () => {
+  it("keeps every field at 16 px or more under a finger", () => {
     // Under 16 px, iOS zooms into a field and does not zoom back out when focus
-    // ends. mangue-ui handles this for its fields; the rule covers fields in the
+    // ends. The primitives handle this for their fields; the rule covers fields in the
     // handwritten product and any future ones.
     expect(read(UI("input"))).toContain("text-base");
     expect(read(UI("input"))).toContain("md:text-sm");
@@ -247,7 +245,7 @@ describe("les autres pièges du tactile", () => {
     expect(css).not.toMatch(/^(html|body)\s*\{[^}]*overscroll-behavior/m);
   });
 
-  it("Tailwind protège toujours ses `hover:` du tactile", () => {
+  it("keeps Tailwind's `hover:` variants away from touch", () => {
     // This eliminates the need to override hundreds of `hover:` utilities in
     // the app one by one — only handwritten `:hover` rules remain to be covered.
     // If a Tailwind update regressed, hover would remain stuck after every tap,
@@ -263,7 +261,7 @@ describe("les autres pièges du tactile", () => {
     expect(tw).toContain('H("&:hover",[B("@media","(hover: hover)"');
   });
 
-  it("les `:hover` écrits à la main sont neutralisés au doigt", () => {
+  it("neutralizes hand-written `:hover` rules under a finger", () => {
     const css = read(GLOBALS);
     // Every `:hover` rule in this file that paints something must have a
     // counterpart under `@media (hover: none)`, or it remains stuck after a tap.
@@ -286,12 +284,12 @@ describe("les autres pièges du tactile", () => {
     // The observer keeps the tag current when we switch themes or palettes.
     expect(script).toContain("MutationObserver");
 
-    // The Minddy defaults are a manual CONVERSION of the mangue-ui tokens,
+    // The Minddy defaults are a manual CONVERSION of the design tokens,
     // which `theme-color` cannot read through `var()`. If a token changes,
     // these must be recalculated — this test prevents discovering that on a
     // phone. The other palettes' chrome colors are checked against
     // app/theme-presets.css by lib/theme-presets.test.ts.
-    const tokens = read(join(REPO, "node_modules/mangue-ui/src/styles/tokens.css"));
+    const tokens = read(join(REPO, "app/tokens.css"));
     expect(tokens).toContain("--background: oklch(0.975 0.006 266);"); // light
     expect(tokens).toContain("--background: oklch(0.135 0.003 250);"); // dark
     expect(THEME_PRESETS["minddy-light"].chromeColor).toBe("#f5f7fb");

@@ -33,7 +33,10 @@ vi.mock("@/lib/use-home-summary-query", () => ({
   useHomeSummaryQuery: () => mocks.summary,
 }));
 vi.mock("@/lib/use-analytics", () => ({ useAnalytics: () => mocks.analytics }));
-vi.mock("mangue-ui", () => ({ toast: { error: vi.fn() } }));
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  toast: { error: vi.fn() },
+}));
 
 let latest: UseOnboardingResult | null = null;
 

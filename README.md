@@ -119,7 +119,8 @@ After CI and explicit production approval, automation fast-forwards
 `production` to the selected `main` SHA. There is no long-lived `develop` or
 release branch, and no human writes directly to `production`.
 
-- **Web app:** Next.js App Router, React, Tailwind CSS, and `mangue-ui`.
+- **Web app:** Next.js App Router, React, Tailwind CSS, and Minddy's own UI
+  components (`components/ui/`, Radix-based).
 - **Data and auth:** Supabase Postgres, Auth, Storage, and Realtime.
 - **Numo and agent integration:** Unified Numo conversations, scheduled routines,
   and an OAuth 2.1 MCP endpoint for external agents.

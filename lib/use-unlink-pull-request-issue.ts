@@ -2,7 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 import { ALL_PULL_REQUESTS_QUERY_KEY } from "./pull-request-list-cache";
 import { unlinkPullRequestIssueApi } from "./agent-api";
 

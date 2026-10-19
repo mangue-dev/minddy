@@ -5,7 +5,12 @@ import { ComputerIcon, Delete02Icon, SentIcon, Settings02Icon, SmartPhone01Icon 
 import {useCallback, useEffect, useState} from "react";
 import {useFormatter, useLocale, useTranslations} from "next-intl";
 import {useQueryClient} from "@tanstack/react-query";
-import {Button, ConfirmDeleteDialog, IconButton, Spinner, Switch, toast} from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { IconButton } from "@/components/ui/icon-button";
+import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
 import {deletePushDeviceApi, setPushDeviceEnabledApi, testPushDeviceApi} from "@/lib/push-devices-api";
 import {pushDevicesQueryKey, usePushDevicesQuery} from "@/lib/use-push-devices-query";
 import {currentEndpoint, isPushSupported, isIOS, isStandalone, pushPermission, subscribeThisDevice, unsubscribeThisDevice} from "@/lib/push/client";

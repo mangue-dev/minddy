@@ -3,7 +3,9 @@
 import { useActionState } from "react";
 import { LockIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
-import { Button, Input, Spinner } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import { IsoIcon } from "@/components/illustrations/iso-icon";
 
 /** PublicShare namespace key rendered under the field. */

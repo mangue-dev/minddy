@@ -160,7 +160,7 @@ async function capture({ locale, theme }) {
     //
     // The extended mode was a framing choice: it put Numo in the center and
     // returned the board to the decor. He doesn't do it anymore. `panel-geometry.ts` a
-    // reconnected its size to the dialogue tokens of mango-ui, i.e.
+    // reconnected its size to the dialog tokens of app/tokens.css, i.e.
     // 90vw × 90vh: the panel now covers the entire screen, the board
     // disappears from the image, and the thread folded — six messages, including a turn of
     // closed work — floats in the bottom two-thirds of white. Expand is

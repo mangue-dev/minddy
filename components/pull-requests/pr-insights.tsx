@@ -5,10 +5,8 @@ import { AppIcon } from "@/components/icon";
 import { AlertCircleIcon, ArrowDown01Icon, Copy01Icon, LinkSquare01Icon, ArrowUpRight01Icon, BubbleChatIcon, GitBranchIcon, GitMergeIcon, GitPullRequestDraftIcon, Shield01Icon, CheckIcon, UserRoundCheckIcon as UserRoundCheck, ViewIcon, Wrench01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
-import {
-  Button,
-  cn,
-} from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 import { PrReviewsDetails, type PrReviewerDetails } from "@/components/pull-requests/pr-reviews-details";
 import { reviewerReviewGroups, reviewCardTone } from "@/lib/pr-review-request";

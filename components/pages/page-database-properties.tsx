@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
-import { Checkbox } from "mangue-ui";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { SearchMultiSelect } from "@/components/search-select";
 import { PropertyRow, TRIGGER } from "@/components/issue-property-fields";

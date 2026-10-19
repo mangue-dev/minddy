@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { AppIcon } from "@/components/icon";
 import { Cancel01Icon as X, CancelCircleIcon as CircleSlash, CheckIcon as Check } from "@hugeicons/core-free-icons";
 import { useFormatter, useTranslations } from "next-intl";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { AuthorNames, AuthorStack } from "@/components/git/author-stack";
 import { GitLogin } from "@/components/git/git-login";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";

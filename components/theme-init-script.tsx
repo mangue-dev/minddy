@@ -5,7 +5,7 @@ import { useServerInsertedHTML } from "next/navigation";
 import { buildThemeScript, type ThemeScriptInput } from "@/lib/theme-script";
 
 /**
- * Apply the theme BEFORE the first paint — mango-ui's ThemeProvider only
+ * Apply the theme BEFORE the first paint — the ThemeProvider (components/theme-provider.tsx) only
  * applies in an effect, especially visible on anonymous public pages. Same
  * logic as the provider: localStorage "mangue-ui-theme", server-driven
  * default ("dark" for the app, "system" for the public — MIN-60), and — on
@@ -37,7 +37,7 @@ import { buildThemeScript, type ThemeScriptInput } from "@/lib/theme-script";
  * theme; it only has to write the matching color.
  *
  * The observer below keeps the tag current when the user switches themes mid-
- * session. It watches the <html> class — what mango-ui's ThemeProvider
+ * session. It watches the <html> class — what the ThemeProvider
  * toggles — rather than subscribing to a provider that lives in node_modules:
  * one observer, filtered on one attribute.
  */

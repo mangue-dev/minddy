@@ -10,8 +10,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  Input,
-} from "mangue-ui";
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { PROPERTY_ICONS } from "./database-property-icons";
 import type { PageSummary } from "@/lib/pages-api";

@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon, Folder01Icon } from "@hugeicons/core-free-icons";
 import type { ReactNode } from "react";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 

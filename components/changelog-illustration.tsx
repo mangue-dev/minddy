@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { cn } from "mangue-ui/lib/utils";
+import { cn } from "@/lib/utils";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Shield01Icon, Layout3ColumnIcon, File02Icon, Link01Icon, ChartLineData01Icon,

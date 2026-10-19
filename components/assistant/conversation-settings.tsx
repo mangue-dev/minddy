@@ -1,15 +1,13 @@
 "use client";
 
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
+import { ResponsivePopover, ResponsivePopoverContent, ResponsivePopoverTrigger } from "@/components/ui/responsive-popover";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, ArrowRight01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Button,
-  Slider,
-} from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { ModelCombobox } from "@/components/agent/model-combobox";
 import { ModelLogo, ProviderLogo } from "@/components/model-logo";
 import {
@@ -118,8 +116,8 @@ export function ConversationSettings() {
 
   return (
     <div className="flex min-w-0 items-center">
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
+      <ResponsivePopover open={open} onOpenChange={setOpen}>
+        <ResponsivePopoverTrigger asChild>
           <Button
             type="button"
             variant="ghost"
@@ -138,8 +136,8 @@ export function ConversationSettings() {
             </span>
             <HugeiconsIcon icon={ArrowDown01Icon} className="size-3 shrink-0 text-muted-foreground" />
           </Button>
-        </PopoverTrigger>
-        <PopoverContent
+        </ResponsivePopoverTrigger>
+        <ResponsivePopoverContent
           mobileTitle={t("sectionTitle")}
           align="start"
           side="top"
@@ -208,8 +206,8 @@ export function ConversationSettings() {
               }}
             />
           </div>
-        </PopoverContent>
-      </Popover>
+        </ResponsivePopoverContent>
+      </ResponsivePopover>
       {state.conversationConfigError ? (
         <span role="alert" className="max-w-56 truncate text-xs text-destructive">
           {state.conversationConfigError}

@@ -6,14 +6,14 @@ import { describe, expect, it } from "vitest";
 /** The shell's reserved space must match the fixed mobile navigation geometry. */
 
 const REPO = process.cwd();
-const APP_SHELL = join(REPO, "node_modules/mangue-ui/src/components/shell/app-shell.tsx");
+const APP_SHELL = join(REPO, "components/app-shell.tsx");
 const MOBILE_NAV = join(REPO, "components/mobile-navigation.tsx");
 const GLOBALS = join(REPO, "app/globals.css");
 
 const read = (path: string) => readFileSync(path, "utf8");
 
 describe("mobile navigation bar clearance", () => {
-  it("mangue-ui always reserves a fixed height below the content under `desktop`", () => {
+  it("the AppShell always reserves a fixed height below the content under `desktop`", () => {
     // The rule in globals.css only makes sense because there is something to it
     // correct: a low padding set by the AppShell, and only on mobile.
     expect(read(APP_SHELL)).toContain(

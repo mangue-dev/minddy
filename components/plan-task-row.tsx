@@ -4,14 +4,14 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { CancelCircleIcon as CircleSlash, CircleIcon, MinusSignIcon, MoreHorizontalIcon, PlayIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
 import {
-  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  cn,
-} from "mangue-ui";
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 import { Markdown } from "@/components/markdown";
 import type { PlanTask, PlanTaskState } from "@/lib/plan";
 

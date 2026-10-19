@@ -19,13 +19,11 @@ import dynamic from "next/dynamic";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAppNavigation, useAppRouter } from "@/lib/use-app-router";
 import Link from "@/components/app-link";
-import {
-  Button,
-  DropdownMenuItem,
-  Skeleton,
-  SplitButton,
-  toast,
-} from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
+import { SplitButton } from "@/components/ui/split-button";
+import { toast } from "sonner";
 import { Kbd } from "@/components/ui/kbd";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/lib/auth-context";

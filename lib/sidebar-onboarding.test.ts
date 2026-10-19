@@ -2,7 +2,7 @@
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Dialog } from "mangue-ui";
+import { Dialog } from "@/components/ui/dialog";
 import { NextIntlClientProvider } from "next-intl";
 import messages from "@/messages/en.json";
 import { SidebarOnboarding } from "@/components/sidebar-onboarding";
@@ -16,14 +16,8 @@ const mocks = vi.hoisted(() => ({
   finish: vi.fn().mockResolvedValue(undefined), updateMetadata: vi.fn().mockResolvedValue(undefined),
 }));
 // Import only the primitives under test; the full barrel also loads unrelated emoji data.
-vi.mock("mangue-ui", async () => ({
-  ...await import("mangue-ui/components/ui/button"),
-  ...await import("mangue-ui/components/ui/collapsible"),
-  ...await import("mangue-ui/components/ui/popover"),
-  ...await import("mangue-ui/components/ui/dropdown-menu"),
-  ...await import("mangue-ui/components/ui/spinner"),
-  ...await import("mangue-ui/components/ui/dialog"),
-  ...await import("mangue-ui/lib/utils"),
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   toast: { error: vi.fn() },
 }));
 vi.mock("@/lib/use-onboarding", () => ({ useOnboardingChecklist: () => mocks.checklist }));

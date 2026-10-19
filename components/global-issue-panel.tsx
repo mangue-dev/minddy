@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { useProjects } from "@/lib/projects-context";
 import { useIssuesQuery } from "@/lib/use-issues-query";

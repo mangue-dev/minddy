@@ -9,8 +9,9 @@ import {
 import { useCallback, useState } from "react";
 import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
-import { Button, cn } from "mangue-ui";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { ResponsivePopover, ResponsivePopoverContent, ResponsivePopoverTrigger } from "@/components/ui/responsive-popover";
 import { MobileSheetScrollArea } from "@/components/ui/mobile-sheet";
 import { type BillingPlanId } from "@/lib/billing-plans";
 import {
@@ -70,8 +71,8 @@ export function UsageIndicator({
         : "text-muted-foreground hover:text-foreground";
 
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>
+    <ResponsivePopover open={open} onOpenChange={handleOpenChange}>
+      <ResponsivePopoverTrigger asChild>
         <Button
           variant="ghost"
           size="sm"
@@ -104,8 +105,8 @@ export function UsageIndicator({
                   })
             : null}
         </Button>
-      </PopoverTrigger>
-      <PopoverContent
+      </ResponsivePopoverTrigger>
+      <ResponsivePopoverContent
         align="end"
         sideOffset={8}
         collisionPadding={sidebar ? 10 : 8}
@@ -116,8 +117,8 @@ export function UsageIndicator({
           <UsageBreakdownBody compact />
         </MobileSheetScrollArea>
         <UsageFooter onNavigate={() => handleOpenChange(false)} />
-      </PopoverContent>
-    </Popover>
+      </ResponsivePopoverContent>
+    </ResponsivePopover>
   );
 }
 

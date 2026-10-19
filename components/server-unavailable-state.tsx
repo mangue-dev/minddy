@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { Refresh01Icon, ServerOffIcon as ServerOff } from "@hugeicons/core-free-icons";
-import { Button } from "mangue-ui";
+import { Button } from "@/components/ui/button";
 
 type ServerUnavailableStateProps = {
   description: string;

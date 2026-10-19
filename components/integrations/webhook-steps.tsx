@@ -3,7 +3,8 @@
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { useTranslations } from "next-intl";
 import { BoxesIcon as Boxes, PlugIcon as Plug } from "@hugeicons/core-free-icons";
-import { Checkbox, Input } from "mangue-ui";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { WizardChoiceCard } from "@/components/wizard/wizard-choice-card";
 import type { WizardStep } from "@/components/wizard/wizard-dialog";
 import {

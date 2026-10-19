@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Plug01Icon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { useIntegrationsQuery } from "@/lib/use-integrations-query";
 import type { IssueCardIssue } from "@/lib/types";
 import {

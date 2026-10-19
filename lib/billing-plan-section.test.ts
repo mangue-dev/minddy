@@ -42,7 +42,10 @@ vi.mock("@/lib/use-billing-query", () => ({
   useBillingSummary: () => mocks.summary,
 }));
 
-vi.mock("mangue-ui", async () => {
+// Stubs for the UI primitives the component under test renders.
+const uiStubs = vi.hoisted(() => {
+  let value: Promise<Record<string, unknown>> | undefined;
+  return () => (value ??= (async () => {
   const React = await import("react");
   const Container = ({ children }: { children?: React.ReactNode }) =>
     React.createElement(React.Fragment, null, children);
@@ -70,6 +73,19 @@ vi.mock("mangue-ui", async () => {
       values.filter(Boolean).join(" "),
     toast: { error: vi.fn(), success: vi.fn() },
   };
+})());
+});
+vi.mock("@/components/ui/alert-dialog", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), AlertDialog: stubs.AlertDialog, AlertDialogAction: stubs.AlertDialogAction, AlertDialogCancel: stubs.AlertDialogCancel, AlertDialogContent: stubs.AlertDialogContent, AlertDialogDescription: stubs.AlertDialogDescription, AlertDialogFooter: stubs.AlertDialogFooter, AlertDialogHeader: stubs.AlertDialogHeader, AlertDialogTitle: stubs.AlertDialogTitle };
+});
+vi.mock("@/components/ui/button", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Button: stubs.Button };
+});
+vi.mock("sonner", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), toast: stubs.toast };
 });
 
 const { PlanSection } = await import("@/components/billing/plan-section");

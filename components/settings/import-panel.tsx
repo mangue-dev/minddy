@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import type { ImportGuide } from "@/lib/import-guides";
 import type { ImportCommitResponse } from "@/lib/import-api";
 import { ImportGuideBlock } from "@/components/import/import-guide";

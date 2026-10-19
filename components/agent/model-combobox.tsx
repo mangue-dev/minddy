@@ -6,8 +6,12 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { AddToListIcon, ArrowUpDownIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useMemo, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Button, Command, CommandGroup, CommandInput, CommandItem, commandFilter, cn, Spinner } from "mangue-ui";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
+import { Button } from "@/components/ui/button";
+import { Command, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { commandFilter } from "@/lib/command-filter";
+import { cn } from "@/lib/utils";
+import { Spinner } from "@/components/ui/spinner";
+import { ResponsivePopover, ResponsivePopoverContent, ResponsivePopoverTrigger } from "@/components/ui/responsive-popover";
 import { ModelLogo, ProviderLogo } from "@/components/model-logo";
 import { formatModelName } from "@/lib/model-display";
 import { formatMultiplier, isMultiplierWithinPlan } from "@/lib/model-multiplier";
@@ -266,7 +270,7 @@ export function ModelCombobox({
   }
 
   return (
-    <Popover
+    <ResponsivePopover
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
@@ -276,7 +280,7 @@ export function ModelCombobox({
         }
       }}
     >
-      <PopoverTrigger asChild>
+      <ResponsivePopoverTrigger asChild>
         {variant === "compact" ? (
           <Button
             type="button"
@@ -331,10 +335,10 @@ export function ModelCombobox({
             <HugeiconsIcon icon={ArrowUpDownIcon} className="ml-2 size-4 shrink-0 opacity-50" />
           </Button>
         )}
-      </PopoverTrigger>
+      </ResponsivePopoverTrigger>
       {/* The list is sized on ITS content, not on the trigger: the
  model names are long, and the picker now lives in a row
- of settings where the button is the width it wants. `PopoverContent`
+ of settings where the button is the width it wants. `ResponsivePopoverContent`
  is already `w-max min-w-(--radix-popover-trigger-width)` — we therefore only impose a ceiling on it, so that an extended id does not leave
  the screen. Pinning the width to the trigger (which
  `w-[var(--radix-popover-trigger-width)]` did) overwrote everything. */}
@@ -342,7 +346,7 @@ export function ModelCombobox({
  it is `Command` which paints this surface and it is already 20px.
  With the removal of 8px from the list, the options (12px) are then
  concentric — 20 − 8 = 12. */}
-      <PopoverContent
+      <ResponsivePopoverContent
         className={cn(
           "rounded-xl p-0",
           variant === "compact" ? "w-80" : "max-w-[min(30rem,calc(100vw-2rem))]"
@@ -414,7 +418,7 @@ export function ModelCombobox({
             </p>
           ) : null}
         </Command>
-      </PopoverContent>
-    </Popover>
+      </ResponsivePopoverContent>
+    </ResponsivePopover>
   );
 }

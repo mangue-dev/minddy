@@ -16,7 +16,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { SmileIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { useTranslations } from "next-intl";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { EmojiPicker } from "@/components/pages/emoji-picker";
 import { useArrowField } from "@/lib/use-arrow-field";

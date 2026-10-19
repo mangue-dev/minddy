@@ -10,7 +10,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "mangue-ui";
+} from "@/components/ui/alert-dialog";
 
 /**
  * What we ask when a creation dialog closes on an entry

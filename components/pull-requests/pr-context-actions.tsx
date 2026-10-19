@@ -20,8 +20,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  toast,
-} from "mangue-ui";
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { NumoIcon } from "@/components/numo-icon";

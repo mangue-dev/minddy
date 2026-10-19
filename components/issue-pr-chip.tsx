@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { GitPullRequestIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { isPrWorthShowing, type IssuePr } from "@/lib/agent-api";
 import {
   Tooltip,

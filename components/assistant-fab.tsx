@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { Kbd, KbdSequence } from "@/components/ui/kbd";
 import { NumoLauncherIcon } from "@/components/assistant/numo-launcher-icon";
 import { AgentBeam } from "@/components/agent-beam";

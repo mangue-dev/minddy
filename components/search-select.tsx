@@ -10,7 +10,9 @@ import { SemanticIssueGroup } from "@/components/semantic-issue-group";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
-import { CommandGroup, CommandItem, CommandSeparator, Spinner, toast } from "mangue-ui";
+import { CommandGroup, CommandItem, CommandSeparator } from "@/components/ui/command";
+import { Spinner } from "@/components/ui/spinner";
+import { toast } from "sonner";
 import { SearchMenu } from "@/components/search-menu";
 
 /**
@@ -20,11 +22,11 @@ import { SearchMenu } from "@/components/search-menu";
  * He lives here, and not copied to each caller, because he diverged
  * exactly like this: both copies wrote `bg-transparent`, and the
  * field therefore appeared EMPTY next to its neighbors, which are in `bg-control`
- * (cf. `Input` and the `outline` variant of `Button` in mango-ui). A background
+ * (cf. `Input` and the `outline` variant of `Button` in components/ui). A background
  * transparent is legitimate on a map; in a row of fields it reads
  * like a disabled or not yet loaded control.
  *
- * Since mango-ui 0.8.0 the fields are borderless (`bg-control` only, focus
+ * The fields are borderless (`bg-control` only, focus
  * marks nothing): the trigger follows them.
  *
  * Pickers whose trigger is a PELLET (the compact fields of a
@@ -127,7 +129,7 @@ export function PickerCreateRow({
   );
 }
 
-/** cmdk forwards `data-checked` to the DOM; mangue-ui's CommandItem renders its
+/** cmdk forwards `data-checked` to the DOM; the CommandItem primitive renders its
  *  trailing check from it. Spread (not a static prop) to stay type-safe.
  *
  * Exported for menus that are built on `SearchMenu` directly, without

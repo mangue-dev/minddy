@@ -4,7 +4,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { BrainIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger, cn } from "mangue-ui";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 import { Markdown } from "@/components/markdown";
 
 /**

@@ -3,7 +3,7 @@ import { AppIcon } from "@/components/icon";
 import { GitPullRequestIcon, MessageSquareDashedIcon, TaskDone01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import type { CSSProperties } from "react";
 import { getTranslations } from "next-intl/server";
-import { cn } from "mangue-ui/lib/utils";
+import { cn } from "@/lib/utils";
 import { PriorityIndicator, StatusIndicator } from "@/components/issue-indicators";
 import { NumoFace } from "@/components/numo-face";
 

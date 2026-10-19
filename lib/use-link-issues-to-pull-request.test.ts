@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("mangue-ui", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  toast: { success: vi.fn(), error: vi.fn() },
+}));
 
 import { linkIssuesToPullRequest, optimisticIssuePrs, unlinkIssuesFromPullRequests } from "./use-link-issues-to-pull-request";
 

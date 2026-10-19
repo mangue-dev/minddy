@@ -2,7 +2,8 @@
 
 import type { ReactNode } from "react";
 import { useFormatter, useTranslations } from "next-intl";
-import { Button, cn } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { GitLogin } from "@/components/git/git-login";
 import type { PrReviewState, PrTimelineEvent } from "@/lib/pr-timeline";

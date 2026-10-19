@@ -1,6 +1,6 @@
 "use client";
 
-import { Skeleton } from "mangue-ui";
+import { Skeleton } from "@/components/ui/skeleton";
 
 /** Loading geometry for the annual hero, work landscape, and compact rhythm card. */
 export function StatsSkeleton() {

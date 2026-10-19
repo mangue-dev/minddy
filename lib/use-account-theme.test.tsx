@@ -12,7 +12,8 @@ const h = vi.hoisted(() => ({
   track: vi.fn(),
 }));
 
-vi.mock("mangue-ui/components/theme-provider", () => ({
+vi.mock("@/components/theme-provider", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   useTheme: () => ({ theme: "system", resolvedTheme: "dark", setTheme: h.setTheme }),
 }));
 vi.mock("./use-analytics", () => ({ useAnalytics: () => ({ track: h.track }) }));

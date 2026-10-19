@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { NumoIcon } from "@/components/numo-icon";
 
 /** Static launcher icon with the same blue unread dot as conversation history. */

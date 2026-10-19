@@ -1,13 +1,9 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { Markdown } from "@/components/markdown";
 import type { RepositorySkillSummary } from "@/lib/repository-skills";
-
-vi.mock("mangue-ui", () => ({
-  cn: (...classes: unknown[]) => classes.filter(Boolean).join(" "),
-}));
 
 describe("markdown skill tokens", () => {
   it("renders the matched skill when name-length sorting changes the input order", () => {

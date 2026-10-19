@@ -19,7 +19,11 @@ import en from "@/messages/en.json";
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: keyof typeof en.Relations) => en.Relations[key],
 }));
-vi.mock("mangue-ui", () => ({ CommandGroup: "group", CommandItem: "item" }));
+vi.mock("@/components/ui/command", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  CommandGroup: "group",
+  CommandItem: "item",
+}));
 vi.mock("@/components/command-anchor", () => ({ CommandAnchor: "anchor" }));
 vi.mock("@/components/issue-indicators", () => ({
   StatusIndicator: "issue-status", ObjectiveStatusIndicator: "objective-status",

@@ -18,9 +18,8 @@ import { describe, expect, it } from "vitest";
  * held here: each call names its key, including the one which is alone on its
  * surface today.
  *
- * The control concerns the SOURCE, for lack of being able to mount the real editor: these
- * modules import the barrel `mangue-ui`, which pulls @lobehub/ui and its emoji JSON
- *, which vites refuses to load without an import attribute.
+ * The control concerns the SOURCE, for lack of being able to mount the real
+ * editor in a Node test.
  */
 
 const ROOT = path.resolve(__dirname, "..");

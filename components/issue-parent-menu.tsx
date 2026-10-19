@@ -7,15 +7,15 @@ import {
   ArrowRight01Icon,
   Unlink01Icon,
 } from "@hugeicons/core-free-icons";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
-  ConfirmDeleteDialog,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  toast,
-} from "mangue-ui";
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 export function IssueParentMenu({
   parentIdentifier,

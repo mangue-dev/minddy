@@ -6,7 +6,9 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { useRouter } from "next/navigation";
 import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
 import { useFormatter, useTranslations } from "next-intl";
-import { Button, Skeleton, toast } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 import { Kbd } from "@/components/ui/kbd";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";

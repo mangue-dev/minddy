@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ShieldCheckIcon as ShieldCheck } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
 import { useTranslations } from "next-intl";
-import { Button, Card, CardContent } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 import { useAuth } from "@/lib/auth-context";
 import { getDesktopBridge } from "@/lib/desktop/bridge";

@@ -5,12 +5,10 @@ import { ArrowLeft01Icon, ArrowRight01Icon, Cancel01Icon } from "@hugeicons/core
 import { useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  Button,
-  ConfirmDeleteDialog,
-  Spinner,
-  cn,
-} from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { WizardStepper } from "@/components/wizard/wizard-stepper";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
@@ -146,7 +144,7 @@ export function WizardDialog<Id extends string>({
    * the slide down the loose leaf — go through this
    * `onOpenChange`, while the brackets `onInteractOutside` /
    * `onEscapeKeyDown` content only exists in the desktop version (in
-   * below 480 px, mango-ui returns a `Drawer`, which does not receive them).
+   * below 480 px, the dialog primitive returns a `Drawer`, which does not receive them).
    *
    * The close button calls `onOpenChange` LIVE, without going through
    * by the modal: it is therefore not intercepted, and this is desired.
@@ -163,7 +161,7 @@ export function WizardDialog<Id extends string>({
     <Dialog open={open} onOpenChange={handleModalOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="dialog-pane-mirror flex h-[var(--spacing-dialog-h)] max-h-[calc(100dvh-2rem)] max-w-[calc(100%-2rem)] flex-col overflow-hidden p-0 -translate-x-0 -translate-y-0 rounded-(--app-pane-radius) sm:max-h-[var(--spacing-dialog-h)] sm:max-w-[var(--spacing-dialog-w)]"
+        className="dialog-pane-mirror flex h-[var(--spacing-dialog-h)] max-w-[calc(100%-2rem)] flex-col overflow-hidden p-0 -translate-x-0 -translate-y-0 rounded-(--app-pane-radius) sm:max-h-[var(--spacing-dialog-h)] sm:max-w-[var(--spacing-dialog-w)]"
       >
         {/* The name of the modal is that of the wizard: it does not change from one moment to another.
             step to another. The title of the stage is a title IN the

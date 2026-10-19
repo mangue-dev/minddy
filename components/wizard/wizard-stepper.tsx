@@ -1,4 +1,4 @@
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 
 /**

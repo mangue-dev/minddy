@@ -32,12 +32,20 @@ vi.mock("@/components/settings/settings-ui", () => ({
   SettingsGroup: ({ title, children }: { title: string; children: ReactNode }) => <section><h3>{title}</h3>{children}</section>,
   SettingsRow: ({ label, control, children }: { label: ReactNode; control: ReactNode; children: ReactNode }) => <article>{label}{control}{children}</article>,
 }));
-vi.mock("mangue-ui", () => ({
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   toast: { success: vi.fn(), error: vi.fn() },
+}));
+vi.mock("@/components/ui/select", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   Select: ({ value, disabled, onValueChange, children }: { value: string; disabled?: boolean; onValueChange: (value: string) => void; children: ReactNode }) => <select value={value} disabled={disabled} onChange={(event) => onValueChange(event.target.value)}>{children}</select>,
-  SelectTrigger: () => null, SelectValue: () => null,
+  SelectTrigger: () => null,
+  SelectValue: () => null,
   SelectContent: ({ children }: { children: ReactNode }) => <>{children}</>,
   SelectItem: ({ value, children }: { value: string; children: ReactNode }) => <option value={value}>{children}</option>,
+}));
+vi.mock("@/components/ui/switch", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   Switch: ({ checked, onCheckedChange }: { checked: boolean; onCheckedChange: (value: boolean) => void }) => <input type="checkbox" checked={checked} onChange={(event) => onCheckedChange(event.target.checked)} />,
 }));
 

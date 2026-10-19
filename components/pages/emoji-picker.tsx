@@ -15,13 +15,9 @@
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { EmojiPicker as Frimousse } from "frimousse";
-import {
-  Button,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  cn,
-} from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 export function EmojiPicker({
   value,

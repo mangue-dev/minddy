@@ -15,7 +15,7 @@
 // tell Numo. These three gestures come from `useTaskSurface()` (task-surface.tsx),
 // that the notebook and the page each fill in their own way.
 //
-// ⚠️ This file imports the `mangue-ui` barrel (SearchMenu, Button, toast), so
+// ⚠️ This file imports client UI (SearchMenu, Button, toast), so
 // it is NOT importable outside the browser. The page block register, for its part,
 // must be (markdown projection, MCP tools, tests — cf. lib/cx.ts): it is
 // why no block file names it, and why it's the editor
@@ -35,15 +35,15 @@ import {
 } from "@tiptap/react";
 import type { NodeViewRenderer } from "@tiptap/core";
 import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
 import {
-  Button,
   CommandGroup,
   CommandItem,
   CommandSeparator,
   CommandShortcut,
-  cn,
-  toast,
-} from "mangue-ui";
+} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { Kbd } from "@/components/ui/kbd";
 import { SearchMenu } from "@/components/search-menu";
 import { NumoIcon } from "@/components/numo-icon";

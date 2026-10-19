@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef } from "react";
-import { ConfirmDeleteDialog, toast } from "mangue-ui";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { useProjects } from "@/lib/projects-context";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";

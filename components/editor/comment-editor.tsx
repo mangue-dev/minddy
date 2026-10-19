@@ -13,7 +13,7 @@
 // It is Markdown, and comments have always been rendered as Markdown.
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import {
   LazyDocumentEditor,
   type DocumentEditorMentions,

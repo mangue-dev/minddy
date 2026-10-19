@@ -12,7 +12,10 @@ const state = vi.hoisted(() => ({ reset: vi.fn(), toast: vi.fn(), push: vi.fn(),
   runs: [] as { id: string; kind: string; numo_conversation_id?: string; created_at: string; status: string }[] }));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key, useLocale: () => "en", useNow: () => new Date("2026-10-13T00:00:00Z"), useFormatter: () => ({ dateTime: () => "October 13", number: (value: number) => String(value) }) }));
 vi.mock("@hugeicons/react", () => ({ HugeiconsIcon: () => null }));
-vi.mock("mangue-ui", async () => {
+// Stubs for the UI primitives the component under test renders.
+const uiStubs = vi.hoisted(() => {
+  let value: Promise<Record<string, unknown>> | undefined;
+  return () => (value ??= (async () => {
   const { Fragment } = await import("react");
   const box = ({ children }: { children?: ReactNode }) => <Fragment>{children}</Fragment>;
   const button = ({ children, onClick, onSelect, disabled, "aria-label": label }: { children?: ReactNode; onClick?: () => void; onSelect?: () => void; disabled?: boolean; "aria-label"?: string }) => <button disabled={disabled} aria-label={label} onClick={onClick ?? onSelect}>{children}</button>;
@@ -20,6 +23,39 @@ vi.mock("mangue-ui", async () => {
     DropdownMenuSeparator: () => null, Popover: box, PopoverContent: box, PopoverTrigger: box,
     ConfirmDeleteDialog: () => null, Skeleton: () => null, Switch: () => null,
     cn: (...values: unknown[]) => values.filter(Boolean).join(" "), toast: { error: state.toast, info: vi.fn(), success: vi.fn() } };
+})());
+});
+vi.mock("@/components/ui/button", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Button: stubs.Button };
+});
+vi.mock("@/components/ui/badge", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Badge: stubs.Badge };
+});
+vi.mock("@/components/ui/dropdown-menu", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), DropdownMenu: stubs.DropdownMenu, DropdownMenuTrigger: stubs.DropdownMenuTrigger, DropdownMenuContent: stubs.DropdownMenuContent, DropdownMenuItem: stubs.DropdownMenuItem, DropdownMenuSeparator: stubs.DropdownMenuSeparator };
+});
+vi.mock("@/components/ui/popover", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Popover: stubs.Popover, PopoverContent: stubs.PopoverContent, PopoverTrigger: stubs.PopoverTrigger };
+});
+vi.mock("@/components/ui/confirm-delete-dialog", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), ConfirmDeleteDialog: stubs.ConfirmDeleteDialog };
+});
+vi.mock("@/components/ui/skeleton", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Skeleton: stubs.Skeleton };
+});
+vi.mock("@/components/ui/switch", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Switch: stubs.Switch };
+});
+vi.mock("sonner", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), toast: stubs.toast };
 });
 vi.mock("@/components/app-link", () => ({ default: ({ children, href }: { children: ReactNode; href: string }) => <a href={href}>{children}</a> }));
 vi.mock("@/lib/use-app-router", () => ({ useAppRouter: () => ({ push: state.push }) }));

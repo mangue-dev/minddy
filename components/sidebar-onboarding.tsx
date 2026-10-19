@@ -4,11 +4,18 @@ import { useId, useRef, useState, type ReactElement } from "react";
 import { useTranslations } from "next-intl";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, ArrowRight01Icon, CheckIcon, MoreHorizontalIcon, PartyIcon } from "@hugeicons/core-free-icons";
+import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
-  Button, Collapsible, CollapsibleContent, CollapsibleTrigger,
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-  Popover, PopoverContent, PopoverTrigger, Spinner, cn, toast,
-} from "mangue-ui";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { DialogClose } from "@/components/ui/dialog";
 import Link from "@/components/app-link";
 import { useAuth } from "@/lib/auth-context";

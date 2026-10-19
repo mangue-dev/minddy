@@ -3,7 +3,10 @@
 import {useEffect, useState} from "react";
 import {useTranslations} from "next-intl";
 import {useQuery, useQueryClient} from "@tanstack/react-query";
-import {Button, ConfirmDeleteDialog, Input, Spinner} from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 
 import {SettingsGroup, SettingsEmpty} from "@/components/settings/settings-ui";
 import {SETTINGS_SECTIONS} from "@/lib/settings-sections";

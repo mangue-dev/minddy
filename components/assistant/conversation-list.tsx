@@ -13,15 +13,17 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  Button,
-  cn,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  toast,
-} from "mangue-ui";
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 import { EmptyScene } from "@/components/empty-scene";
 import { fetchConversations, deleteConversation, updateConversation } from "@/lib/assistant-api";
 import type { NumoConversation } from "@/lib/assistant-types";

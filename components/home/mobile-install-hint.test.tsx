@@ -16,12 +16,6 @@ vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: { id: "user", use
 vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => state.mobile }));
 vi.mock("@/lib/desktop/bridge", () => ({ isDesktop: () => state.native }));
 vi.mock("next/image", () => ({ default: (props: React.ComponentProps<"img">) => <img {...props} /> }));
-vi.mock("mangue-ui", async () => ({
-  ...await import("../../node_modules/mangue-ui/src/components/ui/dialog"),
-  ...await import("../../node_modules/mangue-ui/src/components/ui/sheet"),
-  ...await import("../../node_modules/mangue-ui/src/components/ui/button"),
-  ...await import("../../node_modules/mangue-ui/src/lib/utils"),
-}));
 
 let container: HTMLDivElement;
 let root: ReturnType<typeof createRoot>;

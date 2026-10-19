@@ -160,7 +160,7 @@ function withMarkdown(block: PageBlock, extension: AnyExtension): AnyExtension {
  * `nodeViews` does the opposite: it GRAFTS a view onto a node, by name. This is the
  * path of views that the catalog cannot carry itself — the task
  * shared with the notebook (components/scratchpad/task-item-view.tsx) pulls the
- * barrel `mangue-ui`, so a block file that named it would render the
+ * client UI primitives, so a block file that named it would render the
  * entire register unimportable outside browser (see lib/cx.ts). The knot remains
  * in register, the view comes from the surface - exactly the sharing that
  * `pageExtensions({ mention })` already does for the mention pill.

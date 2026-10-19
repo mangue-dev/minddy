@@ -51,7 +51,7 @@ describe("resolveStoredAccountTheme", () => {
     getItem: (_key: string) => value,
   });
 
-  it("reads the device cache (what mango-ui persists)", () => {
+  it("reads the device cache (what the ThemeProvider persists)", () => {
     expect(resolveStoredAccountTheme(storageOf("light"))).toBe("light");
     expect(resolveStoredAccountTheme(storageOf("dark"))).toBe("dark");
     expect(resolveStoredAccountTheme(storageOf("system"))).toBe("system");

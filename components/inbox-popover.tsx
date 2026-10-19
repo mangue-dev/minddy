@@ -4,8 +4,8 @@ import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Spinner } from "mangue-ui";
-import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/responsive-popover";
+import { Spinner } from "@/components/ui/spinner";
+import { ResponsivePopover, ResponsivePopoverAnchor, ResponsivePopoverContent } from "@/components/ui/responsive-popover";
 import { OPEN_INBOX_EVENT } from "@/lib/inbox-launcher";
 
 const InboxContent = dynamic(() => import("@/components/inbox-content"), {
@@ -56,9 +56,9 @@ export function InboxPopover({ open, onOpenChange: setOpen }: {
   }, [pathname, router, searchParams, setOpen]);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverAnchor virtualRef={anchor} />
-      <PopoverContent
+    <ResponsivePopover open={open} onOpenChange={setOpen}>
+      <ResponsivePopoverAnchor virtualRef={anchor} />
+      <ResponsivePopoverContent
         ref={contentRef}
         id="inbox-popover"
         mobileTitle={t("title")}
@@ -86,7 +86,7 @@ export function InboxPopover({ open, onOpenChange: setOpen }: {
         }}
       >
         <InboxContent onNavigate={() => setOpen(false)} />
-      </PopoverContent>
-    </Popover>
+      </ResponsivePopoverContent>
+    </ResponsivePopover>
   );
 }

@@ -8,10 +8,22 @@ import { Add01Icon, AttachmentIcon, Cancel01Icon, File02Icon, Link02Icon } from 
 import { useEffect, useRef, useState } from "react";
 import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
 import {
-  Button, Command, CommandEmpty, CommandInput, CommandItem, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-  Input, Spinner, cn,
-} from "mangue-ui";
+  Command,
+  CommandEmpty,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EntityPill, type PillRadius } from "@/components/entity-pill";
 import { ResourceTypeIcon } from "@/components/resource-type-icon";

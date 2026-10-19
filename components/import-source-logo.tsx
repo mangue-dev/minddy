@@ -7,7 +7,7 @@ import {
   siNotion,
   siTrello,
 } from "simple-icons";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import type { ImportGuideId } from "@/lib/import-guides";
 import { BrandLogo } from "@/components/brand-logo";
 

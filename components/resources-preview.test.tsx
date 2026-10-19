@@ -6,7 +6,6 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ResourcePills } from "./resources";
 
 const viewer = vi.hoisted(() => ({ props: null as Record<string, unknown> | null }));
-vi.mock("mangue-ui", async () => ({ ...await import("../node_modules/mangue-ui/src/lib/utils") }));
 vi.mock("./resource-type-icon", () => ({ ResourceTypeIcon: () => <svg /> }));
 vi.mock("./entity-pill", () => ({ EntityPill: ({ children }: { children: ReactNode }) => <span>{children}</span> }));
 vi.mock("./ui/app-tooltip", () => ({ AppTooltip: ({ children }: { children: ReactNode }) => children }));

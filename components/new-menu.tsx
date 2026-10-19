@@ -3,14 +3,14 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, ArrowDown01Icon, FolderAddIcon, Target01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
 import {
-  Button,
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  cn,
-} from "mangue-ui";
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 import { Kbd } from "@/components/ui/kbd";
 import { AppIcon } from "@/components/icon";
 import { useProjects } from "@/lib/projects-context";

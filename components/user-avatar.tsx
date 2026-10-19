@@ -1,4 +1,4 @@
-import { cn } from "mangue-ui/lib/utils";
+import { cn } from "@/lib/utils";
 import { avatarDataUri } from "@/lib/avatar";
 import { avatarImageUrl, uploadedAvatarUrl } from "@/lib/avatar-source";
 import { AppTooltip } from "@/components/ui/app-tooltip";

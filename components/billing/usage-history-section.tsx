@@ -11,18 +11,16 @@ import {
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
-  Button,
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  cn,
-} from "mangue-ui";
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import { USAGE_SEGMENTS, type UsageSegmentId } from "@/lib/billing-plans";
 import { fetchUsageHistoryApi } from "@/lib/billing-api";
 import {

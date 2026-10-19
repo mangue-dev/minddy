@@ -6,7 +6,7 @@ import { MAX_ATTACHMENT_UPLOAD_BYTES, MAX_ATTACHMENT_UPLOAD_MB } from
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 import { compressImage } from "@/lib/image-compress";
 import type { LinkResourceInput, ResourceInput, ResourceKind } from "@/lib/types";
 import { trackEvent } from "./analytics";

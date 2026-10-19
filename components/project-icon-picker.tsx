@@ -7,13 +7,11 @@ import { createUuid } from "@/lib/create-uuid";
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  Button,
-  Input,
-  Spinner,
-  cn,
-  toast,
-} from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { ProjectOrb } from "@/components/project-orb";
 import { DropOverlay, useFileDrop } from "@/components/resources";
 import {

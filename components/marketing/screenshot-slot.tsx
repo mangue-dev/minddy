@@ -2,7 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Image01Icon } from "@hugeicons/core-free-icons";
 import { getImageProps } from "next/image";
 import { getLocale, getTranslations } from "next-intl/server";
-import { cn } from "mangue-ui/lib/utils";
+import { cn } from "@/lib/utils";
 import { ScreenshotPicture } from "./screenshot-picture";
 import {
   SCREENSHOT_SLOTS,

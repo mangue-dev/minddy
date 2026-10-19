@@ -39,7 +39,18 @@ const router = { replace: state.noop };
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/all", useRouter: () => router, useSearchParams: () => params, useParams: () => ({}) }));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key, useFormatter: () => ({}) }));
-vi.mock("mangue-ui", () => ({ Button: () => null, Skeleton: () => null, toast: { error: vi.fn() } }));
+vi.mock("@/components/ui/button", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  Button: () => null,
+}));
+vi.mock("@/components/ui/skeleton", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  Skeleton: () => null,
+}));
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  toast: { error: vi.fn() },
+}));
 vi.mock("@/components/ui/kbd", () => ({ Kbd: () => null }));
 vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: null }) }));
 vi.mock("@/lib/projects-context", () => ({ useProjects: () => ({ projects, loading: false }) }));

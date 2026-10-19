@@ -8,12 +8,8 @@ import {
   useState,
 } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  cn,
-} from "mangue-ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 export interface AdaptiveContextItem {
   key: string;

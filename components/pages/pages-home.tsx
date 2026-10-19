@@ -5,7 +5,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, File02Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
-import { Button } from "mangue-ui";
+import { Button } from "@/components/ui/button";
 import { PageCreateMenu } from "./page-create-menu";
 import { EmptyScene } from "@/components/empty-scene";
 import type { PageSummary } from "@/lib/pages-api";

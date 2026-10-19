@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { ModelLogo } from "@/components/model-logo";
 import { formatModelName } from "@/lib/model-display";
 import {

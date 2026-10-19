@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { PencilEdit01Icon as SquarePen } from "@hugeicons/core-free-icons";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { SkillChip } from "@/components/assistant/skill-chip";
 import {
@@ -13,10 +13,6 @@ import {
   filterSlashOptions,
   findActiveComposerMenuQuery,
 } from "./assistant-slash-options";
-
-vi.mock("mangue-ui", () => ({
-  cn: (...classes: unknown[]) => classes.filter(Boolean).join(" "),
-}));
 
 const command = {
   kind: "command",

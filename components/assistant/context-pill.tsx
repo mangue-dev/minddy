@@ -17,7 +17,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AiAutoRotateIcon as CycleIcon, File02Icon, Cancel01Icon, FileAttachmentIcon, GitPullRequestIcon, InboxIcon, Layers01Icon, MessageMultiple01Icon, Settings01Icon, Target01Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { AppIcon } from "@/components/icon";
 import {
   EntityPill,

@@ -9,15 +9,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppRouter } from "@/lib/use-app-router";
 import { useLocale, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  Button,
-  Input,
-  Spinner,
-  Switch,
-  Textarea,
-  cn,
-  toast,
-} from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { Github, Gitlab } from "@/components/git/provider-icons";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";

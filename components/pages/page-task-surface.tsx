@@ -7,7 +7,7 @@
 
 import { useMemo, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { buildPageTaskPrompt } from "@/lib/pages-prompt";
 import {

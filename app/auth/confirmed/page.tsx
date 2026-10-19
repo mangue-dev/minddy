@@ -3,7 +3,8 @@ import { CheckIcon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Button, Card, CardContent } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { MinddyLogo } from "@/components/minddy-logo";
 import { appPageMetadata } from "@/lib/app-metadata";
 

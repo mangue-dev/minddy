@@ -18,7 +18,6 @@ vi.mock("@/lib/use-my-avatar", () => ({ useMyAvatarSource: () => "reader" }));
 vi.mock("@/components/user-avatar", () => ({ UserAvatar: () => null }));
 vi.mock("@/components/numo-face", () => ({ NumoFace: () => null }));
 vi.mock("@/components/lazy-toaster", () => ({ LazyToaster: () => null }));
-vi.mock("mangue-ui", async () => ({ ...await import("mangue-ui/components/ui/button"), ...await import("mangue-ui/components/ui/dropdown-menu") }));
 vi.mock("next/dynamic", () => ({ default: () => ({ open, authenticated }: { open: boolean; authenticated: boolean }) => <aside id="documentation-numo" hidden={!open} data-authenticated={authenticated} /> }));
 
 let host: HTMLDivElement;

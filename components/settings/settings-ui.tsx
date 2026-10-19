@@ -1,7 +1,7 @@
 "use client";
 
 import { Children, useEffect, useRef, useState, type ReactNode } from "react";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { AppIcon } from "@/components/icon";
 import {
   settingsSectionAnchor,

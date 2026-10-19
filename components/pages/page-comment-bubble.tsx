@@ -23,7 +23,7 @@ import type { Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import { useEditorState } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { MarkdownLinkEditDialog } from "@/components/markdown-link-menu";
 
 import { PAGE_BLOCK_ID_ATTRIBUTE } from "@/lib/pages-mentions";

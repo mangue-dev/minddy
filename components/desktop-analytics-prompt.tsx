@@ -6,9 +6,7 @@ import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Button,
-} from "mangue-ui";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth-context";
 import { isDesktop } from "@/lib/desktop/bridge";

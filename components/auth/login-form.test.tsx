@@ -54,10 +54,20 @@ vi.mock("framer-motion", () => ({
 vi.mock("@/components/wizard/wizard-stepper", () => ({ WizardStepper: () => null }));
 vi.mock("@/components/user-avatar-picker", () => ({ UserAvatarPicker: () => null }));
 vi.mock("@/lib/use-my-avatar", () => ({ stageSignupAvatarFile: vi.fn() }));
-vi.mock("mangue-ui", () => ({
+vi.mock("@/components/ui/button", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   Button: (props: ComponentProps<"button">) => <button {...props} />,
+}));
+vi.mock("@/components/ui/input", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   Input: (props: ComponentProps<"input">) => <input {...props} />,
+}));
+vi.mock("@/components/ui/spinner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   Spinner: () => null,
+}));
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   toast: { success: vi.fn() },
 }));
 vi.mock("@/components/otp-input", () => ({

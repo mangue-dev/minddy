@@ -27,7 +27,8 @@ import {
 } from "react";
 import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
-import { Button, cn } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import type { PageSummary } from "@/lib/pages-api";
 import type { PageTreeNode } from "@/lib/pages";
 import { ancestorsOf, splitFavoritePageTree } from "@/lib/pages";

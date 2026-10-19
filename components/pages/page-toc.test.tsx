@@ -19,7 +19,6 @@ vi.mock("next-intl", () => ({
   },
 }));
 vi.mock("@/components/pages/block-actions", () => ({ revealBlock: h.reveal }));
-vi.mock("mangue-ui", () => ({ cn: (...names: unknown[]) => names.filter(Boolean).join(" ") }));
 vi.mock("@/components/ui/app-tooltip", () => ({
   AppTooltip: ({ children }: { children: React.ReactNode }) => children,
 }));

@@ -15,7 +15,10 @@ import type { Page } from "./pages";
 import { beginPagePresence } from "./optimistic-page-writes";
 
 const h = vi.hoisted(() => ({ error: vi.fn(), t: (key: string) => key }));
-vi.mock("mangue-ui", () => ({ toast: { error: h.error } }));
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  toast: { error: h.error },
+}));
 vi.mock("next-intl", () => ({ useTranslations: () => h.t }));
 vi.mock("./analytics", () => ({ trackEvent: vi.fn() }));
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });

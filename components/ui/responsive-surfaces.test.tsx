@@ -8,21 +8,17 @@ import { SearchSelect } from "../search-select";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { MobileSheetScrollArea } from "./mobile-sheet";
 
-// Import only the tested primitives; the package barrel also loads an emoji JSON bundle.
-vi.mock("mangue-ui", async () => ({
-  ...await import("../../node_modules/mangue-ui/src/components/ui/dialog"),
-  ...await import("../../node_modules/mangue-ui/src/components/ui/sheet"),
-  ...await import("../../node_modules/mangue-ui/src/components/ui/popover"),
-  ...await import("../../node_modules/mangue-ui/src/components/ui/command"),
-  ...await import("../../node_modules/mangue-ui/src/components/ui/button"),
-  ...await import("../../node_modules/mangue-ui/src/lib/utils"),
+vi.mock("@/components/ui/spinner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   Spinner: () => null,
+}));
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   toast: { error: vi.fn() },
 }));
 const viewport = vi.hoisted(() => ({ mobile: true }));
 vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => viewport.mobile, MOBILE_LAYOUT_QUERY: "(max-width: 1023px)" }));
-vi.mock("@/components/ui/tooltip", async () => await import("../../node_modules/mangue-ui/src/components/ui/tooltip"));
-import { TooltipProvider } from "../../node_modules/mangue-ui/src/components/ui/tooltip";
+import { TooltipProvider } from "./tooltip";
 let root: ReturnType<typeof createRoot>;
 let container: HTMLDivElement;
 beforeEach(() => {

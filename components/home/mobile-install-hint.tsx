@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Cancel01Icon, ArrowRight01Icon, SmartPhone01Icon } from "@hugeicons/core-free-icons";
-import { Button } from "mangue-ui";
+import { Button } from "@/components/ui/button";
 import { AppIcon } from "@/components/icon";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { MobileSheetScrollArea } from "@/components/ui/mobile-sheet";
@@ -85,7 +85,7 @@ export function MobileInstallHint() {
         <AppIcon icon={Cancel01Icon} className="size-4" aria-hidden />
       </Button>
     </div>
-    <DialogContent data-pwa-install-guide={platform} className="flex max-h-[90dvh] flex-col gap-4 overflow-hidden">
+    <DialogContent data-pwa-install-guide={platform} className="flex flex-col gap-4 overflow-hidden">
       <DialogHeader className="shrink-0 pr-12 text-left">
         <DialogTitle>{t("pwaInstallTitle")}</DialogTitle>
         <DialogDescription>{platform === "ios" ? copy.iosBody : copy.androidBody}</DialogDescription>

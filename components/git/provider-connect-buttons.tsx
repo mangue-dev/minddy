@@ -5,14 +5,14 @@ import { ArrowDown01Icon, ArrowRight01Icon, LoaderCircleIcon } from "@hugeicons/
 import type { ComponentType } from "react";
 import { Github, Gitlab } from "@/components/git/provider-icons";
 import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
 import {
-  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  cn,
-} from "mangue-ui";
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 import {
   ACTIVE_PROVIDERS,
   type RepoProviderIconName,

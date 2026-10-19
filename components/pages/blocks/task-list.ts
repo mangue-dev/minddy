@@ -17,7 +17,7 @@ import type { PageBlock } from "@/components/pages/blocks/types";
  *
  * This file therefore poses NO view — no longer since MIN-274. The view is that of the
  * notebook (components/scratchpad/task-item-view.tsx), menu ⋯ included, and it
- * pulls the barrel `mangue-ui`: naming it here would make the entire register
+ * pulls the client UI primitives: naming it here would make the entire register
  * unimportable outside the browser (markdown projection, MCP tools, tests — cf.
  * lib/cx.ts). It is the page editor who injects it during editing,
  * `pageExtensions({ nodeViews: { taskItem } })`, as it already does for the

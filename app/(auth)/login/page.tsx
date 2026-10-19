@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { Spinner } from "mangue-ui";
+import { Spinner } from "@/components/ui/spinner";
 import { LoginForm } from "@/components/auth/login-form";
 import { resolveInvitationToken } from "@/lib/server/invitation-token";
 import { preserveAuthParams } from "@/lib/signup-wizard";

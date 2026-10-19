@@ -22,7 +22,8 @@ import {
   type SensorDescriptor,
   type SensorOptions,
 } from "@dnd-kit/core";
-import { cn, toast } from "mangue-ui";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import type { IssueStatus, StatusMeta } from "@/lib/issue-constants";
 import type {
   Category,

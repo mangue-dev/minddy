@@ -14,7 +14,7 @@ import {
 } from "react";
 import { useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useTheme } from "mangue-ui/components/theme-provider";
+import { useTheme } from "@/components/theme-provider";
 import { useAssistantChat } from "@/lib/use-assistant-chat";
 import { useAssistantPanel, type OpenAssistantOptions } from "@/lib/assistant-panel-context";
 import { resolveAssistantScope } from "@/lib/assistant-scope";

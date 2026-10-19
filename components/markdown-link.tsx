@@ -8,7 +8,7 @@ import {
   type CSSProperties,
 } from "react";
 import type { ExtraProps } from "react-markdown";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import {
   isVercelAgentReviewUrl,
   MARKDOWN_LINK_CLASS,

@@ -1,7 +1,11 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { Badge, Button, Progress, Skeleton, cn } from "mangue-ui";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { USAGE_SEGMENTS, type UsageSegmentId } from "@/lib/billing-plans";
 import {
   useBillingSummary,

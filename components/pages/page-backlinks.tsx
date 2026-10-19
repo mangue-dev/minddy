@@ -10,7 +10,7 @@ import { File02Icon, HashtagIcon } from "@hugeicons/core-free-icons";
 import { useQuery } from "@tanstack/react-query";
 import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 
 import { fetchPageBacklinksApi } from "@/lib/pages-api";
 import { mentionNavigationTarget } from "@/lib/mention-target";

@@ -5,7 +5,10 @@ import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { AgentBeam, AgentBeamOverlay } from "@/components/agent-beam";
 
-vi.mock("mangue-ui", () => ({ useTheme: () => ({ resolvedTheme: "dark" }) }));
+vi.mock("@/components/theme-provider", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  useTheme: () => ({ resolvedTheme: "dark" }),
+}));
 
 const observe = vi.fn();
 const disconnect = vi.fn();

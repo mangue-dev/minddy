@@ -48,16 +48,16 @@ import { ArrowDown01Icon, Cancel01Icon, Undo02Icon } from "@hugeicons/core-free-
 import { useEffect, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import {
-  Button,
-  Spinner,
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-  cn,
-  toast,
-} from "mangue-ui";
+} from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { SidePanel, SidePanelBody, SidePanelClose, SidePanelContent, SidePanelFooter, SidePanelTitle } from "@/components/ui/side-panel";
 import type { JSONContent } from "@tiptap/react";
 

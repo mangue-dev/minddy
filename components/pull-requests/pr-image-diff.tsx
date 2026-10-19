@@ -4,7 +4,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ImageNotFound01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { cn, Spinner } from "mangue-ui";
+import { cn } from "@/lib/utils";
+import { Spinner } from "@/components/ui/spinner";
 import { prFileRawUrl, type PrEndpoint, type PullRequestFile } from "@/lib/agent-api";
 
 /**

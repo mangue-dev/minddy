@@ -287,20 +287,13 @@ const nextConfig = {
   // dependencies live in `desktop/node_modules`, which Vercel does not install;
   // `npm run typecheck` still covers them with the root configuration.
   typescript: { tsconfigPath: "tsconfig.build.json" },
-  // Pin the workspace root to this app so Turbopack doesn't walk up into the
-  // sibling mangue-ui monorepo (mangue-ui is a `file:` dependency).
+  // Pin the workspace root to this app so Turbopack doesn't walk up into a
+  // parent directory that holds another lockfile.
   turbopack: { root: dir },
-  // mangue-ui ships TS/TSX source (no build) — Next must transpile it.
-  transpilePackages: ["mangue-ui"],
   // `radix-ui` is a barrel on all Radix primitives, and it is through it that
-  // mango-ui components import them (`import { Dialog } from
-  // "radix-ui"`). Next rewrites these named imports to the module that exports them
-  // really, instead of evaluating the whole barrel (MIN-100).
-  //
-  // The same setting can NOTHING for the mango-ui barrel: the rewrite has
-  // need subpaths, and the package's `exports` field doesn't post any.
-  // The alias `mangue-ui/*` of `tsconfig.json` takes care of this — see the
-  // comment there, it carries the measure.
+  // the components of `components/ui/` import them (`import { Dialog } from
+  // "radix-ui"`). Next rewrites these named imports to the module that really
+  // exports them, instead of evaluating the whole barrel (MIN-100).
   experimental: {
     optimizePackageImports: ["radix-ui", "simple-icons"],
     // Vercel rejects this app's build cache once it exceeds 1.50 GB. Writing

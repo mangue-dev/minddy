@@ -6,7 +6,8 @@ import { AiAutoRotateIcon as CycleIcon, CheckIcon, LoaderCircleIcon } from "@hug
 import { useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, toast } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 import { CYCLES_ENABLED_META_KEY } from "@/lib/cycle-prefs";
 import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";

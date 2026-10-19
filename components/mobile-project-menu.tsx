@@ -3,7 +3,7 @@
 import { useCallback, useMemo, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { Skeleton } from "mangue-ui";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AppTabRouteProvider } from "@/lib/app-tab-route-context";
 import { useAppNavigation } from "@/lib/use-app-router";
 import { AgentsPlanGate } from "@/components/billing/agents-plan-gate";

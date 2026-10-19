@@ -6,7 +6,10 @@ import messages from "@/messages/en.json";
 import type { PullRequestListItem } from "@/lib/agent-api";
 
 // Render the popover's content inline: the test reads what it lists.
-vi.mock("mangue-ui", () => {
+// Stubs for the UI primitives the component under test renders.
+const uiStubs = vi.hoisted(() => {
+  let value: Promise<Record<string, unknown>> | undefined;
+  return () => (value ??= (async () => {
   const Pass = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
   return {
     Button: ({ children }: { children?: React.ReactNode }) => <button type="button">{children}</button>,
@@ -14,6 +17,19 @@ vi.mock("mangue-ui", () => {
     Spinner: () => null,
     cn: (...names: unknown[]) => names.filter(Boolean).join(" "),
   };
+})());
+});
+vi.mock("@/components/ui/button", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Button: stubs.Button };
+});
+vi.mock("@/components/ui/popover", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Popover: stubs.Popover, PopoverTrigger: stubs.PopoverTrigger, PopoverContent: stubs.PopoverContent };
+});
+vi.mock("@/components/ui/spinner", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Spinner: stubs.Spinner };
 });
 vi.mock("@/components/ui/app-tooltip", () => ({ AppTooltip: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 vi.mock("@/components/issue-indicators", () => ({

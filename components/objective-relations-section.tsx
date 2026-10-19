@@ -17,16 +17,11 @@ import { useMemo, useState } from "react";
 import { RelationObjectiveLabel } from "@/components/relation-objective-label";
 import { SemanticIssueGroup } from "@/components/semantic-issue-group";
 import { useTranslations } from "next-intl";
-import {
-  Button,
-  CommandGroup,
-  CommandItem,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  cn,
-  toast,
-} from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { isClosedStatus, issueIdentifier } from "@/lib/issue-constants";
 import { issueTierKeyword, orderIssuesForSearch } from "@/lib/issue-search-order";
 import {

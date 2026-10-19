@@ -10,12 +10,10 @@ import { createUuid } from "@/lib/create-uuid";
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  Input,
-  Button,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
   AlertDialog,
   AlertDialogContent,
   AlertDialogHeader,
@@ -24,7 +22,7 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
   AlertDialogAction,
-} from "mangue-ui";
+} from "@/components/ui/alert-dialog";
 import { FormDialog } from "@/components/form-dialog";
 import { SearchSelect, PICKER_FIELD_TRIGGER } from "@/components/search-select";
 import { CATEGORY_COLORS, pickFreeCategoryColor } from "@/lib/category-colors";

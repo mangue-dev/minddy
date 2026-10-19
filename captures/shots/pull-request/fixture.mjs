@@ -58,8 +58,8 @@ ${" "}
 
 /** +14 −2 */
 const PATCH_ROW = `@@ -1,11 +1,19 @@
- import { cn } from "mangue-ui";
-+import { Kbd } from "mangue-ui";
+ import { cn } from "@/lib/utils";
++import { Kbd } from "@/components/ui/kbd";
 +import { KeyHintBadge } from "@/components/palette/key-hint";
 +import type { KeyHint } from "@/lib/palette/actions";
  import type { PaletteAction } from "@/lib/palette/actions";

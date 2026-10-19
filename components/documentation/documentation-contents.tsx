@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "mangue-ui";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import type { DocumentationArticle } from "@/lib/documentation";
 
 type Section = DocumentationArticle["sections"][number];

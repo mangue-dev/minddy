@@ -1,0 +1,734 @@
+/* ============================================================================
+   Minddy design tokens — radix-nova style, OKLch color space.
+
+   Imported by app/globals.css right after `@import "tailwindcss";`. The
+   primitives of components/ui/ and the application read these variables.
+
+   Fonts (--font-inter, --font-space-grotesk, --font-instrument-serif) are
+   provided by next/font in app/layout.tsx. If absent, the browser default
+   sans-serif is used.
+
+   ── Brand color ────────────────────────────────────────────────────────────
+   The two `--primary` lines (one in :root, one in .dark) recolor buttons,
+   rings, focus states, accents and charts. The account palettes of
+   app/theme-presets.css override them per mode (MIN-696).
+   ============================================================================ */
+
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ── State variants ──────────────────────────────────────────────────────────
+   Restored from the shadcn base (lost on extraction). They map short names to
+   the data attributes Radix/cmdk actually emit, so utilities like
+   `data-horizontal:h-1`, `data-active:shadow-sm` or `data-selected:bg-muted`
+   target the right element instead of matching every node (or none). */
+@custom-variant data-open {
+  &:where([data-state="open"]),
+  &:where([data-open]:not([data-open="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-closed {
+  &:where([data-state="closed"]),
+  &:where([data-closed]:not([data-closed="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-checked {
+  &:where([data-state="checked"]),
+  &:where([data-checked]:not([data-checked="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-unchecked {
+  &:where([data-state="unchecked"]),
+  &:where([data-unchecked]:not([data-unchecked="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-indeterminate {
+  &:where([data-state="indeterminate"]),
+  &:where([data-indeterminate]:not([data-indeterminate="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-selected {
+  &:where([data-selected="true"]) {
+    @slot;
+  }
+}
+@custom-variant data-disabled {
+  &:where([data-disabled="true"]),
+  &:where([data-disabled]:not([data-disabled="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-active {
+  &:where([data-state="active"]),
+  &:where([data-active]:not([data-active="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-horizontal {
+  &:where([data-orientation="horizontal"]) {
+    @slot;
+  }
+}
+@custom-variant data-vertical {
+  &:where([data-orientation="vertical"]) {
+    @slot;
+  }
+}
+
+@utility no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/**
+ * NAVIGATION columns (primary sidebar, secondary sidebar): the thumb only shows
+ * while the column is hovered. A navigation column is read at a glance; a
+ * vertical bar parked alongside the list weighs more than it informs — and
+ * becomes useful again the moment you come to scroll it.
+ *
+ * A 10px track for a comfortable pointer target, and a thumb that only fills 4
+ * of it: the 3px transparent border thins it without shrinking what you can grab
+ * (`background-clip: content-box`). It is painted from `--scrollbar-thumb`,
+ * defined below in ALPHA — black in light theme, white in dark — so it sits as
+ * well on a card as on the sidebar, without a tone per surface.
+ *
+ * WORTH KNOWING: styling a scrollbar makes it lose its OVERLAY mode. On macOS,
+ * where it floated above the content taking nothing from it, it now reserves its
+ * 10px as soon as there is something to scroll. `no-scrollbar` above stays there
+ * for the places that would rather have nothing at all.
+ */
+@utility scrollbar-quiet {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  &::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  &::-webkit-scrollbar-track,
+  &::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    background-clip: content-box;
+    border: 3px solid transparent;
+    border-radius: 9999px;
+  }
+  &:hover {
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+  &:hover::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+  }
+  &:hover::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover);
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-inter);
+  --font-serif: var(--font-instrument-serif);
+  /* Headings use Inter too: Space Grotesk is not loaded. */
+  --font-display: var(--font-inter);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+
+  /* Semantic color mappings */
+  --color-control: var(--control);
+  --color-control-hover: var(--control-hover);
+  --color-primary-hover: var(--primary-hover);
+  --color-foreground-hover: var(--foreground-hover);
+  --color-destructive-surface: var(--destructive-surface);
+  --color-destructive-surface-hover: var(--destructive-surface-hover);
+  --color-destructive-button: var(--destructive-button);
+  --color-destructive-button-foreground: var(--destructive-button-foreground);
+  --color-destructive-border: var(--destructive-border);
+  --color-destructive-border-hover: var(--destructive-border-hover);
+  --color-tabs-hover: var(--tabs-hover);
+  --color-slider-thumb: var(--slider-thumb);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-glass: var(--surface-glass);
+  --color-surface-brand: var(--surface-brand);
+  --color-surface-brand-hover: var(--surface-brand-hover);
+  --color-surface-info: var(--surface-info);
+  --color-surface-success: var(--surface-success);
+  --color-surface-warning: var(--surface-warning);
+  --color-surface-danger: var(--surface-danger);
+  --color-surface-type-video: var(--surface-type-video);
+  --color-surface-type-clip: var(--surface-type-clip);
+  --color-surface-type-screenshot: var(--surface-type-screenshot);
+  --color-surface-type-locked: var(--surface-type-locked);
+  --color-border-subtle: var(--border-subtle);
+  --color-accent-glow: var(--accent-glow);
+  --color-accent-glow-foreground: var(--accent-glow-foreground);
+  --color-accent-glow-muted: var(--accent-glow-muted);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-strong: var(--warning-strong);
+  --color-text-tertiary: var(--text-tertiary);
+
+  /* Brand accent — identity color (badges, indicators). Derived from primary. */
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+
+  /* Typography scale extensions (UI coherence tokens) */
+  --text-2xs: 10px;
+  --text-3xs: 11px;
+  --text-md: 13px;
+
+  /* Layout spacing */
+  --spacing-header: 60px;
+  --spacing-sidebar: 256px;
+  --spacing-sidebar-sm: 56px;
+
+  /* Component sizing */
+  --spacing-icon: 16px;
+  --spacing-icon-sm: 14px;
+  --spacing-favicon: 20px;
+  --radius-favicon: 4px;
+
+  /* App shell max size (ultrawide monitors) */
+  --spacing-app-max-w: 1800px;
+  --spacing-app-max-h: 1100px;
+  --breakpoint-3xl: 2200px;
+
+  /* Mobile-adaptation threshold: the app UI is wide and starts breaking below
+     1200px. `desktop:` = >=1200px (wide UI), `max-desktop:` = <1200px (mobile
+     adaptations). Canonical breakpoint for all mobile work. */
+  --breakpoint-desktop: 1200px;
+}
+
+:root {
+  /* Dialog max size — 90% of app shell on ultrawide, 90% of viewport below. */
+  --spacing-dialog-w: min(90vw, calc(var(--spacing-app-max-w) * 0.9));
+  --spacing-dialog-h: min(90vh, calc(var(--spacing-app-max-h) * 0.9));
+
+  --radius: 1rem;
+  --background: oklch(0.975 0.006 266);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(0.995 0.002 266);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(0.995 0.002 266);
+  --popover-foreground: oklch(0.145 0 0);
+
+  /* Ink, with white text on top. */
+  --primary: oklch(0.21 0.012 265);
+  --primary-foreground: oklch(0.985 0 0);
+
+  --secondary: oklch(0.920 0.020 268);
+  --secondary-foreground: oklch(0.256 0.102 268);
+  --muted: oklch(0.935 0.008 268);
+  --muted-foreground: oklch(0.500 0.010 266);
+  --accent: oklch(0.945 0.010 268);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.58 0.22 27);
+  --border: oklch(0.895 0.012 268);
+  --input: oklch(0.910 0.012 268);
+  --ring: oklch(0.45 0 0);
+  /* Scrollbar thumb, read by `scrollbar-quiet`. Repeat that utility's rules on
+     `*` in your app's CSS to make it the scrollbar of every surface. */
+  --scrollbar-thumb: oklch(0 0 0 / 18%);
+  --scrollbar-thumb-hover: oklch(0 0 0 / 30%);
+  --chart-1: oklch(0.85 0.12 266);
+  --chart-2: oklch(0.754 0.120 270);
+  --chart-3: oklch(0.65 0.15 266);
+  --chart-4: oklch(0.498 0.282 266);
+  --chart-5: oklch(0.45 0.12 266);
+  --sidebar: oklch(0.975 0.006 266);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.62 0.22 265);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.940 0.012 268);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.900 0.012 268);
+  --sidebar-ring: oklch(0.676 0.060 270);
+
+  /* Semantic tokens */
+  /* Shared control fill — inputs, selects, outline buttons and neutral chips use
+     the same opaque gray. It stays visible on both background and card without
+     relying on a border. */
+  --control: oklch(0.935 0.008 268);
+  --control-hover: oklch(0.900 0.010 268);
+  --primary-hover: var(--primary);
+  --foreground-hover: var(--foreground);
+  --destructive-button: var(--destructive);
+  --destructive-button-foreground: oklch(0.985 0 0);
+  --destructive-surface: oklch(0.925 0.040 27);
+  --destructive-surface-hover: oklch(0.895 0.060 27);
+  --destructive-border: oklch(0.820 0.080 27);
+  --destructive-border-hover: oklch(0.750 0.100 27);
+  --tabs-hover: var(--control-hover);
+  --slider-thumb: oklch(1 0 0);
+  --surface-raised: oklch(0.995 0.002 266);
+  --surface-sunken: oklch(0.940 0.008 268);
+  --surface-glass: oklch(0.965 0.006 268 / 60%);
+  --surface-brand: oklch(0.920 0.044 265);
+  --surface-brand-hover: oklch(0.890 0.066 265);
+  --surface-info: oklch(0.950 0.022 265);
+  --surface-success: oklch(0.920 0.032 155);
+  --surface-warning: oklch(0.937 0.021 75);
+  --surface-danger: var(--destructive-surface);
+  --surface-type-video: oklch(0.930 0.030 303);
+  --surface-type-clip: oklch(0.930 0.030 163);
+  --surface-type-screenshot: oklch(0.930 0.030 230);
+  --surface-type-locked: oklch(0.930 0.030 55);
+  --border-subtle: oklch(0.910 0.010 268);
+  --accent-glow: oklch(0.62 0.22 265);
+  --accent-glow-foreground: oklch(1 0 0);
+  --accent-glow-muted: oklch(0.62 0.22 265 / 10%);
+  --success: oklch(0.68 0.16 155);
+  --success-foreground: oklch(1 0 0);
+  --warning: oklch(0.78 0.14 75);
+  --warning-foreground: oklch(0.25 0 0);
+  --warning-strong: oklch(0.53 0.17 52);
+  --text-tertiary: oklch(0.500 0.010 266);
+
+  /* Brand — derived from primary by default */
+  --brand: oklch(0.62 0.22 265);
+  --brand-foreground: oklch(1 0 0);
+
+  /* Ultrawide canvas — backdrop behind the centered app shell on ≥3xl screens */
+  --canvas: oklch(0.945 0.025 266);
+  --canvas-glow-1: oklch(0.80 0.12 250 / 0.55);
+  --canvas-glow-2: oklch(0.78 0.11 300 / 0.45);
+}
+
+.dark {
+  /* Linear-style dark — true black/gray with an imperceptible cool cast. */
+  --background: oklch(0.135 0.003 250);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.170 0.003 250);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.170 0.003 250);
+  --popover-foreground: oklch(0.985 0 0);
+
+  --primary: oklch(0.97 0.004 265);
+  --primary-foreground: oklch(0.18 0.01 265);
+
+  --secondary: oklch(0.220 0.003 250);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.200 0.003 250);
+  --muted-foreground: oklch(0.620 0.003 250);
+  --accent: oklch(0.230 0.003 250);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.78 0 0);
+  --scrollbar-thumb: oklch(1 0 0 / 16%);
+  --scrollbar-thumb-hover: oklch(1 0 0 / 28%);
+  --chart-1: oklch(0.85 0 0);
+  --chart-2: oklch(0.70 0 0);
+  --chart-3: oklch(0.55 0 0);
+  --chart-4: oklch(0.65 0.18 265);
+  --chart-5: oklch(0.40 0 0);
+  --sidebar: oklch(0.110 0.003 250);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.64 0.22 265);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.200 0.003 250);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 6%);
+  --sidebar-ring: oklch(0.555 0 0);
+
+  /* Semantic tokens dark */
+  /* Opaque on purpose: controls must stay visible without relying on a border. */
+  --control: oklch(0.245 0.006 250);
+  --control-hover: oklch(0.285 0.006 250);
+  --primary-hover: var(--primary);
+  --foreground-hover: var(--foreground);
+  --destructive-button: oklch(0.50 0.20 22.216);
+  --destructive-button-foreground: oklch(0.985 0 0);
+  --destructive-surface: oklch(0.250 0.050 22.216);
+  --destructive-surface-hover: oklch(0.310 0.070 22.216);
+  --destructive-border: oklch(0.360 0.080 22.216);
+  --destructive-border-hover: oklch(0.420 0.100 22.216);
+  --tabs-hover: var(--control-hover);
+  --slider-thumb: oklch(0.985 0 0);
+  --surface-raised: oklch(0.170 0.003 250);
+  --surface-sunken: oklch(0.090 0.003 250);
+  --surface-glass: oklch(0.170 0.003 250 / 60%);
+  --surface-brand: oklch(0.230 0.044 265);
+  --surface-brand-hover: oklch(0.270 0.066 265);
+  --surface-info: oklch(0.210 0.033 265);
+  --surface-success: oklch(0.210 0.032 155);
+  --surface-warning: oklch(0.240 0.028 75);
+  --surface-danger: var(--destructive-surface);
+  --surface-type-video: oklch(0.230 0.030 303);
+  --surface-type-clip: oklch(0.230 0.030 163);
+  --surface-type-screenshot: oklch(0.230 0.030 230);
+  --surface-type-locked: oklch(0.230 0.030 55);
+  --border-subtle: oklch(1 0 0 / 5%);
+  --accent-glow: oklch(0.58 0.22 265);
+  --accent-glow-foreground: oklch(1 0 0);
+  --accent-glow-muted: oklch(0.58 0.22 265 / 12%);
+  --success: oklch(0.72 0.16 155);
+  --success-foreground: oklch(0.95 0 0);
+  --warning: oklch(0.82 0.14 75);
+  --warning-foreground: oklch(0.95 0 0);
+  --warning-strong: oklch(0.82 0.14 75);
+  --text-tertiary: oklch(0.555 0 0);
+
+  /* Brand dark */
+  --brand: oklch(0.58 0.22 265);
+  --brand-foreground: oklch(1 0 0);
+
+  /* Ultrawide canvas dark */
+  --canvas: oklch(0.060 0.003 250);
+  --canvas-glow-1: oklch(0.28 0.10 265 / 0.30);
+  --canvas-glow-2: oklch(0.20 0.06 265 / 0.25);
+}
+
+@supports (color: color-mix(in oklab, red, blue)) {
+  :root {
+    --primary-hover: color-mix(in oklab, var(--primary) 90%, var(--background));
+    --foreground-hover: color-mix(in oklab, var(--foreground) 90%, var(--background));
+    --destructive-surface: color-mix(in oklab, var(--destructive) 10%, var(--background));
+    --destructive-surface-hover: color-mix(in oklab, var(--destructive) 20%, var(--background));
+    --destructive-border: color-mix(in oklab, var(--destructive) 30%, var(--background));
+    --destructive-border-hover: color-mix(in oklab, var(--destructive) 40%, var(--background));
+    --tabs-hover: color-mix(in oklab, var(--foreground) 5%, var(--muted));
+    --surface-brand: color-mix(in oklab, var(--brand) 20%, var(--background));
+    --surface-brand-hover: color-mix(in oklab, var(--brand) 30%, var(--background));
+    --surface-info: color-mix(in oklab, var(--brand) 10%, var(--background));
+    --surface-success: color-mix(in oklab, var(--success) 10%, var(--background));
+    --surface-warning: color-mix(in oklab, var(--warning) 15%, var(--background));
+    --surface-type-video: color-mix(in oklab, oklch(0.62 0.21 303) 10%, var(--background));
+    --surface-type-clip: color-mix(in oklab, oklch(0.62 0.17 163) 10%, var(--background));
+    --surface-type-screenshot: color-mix(in oklab, oklch(0.62 0.16 230) 10%, var(--background));
+    --surface-type-locked: color-mix(in oklab, oklch(0.66 0.17 55) 10%, var(--background));
+  }
+
+  .dark {
+    --primary-hover: color-mix(in oklab, var(--primary) 90%, var(--background));
+    --foreground-hover: color-mix(in oklab, var(--foreground) 90%, var(--background));
+    --destructive-surface: color-mix(in oklab, var(--destructive) 20%, var(--background));
+    --destructive-surface-hover: color-mix(in oklab, var(--destructive) 30%, var(--background));
+    --destructive-border: color-mix(in oklab, var(--destructive) 40%, var(--background));
+    --destructive-border-hover: color-mix(in oklab, var(--destructive) 50%, var(--background));
+    --tabs-hover: color-mix(in oklab, var(--foreground) 5%, var(--muted));
+    --surface-brand: color-mix(in oklab, var(--brand) 20%, var(--background));
+    --surface-brand-hover: color-mix(in oklab, var(--brand) 30%, var(--background));
+    --surface-info: color-mix(in oklab, var(--brand) 20%, var(--background));
+    --surface-success: color-mix(in oklab, var(--success) 20%, var(--background));
+    --surface-warning: color-mix(in oklab, var(--warning) 25%, var(--background));
+    --surface-type-video: color-mix(in oklab, oklch(0.68 0.19 303) 20%, var(--background));
+    --surface-type-clip: color-mix(in oklab, oklch(0.68 0.15 163) 20%, var(--background));
+    --surface-type-screenshot: color-mix(in oklab, oklch(0.68 0.14 230) 20%, var(--background));
+    --surface-type-locked: color-mix(in oklab, oklch(0.72 0.15 55) 20%, var(--background));
+  }
+}
+
+html,
+body {
+  font-family:
+    var(--font-inter),
+    ui-sans-serif,
+    system-ui,
+    sans-serif,
+    "Apple Color Emoji",
+    "Segoe UI Emoji",
+    "Segoe UI Symbol",
+    "Noto Color Emoji";
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Keyframes used by primitives (skeleton shimmer, accordion, collapsible) */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+@keyframes accordion-down {
+  from { height: 0; opacity: 0; }
+  to { height: var(--radix-accordion-content-height); opacity: 1; }
+}
+@keyframes accordion-up {
+  from { height: var(--radix-accordion-content-height); opacity: 1; }
+  to { height: 0; opacity: 0; }
+}
+@keyframes collapsible-down {
+  from { height: 0; opacity: 0; }
+  to { height: var(--radix-collapsible-content-height); opacity: 1; }
+}
+@keyframes collapsible-up {
+  from { height: var(--radix-collapsible-content-height); opacity: 1; }
+  to { height: 0; opacity: 0; }
+}
+
+/* Text shimmer — the "this is running" signal of the AI surfaces (ToolCallList's
+   in-flight action, WorkAccordion's header). A bright band sweeps across dimmed
+   text, IN READING ORDER — left to right.
+
+   That direction is a sign, not a duration, and it is easy to get backwards.
+   With `background-size: 300%`, a `background-position` of X% offsets the image
+   by (width − 3×width)·X — i.e. LEFTWARDS as X grows. So the bright band (at
+   50% of the gradient) sits 1.5×width to the RIGHT of the text at 0%, and
+   0.5×width to the left at 100%. Sweeping with the text therefore means going
+   from 100% to 0%, not the other way round: 0%→100% enters from the right and
+   reads against the text, which is instantly noticeable.
+
+   The gradient is THREE times wider than the text (300%) with no-repeat, and
+   that is not cosmetic either — it is what makes the loop seamless. At 200% the
+   band lands on one edge at each extreme: half-visible at BOTH ends, so every
+   lap it teleported across. At 300% it is off the text at both ends, so the two
+   extremes look IDENTICAL (uniformly dimmed text) and the seam is invisible.
+   The short breath between passes is intended. At any position the image still
+   covers the whole text — no transparent gap. */
+@keyframes text-shimmer {
+  from { background-position: 100% center; }
+  to { background-position: 0% center; }
+}
+
+@utility text-shimmer {
+  /* NB: `background-clip: text` requires `color: transparent`, which makes
+     `currentColor` transparent too (it RESOLVES to `color`) — so this uses the
+     theme tokens directly rather than currentColor. Base = muted-foreground
+     (the normal label color), sweeping band = foreground (brighter). */
+  background-image: linear-gradient(
+    90deg,
+    var(--muted-foreground) 0%,
+    var(--muted-foreground) 35%,
+    var(--foreground) 50%,
+    var(--muted-foreground) 65%,
+    var(--muted-foreground) 100%
+  );
+  background-size: 300% 100%;
+  background-repeat: no-repeat;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: text-shimmer 2.4s linear infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    background: none;
+    color: var(--muted-foreground);
+    -webkit-text-fill-color: var(--muted-foreground);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* The containing block of the coarse-pointer hit areas
+     (components/ui/touch-target.ts). In the base layer on purpose: a control
+     positioned by a utility (`absolute`, `fixed`, `sticky` — the "back to
+     bottom" arrow of a thread, the close cross of a dialog) keeps its own
+     positioning, which already makes it a containing block. */
+  [data-slot="button"] {
+    position: relative;
+  }
+  @media (pointer: coarse) {
+    :is([data-slot="select-trigger"], [data-slot="dialog-close"]) {
+      position: relative;
+    }
+  }
+}
+
+/* Card hover-lift — subtle rise + shadow on pointer devices only. */
+.lift {
+  transition:
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.3s ease,
+    border-color 0.3s ease;
+}
+@media (hover: hover) {
+  .lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.28);
+  }
+}
+
+/* Reduced motion — kill CSS animations globally */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Global user-select: none (outside @layer for higher priority) */
+*:not(input):not(textarea):not([contenteditable="true"]):not(pre):not(code) {
+  user-select: none;
+}
+input,
+textarea,
+[contenteditable="true"],
+pre,
+code,
+.select-text {
+  user-select: text;
+}
+
+/* iOS Safari zooms a focused control whose font-size < 16px. Enforce 16px floor
+   on small screens. Excludes checkbox/radio/buttons. */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="button"]):not([type="submit"]),
+  textarea,
+  select,
+  [contenteditable="true"] {
+    font-size: 16px;
+  }
+}
+
+/* react-colorful — match the radix-nova look (rounded, soft shadows). */
+.color-input-picker .react-colorful {
+  width: 220px;
+  height: 220px;
+  gap: 10px;
+}
+.color-input-picker .react-colorful__saturation {
+  border-radius: calc(var(--radius) - 2px);
+  border-bottom: none;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.color-input-picker .react-colorful__last-control {
+  border-radius: 999px;
+}
+.color-input-picker .react-colorful__hue,
+.color-input-picker .react-colorful__alpha {
+  height: 12px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.color-input-picker .react-colorful__pointer {
+  width: 18px;
+  height: 18px;
+  border-width: 2px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.12),
+    0 2px 4px rgba(0, 0, 0, 0.2);
+}
+.color-input-picker .react-colorful__interactive:focus .react-colorful__pointer {
+  transform: translate(-50%, -50%) scale(1.15);
+}
+
+/* ── Ultrawide canvas ─────────────────────────────────────────────────────────
+   On ≥3xl screens the <AppShell> becomes a centered card (via its `3xl:*` classes
+   and the body flex/height it applies). This paints the aurora backdrop revealed
+   around the card, and re-anchors floating panels to the app zone edges. */
+.ultrawide-canvas {
+  background-color: var(--canvas);
+  background-image:
+    radial-gradient(ellipse 70% 55% at 12% 18%, var(--canvas-glow-1), transparent 62%),
+    radial-gradient(ellipse 75% 55% at 88% 82%, var(--canvas-glow-2), transparent 62%);
+  background-attachment: fixed;
+}
+
+@layer utilities {
+  /* The floating <SidePanel> is fixed to the viewport. On ultrawide the app is a
+     centered card, so re-anchor the panel to the app-zone edges (+12px) instead
+     of the viewport — top AND bottom, so it never exceeds the app height. */
+  .ultrawide-canvas [data-slot="side-panel-content"][data-side="right"] {
+    right: calc((100dvw - var(--spacing-app-max-w)) / 2 + 12px) !important;
+    top: calc(max(0px, (100dvh - var(--spacing-app-max-h)) / 2) + 12px) !important;
+    bottom: calc(max(0px, (100dvh - var(--spacing-app-max-h)) / 2) + 12px) !important;
+  }
+  .ultrawide-canvas [data-slot="side-panel-content"][data-side="left"] {
+    left: calc((100dvw - var(--spacing-app-max-w)) / 2 + 12px) !important;
+    top: calc(max(0px, (100dvh - var(--spacing-app-max-h)) / 2) + 12px) !important;
+    bottom: calc(max(0px, (100dvh - var(--spacing-app-max-h)) / 2) + 12px) !important;
+  }
+}
+
+/* ─── Settings: naming one card ────────────────────────────────────────────
+   `SettingsLayout` takes you to the right tab, but a settings tab is a column of
+   cards that look alike: arriving does not yet say WHICH one you came for. The
+   ring names it for the length of a glance, then the layout removes the
+   attribute.
+
+   `box-shadow` rather than `outline`: it follows the card's radius and fades out
+   in a single property, and it pushes nothing — the column does not move by a
+   pixel for the two seconds it lasts.
+
+   No `fill-mode`: the landing frame is already transparent, and a frozen shadow
+   would stay a composited layer for nothing. */
+@keyframes settings-section-focus {
+  0%,
+  55% {
+    box-shadow:
+      0 0 0 2px var(--ring),
+      0 0 0 7px color-mix(in oklab, var(--ring) 22%, transparent);
+  }
+  100% {
+    box-shadow:
+      0 0 0 2px transparent,
+      0 0 0 7px transparent;
+  }
+}
+[data-settings-focus] {
+  animation: settings-section-focus 2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* "Less motion": we do not shorten it, we remove it. The ring itself STAYS — it
+   does not decorate, it points. */
+@media (prefers-reduced-motion: reduce) {
+  [data-settings-focus] {
+    animation: none;
+    box-shadow:
+      0 0 0 2px var(--ring),
+      0 0 0 7px color-mix(in oklab, var(--ring) 22%, transparent);
+  }
+}

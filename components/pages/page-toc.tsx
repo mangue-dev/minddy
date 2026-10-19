@@ -32,7 +32,7 @@ import {
 } from "react";
 import { useTranslations } from "next-intl";
 import type { Editor } from "@tiptap/core";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { revealBlock } from "@/components/pages/block-actions";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { readHeadings, sameHeadings, type TocEntry } from "@/lib/pages-toc";

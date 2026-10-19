@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Card, CardContent, CardDescription, CardHeader } from "mangue-ui";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { AppIcon } from "@/components/icon";
 import {
   BotIcon,

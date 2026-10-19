@@ -2,7 +2,7 @@
 
 import { useId } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { AppIcon } from "@/components/icon";
 
 export type SidebarNavRailItem = {
@@ -23,7 +23,7 @@ export type SidebarNavRailItem = {
  * The rail of a secondary sidebar whose rows choose a PANEL and
  * not an object: the settings (account and project) and the admin.
  *
- * These are our cards, and no longer the `Tabs` from mango-ui. The library has
+ * These are our cards, and no longer the `Tabs` primitive. The primitive has
  * gained in 0.6.0 a SLIDING indicator, a `<span>` painted in the list at
  * template of the active tab (`rounded-full`, `bg-background`, `shadow-sm`, and
  * a border in dark). It is invisible in a classic tab bar,

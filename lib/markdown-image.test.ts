@@ -7,8 +7,8 @@ import { Markdown } from "@/components/markdown";
 import { PrEndpointProvider } from "./pr-endpoint-context";
 
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
-vi.mock("mangue-ui", () => ({
-  cn: (...values: unknown[]) => values.filter(Boolean).join(" "),
+vi.mock("@/components/ui/dialog", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   Dialog: ({ open, children }: { open: boolean; children: ReactNode }) => open ? children : null,
   DialogContent: ({ children }: { children: ReactNode }) => createElement("div", { role: "dialog" }, children),
   DialogTitle: ({ children }: { children: ReactNode }) => createElement("h2", null, children),

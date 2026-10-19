@@ -2,7 +2,7 @@
 
 import { createElement, type ComponentProps, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import {
   CodeBlockLanguageLabel,
   CodeBlockSurface,

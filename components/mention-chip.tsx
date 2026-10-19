@@ -32,7 +32,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Book02Icon, Layers01Icon, LockIcon, Target01Icon } from "@hugeicons/core-free-icons";
 import type { CSSProperties, MouseEvent } from "react";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import {
   NODE_LINK_CLASS,
   isPlainNavigationClick,

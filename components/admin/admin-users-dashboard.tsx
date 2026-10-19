@@ -5,7 +5,16 @@ import { Cancel01Icon, Search01Icon, Undo02Icon, ViewOffIcon } from "@hugeicons/
 import {useCallback, useEffect, useRef, useState} from "react";
 import type {ReactNode} from "react";
 import {useFormatter, useTranslations} from "next-intl";
-import {Badge, Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, Skeleton, Spinner, Switch, cn, toast} from "mangue-ui";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {UserAvatar} from "@/components/user-avatar";
 import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
 import {BILLING_PLANS} from "@/lib/billing-plans";

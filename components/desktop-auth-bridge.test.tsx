@@ -16,8 +16,12 @@ vi.mock("@/lib/desktop/bridge", () => ({ getDesktopBridge: () => ({
 }) }));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("@/components/icon", () => ({ AppIcon: () => null }));
-vi.mock("mangue-ui", () => ({
+vi.mock("@/components/ui/button", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   Button: (props: React.ComponentProps<"button">) => <button {...props} />,
+}));
+vi.mock("@/components/ui/card", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   Card: (props: React.ComponentProps<"div">) => <div {...props} />,
   CardContent: (props: React.ComponentProps<"div">) => <div {...props} />,
 }));

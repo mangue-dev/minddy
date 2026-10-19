@@ -10,7 +10,7 @@
  * 1. `accountTheme` — the theme saved on the signed-in account, asserted by
  *    the proxy (`lib/account-theme.ts`). It wins over the device cache: the
  *    account follows its owner across devices. The value is also MIRRORED
- *    back into localStorage, so mango-ui's ThemeProvider — which reads that
+ *    back into localStorage, so the ThemeProvider — which reads that
  *    key on mount — lands on the same choice instead of flipping `<html>`
  *    back right after hydration.
  * 2. localStorage — the device cache; anonymous visitors stop here.
@@ -38,7 +38,7 @@ import {
  * `theme-color` is read by the browser OFF the page: it cannot point to
  * `var(--background)`, and not every engine parses `oklch()` in this tag.
  * Hence the hexadecimal values in the catalog (`lib/theme-presets.ts`); the
- * Minddy defaults are a manual conversion of mango-ui's `--background`, which
+ * Minddy defaults are a manual conversion of app/tokens.css's `--background`, which
  * `lib/mobile-touch.test.ts` re-reads so that a moved token is recalculated.
  * The script reads the attribute of the ACTIVE mode, so the bar follows both
  * a mode switch and a palette switch. */

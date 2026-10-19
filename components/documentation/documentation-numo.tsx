@@ -2,7 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, SendButtonWithCost, Sheet, SheetTitle, Spinner, Textarea } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { SendButtonWithCost } from "@/components/ui/send-button-with-cost";
+import { Sheet, SheetTitle } from "@/components/ui/sheet";
+import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Cancel01Icon, SquareIcon } from "@hugeicons/core-free-icons";
 import { MobileSheetContent } from "@/components/ui/mobile-sheet";

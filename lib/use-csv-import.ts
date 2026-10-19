@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 import { issuesFromMapping, prepareImport } from "@/lib/import/parse";
 import { buildCsvDigest } from "@/lib/import/digest";
 import { mappingHasGaps, mergeMapping } from "@/lib/import/mapping";

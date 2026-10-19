@@ -5,22 +5,19 @@ import { useRichDocument } from "@/lib/use-rich-document";
 
 import { MobileSheetScrollArea } from "@/components/ui/mobile-sheet";
 
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
+import { ResponsivePopover, ResponsivePopoverContent, ResponsivePopoverTrigger } from "@/components/ui/responsive-popover";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { CheckIcon } from "@hugeicons/core-free-icons";
 import { createUuid } from "@/lib/create-uuid";
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Button,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  Spinner,
-  SplitButton,
-  cn,
-  toast,
-} from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { DropdownMenuItem, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
+import { Spinner } from "@/components/ui/spinner";
+import { SplitButton } from "@/components/ui/split-button";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { CreationRelationPills, CreationRelationsCompact } from "@/components/creation-relations";
@@ -128,8 +125,8 @@ function ColorCompact({
     setOpen(false);
   };
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+    <ResponsivePopover open={open} onOpenChange={setOpen}>
+      <ResponsivePopoverTrigger asChild>
         <button type="button" aria-label={t("colorFieldLabel")} className={BARE}>
           <span
             className={cn(
@@ -140,8 +137,8 @@ function ColorCompact({
           />
           <span className="text-muted-foreground">{t("colorFieldLabel")}</span>
         </button>
-      </PopoverTrigger>
-      <PopoverContent mobileTitle={t("colorFieldLabel")} align="start" className="w-auto p-2">
+      </ResponsivePopoverTrigger>
+      <ResponsivePopoverContent mobileTitle={t("colorFieldLabel")} align="start" className="w-auto p-2">
         <div className="flex flex-wrap items-center gap-1.5">
           <button
             type="button"
@@ -170,8 +167,8 @@ function ColorCompact({
             </button>
           ))}
         </div>
-      </PopoverContent>
-    </Popover>
+      </ResponsivePopoverContent>
+    </ResponsivePopover>
   );
 }
 

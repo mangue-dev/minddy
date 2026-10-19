@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Download01Icon, SmartPhone01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
-import { Button } from "mangue-ui/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   resolveInstallPlatform,
   WINDOWS_STORE_DEEP_LINK,

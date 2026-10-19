@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from "mangue-ui";
+} from "@/components/ui/dropdown-menu";
 
 export function PageCreateMenu({
   trigger,

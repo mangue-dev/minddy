@@ -7,7 +7,9 @@ import type { IconSvgElement } from "@hugeicons/react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, Textarea, toast } from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import {
   WizardDialog,

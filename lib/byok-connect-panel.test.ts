@@ -24,22 +24,21 @@ vi.mock("@/lib/use-ai-keys-query", () => ({
   useAiKeysQuery: () => ({ keys: keyState.keys, loading: false }),
 }));
 
-vi.mock("mangue-ui", async () => ({
-  ...await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/alert-dialog.tsx"),
-  cn: (...values: unknown[]) => values.filter(Boolean).join(" "),
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   toast: { error: vi.fn(), success: vi.fn() },
+}));
+vi.mock("@/components/ui/spinner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   Spinner: () => null,
-  Button: ({
-    children,
-    variant: _variant,
-    size: _size,
-    ...props
-  }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
-    variant?: string;
-    size?: string;
-  }) => createElement("button", props, children),
+}));
+vi.mock("@/components/ui/input", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   Input: (props: React.InputHTMLAttributes<HTMLInputElement>) =>
     createElement("input", props),
+}));
+vi.mock("@/components/ui/select", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   Select: ({
     children,
     value,

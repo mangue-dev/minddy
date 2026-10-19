@@ -1,5 +1,5 @@
 /* Theme bridge for the command palette (lib/command-palette).
-   Defines every --cp-* token from the app's mangue-ui tokens instead of using
+   Defines every --cp-* token from the app's design tokens (app/tokens.css) instead of using
    the library's default theme.css — so light/dark follow the app automatically
    and the palette looks native. Paired with command-palette.tsx. */
 
@@ -40,15 +40,15 @@
   --cp-fs-sm: 0.875rem;
   --cp-fs-xs: 0.75rem;
 
-  /* === Radii (mangue-ui scale) === */
+  /* === Radii (app/tokens.css scale) === */
   --cp-radius-xl: var(--radius-xl, 1rem);
   /* Palette container only: one notch rounder than the floating menus, and a
-   notch above mangue's --radius-2xl so the actions bubble pill nests into
+   notch above the token --radius-2xl so the actions bubble pill nests into
    the corner with breathing room. */
   --cp-radius-2xl: calc(var(--radius-2xl, 1.5rem) + 0.25rem);
   --cp-radius-lg: var(--radius-lg, 0.75rem);
   --cp-radius-md: var(--radius-md, 0.5rem);
-  /* Not var(--radius-sm) (12px at mango-ui): on kbd chips of 20px that
+  /* Not var(--radius-sm) (12px in app/tokens.css): on kbd chips of 20px that
  renders circles. 5px = rounded square. */
   --cp-radius-sm: 0.3125rem;
 
@@ -75,7 +75,7 @@
   --cp-icon-account: var(--muted-foreground);
 }
 
-/* Dark: the mango-ui accent (var(--accent)) is almost invisible on --popover —
+/* Dark: the token accent (var(--accent)) is almost invisible on --popover —
  the selected option should be obvious. We force a more contrasting mix
  (highlighting of rows + hover/active of the action popover). */
 .dark {

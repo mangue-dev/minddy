@@ -11,12 +11,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAppNavigation } from "@/lib/use-app-router";
 import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
 import { useTranslations } from "next-intl";
-import {
-  Button,
-  Skeleton,
-  cn,
-  toast,
-} from "mangue-ui";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { SidePanel, SidePanelContent, SidePanelTitle } from "@/components/ui/side-panel";
 import { CollectionSidebar, type SidebarBrowseTarget } from "@/components/secondary-sidebar";
 import { PageTree } from "@/components/pages/page-tree";

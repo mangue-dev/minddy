@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { IsoIcon, type SceneIcon } from "@/components/illustrations/iso-icon";
 
 /**

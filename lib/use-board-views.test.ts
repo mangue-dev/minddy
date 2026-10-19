@@ -11,7 +11,10 @@ import { fetchViewsApi, updateViewApi } from "./views-api";
 
 vi.mock("./views-api", () => ({ fetchViewsApi: vi.fn(), updateViewApi: vi.fn() }));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
-vi.mock("mangue-ui", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  toast: { success: vi.fn(), error: vi.fn() },
+}));
 vi.mock("./app-tabs-context", () => ({ useOptionalAppTabNavigation: () => null }));
 
 const saved: View = {

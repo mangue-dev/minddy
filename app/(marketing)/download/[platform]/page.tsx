@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
-import { Button } from "mangue-ui/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Github } from "@/components/git/provider-icons";
 import type { Locale } from "@/i18n/config";
 import { MINDDY_LICENSE_URL, MINDDY_REPOSITORY_URL } from "@/lib/brand-constants";

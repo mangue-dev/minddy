@@ -3,8 +3,6 @@ import { Editor } from "@tiptap/core";
 import { expect, it, vi } from "vitest";
 import { pageExtensions } from "@/components/pages/page-extensions";
 import { shouldShowSelectionMenu } from "@/components/pages/page-comment-bubble";
-
-vi.mock("mangue-ui", () => ({ cn: () => "" }));
 vi.mock("@/components/markdown-link-menu", () => ({ MarkdownLinkEditDialog: () => null }));
 vi.mock("@/components/ui/tooltip", () => ({ Tooltip: () => null, TooltipContent: () => null, TooltipTrigger: () => null }));
 

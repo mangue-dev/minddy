@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 import { useAutosize } from "@/lib/use-autosize";
 
 /** A textarea that grows with its content instead of scrolling. Behaves like a

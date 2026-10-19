@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useTheme } from "mangue-ui/components/theme-provider";
+import { useTheme } from "@/components/theme-provider";
 import { useAuth } from "@/lib/auth-context";
 import {
   ACCOUNT_THEME_META_KEY,

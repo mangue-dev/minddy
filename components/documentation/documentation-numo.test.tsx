@@ -8,11 +8,8 @@ import { DocumentationNumo } from "./documentation-numo";
 import { SELF_HOSTING_OVERVIEW } from "@/lib/self-hosting-help-context";
 
 const h = vi.hoisted(() => ({ sendMessage: vi.fn(), reset: vi.fn() }));
-vi.mock("mangue-ui", async () => ({
-  ...await import("mangue-ui/components/ui/button"),
-  ...await import("mangue-ui/components/ui/textarea"),
-  ...await import("mangue-ui/components/ui/sheet"),
-  ...await import("mangue-ui/components/ui/spinner"),
+vi.mock("@/components/ui/send-button-with-cost", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   SendButtonWithCost: ({ disabled, onClick, ariaLabel }: { disabled: boolean; onClick: () => void; ariaLabel: string }) => <button type="button" disabled={disabled} onClick={onClick} aria-label={ariaLabel} />,
 }));
 vi.mock("@/components/ai-elements/message", () => ({ Message: () => null, MessageContent: () => null }));

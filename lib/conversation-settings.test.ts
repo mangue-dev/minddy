@@ -61,7 +61,10 @@ vi.mock("@/components/ui/tooltip", async () => {
     TooltipTrigger: Wrapper,
   };
 });
-vi.mock("mangue-ui", async () => {
+// Stubs for the UI primitives the component under test renders.
+const uiStubs = vi.hoisted(() => {
+  let value: Promise<Record<string, unknown>> | undefined;
+  return () => (value ??= (async () => {
   const { createElement } = await import("react");
   const Wrapper = ({ children }: { children?: ReactNode }) =>
     createElement("div", null, children);
@@ -78,6 +81,19 @@ vi.mock("mangue-ui", async () => {
     cn: (...values: Array<string | false | null | undefined>) =>
       values.filter(Boolean).join(" "),
   };
+})());
+});
+vi.mock("@/components/ui/button", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Button: stubs.Button };
+});
+vi.mock("@/components/ui/popover", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Popover: stubs.Popover, PopoverContent: stubs.PopoverContent, PopoverTrigger: stubs.PopoverTrigger };
+});
+vi.mock("@/components/ui/slider", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Slider: stubs.Slider };
 });
 
 import { ConversationSettings } from "@/components/assistant/conversation-settings";

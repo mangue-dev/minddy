@@ -5,8 +5,12 @@ import { CommandList } from "@/components/ui/command";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowUpDownIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
-import { Button, Command, CommandInput, CommandItem, commandFilter, cn, Spinner } from "mangue-ui";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
+import { Button } from "@/components/ui/button";
+import { Command, CommandInput, CommandItem } from "@/components/ui/command";
+import { commandFilter } from "@/lib/command-filter";
+import { cn } from "@/lib/utils";
+import { Spinner } from "@/components/ui/spinner";
+import { ResponsivePopover, ResponsivePopoverContent, ResponsivePopoverTrigger } from "@/components/ui/responsive-popover";
 import { ProviderLogo } from "@/components/model-logo";
 import { formatModelName } from "@/lib/model-display";
 import {
@@ -77,14 +81,14 @@ export function ByokModelCombobox({
   };
 
   return (
-    <Popover
+    <ResponsivePopover
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
         if (!next) setQuery("");
       }}
     >
-      <PopoverTrigger asChild>
+      <ResponsivePopoverTrigger asChild>
         <Button
           type="button"
           variant="outline"
@@ -106,9 +110,9 @@ export function ByokModelCombobox({
           )}
           <HugeiconsIcon icon={ArrowUpDownIcon} className="ml-2 size-4 shrink-0 opacity-50" />
         </Button>
-      </PopoverTrigger>
+      </ResponsivePopoverTrigger>
       {/* Same width ceiling as `ModelCombobox`: a long native id must not leave the screen. */}
-      <PopoverContent
+      <ResponsivePopoverContent
         className="rounded-xl p-0 max-w-[min(30rem,calc(100vw-2rem))]"
         align="start"
       >
@@ -146,7 +150,7 @@ export function ByokModelCombobox({
             ) : null}
           </CommandList>
         </Command>
-      </PopoverContent>
-    </Popover>
+      </ResponsivePopoverContent>
+    </ResponsivePopover>
   );
 }

@@ -9,7 +9,10 @@ import { UndoProvider, useUndoHistory, type UndoRecord } from "./undo-context";
 
 const api = vi.hoisted(() => ({ update: vi.fn(), categories: vi.fn() }));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
-vi.mock("mangue-ui", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("sonner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  toast: { success: vi.fn(), error: vi.fn() },
+}));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 vi.mock("@/lib/issues-api", () => ({
   createIssueApi: vi.fn(),

@@ -29,7 +29,7 @@ import {
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 import {
   createIssueApi,
   deleteIssueApi,

@@ -28,7 +28,10 @@ vi.mock("@/components/search-menu", () => ({ SearchMenu: ({ open, onOpenChange, 
   React.cloneElement(trigger, { onClick: () => onOpenChange(!open) } as React.HTMLAttributes<HTMLElement>),
   open && createPortal(React.createElement("div", { "data-modal": modal }, React.createElement("input", { "aria-label": "Search relations", value: searchValue, onChange: (e: React.ChangeEvent<HTMLInputElement>) => onSearchValueChange(e.target.value) }), children), container ?? document.body)),
 }));
-vi.mock("mangue-ui", () => {
+// Stubs for the UI primitives the component under test renders.
+const uiStubs = vi.hoisted(() => {
+  let value: Promise<Record<string, unknown>> | undefined;
+  return () => (value ??= (async () => {
   const wrap = ({ children }: { children: React.ReactNode }) => React.createElement("div", null, children);
   const item = ({ children, onSelect, disabled }: { children: React.ReactNode; onSelect: () => void; disabled?: boolean }) =>
     React.createElement("button", { type: "button", onClick: onSelect, disabled }, children);
@@ -52,6 +55,47 @@ vi.mock("mangue-ui", () => {
       React.createElement("button", { type: "button", onClick: () => onCheckedChange(!checked) }, "Create more toggle"),
     Popover: wrap, PopoverContent: () => null, PopoverTrigger: wrap,
   };
+})());
+});
+vi.mock("sonner", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), toast: stubs.toast };
+});
+vi.mock("@/components/ui/dialog", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Dialog: stubs.Dialog, DialogContent: stubs.DialogContent, DialogTitle: stubs.DialogTitle };
+});
+vi.mock("@/components/ui/sheet", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Sheet: stubs.Sheet, SheetContent: stubs.SheetContent, SheetTitle: stubs.SheetTitle, SheetTrigger: stubs.SheetTrigger, SheetClose: stubs.SheetClose };
+});
+vi.mock("@/components/ui/dropdown-menu", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), DropdownMenuLabel: stubs.DropdownMenuLabel, DropdownMenuItem: stubs.DropdownMenuItem };
+});
+vi.mock("@/components/ui/command", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), CommandGroup: stubs.CommandGroup, CommandItem: stubs.CommandItem };
+});
+vi.mock("@/components/ui/spinner", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Spinner: stubs.Spinner };
+});
+vi.mock("@/components/ui/button", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Button: stubs.Button };
+});
+vi.mock("@/components/ui/split-button", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), SplitButton: stubs.SplitButton };
+});
+vi.mock("@/components/ui/switch", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Switch: stubs.Switch };
+});
+vi.mock("@/components/ui/popover", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), Popover: stubs.Popover, PopoverContent: stubs.PopoverContent, PopoverTrigger: stubs.PopoverTrigger };
 });
 vi.mock("@/lib/use-issues-query", () => ({ useIssuesQuery: (project: string | null) => {
   fixture.queryProjects.push(project);

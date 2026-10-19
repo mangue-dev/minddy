@@ -4,17 +4,15 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, SparklesIcon } from "@hugeicons/core-free-icons";
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  cn,
-} from "mangue-ui";
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import {
   ISSUE_EFFORTS,
   ISSUE_PRIORITIES,

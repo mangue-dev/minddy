@@ -2,9 +2,7 @@
 
 import type { ComponentProps } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Spinner,
-} from "mangue-ui";
+import { Spinner } from "@/components/ui/spinner";
 import { SidePanel, SidePanelBody, SidePanelContent, SidePanelDescription, SidePanelHeader, SidePanelTitle } from "@/components/ui/side-panel";
 import { PrDiff } from "@/components/pull-requests/pr-diff";
 import { ShaButton } from "@/components/pull-requests/pr-sha-button";

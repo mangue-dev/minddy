@@ -15,12 +15,12 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  Button,
-  IconButton,
-  Spinner,
-  cn,
-  toast,
-} from "mangue-ui";
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { EmptyScene } from "@/components/empty-scene";
 import {
   AutomationAvatar,

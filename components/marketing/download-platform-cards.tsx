@@ -8,7 +8,7 @@ import { resolveInstallPlatform, WINDOWS_STORE_DEEP_LINK, type InstallPlatform }
 import { showMobileInstallGuide } from "@/lib/mobile-install-guide";
 import { TrackedDownloadLink } from "./tracked-download-link";
 import { usePwaInstall } from "./use-pwa-install";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "mangue-ui/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CARD_TONES } from "./card-tones";
 
 type SupportedInstallPlatform = Exclude<InstallPlatform, "unsupported">;

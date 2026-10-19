@@ -6,7 +6,6 @@ import { DocumentationSidebar, type DocumentationNavigationEntry } from "./docum
 import { documentationTopicKey, openDocumentationTopic } from "@/lib/use-documentation-topics";
 
 vi.mock("@/lib/command-palette", () => ({ CommandPalette: () => null }));
-vi.mock("mangue-ui", () => import("mangue-ui/components/ui/collapsible"));
 vi.mock("@/components/command-palette.css", () => ({}));
 
 it("keeps one topic open and reveals each destination article across navigation surfaces", async () => {

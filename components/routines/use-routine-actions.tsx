@@ -2,7 +2,8 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ConfirmDeleteDialog, toast } from "mangue-ui";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import {
   deleteRoutineApi,

@@ -8,9 +8,6 @@ vi.mock("@/components/editor/document-editor", () => ({
   DocumentEditor: (props: { value: string }) =>
     createElement("div", { "data-testid": "rich-editor" }, props.value),
 }));
-vi.mock("mangue-ui", () => ({
-  cn: (...args: unknown[]) => args.filter(Boolean).join(" "),
-}));
 
 type Frame = { id: number; callback: () => void };
 let frames: Frame[] = [];

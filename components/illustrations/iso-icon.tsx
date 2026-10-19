@@ -4,7 +4,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import type { ComponentType, CSSProperties, Ref } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { IconSvgElement } from "@hugeicons/react";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 
 /**
  * ANY lucid icon, placed on an isometric BLOCK — without having to

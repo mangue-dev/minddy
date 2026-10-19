@@ -3,24 +3,10 @@
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 
 import * as React from "react";
-import { cn } from "mangue-ui";
+import { cn } from "@/lib/utils";
 
 /**
- * `Kbd` / `KbdSequence` — TEMPORARY DUPLICATION of `mangue-ui`, like the layer
- * settings before it.
- *
- * The fix (a key is square when it fits into a glyph) lives in
- * `~/Projets/mangue-ui/packages/mangue-ui/src/components/ui/kbd.tsx`, in 0.4.0
- * — unpublished. minddy consumes 0.3.0 from npm: without this copy, the
- * patch would be invisible here until the next release, and a bump
- * from mango-ui is not trivial (it can duplicate framer-motion and drown the
- * typecheck under type identity errors).
- *
- * TO REMOVE as soon as minddy switches to mango-ui ≥ 0.4.0: replace imports
- * `@/components/ui/kbd` by `mangue-ui` and delete this file. NOTE: the
- * styling now intentionally DIVERGES from upstream (transparent surface,
- * tinted border, sans glyphs — see the `Kbd` docstring below); port the new
- * look to mangue-ui before the switch or restore the old classes there.
+ * `Kbd` / `KbdSequence` — minddy's keyboard key and shortcut primitives.
  */
 
 export type KbdProps = React.ComponentProps<"kbd"> & {
@@ -55,7 +41,7 @@ function isSingleGlyph(children: React.ReactNode): boolean {
  * inherits whatever color its surface is built for (foreground normally, the
  * inverted tooltip text on tooltips) without shouting. The font is
  * `--font-kbd` (see app/globals.css): Inter has none of the ⌘⇧⌥ glyphs. The
- * radius is explicit because the mangue-ui token scale redefines
+ * radius is explicit because the token scale of app/tokens.css redefines
  * `rounded-md` (0.375rem) to 14px.
  */
 export function Kbd({

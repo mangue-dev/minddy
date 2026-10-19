@@ -18,25 +18,23 @@ import { AppTabRouteBoundary, useAppTabActive, useAppTabRoute } from "@/lib/app-
 import Link from "@/components/app-link";
 import { useLocale, useNow, useTranslations, useFormatter } from "next-intl";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { CommandGroup, CommandItem, CommandSeparator } from "@/components/ui/command";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
-  Badge,
-  Button,
-  CommandGroup,
-  CommandItem,
-  CommandSeparator,
-  ConfirmDeleteDialog,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  Input,
-  Skeleton,
-  Spinner,
-  SplitButton,
-  Switch,
-  cn,
-  toast,
-} from "mangue-ui";
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
+import { SplitButton } from "@/components/ui/split-button";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 // ChevronUp renders the post vote count.
 import { EmptyScene } from "@/components/empty-scene";

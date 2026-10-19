@@ -32,10 +32,13 @@ vi.mock("./auth-context", () => ({ useAuth: () => h.auth }));
 vi.mock("./projects-context", () => ({ useProjects: () => ({ projects: h.projects }) }));
 vi.mock("next-intl", () => ({ useLocale: () => "en", useTranslations: () => (key: string) => key }));
 vi.mock("next/navigation", () => ({ useRouter: () => h.router }));
-vi.mock("mangue-ui/components/theme-provider", () => ({ useTheme: () => h.theme }));
+vi.mock("@/components/theme-provider", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  useTheme: () => h.theme,
+}));
 vi.mock("./set-locale", () => ({ setLocaleCookie: async () => {} }));
-vi.mock("mangue-ui", () => ({
-  cn: (...values: unknown[]) => values.filter(Boolean).join(" "),
+vi.mock("@/components/ui/sheet", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   Sheet: ({ open, children }: { open: boolean; children: ReactNode }) => open ? children : null,
   SheetContent: ({ children }: { children: ReactNode }) => children,
   SheetTitle: ({ children }: { children: ReactNode }) => children,

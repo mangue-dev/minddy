@@ -17,7 +17,6 @@ import { observePageReadFailures } from "@/lib/page-read-receipts";
 import { trackPageCreation, waitForPageCreation } from "@/lib/page-creation-settlement";
 
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
-vi.mock("mangue-ui", () => ({ cn: (...args: unknown[]) => args.filter(Boolean).join(" ") }));
 vi.mock("@/components/pages/block-gutter", () => ({ BlockGutter: () => null }));
 vi.mock("@/components/pages/page-comment-bubble", () => ({ PageCommentBubble: () => null }));
 vi.mock("@/components/markdown-link-menu", () => ({ MarkdownLinkMenu: () => null }));

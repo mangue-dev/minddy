@@ -1,7 +1,7 @@
 /**
  * Public board accent color (MIN-59) — shared client/server.
  *
- * The mango-ui UI has been recolored for a few CSS tokens. The public board
+ * The UI has been recolored for a few CSS tokens. The public board
  * utilise `--primary` (chips du composeur), `--brand` (titres/liens au survol)
  * and `--ring` (focus). minddy only overrides `--primary` by default, so for
  * a coherent accent we put the three tokens together.
@@ -14,7 +14,7 @@ export const DEFAULT_BOARD_ACCENT = "#3098D0";
 const HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
 /** A valid accent is a CSS hex (3 or 6 digits), canonical form of
-    `<input type=color>` and `ColorInput` (mango-ui). */
+    `<input type=color>` and `ColorInput` (components/ui/color-input.tsx). */
 export function isAccentColor(value: unknown): value is string {
   return typeof value === "string" && HEX_COLOR_RE.test(value);
 }
