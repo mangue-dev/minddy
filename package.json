@@ -128,7 +128,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@hugeicons/core-free-icons": "^4.3.5",
     "@hugeicons/react": "^1.1.10",
-    "@lobehub/icons": "^5.23.0",
+    "@lobehub/icons": "^6.0.0",
     "@modelcontextprotocol/client": "^2.3.1",
     "@modelcontextprotocol/server": "^2.3.1",
     "@paper-design/shaders-react": "^0.0.81",
