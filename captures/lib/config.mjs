@@ -146,28 +146,23 @@ export const TABLE_SCOPES = {
     userRefColumns: ["owner_id", "deleted_by"],
   },
 
-  // ── Agent de code ────────────────────────────────────────────────────────
-  // No demo run should be `queued` nor `running`: the drain cron
-  // claim the `queued`, and `requeueStuckRuns` re-queues any `running` of
-  // more than 6 minutes — which WOULD actually RUN the agent (sandbox, calls
-  // LLM invoiced, writing on a deposit). See lib/server/agent/runs.ts.
-  // A run is anchored by its project PLUS at least one demo lineage: the
-  // worked issue OR the routine that spawned it. Routine runs have no
-  // issue, so both parents are optional — but at least one must be proven
-  // demo (checked in `validateRow` via `requireSomeParent`).
-  agent_runs: {
+  // ── Statistics ledger (MIN-737) ──────────────────────────────────────────
+  // Append-only events behind the profile statistics. Anchored on the demo
+  // account alone: notebook-task events have no project, so `project_id`
+  // cannot be a required anchor. `018-statistiques.mjs` checks itself that
+  // every project and issue it references is a demo row, and leaves the
+  // snapshot texts (project name, issue title, task text) empty so no row
+  // carries content that would need encrypting.
+  stat_events: {
     writable: true,
-    projectColumn: "project_id",
-    userRefColumns: ["created_by"],
-    parents: [
-      { column: "issue_id", table: "issues", optional: true },
-      { column: "routine_id", table: "agent_routines", optional: true },
-    ],
+    ownerColumn: "user_id",
+    userRefColumns: ["user_id"],
   },
-  agent_run_events: {
-    writable: true,
-    parents: [{ column: "run_id", table: "agent_runs" }],
-  },
+
+  // ── Code agent ───────────────────────────────────────────────────────────
+  // `agent_runs` and `agent_run_events` were dropped with the code agent
+  // (MIN-721, migration 20270109200049): they are no longer part of the
+  // perimeter, and seeds 008 and 016 that wrote them cannot be replayed.
 
   // ── Feedback (public board + team view) ─────────────────────────────────
   // Any demo post must have non-zero `analyzed_at` AND `classified_at`:

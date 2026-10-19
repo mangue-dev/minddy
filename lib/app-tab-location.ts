@@ -1,8 +1,13 @@
 /** Persist only authenticated destinations and repeatable selection state. */
 const ROUTES = new Set([
   "home", "all", "inbox", "routines", "pull-requests",
-  "statistics", "trash", "settings", "billing", "admin",
+  "trash", "settings", "billing", "admin",
 ]);
+/** Retired screens whose content moved elsewhere: restored tabs follow it. */
+const MOVED_ROUTES: Readonly<Record<string, string>> = {
+  // Personal statistics live in the profile since MIN-737.
+  statistics: "settings",
+};
 const PROJECT_SECTIONS = new Set(["feedback", "objectives", "pages", "settings", "triage"]);
 const SELECTION_PARAMS = new Set([
   "view", "objective", "family", "tab", "open", "post", "routine", "pr", "entry",
@@ -28,7 +33,9 @@ export function normalizeAppTabLocation(raw: unknown): string | null {
   let url: URL;
   try { url = new URL(raw, "https://minddy.invalid"); } catch { return null; }
   if (url.origin !== "https://minddy.invalid") return null;
-  const path = url.pathname.replace(/\/$/, "");
+  const trimmed = url.pathname.replace(/\/$/, "");
+  const moved = MOVED_ROUTES[trimmed.slice(1)];
+  const path = moved ? `/${moved}` : trimmed;
   const segments = path.slice(1).split("/");
   if (segments.some((segment) => !/^[a-zA-Z0-9_-]+$/.test(segment))) return null;
   const [root, project, section] = segments;

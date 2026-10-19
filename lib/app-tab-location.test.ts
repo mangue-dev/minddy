@@ -30,6 +30,10 @@ describe("application tab destinations", () => {
     expect(normalizeAppTabLocation("/projects/p/pages/a?entry=b#heading")).toBe("/projects/p/pages/a?entry=b#heading");
     expect(normalizeAppTabLocation("/settings?tab=security&section=account-security#hint")).toBe("/settings?tab=security");
   });
+  it("moves restored statistics tabs to the profile that now holds them", () => {
+    expect(normalizeAppTabLocation("/statistics")).toBe("/settings");
+    expect(normalizeAppTabLocation("/statistics/")).toBe("/settings");
+  });
   it("rejects the retired Numo routes (the FAB has no URL)", () => {
     expect(normalizeAppTabLocation("/agents?run=a")).toBeNull();
     expect(normalizeAppTabLocation("/numo?conversation=a")).toBeNull();

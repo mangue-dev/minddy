@@ -15,25 +15,10 @@ import {locales} from "@/i18n/config";
 import type {Locale} from "@/i18n/config";
 import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
 import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
-import {StatusIndicator} from "@/components/issue-indicators";
-import {NUMO_DEFAULT_STATUS_OPTIONS, resolveNumoDefaultStatus} from "@/lib/numo-default-status";
-import type {NumoDefaultStatus} from "@/lib/numo-default-status";
-import {PROMPT_COPY_AUTO_START_META_KEY, resolvePromptCopyAutoStart} from "@/lib/prompt-copy-auto-start";
-import {AUTO_ASSIGN_ON_START_META_KEY, resolveAutoAssignOnStart} from "@/lib/auto-assign-on-start";
-import {
-  ISSUE_INDEXING_META_KEY,
-  resolveIssueIndexing,
-  resolveSmartFill,
-  resolveSmartFillRelations,
-  resolveSmartFillScope,
-  SMART_FILL_CREATED_META_KEY,
-  SMART_FILL_META_KEY,
-  SMART_FILL_RELATIONS_META_KEY,
-  SMART_FILL_TRIAGE_META_KEY,
-} from "@/lib/smart-fill";
 import {SEND_MODE_META_KEY, resolveSendMode} from "@/lib/keyboard/send-shortcut";
 import type {SendMode} from "@/lib/keyboard/send-shortcut";
 import {useModKey} from "@/lib/keyboard/use-mod-shortcut";
+import {useAccountPreference} from "@/components/settings/use-account-preference";
 import {useAccountTheme} from "@/lib/use-account-theme";
 import {ThemePresetPicker} from "@/components/settings/theme-preset-picker";
 import type {ThemeMode, ThemePresetId} from "@/lib/theme-presets";
@@ -51,17 +36,16 @@ const LANGUAGE_LABELS: Record<Locale, string> = {
     no segment must light up before editing (see `mounted`). */
 type ThemeValue = "light" | "dark" | "system" | "";
 
-/** Account → Preferences: two groups, appearance and what tickets do.
-    The six stacked sections from before weren't six subjects, they were six
-    settings: everyone had the right to their title, no one had a neighbor. */
+/** Account → Preferences: how minddy looks and how the keyboard sends.
+    What issues do moved to the Issues and Smart Fill tabs (MIN-737); each
+    Appearance row is also a ⌘K destination of its own. */
 export function AccountPreferencesSection() {
   const ta = useTranslations("Account");
   const tLang = useTranslations("Language");
   const tNav = useTranslations("Nav");
-  const tStatus = useTranslations("Status");
   const currentLocale = useLocale() as Locale;
   const router = useRouter();
-  const { user, updateUser, updateUserMetadata } = useAuth();
+  const { user, updateUser } = useAuth();
   // The theme is an ACCOUNT setting: the hook persists the choice to
   // user_metadata so it follows the account to every device.
   const { theme, setTheme, appearance, setPreset, setTransparency } = useAccountTheme();
@@ -73,168 +57,12 @@ export function AccountPreferencesSection() {
   // active option doesn't mismatch during hydration.
   useEffect(() => setMounted(true), []);
 
-  // Auto-assign preference lives in user_metadata (like locale). Mirror it into
-  // local state so the switch flips instantly, then reconcile once the account
-  // update resolves (or a Realtime user refresh lands).
-  const [autoAssign, setAutoAssign] = useState(
-    user?.user_metadata?.auto_assign_created === true,
+  // The sending shortcut (MIN-287): a mode rather than a Boolean, whose
+  // default is that of always.
+  const [sendMode, changeSendMode] = useAccountPreference<SendMode>(
+    SEND_MODE_META_KEY,
+    resolveSendMode,
   );
-  useEffect(() => {
-    setAutoAssign(user?.user_metadata?.auto_assign_created === true);
-  }, [user]);
-
-  // Optimistic and NOT locked: the switch switches immediately, writing
-  // GoTrue is serialized by updateUserMetadata (merge-safe), revert to failure.
-  const toggleAutoAssign = async (next: boolean) => {
-    if (!user) return;
-    setAutoAssign(next);
-    try {
-      await updateUserMetadata({ auto_assign_created: next });
-    } catch (e) {
-      setAutoAssign(!next);
-      toast.error((e as Error).message);
-    }
-  };
-
-  // "Starting an issue self-assigns it" preference (user_metadata, like the
-  // others). Enabled by default, so mirror the resolved value into local state.
-  const [autoAssignStart, setAutoAssignStart] = useState(
-    resolveAutoAssignOnStart(user?.user_metadata),
-  );
-  useEffect(() => {
-    setAutoAssignStart(resolveAutoAssignOnStart(user?.user_metadata));
-  }, [user]);
-
-  const toggleAutoAssignStart = async (next: boolean) => {
-    if (!user) return;
-    setAutoAssignStart(next);
-    try {
-      await updateUserMetadata({ [AUTO_ASSIGN_ON_START_META_KEY]: next });
-    } catch (e) {
-      setAutoAssignStart(!next);
-      toast.error((e as Error).message);
-    }
-  };
-
-  // Smart-fill (MIN-260): the creation form fills only priority,
-  // effort, categories and objective. Enabled by default, like both
-  // above — hence the passage by `resolveSmartFill` rather than a `=== true`.
-  const [smartFill, setSmartFill] = useState(resolveSmartFill(user?.user_metadata));
-  const [smartFillCreated, setSmartFillCreated] = useState(
-    resolveSmartFillScope(user?.user_metadata, "created"),
-  );
-  const [smartFillTriage, setSmartFillTriage] = useState(
-    resolveSmartFillScope(user?.user_metadata, "triage"),
-  );
-  // Smart Fill relations and issue indexing (MIN-717): two switches, because
-  // the index will also serve search and refusing vectors must hold on its own.
-  const [smartFillRelations, setSmartFillRelations] = useState(
-    resolveSmartFillRelations(user?.user_metadata),
-  );
-  const [issueIndexing, setIssueIndexing] = useState(resolveIssueIndexing(user?.user_metadata));
-  useEffect(() => {
-    setSmartFill(resolveSmartFill(user?.user_metadata));
-    setSmartFillCreated(resolveSmartFillScope(user?.user_metadata, "created"));
-    setSmartFillTriage(resolveSmartFillScope(user?.user_metadata, "triage"));
-    setSmartFillRelations(resolveSmartFillRelations(user?.user_metadata));
-    setIssueIndexing(resolveIssueIndexing(user?.user_metadata));
-  }, [user]);
-
-  const toggleSmartFill = async (next: boolean) => {
-    if (!user) return;
-    setSmartFill(next);
-    try {
-      await updateUserMetadata({ [SMART_FILL_META_KEY]: next });
-    } catch (e) {
-      setSmartFill(!next);
-      toast.error((e as Error).message);
-    }
-  };
-
-  const toggleSmartFillScope = async (
-    key:
-      | typeof SMART_FILL_CREATED_META_KEY
-      | typeof SMART_FILL_TRIAGE_META_KEY
-      | typeof SMART_FILL_RELATIONS_META_KEY
-      | typeof ISSUE_INDEXING_META_KEY,
-    next: boolean,
-  ) => {
-    if (!user) return;
-    const setter = {
-      [SMART_FILL_CREATED_META_KEY]: setSmartFillCreated,
-      [SMART_FILL_TRIAGE_META_KEY]: setSmartFillTriage,
-      [SMART_FILL_RELATIONS_META_KEY]: setSmartFillRelations,
-      [ISSUE_INDEXING_META_KEY]: setIssueIndexing,
-    }[key];
-    setter(next);
-    try {
-      await updateUserMetadata({ [key]: next });
-    } catch (e) {
-      setter(!next);
-      toast.error((e as Error).message);
-    }
-  };
-
-  // "Copy prompt starts the issue" preference (user_metadata, like auto-assign).
-  // Enabled by default, so mirror the resolved value into local state.
-  const [promptAutoStart, setPromptAutoStart] = useState(
-    resolvePromptCopyAutoStart(user?.user_metadata),
-  );
-  useEffect(() => {
-    setPromptAutoStart(resolvePromptCopyAutoStart(user?.user_metadata));
-  }, [user]);
-
-  const togglePromptAutoStart = async (next: boolean) => {
-    if (!user) return;
-    setPromptAutoStart(next);
-    try {
-      await updateUserMetadata({ [PROMPT_COPY_AUTO_START_META_KEY]: next });
-    } catch (e) {
-      setPromptAutoStart(!next);
-      toast.error((e as Error).message);
-    }
-  };
-
-  // Landing status for issues Numo creates (user_metadata, like the two above).
-  const [numoStatus, setNumoStatus] = useState<NumoDefaultStatus>(
-    resolveNumoDefaultStatus(user?.user_metadata),
-  );
-  useEffect(() => {
-    setNumoStatus(resolveNumoDefaultStatus(user?.user_metadata));
-  }, [user]);
-
-  const changeNumoStatus = async (next: NumoDefaultStatus) => {
-    if (!user || next === numoStatus) return;
-    const prev = numoStatus;
-    setNumoStatus(next);
-    try {
-      await updateUserMetadata({ numo_default_status: next });
-    } catch (e) {
-      setNumoStatus(prev);
-      toast.error((e as Error).message);
-    }
-  };
-
-  // The sending shortcut (MIN-287). Same mechanics as its neighbors, except that
-  // it is not a Boolean: a mode, the default of which is that of always.
-  const [sendMode, setSendMode] = useState<SendMode>(
-    resolveSendMode(user?.user_metadata),
-  );
-  useEffect(() => {
-    setSendMode(resolveSendMode(user?.user_metadata));
-  }, [user]);
-
-  const changeSendMode = async (next: SendMode) => {
-    if (!user || next === sendMode) return;
-    const prev = sendMode;
-    setSendMode(next);
-    try {
-      await updateUserMetadata({ [SEND_MODE_META_KEY]: next });
-    } catch (e) {
-      setSendMode(prev);
-      toast.error((e as Error).message);
-    }
-  };
 
   const switchLocale = async (locale: Locale) => {
     if (locale === currentLocale || switchingLocale) return;
@@ -280,6 +108,7 @@ export function AccountPreferencesSection() {
         title={tNav("appearance")}
       >
         <SettingsRow
+          anchor={SETTINGS_SECTIONS.accountLanguage}
           htmlFor="account-language"
           label={tLang("title")}
           control={
@@ -303,6 +132,7 @@ export function AccountPreferencesSection() {
         />
 
         <SettingsRow
+          anchor={SETTINGS_SECTIONS.accountTheme}
           label={ta("themeTitle")}
           hint={ta("themeSyncHint")}
           control={
@@ -319,6 +149,7 @@ export function AccountPreferencesSection() {
         {/* One palette per mode (MIN-696): the active mode's choice repaints
             the app at once, the other one is kept for when it comes back. */}
         <SettingsRow
+          anchor={SETTINGS_SECTIONS.accountThemeLight}
           htmlFor="account-theme-light"
           label={ta("themeLightPresetTitle")}
           hint={ta("themeLightPresetHint")}
@@ -332,6 +163,7 @@ export function AccountPreferencesSection() {
           }
         />
         <SettingsRow
+          anchor={SETTINGS_SECTIONS.accountThemeDark}
           htmlFor="account-theme-dark"
           label={ta("themeDarkPresetTitle")}
           hint={ta("themeDarkPresetHint")}
@@ -345,6 +177,7 @@ export function AccountPreferencesSection() {
           }
         />
         <SettingsRow
+          anchor={SETTINGS_SECTIONS.accountTransparency}
           htmlFor="account-theme-transparency"
           label={ta("themeTransparencyTitle")}
           hint={ta("themeTransparencyHint")}
@@ -379,156 +212,6 @@ export function AccountPreferencesSection() {
         />
       </SettingsGroup>
 
-      <SettingsGroup
-        anchor={SETTINGS_SECTIONS.accountIssues}
-        title={tNav("tickets")}
-      >
-        <SettingsRow
-          htmlFor="account-auto-assign"
-          label={ta("autoAssignLabel")}
-          control={
-            <Switch
-              id="account-auto-assign"
-              checked={autoAssign}
-              onCheckedChange={(v) => void toggleAutoAssign(v)}
-              disabled={!user}
-            />
-          }
-        />
-
-        <SettingsRow
-          htmlFor="account-auto-assign-start"
-          label={ta("autoAssignStartLabel")}
-          hint={ta("autoAssignStartDesc")}
-          control={
-            <Switch
-              id="account-auto-assign-start"
-              checked={autoAssignStart}
-              onCheckedChange={(v) => void toggleAutoAssignStart(v)}
-              disabled={!user}
-            />
-          }
-        />
-
-        <SettingsRow
-          htmlFor="account-smart-fill"
-          label={ta("smartFillLabel")}
-          hint={ta("smartFillDesc")}
-          control={
-            <Switch
-              id="account-smart-fill"
-              checked={smartFill}
-              onCheckedChange={(v) => void toggleSmartFill(v)}
-              disabled={!user}
-            />
-          }
-        />
-
-        <SettingsRow
-          htmlFor="account-smart-fill-created"
-          label={ta("smartFillCreatedLabel")}
-          hint={ta("smartFillCreatedDesc")}
-          control={
-            <Switch
-              id="account-smart-fill-created"
-              checked={smartFillCreated}
-              onCheckedChange={(v) =>
-                void toggleSmartFillScope(SMART_FILL_CREATED_META_KEY, v)
-              }
-              disabled={!user || !smartFill}
-            />
-          }
-        />
-
-        <SettingsRow
-          htmlFor="account-smart-fill-triage"
-          label={ta("smartFillTriageLabel")}
-          hint={ta("smartFillTriageDesc")}
-          control={
-            <Switch
-              id="account-smart-fill-triage"
-              checked={smartFillTriage}
-              onCheckedChange={(v) =>
-                void toggleSmartFillScope(SMART_FILL_TRIAGE_META_KEY, v)
-              }
-              disabled={!user || !smartFill}
-            />
-          }
-        />
-
-        <SettingsRow
-          htmlFor="account-smart-fill-relations"
-          label={ta("smartFillRelationsLabel")}
-          hint={ta("smartFillRelationsDesc")}
-          control={
-            <Switch
-              id="account-smart-fill-relations"
-              checked={smartFillRelations}
-              onCheckedChange={(v) =>
-                void toggleSmartFillScope(SMART_FILL_RELATIONS_META_KEY, v)
-              }
-              disabled={!user || !smartFill}
-            />
-          }
-        />
-
-        <SettingsRow
-          htmlFor="account-issue-indexing"
-          label={ta("issueIndexingLabel")}
-          hint={ta("issueIndexingDesc")}
-          control={
-            <Switch
-              id="account-issue-indexing"
-              checked={issueIndexing}
-              onCheckedChange={(v) =>
-                void toggleSmartFillScope(ISSUE_INDEXING_META_KEY, v)
-              }
-              disabled={!user}
-            />
-          }
-        />
-
-        <SettingsRow
-          htmlFor="account-prompt-auto-start"
-          label={ta("promptAutoStartLabel")}
-          hint={ta("promptAutoStartDesc")}
-          control={
-            <Switch
-              id="account-prompt-auto-start"
-              checked={promptAutoStart}
-              onCheckedChange={(v) => void togglePromptAutoStart(v)}
-              disabled={!user}
-            />
-          }
-        />
-
-        <SettingsRow
-          htmlFor="account-numo-status"
-          label={ta("numoStatusTitle")}
-          hint={ta("numoStatusDesc")}
-          control={
-            <Select
-              value={numoStatus}
-              onValueChange={(v) => void changeNumoStatus(v as NumoDefaultStatus)}
-              disabled={!user}
-            >
-              <SelectTrigger id="account-numo-status" className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {NUMO_DEFAULT_STATUS_OPTIONS.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    <span className="flex items-center gap-2">
-                      <StatusIndicator status={s} className="size-4" />
-                      {tStatus(s)}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          }
-        />
-      </SettingsGroup>
     </>
   );
 }

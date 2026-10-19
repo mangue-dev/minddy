@@ -18,12 +18,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-18",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677)",
+    "version": "0.11.1 candidate (MIN-677); MIN-737 account settings reorganization",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -65,14 +65,19 @@
       "content/documentation/reviews/sign-out-other-devices.md",
       "lib/theme-presets.ts",
       "app/theme-presets.css",
-      "content/documentation/reviews/min-696-theme-presets.md"
+      "content/documentation/reviews/min-696-theme-presets.md",
+      "components/settings/account-settings-page.tsx",
+      "components/settings/account-desktop-section.tsx",
+      "components/settings/account-issues-section.tsx",
+      "content/documentation/reviews/min-737-settings-reorganization.md",
+      "components/settings/account-hidden-projects-section.tsx"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root (theme palette, high-contrast and transparency controls: source and test review; the preferences capture predates these rows and is retained)",
-    "language": "agent:/root (en source and pt-BR translation self-review of the changed paragraph)",
-    "date": "2026-10-18"
+    "revision": 12,
+    "fact": "agent:/root (theme palette, high-contrast and transparency controls: source and test review; the preferences capture predates these rows and is retained); agent:/root (MIN-737 account settings reorganization: source review of the tab order, the in-place profile editing, the Preferences, Issues and AI & Numo contents and the Privacy & data tab; profile-and-preferences-workflow recaptured on 2026-10-19 in all six locales from the local candidate showing the profile header edited in place (avatar menu, name field or mobile sheet; the Edit profile dialog was removed the same day), and inspected; no other browser walkthrough); agent:/root (MIN-737 second pass: Hidden projects moved from Preferences to its own account tab; source review of components/settings/account-settings-page.tsx; no new captures)",
+    "language": "agent:/root (en source and pt-BR translation self-review of the changed paragraph); agent:/root (pt-BR MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (pt-BR translation of the MIN-737 second-pass Hidden projects sentence with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [
     "choose-an-instance",
@@ -104,7 +109,7 @@
       "src": "/documentation/pt-BR/account-security-workflow.png",
       "alt": "Cartão de autenticação de dois fatores com botão de ativação.",
       "caption": "Comece aqui, depois verifique o autenticador e guarde os códigos de recuperação em local protegido.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -119,14 +124,14 @@
       "id": "profile-and-preferences-workflow",
       "kind": "screenshot",
       "src": "/documentation/pt-BR/profile-and-preferences-workflow.png",
-      "alt": "Controles do perfil para avatar, nome de usuário e email somente leitura.",
-      "caption": "Salve as alterações do perfil após a validação; o endereço de email permanece somente leitura.",
-      "revision": 11,
+      "alt": "Cabeçalho do perfil com o avatar e seu selo de edição, o nome e o email somente leitura.",
+      "caption": "Selecione o avatar para gerar ou enviar um, ou o nome para alterá-lo; o endereço de email continua somente leitura.",
+      "revision": 12,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-19",
       "viewport": [
         816,
-        416
+        256
       ],
       "theme": "light",
       "padding": 24,
@@ -138,7 +143,7 @@
       "src": "/documentation/pt-BR/profile-and-preferences-preferences-workflow.png",
       "alt": "Seletor de idioma, controles de tema claro, escuro e do sistema, seletores de paleta dos modos claro e escuro e o interruptor de transparência.",
       "caption": "O idioma da conta e o do site público são configurados separadamente.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -155,7 +160,7 @@
       "src": "/documentation/pt-BR/privacy-and-account-deletion-workflow.png",
       "alt": "Prévia de exclusão com projetos próprios, tickets e membros que perderão acesso.",
       "caption": "Leia a prévia e exporte os dados que deseja manter antes de abrir a confirmação.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -234,11 +239,11 @@ Se não tiver nem o segundo fator nem um código de recuperação, contate o ope
 
 ## Alterar perfil e preferências {#profile-and-preferences}
 
-Abra as configurações no menu da conta. No perfil, informe um nome não vazio e salve. O email é somente leitura. Gere outro avatar ou envie uma imagem pelos controles próprios. Aguarde o resultado e confira o avatar em um comentário ou na lista de membros; ele acompanha a conta entre projetos e conversas. Se o arquivo for rejeitado, siga a mensagem de validação em vez de reenviar repetidamente.
+Abra as configurações no menu da conta ou escolha seu perfil no topo desse menu. A aba **Perfil** abre primeiro. Ela mostra seu avatar, seu nome e seu email, seguidos das suas [estatísticas pessoais](/docs/personal-statistics). Selecione seu avatar e escolha **Novo avatar de Lorelei** ou **Carregar imagem**; a mudança vale assim que é concluída. Selecione seu nome para alterá-lo: no computador ele vira um campo que Enter ou sair do campo salvam e Esc cancela; no celular abre um painel com **Nome de usuário** e **Salvar**. O nome não pode ficar vazio. O email é somente leitura. Aguarde o resultado e confira o avatar em um comentário ou na lista de membros; ele acompanha a conta entre projetos e conversas. Se o arquivo for rejeitado, siga a mensagem de validação em vez de reenviar repetidamente.
 
 A imagem original não pode exceder 10 MiB. O servidor verifica se consegue ler os bytes, aplica a orientação e recorta o centro para gerar um avatar WebP de 256 × 256.
 
-![Controles do perfil para avatar, nome de usuário e email somente leitura.](/documentation/pt-BR/profile-and-preferences-workflow.png)
+![Cabeçalho do perfil com o avatar e seu selo de edição, o nome e o email somente leitura.](/documentation/pt-BR/profile-and-preferences-workflow.png)
 
 ### Escolher o comportamento {#preferences}
 
@@ -246,13 +251,13 @@ Selecione o idioma e o tema nas preferências e confira outra página. O idioma 
 
 O tema escolhe o modo claro, escuro ou do sistema. **Paleta do modo claro** e **Paleta do modo escuro** definem cada uma as cores de um modo. As **cores de destaque** (minddy, Azul, Violeta, Verde, Laranja, Rosa) mantêm as cores do minddy e só mudam a cor dos botões e do anel de foco; as **paletas completas** (Solarized, Catppuccin, Nord) mudam todas as superfícies; **Alto contraste** fica em Acessibilidade. A paleta do modo exibido se aplica na hora; a outra fica salva e aparece quando seu modo volta a ficar ativo, inclusive quando Sistema acompanha uma troca do sistema operacional. Alto contraste reforça o contraste de texto e bordas, contorna campos, menus, diálogos e abas, marca a página atual e o item selecionado, sempre mostra o foco do teclado e mantém os menus opacos. Desative **Transparência** para deixar menus, popovers e a paleta de comandos opacos, sem desfoque. As paletas e a transparência ficam salvas na conta; outro dispositivo as aplica no próximo carregamento de página.
 
-Escolha o atalho de envio na seção de teclado. Ele vale para comentários e Numo. Use o botão de enviar se a plataforma interceptar o atalho; as teclas modificadoras variam entre sistemas. Preferências como atribuição automática e status de tarefas criadas pelo Numo também pertencem à conta e não alteram as de outros membros.
+Escolha o atalho de envio na seção de teclado. Ele vale para comentários e Numo. Use o botão de enviar se a plataforma interceptar o atalho; as teclas modificadoras variam entre sistemas. Os projetos que você ocultou ficam listados na aba própria **Projetos ocultos**, onde você pode mostrá-los de novo. **Preferências** também reúne o cartão **Aplicativo de desktop**: na web, ele leva ao download do aplicativo de desktop; no aplicativo de desktop, mostra o servidor conectado, o canal de prévia quando disponível e a versão do aplicativo. As preferências de tickets também pertencem à conta e não alteram as de outros membros: a atribuição automática fica na aba **Tickets**, e o status dos tickets criados pelo Numo em **IA e Numo** → **Tickets criados pelo Numo**.
 
 ![Seletor de idioma, controles de tema claro, escuro e do sistema, seletores de paleta dos modos claro e escuro e o interruptor de transparência.](/documentation/pt-BR/profile-and-preferences-preferences-workflow.png)
 
 ## Controlar análises e excluir a conta {#privacy-and-account-deletion}
 
-Quando o serviço de análise está configurado, as configurações da conta mostram um controle de consentimento e um link para a política de cookies. Desativá-lo altera imediatamente o consentimento de medição neste dispositivo e salva a escolha na conta. A escolha local já existente em outro dispositivo pode continuar valendo naquele dispositivo. Se nenhum serviço de análise estiver configurado, a seção não aparece.
+Quando o serviço de análise está configurado, a aba **Privacidade e dados** das configurações da conta mostra um controle de consentimento e um link para a política de cookies. Desativá-lo altera imediatamente o consentimento de medição neste dispositivo e salva a escolha na conta. A escolha local já existente em outro dispositivo pode continuar valendo naquele dispositivo. Se nenhum serviço de análise estiver configurado, a seção não aparece.
 
 Esse consentimento é separado dos dados necessários ao funcionamento da conta. Leia a política de privacidade da instância e confira os provedores externos que habilitou. No minddy self-hosted, a configuração e as políticas do operador determinam os destinos dos serviços; desativar a análise não remove integrações de IA ou Git.
 
@@ -260,7 +265,7 @@ Esse consentimento é separado dos dados necessários ao funcionamento da conta.
 
 ### Conferir as consequências da exclusão {#deletion}
 
-Antes de excluir a conta, exporte pela seção Dados o que precisa conservar. Leia a prévia dos projetos que possui, membros afetados, tarefas, comentários e assinatura ativa. As consequências para os projetos próprios afetam outras pessoas; resolva essas questões antes de confirmar.
+Antes de excluir a conta, exporte pela aba **Privacidade e dados** o que precisa conservar. Leia a prévia dos projetos que possui, membros afetados, tarefas, comentários e assinatura ativa. As consequências para os projetos próprios afetam outras pessoas; resolva essas questões antes de confirmar.
 
 Abra a confirmação de exclusão somente quando estiver pronto. Digite o email da conta e, nas contas com senha, a senha. Contas sem senha exigem um login recente. Siga as orientações de uma recusa por autenticação não recente, em vez de repetir tentativas às cegas. Uma exclusão bem-sucedida encerra a sessão e retorna ao site público. Essa operação não envia os dados para uma lixeira recuperável. Mantenha as exportações privadas e trate qualquer questão restante de assinatura ou provedor pelos controles correspondentes de cobrança e serviço.
 

@@ -14,7 +14,6 @@ const locales = process.env.CAPTURE_LOCALES?.split(",").filter(Boolean);
 if (!locales || locales.length !== 1 || !CAPTURE_LOCALES.includes(locales[0])) throw new Error("Select exactly one locale for a bounded documentation capture batch.");
 if (!requested?.length || requested.length > 3) throw new Error("Select one to three documentation screens per batch.");
 const settings = [
-  ["profile-and-preferences-workflow", "profile", "account-profile"],
   ["profile-and-preferences-preferences-workflow", "preferences", "account-appearance"],
   ["account-security-workflow", "security", "account-security"],
   ["devices-and-notifications-workflow", "inbox", "account-push-devices"],
@@ -23,10 +22,13 @@ const settings = [
   ["transfer-between-instances-workflow", "data", "account-data-import"],
   ["transfer-between-instances-export-workflow", "data", "account-data-export"],
   ["privacy-and-account-deletion-workflow", "data", "account-data-delete"],
-  ["numo-mcp-connections-workflow", "mcp-clients", "account-mcp-clients"],
+  // MCP for Numo is a card of the "AI & Numo" tab since MIN-737.
+  ["numo-mcp-connections-workflow", "agent", "account-mcp-clients"],
   ["external-minddy-mcp-workflow", "mcp", "account-mcp"],
 ];
 const knownScreens = new Set([...settings.map(([screen]) => screen),
+  "profile-and-preferences-workflow", "personal-statistics-workflow",
+  "project-general", "project-members", "publish-a-feedback-board-workflow",
   "external-minddy-mcp-install-workflow", "numo-mcp-connections-config-workflow",
   "import-issues-workflow", "work-with-numo-workflow", "scheduled-routines-workflow", "install-the-pwa-workflow",
   "install-locally-wizard", "install-a-server-wizard", "web-and-mobile-workflow",
@@ -56,7 +58,8 @@ for (const locale of locales) {
         writes.push({ method: request.method(), path });
         return route.abort("blockedbyclient");
       }
-      if (!path.startsWith(`/api/projects/${fixture.projectId}`) && !/^\/api\/(assistant|numo|routines)(\/|$)/.test(path)) return route.fallback();
+      // `/api/stats` names the demo projects and objectives in the profile.
+      if (!path.startsWith(`/api/projects/${fixture.projectId}`) && !/^\/api\/(assistant|numo|routines|stats)(\/|$)/.test(path)) return route.fallback();
       const response = await route.fetch().catch(() => null);
       if (!response) return;
       if (!response.ok()) return route.fulfill({ response });
@@ -93,11 +96,37 @@ for (const locale of locales) {
       await writeFile(output, JSON.stringify(records, null, 2) + "\n");
     }
     for (const [screen, tab, section] of settings) await capture(screen, `/settings?tab=${tab}&section=${section}`, () => page.locator(`#settings-section-${section}`).locator(".."));
+    // The profile header (MIN-737): avatar and name are edited in place —
+    // the avatar opens a menu, the name turns into a field. Nothing is saved.
+    await capture("profile-and-preferences-workflow", "/settings", () => page.locator("#settings-section-account-profile"), async () => {
+      await page.getByRole("button", { name: messages.Profile.changeAvatar, exact: true }).waitFor();
+    }, { width: 1440, height: 1100 });
+    // Personal statistics now live under the profile header (MIN-737).
+    await capture("personal-statistics-workflow", "/settings", () => page.locator("#settings-section-account-statistics"), async () => {
+      await page.getByRole("region", { name: messages.Stats.yearStory, exact: true }).first().waitFor();
+    }, { width: 1440, height: 2200 });
+    // Project settings (MIN-737): the identity header of General, and the
+    // Members tab (invite card and member list). Nothing is edited.
+    await capture("project-general", `/projects/${fixture.projectId}/settings`, () => page.locator("#settings-section-project-general"), async () => {
+      await page.getByRole("button", { name: messages.Settings.changeProjectIcon, exact: true }).waitFor();
+    }, { width: 1440, height: 1100 });
+    await capture("project-members", `/projects/${fixture.projectId}/settings?tab=members`, () => page.locator("#settings-section-project-members").locator("../.."), async () => {
+      await page.locator("#settings-section-project-members").getByRole("img").first().waitFor();
+    }, { width: 1440, height: 1100 });
+    // The Public board card of the Feedback tab (MIN-737). The board's public
+    // address is concealed with a neutral bar, as in the previous capture;
+    // nothing is toggled.
+    await capture("publish-a-feedback-board-workflow", `/projects/${fixture.projectId}/settings?tab=feedback`, () => page.locator("#settings-section-project-feedback-board").locator(".."), async () => {
+      await page.locator("#settings-section-project-feedback-board").waitFor();
+      await page.locator("#settings-section-project-feedback-board .font-mono").first().evaluate((node) => {
+        Object.assign(node.style, { color: "transparent", background: "rgb(148 163 184)", borderRadius: "4px" });
+      });
+    }, { width: 1440, height: 1600 });
     await capture("external-minddy-mcp-install-workflow", "/settings?tab=mcp", () => page.getByRole("dialog"), async () => {
       await page.locator("#settings-section-account-mcp").waitFor();
       await page.getByRole("button", { name: "Codex", exact: true }).click();
     });
-    await capture("numo-mcp-connections-config-workflow", "/settings?tab=mcp-clients", () => page.getByRole("dialog"), async () => {
+    await capture("numo-mcp-connections-config-workflow", "/settings?tab=agent", () => page.getByRole("dialog"), async () => {
       await page.locator("#settings-section-account-mcp-clients").waitFor();
       await page.getByRole("button", { name: messages.McpClients.custom, exact: true }).click();
       await page.getByRole("dialog").getByRole("button", { name: messages.McpClients.advanced, exact: true }).click();

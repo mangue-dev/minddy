@@ -21,11 +21,7 @@ import { ProjectGitSection } from "@/components/settings/project-git-section";
 import { ProjectImportSection } from "@/components/settings/project-import-section";
 import { ProjectRecurrencesSection } from "@/components/settings/project-recurrences-section";
 import { SmartAssignSection } from "@/components/settings/smart-assign-section";
-import { SettingsGroup } from "@/components/settings/settings-ui";
-import {
-  PROJECT_SETTINGS_DEFAULT_TAB,
-  SETTINGS_SECTIONS,
-} from "@/lib/settings-sections";
+import { PROJECT_SETTINGS_DEFAULT_TAB } from "@/lib/settings-sections";
 import type { SidebarBrowseTarget } from "@/components/secondary-sidebar";
 import { SettingsShell, type SettingsTab } from "@/components/settings-shell";
 import { SettingsPageSkeleton } from "@/components/route-skeletons";
@@ -97,29 +93,17 @@ export default function ProjectSettingsPage({ browse, projectId }: { browse?: Si
       value: "categories",
       label: t("categoriesTab"),
       icon: Tags,
-      content: (
-        <SettingsGroup
-          anchor={SETTINGS_SECTIONS.projectCategories}
-          title={t("categoriesTab")}
-          variant="block"
-        >
-          <ProjectCategories projectId={project.id} />
-        </SettingsGroup>
-      ),
+      // The section renders its own card: "New category" lives on its
+      // title line and opens a row inside the list.
+      content: <ProjectCategories projectId={project.id} />,
     },
     {
       value: "members",
       label: t("membersTab"),
       icon: Users,
-      content: (
-        <SettingsGroup
-          anchor={SETTINGS_SECTIONS.projectMembers}
-          title={t("membersTab")}
-          variant="block"
-        >
-          <ProjectMembers projectId={project.id} enabled />
-        </SettingsGroup>
-      ),
+      // The section renders its own cards: invite, members, pending
+      // invitations.
+      content: <ProjectMembers projectId={project.id} enabled />,
     },
     {
       value: "recurrences",

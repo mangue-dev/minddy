@@ -18,12 +18,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-18",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677)",
+    "version": "0.11.1 candidate (MIN-677); MIN-737 account settings reorganization",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -65,14 +65,19 @@
       "content/documentation/reviews/sign-out-other-devices.md",
       "lib/theme-presets.ts",
       "app/theme-presets.css",
-      "content/documentation/reviews/min-696-theme-presets.md"
+      "content/documentation/reviews/min-696-theme-presets.md",
+      "components/settings/account-settings-page.tsx",
+      "components/settings/account-desktop-section.tsx",
+      "components/settings/account-issues-section.tsx",
+      "content/documentation/reviews/min-737-settings-reorganization.md",
+      "components/settings/account-hidden-projects-section.tsx"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root (theme palette, high-contrast and transparency controls: source and test review; the preferences capture predates these rows and is retained)",
-    "language": "agent:/root (en source and fr, de, es, it, pt-BR translation self-review of the changed paragraph)",
-    "date": "2026-10-18"
+    "revision": 12,
+    "fact": "agent:/root (theme palette, high-contrast and transparency controls: source and test review; the preferences capture predates these rows and is retained); agent:/root (MIN-737 account settings reorganization: source review of the tab order, the in-place profile editing, the Preferences, Issues and AI & Numo contents and the Privacy & data tab; profile-and-preferences-workflow recaptured on 2026-10-19 in all six locales from the local candidate showing the profile header edited in place (avatar menu, name field or mobile sheet; the Edit profile dialog was removed the same day), and inspected; no other browser walkthrough); agent:/root (MIN-737 second pass: Hidden projects moved from Preferences to its own account tab; source review of components/settings/account-settings-page.tsx; no new captures)",
+    "language": "agent:/root (en source and fr, de, es, it, pt-BR translation self-review of the changed paragraph); agent:/root (en MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-737 second-pass Hidden projects sentence with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [
     "choose-an-instance",
@@ -104,7 +109,7 @@
       "src": "/documentation/en/account-security-workflow.png",
       "alt": "Two-factor authentication card with the Turn on button.",
       "caption": "Start enrollment here, then verify the authenticator and store recovery codes privately.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -119,14 +124,14 @@
       "id": "profile-and-preferences-workflow",
       "kind": "screenshot",
       "src": "/documentation/en/profile-and-preferences-workflow.png",
-      "alt": "Profile controls for avatar, username and read-only email.",
-      "caption": "Save profile edits after validation; the email address remains read-only.",
-      "revision": 11,
+      "alt": "Profile header with the avatar and its edit badge, the name and the read-only email.",
+      "caption": "Select the avatar to generate or upload one, or the name to rename yourself; the email address stays read-only.",
+      "revision": 12,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-19",
       "viewport": [
         816,
-        416
+        256
       ],
       "theme": "light",
       "padding": 24,
@@ -138,7 +143,7 @@
       "src": "/documentation/en/profile-and-preferences-preferences-workflow.png",
       "alt": "Language selector, light, dark and system theme controls, the light and dark mode palette selectors and the transparency switch.",
       "caption": "Account appearance preferences are separate from the public website language.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -155,7 +160,7 @@
       "src": "/documentation/en/privacy-and-account-deletion-workflow.png",
       "alt": "Deletion preview listing owned projects, issues and members who lose access.",
       "caption": "Read the preview and export wanted data before opening the deletion confirmation.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -236,11 +241,11 @@ If neither factor nor a recovery code is available, contact the instance operato
 
 ## Change your profile and interface preferences {#profile-and-preferences}
 
-Open account settings from your account menu. In Profile, enter a non-empty display name and save it. Your email is read-only. Generate a new avatar or upload an image using the avatar controls. Wait for the upload result and verify the avatar in a comment or member list; the same account avatar is used across projects and conversations. If a file is rejected, use the displayed validation message rather than repeatedly uploading it.
+Open account settings from your account menu, or choose your profile at the top of that menu. The **Profile** tab opens first. It shows your avatar, name and email, followed by your [personal statistics](/docs/personal-statistics). Select your avatar and choose **New Lorelei avatar** or **Upload image**; the change applies as soon as it succeeds. Select your name to rename yourself: on a computer the name becomes a field, where Enter or leaving the field saves and Escape cancels; on a phone it opens a sheet with **Username** and **Save**. The name cannot be empty. Your email is read-only. Wait for the upload result and verify the avatar in a comment or member list; the same account avatar is used across projects and conversations. If a file is rejected, use the displayed validation message rather than repeatedly uploading it.
 
 Uploaded source images must be no larger than 10 MiB. The server validates readable image bytes, applies orientation and center-crops to a 256 × 256 WebP avatar.
 
-![Profile controls for avatar, username and read-only email.](/documentation/en/profile-and-preferences-workflow.png)
+![Profile header with the avatar and its edit badge, the name and the read-only email.](/documentation/en/profile-and-preferences-workflow.png)
 
 ### Choose how the interface behaves {#preferences}
 
@@ -248,13 +253,13 @@ In Preferences, select the interface language and theme, then check another page
 
 Theme chooses light, dark or system mode. **Light mode palette** and **Dark mode palette** each set the colors of one mode. **Accent colors** (minddy, Blue, Violet, Green, Orange, Rose) keep minddy's colors and only recolor buttons and the focus ring; **Full palettes** (Solarized, Catppuccin, Nord) recolor every surface; **High contrast** sits under Accessibility. The palette of the mode on screen applies immediately; the other is saved and appears whenever its mode becomes active, including when System follows an operating-system switch. High contrast raises text and border contrast, outlines fields, menus, dialogs and tabs, marks the current page and selected item, always shows keyboard focus and keeps menus opaque. Turn off **Transparency** to paint menus, popovers and the command palette opaque, without blur. Palettes and transparency are saved to the account; another device applies them the next time it loads a page.
 
-Choose the message-send shortcut in Keyboard. This preference governs comments and Numo's composer. Use the send button when a platform intercepts the shortcut; do not assume every OS maps the modifier key identically. Issue preferences such as automatic assignment and the status for Numo-created issues also belong to the account and do not change another member's settings.
+Choose the message-send shortcut in Keyboard. This preference governs comments and Numo's composer. Use the send button when a platform intercepts the shortcut; do not assume every OS maps the modifier key identically. Projects you hid are listed in their own **Hidden projects** tab, where you can show them again. **Preferences** also holds the **Desktop app** card: on the web it links to the desktop download, and in the desktop app it shows the connected server, the preview channel when available and the app version. Issue preferences also belong to the account and do not change another member's settings: automatic assignment is in the **Issues** tab, and the status for issues Numo creates is in **AI & Numo** → **Issues Numo creates**.
 
 ![Language selector, light, dark and system theme controls, the light and dark mode palette selectors and the transparency switch.](/documentation/en/profile-and-preferences-preferences-workflow.png)
 
 ## Control analytics and delete an account carefully {#privacy-and-account-deletion}
 
-When analytics is configured, account settings show its consent switch and a cookie-policy link. Turning it off immediately changes measurement consent on this device and saves the choice to the account. Another device's existing local choice can still govern it. If no analytics service is configured, the section is absent.
+When analytics is configured, the **Privacy & data** tab of account settings shows its consent switch and a cookie-policy link. Turning it off immediately changes measurement consent on this device and saves the choice to the account. Another device's existing local choice can still govern it. If no analytics service is configured, the section is absent.
 
 Consent is distinct from data needed to operate the account. Review the instance's privacy policy and the external providers you enabled. On self-hosted minddy, the operator's configuration and policies determine service destinations; disabling analytics does not remove AI or Git integrations.
 
@@ -262,7 +267,7 @@ Consent is distinct from data needed to operate the account. Review the instance
 
 ### Preview deletion before confirming {#deletion}
 
-Export data you need to retain from account Data before deletion. Read the preview of owned projects, affected members, issues, comments and active subscription. Owned-project consequences affect other people; resolve those before confirming.
+Export data you need to retain from the **Privacy & data** tab before deletion. Read the preview of owned projects, affected members, issues, comments and active subscription. Owned-project consequences affect other people; resolve those before confirming.
 
 Open the deletion confirmation only when ready. Type your account email and, for password accounts, the password. Accounts without a password need a recent sign-in. Follow any fresh-authentication refusal rather than retrying blindly. A successful deletion signs out and returns to the public site. This is not recoverable trash. Keep exports private and handle any remaining subscription or provider concerns through the relevant billing and provider controls.
 

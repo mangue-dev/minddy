@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12); MIN-693 project roles",
+    "version": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12); MIN-693 project roles; MIN-737 project settings reorganization",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -47,14 +47,16 @@
       "content/documentation/reviews/min-670-feedback-objectives.md",
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
-      "content/documentation/reviews/min-693-project-roles.md"
+      "content/documentation/reviews/min-693-project-roles.md",
+      "components/project-integrations.tsx",
+      "content/documentation/reviews/min-737-settings-reorganization.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-670 source, de wording and new-control review; existing procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-670 source, de wording and new-control review; existing procedural evidence retained); agent:/root/min693_de with agent:/root (de MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
-    "date": "2026-10-17"
+    "revision": 8,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-670 source, de wording and new-control review; existing procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 integrations list: source review of components/project-integrations.tsx for New integration, the list details and badges, the ⋯ menu with Configure the webhook… and Revoke, the Webhook delivery line and the Objective for new feedback line; no browser walkthrough; the two diagrams remain accurate)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-670 source, de wording and new-control review; existing procedural evidence retained); agent:/root/min693_de with agent:/root (de MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (de translation of the MIN-737 project-settings second-pass passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [
     "integration-troubleshooting",
@@ -75,7 +77,7 @@
       "src": "/documentation/de/integration-api-and-webhooks-flow.svg",
       "alt": "Diagramm: Server hält Projektintegrationsschlüssel. POST Tickets oder Feedback mit passender Art. Eigentümer wählt Webhookziel für Tickets. Empfänger prüft Rohkörper-HMAC und Zustell-UUID.",
       "caption": "Lesen Sie die Schritte in dieser Reihenfolge. Server hält Projektintegrationsschlüssel. `POST` Tickets oder Feedback mit passender Art. Eigentümer wählt Webhookziel für Tickets. Empfänger prüft Rohkörper-HMAC und Zustell-UUID.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -107,7 +109,7 @@
       "src": "/documentation/de/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Getrennte Abläufe für Backend-Erfassung und Browser-SSO mit unterschiedlichen Geheimnissen.",
       "caption": "Der Erfassungsschlüssel authentifiziert Serveraufrufe. Das Board-SSO-Geheimnis signiert ein kurzlebiges, einmaliges Besuchertoken.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -152,7 +154,7 @@ Die Integrations-API nimmt Tickets oder Feedback über projektgebundene Schlüss
 
 ## Tickets oder Feedback erstellen und signierte Webhooks empfangen {#integration-api-and-webhooks}
 
-Eigentümer erstellen Integrationen in Projekteinstellungen. `issues` erzeugt interne Arbeit in Triage, `feedback` Nutzerbedarfe mit Stimmen/öffentlichem Status. Der Klartextschlüssel `mdy_` erscheint einmal. Speichern Sie ihn nur serverseitig als `MINDDY_API_KEY` beziehungsweise `MINDDY_FEEDBACK_KEY`, nie im Browser, Git oder geteilten Logs. Widerruf ist endgültig; unbekannte und widerrufene Schlüssel ergeben 401 `invalid_api_key`. Schlüssel gehören zum Projekt und können die andere Endpunktfamilie nicht aufrufen (403 `wrong_key_kind`). Eine Integration ist keine Person: Sie hat keine Projektrolle und behält die festen Berechtigungen ihrer Art, wenn sich die Rollen der Mitglieder ändern. Leser sehen keine Integrationen.
+Eigentümer erstellen Integrationen mit **Neue Integration** in der Titelzeile von **Projekteinstellungen** → **Integrationen**. `issues` erzeugt interne Arbeit in Triage, `feedback` Nutzerbedarfe mit Stimmen/öffentlichem Status. Der Klartextschlüssel `mdy_` erscheint einmal. Speichern Sie ihn nur serverseitig als `MINDDY_API_KEY` beziehungsweise `MINDDY_FEEDBACK_KEY`, nie im Browser, Git oder geteilten Logs. Jede Integration wird mit Name, Schlüsselpräfix, Erstellungsdatum, letzter Nutzung und einem Badge **Probleme** oder **Feedback** aufgeführt. Zum Widerrufen wählt der Eigentümer **Autorisierung widerrufen** im ⋯-Menü der Integration und bestätigt; sie trägt dann das Badge **Widerrufen** und rückt abgeblendet ans Ende der Liste. Widerruf ist endgültig; unbekannte und widerrufene Schlüssel ergeben 401 `invalid_api_key`. Schlüssel gehören zum Projekt und können die andere Endpunktfamilie nicht aufrufen (403 `wrong_key_kind`). Eine Integration ist keine Person: Sie hat keine Projektrolle und behält die festen Berechtigungen ihrer Art, wenn sich die Rollen der Mitglieder ändern. Leser sehen keine Integrationen.
 
 
 ![Diagramm: Server hält Projektintegrationsschlüssel. POST Tickets oder Feedback mit passender Art. Eigentümer wählt Webhookziel für Tickets. Empfänger prüft Rohkörper-HMAC und Zustell-UUID.](/documentation/de/integration-api-and-webhooks-flow.svg)
@@ -178,7 +180,7 @@ curl --fail-with-body --request POST "$MINDDY_ORIGIN/api/v1/issues" \
 
 ### Ereignisse prüfen und deduplizieren {#receive}
 
-`issues` kann `issue.created`, `issue.status_changed` und `issue.updated` senden. Ein neues Webhookziel muss der Projekteigentümer wählen; Agenten dürfen bestehende Ereignisse/Umfang einstellen oder deaktivieren, keine neuen Ausgabekanäle anlegen. `integration` umfasst nur Tickets dieses Schlüssels, `all` jedes Projektticket. Prüfen Sie `X-minddy-Signature` als `sha256=` plus HMAC-SHA256 der unveränderten Empfangsbytes mit dem kleingeschriebenen SHA-256-Hexdigest des API-Schlüssels als HMAC-Schlüssel. Vergleichen Sie zeitkonstant vor Vertrauen. Nicht vorher JSON parsen und neu serialisieren. `X-minddy-Delivery` entspricht `delivery_id`; deduplizieren Sie nach UUID.
+`issues` kann `issue.created`, `issue.status_changed` und `issue.updated` senden. Ein neues Webhookziel muss der Projekteigentümer mit **Webhook konfigurieren…** im ⋯-Menü der Integration wählen. Ist ein Ziel gesetzt, zeigt die Zeile **Webhook** unter der Integration die letzte Lieferung, akzeptiert oder abgelehnt mit Datum, oder **Noch keine Lieferung**. Agenten dürfen bestehende Ereignisse/Umfang einstellen oder deaktivieren, keine neuen Ausgabekanäle anlegen. `integration` umfasst nur Tickets dieses Schlüssels, `all` jedes Projektticket. Prüfen Sie `X-minddy-Signature` als `sha256=` plus HMAC-SHA256 der unveränderten Empfangsbytes mit dem kleingeschriebenen SHA-256-Hexdigest des API-Schlüssels als HMAC-Schlüssel. Vergleichen Sie zeitkonstant vor Vertrauen. Nicht vorher JSON parsen und neu serialisieren. `X-minddy-Delivery` entspricht `delivery_id`; deduplizieren Sie nach UUID.
 
 ### Fehler und Grenzen behandeln {#limits}
 
@@ -211,4 +213,4 @@ Prüfen Sie, dass der Besucher Mein Feedback mit der vorgesehenen Identität öf
 
 ## Ein Ziel für Feedback wählen {#feedback-objective-default}
 
-Bei einer `feedback`-Integration kann der Eigentümer **Ziel** bei der Erstellung oder neben der bestehenden Integration unter **Einstellungen → Integrationen** wählen. Nur aktive Ziele desselben Projekts sind zulässig. Neue Aufrufe von `POST /api/v1/feedback` übernehmen diese Vorgabe, auch mit `analyze: false`; senden Sie `objective_id` nicht im API-Payload. Die 201-Antwort enthält die zugeordnete `objective_id` oder `null`. Änderungen betreffen nur zukünftige Übermittlungen. Eine nicht verfügbare Vorgabe liefert 422 `objective_not_found`: wählen Sie ein aktives Ziel oder entfernen Sie die Vorgabe vor einem erneuten Versuch. Numo leitet bei der Prüfung kein Ziel ab. Die Umwandlung übernimmt Ziel und Kategorien.
+Bei einer `feedback`-Integration kann der Eigentümer das Ziel bei der Erstellung wählen oder später in der Zeile **Ziel für neues Feedback** unter der bestehenden Integration in **Projekteinstellungen** → **Integrationen**; diese Auswahl kann auch ein neues Ziel anlegen. Nur aktive Ziele desselben Projekts sind zulässig. Neue Aufrufe von `POST /api/v1/feedback` übernehmen diese Vorgabe, auch mit `analyze: false`; senden Sie `objective_id` nicht im API-Payload. Die 201-Antwort enthält die zugeordnete `objective_id` oder `null`. Änderungen betreffen nur zukünftige Übermittlungen. Eine nicht verfügbare Vorgabe liefert 422 `objective_not_found`: wählen Sie ein aktives Ziel oder entfernen Sie die Vorgabe vor einem erneuten Versuch. Numo leitet bei der Prüfung kein Ziel ab. Die Umwandlung übernimmt Ziel und Kategorien.

@@ -188,32 +188,6 @@ export function useFeedbackBoardSettings(projectId: string) {
   };
 }
 
-/** Status dot: colored dot + label, to read the status at once. */
-export function StatusPill({
-  active,
-  label,
-}: {
-  active: boolean;
-  label: string;
-}) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium",
-        active ? "bg-brand/10 text-brand" : "bg-muted text-muted-foreground",
-      )}
-    >
-      <span
-        className={cn(
-          "size-1.5 rounded-full",
-          active ? "bg-brand" : "bg-muted-foreground/40",
-        )}
-      />
-      {label}
-    </span>
-  );
-}
-
 /**
  * The body of a settings card, without its header — the form the settings take
  * stored in the wizard, where the step title already says what they are adjusting.
@@ -521,20 +495,14 @@ export function NumoReviewGroup({
       title={t("feedbackReviewTitle")}
       help={t("feedbackReviewHelp")}
       action={
-        <>
-          <StatusPill
-            active={reviewOn}
-            label={reviewOn ? t("feedbackActive") : t("feedbackInactive")}
-          />
-          <Switch
-            checked={reviewOn}
-            disabled={!isOwner}
-            onCheckedChange={(v) =>
-              void patch("feedback_review_enabled", v, setReviewOn)
-            }
-            aria-label={t("feedbackReviewTitle")}
-          />
-        </>
+        <Switch
+          checked={reviewOn}
+          disabled={!isOwner}
+          onCheckedChange={(v) =>
+            void patch("feedback_review_enabled", v, setReviewOn)
+          }
+          aria-label={t("feedbackReviewTitle")}
+        />
       }
     >
       {!reviewOn && (
@@ -639,23 +607,17 @@ export function FeedbackTranslationGroup({
       title={t("feedbackTranslationTitle")}
       help={t("feedbackTranslationHelp")}
       action={
-        <>
-          <StatusPill
-            active={on}
-            label={on ? t("feedbackActive") : t("feedbackInactive")}
-          />
-          <Switch
-            checked={on}
-            disabled={!isOwner}
-            onCheckedChange={(v) => {
-              setOn(v);
-              void patch({ feedback_translate_enabled: v }).catch(() =>
-                setOn(!v),
-              );
-            }}
-            aria-label={t("feedbackTranslationTitle")}
-          />
-        </>
+        <Switch
+          checked={on}
+          disabled={!isOwner}
+          onCheckedChange={(v) => {
+            setOn(v);
+            void patch({ feedback_translate_enabled: v }).catch(() =>
+              setOn(!v),
+            );
+          }}
+          aria-label={t("feedbackTranslationTitle")}
+        />
       }
     >
       {on && (

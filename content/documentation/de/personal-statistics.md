@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-18",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-737 account settings reorganization",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -30,8 +30,11 @@
       "desktop"
     ],
     "evidence": [
-      "app/(app)/statistics/page.tsx",
+      "components/stats/profile-statistics.tsx",
+      "components/settings/account-profile-section.tsx",
+      "components/settings/account-settings-page.tsx",
       "components/stats/effort-durations.tsx",
+      "content/documentation/reviews/min-737-settings-reorganization.md",
       "content/knowledge/productivity.md",
       "lib/stats-derive.ts",
       "lib/server/stats.ts",
@@ -41,10 +44,10 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (12-month headline deduplication: get_user_stats migration 20270109200067, lib/stats-derive.ts and a production read of one account (685 events, 603 distinct issues); no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root (de headline deduplication sentence and retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-18"
+    "revision": 6,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (12-month headline deduplication: get_user_stats migration 20270109200067, lib/stats-derive.ts and a production read of one account (685 events, 603 distinct issues); no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 account settings reorganization: text revised from source review of components/settings/account-settings-page.tsx and components/stats/profile-statistics.tsx; figure personal-statistics-steps recaptured on 2026-10-19 in all six locales from the local candidate (now personal-statistics-workflow.png, demo history mirrored into the statistics ledger by captures/world/seed/018-statistiques.mjs) and inspected; the grid crops to the most recent weeks that fit; no other browser walkthrough)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root (de headline deduplication sentence and retained-meaning self-review; agent review, not human acceptance); agent:/root (de MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [
     "personal-cycle",
@@ -59,18 +62,19 @@
     {
       "id": "personal-statistics-steps",
       "kind": "screenshot",
-      "src": "/documentation/de/reader-statistics.png",
-      "alt": "Persönliche Statistik mit Jahresraster, Aufschlüsselungen, Arbeitsrhythmus und Gesamtzahlen.",
-      "caption": "Das Demokonto zeigt ein abgeschlossenes und elf erstellte Tickets. Die angezeigten Statistiken sind echt; Projekt- und Zielnamen wurden für die Darstellung übersetzt.",
-      "revision": 5,
+      "src": "/documentation/de/personal-statistics-workflow.png",
+      "alt": "Profilstatistik mit Kennzahlenleiste, Aktivitätsraster über 12 Monate, Aufschlüsselung nach Projekt und Kategorie sowie Arbeitsrhythmus.",
+      "caption": "Echter Verlauf des Demokontos: sechs abgeschlossene Vorgänge in zwei Projekten, dreißig erstellte Vorgänge, keine abgehakte Notizbuchaufgabe.",
+      "revision": 6,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-19",
       "viewport": [
-        994,
-        1046
+        816,
+        999
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -81,11 +85,13 @@
 
 ## Statistik öffnen und lesen {#personal-statistics}
 
-Öffne die Statistik über die Navigation deines Kontos. Lies das jährliche Aktivitätsraster, die Aufschlüsselungen nach Projekt, Kategorie und Ziel, den Abschnitt zum Arbeitsrhythmus und die Gesamtwerte. Die Seite zeigt festgelegte Zeiträume. Sie bietet keinen Datumsfilter für einen anderen Zeitraum. Die Auswertung fasst deine Arbeit zusammen und ist keine Rangliste für die Leistung anderer Mitglieder.
+Deine Statistik steht im Tab **Profil** der Kontoeinstellungen. Wähle dein Profil oben im Kontomenü oder öffne die Kontoeinstellungen: **Profil** ist der erste Tab. Die Statistik erscheint unter deinem Avatar, deinem Namen und deiner E-Mail-Adresse. Die frühere Adresse `/statistics` öffnet jetzt diesen Tab.
 
-Anhand erledigter Tickets, Arbeitsgeschwindigkeit, aktiver Tage, Serien und Zeitmessungen kannst du deine eigene Aktivität untersuchen. Das Aktivitätsraster zählt Abschlussereignisse von Problemen und Aufgaben im Aufgabenheft, zusammengefasst nach Kalendertagen in deiner Zeitzone. Ein aktiver Tag hat mindestens ein solches Ereignis. Die aktuelle Serie toleriert einen heute noch leeren Tag, endet aber am nächsten leeren Tag. Bei der Gesamtzahl abgeschlossener Probleme wird jede Problemkennung nur einmal gezählt. Ereigniszahl und Zahl unterschiedlicher Probleme beantworten daher verschiedene Fragen. Auch die Kennzahl über dem Raster zählt jedes Problem in ihren 12 Monaten nur einmal: Ein erneut abgeschlossenes Problem markiert jeden seiner Tage im Raster, erhöht die Kennzahl aber nur um ein Problem.
+Zuerst kommt eine Leiste mit sechs Kennzahlen: **Abgeschlossen**, **Aufgaben abgehakt**, **Erstellt**, **Projekte**, **Längste Serie** und **Aktuelle Serie**. Sie ersetzt den früheren Abschnitt mit den Gesamtwerten. Darunter liest du die Kennzahl der 12 Monate und das Aktivitätsraster, dann **Wohin Ihre Arbeit ging** mit den Aufschlüsselungen nach Projekt, Kategorie und Ziel sowie **Arbeitsrhythmus** mit **Aktuelle Arbeitslast**, **Probleme pro Zyklus**, **Abstand zum Fälligkeitsdatum** und **Aufschlüsselung nach Aufwand**. **Probleme pro Zyklus**, **Abstand zum Fälligkeitsdatum** und **Aufschlüsselung nach Aufwand** erscheinen nur, wenn Daten vorliegen. Der Tab zeigt festgelegte Zeiträume. Sie bietet keinen Datumsfilter für einen anderen Zeitraum. Die Auswertung fasst deine Arbeit zusammen und ist keine Rangliste für die Leistung anderer Mitglieder.
 
-Die Zeit nach Aufwand ist der Median der verstrichenen Zeit zwischen dem ersten aufgezeichneten Wechsel eines Problems zu In Bearbeitung und seinem Abschluss. Berücksichtigt werden geeignete, dir zugewiesene Probleme im Status Fertig mit Aufwand und beiden Zeitstempeln. Wartezeit ist enthalten; es handelt sich nicht um eine Stoppuhr für geleistete Arbeitsstunden. Die Mengenansicht zeigt die zugrunde liegende Stichprobengröße. Ein fehlender Median kann bedeuten, dass es keine geeigneten Messungen gibt, nicht dass die Dauer null ist. Prüfe vor einem Vergleich, welche Einheit und welchen Zeitraum der jeweilige Abschnitt verwendet.
+Anhand erledigter Tickets, Arbeitsgeschwindigkeit, aktiver Tage, Serien und Zeitmessungen kannst du deine eigene Aktivität untersuchen. Das Aktivitätsraster zählt Abschlussereignisse von Problemen und Aufgaben im Aufgabenheft, zusammengefasst nach Kalendertagen in deiner Zeitzone. Das Raster scrollt nie: Es zeigt die jüngsten Wochen, die auf den Bildschirm passen, ein Telefon also weniger Monate als ein Computer. Ein aktiver Tag hat mindestens ein solches Ereignis. Die aktuelle Serie toleriert einen heute noch leeren Tag, endet aber am nächsten leeren Tag. Die Kennzahl **Abgeschlossen** zählt jede Problemkennung nur einmal: Wird dasselbe Problem zweimal auf Fertig gesetzt, zählt es trotzdem einmal. Ereigniszahl und Zahl unterschiedlicher Probleme beantworten daher verschiedene Fragen. Auch die Kennzahl über dem Raster zählt jedes Problem in ihren 12 Monaten nur einmal: Ein erneut abgeschlossenes Problem markiert jeden seiner Tage im Raster, erhöht die Kennzahl aber nur um ein Problem.
+
+Die Zeit nach Aufwand ist der Median der verstrichenen Zeit zwischen dem ersten aufgezeichneten Wechsel eines Problems zu In Bearbeitung und seinem Abschluss. Berücksichtigt werden geeignete, dir zugewiesene Probleme im Status Fertig mit Aufwand und beiden Zeitstempeln. Wartezeit ist enthalten; es handelt sich nicht um eine Stoppuhr für geleistete Arbeitsstunden. Die Ansicht **Anzahl der Probleme** zeigt die zugrunde liegende Stichprobengröße. Ein fehlender Median kann bedeuten, dass es keine geeigneten Messungen gibt, nicht dass die Dauer null ist. Prüfe vor einem Vergleich, welche Einheit und welchen Zeitraum der jeweilige Abschnitt verwendet.
 
 ## Wenige oder veränderte Daten einordnen {#statistics-limits}
 
@@ -94,4 +100,4 @@ Ein leerer Zeitraum kann bedeuten, dass keine passenden abgeschlossenen Arbeiten
 Numo kann deine Statistik mit seinen nur lesenden Statistikwerkzeugen abrufen und dieselben Zahlen erklären. Auch sein Zugriff auf Tarifverbrauch und letzte Ausführungen ist nur lesend. Eine Auskunft verändert dein Budget nicht. Öffne bei Fragen zu KI-Kosten die Verbrauchs- und Kontoeinstellungen, statt den Aufwand eines Tickets zu ändern, um eine Messung zu verbergen.
 
 
-![Persönliche Statistik mit Jahresraster, Aufschlüsselungen, Arbeitsrhythmus und Gesamtzahlen.](/documentation/de/reader-statistics.png)
+![Profilstatistik mit Kennzahlenleiste, Aktivitätsraster über 12 Monate, Aufschlüsselung nach Projekt und Kategorie sowie Arbeitsrhythmus.](/documentation/de/personal-statistics-workflow.png)

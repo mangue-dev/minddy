@@ -20,7 +20,6 @@ const META_PAGE_KEYS = [
   "agents",
   "routines",
   "pullRequests",
-  "statistics",
   "trash",
   "billing",
   "settings",

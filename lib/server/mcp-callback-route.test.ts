@@ -35,7 +35,7 @@ const { GET } = await import(
 );
 
 const ORIGIN = "https://www.minddy.app";
-const SETTINGS = "/settings?tab=mcp-clients";
+const SETTINGS = "/settings?tab=agent";
 
 function get(cookie?: string): Promise<Response> {
   return GET(

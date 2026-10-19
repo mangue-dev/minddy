@@ -184,3 +184,59 @@ export function TotalItem({
     </div>
   );
 }
+
+/**
+ * One figure of a `StatsFigureStrip` (the profile, a project header). A description list row: on a phone the strip is a
+ * table — label on the left, value on the right, a line between rows — and
+ * from `sm` up it becomes six centered columns, value above label.
+ */
+export function StatsFigure({
+  label,
+  value,
+  info,
+}: {
+  label: string;
+  value: string | number;
+  info?: string;
+}) {
+  return (
+    <div className="flex min-w-0 items-center justify-between gap-3 px-4 py-3 sm:flex-col-reverse sm:justify-end sm:gap-0.5 sm:px-2 sm:text-center">
+      {/* The label wraps rather than truncates: a cut-off figure name, such
+          as "Tasks checked off", no longer says what it counts. */}
+      <dt className="flex min-w-0 items-center gap-1 text-sm leading-tight text-muted-foreground sm:max-w-full sm:justify-center sm:text-xs sm:text-balance">
+        <span>{label}</span>
+        {info ? <InfoHint text={info} /> : null}
+      </dt>
+      <dd className="shrink-0 text-base font-medium tabular-nums text-foreground">
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+const STRIP_COLUMNS = {
+  4: "sm:grid-cols-4",
+  5: "sm:grid-cols-5",
+  6: "sm:grid-cols-6",
+} as const;
+
+/** A row of figures under a profile or project header (MIN-737). */
+export function StatsFigureStrip({
+  columns,
+  children,
+}: {
+  /** One column per figure from `sm` up. */
+  columns: keyof typeof STRIP_COLUMNS;
+  children: ReactNode;
+}) {
+  return (
+    <dl
+      className={cn(
+        "divide-y divide-border rounded-2xl border border-border bg-card sm:grid sm:divide-x sm:divide-y-0",
+        STRIP_COLUMNS[columns],
+      )}
+    >
+      {children}
+    </dl>
+  );
+}

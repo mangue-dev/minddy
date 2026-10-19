@@ -160,7 +160,6 @@ function MobileBreadcrumb({
   sectionKey,
   isInbox,
   isAccountSettings,
-  isStatistics,
   isTrash,
   isBilling,
   isAdmin,
@@ -174,7 +173,6 @@ function MobileBreadcrumb({
   sectionKey: string | null;
   isInbox: boolean;
   isAccountSettings: boolean;
-  isStatistics: boolean;
   isTrash: boolean;
   isBilling: boolean;
   isAdmin: boolean;
@@ -200,10 +198,6 @@ function MobileBreadcrumb({
     backHref = "/home";
     backIcon = homeIcon;
     current = <CurrentLabel>{t("accountSettings")}</CurrentLabel>;
-  } else if (isStatistics) {
-    backHref = "/home";
-    backIcon = homeIcon;
-    current = <CurrentLabel>{t("statistics")}</CurrentLabel>;
   } else if (isTrash) {
     backHref = "/home";
     backIcon = homeIcon;
@@ -314,7 +308,6 @@ export function AppBreadcrumb({
   const isHome = pathname.startsWith("/home");
   const isInbox = pathname.startsWith("/inbox");
   const isAccountSettings = pathname.startsWith("/settings");
-  const isStatistics = pathname.startsWith("/statistics");
   const isTrash = pathname.startsWith("/trash");
   const isBilling = pathname.startsWith("/billing");
   const isAdmin = pathname.startsWith("/admin");
@@ -343,12 +336,6 @@ export function AppBreadcrumb({
         <BreadcrumbLevel show={isAccountSettings} levelKey="account-settings">
           <span className="text-sm font-medium text-foreground">
             {t("accountSettings")}
-          </span>
-        </BreadcrumbLevel>
-
-        <BreadcrumbLevel show={isStatistics} levelKey="statistics">
-          <span className="text-sm font-medium text-foreground">
-            {t("statistics")}
           </span>
         </BreadcrumbLevel>
 
@@ -431,7 +418,6 @@ export function AppBreadcrumb({
         sectionKey={sectionKey}
         isInbox={isInbox}
         isAccountSettings={isAccountSettings}
-        isStatistics={isStatistics}
         isTrash={isTrash}
         isBilling={isBilling}
         isAdmin={isAdmin}

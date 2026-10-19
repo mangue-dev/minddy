@@ -1407,6 +1407,20 @@
     "storage": false
   },
   {
+    "file": "captures/world/seed/018-statistiques.mjs",
+    "operation": "from",
+    "resource": "issues",
+    "line": 21,
+    "storage": false
+  },
+  {
+    "file": "captures/world/seed/018-statistiques.mjs",
+    "operation": "from",
+    "resource": "stat_events",
+    "line": 26,
+    "storage": false
+  },
+  {
     "file": "captures/world/seed/_categories.mjs",
     "operation": "from",
     "resource": "categories",

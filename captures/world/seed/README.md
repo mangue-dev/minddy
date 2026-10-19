@@ -23,3 +23,11 @@ cycles are recalibrated to 80 completed points so the velocity factor stays
 1 and the capacity ring reads ~45 % instead of a floored 93 %. It creates no
 records; every update goes through the shared write guards, and the default
 run only describes the change before applying it.
+
+`018-statistiques.mjs` fills the demo account's statistics ledger from its
+existing history for the profile statistics screenshot (MIN-737): one
+"issue created" event per demo issue the demo owner created, at its creation
+date, and one "issue completed" event per completed issue assigned to it, at
+its completion date. It invents nothing, copies no title or project name, and
+never adds an event twice. The default run only describes the change;
+`--apply` requires explicit user approval.

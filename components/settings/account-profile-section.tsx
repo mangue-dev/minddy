@@ -1,22 +1,26 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Download01Icon } from "@hugeicons/core-free-icons";
-import {useEffect, useState} from "react";
+import { ImageUploadIcon, PencilEdit02Icon, ShuffleIcon } from "@hugeicons/core-free-icons";
+import {useRef} from "react";
 import {useTranslations} from "next-intl";
-import Link from "@/components/app-link";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import {useAuth} from "@/lib/auth-context";
-import {isDesktop} from "@/lib/desktop/bridge";
 import {emailLocalPart} from "@/lib/display-name";
 import {useAnalytics} from "@/lib/use-analytics";
 import {useMyAvatarSource, useRegenerateAvatar, useUploadAvatar} from "@/lib/use-my-avatar";
-import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
+import {SettingsBlock} from "@/components/settings/settings-ui";
 import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
-import {UserAvatarPicker} from "@/components/user-avatar-picker";
+import {InlineEditField} from "@/components/settings/inline-edit-field";
+import {UserAvatar} from "@/components/user-avatar";
+import {ProfileStatistics} from "@/components/stats/profile-statistics";
 
 /** Read a string key off the user's auth metadata. */
 function metaString(meta: Record<string, unknown>, key: string): string {
@@ -25,17 +29,24 @@ function metaString(meta: Record<string, unknown>, key: string): string {
 }
 
 /**
- * Account profile: avatar + display name (+ read-only email).
+ * Account → Profile (MIN-737): who I am, then what I did. The identity sits
+ * centered at the top and is edited where it is shown — no Edit button:
  *
- * The avatar uses either a generated Lorelei seed or a normalized imported
- * image. The name still lives on the Supabase Auth account
- * (`user_metadata.display_name/full_name`).
+ * - the avatar opens a menu to generate a new Lorelei avatar or upload an
+ *   image, applied as soon as it is picked;
+ * - the name turns into a field in place on desktop (Enter or leaving the
+ *   field saves, Escape cancels), and opens a bottom sheet in the mobile
+ *   layout, where an in-place field would sit under the software keyboard.
+ *
+ * The name lives on the Supabase Auth account
+ * (`user_metadata.display_name/full_name`). The personal statistics —
+ * formerly their own /statistics page — follow underneath.
  */
 export function AccountProfileSection() {
   const { user, updateUser } = useAuth();
   const t = useTranslations("Profile");
   const ta = useTranslations("Account");
-  const tCommon = useTranslations("Common");
+  const tStats = useTranslations("Stats");
 
   const meta = (user?.user_metadata ?? {}) as Record<string, unknown>;
   const currentName =
@@ -46,47 +57,23 @@ export function AccountProfileSection() {
     "";
   const avatarSource = useMyAvatarSource();
   const { track } = useAnalytics();
-  // Read after hydration: `window.minddy` does not exist during server rendering.
-  const [inDesktopApp, setInDesktopApp] = useState(false);
-  useEffect(() => setInDesktopApp(isDesktop()), []);
   const regenerate = useRegenerateAvatar();
   const upload = useUploadAvatar();
+  const avatarBusy = regenerate.isPending || upload.isPending;
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const [name, setName] = useState(currentName);
-  const [busy, setBusy] = useState(false);
-
-  // Adopt the account's current name once the user resolves.
-  useEffect(() => {
-    setName(currentName);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentName]);
-
-  const dirty = name.trim() !== currentName;
-
-  const save = async () => {
+  const saveName = async (next: string) => {
     if (!user) return;
-    const trimmed = name.trim();
-    if (!trimmed) {
-      toast.error(t("nameEmpty"));
-      return;
-    }
-    setBusy(true);
-    try {
-      await updateUser({
-        // Spread existing metadata so we never drop provider fields
-        // (locale…) regardless of merge-vs-replace behavior.
-        data: { ...meta, full_name: trimmed, display_name: trimmed },
-      });
-      toast.success(t("updated"));
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
+    await updateUser({
+      // Spread existing metadata so we never drop provider fields
+      // (locale…) regardless of merge-vs-replace behavior.
+      data: { ...meta, full_name: next, display_name: next },
+    });
+    toast.success(t("updated"));
   };
 
   const reroll = () => {
-    if (regenerate.isPending || upload.isPending) return;
+    if (avatarBusy) return;
     regenerate.mutate(undefined, {
       onError: (e) => toast.error((e as Error).message),
       onSuccess: () => track("profile_updated", { field: "avatar" }),
@@ -94,7 +81,7 @@ export function AccountProfileSection() {
   };
 
   const uploadFile = (file: File) => {
-    if (regenerate.isPending || upload.isPending) return;
+    if (avatarBusy) return;
     if (file.type && !file.type.startsWith("image/")) {
       toast.error(t("avatarInvalidFile"));
       return;
@@ -106,86 +93,85 @@ export function AccountProfileSection() {
   };
 
   return (
-    <SettingsGroup
-      anchor={SETTINGS_SECTIONS.accountProfile}
-      title={ta("profileSectionTitle")}
-      footer={
-        <Button onClick={() => void save()} disabled={busy || !dirty}>
-          {busy && <Spinner />}
-          {tCommon("save")}
-        </Button>
-      }
-    >
-      <SettingsRow
-        label={t("avatarLabel")}
-        hint={t("avatarHint")}
-        control={
-          <UserAvatarPicker
-            source={avatarSource}
-            onUpload={uploadFile}
-            onGenerate={reroll}
-            uploadLabel={t("uploadAvatar")}
-            generateLabel={t("newLoreleiAvatar")}
-            uploading={upload.isPending}
-            generating={regenerate.isPending}
-          />
-        }
-      />
-
-      <SettingsRow
-        htmlFor="account-name"
-        label={t("nameLabel")}
-        control={
-          <Input
-            id="account-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={t("namePlaceholder")}
-            className="w-64"
-          />
-        }
-      />
-
-      {/* The email does not change: showing it in a gray field promised
- an entry that does not exist. It’s a value, it can be read. */}
-      {user?.email && (
-        <SettingsRow
-          label={ta("emailLabel")}
-          hint={ta("emailHint")}
-          control={
-            <span className="text-sm text-muted-foreground">{user.email}</span>
-          }
+    <>
+      <SettingsBlock
+        anchor={SETTINGS_SECTIONS.accountProfile}
+        label={ta("profileSectionTitle")}
+        className="flex flex-col items-center px-4 pt-6 pb-2 text-center"
+      >
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) uploadFile(file);
+            // Selecting the same file again must trigger another change event.
+            event.target.value = "";
+          }}
         />
-      )}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            disabled={avatarBusy}
+            aria-label={t("changeAvatar")}
+            className="group relative rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            <UserAvatar seed={avatarSource} className="size-24 ring-1 ring-border" />
+            {/* The badge says the picture can be changed, on touch screens too
+                where there is no hover. */}
+            <span
+              aria-hidden
+              className="absolute right-0 bottom-0 flex size-7 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-xs transition-colors group-hover:text-foreground"
+            >
+              {avatarBusy ? (
+                <Spinner className="size-3.5" />
+              ) : (
+                <HugeiconsIcon icon={PencilEdit02Icon} className="size-3.5" />
+              )}
+            </span>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center">
+            <DropdownMenuItem onSelect={reroll}>
+              <HugeiconsIcon icon={ShuffleIcon} />
+              {t("newLoreleiAvatar")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => fileRef.current?.click()}>
+              <HugeiconsIcon icon={ImageUploadIcon} />
+              {t("uploadAvatar")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-      {/* The desktop app (MIN-292) — FIXED, without a button to dismiss it.
- Unlike the welcome banner, which only appears once in the life of the account, this is the place where you come back to find the __
- that you had dismissed. A line that can be removed from a setting
- is no longer a setting.
+        <InlineEditField
+          value={currentName}
+          onSave={user ? saveName : undefined}
+          label={t("nameLabel")}
+          editLabel={t("editName", { name: currentName })}
+          placeholder={t("namePlaceholder")}
+          validate={(next) => (next ? null : t("nameEmpty"))}
+          className="mt-4 flex h-10 max-w-full items-center justify-center"
+          inputClassName="h-10 w-72 max-w-full text-center text-xl font-semibold"
+        >
+          <span className="truncate text-2xl font-semibold tracking-tight">
+            {currentName}
+          </span>
+        </InlineEditField>
+        {/* The email does not change, so it reads as a value, not a field. */}
+        {user?.email && (
+          <p className="mt-1 max-w-full truncate text-sm text-muted-foreground">
+            {user.email}
+          </p>
+        )}
+      </SettingsBlock>
 
- Absent IN the app: offering to install it to whoever opened it is
- noise. However, it remains visible under Windows and Linux, where its
- label says that it is macOS — it is information, not a promise,
- and leaving it alone would make people believe that the app does not exist. */}
-      {!inDesktopApp && (
-        <SettingsRow
-          label={ta("desktopAppLabel")}
-          hint={ta("desktopAppHint")}
-          control={
-            <Button asChild variant="outline" size="sm">
-              <Link
-                href="/download"
-                onClick={() =>
-                  track("desktop_install_prompt_clicked", { surface: "settings" })
-                }
-              >
-                <HugeiconsIcon icon={Download01Icon} />
-                {ta("desktopAppCta")}
-              </Link>
-            </Button>
-          }
-        />
-      )}
-    </SettingsGroup>
+      <SettingsBlock
+        anchor={SETTINGS_SECTIONS.accountStatistics}
+        label={tStats("title")}
+      >
+        <ProfileStatistics />
+      </SettingsBlock>
+
+    </>
   );
 }

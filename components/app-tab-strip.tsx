@@ -56,7 +56,7 @@ import type { MessageKey } from "@/lib/i18n-keys";
 
 const routeLabels: Record<string, MessageKey<"Nav">> = {
   home: "home", all: "allIssues", inbox: "inbox", routines: "routines",
-  "pull-requests": "pullRequests", statistics: "statistics", trash: "trash", settings: "settings", billing: "billing",
+  "pull-requests": "pullRequests", trash: "trash", settings: "settings", billing: "billing",
   admin: "adminDashboard", pages: "pages", tickets: "tickets", objectives: "objectives", feedback: "feedback", triage: "triage",
 };
 

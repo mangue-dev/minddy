@@ -98,6 +98,8 @@ const rules = [
       "captures/world/seed/008-agent.mjs", "captures/world/seed/009-densite-aurora.mjs",
       "captures/world/seed/014-pages-aurora.mjs", "captures/world/seed/015-current-cycle-completed.mjs",
       "captures/world/seed/017-cycle-recal.mjs", "captures/world/seed/_issues.mjs",
+      // Statistics seed (MIN-737): ids, statuses, people and dates, no content.
+      "captures/world/seed/018-statistiques.mjs",
     ]),
   },
   {
@@ -209,7 +211,11 @@ const rules = [
   },
   {
     access: /\.\s*from\s*\(\s*["'`]stat_events["'`]\s*\)/,
-    allowed: new Set(["lib/server/stat-events.ts", "lib/server/encryption/stat-events-backfill.ts"]),
+    allowed: new Set(["lib/server/stat-events.ts", "lib/server/encryption/stat-events-backfill.ts",
+      // Demo statistics seed (MIN-737): reads only `kind` and `issue_id`, and
+      // inserts rows whose snapshot texts (project name, issue title, task
+      // text) stay null, so no content needs the row codec.
+      "captures/world/seed/018-statistiques.mjs"]),
   },
   {
     access: /\.\s*from\s*\(\s*["'`]user_scratchpad["'`]\s*\)/,

@@ -1,8 +1,8 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, Cancel01Icon, Delete02Icon, Edit04Icon, CheckIcon } from "@hugeicons/core-free-icons";
-import { useState } from "react";
+import { Add01Icon, Delete02Icon } from "@hugeicons/core-free-icons";
+import { useState, type KeyboardEvent } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
@@ -12,9 +12,13 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
 import {
-  SettingsEmpty,
-  SettingsListRow,
-} from "@/components/settings/settings-ui";
+  ResponsivePopover,
+  ResponsivePopoverContent,
+  ResponsivePopoverTrigger,
+} from "@/components/ui/responsive-popover";
+import { InlineEditField } from "@/components/settings/inline-edit-field";
+import { SettingsEmpty, SettingsGroup } from "@/components/settings/settings-ui";
+import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import {
   CATEGORY_COLORS,
   CATEGORY_COLOR_NAMES,
@@ -50,6 +54,47 @@ function Swatches({
   );
 }
 
+/** The color of a category: a dot that opens the swatches (a sheet on a
+    phone). Picking one applies at once. */
+function ColorButton({
+  value,
+  onChange,
+  label,
+}: {
+  value: string;
+  onChange: (color: string) => void | Promise<unknown>;
+  label: string;
+}) {
+  const t = useTranslations("Categories");
+  const [open, setOpen] = useState(false);
+  return (
+    <ResponsivePopover open={open} onOpenChange={setOpen}>
+      <ResponsivePopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={label}
+          className="flex size-8 shrink-0 items-center justify-center rounded-full outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <span
+            aria-hidden
+            className="size-3.5 rounded-full ring-1 ring-black/5 dark:ring-white/10"
+            style={{ backgroundColor: value }}
+          />
+        </button>
+      </ResponsivePopoverTrigger>
+      <ResponsivePopoverContent align="start" className="w-auto p-3" mobileTitle={t("colorLabel")}>
+        <Swatches
+          value={value}
+          onChange={(color) => {
+            setOpen(false);
+            void onChange(color);
+          }}
+        />
+      </ResponsivePopoverContent>
+    </ResponsivePopover>
+  );
+}
+
 function CategoryRow({
   category,
   onUpdate,
@@ -59,103 +104,73 @@ function CategoryRow({
   onUpdate: (updates: { name?: string; color?: string }) => Promise<unknown>;
   onDelete: () => void;
 }) {
-  const tc = useTranslations("Common");
-  const [editing, setEditing] = useState(false);
-  const [name, setName] = useState(category.name);
-  const [color, setColor] = useState(category.color);
-  const [saving, setSaving] = useState(false);
-
-  const save = async () => {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    setSaving(true);
-    try {
-      await onUpdate({ name: trimmed, color });
-      setEditing(false);
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (editing) {
-    return (
-      <div className="flex flex-col gap-2 rounded-lg border border-border p-2">
-        <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
-        <Swatches value={color} onChange={setColor} />
-        <div className="flex justify-end gap-1">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={tc("cancel")}
-            onClick={() => {
-              setEditing(false);
-              setName(category.name);
-              setColor(category.color);
-            }}
-          >
-            <HugeiconsIcon icon={Cancel01Icon} />
-          </Button>
-          <Button size="icon-sm" aria-label={tc("save")} disabled={saving} onClick={save}>
-            {saving ? <Spinner /> : <HugeiconsIcon icon={CheckIcon} />}
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  const t = useTranslations("Categories");
 
   return (
-    <SettingsListRow
-      className="py-2"
-      avatar={
-        <span
-          className="size-3 shrink-0 rounded-full"
-          style={{ backgroundColor: category.color }}
-          aria-hidden
-        />
-      }
-      title={<span className="font-normal">{category.name}</span>}
-      action={
-        <>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={tc("edit")}
-            onClick={() => setEditing(true)}
-          >
-            <HugeiconsIcon icon={Edit04Icon} />
-          </Button>
-          <Button variant="ghost" size="icon-sm" aria-label={tc("delete")} onClick={onDelete}>
-            <HugeiconsIcon icon={Delete02Icon} />
-          </Button>
-        </>
-      }
-    />
+    <li className="group/category flex items-center gap-2 py-2">
+      <ColorButton
+        value={category.color}
+        label={t("changeColor", { name: category.name })}
+        onChange={async (color) => {
+          try {
+            await onUpdate({ color });
+          } catch (err) {
+            toast.error((err as Error).message);
+          }
+        }}
+      />
+      {/* Renamed in place, like the project and profile names. */}
+      <InlineEditField
+        value={category.name}
+        onSave={async (name) => {
+          await onUpdate({ name });
+        }}
+        label={t("nameLabel")}
+        editLabel={t("rename", { name: category.name })}
+        validate={(next) => (next ? null : t("nameRequired"))}
+        className="flex min-w-0 flex-1 items-center"
+        inputClassName="h-8 max-w-xs"
+      >
+        <span className="truncate text-sm">{category.name}</span>
+      </InlineEditField>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label={t("deleteAria", { name: category.name })}
+        onClick={onDelete}
+        // Shown on hover and focus with a pointer; always there on touch.
+        className="shrink-0 text-muted-foreground hover:text-destructive pointer-fine:opacity-0 pointer-fine:group-hover/category:opacity-100 pointer-fine:focus-visible:opacity-100"
+      >
+        <HugeiconsIcon icon={Delete02Icon} />
+      </Button>
+    </li>
   );
 }
 
-export function ProjectCategories({ projectId }: { projectId: string }) {
+/** The category being added: a row at the top of the list, focused. Enter
+    creates it, Escape or an empty field leaves. */
+function NewCategoryRow({
+  onCreate,
+  onDone,
+}: {
+  onCreate: (input: { name: string; color: string }) => Promise<unknown>;
+  onDone: () => void;
+}) {
   const t = useTranslations("Categories");
-  const tc = useTranslations("Common");
-  const tf = useTranslations("Field");
-  const { categories, createCategory, updateCategory, deleteCategory } =
-    useCategoriesQuery(projectId);
-
   const [name, setName] = useState("");
   const [color, setColor] = useState<string>(DEFAULT_CATEGORY_COLOR);
   const [creating, setCreating] = useState(false);
-  const [toDelete, setToDelete] = useState<Category | null>(null);
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const create = async () => {
     const trimmed = name.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      onDone();
+      return;
+    }
     setCreating(true);
     try {
-      await createCategory({ name: trimmed, color });
-      setName("");
-      setColor(DEFAULT_CATEGORY_COLOR);
+      await onCreate({ name: trimmed, color });
+      onDone();
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -163,45 +178,81 @@ export function ProjectCategories({ projectId }: { projectId: string }) {
     }
   };
 
-  return (
-    <div className="flex flex-col gap-4">
-      <form onSubmit={handleCreate} className="flex flex-col gap-2">
-        <div className="flex items-end gap-2">
-          <div className="flex flex-1 flex-col gap-1.5">
-            <label htmlFor="category-name" className="text-sm font-medium">
-              {t("newCategoryLabel")}
-            </label>
-            <Input
-              id="category-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t("newCategoryPlaceholder")}
-            />
-          </div>
-          <Button type="submit" disabled={creating || !name.trim()}>
-            {creating ? <Spinner /> : <HugeiconsIcon icon={Add01Icon} />}
-            {tc("add")}
-          </Button>
-        </div>
-        <Swatches value={color} onChange={setColor} />
-      </form>
+  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      void create();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      onDone();
+    }
+  };
 
-      <div className="flex flex-col divide-y divide-border">
-        {categories.length === 0 ? (
-          <SettingsEmpty>
-            {t("emptyState", { noCategories: tf("noCategories") })}
-          </SettingsEmpty>
-        ) : (
-          categories.map((c) => (
+  return (
+    <li className="flex items-center gap-2 py-2">
+      <ColorButton value={color} onChange={setColor} label={t("colorLabel")} />
+      <Input
+        autoFocus
+        aria-label={t("newCategoryLabel")}
+        value={name}
+        disabled={creating}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={onKeyDown}
+        placeholder={t("newCategoryPlaceholder")}
+        className="h-8 max-w-xs flex-1"
+      />
+      <Button size="sm" disabled={creating || !name.trim()} onClick={() => void create()}>
+        {creating && <Spinner />}
+        {t("addCategory")}
+      </Button>
+    </li>
+  );
+}
+
+/** Project → Categories (MIN-737): one row per category, edited where it is
+    shown — color from its dot, name in place — and a new one added at the
+    top from the card's title line. */
+export function ProjectCategories({ projectId }: { projectId: string }) {
+  const t = useTranslations("Categories");
+  const tc = useTranslations("Common");
+  const tf = useTranslations("Field");
+  const tSettings = useTranslations("Settings");
+  const { categories, createCategory, updateCategory, deleteCategory } =
+    useCategoriesQuery(projectId);
+
+  const [adding, setAdding] = useState(false);
+  const [toDelete, setToDelete] = useState<Category | null>(null);
+
+  return (
+    <SettingsGroup
+      anchor={SETTINGS_SECTIONS.projectCategories}
+      title={tSettings("categoriesTab")}
+      action={
+        <Button type="button" size="sm" disabled={adding} onClick={() => setAdding(true)}>
+          <HugeiconsIcon icon={Add01Icon} />
+          {t("newCategoryLabel")}
+        </Button>
+      }
+    >
+      {adding || categories.length > 0 ? (
+        <ul className="flex flex-col divide-y divide-border">
+          {adding && (
+            <NewCategoryRow onCreate={createCategory} onDone={() => setAdding(false)} />
+          )}
+          {categories.map((c) => (
             <CategoryRow
               key={c.id}
               category={c}
               onUpdate={(updates) => updateCategory(c.id, updates)}
               onDelete={() => setToDelete(c)}
             />
-          ))
-        )}
-      </div>
+          ))}
+        </ul>
+      ) : (
+        <SettingsEmpty>
+          {t("emptyState", { noCategories: tf("noCategories") })}
+        </SettingsEmpty>
+      )}
 
       <ConfirmDeleteDialog
         open={!!toDelete}
@@ -223,6 +274,6 @@ export function ProjectCategories({ projectId }: { projectId: string }) {
           }
         }}
       />
-    </div>
+    </SettingsGroup>
   );
 }

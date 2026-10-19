@@ -1006,34 +1006,6 @@
   },
   {
     "locale": "en",
-    "screen": "profile-and-preferences-workflow",
-    "src": "/documentation/en/profile-and-preferences-workflow.png",
-    "date": "2026-10-09",
-    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
-    "workingTreeChanges": true,
-    "runtime": "https://www.minddy.app",
-    "frameVersion": 2,
-    "route": "/settings?tab=profile&section=account-profile",
-    "viewport": [
-      816,
-      416
-    ],
-    "padding": 24,
-    "deviceScaleFactor": 2,
-    "theme": "light",
-    "submitted": false,
-    "blockedWrites": [
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      }
-    ],
-    "displayAdaptation": [],
-    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
-    "sha256": "d5a6f22a1904838401960b945c5935bb4d5f0bf50cad10b2c2b85fa6cfe63dcd"
-  },
-  {
-    "locale": "en",
     "screen": "account-security-workflow",
     "src": "/documentation/en/account-security-workflow.png",
     "date": "2026-10-09",
@@ -1455,34 +1427,6 @@
     "displayAdaptation": [],
     "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
     "sha256": "8442f292dfe4fd5b83dd6d7cee2e96dd3d7c5b4dae3f6be50bde545dbed4bae7"
-  },
-  {
-    "locale": "fr",
-    "screen": "profile-and-preferences-workflow",
-    "src": "/documentation/fr/profile-and-preferences-workflow.png",
-    "date": "2026-10-09",
-    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
-    "workingTreeChanges": true,
-    "runtime": "https://www.minddy.app",
-    "frameVersion": 2,
-    "route": "/settings?tab=profile&section=account-profile",
-    "viewport": [
-      816,
-      416
-    ],
-    "padding": 24,
-    "deviceScaleFactor": 2,
-    "theme": "light",
-    "submitted": false,
-    "blockedWrites": [
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      }
-    ],
-    "displayAdaptation": [],
-    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
-    "sha256": "b7e311058eb9802242f43a5c35d26f0a5e9106988f50381199340ab2234c962f"
   },
   {
     "locale": "fr",
@@ -1911,34 +1855,6 @@
   },
   {
     "locale": "de",
-    "screen": "profile-and-preferences-workflow",
-    "src": "/documentation/de/profile-and-preferences-workflow.png",
-    "date": "2026-10-09",
-    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
-    "workingTreeChanges": true,
-    "runtime": "https://www.minddy.app",
-    "frameVersion": 2,
-    "route": "/settings?tab=profile&section=account-profile",
-    "viewport": [
-      816,
-      416
-    ],
-    "padding": 24,
-    "deviceScaleFactor": 2,
-    "theme": "light",
-    "submitted": false,
-    "blockedWrites": [
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      }
-    ],
-    "displayAdaptation": [],
-    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
-    "sha256": "1229daca1a5c84e8f0a97f6408919f3ac67fc1a519ab9379e9ec5ff95ee7f4b1"
-  },
-  {
-    "locale": "de",
     "screen": "account-security-workflow",
     "src": "/documentation/de/account-security-workflow.png",
     "date": "2026-10-09",
@@ -2361,34 +2277,6 @@
     ],
     "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
     "sha256": "eebd61bdf8ec2a64efcdaad02e26ef6f08077717fef81a9da6e81320745a2820"
-  },
-  {
-    "locale": "es",
-    "screen": "profile-and-preferences-workflow",
-    "src": "/documentation/es/profile-and-preferences-workflow.png",
-    "date": "2026-10-09",
-    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
-    "workingTreeChanges": true,
-    "runtime": "https://www.minddy.app",
-    "frameVersion": 2,
-    "route": "/settings?tab=profile&section=account-profile",
-    "viewport": [
-      816,
-      416
-    ],
-    "padding": 24,
-    "deviceScaleFactor": 2,
-    "theme": "light",
-    "submitted": false,
-    "blockedWrites": [
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      }
-    ],
-    "displayAdaptation": [],
-    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
-    "sha256": "bb3fcc331cc67d46820f891d0e99a54e77b821bc55620279a5cdcb8da1863bef"
   },
   {
     "locale": "es",
@@ -2818,34 +2706,6 @@
     ],
     "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
     "sha256": "11d33086729d35b9adf3761a59c9349fc2de5dd2f73bdca1fbf4a05924f29eec"
-  },
-  {
-    "locale": "it",
-    "screen": "profile-and-preferences-workflow",
-    "src": "/documentation/it/profile-and-preferences-workflow.png",
-    "date": "2026-10-09",
-    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
-    "workingTreeChanges": true,
-    "runtime": "https://www.minddy.app",
-    "frameVersion": 2,
-    "route": "/settings?tab=profile&section=account-profile",
-    "viewport": [
-      816,
-      416
-    ],
-    "padding": 24,
-    "deviceScaleFactor": 2,
-    "theme": "light",
-    "submitted": false,
-    "blockedWrites": [
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      }
-    ],
-    "displayAdaptation": [],
-    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
-    "sha256": "d8370f51ae938173968936ac41eaf376d663930b119bf0587f8271fca55d0f0b"
   },
   {
     "locale": "it",
@@ -3284,35 +3144,6 @@
     ],
     "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
     "sha256": "c2c8f285a74c7671dfeef60dc5e5afeb4bff62665a8b5b5fbfd8c1080398c37d"
-  },
-  {
-    "locale": "pt-BR",
-    "screen": "profile-and-preferences-workflow",
-    "src": "/documentation/pt-BR/profile-and-preferences-workflow.png",
-    "date": "2026-10-09",
-    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
-    "workingTreeChanges": true,
-    "runtime": "https://www.minddy.app",
-    "frameVersion": 2,
-    "stableFocus": true,
-    "route": "/settings?tab=profile&section=account-profile",
-    "viewport": [
-      816,
-      416
-    ],
-    "padding": 24,
-    "deviceScaleFactor": 2,
-    "theme": "light",
-    "submitted": false,
-    "blockedWrites": [
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      }
-    ],
-    "displayAdaptation": [],
-    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
-    "sha256": "100c3dcdf19cc882b5ff2157d8909b7a4d02478da25eef269618913cb75f09bb"
   },
   {
     "locale": "pt-BR",
@@ -4708,6 +4539,904 @@
       "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
       "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
     ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "en",
+    "screen": "profile-and-preferences-workflow",
+    "src": "/documentation/en/profile-and-preferences-workflow.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings",
+    "viewport": [
+      816,
+      256
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "en",
+    "screen": "personal-statistics-workflow",
+    "src": "/documentation/en/personal-statistics-workflow.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings",
+    "viewport": [
+      816,
+      999
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "fr",
+    "screen": "profile-and-preferences-workflow",
+    "src": "/documentation/fr/profile-and-preferences-workflow.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings",
+    "viewport": [
+      816,
+      256
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "fr",
+    "screen": "personal-statistics-workflow",
+    "src": "/documentation/fr/personal-statistics-workflow.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings",
+    "viewport": [
+      816,
+      984
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "de",
+    "screen": "profile-and-preferences-workflow",
+    "src": "/documentation/de/profile-and-preferences-workflow.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings",
+    "viewport": [
+      816,
+      256
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "de",
+    "screen": "personal-statistics-workflow",
+    "src": "/documentation/de/personal-statistics-workflow.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings",
+    "viewport": [
+      816,
+      999
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "es",
+    "screen": "profile-and-preferences-workflow",
+    "src": "/documentation/es/profile-and-preferences-workflow.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings",
+    "viewport": [
+      816,
+      256
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "es",
+    "screen": "personal-statistics-workflow",
+    "src": "/documentation/es/personal-statistics-workflow.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings",
+    "viewport": [
+      816,
+      999
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "it",
+    "screen": "profile-and-preferences-workflow",
+    "src": "/documentation/it/profile-and-preferences-workflow.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings",
+    "viewport": [
+      816,
+      256
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "it",
+    "screen": "personal-statistics-workflow",
+    "src": "/documentation/it/personal-statistics-workflow.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings",
+    "viewport": [
+      816,
+      999
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "profile-and-preferences-workflow",
+    "src": "/documentation/pt-BR/profile-and-preferences-workflow.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings",
+    "viewport": [
+      816,
+      256
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "personal-statistics-workflow",
+    "src": "/documentation/pt-BR/personal-statistics-workflow.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings",
+    "viewport": [
+      816,
+      999
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "en",
+    "screen": "project-members",
+    "src": "/documentation/en/project-members.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=members",
+    "viewport": [
+      816,
+      414
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "fr",
+    "screen": "project-members",
+    "src": "/documentation/fr/project-members.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=members",
+    "viewport": [
+      816,
+      430
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "de",
+    "screen": "project-members",
+    "src": "/documentation/de/project-members.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=members",
+    "viewport": [
+      816,
+      430
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "es",
+    "screen": "project-members",
+    "src": "/documentation/es/project-members.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=members",
+    "viewport": [
+      816,
+      430
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "it",
+    "screen": "project-members",
+    "src": "/documentation/it/project-members.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=members",
+    "viewport": [
+      816,
+      430
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "project-members",
+    "src": "/documentation/pt-BR/project-members.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=members",
+    "viewport": [
+      816,
+      430
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "en",
+    "screen": "project-general",
+    "src": "/documentation/en/project-general.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings",
+    "viewport": [
+      816,
+      359
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "de",
+    "screen": "project-general",
+    "src": "/documentation/de/project-general.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings",
+    "viewport": [
+      816,
+      359
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "es",
+    "screen": "project-general",
+    "src": "/documentation/es/project-general.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings",
+    "viewport": [
+      816,
+      359
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "it",
+    "screen": "project-general",
+    "src": "/documentation/it/project-general.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings",
+    "viewport": [
+      816,
+      359
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "project-general",
+    "src": "/documentation/pt-BR/project-general.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings",
+    "viewport": [
+      816,
+      359
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "fr",
+    "screen": "project-general",
+    "src": "/documentation/fr/project-general.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings",
+    "viewport": [
+      816,
+      359
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "en",
+    "screen": "publish-a-feedback-board-workflow",
+    "src": "/documentation/en/publish-a-feedback-board-workflow.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=feedback",
+    "viewport": [
+      816,
+      566
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "fr",
+    "screen": "publish-a-feedback-board-workflow",
+    "src": "/documentation/fr/publish-a-feedback-board-workflow.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=feedback",
+    "viewport": [
+      816,
+      566
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "de",
+    "screen": "publish-a-feedback-board-workflow",
+    "src": "/documentation/de/publish-a-feedback-board-workflow.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=feedback",
+    "viewport": [
+      816,
+      566
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "es",
+    "screen": "publish-a-feedback-board-workflow",
+    "src": "/documentation/es/publish-a-feedback-board-workflow.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=feedback",
+    "viewport": [
+      816,
+      566
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "publish-a-feedback-board-workflow",
+    "src": "/documentation/pt-BR/publish-a-feedback-board-workflow.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=feedback",
+    "viewport": [
+      816,
+      566
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "it",
+    "screen": "publish-a-feedback-board-workflow",
+    "src": "/documentation/it/publish-a-feedback-board-workflow.png",
+    "date": "2026-10-19",
+    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=feedback",
+    "viewport": [
+      816,
+      566
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
     "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
   }
 ]

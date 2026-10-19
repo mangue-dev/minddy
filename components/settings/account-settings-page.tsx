@@ -1,7 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { AiAutoRotateIcon as CycleIcon, BotIcon as Bot, GitBranchIcon as GitBranch, InboxIcon as Inbox, LockIcon, PlugIcon as Plug, ShieldCheckIcon as ShieldCheck, SlidersHorizontalIcon as SlidersHorizontal, UserIcon as User } from "@hugeicons/core-free-icons";
+import { AiAutoRotateIcon as CycleIcon, BotIcon as Bot, GitBranchIcon as GitBranch, InboxIcon as Inbox, LockIcon, PlugIcon as Plug, ShieldCheckIcon as ShieldCheck, SlidersHorizontalIcon as SlidersHorizontal, TicketIcon as Ticket, UserIcon as User, ViewOffIcon } from "@hugeicons/core-free-icons";
+import { SmartFillIcon } from "@/components/smart-icons";
 import { useAuth } from "@/lib/auth-context";
 import { useMfaStatusQuery } from "@/lib/use-mfa-status";
 import type { SidebarBrowseTarget } from "@/components/secondary-sidebar";
@@ -23,7 +24,13 @@ import { AccountGitConnectionsSection } from "@/components/settings/account-git-
 import { AccountAiKeysSection } from "@/components/settings/account-ai-keys-section";
 import { AccountAnalyticsSection } from "@/components/settings/account-analytics-section";
 import { AccountDataSection } from "@/components/settings/account-data-section";
-import { ACCOUNT_SETTINGS_DEFAULT_TAB } from "@/lib/settings-sections";
+import { AccountIssuesSection, AccountNumoIssuesSection } from "@/components/settings/account-issues-section";
+import { AccountSmartFillSection } from "@/components/settings/account-smart-fill-section";
+import {
+  ACCOUNT_SETTINGS_DEFAULT_TAB,
+  ACCOUNT_SETTINGS_TAB_ALIASES,
+  type AccountSettingsTab,
+} from "@/lib/settings-sections";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 
 export default function AccountSettingsPage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
@@ -39,7 +46,10 @@ export default function AccountSettingsPage({ browse }: { browse?: SidebarBrowse
   // The sections read the account; hold off until it resolves.
   if (!user) return null;
 
-  const tabs: SettingsTab[] = [
+  // One tab per subject (MIN-737): each group of related settings lives in
+  // one place, and a card is never split across two tabs.
+  const tabs: (SettingsTab & { value: AccountSettingsTab })[] = [
+    // Who I am and what I did: identity, then the personal statistics.
     {
       value: "profile",
       label: t("profileTab"),
@@ -54,19 +64,38 @@ export default function AccountSettingsPage({ browse }: { browse?: SidebarBrowse
       indicator: mfa && !mfa.enabled ? t("securityTabIndicator") : undefined,
       content: <AccountSecuritySection />,
     },
+    // How minddy looks and behaves on my screens.
     {
       value: "preferences",
       label: t("preferencesTab"),
       icon: SlidersHorizontal,
-      // Desktop app map goes to `null` elsewhere
-      // (browser, dev): so it has no conditions here.
       content: (
         <>
           <AccountPreferencesSection />
-          <AccountHiddenProjectsSection />
           <AccountDesktopSection />
         </>
       ),
+    },
+    // Which projects my navigation shows: a list that grows with the
+    // workspace, not a preference among others.
+    {
+      value: "hidden-projects",
+      label: t("hiddenProjectsTitle"),
+      icon: ViewOffIcon,
+      content: <AccountHiddenProjectsSection />,
+    },
+    // What happens to an issue because of me.
+    {
+      value: "issues",
+      label: t("issuesTab"),
+      icon: Ticket,
+      content: <AccountIssuesSection />,
+    },
+    {
+      value: "smart-fill",
+      label: t("smartFillTab"),
+      icon: SmartFillIcon,
+      content: <AccountSmartFillSection />,
     },
     {
       value: "cycles",
@@ -80,7 +109,7 @@ export default function AccountSettingsPage({ browse }: { browse?: SidebarBrowse
       icon: Inbox,
       // WHAT lands in the inbox first, WHERE it rings next (MIN-183):
       // push devices only make sense once the categories are chosen,
-      // and it is the same rocker which governs the two surfaces.
+      // and the same switch governs both surfaces.
       content: (
         <>
           <AccountNotificationsSection />
@@ -88,6 +117,21 @@ export default function AccountSettingsPage({ browse }: { browse?: SidebarBrowse
         </>
       ),
     },
+    // Everything Numo and the AI features use: the provider key, the MCP
+    // servers Numo connects to, and where the issues it creates land.
+    {
+      value: "agent",
+      label: t("agentTab"),
+      icon: Bot,
+      content: (
+        <>
+          <AccountAiKeysSection />
+          <AccountMcpClientsSection />
+          <AccountNumoIssuesSection />
+        </>
+      ),
+    },
+    // The other direction: assistants and apps that connect TO minddy.
     {
       value: "mcp",
       label: t("mcpTab"),
@@ -100,24 +144,12 @@ export default function AccountSettingsPage({ browse }: { browse?: SidebarBrowse
       ),
     },
     {
-      value: "mcp-clients",
-      label: t("mcpClientsTab"),
-      icon: Plug,
-      content: <AccountMcpClientsSection />,
-    },
-    {
       value: "git",
       label: t("gitTab"),
       icon: GitBranch,
       content: <AccountGitConnectionsSection />,
     },
-    {
-      value: "agent",
-      label: t("agentTab"),
-      icon: Bot,
-      content: <AccountAiKeysSection />,
-    },
-    // Last tab: export and deletion of the account (MIN-119). It is
+    // Last tab: privacy, export and deletion of the account (MIN-119). It is
     // where we go when we leave, not where we pass every day.
     {
       value: "data",
@@ -126,7 +158,7 @@ export default function AccountSettingsPage({ browse }: { browse?: SidebarBrowse
       content: (
         <>
           {/* Audience measurement before export and deletion: this is the
- only setting of this tab that we just CHANGE rather than undergo. */}
+              only setting of this tab that we just CHANGE rather than undergo. */}
           <AccountAnalyticsSection />
           <AccountDataSection />
         </>
@@ -140,6 +172,7 @@ export default function AccountSettingsPage({ browse }: { browse?: SidebarBrowse
       title={t("title")}
       defaultTab={ACCOUNT_SETTINGS_DEFAULT_TAB}
       tabs={tabs}
+      tabAliases={ACCOUNT_SETTINGS_TAB_ALIASES}
       filterPlaceholder={(count) => t("filterPlaceholder", { count })}
     />
   );

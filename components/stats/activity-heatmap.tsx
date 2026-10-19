@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import type { StatsHeatmap, HeatmapDay } from "@/lib/types";
 import {
@@ -34,6 +34,13 @@ const JOINED_CLASS = "bg-orange-500 dark:bg-orange-400";
 // 16px, shared by the boxes, month labels and days column —
 // this is what ensures that “March” falls well above its week.
 const CELL = "size-3 rounded-[3px]";
+
+/** One week column: the 12px box plus the 4px gutter. */
+const WEEK_STEP = 16;
+/** Right padding left for a month label wider than its 12px column. */
+const LABEL_OVERFLOW = 12;
+/** Below this many columns a month label would collide with the next one. */
+const MONTH_LABEL_SPAN = 3;
 
 /** Rows with a day label (the grid starts on a Sunday). */
 const LABELLED_ROWS = new Set([1, 3, 5]); // lundi, mercredi, vendredi
@@ -120,7 +127,8 @@ function DayDetail({ day, joined }: { day: HeatmapDay; joined: boolean }) {
 }
 
 /**
- * 53-week contribution grid (MIN-85).
+ * Contribution grid of up to 53 weeks (MIN-85), cropped to the most recent
+ * weeks that fit its width (MIN-737).
  *
  * Columns = weeks, rows = days (Sunday → Saturday). Compared to the
  * previous version: a gutter of day labels on the left, and a real
@@ -150,7 +158,32 @@ export function ActivityHeatmap({
     top: number;
   } | null>(null);
 
-  const weeks = useMemo(() => toWeeks(heatmap.days), [heatmap.days]);
+  const allWeeks = useMemo(() => toWeeks(heatmap.days), [heatmap.days]);
+
+  // The grid never scrolls (MIN-737): it keeps the most recent whole weeks
+  // that fit the width, so the current period is always on screen and the
+  // oldest weeks are the ones dropped. Until the width is known the grid is
+  // right-aligned in a clipped box, which shows the same end of the year.
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [fitWeeks, setFitWeeks] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const node = gridRef.current;
+    if (!node) return;
+    const measure = () => {
+      // n columns take n * 16px - 4px; the box's 12px right padding keeps
+      // room for a month label that starts on the last column.
+      const width = node.clientWidth - LABEL_OVERFLOW;
+      setFitWeeks(Math.max(1, Math.floor((width + 4) / WEEK_STEP)));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+  const hiddenWeeks = fitWeeks === null ? 0 : Math.max(0, allWeeks.length - fitWeeks);
+  const weeks = useMemo(() => allWeeks.slice(hiddenWeeks), [allWeeks, hiddenWeeks]);
+  // Index of the first visible day in `heatmap.days`, for the tooltip lookup.
+  const firstDayIndex = hiddenWeeks * 7;
 
   // A month label above the column where a new month begins.
   const monthLabels = useMemo(
@@ -161,6 +194,14 @@ export function ActivityHeatmap({
         const d = parseYmd(first.date);
         const prev = i > 0 ? parseYmd(weeks[i - 1][0].date) : null;
         if (i === 0 || (prev && d.getUTCMonth() !== prev.getUTCMonth())) {
+          // The first column names its month only when the next month starts
+          // far enough away; otherwise the two labels would overlap.
+          if (i === 0) {
+            const next = weeks.findIndex(
+              (other, j) => j > 0 && other[0] && parseYmd(other[0].date).getUTCMonth() !== d.getUTCMonth(),
+            );
+            if (next !== -1 && next < MONTH_LABEL_SPAN) return "";
+          }
           return format.dateTime(d, { month: "short", timeZone: "UTC" });
         }
         return "";
@@ -183,14 +224,14 @@ export function ActivityHeatmap({
   }, [weeks, format]);
 
   // `offsetLeft/offsetTop` are relative to the (positioned) grid, so
-  // the anchor is placed without costly measures and follows the horizontal scrolling.
+  // the anchor is placed without costly measures.
   const onPointerMove = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
       const cell = (event.target as HTMLElement).closest<HTMLElement>(
         "[data-day-index]",
       );
       if (!cell) return;
-      const day = heatmap.days[Number(cell.dataset.dayIndex)];
+      const day = heatmap.days[Number(cell.dataset.dayIndex) + firstDayIndex];
       if (!day) return;
       setHovered((prev) =>
         prev?.day.date === day.date
@@ -198,13 +239,13 @@ export function ActivityHeatmap({
           : { day, left: cell.offsetLeft, top: cell.offsetTop },
       );
     },
-    [heatmap.days],
+    [heatmap.days, firstDayIndex],
   );
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="overflow-x-auto pb-1">
-        <div className="inline-flex gap-2">
+      <div className="pb-1">
+        <div className="flex gap-2">
           {/* Gutter of days. The top offset (mt-4 = 16px) reproduces the
  month line (10px of text) + the 6px gutter which separates it
  from the grid, so that the lines match each other exactly. */}
@@ -222,7 +263,12 @@ export function ActivityHeatmap({
             ))}
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          {/* The measured box: clipped and right-aligned, so even before the
+              first measure the latest weeks are the visible ones. */}
+          <div
+            ref={gridRef}
+            className="flex min-w-0 flex-1 flex-col items-end gap-1.5 overflow-hidden pr-3"
+          >
             {/* Month labels — one 12px track per week, right overflow */}
             <div className="grid grid-flow-col auto-cols-[12px] gap-1 text-[10px] leading-none text-muted-foreground">
               {monthLabels.map((label, i) => (
@@ -232,13 +278,13 @@ export function ActivityHeatmap({
               ))}
             </div>
 
-            {/* Grille : colonnes = semaines, lignes = jours (dim → sam) */}
+            {/* Grid: columns are weeks, rows are days (Sunday to Saturday). */}
             <div
               className="relative grid grid-flow-col grid-rows-7 gap-1"
               onPointerMove={onPointerMove}
               onPointerLeave={() => setHovered(null)}
             >
-              {heatmap.days.map((day, i) => {
+              {weeks.flat().map((day, i) => {
                 const joined = day.date === joinedDate;
                 // “3 tickets · 2 tasks · March 12” — the textual equivalent of
                 // tooltip detail, for screen readers.

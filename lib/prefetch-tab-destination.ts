@@ -141,7 +141,8 @@ export function prefetchAppTabDestination(
       }
       return;
     }
-    case "statistics": {
+    // The profile, the default settings tab, shows the personal statistics.
+    case "settings": {
       const tz = statsTimeZone();
       void queryClient.prefetchQuery({ queryKey: ["stats", tz], queryFn: () => fetchStatsApi(tz) });
       return;

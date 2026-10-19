@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search; MIN-726 issue search order; MIN-733 always-on AI features",
+    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search; MIN-726 issue search order; MIN-733 always-on AI features; MIN-737 account settings reorganization",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -56,13 +56,18 @@
       "lib/issue-search-order.ts",
       "content/documentation/reviews/min-718-hybrid-issue-search.md",
       "components/app-tab-strip.tsx",
-      "lib/app-tab-indicators.ts"
+      "lib/app-tab-indicators.ts",
+      "lib/settings-sections.ts",
+      "lib/settings-section-focus.ts",
+      "components/settings-shell.tsx",
+      "components/settings/account-smart-fill-section.tsx",
+      "content/documentation/reviews/min-737-settings-reorganization.md"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; de translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-695 badge propagation: source and unit-test review of app-shell-chrome, app-sidebar, mobile-navigation, app-tab-strip and lib/app-tab-indicators; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-733 removal of the instance AI switches: source and unit-test review of the admin registry and every former switch reader; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (de changed-passage parity and label review); agent:/root (de translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (de translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de MIN-695 badge paragraph, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (de removal of the sentences describing instance AI switches; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 12,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; de translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-695 badge propagation: source and unit-test review of app-shell-chrome, app-sidebar, mobile-navigation, app-tab-strip and lib/app-tab-indicators; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-733 removal of the instance AI switches: source and unit-test review of the admin registry and every former switch reader; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 account settings reorganization: source review of the Issue indexing card, the settings section catalog, the settings filter and the new-tab palette hand-off in lib/settings-sections.ts and lib/settings-section-focus.ts; unchanged evidence retained; no browser walkthrough, no new captures)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (de changed-passage parity and label review); agent:/root (de translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (de translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de MIN-695 badge paragraph, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (de removal of the sentences describing instance AI switches; retained-meaning self-review; agent review, not human acceptance); agent:/root (de MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-19"
   },
   "related": [
@@ -84,7 +89,7 @@
       "src": "/documentation/de/work-navigation.png",
       "alt": "Projektnavigation neben dem Demo-Ticketboard.",
       "caption": "Über die Projektseitenleiste erreichst du Tickets, Ziele, Seiten und Triage.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -100,7 +105,7 @@
       "src": "/documentation/de/work-search.png",
       "alt": "Suchergebnisse für die Kennung eines Demo-Tickets.",
       "caption": "Die Palette findet das Ticket über seine Kennung neben Projektseiten; beim Öffnen bleiben die Zugriffsregeln bestehen.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -162,6 +167,8 @@ Der Befehl Dokumentation öffnet das öffentliche Handbuch in Ihrer aktuellen Sp
 
 Drücke Command+K unter macOS oder Strg+K unter Windows/Linux, um die Befehlspalette zu öffnen; Command/Strg+P ist ein alternatives Anwendungskürzel. Außerhalb bearbeitbarer Texte öffnet ? die Kürzelhilfe und C die Problemerstellung. Auf einer Problemkarte unter dem Mauszeiger oder an den unterstützten Detailfunktionen öffnet S den Status, P die Priorität, E den Aufwand, A die zuständige Person, L die Kategorien, D das Fälligkeitsdatum und O das Ziel. Diese Einzelbuchstaben unterbrechen keine Eingabe in einem Eingabefeld, Textbereich oder Inhaltseditor. Navigationsfolgen wie G, dann H (Startseite) und G, dann I (Posteingang) verwenden zwei nacheinander gedrückte Tasten. G, dann W führt nur innerhalb eines Projekts zu den Seiten.
 
+Um eine Einstellung zu erreichen, gib ihren Namen in der Befehlspalette oder im Filterfeld oben in der Seitenleiste der Einstellungen ein. Beide finden jede Einstellungskarte und einzelne Einstellungen wie Sprache, Design, jede Palette, Transparenz und die beiden Schalter von **Vorgang starten**. Ein gewähltes Ergebnis öffnet den passenden Einstellungstab, scrollt zur Karte oder Zeile und hebt sie hervor. Command+T unter macOS oder Strg+T unter Windows/Linux öffnet die Palette für einen neuen Tab; eine dort gewählte Einstellung öffnet sich in einem neuen App-Tab. Englische und französische Suchbegriffe funktionieren unabhängig von der Sprache der Oberfläche.
+
 Lies in der Tastenkürzelhilfe die Befehle für deine Plattform. minddy unterscheidet Anwendungskürzel, Aktionen für Problemeigenschaften und native Desktop-Kürzel für Tabs oder Fenster. Prüfe vor einem Befehl den Fokus: Schreiben im Editor und Handeln am umgebenden Problem sind verschiedene Kontexte.
 
 ![Suchergebnisse für die Kennung eines Demo-Tickets.](/documentation/de/work-search.png)
@@ -180,7 +187,7 @@ Für die inhaltliche Suche gelten diese Grenzen:
 
 - Die Suchanfrage braucht mindestens zwei Wörter oder ein Wort mit mindestens sechs Buchstaben. Kennungen wie `MIN-42`, `#42` oder `42` sowie sehr kurze Anfragen nutzen nur die Textsuche.
 - Sie stützt sich auf den Index, den Smart-Fill aus Titel und Beschreibung der Probleme aufbaut. Ein noch nicht indexiertes Problem oder eines, dessen Autor [**Vorgänge indexieren**](/docs/issues#smart-fill-preferences) ausgeschaltet hat, wird nur über seine Wörter gefunden. Probleme im Papierkorb erscheinen nie.
-- Hast du **Vorgänge indexieren** unter **Kontoeinstellungen** → **Einstellungen** ausgeschaltet, vergleichen deine Suchen nur Wörter. Dasselbe gilt, wenn dein KI-Budget erschöpft ist oder wenn der Anbieter nicht innerhalb weniger Sekunden antwortet. Die Textergebnisse bleiben, und es wird kein Fehler angezeigt.
+- Hast du **Vorgänge indexieren** unter **Kontoeinstellungen** → **Smart Fill** → **Vorgangsindexierung** ausgeschaltet, vergleichen deine Suchen nur Wörter. Dasselbe gilt, wenn dein KI-Budget erschöpft ist oder wenn der Anbieter nicht innerhalb weniger Sekunden antwortet. Die Textergebnisse bleiben, und es wird kein Fehler angezeigt.
 - Eine `@`-Suche, deren Text bereits zu einer Person, einem Projekt oder einer Seite passt, wird nicht inhaltlich gesucht. In einem Projekt mit mehr als 3.000 indexierten Problemen werden nur die 3.000 zuletzt indexierten verglichen; die übrigen werden über ihre Wörter gefunden.
 
 Jede neue Suchanfrage nutzt einen KI-Aufruf, der zu deinem Anteil **Automatisierungen** zählt und im Nutzungsverlauf als **Problemsuche** erscheint. Eine innerhalb von etwa 15 Minuten wiederholte Anfrage wird normalerweise nicht erneut berechnet.

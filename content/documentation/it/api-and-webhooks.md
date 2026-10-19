@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12); MIN-693 project roles",
+    "version": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12); MIN-693 project roles; MIN-737 project settings reorganization",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -47,14 +47,16 @@
       "content/documentation/reviews/min-670-feedback-objectives.md",
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
-      "content/documentation/reviews/min-693-project-roles.md"
+      "content/documentation/reviews/min-693-project-roles.md",
+      "components/project-integrations.tsx",
+      "content/documentation/reviews/min-737-settings-reorganization.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained); agent:/root/min693_it with agent:/root (it MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
-    "date": "2026-10-17"
+    "revision": 8,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 integrations list: source review of components/project-integrations.tsx for New integration, the list details and badges, the ⋯ menu with Configure the webhook… and Revoke, the Webhook delivery line and the Objective for new feedback line; no browser walkthrough; the two diagrams remain accurate)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained); agent:/root/min693_it with agent:/root (it MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (it translation of the MIN-737 project-settings second-pass passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [
     "integration-troubleshooting",
@@ -76,7 +78,7 @@
       "src": "/documentation/it/integration-api-and-webhooks-flow.svg",
       "alt": "Schema: Server conserva chiave integrazione. POST ticket o feedback con tipo corretto. Proprietario sceglie destinazione webhook. Ricevente verifica HMAC grezzo e UUID.",
       "caption": "Segui le fasi in questo ordine. Server conserva chiave integrazione. `POST` ticket o feedback con tipo corretto. Proprietario sceglie destinazione webhook. Ricevente verifica HMAC grezzo e UUID.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -108,7 +110,7 @@
       "src": "/documentation/it/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Sequenze distinte di acquisizione backend e SSO browser con segreti diversi.",
       "caption": "La chiave di acquisizione autentica le chiamate server. Il segreto SSO della bacheca firma un token visitatore breve e monouso.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -153,7 +155,7 @@ L’API di integrazione riceve ticket e feedback tramite chiavi di progetto; i w
 
 ## Creare ticket o feedback e ricevere webhook firmati {#integration-api-and-webhooks}
 
-Il proprietario crea un’integrazione dalle impostazioni del progetto. Un’integrazione `issues` invia lavoro al triage; un’integrazione `feedback` raccoglie esigenze con voti e stato pubblico. La chiave `mdy_` viene mostrata una sola volta. Conservala solo sul server in `MINDDY_API_KEY` o `MINDDY_FEEDBACK_KEY`, mai nel browser, in Git o nei log. La revoca è permanente; una chiave sconosciuta o revocata restituisce 401 `invalid_api_key`. Ogni chiave appartiene a un progetto e a un tipo: usarla sull’endpoint sbagliato restituisce 403 `wrong_key_kind`. Un’integrazione non è una persona: non ha un ruolo nel progetto e mantiene i permessi fissi del suo tipo quando cambiano i ruoli dei membri. I lettori non vedono le integrazioni.
+Il proprietario crea un’integrazione con **Nuova integrazione** sulla riga del titolo di **Impostazioni del progetto** → **Integrazioni**. Un’integrazione `issues` invia lavoro al triage; un’integrazione `feedback` raccoglie esigenze con voti e stato pubblico. La chiave `mdy_` viene mostrata una sola volta. Conservala solo sul server in `MINDDY_API_KEY` o `MINDDY_FEEDBACK_KEY`, mai nel browser, in Git o nei log. Ogni integrazione è elencata con nome, prefisso della chiave, data di creazione, ultimo utilizzo e un badge **Ticket** o **Feedback**. Per revocarne una, il proprietario sceglie **Revoca** nel suo menu ⋯ e conferma; l’integrazione porta allora il badge **Revocata** e passa in fondo all’elenco, attenuata. La revoca è permanente; una chiave sconosciuta o revocata restituisce 401 `invalid_api_key`. Ogni chiave appartiene a un progetto e a un tipo: usarla sull’endpoint sbagliato restituisce 403 `wrong_key_kind`. Un’integrazione non è una persona: non ha un ruolo nel progetto e mantiene i permessi fissi del suo tipo quando cambiano i ruoli dei membri. I lettori non vedono le integrazioni.
 
 ![Schema: Server conserva chiave integrazione. POST ticket o feedback con tipo corretto. Proprietario sceglie destinazione webhook. Ricevente verifica HMAC grezzo e UUID.](/documentation/it/integration-api-and-webhooks-flow.svg)
 
@@ -178,7 +180,7 @@ curl --fail-with-body --request POST "$MINDDY_ORIGIN/api/v1/issues" \
 
 ### Verificare e deduplicare eventi {#receive}
 
-Le integrazioni `issues` possono inviare `issue.created`, `issue.status_changed` e `issue.updated`. Una nuova destinazione webhook deve essere scelta dal proprietario. Gli agenti possono regolare eventi e ambito di una destinazione esistente o disattivarla; non possono aprire un nuovo canale di uscita. L’ambito `integration` include solo i ticket creati con quella chiave; `all` include l’intero progetto.
+Le integrazioni `issues` possono inviare `issue.created`, `issue.status_changed` e `issue.updated`. Una nuova destinazione webhook deve essere scelta dal proprietario con **Configura il webhook…** nel menu ⋯ dell’integrazione. Una volta impostata la destinazione, la riga **Webhook** sotto l’integrazione mostra l’ultima consegna, accettata o rifiutata con la data, oppure **Nessuna consegna ancora**. Gli agenti possono regolare eventi e ambito di una destinazione esistente o disattivarla; non possono aprire un nuovo canale di uscita. L’ambito `integration` include solo i ticket creati con quella chiave; `all` include l’intero progetto.
 
 `X-minddy-Signature` contiene il prefisso `sha256=` e un HMAC-SHA256 calcolato sui byte originali. La chiave HMAC è il digest SHA-256 della chiave API, rappresentato come stringa esadecimale minuscola. Confronta la firma in tempo costante prima di fidarti del payload, senza analizzarlo e riserializzarlo. `X-minddy-Delivery` corrisponde a `delivery_id`: usa questo UUID per eliminare i duplicati.
 
@@ -213,4 +215,4 @@ Verifica che il visitatore apra Il mio feedback con l’identità prevista. Un t
 
 ## Scegliere un obiettivo per un feedback {#feedback-objective-default}
 
-Per un’integrazione `feedback`, il proprietario può scegliere **Obiettivo** alla creazione o accanto all’integrazione esistente in **Impostazioni → Integrazioni**. Sono accettati solo obiettivi attivi dello stesso progetto. Ogni nuovo invio `POST /api/v1/feedback` eredita l’impostazione, anche con `analyze: false`; non inviare `objective_id` nel payload API. La risposta 201 include l’`objective_id` assegnato o `null`. Cambiare o rimuovere l’impostazione riguarda solo gli invii futuri. Un obiettivo non disponibile restituisce 422 `objective_not_found`: scegline uno attivo o rimuovi l’impostazione prima di riprovare. La revisione di Numo non deduce obiettivi. La conversione eredita l’obiettivo e le categorie del feedback.
+Per un’integrazione `feedback`, il proprietario può scegliere l’obiettivo alla creazione, oppure più tardi nella riga **Obiettivo dei nuovi feedback** sotto l’integrazione esistente in **Impostazioni del progetto** → **Integrazioni**; quel selettore può anche creare un nuovo obiettivo. Sono accettati solo obiettivi attivi dello stesso progetto. Ogni nuovo invio `POST /api/v1/feedback` eredita l’impostazione, anche con `analyze: false`; non inviare `objective_id` nel payload API. La risposta 201 include l’`objective_id` assegnato o `null`. Cambiare o rimuovere l’impostazione riguarda solo gli invii futuri. Un obiettivo non disponibile restituisce 422 `objective_not_found`: scegline uno attivo o rimuovi l’impostazione prima di riprovare. La revisione di Numo non deduce obiettivi. La conversione eredita l’obiettivo e le categorie del feedback.

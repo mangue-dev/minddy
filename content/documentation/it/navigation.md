@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search; MIN-726 issue search order; MIN-733 always-on AI features",
+    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search; MIN-726 issue search order; MIN-733 always-on AI features; MIN-737 account settings reorganization",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -56,13 +56,18 @@
       "lib/issue-search-order.ts",
       "content/documentation/reviews/min-718-hybrid-issue-search.md",
       "components/app-tab-strip.tsx",
-      "lib/app-tab-indicators.ts"
+      "lib/app-tab-indicators.ts",
+      "lib/settings-sections.ts",
+      "lib/settings-section-focus.ts",
+      "components/settings-shell.tsx",
+      "components/settings/account-smart-fill-section.tsx",
+      "content/documentation/reviews/min-737-settings-reorganization.md"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; it translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-695 badge propagation: source and unit-test review of app-shell-chrome, app-sidebar, mobile-navigation, app-tab-strip and lib/app-tab-indicators; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-733 removal of the instance AI switches: source and unit-test review of the admin registry and every former switch reader; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (it changed-passage parity and label review); agent:/root (it translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (it translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it MIN-695 badge paragraph, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (it removal of the sentences describing instance AI switches; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 12,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; it translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-695 badge propagation: source and unit-test review of app-shell-chrome, app-sidebar, mobile-navigation, app-tab-strip and lib/app-tab-indicators; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-733 removal of the instance AI switches: source and unit-test review of the admin registry and every former switch reader; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 account settings reorganization: source review of the Issue indexing card, the settings section catalog, the settings filter and the new-tab palette hand-off in lib/settings-sections.ts and lib/settings-section-focus.ts; unchanged evidence retained; no browser walkthrough, no new captures)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (it changed-passage parity and label review); agent:/root (it translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (it translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it MIN-695 badge paragraph, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (it removal of the sentences describing instance AI switches; retained-meaning self-review; agent review, not human acceptance); agent:/root (it MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-19"
   },
   "related": [
@@ -84,7 +89,7 @@
       "src": "/documentation/it/work-navigation.png",
       "alt": "Navigazione del progetto accanto alla bacheca dei ticket dimostrativi.",
       "caption": "La barra del progetto permette di aprire ticket, obiettivi, pagine e triage.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -100,7 +105,7 @@
       "src": "/documentation/it/work-search.png",
       "alt": "Risultati della ricerca dell’identificativo di un ticket dimostrativo.",
       "caption": "La palette trova il ticket tramite identificativo insieme alle pagine del progetto; aprire un risultato conserva le sue regole di accesso.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -162,6 +167,8 @@ Apri la palette dei comandi dal controllo di ricerca della navigazione. Cerca un
 
 Premi Command+K su macOS o Ctrl+K su Windows/Linux per aprire la palette dei comandi; Command/Ctrl+P è una scorciatoia alternativa dell’applicazione. Fuori dal testo modificabile, ? apre la guida delle scorciatoie e C la creazione di ticket. Su una scheda di ticket sotto il puntatore o nei suoi controlli di dettaglio supportati, S apre lo stato, P la priorità, E l’impegno, A l’assegnatario, L le categorie, D la scadenza e O l’obiettivo. Queste azioni con un solo tasto non intercettano la scrittura in campi, aree di testo o editor di contenuti. Le sequenze di navigazione come G e poi H (Home) o G e poi I (Posta in arrivo) usano due tasti successivi. G e poi W porta a Pagine solo nel contesto di un progetto.
 
+Per raggiungere un’impostazione, digitane il nome nella palette dei comandi o nel campo di filtro in cima alla barra laterale delle impostazioni. Entrambi trovano ogni riquadro di impostazioni e le singole impostazioni, come la lingua, il tema, ogni palette, la trasparenza e i due interruttori di **Avviare un ticket**. Scegliendo un risultato si apre la scheda di impostazioni giusta, la pagina scorre fino al riquadro o alla riga e lo evidenzia. Comando+T su macOS o Ctrl+T su Windows/Linux apre la palette della nuova scheda; un’impostazione scelta lì si apre in una nuova scheda dell’app. Le parole chiave in inglese e in francese funzionano qualunque sia la lingua dell’interfaccia.
+
 Usa la guida delle scorciatoie per esaminare i comandi disponibili sulla tua piattaforma. minddy distingue scorciatoie dell’applicazione, azioni sulle proprietà dei ticket e scorciatoie native per schede o finestre desktop. Controlla dove si trova il focus prima di usare un comando: scrivere dentro un editor e agire sul ticket circostante sono contesti diversi.
 
 ![Risultati della ricerca dell’identificativo di un ticket dimostrativo.](/documentation/it/work-search.png)
@@ -180,7 +187,7 @@ La ricerca per significato ha questi limiti:
 
 - La ricerca deve contenere almeno due parole, o una parola di almeno sei lettere. Gli identificativi come `MIN-42`, `#42` o `42`, e le ricerche molto brevi, usano solo la ricerca testuale.
 - Si basa sull’indice che Riempimento intelligente costruisce dal titolo e dalla descrizione dei ticket. Un ticket non ancora indicizzato, o il cui autore ha disattivato [**Indicizza i ticket**](/docs/issues#smart-fill-preferences), viene trovato solo tramite le sue parole. I ticket nel cestino non compaiono mai.
-- Se hai disattivato **Indicizza i ticket** in **Impostazioni account** → **Preferenze**, le tue ricerche confrontano solo le parole. Lo stesso accade quando il tuo budget IA è esaurito o quando il provider non risponde entro pochi secondi. I risultati testuali restano e non viene mostrato alcun errore.
+- Se hai disattivato **Indicizza i ticket** in **Impostazioni account** → **Smart Fill** → **Indicizzazione dei ticket**, le tue ricerche confrontano solo le parole. Lo stesso accade quando il tuo budget IA è esaurito o quando il provider non risponde entro pochi secondi. I risultati testuali restano e non viene mostrato alcun errore.
 - Una ricerca `@` il cui testo corrisponde già a una persona, un progetto o una pagina non viene cercata per significato. In un progetto con più di 3.000 ticket indicizzati, vengono confrontati solo i 3.000 indicizzati più di recente; gli altri si trovano tramite le loro parole.
 
 Ogni nuova ricerca usa una chiamata IA, conteggiata nella tua quota **Automazioni** e mostrata nella cronologia di utilizzo come **Ricerca dei ticket**. Una ricerca ripetuta entro circa 15 minuti di norma non viene addebitata di nuovo.

@@ -53,7 +53,7 @@ vi.mock("sonner", async (importOriginal) => ({
 }));
 vi.mock("@/components/settings/settings-ui", () => ({
   SettingsGroup: ({ children, action }: { children?: ReactNode; action?: ReactNode }) => createElement(Fragment, null, children, action),
-  SettingsRow: () => null,
+  SettingsRow: ({ control }: { control?: ReactNode }) => createElement(Fragment, null, control),
 }));
 vi.mock("@/components/settings-shell", () => ({ SettingsShell: () => null }));
 vi.mock("@/components/project-members", () => ({ ProjectMembers: () => null }));
@@ -64,8 +64,8 @@ vi.mock("@/components/settings/project-git-section", () => ({ ProjectGitSection:
 vi.mock("@/components/settings/project-import-section", () => ({ ProjectImportSection: () => null }));
 vi.mock("@/components/settings/project-recurrences-section", () => ({ ProjectRecurrencesSection: () => null }));
 vi.mock("@/components/settings/smart-assign-section", () => ({ SmartAssignSection: () => null }));
-vi.mock("@/components/settings/project-visibility-section", () => ({ ProjectVisibilitySection: () => null }));
-vi.mock("@/components/project-icon-picker", () => ({ ProjectIconPicker: () => null }));
+vi.mock("@/components/settings/project-visibility-section", () => ({ ProjectVisibilityRow: () => null }));
+vi.mock("@/components/settings/project-identity-header", () => ({ ProjectIdentityHeader: () => null }));
 vi.mock("@/components/route-skeletons", () => ({ SettingsPageSkeleton: () => null }));
 
 let root: Root;

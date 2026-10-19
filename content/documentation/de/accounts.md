@@ -18,12 +18,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-18",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677)",
+    "version": "0.11.1 candidate (MIN-677); MIN-737 account settings reorganization",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -65,14 +65,19 @@
       "content/documentation/reviews/sign-out-other-devices.md",
       "lib/theme-presets.ts",
       "app/theme-presets.css",
-      "content/documentation/reviews/min-696-theme-presets.md"
+      "content/documentation/reviews/min-696-theme-presets.md",
+      "components/settings/account-settings-page.tsx",
+      "components/settings/account-desktop-section.tsx",
+      "components/settings/account-issues-section.tsx",
+      "content/documentation/reviews/min-737-settings-reorganization.md",
+      "components/settings/account-hidden-projects-section.tsx"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root (theme palette, high-contrast and transparency controls: source and test review; the preferences capture predates these rows and is retained)",
-    "language": "agent:/root (en source and de translation self-review of the changed paragraph)",
-    "date": "2026-10-18"
+    "revision": 12,
+    "fact": "agent:/root (theme palette, high-contrast and transparency controls: source and test review; the preferences capture predates these rows and is retained); agent:/root (MIN-737 account settings reorganization: source review of the tab order, the in-place profile editing, the Preferences, Issues and AI & Numo contents and the Privacy & data tab; profile-and-preferences-workflow recaptured on 2026-10-19 in all six locales from the local candidate showing the profile header edited in place (avatar menu, name field or mobile sheet; the Edit profile dialog was removed the same day), and inspected; no other browser walkthrough); agent:/root (MIN-737 second pass: Hidden projects moved from Preferences to its own account tab; source review of components/settings/account-settings-page.tsx; no new captures)",
+    "language": "agent:/root (en source and de translation self-review of the changed paragraph); agent:/root (de MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (de translation of the MIN-737 second-pass Hidden projects sentence with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [
     "choose-an-instance",
@@ -104,7 +109,7 @@
       "src": "/documentation/de/account-security-workflow.png",
       "alt": "Karte zur Zwei-Faktor-Authentifizierung mit Aktivieren-Schaltfläche.",
       "caption": "Beginne hier, bestätige anschließend den Authenticator und bewahre die Wiederherstellungscodes sicher auf.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -119,14 +124,14 @@
       "id": "profile-and-preferences-workflow",
       "kind": "screenshot",
       "src": "/documentation/de/profile-and-preferences-workflow.png",
-      "alt": "Profileinstellungen mit Avatar, Benutzername und schreibgeschützter E-Mail-Adresse.",
-      "caption": "Speichere die geprüften Profiländerungen. Die E-Mail-Adresse bleibt schreibgeschützt.",
-      "revision": 11,
+      "alt": "Profilkopf mit Avatar und Bearbeitungssymbol, Name und schreibgeschützter E-Mail-Adresse.",
+      "caption": "Wähle den Avatar, um einen zu erzeugen oder hochzuladen, oder den Namen, um ihn zu ändern; die E-Mail-Adresse bleibt schreibgeschützt.",
+      "revision": 12,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-19",
       "viewport": [
         816,
-        416
+        256
       ],
       "theme": "light",
       "padding": 24,
@@ -138,7 +143,7 @@
       "src": "/documentation/de/profile-and-preferences-preferences-workflow.png",
       "alt": "Sprachauswahl, Schalter für helles, dunkles und Systemdesign, Palettenauswahl für hellen und dunklen Modus und Transparenzschalter.",
       "caption": "Die Kontosprache und die Sprache der öffentlichen Website werden getrennt eingestellt.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -155,7 +160,7 @@
       "src": "/documentation/de/privacy-and-account-deletion-workflow.png",
       "alt": "Löschvorschau mit eigenen Projekten, Tickets und Mitgliedern, die Zugriff verlieren.",
       "caption": "Lies die Vorschau und exportiere gewünschte Daten, bevor du die Löschbestätigung öffnest.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -232,11 +237,11 @@ Sind weder der zweite Faktor noch ein Wiederherstellungscode verfügbar, kontakt
 
 ## Profil und Oberflächenpräferenzen ändern {#profile-and-preferences}
 
-Öffne die Kontoeinstellungen im Kontomenü. Gib im Profil einen nicht leeren Anzeigenamen ein und speichere. Die E-Mail-Adresse ist schreibgeschützt. Erzeuge einen Avatar oder lade ein Bild über die Avatar-Steuerung hoch. Warte auf das Ergebnis und prüfe den Avatar in einem Kommentar oder in der Mitgliederliste; derselbe Avatar gilt für alle Projekte und Gespräche. Folge bei abgewiesenen Dateien der Validierungsmeldung, statt sie wiederholt hochzuladen.
+Öffne die Kontoeinstellungen im Kontomenü oder wähle dein Profil oben in diesem Menü. Der Tab **Profil** öffnet sich zuerst. Er zeigt deinen Avatar, deinen Namen und deine E-Mail-Adresse, gefolgt von deiner [persönlichen Statistik](/docs/personal-statistics). Wähle deinen Avatar und dann **Neuer Lorelei-Avatar** oder **Bild hochladen**; die Änderung gilt, sobald sie gelungen ist. Wähle deinen Namen, um ihn zu ändern: Am Computer wird er zu einem Feld, das Enter oder ein Klick daneben speichert und Escape verwirft; auf dem Telefon öffnet sich ein Bereich mit **Benutzername** und **Speichern**. Der Name darf nicht leer sein. Die E-Mail-Adresse ist schreibgeschützt. Warte auf das Ergebnis und prüfe den Avatar in einem Kommentar oder in der Mitgliederliste; derselbe Avatar gilt für alle Projekte und Gespräche. Folge bei abgewiesenen Dateien der Validierungsmeldung, statt sie wiederholt hochzuladen.
 
 Das Quellbild darf höchstens 10 MiB groß sein. Der Server prüft lesbare Bilddaten, berücksichtigt die Orientierung und schneidet mittig auf einen WebP-Avatar mit 256 × 256 Pixeln zu.
 
-![Profileinstellungen mit Avatar, Benutzername und schreibgeschützter E-Mail-Adresse.](/documentation/de/profile-and-preferences-workflow.png)
+![Profilkopf mit Avatar und Bearbeitungssymbol, Name und schreibgeschützter E-Mail-Adresse.](/documentation/de/profile-and-preferences-workflow.png)
 
 ### Die Oberfläche einstellen {#preferences}
 
@@ -244,13 +249,13 @@ Wähle in den Präferenzen Sprache und Design und prüfe eine andere Seite. Die 
 
 Das Design wählt den hellen, dunklen oder System-Modus. **Palette für hellen Modus** und **Palette für dunklen Modus** legen jeweils die Farben eines Modus fest. **Akzentfarben** (minddy, Blau, Violett, Grün, Orange, Rosé) behalten die Farben von minddy und färben nur Schaltflächen und den Fokusring um; **Vollständige Paletten** (Solarized, Catppuccin, Nord) färben alle Flächen um; **Hoher Kontrast** steht unter Barrierefreiheit. Die Palette des angezeigten Modus gilt sofort; die andere wird gespeichert und erscheint, sobald ihr Modus aktiv wird, auch wenn System einem Wechsel des Betriebssystems folgt. Hoher Kontrast verstärkt den Kontrast von Text und Rahmen, umrandet Felder, Menüs, Dialoge und Tabs, markiert die aktuelle Seite und das ausgewählte Element, zeigt den Tastaturfokus immer an und hält Menüs deckend. Schalte **Transparenz** aus, damit Menüs, Popover und die Befehlspalette deckend und ohne Unschärfe erscheinen. Paletten und Transparenz werden im Konto gespeichert; ein anderes Gerät übernimmt sie beim nächsten Laden einer Seite.
 
-Wähle das Sendetastenkürzel unter Tastatur. Es gilt für Kommentare und Numo. Nutze die Sendeschaltfläche, wenn das Betriebssystem das Kürzel abfängt; Modifikatortasten unterscheiden sich je Plattform. Ticketpräferenzen wie automatische Zuweisung und Status von Numo-Tickets gehören ebenfalls zum Konto und ändern keine Einstellungen anderer Mitglieder.
+Wähle das Sendetastenkürzel unter Tastatur. Es gilt für Kommentare und Numo. Nutze die Sendeschaltfläche, wenn das Betriebssystem das Kürzel abfängt; Modifikatortasten unterscheiden sich je Plattform. Projekte, die du ausgeblendet hast, stehen in einem eigenen Tab **Ausgeblendete Projekte**, wo du sie wieder einblenden kannst. Der Tab **Einstellungen** enthält außerdem die Karte **Desktop-App**: Im Web führt sie zum Download der Desktop-App, in der Desktop-App zeigt sie den verbundenen Server, den Vorschaukanal, sofern verfügbar, und die App-Version. Ticketpräferenzen gehören ebenfalls zum Konto und ändern keine Einstellungen anderer Mitglieder: Die automatische Zuweisung liegt im Tab **Vorgänge**, der Status von Tickets, die Numo erstellt, unter **KI & Numo** → **Von Numo erstellte Vorgänge**.
 
 ![Sprachauswahl, Schalter für helles, dunkles und Systemdesign, Palettenauswahl für hellen und dunklen Modus und Transparenzschalter.](/documentation/de/profile-and-preferences-preferences-workflow.png)
 
 ## Analyse steuern und Konto sorgfältig löschen {#privacy-and-account-deletion}
 
-Wenn Analytics konfiguriert ist, zeigen die Kontoeinstellungen einen Zustimmungsschalter und einen Link zur Cookie-Richtlinie. Das Abschalten ändert die Zustimmung zur Messung auf diesem Gerät sofort und speichert die Auswahl im Konto. Eine bereits vorhandene lokale Entscheidung auf einem anderen Gerät kann dort weiterhin gelten. Ist kein Analytics-Dienst konfiguriert, fehlt der Bereich.
+Wenn Analytics konfiguriert ist, zeigt der Tab **Datenschutz & Daten** der Kontoeinstellungen einen Zustimmungsschalter und einen Link zur Cookie-Richtlinie. Das Abschalten ändert die Zustimmung zur Messung auf diesem Gerät sofort und speichert die Auswahl im Konto. Eine bereits vorhandene lokale Entscheidung auf einem anderen Gerät kann dort weiterhin gelten. Ist kein Analytics-Dienst konfiguriert, fehlt der Bereich.
 
 Die Zustimmung ist von den für den Kontobetrieb erforderlichen Daten getrennt. Lies die Datenschutzrichtlinie der Instanz und prüfe aktivierte externe Anbieter. Beim selbst betriebenen minddy bestimmen Konfiguration und Richtlinien des Betreibers die Dienstziele. Analytics abzuschalten entfernt keine KI- oder Git-Integrationen.
 
@@ -258,7 +263,7 @@ Die Zustimmung ist von den für den Kontobetrieb erforderlichen Daten getrennt. 
 
 ### Löschvorschau prüfen {#deletion}
 
-Exportiere vor der Kontolöschung benötigte Daten im Bereich Daten. Lies die Vorschau deiner eigenen Projekte, betroffenen Mitglieder, Tickets, Kommentare und des aktiven Abonnements. Kläre vor der Bestätigung die Folgen für andere Menschen, die an deinen Projekten beteiligt sind.
+Exportiere vor der Kontolöschung benötigte Daten im Tab **Datenschutz & Daten**. Lies die Vorschau deiner eigenen Projekte, betroffenen Mitglieder, Tickets, Kommentare und des aktiven Abonnements. Kläre vor der Bestätigung die Folgen für andere Menschen, die an deinen Projekten beteiligt sind.
 
 Öffne die Löschbestätigung erst, wenn du bereit bist. Gib deine Konto-E-Mail-Adresse und bei Passwortkonten das Passwort ein. Konten ohne Passwort benötigen eine kürzlich erfolgte Anmeldung. Folge den Hinweisen, wenn die erneute Authentifizierung abgelehnt wird, statt die Anfrage wiederholt zu senden. Eine erfolgreiche Löschung meldet das Konto ab und führt zur öffentlichen Website zurück. Dies ist kein wiederherstellbarer Papierkorb. Halte Exporte privat und bearbeite verbleibende Abonnement- oder Anbieterfragen über die jeweiligen Abrechnungs- und Anbieterfunktionen.
 

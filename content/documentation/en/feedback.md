@@ -20,12 +20,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-693 project roles; MIN-718 hybrid issue search",
+    "version": "0.11.1 development (UI refinements); MIN-693 project roles; MIN-718 hybrid issue search; MIN-737 project settings reorganization",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -70,14 +70,16 @@
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
       "content/documentation/reviews/min-693-project-roles.md",
-      "content/documentation/reviews/min-718-hybrid-issue-search.md"
+      "content/documentation/reviews/min-718-hybrid-issue-search.md",
+      "components/project-integrations.tsx",
+      "content/documentation/reviews/min-737-settings-reorganization.md"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_en_fr (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_en_fr with agent:/root (en pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained); agent:/root (en changed-passage parity and localized-label review); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-718 added passages with catalog UI labels; agent review, not human acceptance)",
-    "date": "2026-10-17"
+    "revision": 12,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_en_fr (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 integrations list: source review of the Objective for new feedback line and its in-place objective creation; no browser walkthrough; feedback-objective-selection predates this layout and is retained pending recapture; MIN-737: publish-a-feedback-board-workflow recaptured on 2026-10-19 in all six locales from the local candidate on the demo board — email identity, URL concealed — and inspected)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_en_fr with agent:/root (en pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained); agent:/root (en changed-passage parity and localized-label review); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-718 added passages with catalog UI labels; agent review, not human acceptance); agent:/root (en MIN-737 project-settings second-pass passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [
     "api-and-webhooks"
@@ -101,17 +103,18 @@
       "id": "publish-a-feedback-board-workflow",
       "kind": "screenshot",
       "src": "/documentation/en/publish-a-feedback-board-workflow.png",
-      "alt": "Enabled public feedback board with local SSO identity configured and its URL concealed.",
-      "caption": "The owner enables the board and chooses visitor identity. This demo uses a local SSO signer; the URL and signing secret are concealed.",
-      "revision": 11,
+      "alt": "Enabled public feedback board with email-code visitor identity, the Enable SSO action and its URL concealed.",
+      "caption": "The owner enables the board and chooses visitor identity. This demo board uses email verification; its URL is concealed.",
+      "revision": 12,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-19",
       "viewport": [
         816,
-        378
+        566
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "submit-and-follow-feedback-workflow",
@@ -119,7 +122,7 @@
       "src": "/documentation/en/submit-and-follow-feedback-workflow.png",
       "alt": "Visitor feedback form with a title, description and public visibility enabled.",
       "caption": "A signed-in visitor submits a need and chooses whether it appears publicly. The example was actually submitted with automatic review disabled.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -135,7 +138,7 @@
       "src": "/documentation/en/feedback-objective-selection.png",
       "alt": "Component preview of the feedback objective selector and a feedback integration default, both set to Docs.",
       "caption": "Objective selectors with demonstration data. New feedback inherits the integration default.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -152,7 +155,7 @@
       "src": "/documentation/en/feedback-pages-and-views-workflow.png",
       "alt": "Published feedback guide selected in the board navigation and readable without sign-in.",
       "caption": "Publish a page, enable page tabs and select it for the board. This demonstration page was opened anonymously; the opaque URL keeps `noindex`.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -186,7 +189,7 @@ Turning off the board makes its visitor pages unavailable. Server-to-server inge
 
 Optional Numo review applies to submitted feedback and depends on project/instance settings, providers and owner usage. With review enabled, submissions wait for review before publication; with it disabled they are not held for a nonexistent review. Check the review queue after a demo submission. Numo sends public replies only when explicitly requested.
 
-![Enabled public feedback board with local SSO identity configured and its URL concealed.](/documentation/en/publish-a-feedback-board-workflow.png)
+![Enabled public feedback board with email-code visitor identity, the Enable SSO action and its URL concealed.](/documentation/en/publish-a-feedback-board-workflow.png)
 
 ## Submit, vote and follow feedback {#submit-and-follow-feedback}
 
@@ -226,7 +229,7 @@ The list shows the linked objective below the author and categories. In the obje
 
 As a project member, choose **Objective** in the feedback properties, or when creating internal feedback. Choose **None** to remove the link. The objective must belong to this project. This association is internal and does not expose private objectives on the public board. It does not count as issue progress.
 
-The project owner can choose an optional objective when creating a feedback integration in **Settings → Integrations**, or change it beside an existing feedback integration. New API submissions inherit that objective, including with `analyze: false`; changing the default does not move existing feedback. If the objective is in the trash, choose an active objective or clear the default before submitting again. Numo never chooses an objective during feedback review. Ask Numo explicitly to link or unlink a request when you want its help.
+The project owner can choose an optional objective when creating a feedback integration in **Project settings** → **Integrations**, or change it later on the **Objective for new feedback** line under an existing feedback integration. That picker can also create a new objective. New API submissions inherit that objective, including with `analyze: false`; changing the default does not move existing feedback. If the objective is in the trash, choose an active objective or clear the default before submitting again. Numo never chooses an objective during feedback review. Ask Numo explicitly to link or unlink a request when you want its help.
 
 Promotion starts the new issue with the feedback objective and categories. You can change them in the creation form. If no objective was chosen, promotion keeps it empty, even with Smart Fill enabled. Changing a feedback objective later does not move an already linked issue. Feedback can merge only when both requests have the same objective, including both having none; align their objectives first if the team decides they describe the same need.
 

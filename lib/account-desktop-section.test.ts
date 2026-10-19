@@ -83,6 +83,15 @@ vi.mock("@/components/ui/popover", async (importOriginal) => {
   const stubs = await uiStubs();
   return { ...(await importOriginal<Record<string, unknown>>()), Popover: stubs.Popover, PopoverTrigger: stubs.PopoverTrigger, PopoverContent: stubs.PopoverContent };
 });
+// The web download row links through the app router, which a unit render
+// does not mount; a plain anchor keeps the destination observable.
+vi.mock("@/components/app-link", async () => {
+  const { createElement: element } = await import("react");
+  return {
+    default: ({ children, href, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) =>
+      element("a", { ...props, href }, children),
+  };
+});
 vi.mock("@/components/ui/tooltip", async (importOriginal) => {
   const stubs = await uiStubs();
   return { ...(await importOriginal<Record<string, unknown>>()), Tooltip: stubs.Tooltip, TooltipTrigger: stubs.TooltipTrigger, TooltipContent: stubs.TooltipContent };
@@ -163,9 +172,13 @@ describe("AccountDesktopSection", () => {
     return match;
   }
 
-  it("does not render in a browser", async () => {
+  it("offers the download in a browser instead of the app controls", async () => {
     await renderSection();
-    expect(container.textContent).toBe("");
+    // One card in every context (MIN-737): on the web it carries the link
+    // that used to sit in the profile, never controls the bridge would own.
+    expect(container.textContent).toContain(messages.Account.desktopSectionTitle);
+    expect(container.querySelector('a[href="/download"]')).not.toBeNull();
+    expect(container.textContent).not.toContain("Preview the latest features");
   });
 
   it("renders Cloud state and routes each control to its argument-free bridge action", async () => {

@@ -37,7 +37,7 @@ const screens=[
  ['search',base,async p=>{await p.keyboard.press('ControlOrMeta+k');await p.getByRole('dialog').waitFor();await p.getByRole('dialog').locator('input').fill('AUR-2');},p=>p.getByRole('dialog')],
  ['inbox','/home',async(p,m)=>{await p.getByRole('button',{name:m.Nav.inbox,exact:true}).click();await p.locator('#inbox-popover').waitFor();await p.locator('#inbox-popover').locator('button[aria-pressed]').filter({hasText:new RegExp('^'+m.Inbox.filterAll)}).click();await p.locator('#inbox-popover').getByText('AUR-2',{exact:false}).first().waitFor();},p=>p.locator('#inbox-popover')],
  ['task-notebook',base,async(p,m)=>{await p.getByRole('button',{name:new RegExp('^'+m.Scratchpad.openAria.split('(')[0].trim())}).first().click();await p.getByRole('dialog',{name:m.Scratchpad.title,exact:true}).waitFor();},p=>p.getByRole('dialog')],
- ['statistics','/statistics',null,p=>p.locator('main')],
+ ['statistics','/settings',async(p,m)=>{await p.getByRole('region',{name:m.Stats.yearStory,exact:true}).first().waitFor();},p=>p.locator('main')],
  ['trash','/trash',null,p=>p.locator('main')],
 ];
 for(const locale of(process.env.CAPTURE_LOCALES?.split(',')??CAPTURE_LOCALES)){

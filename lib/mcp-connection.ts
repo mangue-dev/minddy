@@ -26,7 +26,7 @@ export function mcpConnectionNeedsAuth(connection: {
 }
 
 export function mcpSettingsHref(connectionId?: string): string {
-  const params = new URLSearchParams({ tab: "mcp-clients" });
+  const params = new URLSearchParams({ tab: "agent" });
   if (connectionId) params.set("mcp_connection", connectionId);
   return `/settings?${params}`;
 }

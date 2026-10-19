@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12)",
+    "version": "0.11.1 candidate (cd1843e12); MIN-737 account settings reorganization",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -35,14 +35,16 @@
       "lib/server/account-import.ts",
       "content/documentation/reviews/remaining-account-capture-candidates.json",
       "content/documentation/reviews/account-transfer-execution.json",
-      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
+      "components/settings/account-settings-page.tsx",
+      "content/documentation/reviews/min-737-settings-reorganization.md"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-737 account settings reorganization: source review of the Privacy & data tab name; the retained screenshots predate the rename; no browser walkthrough, no new captures)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root (it MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [],
   "aliases": [],
@@ -56,7 +58,7 @@
       "src": "/documentation/it/transfer-between-instances-workflow.png",
       "alt": "Impostazioni di trasferimento con pulsante per importare un file.",
       "caption": "Scegli il JSON integro esportato dall’account di origine; controlla il risultato prima di chiudere.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -73,7 +75,7 @@
       "src": "/documentation/it/transfer-between-instances-export-workflow.png",
       "alt": "Controllo di esportazione dell’account.",
       "caption": "Controllo di esportazione dell’account. Il file esclude chiavi e token; la cattura mostra il pulsante prima del download.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -94,7 +96,7 @@
 
 ## Esportare e importare {#transfer-between-instances}
 
-Accedi all’istanza di origine e apri la sezione Dati nelle impostazioni dell’account. Scarica l’esportazione JSON e conservala privatamente: contiene dati dell’account e dei progetti. Crea il tuo account nell’istanza di destinazione oppure accedi a quello esistente, verifica l’indirizzo e scegli lì il comando di importazione. Seleziona il file esportato senza modificarlo e attendi il risultato prima di chiudere la pagina.
+Accedi all’istanza di origine e apri la scheda **Privacy e dati** nelle impostazioni dell’account. Scarica l’esportazione JSON e conservala privatamente: contiene dati dell’account e dei progetti. Crea il tuo account nell’istanza di destinazione oppure accedi a quello esistente, verifica l’indirizzo e scegli lì il comando di importazione. Seleziona il file esportato senza modificarlo e attendi il risultato prima di chiudere la pagina.
 
 L’importazione aggiunge dati senza sostituire quelli della destinazione. Gli identificatori vengono conservati quando possono essere riutilizzati in sicurezza; in caso di conflitto ne vengono assegnati di nuovi. Il risultato indica gli identificatori rimappati e le appartenenze ai progetti ignorate. I riferimenti di appartenenza a progetti esistenti vengono ripristinati solo se il progetto di destinazione esiste già e il riferimento è autorizzato. Dopo il ricaricamento della pagina, controlla progetti, ticket, pagine e dati personali.
 

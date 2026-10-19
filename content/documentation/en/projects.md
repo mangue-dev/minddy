@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 10,
+  "revision": 11,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-18",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-693 project roles",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-693 project roles; MIN-737 project settings reorganization",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -51,14 +51,19 @@
       "content/documentation/reviews/min-692-hidden-projects.md",
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
-      "content/documentation/reviews/min-693-project-roles.md"
+      "content/documentation/reviews/min-693-project-roles.md",
+      "components/settings/project-identity-header.tsx",
+      "components/settings/inline-edit-field.tsx",
+      "components/project-categories.tsx",
+      "components/settings/project-settings-page.tsx",
+      "content/documentation/reviews/min-737-settings-reorganization.md"
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-685 sidebar context menu source and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (hide-project confirmation from the sidebar menu: source and unit-test review of components/project-context-actions.tsx; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (en MIN-685 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en hide-project confirmation sentence, catalog UI labels and retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-18"
+    "revision": 11,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-685 sidebar context menu source and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (hide-project confirmation from the sidebar menu: source and unit-test review of components/project-context-actions.tsx; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 project settings: source review of the General identity header edited in place (icon menu, name and key fields or phone sheet, no Save button), the Categories card, the three Members cards and the Hidden projects account tab; project-settings-steps and project-members-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-refresh screens project-general and project-members) and inspected; no other browser walkthrough)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (en MIN-685 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en hide-project confirmation sentence, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-737 project-settings second-pass passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [
     "issues",
@@ -80,33 +85,35 @@
       "id": "project-settings-steps",
       "kind": "screenshot",
       "src": "/documentation/en/project-general.png",
-      "alt": "General project settings with name, key, icon and a separate trash action.",
-      "caption": "Check the project name and key before saving. Moving the project to trash is a separate action.",
-      "revision": 10,
+      "alt": "Project header with the icon and its edit badge, the name, the key and the Issues, Members, Objectives, Categories and Created figures.",
+      "caption": "Select the icon, the name or the key to change it in place; moving the project to trash stays a separate action below.",
+      "revision": 11,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-19",
       "viewport": [
-        1178,
-        563
+        816,
+        359
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "project-members-steps",
       "kind": "screenshot",
       "src": "/documentation/en/project-members.png",
-      "alt": "Email invitation form and three demonstration members, with the owner identified.",
+      "alt": "Invite by email card above the Members card, which lists three demonstration members with the owner identified.",
       "caption": "Invite by account email and check who owns the project before removing another member’s access.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-19",
       "viewport": [
-        1178,
-        503
+        816,
+        414
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -122,18 +129,20 @@ A project brings together issues, objectives, pages and the people who work on t
 
 Open the project, then its settings. Project ownership controls administrative settings. Members and readers can inspect the general section, hide the project for themselves and leave it, but do not gain the owner's editing controls.
 
-As owner, enter a nonempty name and a valid project key, then save. The key is normalized to uppercase and uses 2 to 5 ASCII letters. Review the resulting identifiers after changing it. Use the icon and appearance controls to distinguish the project in navigation; these visual choices do not change membership.
+The **General** tab opens with the project's identity: its icon, its name and key, then five figures: **Issues**, **Members**, **Objectives**, **Categories** and **Created**. As owner, you change the icon, name and key where they are shown; there is no Save button. Select the icon and choose **New orb** (offered only while no image covers the orb), **Upload an image**, **Import from a website…**, which asks for the website address and imports its icon when you choose **Import**, or, when an image is set, **Remove the image**. Select the name or the key to edit it: on a computer it becomes a field, where Enter or leaving the field saves and Escape cancels; on a phone it opens a sheet with **Save**. The name cannot be empty. The key is normalized to uppercase and must have 2 to 5 letters (A–Z); otherwise an error appears and the key is not saved. Review the resulting identifiers after changing it. The icon only distinguishes the project in navigation; it does not change membership. Members and readers see the same header without these controls.
 
-Other sections manage collaborators, recurring issues, Git, import, integrations, automation and feedback. Follow the corresponding task guide before enabling a provider or automatic work. Account preferences such as your interface language are separate from project configuration.
+Other sections manage categories, collaborators, recurring issues, Git, import, integrations, automation and feedback. Follow the corresponding task guide before enabling a provider or automatic work. Account preferences such as your interface language are separate from project configuration.
+
+In **Categories**, the owner and members manage the categories used to label issues. Choose **New category** on the card's title line: a row with a color dot and a name field appears at the top of the list. Press Enter or choose **Add** to create the category; Escape leaves without creating it. Select a category's color dot to choose another color, which applies at once (on a phone the colors open in a sheet), or select its name to rename it in place. The delete button asks for confirmation, then removes the category from every issue.
 
 
-![General project settings with name, key, icon and a separate trash action.](/documentation/en/project-general.png)
+![Project header with the icon and its edit badge, the name, the key and the Issues, Members, Objectives, Categories and Created figures.](/documentation/en/project-general.png)
 
 ### Hide a project for yourself {#hide-project}
 
-Hide a project you no longer follow day to day to keep it out of your sidebar and home without leaving it. In the project's general settings, choose **Hide** under **Visibility for you**, or right-click the project in the sidebar and choose **Hide project**, then confirm. The menu asks first because the project leaves your navigation; the settings button hides it at once. Everyone in the project can hide it, including the owner and readers.
+Hide a project you no longer follow day to day to keep it out of your sidebar and home without leaving it. In the project's general settings, choose **Hide** in the **Danger zone**, or right-click the project in the sidebar and choose **Hide project**, then confirm. The menu asks first because the project leaves your navigation; the settings button hides it at once. Everyone in the project can hide it, including the owner and readers.
 
-Hiding changes only your own navigation. The preference is saved on your account, so it follows you after signing in again and on your other devices. You keep your access and can still open and edit the project from a direct link or from **Account settings** → **Preferences** → **Hidden projects**. Other members still see the project, and its routines, integrations and notifications keep running. Opening a hidden project does not bring it back to your sidebar.
+Hiding changes only your own navigation. The preference is saved on your account, so it follows you after signing in again and on your other devices. You keep your access and can still open and edit the project from a direct link or from the **Hidden projects** tab of **Account settings**. Other members still see the project, and its routines, integrations and notifications keep running. Opening a hidden project does not bring it back to your sidebar.
 
 To bring it back, choose **Show** in **Hidden projects** or in the project's general settings, or choose **Show project** from its sidebar menu. If the change cannot be saved, an error appears and the project returns to its previous state; try again. Unlike leaving or moving to trash, hiding never removes access or content.
 
@@ -147,12 +156,12 @@ The owner can also right-click the project in the sidebar and choose **Move to t
 
 ## Invite people to a project {#project-members}
 
-The project owner manages membership in **Project settings** → **Members**. Ask the collaborator for the email they use on this instance, choose their role, send the invitation and check its pending state. Choose **Member** for someone who works on the project, or **Reader** for someone who only follows it. For a reader, turn on **Can comment** if they should take part in discussions. While the invitation is pending, the owner can change its role and comment option. The same email on another instance does not grant access here.
+The project owner manages membership in **Project settings** → **Members**. Ask the collaborator for the email they use on this instance, then, in the **Invite by email** card, enter that address, choose their role and choose **Invite**. The invitation appears in the **Pending invitations** card until it is accepted; current members are listed in the **Members** card, whose title shows their number. Choose **Member** for someone who works on the project, or **Reader** for someone who only follows it. For a reader, turn on **Can comment** if they should take part in discussions. While the invitation is pending, the owner can change its role and comment option. The same email on another instance does not grant access here.
 
 The invited person signs in with that account and opens Inbox. Accept the pending invitation to join with the role it carries, or decline it if the project is unexpected. The first-use join dialog helps share your email with the owner; it does not let you join projects without an invitation.
 
 
-![Email invitation form and three demonstration members, with the owner identified.](/documentation/en/project-members.png)
+![Invite by email card above the Members card, which lists three demonstration members with the owner identified.](/documentation/en/project-members.png)
 
 ### Owner, member and reader roles {#member-permissions}
 
