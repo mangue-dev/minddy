@@ -2919,6 +2919,41 @@
     "storage": false
   },
   {
+    "file": "lib/server/collaborators.ts",
+    "operation": "from",
+    "resource": "projects",
+    "line": 29,
+    "storage": false
+  },
+  {
+    "file": "lib/server/collaborators.ts",
+    "operation": "from",
+    "resource": "project_members",
+    "line": 30,
+    "storage": false
+  },
+  {
+    "file": "lib/server/collaborators.ts",
+    "operation": "from",
+    "resource": "projects",
+    "line": 37,
+    "storage": false
+  },
+  {
+    "file": "lib/server/collaborators.ts",
+    "operation": "from",
+    "resource": "project_members",
+    "line": 46,
+    "storage": false
+  },
+  {
+    "file": "lib/server/collaborators.ts",
+    "operation": "from",
+    "resource": "project_members",
+    "line": 63,
+    "storage": false
+  },
+  {
     "file": "lib/server/comment-lifecycle.ts",
     "operation": "rpc",
     "resource": "delete_comment_thread_atomic",
@@ -7220,84 +7255,84 @@
     "file": "lib/server/members.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 128,
+    "line": 149,
     "storage": false
   },
   {
     "file": "lib/server/members.ts",
     "operation": "rpc",
     "resource": "create_project_invitation_encrypted_role_guarded",
-    "line": 161,
+    "line": 182,
     "storage": false
   },
   {
     "file": "lib/server/members.ts",
     "operation": "rpc",
     "resource": "create_project_invitation_role_guarded",
-    "line": 175,
+    "line": 196,
     "storage": false
   },
   {
     "file": "lib/server/members.ts",
     "operation": "from",
     "resource": "project_invitations",
-    "line": 287,
+    "line": 308,
     "storage": false
   },
   {
     "file": "lib/server/members.ts",
     "operation": "from",
     "resource": "project_invitations",
-    "line": 347,
+    "line": 368,
     "storage": false
   },
   {
     "file": "lib/server/members.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 438,
+    "line": 459,
     "storage": false
   },
   {
     "file": "lib/server/members.ts",
     "operation": "from",
     "resource": "project_invitations",
-    "line": 474,
+    "line": 495,
     "storage": false
   },
   {
     "file": "lib/server/members.ts",
     "operation": "from",
     "resource": "project_invitations",
-    "line": 487,
+    "line": 508,
     "storage": false
   },
   {
     "file": "lib/server/members.ts",
     "operation": "rpc",
     "resource": "update_project_member_role_guarded",
-    "line": 547,
+    "line": 568,
     "storage": false
   },
   {
     "file": "lib/server/members.ts",
     "operation": "rpc",
     "resource": "update_project_invitation_role_guarded",
-    "line": 588,
+    "line": 609,
     "storage": false
   },
   {
     "file": "lib/server/members.ts",
     "operation": "rpc",
     "resource": "transfer_project_ownership_guarded",
-    "line": 625,
+    "line": 646,
     "storage": false
   },
   {
     "file": "lib/server/members.ts",
     "operation": "from",
     "resource": "project_invitations",
-    "line": 675,
+    "line": 696,
     "storage": false
   },
   {
