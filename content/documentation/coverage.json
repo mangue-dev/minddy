@@ -347,7 +347,7 @@
       "member"
     ],
     "type": "explanation",
-    "source": "`app/(app)/statistics/page.tsx`; `components/stats/effort-durations.tsx`; K/productivity",
+    "source": "`components/stats/profile-statistics.tsx`; `components/stats/effort-durations.tsx`; K/productivity",
     "gaps": "Measurement definitions, date range, estimates/limitations, privacy and empty data",
     "illustration": "New demo statistics",
     "requiresFigures": true,

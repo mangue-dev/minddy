@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12)",
+    "version": "0.11.1 candidate (cd1843e12); MIN-737 account settings reorganization",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -35,14 +35,16 @@
       "lib/server/account-import.ts",
       "content/documentation/reviews/remaining-account-capture-candidates.json",
       "content/documentation/reviews/account-transfer-execution.json",
-      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
+      "components/settings/account-settings-page.tsx",
+      "content/documentation/reviews/min-737-settings-reorganization.md"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-737 account settings reorganization: source review of the Privacy & data tab name; the retained screenshots predate the rename; no browser walkthrough, no new captures)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root (es MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [],
   "aliases": [],
@@ -56,7 +58,7 @@
       "src": "/documentation/es/transfer-between-instances-workflow.png",
       "alt": "Ajustes de transferencia con botón para importar un archivo.",
       "caption": "Elige el JSON intacto exportado de la cuenta de origen; revisa el resultado antes de cerrar.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -73,7 +75,7 @@
       "src": "/documentation/es/transfer-between-instances-export-workflow.png",
       "alt": "Control de exportación de la cuenta.",
       "caption": "Control de exportación de la cuenta. El archivo excluye claves y tokens; la captura muestra el botón antes de descargarlo.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -94,7 +96,7 @@
 
 ## Exportar e importar {#transfer-between-instances}
 
-Inicie sesión en la instancia de origen y abra la sección de datos de los ajustes de la cuenta. Descargue el archivo JSON y guárdelo de forma privada: contiene datos de la cuenta y de los proyectos. Cree una cuenta o inicie sesión en la instancia de destino, compruebe su dirección y use allí el control de importación. Seleccione el archivo exportado sin modificarlo y espere el resultado antes de cerrar la página.
+Inicie sesión en la instancia de origen y abra la pestaña **Privacidad y datos** de los ajustes de la cuenta. Descargue el archivo JSON y guárdelo de forma privada: contiene datos de la cuenta y de los proyectos. Cree una cuenta o inicie sesión en la instancia de destino, compruebe su dirección y use allí el control de importación. Seleccione el archivo exportado sin modificarlo y espere el resultado antes de cerrar la página.
 
 La importación añade datos; no sustituye los que ya existen en el destino. Conserva los identificadores que pueden reutilizarse de forma segura y asigna otros nuevos cuando hay conflictos. El resultado informa de los identificadores reasignados y de las membresías omitidas. Las referencias de membresía de proyectos existentes solo se restauran si el proyecto ya existe en el destino y la referencia está autorizada. Después de que la página se recargue, revise los proyectos, tickets, páginas y datos personales.
 

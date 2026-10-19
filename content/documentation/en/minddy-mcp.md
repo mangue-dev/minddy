@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 10,
+  "revision": 11,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12); 0.11.1 candidate (89ebb59a5); MIN-693 project roles; MIN-718 hybrid issue search",
+    "version": "0.11.1 candidate (cd1843e12); 0.11.1 candidate (89ebb59a5); MIN-693 project roles; MIN-718 hybrid issue search; MIN-737 account settings reorganization",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -62,14 +62,16 @@
       "lib/project-roles.ts",
       "content/documentation/reviews/min-693-project-roles.md",
       "lib/server/issue-reads.ts",
-      "content/documentation/reviews/min-718-hybrid-issue-search.md"
+      "content/documentation/reviews/min-718-hybrid-issue-search.md",
+      "components/settings/account-settings-page.tsx",
+      "content/documentation/reviews/min-737-settings-reorganization.md"
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun); agent:/root with agent:/root/review_en_fr (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-728 agent image access: source and unit-test review of view_image and minddy_get_image; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 en network guidance and terminology review); agent:/root/review_en_fr with agent:/root (en pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-718 added passages with catalog UI labels; agent review, not human acceptance)",
-    "date": "2026-10-17"
+    "revision": 11,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun); agent:/root with agent:/root/review_en_fr (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-728 agent image access: source and unit-test review of view_image and minddy_get_image; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 account settings reorganization: source review of the AI & Numo and minddy MCP tab contents; unchanged evidence retained; no browser walkthrough, no new captures)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 en network guidance and terminology review); agent:/root/review_en_fr with agent:/root (en pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-718 added passages with catalog UI labels; agent review, not human acceptance); agent:/root (en MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [
     "numo",
@@ -90,7 +92,7 @@
       "src": "/documentation/en/external-minddy-mcp-workflow.png",
       "alt": "minddy MCP client picker for Claude, Codex and other assistants.",
       "caption": "Select your client to display its installation command or configuration.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -107,7 +109,7 @@
       "src": "/documentation/en/external-minddy-mcp-install-workflow.png",
       "alt": "Codex installation dialog showing the minddy Cloud endpoint.",
       "caption": "This example connects to minddy Cloud. For self-hosting, use your own instance origin; the displayed command was not executed for this capture.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -152,7 +154,7 @@ Availability does not guarantee network reachability. Both the MCP client and th
 
 External clients can use available minddy tools for issues, plans, comments, pages, feedback, cycles, routines and the task notebook within their authorized permissions. Tools follow your current role in each project on every call, so a role change applies without reconnecting. As a reader you get the read tools, plus the comment tools when the owner turned on **Can comment** for you. The MCP server is available on every Cloud plan; running the client's AI still depends on that client's configuration and costs.
 
-Account settings' minddy MCP section lists external client access and its revocation controls. Revoke a client when you no longer trust or use it. This is separate from MCP for Numo, which connects Numo to other services. Never paste access tokens into issues, public feedback or screenshots.
+Account settings' minddy MCP section lists external client access and its revocation controls. Revoke a client when you no longer trust or use it. This is separate from the **MCP for Numo** card in the **AI & Numo** tab, which connects Numo to other services. Never paste access tokens into issues, public feedback or screenshots.
 
 ![Codex installation dialog showing the minddy Cloud endpoint.](/documentation/en/external-minddy-mcp-install-workflow.png)
 

@@ -18,12 +18,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-18",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677)",
+    "version": "0.11.1 candidate (MIN-677); MIN-737 account settings reorganization",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -65,14 +65,19 @@
       "content/documentation/reviews/sign-out-other-devices.md",
       "lib/theme-presets.ts",
       "app/theme-presets.css",
-      "content/documentation/reviews/min-696-theme-presets.md"
+      "content/documentation/reviews/min-696-theme-presets.md",
+      "components/settings/account-settings-page.tsx",
+      "components/settings/account-desktop-section.tsx",
+      "components/settings/account-issues-section.tsx",
+      "content/documentation/reviews/min-737-settings-reorganization.md",
+      "components/settings/account-hidden-projects-section.tsx"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root (theme palette, high-contrast and transparency controls: source and test review; the preferences capture predates these rows and is retained)",
-    "language": "agent:/root (en source and fr translation self-review of the changed paragraph)",
-    "date": "2026-10-18"
+    "revision": 12,
+    "fact": "agent:/root (theme palette, high-contrast and transparency controls: source and test review; the preferences capture predates these rows and is retained); agent:/root (MIN-737 account settings reorganization: source review of the tab order, the in-place profile editing, the Preferences, Issues and AI & Numo contents and the Privacy & data tab; profile-and-preferences-workflow recaptured on 2026-10-19 in all six locales from the local candidate showing the profile header edited in place (avatar menu, name field or mobile sheet; the Edit profile dialog was removed the same day), and inspected; no other browser walkthrough); agent:/root (MIN-737 second pass: Hidden projects moved from Preferences to its own account tab; source review of components/settings/account-settings-page.tsx; no new captures)",
+    "language": "agent:/root (en source and fr translation self-review of the changed paragraph); agent:/root (fr MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (fr translation of the MIN-737 second-pass Hidden projects sentence with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [
     "choose-an-instance",
@@ -104,7 +109,7 @@
       "src": "/documentation/fr/account-security-workflow.png",
       "alt": "Carte de double authentification avec le bouton Activer.",
       "caption": "Commencez ici, puis vérifiez l’authentificateur et conservez les codes de récupération à l’abri.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -119,14 +124,14 @@
       "id": "profile-and-preferences-workflow",
       "kind": "screenshot",
       "src": "/documentation/fr/profile-and-preferences-workflow.png",
-      "alt": "Réglages du profil : avatar, nom d’utilisateur et adresse email en lecture seule.",
-      "caption": "Enregistrez les changements du profil après validation ; l’adresse email reste en lecture seule.",
-      "revision": 11,
+      "alt": "En-tête du profil avec l’avatar et son badge de modification, le nom et l’adresse email en lecture seule.",
+      "caption": "Sélectionnez l’avatar pour en générer ou en importer un, ou le nom pour le changer ; l’adresse email reste en lecture seule.",
+      "revision": 12,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-19",
       "viewport": [
         816,
-        416
+        256
       ],
       "theme": "light",
       "padding": 24,
@@ -138,7 +143,7 @@
       "src": "/documentation/fr/profile-and-preferences-preferences-workflow.png",
       "alt": "Sélecteur de langue, commandes des thèmes clair, sombre et système, sélecteurs de palette des modes clair et sombre et interrupteur de transparence.",
       "caption": "La langue du compte et celle du site public se règlent séparément.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -155,7 +160,7 @@
       "src": "/documentation/fr/privacy-and-account-deletion-workflow.png",
       "alt": "Aperçu de suppression listant les projets possédés, les tickets et les membres privés d’accès.",
       "caption": "Lisez l’aperçu et exportez les données à conserver avant d’ouvrir la confirmation de suppression.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -238,11 +243,11 @@ Si aucun facteur ni code de récupération n’est disponible, contactez l’op�
 
 ## Modifier son profil et ses préférences {#profile-and-preferences}
 
-Ouvrez les paramètres depuis le menu du compte. Dans le profil, saisissez un nom non vide et enregistrez. L’adresse email est en lecture seule. Générez un nouvel avatar ou importez une image avec les contrôles correspondants. Attendez le résultat et vérifiez l’avatar dans un commentaire ou une liste de membres ; il suit le compte entre projets et conversations. Si un fichier est refusé, suivez le message de validation plutôt que de le renvoyer à répétition.
+Ouvrez les paramètres depuis le menu du compte, ou choisissez votre profil en haut de ce menu. L’onglet **Profil** s’ouvre en premier. Il affiche votre avatar, votre nom et votre adresse email, suivis de vos [statistiques personnelles](/docs/personal-statistics). Sélectionnez votre avatar, puis choisissez **Nouvel avatar Lorelei** ou **Importer une image** ; le changement s’applique dès qu’il réussit. Sélectionnez votre nom pour le changer : sur ordinateur, il devient un champ, qu’Entrée ou un clic ailleurs enregistre et qu’Échap annule ; sur téléphone, il ouvre un panneau avec **Nom d'utilisateur** et **Enregistrer**. Le nom ne peut pas être vide. L’adresse email est en lecture seule. Attendez le résultat et vérifiez l’avatar dans un commentaire ou une liste de membres ; il suit le compte entre projets et conversations. Si un fichier est refusé, suivez le message de validation plutôt que de le renvoyer à répétition.
 
 L’image source ne doit pas dépasser 10 MiB. Le serveur vérifie les octets lisibles, applique l’orientation et recadre au centre en avatar WebP de 256 × 256.
 
-![Réglages du profil : avatar, nom d’utilisateur et adresse email en lecture seule.](/documentation/fr/profile-and-preferences-workflow.png)
+![En-tête du profil avec l’avatar et son badge de modification, le nom et l’adresse email en lecture seule.](/documentation/fr/profile-and-preferences-workflow.png)
 
 ### Choisir le comportement de l’interface {#preferences}
 
@@ -250,13 +255,13 @@ Dans les préférences, sélectionnez la langue et le thème puis vérifiez une 
 
 Le thème choisit le mode clair, sombre ou système. **Palette du mode clair** et **Palette du mode sombre** règlent chacune les couleurs d'un mode. Les **couleurs d'accent** (minddy, Bleu, Violet, Vert, Orange, Rose) gardent les couleurs de minddy et ne recolorent que les boutons et l'anneau de focus ; les **palettes complètes** (Solarized, Catppuccin, Nord) recolorent toutes les surfaces ; **Contraste élevé** figure sous Accessibilité. La palette du mode affiché s'applique immédiatement ; l'autre est enregistrée et apparaît dès que son mode redevient actif, y compris quand Système suit un changement du système d'exploitation. Contraste élevé renforce le contraste du texte et des bordures, détoure les champs, menus, dialogues et onglets, marque la page courante et l'élément sélectionné, affiche toujours le focus clavier et garde les menus opaques. Désactivez **Transparence** pour rendre opaques, sans flou, les menus, les pop-overs et la palette de commandes. Palettes et transparence sont enregistrées sur le compte ; un autre appareil les applique au prochain chargement de page.
 
-Choisissez le raccourci d’envoi dans les réglages clavier. Il s’applique aux commentaires et à Numo. Utilisez le bouton d’envoi si la plateforme intercepte le raccourci ; les touches modificatrices diffèrent selon l’OS. Les préférences de tickets, comme l’assignation automatique et le statut des tickets créés par Numo, appartiennent aussi au compte et ne changent pas celles des autres membres.
+Choisissez le raccourci d’envoi dans les réglages clavier. Il s’applique aux commentaires et à Numo. Utilisez le bouton d’envoi si la plateforme intercepte le raccourci ; les touches modificatrices diffèrent selon l’OS. Les projets que vous avez masqués sont listés dans leur propre onglet **Projets masqués**, où vous pouvez les réafficher. **Préférences** contient aussi la carte **Application de bureau** : sur le web, elle mène au téléchargement de l’app de bureau ; dans l’app de bureau, elle affiche le serveur connecté, le canal de prévisualisation lorsqu’il est disponible et la version de l’application. Les préférences de tickets appartiennent aussi au compte et ne changent pas celles des autres membres : l’assignation automatique se trouve dans l’onglet **Tickets**, et le statut des tickets créés par Numo dans **IA et Numo** → **Tickets créés par Numo**.
 
 ![Sélecteur de langue, commandes des thèmes clair, sombre et système, sélecteurs de palette des modes clair et sombre et interrupteur de transparence.](/documentation/fr/profile-and-preferences-preferences-workflow.png)
 
 ## Gérer la confidentialité et supprimer son compte {#privacy-and-account-deletion}
 
-Lorsque l’analytics est configuré, les réglages du compte affichent un contrôle de consentement et un lien vers la politique des cookies. Le désactiver change immédiatement le consentement aux mesures sur cet appareil et enregistre le choix dans le compte. Le choix local déjà présent sur un autre appareil peut continuer à le régir. Si aucun service analytics n’est configuré, la section est absente.
+Lorsque l’analytics est configuré, l’onglet **Confidentialité et données** des paramètres du compte affiche un contrôle de consentement et un lien vers la politique des cookies. Le désactiver change immédiatement le consentement aux mesures sur cet appareil et enregistre le choix dans le compte. Le choix local déjà présent sur un autre appareil peut continuer à le régir. Si aucun service analytics n’est configuré, la section est absente.
 
 Le consentement est distinct des données nécessaires au fonctionnement du compte. Consultez la politique de confidentialité de l’instance et les fournisseurs externes que vous avez activés. En auto-hébergement, la configuration et les politiques de l’opérateur déterminent les destinations des services ; désactiver l’analytics ne retire pas les intégrations IA ou Git.
 
@@ -264,7 +269,7 @@ Le consentement est distinct des données nécessaires au fonctionnement du comp
 
 ### Lire l’aperçu de suppression {#deletion}
 
-Avant de supprimer le compte, exportez les données à conserver depuis la section Données. Lisez l’aperçu des projets dont vous êtes propriétaire, des membres affectés, des tickets, des commentaires et de l’abonnement actif. Les conséquences sur les projets possédés touchent d’autres personnes ; réglez ces questions avant de confirmer.
+Avant de supprimer le compte, exportez les données à conserver depuis l’onglet **Confidentialité et données**. Lisez l’aperçu des projets dont vous êtes propriétaire, des membres affectés, des tickets, des commentaires et de l’abonnement actif. Les conséquences sur les projets possédés touchent d’autres personnes ; réglez ces questions avant de confirmer.
 
 Ouvrez la confirmation de suppression seulement lorsque vous êtes prêt. Saisissez l’email du compte et, pour un compte avec mot de passe, ce mot de passe. Les comptes sans mot de passe exigent une connexion récente. Suivez les indications d’un refus d’authentification récente plutôt que de réessayer à l’aveugle. Une suppression réussie déconnecte le compte et revient au site public. Ce n’est pas une corbeille récupérable. Gardez les exports privés et traitez les questions restantes d’abonnement ou de fournisseur dans les contrôles de facturation et de service correspondants.
 

@@ -20,12 +20,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-693 project roles; MIN-718 hybrid issue search",
+    "version": "0.11.1 development (UI refinements); MIN-693 project roles; MIN-718 hybrid issue search; MIN-737 project settings reorganization",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -70,14 +70,16 @@
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
       "content/documentation/reviews/min-693-project-roles.md",
-      "content/documentation/reviews/min-718-hybrid-issue-search.md"
+      "content/documentation/reviews/min-718-hybrid-issue-search.md",
+      "components/project-integrations.tsx",
+      "content/documentation/reviews/min-737-settings-reorganization.md"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_en_fr (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, fr wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_en_fr with agent:/root (fr pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, fr wording and new-control review; existing procedural evidence retained); agent:/root (fr changed-passage parity and localized-label review); agent:/root/min693_fr with agent:/root (fr MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (fr translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-17"
+    "revision": 12,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_en_fr (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, fr wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 integrations list: source review of the Objective for new feedback line and its in-place objective creation; no browser walkthrough; feedback-objective-selection predates this layout and is retained pending recapture; MIN-737: publish-a-feedback-board-workflow recaptured on 2026-10-19 in all six locales from the local candidate on the demo board — email identity, URL concealed — and inspected)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_en_fr with agent:/root (fr pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, fr wording and new-control review; existing procedural evidence retained); agent:/root (fr changed-passage parity and localized-label review); agent:/root/min693_fr with agent:/root (fr MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (fr translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr translation of the MIN-737 project-settings second-pass passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [
     "api-and-webhooks"
@@ -101,17 +103,18 @@
       "id": "publish-a-feedback-board-workflow",
       "kind": "screenshot",
       "src": "/documentation/fr/publish-a-feedback-board-workflow.png",
-      "alt": "Board public de retours activé, avec identité SSO locale configurée et URL masquée.",
-      "caption": "Le propriétaire active le board et choisit l’identité des visiteurs. Cet exemple utilise une signature SSO locale ; l’URL et le secret de signature sont masqués.",
-      "revision": 11,
+      "alt": "Board public de retours activé, avec identité des visiteurs par code e-mail, l’action Activer le SSO et URL masquée.",
+      "caption": "Le propriétaire active le board et choisit l’identité des visiteurs. Ce board de démonstration utilise la vérification par e-mail ; son URL est masquée.",
+      "revision": 12,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-19",
       "viewport": [
         816,
-        378
+        566
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "submit-and-follow-feedback-workflow",
@@ -119,7 +122,7 @@
       "src": "/documentation/fr/submit-and-follow-feedback-workflow.png",
       "alt": "Formulaire visiteur avec titre, description et visibilité publique activée.",
       "caption": "Un visiteur identifié soumet un besoin et choisit sa visibilité. L’exemple a été réellement envoyé avec la revue automatique désactivée.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -135,7 +138,7 @@
       "src": "/documentation/fr/feedback-objective-selection.png",
       "alt": "Aperçu des composants de sélection d’objectif pour un retour et une intégration, tous deux réglés sur Docs.",
       "caption": "Sélecteurs d’objectif avec des données de démonstration. Les nouveaux retours héritent du réglage de l’intégration.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -152,7 +155,7 @@
       "src": "/documentation/fr/feedback-pages-and-views-workflow.png",
       "alt": "Guide des retours publié, sélectionné dans la navigation du board et lisible sans connexion.",
       "caption": "Publiez une page, activez les onglets de pages et sélectionnez-la pour le board. Cette page de démonstration a été ouverte anonymement ; son URL opaque conserve `noindex`.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -186,7 +189,7 @@ Désactiver le board rend ses pages inaccessibles aux visiteurs. L’ingestion d
 
 La revue Numo facultative s’applique aux retours soumis et dépend des réglages du projet et de l’instance, des fournisseurs et du budget du propriétaire. Si elle est activée, les soumissions attendent leur revue avant publication ; si elle est désactivée, elles n’attendent pas une revue inexistante. Vérifiez la file de revue après une soumission de démonstration. Numo n’envoie une réponse publique que sur demande explicite.
 
-![Board public de retours activé, avec identité SSO locale configurée et URL masquée.](/documentation/fr/publish-a-feedback-board-workflow.png)
+![Board public de retours activé, avec identité des visiteurs par code e-mail, l’action Activer le SSO et URL masquée.](/documentation/fr/publish-a-feedback-board-workflow.png)
 
 ## Soumettre, voter et suivre un retour {#submit-and-follow-feedback}
 
@@ -226,7 +229,7 @@ La liste affiche l’objectif lié sous l’auteur et les catégories. Dans les 
 
 En tant que membre du projet, choisissez **Objectif** dans les propriétés du retour ou lors de sa création en interne. Choisissez **Aucun** pour retirer le lien. L’objectif doit appartenir à ce projet. Ce lien reste interne et n’expose pas les objectifs privés sur le tableau public. Il ne contribue pas à la progression des tickets.
 
-Le propriétaire du projet peut choisir un objectif facultatif lors de la création d’une intégration de retours dans **Paramètres → Intégrations**, ou le modifier à côté d’une intégration existante. Les nouveaux retours reçus par l’API héritent de cet objectif, y compris avec `analyze: false` ; modifier ce réglage ne déplace pas les retours existants. Si l’objectif est dans la corbeille, choisissez un objectif actif ou retirez le réglage avant un nouvel envoi. Numo ne choisit jamais d’objectif lors de la revue des retours. Demandez-lui explicitement de lier ou délier un retour si vous souhaitez son aide.
+Le propriétaire du projet peut choisir un objectif facultatif lors de la création d’une intégration de retours dans **Paramètres du projet** → **Intégrations**, ou le modifier ensuite sur la ligne **Objectif des nouveaux retours** sous une intégration de retours existante. Ce sélecteur peut aussi créer un nouvel objectif. Les nouveaux retours reçus par l’API héritent de cet objectif, y compris avec `analyze: false` ; modifier ce réglage ne déplace pas les retours existants. Si l’objectif est dans la corbeille, choisissez un objectif actif ou retirez le réglage avant un nouvel envoi. Numo ne choisit jamais d’objectif lors de la revue des retours. Demandez-lui explicitement de lier ou délier un retour si vous souhaitez son aide.
 
 La conversion en ticket reprend l’objectif et les catégories du retour. Vous pouvez les modifier dans le formulaire de création. Sans objectif choisi, la conversion laisse ce champ vide, même si Smart Fill est activé. Modifier ensuite l’objectif du retour ne déplace pas un ticket déjà lié. Une fusion exige que les deux retours aient le même objectif, ou n’en aient aucun ; alignez leurs objectifs si l’équipe décide qu’ils décrivent le même besoin.
 

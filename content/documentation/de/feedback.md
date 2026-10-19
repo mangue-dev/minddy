@@ -20,12 +20,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-693 project roles; MIN-718 hybrid issue search",
+    "version": "0.11.1 development (UI refinements); MIN-693 project roles; MIN-718 hybrid issue search; MIN-737 project settings reorganization",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -70,14 +70,16 @@
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
       "content/documentation/reviews/min-693-project-roles.md",
-      "content/documentation/reviews/min-718-hybrid-issue-search.md"
+      "content/documentation/reviews/min-718-hybrid-issue-search.md",
+      "components/project-integrations.tsx",
+      "content/documentation/reviews/min-737-settings-reorganization.md"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, de wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_de_es with agent:/root (de pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, de wording and new-control review; existing procedural evidence retained); agent:/root (de changed-passage parity and localized-label review); agent:/root/min693_de with agent:/root (de MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (de translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-17"
+    "revision": 12,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, de wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 integrations list: source review of the Objective for new feedback line and its in-place objective creation; no browser walkthrough; feedback-objective-selection predates this layout and is retained pending recapture; MIN-737: publish-a-feedback-board-workflow recaptured on 2026-10-19 in all six locales from the local candidate on the demo board — email identity, URL concealed — and inspected)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_de_es with agent:/root (de pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, de wording and new-control review; existing procedural evidence retained); agent:/root (de changed-passage parity and localized-label review); agent:/root/min693_de with agent:/root (de MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (de translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de translation of the MIN-737 project-settings second-pass passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [
     "api-and-webhooks"
@@ -101,17 +103,18 @@
       "id": "publish-a-feedback-board-workflow",
       "kind": "screenshot",
       "src": "/documentation/de/publish-a-feedback-board-workflow.png",
-      "alt": "Aktiviertes öffentliches Feedback-Board mit lokaler SSO-Identität und ausgeblendeter URL.",
-      "caption": "Der Eigentümer aktiviert das Board und wählt die Besucheridentität. Dieses Beispiel verwendet einen lokalen SSO-Signierer; URL und Signaturgeheimnis sind ausgeblendet.",
-      "revision": 11,
+      "alt": "Aktiviertes öffentliches Feedback-Board mit Besucheridentität per E-Mail-Code, der Aktion SSO aktivieren und ausgeblendeter URL.",
+      "caption": "Der Eigentümer aktiviert das Board und wählt die Besucheridentität. Dieses Demo-Board nutzt die E-Mail-Bestätigung; seine URL ist ausgeblendet.",
+      "revision": 12,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-19",
       "viewport": [
         816,
-        378
+        566
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "submit-and-follow-feedback-workflow",
@@ -119,7 +122,7 @@
       "src": "/documentation/de/submit-and-follow-feedback-workflow.png",
       "alt": "Feedback-Formular für Besucher mit Titel, Beschreibung und aktivierter öffentlicher Sichtbarkeit.",
       "caption": "Ein angemeldeter Besucher reicht einen Bedarf ein und bestimmt die Sichtbarkeit. Das Beispiel wurde tatsächlich bei deaktivierter automatischer Prüfung eingereicht.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -135,7 +138,7 @@
       "src": "/documentation/de/feedback-objective-selection.png",
       "alt": "Komponentenvorschau der Zielauswahl für Feedback und einer Feedback-Integration, beide auf Docs eingestellt.",
       "caption": "Zielauswahl mit Demonstrationsdaten. Neues Feedback übernimmt die Integrationsvorgabe.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -152,7 +155,7 @@
       "src": "/documentation/de/feedback-pages-and-views-workflow.png",
       "alt": "Veröffentlichter Feedback-Leitfaden als ausgewählter Board-Tab, ohne Anmeldung lesbar.",
       "caption": "Veröffentlichen Sie eine Seite, aktivieren Sie Seitentabs und wählen Sie die Seite für das Board aus. Die Demoseite wurde anonym geöffnet; ihre undurchsichtige URL behält `noindex`.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -186,7 +189,7 @@ Wenn Sie das Board deaktivieren, sind seine Besucherseiten nicht mehr erreichbar
 
 Die optionale Numo-Prüfung betrifft eingereichtes Feedback und hängt von Projekt- und Instanzeinstellungen, Anbietern und dem Budget des Inhabers ab. Ist sie aktiviert, warten Einreichungen vor der Veröffentlichung auf die Prüfung; andernfalls warten sie nicht auf eine Prüfung, die gar nicht stattfindet. Prüfen Sie die Warteschlange nach einer Demoeinreichung. Numo sendet öffentliche Antworten nur nach ausdrücklicher Aufforderung.
 
-![Aktiviertes öffentliches Feedback-Board mit lokaler SSO-Identität und ausgeblendeter URL.](/documentation/de/publish-a-feedback-board-workflow.png)
+![Aktiviertes öffentliches Feedback-Board mit Besucheridentität per E-Mail-Code, der Aktion SSO aktivieren und ausgeblendeter URL.](/documentation/de/publish-a-feedback-board-workflow.png)
 
 ## Feedback einreichen, abstimmen und verfolgen {#submit-and-follow-feedback}
 
@@ -226,7 +229,7 @@ Die Liste zeigt das verknüpfte Ziel unter Autor und Kategorien. In den Zieleige
 
 Als Projektmitglied wählen Sie **Ziel** in den Feedback-Eigenschaften oder beim internen Erfassen einer Rückmeldung. **Keine** entfernt die Verknüpfung. Das Ziel muss zum selben Projekt gehören. Diese interne Zuordnung veröffentlicht keine privaten Ziele auf dem öffentlichen Board und zählt nicht zum Ticketfortschritt.
 
-Der Projekteigentümer kann beim Erstellen einer Feedback-Integration unter **Einstellungen → Integrationen** ein optionales Ziel wählen oder die Vorgabe neben einer bestehenden Integration ändern. Neue API-Rückmeldungen übernehmen das Ziel, auch bei `analyze: false`. Eine Änderung verschiebt kein bestehendes Feedback. Liegt das Ziel im Papierkorb, wählen Sie ein aktives Ziel oder entfernen Sie die Vorgabe vor der nächsten Übermittlung. Numo wählt bei der Feedback-Prüfung niemals ein Ziel. Bitten Sie Numo ausdrücklich, eine Rückmeldung mit einem Ziel zu verknüpfen oder die Zuordnung zu entfernen.
+Der Projekteigentümer kann beim Erstellen einer Feedback-Integration unter **Projekteinstellungen** → **Integrationen** ein optionales Ziel wählen oder die Vorgabe später in der Zeile **Ziel für neues Feedback** unter einer bestehenden Feedback-Integration ändern. Diese Auswahl kann auch ein neues Ziel anlegen. Neue API-Rückmeldungen übernehmen das Ziel, auch bei `analyze: false`. Eine Änderung verschiebt kein bestehendes Feedback. Liegt das Ziel im Papierkorb, wählen Sie ein aktives Ziel oder entfernen Sie die Vorgabe vor der nächsten Übermittlung. Numo wählt bei der Feedback-Prüfung niemals ein Ziel. Bitten Sie Numo ausdrücklich, eine Rückmeldung mit einem Ziel zu verknüpfen oder die Zuordnung zu entfernen.
 
 Bei der Umwandlung übernimmt das neue Ticket Ziel und Kategorien der Rückmeldung. Sie können diese im Erstellungsformular ändern. Ohne gewähltes Ziel bleibt das Feld leer, auch mit aktiviertem Smart Fill. Eine spätere Änderung des Feedback-Ziels verschiebt kein bereits verknüpftes Ticket. Rückmeldungen lassen sich nur mit demselben Ziel zusammenführen, auch wenn beide keines haben. Gleichen Sie die Ziele zuerst ab, wenn das Team denselben Bedarf erkennt.
 

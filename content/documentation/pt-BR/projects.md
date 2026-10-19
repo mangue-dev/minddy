@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 10,
+  "revision": 11,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-18",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-693 project roles",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-693 project roles; MIN-737 project settings reorganization",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -51,14 +51,19 @@
       "content/documentation/reviews/min-692-hidden-projects.md",
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
-      "content/documentation/reviews/min-693-project-roles.md"
+      "content/documentation/reviews/min-693-project-roles.md",
+      "components/settings/project-identity-header.tsx",
+      "components/settings/inline-edit-field.tsx",
+      "components/project-categories.tsx",
+      "components/settings/project-settings-page.tsx",
+      "content/documentation/reviews/min-737-settings-reorganization.md"
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; pt-BR translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (hide-project confirmation from the sidebar menu: source and unit-test review of components/project-context-actions.tsx; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (pt-BR translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (pt-BR MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root/min693_pt-BR with agent:/root (pt-BR MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (pt-BR hide-project confirmation sentence, catalog UI labels and retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-18"
+    "revision": 11,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; pt-BR translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (hide-project confirmation from the sidebar menu: source and unit-test review of components/project-context-actions.tsx; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 project settings: source review of the General identity header edited in place (icon menu, name and key fields or phone sheet, no Save button), the Categories card, the three Members cards and the Hidden projects account tab; project-settings-steps and project-members-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-refresh screens project-general and project-members) and inspected; no other browser walkthrough)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (pt-BR translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (pt-BR MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root/min693_pt-BR with agent:/root (pt-BR MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (pt-BR hide-project confirmation sentence, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (pt-BR translation of the MIN-737 project-settings second-pass passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [
     "issues",
@@ -80,33 +85,35 @@
       "id": "project-settings-steps",
       "kind": "screenshot",
       "src": "/documentation/pt-BR/project-general.png",
-      "alt": "Configurações gerais do projeto com nome, chave, ícone e ação separada para a lixeira.",
-      "caption": "Confira o nome e a chave antes de salvar. Mover o projeto para a lixeira é uma ação separada.",
-      "revision": 10,
+      "alt": "Cabeçalho do projeto com o ícone e seu selo de edição, o nome, a chave e os números Tickets, Membros, Objetivos, Categorias e Criado em.",
+      "caption": "Selecione o ícone, o nome ou a chave para alterá-los no lugar; mover o projeto para a lixeira continua sendo uma ação separada, mais abaixo.",
+      "revision": 11,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-19",
       "viewport": [
-        1178,
-        563
+        816,
+        359
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "project-members-steps",
       "kind": "screenshot",
       "src": "/documentation/pt-BR/project-members.png",
-      "alt": "Convite por email e três membros de demonstração, com o proprietário identificado.",
+      "alt": "Cartão “Convidar por e-mail” acima do cartão Membros, que lista três membros de demonstração com o proprietário identificado.",
       "caption": "Convide pelo email da conta e identifique o proprietário antes de remover o acesso de um membro.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-19",
       "viewport": [
-        1178,
-        503
+        816,
+        430
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -122,18 +129,20 @@ Um projeto reúne problemas, objetivos, páginas e as pessoas que trabalham nele
 
 Abra o projeto e depois suas configurações. A propriedade do projeto determina o acesso às configurações administrativas. Os membros e os leitores podem consultar a seção geral, ocultar o projeto para si e sair dele, mas não recebem os controles de edição do proprietário.
 
-Como proprietário, informe um nome não vazio e uma chave de projeto válida, depois salve. A chave é normalizada para maiúsculas e usa de 2 a 5 letras ASCII. Revise os identificadores resultantes depois de alterá-la. Use os controles de ícone e aparência para distinguir o projeto na navegação; essas escolhas visuais não mudam a participação no projeto.
+A aba **Geral** abre com a identidade do projeto: o ícone, o nome e a chave, e depois cinco números: **Tickets**, **Membros**, **Objetivos**, **Categorias** e **Criado em**. Como proprietário, você altera o ícone, o nome e a chave onde eles aparecem; não há mais botão Salvar. Selecione o ícone e escolha **Novo orbe** (oferecido só enquanto nenhuma imagem cobre o orbe), **Fazer upload de uma imagem**, **Importar de um site…**, que pede o endereço do site e importa o ícone dele quando você escolhe **Importar**, ou, se houver uma imagem, **Remover a imagem**. Selecione o nome ou a chave para editá-los: no computador eles viram um campo em que Enter ou sair do campo salva e Esc cancela; no celular abre um painel com **Salvar**. O nome não pode ficar vazio. A chave é normalizada para maiúsculas e precisa ter de 2 a 5 letras (A–Z); caso contrário, aparece um erro e a chave não é salva. Revise os identificadores resultantes depois de alterá-la. O ícone só distingue o projeto na navegação; ele não muda a participação no projeto. Membros e leitores veem o mesmo cabeçalho sem esses controles.
 
-As outras seções gerenciam colaboradores, problemas recorrentes, Git, importação, integrações, automação e feedback. Siga o guia correspondente antes de habilitar um provedor ou trabalho automático. As preferências da conta, como o idioma da interface, são separadas da configuração do projeto.
+As outras seções gerenciam categorias, colaboradores, problemas recorrentes, Git, importação, integrações, automação e feedback. Siga o guia correspondente antes de habilitar um provedor ou trabalho automático. As preferências da conta, como o idioma da interface, são separadas da configuração do projeto.
+
+Em **Categorias**, o proprietário e os membros gerenciam as categorias que classificam os tickets. Escolha **Nova categoria** na linha de título do cartão: uma linha com um ponto de cor e um campo de nome aparece no topo da lista. Pressione Enter ou escolha **Adicionar** para criar a categoria; Esc fecha a linha sem criá-la. Selecione o ponto de cor de uma categoria para escolher outra cor, aplicada na hora (no celular as cores abrem em um painel), ou selecione o nome dela para renomeá-la ali mesmo. O botão de excluir pede confirmação e depois remove a categoria de todos os tickets.
 
 
-![Configurações gerais do projeto com nome, chave, ícone e ação separada para a lixeira.](/documentation/pt-BR/project-general.png)
+![Cabeçalho do projeto com o ícone e seu selo de edição, o nome, a chave e os números Tickets, Membros, Objetivos, Categorias e Criado em.](/documentation/pt-BR/project-general.png)
 
 ### Ocultar um projeto para você {#hide-project}
 
-Oculte um projeto que você não acompanha mais no dia a dia para tirá-lo da sua barra lateral e do seu início sem sair dele. Nas configurações gerais do projeto, escolha **Ocultar** em **Visibilidade para você**, ou clique com o botão direito no projeto na barra lateral e escolha **Ocultar projeto** e confirme. O menu pede confirmação porque o projeto sai da sua navegação; o botão das configurações o oculta na hora. Qualquer pessoa no projeto pode ocultá-lo, inclusive o proprietário e os leitores.
+Oculte um projeto que você não acompanha mais no dia a dia para tirá-lo da sua barra lateral e do seu início sem sair dele. Nas configurações gerais do projeto, escolha **Ocultar** na **Zona de perigo**, ou clique com o botão direito no projeto na barra lateral e escolha **Ocultar projeto** e confirme. O menu pede confirmação porque o projeto sai da sua navegação; o botão das configurações o oculta na hora. Qualquer pessoa no projeto pode ocultá-lo, inclusive o proprietário e os leitores.
 
-Ocultar muda apenas a sua própria navegação. A preferência é salva na sua conta, então continua valendo depois de entrar novamente e nos seus outros dispositivos. Você mantém seu acesso e ainda pode abrir e editar o projeto por um link direto ou em **Configurações da conta** → **Preferências** → **Projetos ocultos**. Os outros membros continuam vendo o projeto, e as rotinas, integrações e notificações dele continuam funcionando. Abrir um projeto oculto não o traz de volta para a sua barra lateral.
+Ocultar muda apenas a sua própria navegação. A preferência é salva na sua conta, então continua valendo depois de entrar novamente e nos seus outros dispositivos. Você mantém seu acesso e ainda pode abrir e editar o projeto por um link direto ou na aba **Projetos ocultos** das **Configurações da conta**. Os outros membros continuam vendo o projeto, e as rotinas, integrações e notificações dele continuam funcionando. Abrir um projeto oculto não o traz de volta para a sua barra lateral.
 
 Para trazê-lo de volta, escolha **Mostrar** em **Projetos ocultos** ou nas configurações gerais do projeto, ou escolha **Mostrar projeto** no menu dele na barra lateral. Se a alteração não puder ser salva, aparece um erro e o projeto volta ao estado anterior; tente novamente. Diferentemente de sair do projeto ou movê-lo para a lixeira, ocultar nunca remove acesso nem conteúdo.
 
@@ -147,12 +156,12 @@ O proprietário também pode clicar com o botão direito no projeto na barra lat
 
 ## Convidar pessoas para um projeto {#project-members}
 
-O proprietário do projeto gerencia a participação em **Configurações do projeto** → **Membros**. Peça à pessoa colaboradora o e-mail que ela usa nesta instância, escolha o papel dela, envie o convite e confira seu estado pendente. Escolha **Membro** para alguém que trabalha no projeto, ou **Leitor** para alguém que só o acompanha. Para um leitor, ative **Pode comentar** se ele deve participar das discussões. Enquanto o convite estiver pendente, o proprietário pode alterar o papel e a opção de comentário. O mesmo e-mail em outra instância não concede acesso aqui.
+O proprietário do projeto gerencia a participação em **Configurações do projeto** → **Membros**. Peça à pessoa colaboradora o e-mail que ela usa nesta instância, depois, no cartão **Convidar por e-mail**, informe esse endereço, escolha o papel dela e escolha **Convidar**. O convite aparece no cartão **Convites pendentes** até ser aceito; os membros atuais ficam listados no cartão **Membros**, cujo título mostra quantos são. Escolha **Membro** para alguém que trabalha no projeto, ou **Leitor** para alguém que só o acompanha. Para um leitor, ative **Pode comentar** se ele deve participar das discussões. Enquanto o convite estiver pendente, o proprietário pode alterar o papel e a opção de comentário. O mesmo e-mail em outra instância não concede acesso aqui.
 
 A pessoa convidada entra com essa conta e abre a caixa de entrada. Aceite o convite pendente para participar com o papel que ele indica, ou recuse se não esperava esse projeto. O diálogo inicial de entrada ajuda a compartilhar seu e-mail com o proprietário; ele não permite entrar em projetos sem convite.
 
 
-![Convite por email e três membros de demonstração, com o proprietário identificado.](/documentation/pt-BR/project-members.png)
+![Cartão “Convidar por e-mail” acima do cartão Membros, que lista três membros de demonstração com o proprietário identificado.](/documentation/pt-BR/project-members.png)
 
 ### Papéis de proprietário, membro e leitor {#member-permissions}
 

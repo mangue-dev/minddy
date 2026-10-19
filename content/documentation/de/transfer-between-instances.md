@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12)",
+    "version": "0.11.1 candidate (cd1843e12); MIN-737 account settings reorganization",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -35,14 +35,16 @@
       "lib/server/account-import.ts",
       "content/documentation/reviews/remaining-account-capture-candidates.json",
       "content/documentation/reviews/account-transfer-execution.json",
-      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
+      "components/settings/account-settings-page.tsx",
+      "content/documentation/reviews/min-737-settings-reorganization.md"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-737 account settings reorganization: source review of the Privacy & data tab name; the retained screenshots predate the rename; no browser walkthrough, no new captures)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root (de MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [],
   "aliases": [],
@@ -56,7 +58,7 @@
       "src": "/documentation/de/transfer-between-instances-workflow.png",
       "alt": "Datenübertragung mit Schaltfläche zum Import einer Datei.",
       "caption": "Wähle die unveränderte JSON-Exportdatei des Quellkontos. Prüfe das Importergebnis vor dem Schließen.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -73,7 +75,7 @@
       "src": "/documentation/de/transfer-between-instances-export-workflow.png",
       "alt": "Exportfunktion des Kontos.",
       "caption": "Exportfunktion des Kontos. Der Export enthält keine Schlüssel oder Tokens; die Aufnahme zeigt die Schaltfläche vor dem Download.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -94,7 +96,7 @@
 
 ## Exportieren und importieren {#transfer-between-instances}
 
-Melden Sie sich an der Quellinstanz an und öffnen Sie den Bereich Daten in den Kontoeinstellungen. Laden Sie den JSON-Export herunter und bewahren Sie ihn privat auf: Er enthält Konto- und Projektinhalte. Erstellen Sie Ihr Konto auf der Zielinstanz oder melden Sie sich dort am bestehenden Konto an. Prüfen Sie deren Adresse und wählen Sie dort den Importbefehl. Wählen Sie die unveränderte Exportdatei und warten Sie auf das Ergebnis, bevor Sie die Seite schließen.
+Melden Sie sich an der Quellinstanz an und öffnen Sie den Tab **Datenschutz & Daten** in den Kontoeinstellungen. Laden Sie den JSON-Export herunter und bewahren Sie ihn privat auf: Er enthält Konto- und Projektinhalte. Erstellen Sie Ihr Konto auf der Zielinstanz oder melden Sie sich dort am bestehenden Konto an. Prüfen Sie deren Adresse und wählen Sie dort den Importbefehl. Wählen Sie die unveränderte Exportdatei und warten Sie auf das Ergebnis, bevor Sie die Seite schließen.
 
 Der Import fügt Daten hinzu, statt das Ziel zu ersetzen. Kennungen bleiben erhalten, wenn sie sicher wiederverwendbar sind; Konflikte erhalten neue Kennungen. Das Ergebnis nennt neu zugeordnete Kennungen und übersprungene Mitgliedschaften. Mitgliedschaftsreferenzen zu bestehenden Projekten werden nur wiederhergestellt, wenn das Zielprojekt bereits existiert und die Referenz autorisiert ist. Prüfen Sie nach dem Neuladen Projekte, Tickets, Seiten und persönliche Daten.
 

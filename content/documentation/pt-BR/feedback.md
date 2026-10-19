@@ -20,12 +20,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-693 project roles; MIN-718 hybrid issue search",
+    "version": "0.11.1 development (UI refinements); MIN-693 project roles; MIN-718 hybrid issue search; MIN-737 project settings reorganization",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -70,14 +70,16 @@
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
       "content/documentation/reviews/min-693-project-roles.md",
-      "content/documentation/reviews/min-718-hybrid-issue-search.md"
+      "content/documentation/reviews/min-718-hybrid-issue-search.md",
+      "components/project-integrations.tsx",
+      "content/documentation/reviews/min-737-settings-reorganization.md"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_it_pt (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, pt-BR wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_it_pt with agent:/root (pt-BR pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, pt-BR wording and new-control review; existing procedural evidence retained); agent:/root (pt-BR changed-passage parity and localized-label review); agent:/root/min693_pt-BR with agent:/root (pt-BR MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (pt-BR translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-17"
+    "revision": 12,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_it_pt (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, pt-BR wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 integrations list: source review of the Objective for new feedback line and its in-place objective creation; no browser walkthrough; feedback-objective-selection predates this layout and is retained pending recapture; MIN-737: publish-a-feedback-board-workflow recaptured on 2026-10-19 in all six locales from the local candidate on the demo board — email identity, URL concealed — and inspected)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_it_pt with agent:/root (pt-BR pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, pt-BR wording and new-control review; existing procedural evidence retained); agent:/root (pt-BR changed-passage parity and localized-label review); agent:/root/min693_pt-BR with agent:/root (pt-BR MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (pt-BR translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (pt-BR translation of the MIN-737 project-settings second-pass passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [
     "api-and-webhooks"
@@ -101,17 +103,18 @@
       "id": "publish-a-feedback-board-workflow",
       "kind": "screenshot",
       "src": "/documentation/pt-BR/publish-a-feedback-board-workflow.png",
-      "alt": "Mural público de feedback ativado, com identidade SSO local configurada e URL oculta.",
-      "caption": "O proprietário ativa o mural e escolhe a identidade dos visitantes. Este exemplo usa um assinador SSO local; a URL e o segredo de assinatura estão ocultos.",
-      "revision": 11,
+      "alt": "Mural público de feedback ativado, com identidade dos visitantes por código de e-mail, a ação Ativar SSO e URL oculta.",
+      "caption": "O proprietário ativa o mural e escolhe a identidade dos visitantes. Este mural de demonstração usa a verificação por e-mail; sua URL está oculta.",
+      "revision": 12,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-19",
       "viewport": [
         816,
-        378
+        566
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "submit-and-follow-feedback-workflow",
@@ -119,7 +122,7 @@
       "src": "/documentation/pt-BR/submit-and-follow-feedback-workflow.png",
       "alt": "Formulário de feedback do visitante com título, descrição e visibilidade pública ativada.",
       "caption": "Um visitante identificado envia uma necessidade e escolhe sua visibilidade. O exemplo foi realmente enviado com a revisão automática desativada.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -135,7 +138,7 @@
       "src": "/documentation/pt-BR/feedback-objective-selection.png",
       "alt": "Prévia dos componentes de seleção de objetivo para um feedback e uma integração, ambos definidos como Docs.",
       "caption": "Seletores de objetivo com dados de demonstração. Novos feedbacks herdam a configuração da integração.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -152,7 +155,7 @@
       "src": "/documentation/pt-BR/feedback-pages-and-views-workflow.png",
       "alt": "Guia de feedback publicado e selecionado na navegação do mural, legível sem entrar na conta.",
       "caption": "Publique uma página, ative as guias de páginas e selecione-a para o mural. Esta página de demonstração foi aberta anonimamente; seu URL opaco mantém `noindex`.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -186,7 +189,7 @@ Desativar o mural torna suas páginas indisponíveis para os visitantes. A recep
 
 A revisão opcional do Numo se aplica aos feedbacks enviados e depende das configurações do projeto e da instância, dos provedores e do orçamento do proprietário. Se estiver ativa, os envios aguardam revisão antes da publicação; se estiver desativada, não esperam uma revisão que não ocorrerá. Confira a fila depois de enviar um exemplo de demonstração. O Numo só envia respostas públicas quando solicitado explicitamente.
 
-![Mural público de feedback ativado, com identidade SSO local configurada e URL oculta.](/documentation/pt-BR/publish-a-feedback-board-workflow.png)
+![Mural público de feedback ativado, com identidade dos visitantes por código de e-mail, a ação Ativar SSO e URL oculta.](/documentation/pt-BR/publish-a-feedback-board-workflow.png)
 
 ## Enviar, votar e acompanhar feedback {#submit-and-follow-feedback}
 
@@ -226,7 +229,7 @@ A lista mostra o objetivo vinculado abaixo do autor e das categorias. Nas propri
 
 Como membro do projeto, escolha **Objetivo** nas propriedades do feedback ou ao criá-lo internamente. Escolha **Nenhum** para remover o vínculo. O objetivo deve pertencer ao mesmo projeto. Essa associação é interna, não expõe objetivos privados no quadro público e não conta para o progresso dos tickets.
 
-O proprietário pode escolher um objetivo opcional ao criar uma integração de feedback em **Configurações → Integrações**, ou alterá-lo ao lado de uma integração existente. Novos envios da API herdam esse objetivo, inclusive com `analyze: false`. Alterar a configuração não move feedbacks existentes. Se o objetivo estiver na lixeira, escolha um ativo ou remova a configuração antes de enviar novamente. O Numo nunca escolhe um objetivo durante a revisão de feedbacks. Peça explicitamente para vincular uma solicitação ou remover seu vínculo.
+O proprietário pode escolher um objetivo opcional ao criar uma integração de feedback em **Configurações do projeto** → **Integrações**, ou alterá-lo depois na linha **Objetivo dos novos feedbacks** abaixo de uma integração de feedback existente. Esse seletor também pode criar um objetivo novo. Novos envios da API herdam esse objetivo, inclusive com `analyze: false`. Alterar a configuração não move feedbacks existentes. Se o objetivo estiver na lixeira, escolha um ativo ou remova a configuração antes de enviar novamente. O Numo nunca escolhe um objetivo durante a revisão de feedbacks. Peça explicitamente para vincular uma solicitação ou remover seu vínculo.
 
 A conversão cria um ticket com o objetivo e as categorias do feedback. Você pode alterá-los no formulário de criação. Sem um objetivo escolhido, o campo fica vazio mesmo com o Smart Fill ativado. Alterar depois o objetivo do feedback não move um ticket já vinculado. Mesclagens exigem que as duas solicitações tenham o mesmo objetivo, inclusive quando ambas não têm nenhum. Alinhe os objetivos primeiro se a equipe decidir que descrevem a mesma necessidade.
 

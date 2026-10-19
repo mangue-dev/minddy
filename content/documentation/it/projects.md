@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 10,
+  "revision": 11,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-18",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-693 project roles",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-693 project roles; MIN-737 project settings reorganization",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -51,14 +51,19 @@
       "content/documentation/reviews/min-692-hidden-projects.md",
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
-      "content/documentation/reviews/min-693-project-roles.md"
+      "content/documentation/reviews/min-693-project-roles.md",
+      "components/settings/project-identity-header.tsx",
+      "components/settings/inline-edit-field.tsx",
+      "components/project-categories.tsx",
+      "components/settings/project-settings-page.tsx",
+      "content/documentation/reviews/min-737-settings-reorganization.md"
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; it translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (hide-project confirmation from the sidebar menu: source and unit-test review of components/project-context-actions.tsx; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (it translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root/min693_it with agent:/root (it MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (it hide-project confirmation sentence, catalog UI labels and retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-18"
+    "revision": 11,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; it translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (hide-project confirmation from the sidebar menu: source and unit-test review of components/project-context-actions.tsx; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 project settings: source review of the General identity header edited in place (icon menu, name and key fields or phone sheet, no Save button), the Categories card, the three Members cards and the Hidden projects account tab; project-settings-steps and project-members-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-refresh screens project-general and project-members) and inspected; no other browser walkthrough)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (it translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root/min693_it with agent:/root (it MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (it hide-project confirmation sentence, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (it translation of the MIN-737 project-settings second-pass passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [
     "issues",
@@ -80,33 +85,35 @@
       "id": "project-settings-steps",
       "kind": "screenshot",
       "src": "/documentation/it/project-general.png",
-      "alt": "Impostazioni generali del progetto con nome, chiave, icona e azione separata per il cestino.",
-      "caption": "Controlla nome e chiave prima di salvare. Spostare il progetto nel cestino è un’azione separata.",
-      "revision": 10,
+      "alt": "Intestazione del progetto con l’icona e il suo badge di modifica, il nome, la chiave e le cifre Ticket, Membri, Obiettivi, Categorie e Creato.",
+      "caption": "Seleziona l’icona, il nome o la chiave per cambiarli sul posto; spostare il progetto nel cestino resta un’azione separata, più in basso.",
+      "revision": 11,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-19",
       "viewport": [
-        1178,
-        563
+        816,
+        359
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "project-members-steps",
       "kind": "screenshot",
       "src": "/documentation/it/project-members.png",
-      "alt": "Invito via email e tre membri dimostrativi, con il proprietario identificato.",
+      "alt": "Scheda «Invitare via email» sopra la scheda Membri, che elenca tre membri dimostrativi con il proprietario indicato.",
       "caption": "Invita con l’email dell’account e identifica il proprietario prima di rimuovere l’accesso di un membro.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-19",
       "viewport": [
-        1178,
-        503
+        816,
+        430
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -122,18 +129,20 @@ Un progetto raccoglie ticket, obiettivi, pagine e le persone che ci lavorano. Il
 
 Apri il progetto e poi le sue impostazioni. La proprietà del progetto determina l’accesso alle impostazioni amministrative. I membri e i lettori possono consultare la sezione generale, nascondere il progetto per sé e lasciarlo, ma non ottengono i controlli di modifica del proprietario.
 
-Come proprietario, inserisci un nome non vuoto e una chiave di progetto valida, quindi salva. La chiave viene convertita in maiuscolo e usa da 2 a 5 lettere ASCII. Dopo averla cambiata, controlla gli identificativi risultanti. Usa i controlli di icona e aspetto per distinguere il progetto nella navigazione; queste scelte visive non cambiano l’appartenenza al progetto.
+La scheda **Generalità** si apre con l’identità del progetto: la sua icona, il nome e la chiave, poi cinque cifre: **Ticket**, **Membri**, **Obiettivi**, **Categorie** e **Creato**. Come proprietario, modifichi icona, nome e chiave dove sono mostrati; non c’è più un pulsante Salva. Seleziona l’icona e scegli **Nuovo orbe** (proposto solo finché nessuna immagine copre l’orbe), **Carica un'immagine**, **Importa da un sito…**, che chiede l’indirizzo del sito e ne importa l’icona quando scegli **Importazione**, oppure, se è impostata un’immagine, **Rimuovi l’immagine**. Seleziona il nome o la chiave per modificarli: su un computer diventano un campo in cui Invio o l’uscita dal campo salva ed Esc annulla; su un telefono si apre un pannello con **Salva**. Il nome non può essere vuoto. La chiave viene convertita in maiuscolo e deve avere da 2 a 5 lettere (A–Z); altrimenti compare un errore e la chiave non viene salvata. Dopo averla cambiata, controlla gli identificativi risultanti. L’icona distingue il progetto solo nella navigazione; non cambia l’appartenenza al progetto. Membri e lettori vedono la stessa intestazione senza questi controlli.
 
-Le altre sezioni gestiscono collaboratori, ticket ricorrenti, Git, importazione, integrazioni, automazione e feedback. Segui la guida dell’attività corrispondente prima di abilitare un fornitore o lavoro automatico. Le preferenze dell’account, come la lingua dell’interfaccia, sono separate dalla configurazione del progetto.
+Le altre sezioni gestiscono categorie, collaboratori, ticket ricorrenti, Git, importazione, integrazioni, automazione e feedback. Segui la guida dell’attività corrispondente prima di abilitare un fornitore o lavoro automatico. Le preferenze dell’account, come la lingua dell’interfaccia, sono separate dalla configurazione del progetto.
+
+In **Categorie**, il proprietario e i membri gestiscono le categorie che classificano i ticket. Scegli **Nuova categoria** sulla riga del titolo della scheda: in cima all’elenco compare una riga con un punto colorato e un campo per il nome. Premi Invio o scegli **Aggiungi** per creare la categoria; Esc chiude la riga senza crearla. Seleziona il punto colorato di una categoria per scegliere un altro colore, applicato subito (su un telefono i colori si aprono in un pannello), oppure seleziona il nome per rinominarla sul posto. Il pulsante di eliminazione chiede conferma, poi rimuove la categoria da tutti i ticket.
 
 
-![Impostazioni generali del progetto con nome, chiave, icona e azione separata per il cestino.](/documentation/it/project-general.png)
+![Intestazione del progetto con l’icona e il suo badge di modifica, il nome, la chiave e le cifre Ticket, Membri, Obiettivi, Categorie e Creato.](/documentation/it/project-general.png)
 
 ### Nascondere un progetto per te {#hide-project}
 
-Nascondi un progetto che non segui più ogni giorno per toglierlo dalla tua barra laterale e dalla tua home senza lasciarlo. Nelle impostazioni generali del progetto, scegli **Nascondi** in **Visibilità per te**, oppure fai clic con il tasto destro sul progetto nella barra laterale e scegli **Nascondi progetto**, poi conferma. Il menu chiede prima conferma perché il progetto esce dalla tua navigazione; il pulsante nelle impostazioni lo nasconde subito. Chiunque faccia parte del progetto può nasconderlo, compresi il proprietario e i lettori.
+Nascondi un progetto che non segui più ogni giorno per toglierlo dalla tua barra laterale e dalla tua home senza lasciarlo. Nelle impostazioni generali del progetto, scegli **Nascondi** nella **Zona pericolosa**, oppure fai clic con il tasto destro sul progetto nella barra laterale e scegli **Nascondi progetto**, poi conferma. Il menu chiede prima conferma perché il progetto esce dalla tua navigazione; il pulsante nelle impostazioni lo nasconde subito. Chiunque faccia parte del progetto può nasconderlo, compresi il proprietario e i lettori.
 
-Nascondere cambia solo la tua navigazione. La preferenza è salvata nel tuo account, quindi resta dopo un nuovo accesso e sugli altri tuoi dispositivi. Mantieni il tuo accesso e puoi ancora aprire e modificare il progetto da un link diretto o da **Impostazioni account** → **Preferenze** → **Progetti nascosti**. Gli altri membri continuano a vedere il progetto, e le sue routine, integrazioni e notifiche continuano a funzionare. Aprire un progetto nascosto non lo riporta nella tua barra laterale.
+Nascondere cambia solo la tua navigazione. La preferenza è salvata nel tuo account, quindi resta dopo un nuovo accesso e sugli altri tuoi dispositivi. Mantieni il tuo accesso e puoi ancora aprire e modificare il progetto da un link diretto o dalla scheda **Progetti nascosti** delle **Impostazioni account**. Gli altri membri continuano a vedere il progetto, e le sue routine, integrazioni e notifiche continuano a funzionare. Aprire un progetto nascosto non lo riporta nella tua barra laterale.
 
 Per ritrovarlo, scegli **Mostra** in **Progetti nascosti** o nelle impostazioni generali del progetto, oppure scegli **Mostra progetto** dal suo menu nella barra laterale. Se la modifica non può essere salvata, compare un errore e il progetto torna allo stato precedente; riprova. A differenza di lasciare il progetto o spostarlo nel cestino, nasconderlo non rimuove mai accesso o contenuti.
 
@@ -147,12 +156,12 @@ Il proprietario può anche fare clic con il tasto destro sul progetto nella barr
 
 ## Invitare persone a un progetto {#project-members}
 
-Il proprietario del progetto gestisce l’appartenenza in **Impostazioni del progetto** → **Membri**. Chiedi al collaboratore l’email che usa su questa istanza, scegli il suo ruolo, invia l’invito e controlla che sia in attesa. Scegli **Membro** per chi lavora sul progetto, oppure **Lettore** per chi si limita a seguirlo. Per un lettore, attiva **Può commentare** se deve partecipare alle discussioni. Finché l’invito è in attesa, il proprietario può cambiarne il ruolo e l’opzione di commento. La stessa email su un’altra istanza non dà accesso qui.
+Il proprietario del progetto gestisce l’appartenenza in **Impostazioni del progetto** → **Membri**. Chiedi al collaboratore l’email che usa su questa istanza, poi, nel riquadro **Invitare via email**, inserisci quell’indirizzo, scegli il suo ruolo e scegli **Invitare**. L’invito compare nel riquadro **In attesa di inviti** finché non viene accettato; i membri attuali sono elencati nel riquadro **Membri**, il cui titolo ne indica il numero. Scegli **Membro** per chi lavora sul progetto, oppure **Lettore** per chi si limita a seguirlo. Per un lettore, attiva **Può commentare** se deve partecipare alle discussioni. Finché l’invito è in attesa, il proprietario può cambiarne il ruolo e l’opzione di commento. La stessa email su un’altra istanza non dà accesso qui.
 
 La persona invitata accede con quell’account e apre la posta in arrivo. Accetta l’invito in attesa per entrare con il ruolo che prevede, oppure rifiutalo se il progetto è inatteso. Il dialogo di ingresso iniziale aiuta a condividere la tua email con il proprietario; non permette di entrare in progetti senza invito.
 
 
-![Invito via email e tre membri dimostrativi, con il proprietario identificato.](/documentation/it/project-members.png)
+![Scheda «Invitare via email» sopra la scheda Membri, che elenca tre membri dimostrativi con il proprietario indicato.](/documentation/it/project-members.png)
 
 ### Ruoli di proprietario, membro e lettore {#member-permissions}
 

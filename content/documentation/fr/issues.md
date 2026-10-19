@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 20,
-  "sourceRevision": 20,
+  "revision": 21,
+  "sourceRevision": 21,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work; MIN-693 project roles; MIN-717 Smart Fill relations; MIN-718 hybrid issue search; MIN-728 one editor engine; MIN-733 always-on AI features; MIN-736 closed columns hidden by default",
+    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work; MIN-693 project roles; MIN-717 Smart Fill relations; MIN-718 hybrid issue search; MIN-728 one editor engine; MIN-733 always-on AI features; MIN-736 closed columns hidden by default; MIN-737 account settings reorganization",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -113,13 +113,15 @@
       "content/documentation/reviews/min-728-one-editor-engine.md",
       "lib/server/description-collaboration.ts",
       "lib/use-description-collaboration.ts",
-      "docs/document-collaboration.md"
+      "docs/document-collaboration.md",
+      "components/settings/account-smart-fill-section.tsx",
+      "content/documentation/reviews/min-737-settings-reorganization.md"
     ]
   },
   "review": {
-    "revision": 20,
-    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; fr translation of removal edits; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-717 Smart Fill relations source review inherited from en revision 14; fr translation of added passages; no browser walkthrough); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-728 one editor engine: source and unit-test review of the shared editor on this surface; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-734 typed mentions: source and unit-test review of the mention format, rendering and access rules; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (Command/Ctrl+K opens the selection actions: source and unit-test review of bulk-actions-context and use-command-palette-launcher; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-733 removal of the instance AI switches: source and unit-test review of the admin registry and every former switch reader; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 default status columns: source and unit-test review of lib/view-filter.ts and the board status filter; no browser walkthrough, no new captures)",
-    "language": "agent:/root (fr new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_fr (fr translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root/min693_fr with agent:/root (fr MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (fr translation of MIN-717 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr translation of the MIN-728 passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr added sentences, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (fr removal of the sentences describing instance AI switches; retained-meaning self-review; agent review, not human acceptance); agent:/root (fr MIN-736 added sentences with catalog status labels; agent review, not human acceptance)",
+    "revision": 21,
+    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; fr translation of removal edits; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-717 Smart Fill relations source review inherited from en revision 14; fr translation of added passages; no browser walkthrough); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-728 one editor engine: source and unit-test review of the shared editor on this surface; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-734 typed mentions: source and unit-test review of the mention format, rendering and access rules; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (Command/Ctrl+K opens the selection actions: source and unit-test review of bulk-actions-context and use-command-palette-launcher; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-733 removal of the instance AI switches: source and unit-test review of the admin registry and every former switch reader; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 default status columns: source and unit-test review of lib/view-filter.ts and the board status filter; no browser walkthrough, no new captures); agent:/root (MIN-737 account settings reorganization: source review of the Smart Fill tab and its cards in components/settings/account-smart-fill-section.tsx; unchanged evidence retained; no browser walkthrough, no new captures)",
+    "language": "agent:/root (fr new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_fr (fr translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root/min693_fr with agent:/root (fr MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (fr translation of MIN-717 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr translation of the MIN-728 passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr added sentences, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (fr removal of the sentences describing instance AI switches; retained-meaning self-review; agent review, not human acceptance); agent:/root (fr MIN-736 added sentences with catalog status labels; agent review, not human acceptance); agent:/root (fr MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-19"
   },
   "related": [
@@ -165,7 +167,7 @@
       "src": "/documentation/fr/new-issue.png",
       "alt": "Brouillon de ticket non envoyé avec titre, description et propriétés manuelles.",
       "caption": "Décrivez le résultat attendu, puis choisissez les propriétés utiles avant de créer le ticket.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -181,7 +183,7 @@
       "src": "/documentation/fr/triage-incoming.png",
       "alt": "Ticket de démonstration DOC-11 reçu dans le triage, avec son signalement, ses propriétés et les commandes Doublon, Refuser et Accepter.",
       "caption": "Lisez le signalement reçu avant de l’accepter, de le refuser ou de le relier à un doublon.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -197,7 +199,7 @@
       "src": "/documentation/fr/issue-statuses.png",
       "alt": "Les huit statuts du ticket dans le sélecteur, avec Backlog sélectionné.",
       "caption": "La coche indique le statut actuel. Choisissez celui qui reflète l’état réel du travail.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -213,7 +215,7 @@
       "src": "/documentation/fr/work-resources.png",
       "alt": "Dialogue d’ajout de lien avec une adresse de contact d’exemple.",
       "caption": "Vérifiez la destination avant d’ajouter la ressource. Ce lien d’exemple n’a pas été envoyé.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -229,7 +231,7 @@
       "src": "/documentation/fr/work-dependencies.png",
       "alt": "Recherche d’un préalable par identifiant de ticket.",
       "caption": "Choisissez le sens de la relation avant sa destination. Aucune relation n’a été envoyée dans ce sélecteur.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -245,7 +247,7 @@
       "src": "/documentation/fr/work-sub-issues.png",
       "alt": "Champ de création d’un sous-ticket dans un parent de démonstration.",
       "caption": "Ce champ crée un enfant sous le parent ; chaque enfant conserve son état et sa discussion.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -261,7 +263,7 @@
       "src": "/documentation/fr/work-implementation-plan.png",
       "alt": "Plan de démonstration avec deux tâches de travail terminées sur six.",
       "caption": "Le plan enregistré distingue les étapes terminées, actives et en attente. Sa progression ne prouve pas l’exécution de la tâche de code fictive.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -277,7 +279,7 @@
       "src": "/documentation/fr/issue-date-recurrence.png",
       "alt": "Sélecteur d’échéance en mode récurrent avec aperçu hebdomadaire le dimanche et heure optionnelle.",
       "caption": "Le mode récurrent prévisualise la cadence hebdomadaire. Confirmez la première échéance avant de créer le ticket.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -293,7 +295,7 @@
       "src": "/documentation/fr/import-issues-preview-workflow.png",
       "alt": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées.",
       "caption": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées. Aucun import n’a été lancé ; la préparation IA optionnelle a été bloquée pour la capture.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -310,7 +312,7 @@
       "src": "/documentation/fr/file-preview.png",
       "alt": "Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger et Retirer.",
       "caption": "Le lecteur commun place Fermer sous l’aperçu. Le menu Actions du fichier propose Télécharger et, si les droits le permettent, Retirer.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -364,12 +366,12 @@ Si la création ou la sauvegarde échoue, conservez votre texte, lisez l’erreu
 
 ### Choisir ce que fait Smart-fill {#smart-fill-preferences}
 
-Les préférences de Smart-fill appartiennent à votre compte. Ouvrez **Paramètres du compte** → **Préférences** et utilisez les interrupteurs du groupe **Tickets** :
+Les préférences de Smart-fill appartiennent à votre compte. Ouvrez **Paramètres du compte** → **Smart Fill**. Chaque option a sa propre carte :
 
-- **Activer Smart Fill** active ou désactive Smart-fill pour votre compte. Il complète la priorité, l’effort, les catégories et l’objectif manquants ; l’état, le responsable et l’échéance restent les vôtres. Les trois interrupteurs suivants en dépendent.
-- **Remplir les tickets créés** et **Remplir les tickets en triage** choisissent les nouveaux tickets qu’il complète : ceux que vous créez, et les tickets en triage dont vous êtes responsable.
-- **Relier les tickets liés**, activé par défaut, permet à Smart-fill d’[ajouter des relations](#smart-fill-relations) après l’enregistrement d’un ticket.
-- **Indexer les tickets**, activé par défaut et indépendant de Smart-fill, transforme le titre et la description des tickets que vous créez ou modifiez en vecteurs privés qui servent à trouver les tickets liés et à [chercher des tickets par le sens](/docs/navigation#search-by-meaning). L’indexation en arrière-plan des tickets existants d’un projet suit à la fois l’interrupteur du propriétaire du projet et celui de l’auteur : un ticket dont l’auteur l’a désactivé n’est jamais indexé. Les vecteurs sont chiffrés avec le projet, comme le ticket ; ceux enregistrés avant que le projet ne soit chiffré sont convertis par la tâche d’arrière-plan. Interrupteur désactivé, aucun vecteur n’est créé pour vos tickets, même quand quelqu’un d’autre les modifie, et la recherche de tickets liés ne compare que les mots. Vos propres recherches n’utilisent alors que le texte, sans recherche par le sens. Les vecteurs déjà créés restent tant que le texte ne change pas ; ils sont supprimés dès que le texte change, ou avec le ticket.
+- Dans la carte **Smart Fill**, **Activer Smart Fill** active ou désactive Smart-fill pour votre compte. Il complète la priorité, l’effort, les catégories et l’objectif manquants ; l’état, le responsable et l’échéance restent les vôtres. Les interrupteurs des deux cartes suivantes en dépendent.
+- Dans **Tickets à remplir**, **Remplir les tickets créés** et **Remplir les tickets en triage** choisissent les nouveaux tickets qu’il complète : ceux que vous créez, et les tickets en triage dont vous êtes responsable.
+- Dans **Tickets liés**, **Relier les tickets liés**, activé par défaut, permet à Smart-fill d’[ajouter des relations](#smart-fill-relations) après l’enregistrement d’un ticket.
+- Dans **Indexation des tickets**, **Indexer les tickets**, activé par défaut et indépendant de Smart-fill, transforme le titre et la description des tickets que vous créez ou modifiez en vecteurs privés qui servent à trouver les tickets liés et à [chercher des tickets par le sens](/docs/navigation#search-by-meaning). L’indexation en arrière-plan des tickets existants d’un projet suit à la fois l’interrupteur du propriétaire du projet et celui de l’auteur : un ticket dont l’auteur l’a désactivé n’est jamais indexé. Les vecteurs sont chiffrés avec le projet, comme le ticket ; ceux enregistrés avant que le projet ne soit chiffré sont convertis par la tâche d’arrière-plan. Interrupteur désactivé, aucun vecteur n’est créé pour vos tickets, même quand quelqu’un d’autre les modifie, et la recherche de tickets liés ne compare que les mots. Vos propres recherches n’utilisent alors que le texte, sans recherche par le sens. Les vecteurs déjà créés restent tant que le texte ne change pas ; ils sont supprimés dès que le texte change, ou avec le ticket.
 
 Désactiver un interrupteur annule aussi les passes qui n’ont pas encore eu lieu. Numo peut modifier ces préférences à votre demande.
 

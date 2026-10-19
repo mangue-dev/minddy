@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12)",
+    "version": "0.11.1 candidate (cd1843e12); MIN-737 account settings reorganization",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -35,14 +35,16 @@
       "lib/server/account-import.ts",
       "content/documentation/reviews/remaining-account-capture-candidates.json",
       "content/documentation/reviews/account-transfer-execution.json",
-      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
+      "components/settings/account-settings-page.tsx",
+      "content/documentation/reviews/min-737-settings-reorganization.md"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-737 account settings reorganization: source review of the Privacy & data tab name; the retained screenshots predate the rename; no browser walkthrough, no new captures)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (en MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [],
   "aliases": [],
@@ -56,7 +58,7 @@
       "src": "/documentation/en/transfer-between-instances-workflow.png",
       "alt": "Data transfer settings with the import-file button.",
       "caption": "Choose the intact JSON export from the source account; review the import result before closing.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -73,7 +75,7 @@
       "src": "/documentation/en/transfer-between-instances-export-workflow.png",
       "alt": "Account export control.",
       "caption": "Account export control. The export excludes keys and tokens; this capture shows the control before a download.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -94,7 +96,7 @@
 
 ## Export and import {#transfer-between-instances}
 
-Sign in to the source instance and open account settings' Data section. Download the JSON export and store it privately: it contains account and project content. Create or sign in to your account on the destination instance, check its address, and choose the import control there. Select the unmodified export file and wait for the result before closing the page.
+Sign in to the source instance and open the **Privacy & data** tab of account settings. Download the JSON export and store it privately: it contains account and project content. Create or sign in to your account on the destination instance, check its address, and choose the import control there. Select the unmodified export file and wait for the result before closing the page.
 
 Import adds data rather than replacing the destination. IDs are retained when safely reusable; conflicts receive new IDs. The result reports remapped IDs and skipped memberships. Existing-project membership references are restored only when the target project already exists and the reference is authorized. Inspect projects, issues, pages and personal data after the page reloads.
 

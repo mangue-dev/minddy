@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 20,
-  "sourceRevision": 20,
+  "revision": 21,
+  "sourceRevision": 21,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work; MIN-693 project roles; MIN-717 Smart Fill relations; MIN-718 hybrid issue search; MIN-728 one editor engine; MIN-733 always-on AI features; MIN-736 closed columns hidden by default",
+    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work; MIN-693 project roles; MIN-717 Smart Fill relations; MIN-718 hybrid issue search; MIN-728 one editor engine; MIN-733 always-on AI features; MIN-736 closed columns hidden by default; MIN-737 account settings reorganization",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -113,13 +113,15 @@
       "content/documentation/reviews/min-728-one-editor-engine.md",
       "lib/server/description-collaboration.ts",
       "lib/use-description-collaboration.ts",
-      "docs/document-collaboration.md"
+      "docs/document-collaboration.md",
+      "components/settings/account-smart-fill-section.tsx",
+      "content/documentation/reviews/min-737-settings-reorganization.md"
     ]
   },
   "review": {
-    "revision": 20,
-    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; de translation of removal edits; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-717 Smart Fill relations source review inherited from en revision 14; de translation of added passages; no browser walkthrough); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-728 one editor engine: source and unit-test review of the shared editor on this surface; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-734 typed mentions: source and unit-test review of the mention format, rendering and access rules; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (Command/Ctrl+K opens the selection actions: source and unit-test review of bulk-actions-context and use-command-palette-launcher; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-733 removal of the instance AI switches: source and unit-test review of the admin registry and every former switch reader; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 default status columns: source and unit-test review of lib/view-filter.ts and the board status filter; no browser walkthrough, no new captures)",
-    "language": "agent:/root (de new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_de (de translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root/min693_de with agent:/root (de MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (de translation of MIN-717 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de translation of the MIN-728 passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de added sentences, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (de removal of the sentences describing instance AI switches; retained-meaning self-review; agent review, not human acceptance); agent:/root (de MIN-736 added sentences with catalog status labels; agent review, not human acceptance)",
+    "revision": 21,
+    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; de translation of removal edits; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-717 Smart Fill relations source review inherited from en revision 14; de translation of added passages; no browser walkthrough); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-728 one editor engine: source and unit-test review of the shared editor on this surface; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-734 typed mentions: source and unit-test review of the mention format, rendering and access rules; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (Command/Ctrl+K opens the selection actions: source and unit-test review of bulk-actions-context and use-command-palette-launcher; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-733 removal of the instance AI switches: source and unit-test review of the admin registry and every former switch reader; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 default status columns: source and unit-test review of lib/view-filter.ts and the board status filter; no browser walkthrough, no new captures); agent:/root (MIN-737 account settings reorganization: source review of the Smart Fill tab and its cards in components/settings/account-smart-fill-section.tsx; unchanged evidence retained; no browser walkthrough, no new captures)",
+    "language": "agent:/root (de new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_de (de translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root/min693_de with agent:/root (de MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (de translation of MIN-717 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de translation of the MIN-728 passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de added sentences, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (de removal of the sentences describing instance AI switches; retained-meaning self-review; agent review, not human acceptance); agent:/root (de MIN-736 added sentences with catalog status labels; agent review, not human acceptance); agent:/root (de MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-19"
   },
   "related": [
@@ -165,7 +167,7 @@
       "src": "/documentation/de/new-issue.png",
       "alt": "Noch nicht abgesendeter Ticketentwurf mit Titel, Beschreibung und manuell wählbaren Eigenschaften.",
       "caption": "Beschreibe das erwartete Ergebnis und wähle vor der Erstellung die passenden Eigenschaften.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -181,7 +183,7 @@
       "src": "/documentation/de/triage-incoming.png",
       "alt": "Eingegangenes Demoproblem DOC-11 mit Bericht, Eigenschaften und Funktionen für Duplikat, Ablehnen und Akzeptieren.",
       "caption": "Lies den eingegangenen Bericht, bevor du ihn akzeptierst, ablehnst oder mit einem Duplikat verknüpfst.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -197,7 +199,7 @@
       "src": "/documentation/de/issue-statuses.png",
       "alt": "Die acht Ticketstatus im Auswahlmenü, mit ausgewähltem Backlog-Status.",
       "caption": "Das Häkchen zeigt den aktuellen Status. Wähle den Status, der dem tatsächlichen Arbeitsstand entspricht.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -213,7 +215,7 @@
       "src": "/documentation/de/work-resources.png",
       "alt": "Dialog zum Hinzufügen eines Links mit einer Beispiel-Kontaktadresse.",
       "caption": "Prüfe das Ziel, bevor du die Ressource hinzufügst. Dieser Beispiellink wurde nicht gesendet.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -229,7 +231,7 @@
       "src": "/documentation/de/work-dependencies.png",
       "alt": "Suche nach einem blockierenden Ticket anhand seiner Kennung.",
       "caption": "Wähle zuerst die Richtung der Beziehung und dann ihr Ziel. Hier wurde keine Beziehung gespeichert.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -245,7 +247,7 @@
       "src": "/documentation/de/work-sub-issues.png",
       "alt": "Eingabefeld für ein Unterticket in einem Demo-Elternticket.",
       "caption": "Das Feld erstellt ein Kind dieses Elterntickets; jedes Kind behält seinen eigenen Status und Diskussionsverlauf.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -261,7 +263,7 @@
       "src": "/documentation/de/work-implementation-plan.png",
       "alt": "Demo-Plan mit zwei von sechs abgeschlossenen Arbeitsschritten.",
       "caption": "Der gespeicherte Demo-Plan unterscheidet abgeschlossene, laufende und ausstehende Schritte. Der Fortschritt belegt nicht, dass die fiktive Codeaufgabe ausgeführt wurde.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -277,7 +279,7 @@
       "src": "/documentation/de/issue-date-recurrence.png",
       "alt": "Fälligkeitsauswahl im wiederkehrenden Modus mit Sonntagsvorschau und optionaler Uhrzeit.",
       "caption": "Der wiederkehrende Modus zeigt die wöchentliche Folge. Bestätige die erste Fälligkeit vor der Ticketerstellung.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -293,7 +295,7 @@
       "src": "/documentation/de/import-issues-preview-workflow.png",
       "alt": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen.",
       "caption": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen. Es wurde nichts importiert; die optionale KI-Planung war für die Aufnahme gesperrt.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -310,7 +312,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Entfernen.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -364,12 +366,12 @@ Schlägt Erstellen oder Speichern fehl, bewahre deinen Text auf, lies den Fehler
 
 ### Festlegen, was Smart-Fill tut {#smart-fill-preferences}
 
-Die Smart-Fill-Einstellungen gehören zu deinem Konto. Öffne **Kontoeinstellungen** → **Einstellungen** und verwende die Schalter der Gruppe **Probleme**:
+Die Smart-Fill-Einstellungen gehören zu deinem Konto. Öffne **Kontoeinstellungen** → **Smart Fill**. Jede Option hat ihre eigene Karte:
 
-- **Smart Fill aktivieren** schaltet Smart-Fill für dein Konto ein oder aus. Es ergänzt fehlende Priorität, fehlenden Aufwand, fehlende Kategorien und ein fehlendes Ziel; Status, zuständige Person und Fälligkeitsdatum bleiben deine Sache. Die drei folgenden Schalter hängen davon ab.
-- **Erstellte Vorgänge ausfüllen** und **Triage-Vorgänge ausfüllen** legen fest, welche neuen Probleme es ergänzt: die Probleme, die du erstellst, und die Triage-Probleme, für die du zuständig bist.
-- **Verwandte Vorgänge verknüpfen** ist standardmäßig eingeschaltet und erlaubt Smart-Fill, nach dem Speichern eines Problems [Beziehungen hinzuzufügen](#smart-fill-relations).
-- **Vorgänge indexieren** ist standardmäßig eingeschaltet und von Smart-Fill unabhängig. Es wandelt Titel und Beschreibung der Probleme, die du erstellst oder bearbeitest, in private Vektoren um, mit denen verwandte Probleme gefunden und Probleme [inhaltlich gesucht](/docs/navigation#search-by-meaning) werden. Die Indexierung der bestehenden Probleme eines Projekts im Hintergrund folgt sowohl dem Schalter des Projekteigentümers als auch dem des Autors: Ein Problem, dessen Autor ihn ausgeschaltet hat, wird nie indexiert. Die Vektoren werden wie das Problem mit dem Projekt verschlüsselt; Vektoren, die gespeichert wurden, bevor das Projekt verschlüsselt wurde, wandelt der Hintergrundjob um. Ist der Schalter aus, entsteht für deine Probleme kein Vektor, auch wenn jemand anderes sie bearbeitet, und die Suche nach verwandten Problemen vergleicht nur Wörter. Deine eigenen Suchen nutzen dann nur den Text, ohne inhaltliche Suche. Bereits erstellte Vektoren bleiben, solange sich der Text nicht ändert; sie werden gelöscht, sobald sich der Text ändert, oder mit dem Problem.
+- In der Karte **Smart Fill** schaltet **Smart Fill aktivieren** Smart-Fill für dein Konto ein oder aus. Es ergänzt fehlende Priorität, fehlenden Aufwand, fehlende Kategorien und ein fehlendes Ziel; Status, zuständige Person und Fälligkeitsdatum bleiben deine Sache. Die Schalter der beiden folgenden Karten hängen davon ab.
+- In **Zu füllende Vorgänge** legen **Erstellte Vorgänge ausfüllen** und **Triage-Vorgänge ausfüllen** fest, welche neuen Probleme es ergänzt: die Probleme, die du erstellst, und die Triage-Probleme, für die du zuständig bist.
+- In **Verwandte Vorgänge** ist **Verwandte Vorgänge verknüpfen** standardmäßig eingeschaltet und erlaubt Smart-Fill, nach dem Speichern eines Problems [Beziehungen hinzuzufügen](#smart-fill-relations).
+- In **Vorgangsindexierung** ist **Vorgänge indexieren** standardmäßig eingeschaltet und von Smart-Fill unabhängig. Es wandelt Titel und Beschreibung der Probleme, die du erstellst oder bearbeitest, in private Vektoren um, mit denen verwandte Probleme gefunden und Probleme [inhaltlich gesucht](/docs/navigation#search-by-meaning) werden. Die Indexierung der bestehenden Probleme eines Projekts im Hintergrund folgt sowohl dem Schalter des Projekteigentümers als auch dem des Autors: Ein Problem, dessen Autor ihn ausgeschaltet hat, wird nie indexiert. Die Vektoren werden wie das Problem mit dem Projekt verschlüsselt; Vektoren, die gespeichert wurden, bevor das Projekt verschlüsselt wurde, wandelt der Hintergrundjob um. Ist der Schalter aus, entsteht für deine Probleme kein Vektor, auch wenn jemand anderes sie bearbeitet, und die Suche nach verwandten Problemen vergleicht nur Wörter. Deine eigenen Suchen nutzen dann nur den Text, ohne inhaltliche Suche. Bereits erstellte Vektoren bleiben, solange sich der Text nicht ändert; sie werden gelöscht, sobald sich der Text ändert, oder mit dem Problem.
 
 Das Ausschalten eines Schalters bricht auch Durchläufe ab, die noch nicht ausgeführt wurden. Numo kann diese Einstellungen auf deine Bitte hin ändern.
 
