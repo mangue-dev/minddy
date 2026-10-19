@@ -1189,6 +1189,7 @@ function FeedbackDetail({
     updateComment,
     deleteComment,
     deleteAttachment,
+    renameAttachment,
   } = useFeedbackTimeline(projectId, postId);
 
   // IssueActivity is generic — the feedback thread wires the same handlers as
@@ -1888,6 +1889,7 @@ function FeedbackDetail({
             onEditComment={updateComment}
             onDeleteComment={deleteComment}
             onDeleteAttachment={deleteAttachment}
+            onRenameAttachment={renameAttachment}
             canComment={canComment}
             canModerate={canWrite}
           />

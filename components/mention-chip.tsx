@@ -30,7 +30,7 @@
 // that a color cannot render: a face, an orb, an emoji.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Book02Icon, Layers01Icon, LockIcon, Target01Icon } from "@hugeicons/core-free-icons";
+import { AttachmentIcon, Book02Icon, Layers01Icon, LockIcon, Target01Icon } from "@hugeicons/core-free-icons";
 import type { CSSProperties, MouseEvent } from "react";
 import { cn } from "@/lib/utils";
 import {
@@ -62,6 +62,8 @@ export type MentionChipType =
   | "objective"
   | "page"
   | "skill"
+  /** An attachment of the surface the text belongs to (MIN-742). */
+  | "resource"
   /** A mention whose target the reader may not see (MIN-734): no name, no
    figure of its own, no link — the label is the neutral one it is given. */
   | "unavailable";
@@ -154,6 +156,8 @@ export function MentionChip({
         <HugeiconsIcon icon={LockIcon} className="size-full" aria-hidden />
       ) : type === "skill" ? (
         <HugeiconsIcon icon={Layers01Icon} className="size-full" aria-hidden />
+      ) : type === "resource" ? (
+        <HugeiconsIcon icon={AttachmentIcon} className="size-full" aria-hidden />
       ) : type === "page" ? (
         // The EMOJI of the page takes the place of the glyph when it has one:
         // it's her own face, and she wears her own colors.
@@ -283,6 +287,8 @@ function mentionTone(
       return "var(--mention-page)";
     case "skill":
       return "var(--color-emerald-500)";
+    case "resource":
+      return "var(--color-sky-600)";
     case "unavailable":
       return "var(--muted-foreground)";
     case "objective":

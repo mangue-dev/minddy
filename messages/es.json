@@ -308,7 +308,9 @@
     "cannotChangeOwner": "El rol de la persona propietaria solo cambia al transferir la propiedad.",
     "transferTargetNotMember": "La propiedad solo puede transferirse a un miembro, no a un lector.",
     "transferKeyConflict": "La nueva persona propietaria ya tiene un proyecto con esta clave. Cambia primero la clave.",
-    "transferStorageQuota": "El almacenamiento de la nueva persona propietaria no tiene espacio para los archivos de este proyecto."
+    "transferStorageQuota": "El almacenamiento de la nueva persona propietaria no tiene espacio para los archivos de este proyecto.",
+    "resourceNameInvalid": "Introduce un nombre para este recurso.",
+    "resourceNotRenamable": "Un recurso de página lleva el título de su página."
   },
   "RelayClaim": {
     "title": "Conectar GitHub",
@@ -354,7 +356,17 @@
     "dropOnIssue": "Adjuntar a {id}",
     "addedTo": "Archivo adjunto añadido a {id}.",
     "kb": "KB",
-    "mb": "MB"
+    "mb": "MB",
+    "rename": "Cambiar nombre",
+    "renameDialogTitle": "Cambiar el nombre del recurso",
+    "renameLabel": "Nombre",
+    "renameEmpty": "Introduce un nombre.",
+    "renameFailed": "No se ha podido cambiar el nombre de este recurso.",
+    "removeConfirmTitle": "¿Eliminar «{name}»?",
+    "removeConfirmDescription": "Se elimina para todos. Sus menciones aparecerán como no disponibles.",
+    "removeDraftConfirmDescription": "No se enviará. Sus menciones en tu texto aparecerán como no disponibles.",
+    "removeUploadConfirmDescription": "La subida se detiene y el archivo no se adjuntará.",
+    "removeBlockConfirmDescription": "El bloque se quita de la página. Puedes deshacerlo en el editor."
   },
   "Billing": {
     "usageAria": "Uso del plan",

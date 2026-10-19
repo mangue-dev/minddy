@@ -204,17 +204,27 @@ export function pageFileIdsInBody(body: unknown): Set<string> {
     both languages ​​up to the comma, which `Intl` already sets correctly. */
 export function formatFileSize(bytes: number, locale = "en"): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return "";
-  const units = ["B", "kB", "MB", "GB"];
+  const units = ["byte", "kilobyte", "megabyte", "gigabyte"] as const;
   let value = bytes;
   let unit = 0;
   while (value >= 1000 && unit < units.length - 1) {
     value /= 1000;
     unit += 1;
   }
-  const formatted = new Intl.NumberFormat(locale, {
-    maximumFractionDigits: value < 10 && unit > 0 ? 1 : 0,
+  const maximumFractionDigits = value < 10 && unit > 0 ? 1 : 0;
+  if (unit === 0) {
+    // CLDR spells bytes out ("820 byte"); the symbol reads better. French
+    // writes octets.
+    const formatted = new Intl.NumberFormat(locale, { maximumFractionDigits }).format(value);
+    return `${formatted} ${locale.startsWith("fr") ? "o" : "B"}`;
+  }
+  // The locale's own symbols: kB and MB, ko and Mo in French (MIN-742).
+  return new Intl.NumberFormat(locale, {
+    style: "unit",
+    unit: units[unit],
+    unitDisplay: "short",
+    maximumFractionDigits,
   }).format(value);
-  return `${formatted} ${units[unit]}`;
 }
 
 /** An image, in the sense of this module: what goes into a `<img>`. */

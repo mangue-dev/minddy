@@ -75,3 +75,30 @@ it("shows a mention just picked from the menu at once, without asking the server
   expect(host.querySelector("[data-chip=member]")?.textContent).toBe("Jean Dupont");
   expect(fetchMock).not.toHaveBeenCalled();
 });
+
+it("names an attachment from its own surface, and never from another one (MIN-742)", async () => {
+  const fetchMock = vi.fn();
+  vi.stubGlobal("fetch", fetchMock);
+  const mine = "9f1c2a3b-0000-4000-8000-000000000003";
+  const elsewhere = "9f1c2a3b-0000-4000-8000-000000000004";
+  await render(
+    `See [@spec.pdf](mention:resource/${mine}) and [@budget.xlsx](mention:resource/${elsewhere})`,
+    links({ [`resource:${mine}`]: "Spec v2.pdf" }),
+  );
+  const chips = [...host.querySelectorAll("[data-chip]")].map((chip) => [chip.getAttribute("data-chip"), chip.textContent]);
+  expect(chips).toEqual([["resource", "Spec v2.pdf"], ["unavailable", "mentionUnavailable"]]);
+  // Another surface's attachment is not resolved through the server either.
+  expect(fetchMock).not.toHaveBeenCalled();
+  expect(host.textContent).not.toContain("budget");
+});
+
+it("passes a render's own links to its pills", async () => {
+  const id = "9f1c2a3b-0000-4000-8000-000000000005";
+  await act(async () => {
+    root.render(createElement(Markdown, {
+      mentionLinks: links({ [`resource:${id}`]: "notes.md" }),
+      children: `Read [@notes](mention:resource/${id})`,
+    }));
+  });
+  expect(host.querySelector("[data-chip=resource]")?.textContent).toBe("notes.md");
+});

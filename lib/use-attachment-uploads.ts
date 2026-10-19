@@ -8,6 +8,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { compressImage } from "@/lib/image-compress";
+import { normalizeResourceName } from "@/lib/resource-name";
 import type { LinkResourceInput, ResourceInput, ResourceKind } from "@/lib/types";
 import { trackEvent } from "./analytics";
 import { sizeBucket } from "./analytics-sanitize";
@@ -28,6 +29,8 @@ export interface PendingResource {
   /** Link half. */
   url?: string;
   icon_data_url?: string | null;
+  /** The page's og:image thumbnail (MIN-742). */
+  preview_data_url?: string | null;
   /** Page half (MIN-275) — `page` mirrors what the resolved row carries, so the
       chip of a page picked in a composer reads exactly like a saved one. */
   page_id?: string;
@@ -168,6 +171,7 @@ export function useAttachmentUploads(
             });
             onUploadedRef.current?.(
               {
+                id: localId,
                 storage_path: path,
                 file_name: fileName,
                 mime_type: uploaded.mime_type,
@@ -236,6 +240,7 @@ export function useAttachmentUploads(
                   url: data.url,
                   file_name: data.file_name,
                   icon_data_url: data.icon_data_url ?? null,
+                  preview_data_url: data.preview_data_url ?? null,
                 }
               : p
           )
@@ -244,10 +249,12 @@ export function useAttachmentUploads(
         trackEvent("resource_added", { target: "issue", kind: "link" });
         onUploadedRef.current?.(
           {
+            id: localId,
             kind: "link",
             url: data.url,
             file_name: data.file_name,
             icon_data_url: data.icon_data_url ?? null,
+            preview_data_url: data.preview_data_url ?? null,
           },
           localId
         );
@@ -296,7 +303,7 @@ export function useAttachmentUploads(
       // Neither the title nor the id: only that a page has been cited.
       trackEvent("resource_added", { target: "issue", kind: "page" });
       onUploadedRef.current?.(
-        { kind: "page", page_id: page.id, file_name: title },
+        { id: localId, kind: "page", page_id: page.id, file_name: title },
         localId
       );
     },
@@ -309,17 +316,35 @@ export function useAttachmentUploads(
     setPending((prev) => prev.filter((p) => p.localId !== localId));
   }, []);
 
+  /**
+   * Rename a landed entry before it is saved (MIN-742). Pages keep their
+   * title, which is what the saved chip shows anyway; an entry still in
+   * flight is not renamed, as its landing would overwrite the name.
+   */
+  const rename = useCallback((localId: string, fileName: string) => {
+    const name = normalizeResourceName(fileName);
+    if (!name) return;
+    setPending((prev) =>
+      prev.map((p) =>
+        p.localId === localId && p.status === "done" && p.kind !== "page"
+          ? { ...p, file_name: name }
+          : p
+      )
+    );
+  }, []);
+
   const clear = useCallback(() => setPending([]), []);
 
   // Reseed the composer from already-added references (a recovered draft,
   // MIN-41). The storage objects still exist and the links are still resolved —
-  // mark each done with a fresh localId so removal keeps working.
+  // mark each done. The localId is the id the draft carried, so mentions the
+  // recovered text makes still point at their resource (MIN-742).
   const restore = useCallback((restored: ResourceInput[]) => {
     setPending(
       restored.map((input) =>
         input.kind === "page"
           ? {
-              localId: createUuid(),
+              localId: input.id ?? createUuid(),
               status: "done" as const,
               kind: "page" as const,
               storage_path: "",
@@ -334,7 +359,7 @@ export function useAttachmentUploads(
             }
           : input.kind === "link"
           ? {
-              localId: createUuid(),
+              localId: input.id ?? createUuid(),
               status: "done" as const,
               kind: "link" as const,
               storage_path: "",
@@ -343,11 +368,12 @@ export function useAttachmentUploads(
               size_bytes: 0,
               url: input.url,
               icon_data_url: input.icon_data_url ?? null,
+              preview_data_url: input.preview_data_url ?? null,
             }
           : {
               ...input,
               kind: "file" as const,
-              localId: createUuid(),
+              localId: input.id ?? createUuid(),
               status: "done" as const,
             }
       )
@@ -361,18 +387,22 @@ export function useAttachmentUploads(
         .map((p) =>
           p.kind === "page"
             ? {
+                id: p.localId,
                 kind: "page" as const,
                 page_id: p.page_id as string,
                 file_name: p.file_name,
               }
             : p.kind === "link"
             ? {
+                id: p.localId,
                 kind: "link" as const,
                 url: p.url as string,
                 file_name: p.file_name,
                 icon_data_url: p.icon_data_url ?? null,
+                preview_data_url: p.preview_data_url ?? null,
               }
             : {
+                id: p.localId,
                 storage_path: p.storage_path,
                 file_name: p.file_name,
                 mime_type: p.mime_type,
@@ -390,6 +420,7 @@ export function useAttachmentUploads(
     addLink,
     addPage,
     remove,
+    rename,
     clear,
     restore,
     inputs,
@@ -398,6 +429,19 @@ export function useAttachmentUploads(
 }
 
 export type AttachmentUploads = ReturnType<typeof useAttachmentUploads>;
+
+/**
+ * The entries of a composer that are ready, each under the id it will be
+ * saved with (its `localId`, MIN-742): what its chips list and what the text
+ * being written can mention.
+ */
+export function landedResources(
+  pending: readonly PendingResource[],
+): Array<PendingResource & { id: string }> {
+  return pending
+    .filter((entry) => entry.status === "done")
+    .map((entry) => ({ ...entry, id: entry.localId }));
+}
 
 /** `https://www.linear.app/x` → `linear.app`; the raw string if unparsable
     (the server has the last word on validity anyway). */

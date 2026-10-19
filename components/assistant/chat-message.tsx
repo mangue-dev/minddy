@@ -151,6 +151,8 @@ function MessageContextRow({
       render: () => (
         <ResourcePills
           resources={[resource]}
+          // One line shared with the context chips: the compact form.
+          variant="pill"
           className="flex-nowrap"
         />
       ),

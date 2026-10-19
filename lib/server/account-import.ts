@@ -785,7 +785,7 @@ async function importAccountTransferCore(
       return [];
     }
     return [{
-      ...pick(source, ["id", "comment_id", "kind", "url", "icon_data_url", "file_name", "mime_type", "size_bytes"]),
+      ...pick(source, ["id", "comment_id", "kind", "url", "icon_data_url", "preview_data_url", "file_name", "mime_type", "size_bytes"]),
       id,
       project_id: projectId,
       issue_id: issueId,
@@ -805,7 +805,7 @@ async function importAccountTransferCore(
       row.storage_path = path;
     }
     if (protectAttachmentMetadata) {
-      for (const column of ["file_name", "url", "icon_data_url"] as const) {
+      for (const column of ["file_name", "url", "icon_data_url", "preview_data_url"] as const) {
         if (typeof row[column] === "string") {
           row[column] = await encodeAttachmentValue("attachments",
             String(row.project_id), String(row.id), column, row[column]);

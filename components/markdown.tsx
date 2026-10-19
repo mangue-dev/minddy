@@ -13,7 +13,7 @@ import { MarkdownLink, PlainMarkdownLink } from "@/components/markdown-link";
 import { extractCodeBlock } from "@/lib/markdown-code";
 import { MentionChip, NUMO_MENTION_ID } from "@/components/mention-chip";
 import { SkillChip } from "@/components/assistant/skill-chip";
-import { useMentionLinks, type MentionLinks } from "@/components/mention-links";
+import { MentionLinksProvider, useMentionLinks, type MentionLinks } from "@/components/mention-links";
 import {
   memberLabel,
   mentionScanner,
@@ -389,6 +389,9 @@ function MarkdownRenderer({
       )}
       onCopy={copyWithMentions}
     >
+      {/* Typed pills read their labels and destinations from context: the
+          links this render was given must reach them (MIN-742). */}
+      <MentionLinksProvider value={links}>
       <ReactMarkdown
         // Conversational surfaces treat a single newline as a visible break.
         // Markdown files opt out to preserve standard Markdown paragraph rules.
@@ -586,6 +589,7 @@ function MarkdownRenderer({
       >
         {children}
       </ReactMarkdown>
+      </MentionLinksProvider>
     </div>
   );
 }

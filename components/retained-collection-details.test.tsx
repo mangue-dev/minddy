@@ -78,6 +78,7 @@ vi.mock("@/lib/use-repository-skills", () => ({ useRepositorySkills: () => ({ sk
 vi.mock("@/components/ui/tooltip", () => ({ Tooltip: ({ children }: { children: ReactNode }) => children, TooltipTrigger: ({ children }: { children: ReactNode }) => children, TooltipContent: () => null }));
 vi.mock("@/components/pull-requests/pr-state-badge", () => ({ PR_STATE_STYLES: {}, PrStateBadge: () => null }));
 vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: { id: "owner" } }) }));
+vi.mock("@/lib/use-objective-resources", () => ({ useObjectiveResources: () => ({ resources: [], add: vi.fn(), remove: vi.fn(), rename: vi.fn() }) }));
 vi.mock("@/lib/use-objective-timeline", () => ({ useObjectiveTimeline: () => ({ items: [], addComment: vi.fn(), updateComment: vi.fn(), deleteComment: vi.fn(), deleteAttachment: vi.fn() }) }));
 vi.mock("@/lib/use-objective-dictation", () => ({ useObjectiveDictation: () => ({ busy: false, onTranscript: vi.fn(), reset: state.reset }) }));
 vi.mock("@/lib/use-analytics", () => ({ useAnalytics: () => ({ track: vi.fn() }) }));

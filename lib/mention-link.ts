@@ -2,8 +2,9 @@
 //
 //   [@Label](mention:<type>/<id>)
 //
-// with `type` one of member, issue, objective, project, page and `id` the
-// target's stable id. Every reader of the Markdown sees `@Label` — an agent,
+// with `type` one of member, issue, objective, project, page, resource and
+// `id` the target's stable id. A `resource` is an attachment (MIN-742),
+// mentioned only from the surface that holds it. Every reader of the Markdown sees `@Label` — an agent,
 // a webhook, GitHub, which renders an unknown scheme as plain text — while
 // the app resolves the id: the pill follows renames, a homonym can no longer
 // take its place, and a target the reader cannot open is shown as
@@ -15,7 +16,7 @@
 // label scanner (lib/mention-scan.ts) and written back as that text: only a
 // mention picked again from the menu becomes typed (docs/mentions.md).
 
-export const MENTION_TYPES = ["member", "issue", "objective", "project", "page"] as const;
+export const MENTION_TYPES = ["member", "issue", "objective", "project", "page", "resource"] as const;
 export type MentionLinkType = (typeof MENTION_TYPES)[number];
 
 export interface MentionLink {

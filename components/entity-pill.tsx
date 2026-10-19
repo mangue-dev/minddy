@@ -86,6 +86,7 @@ export function EntityPill({
   bordered = true,
   ariaLabel,
   action,
+  actions,
   className,
   children,
 }: {
@@ -98,9 +99,13 @@ export function EntityPill({
   bordered?: boolean;
   ariaLabel?: string;
   action?: PillAction;
+  /** Several overprinted commands (rename, then remove), in reading order. */
+  actions?: PillAction[];
   className?: string;
   children: ReactNode;
 }) {
+  const commands = actions ?? (action ? [action] : []);
+  const persistent = commands.some((command) => command.persistent);
   return (
     <span
       aria-label={ariaLabel}
@@ -116,33 +121,35 @@ export function EntityPill({
       )}
     >
       {children}
-      {action && (
+      {commands.length > 0 && (
         <span
           className={cn(
-            "pointer-events-none absolute inset-y-0 right-0 flex items-center rounded-[inherit] bg-gradient-to-l from-card via-card to-transparent pl-4 pr-1 transition-[opacity,--tw-gradient-from,--tw-gradient-via]",
+            "pointer-events-none absolute inset-y-0 right-0 flex items-center gap-1 rounded-[inherit] bg-gradient-to-l from-card via-card to-transparent pl-4 pr-1 transition-[opacity,--tw-gradient-from,--tw-gradient-via]",
             highlight &&
               "group-hover/pill:from-accent group-hover/pill:via-accent",
             // On the keyboard, it is the focus of the button which reveals it - otherwise we
             // would rely on an invisible.
-            action.persistent
+            persistent
               ? "opacity-100"
               : "opacity-0 group-hover/pill:opacity-100 has-[:focus-visible]:opacity-100"
           )}
         >
-          <AppTooltip label={action.label}>
-            <button
-              type="button"
-              aria-label={action.label}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                action.onClick();
-              }}
-              className="pointer-events-auto flex size-4 items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none"
-            >
-              {action.icon}
-            </button>
-          </AppTooltip>
+          {commands.map((command) => (
+            <AppTooltip key={command.label} label={command.label}>
+              <button
+                type="button"
+                aria-label={command.label}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  command.onClick();
+                }}
+                className="pointer-events-auto flex size-4 items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none"
+              >
+                {command.icon}
+              </button>
+            </AppTooltip>
+          ))}
         </span>
       )}
     </span>

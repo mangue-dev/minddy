@@ -28,6 +28,7 @@ import {
   useIdleDocumentEditorPreload,
 } from "@/components/editor/document-editor-lazy";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
+import { useResourceMentions } from "@/lib/use-resource-mentions";
 import { AssigneeCompact } from "@/components/issue-compact-fields";
 import { ObjectiveStatusIndicator } from "@/components/issue-indicators";
 import { DateTimePicker } from "@/components/date-time-picker";
@@ -42,14 +43,14 @@ import { CreationDictation, CreationProperty } from "@/components/creation-form-
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 import {
   AddResourceButton,
-  ResourcePills,
+  ComposerResourcePills,
   DropOverlay,
   pasteFileHandler,
   useFileDrop,
 } from "@/components/resources";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { AgentBeamOverlay } from "@/components/agent-beam";
-import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
+import { landedResources, useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useObjectiveDictation } from "@/lib/use-objective-dictation";
 import { useAnalytics } from "@/lib/use-analytics";
 import { useDrafts } from "@/lib/use-drafts";
@@ -288,7 +289,11 @@ export function ObjectiveDialog({
   const drafts = useDrafts("objective", activeProjectId ?? null, open && composerEnabled);
   const uploads = useAttachmentUploads(() => `projects/${activeProjectId ?? ""}`);
   const drop = useFileDrop(uploads.addFiles);
-  const mentions = useDescriptionMentions(activeProjectId ?? null, scopedMembers);
+  // The description can cite the resources added in this dialog (MIN-742).
+  const mentions = useResourceMentions(
+    useDescriptionMentions(activeProjectId ?? null, scopedMembers),
+    landedResources(uploads.pending),
+  );
 
   const activeProject = projects.find((p) => p.id === activeProjectId) ?? null;
   // Another project is only offered when the caller can create there.
@@ -589,19 +594,8 @@ export function ObjectiveDialog({
                 )}
               {/* Resources are context — they sit ABOVE the text being written. */}
               {composerEnabled && (
-                <ResourcePills
-                  resources={uploads.pending.filter((p) => p.status === "done")}
-                  pending={uploads.pending}
-                  onRemove={(a) => {
-                    // A link has no storage path — match on whichever identifies it.
-                    const match = uploads.pending.find((p) =>
-                      a.kind === "link"
-                        ? p.url === a.url
-                        : p.storage_path === a.storage_path
-                    );
-                    if (match) uploads.remove(match.localId);
-                  }}
-                  onRemovePending={uploads.remove}
+                <ComposerResourcePills
+                  uploads={uploads}
                   className="mb-3"
                 />
               )}

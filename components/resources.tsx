@@ -3,10 +3,10 @@
 
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, AttachmentIcon, Cancel01Icon, File02Icon, Link02Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, AttachmentIcon, Cancel01Icon, Delete02Icon, Download01Icon, Edit04Icon, File02Icon, Link02Icon, LinkSquare02Icon, ViewIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState } from "react";
 import Link from "@/components/app-link";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 import { SearchMenu } from "@/components/search-menu";
@@ -30,13 +30,37 @@ import type { ResourceKind } from "@/lib/types";
 import { normalizeWebUrl } from "@/lib/url-normalize";
 import { usePagesQuery } from "@/lib/use-pages-query";
 import { flattenPageTree } from "@/lib/pages";
-import type { PendingResource } from "@/lib/use-attachment-uploads";
+import {
+  landedResources,
+  type AttachmentUploads,
+  type PendingResource,
+} from "@/lib/use-attachment-uploads";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { AppTooltip } from "@/components/ui/app-tooltip";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import {
+  ResourceCard,
+  ResourceThumbnail,
+  ResourceTile,
+  tileExtension,
+  type ResourceCardItem,
+} from "@/components/resource-card";
+import { formatFileSize } from "@/lib/page-files";
+import {
+  attachmentFileUrl,
+  attachmentPreviewUrl,
+  pageResourceHref,
+  resourceDisplayName,
+} from "@/lib/resource-links";
+import {
+  isRenamableResource,
+  normalizeResourceName,
+  resourceNameStemLength,
+} from "@/lib/resource-name";
 
 /**
  * Saved rows (with id) and just-added composer entries (without) alike, in the
@@ -56,6 +80,8 @@ export interface ResourceLike {
   /** Link half. */
   url?: string | null;
   icon_data_url?: string | null;
+  /** The page's og:image thumbnail (MIN-742). */
+  preview_data_url?: string | null;
   /** Page half (MIN-275) — the id, and the page itself when the read resolved
       it. `page` absent or null on a page resource means the page is in the
       trash (or the read carried no join): the chip stays, inert. */
@@ -63,24 +89,6 @@ export interface ResourceLike {
   page?: { id: string; title: string; icon: string | null } | null;
   /** Where the page lives — the chip links to it inside the app. */
   project_id?: string | null;
-}
-
-/** The address of a page in the app — the same as that of the wiki tree. */
-export function pageResourceHref(projectId: string, pageId: string): string {
-  return `/projects/${projectId}/pages/${pageId}`;
-}
-
-/** The same-origin proxy for the private attachment bucket. */
-export function attachmentFileUrl(storagePath: string, download = false): string {
-  const qs = new URLSearchParams({ path: storagePath });
-  if (download) qs.set("download", "1");
-  return `/api/attachments/file?${qs.toString()}`;
-}
-
-/** Authenticated same-origin response used only inside the sandboxed viewer. */
-export function attachmentPreviewUrl(storagePath: string): string {
-  const qs = new URLSearchParams({ path: storagePath, preview: "1" });
-  return `/api/attachments/file?${qs.toString()}`;
 }
 
 /** Paperclip button + hidden multi-file input, shared by every composer that
@@ -448,6 +456,108 @@ export function AddLinkDialog({
   );
 }
 
+/**
+ * “Rename”: one field holding the current name, the part before the
+ * extension selected so typing keeps `.pdf` (MIN-742). Same form discipline
+ * as {@link AddLinkDialog}: it opens from inside other forms.
+ */
+export function RenameResourceDialog({
+  resource,
+  onOpenChange,
+  onSubmit,
+}: {
+  /** The resource being renamed; `null` closes the dialog. */
+  resource: ResourceLike | null;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (resource: ResourceLike, fileName: string) => void | Promise<void>;
+}) {
+  const t = useTranslations("Resources");
+  const tCommon = useTranslations("Common");
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!resource) return;
+    setValue(resource.file_name);
+    setError(null);
+    setBusy(false);
+  }, [resource]);
+
+  return (
+    <Dialog open={resource !== null} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="sm:max-w-md"
+        onOpenAutoFocus={(event) => {
+          if (!allowInputAutoFocus()) return;
+          event.preventDefault();
+          const input = inputRef.current;
+          if (!input) return;
+          input.focus();
+          input.setSelectionRange(0, resourceNameStemLength(input.value));
+        }}
+      >
+        <DialogHeader>
+          <DialogTitle>{t("renameDialogTitle")}</DialogTitle>
+        </DialogHeader>
+        <form
+          className="flex flex-col gap-3"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            // See AddLinkDialog: the parent form must not receive this submit.
+            e.stopPropagation();
+            if (!resource) return;
+            const name = normalizeResourceName(value);
+            if (!name) {
+              setError(t("renameEmpty"));
+              return;
+            }
+            if (name === resource.file_name) {
+              onOpenChange(false);
+              return;
+            }
+            setBusy(true);
+            setError(null);
+            try {
+              await onSubmit(resource, name);
+              onOpenChange(false);
+            } catch (err) {
+              setError((err as Error).message || t("renameFailed"));
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          <Input
+            ref={inputRef}
+            type="text"
+            autoComplete="off"
+            spellCheck={false}
+            aria-label={t("renameLabel")}
+            value={value}
+            onChange={(e) => {
+              setValue(e.target.value);
+              setError(null);
+            }}
+            aria-invalid={error ? true : undefined}
+          />
+          {error && <p className="text-xs text-destructive">{error}</p>}
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+              {tCommon("cancel")}
+            </Button>
+            <Button type="submit" disabled={busy || !value.trim()}>
+              {busy && <Spinner className="size-4" />}
+              {t("rename")}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 /** Forward pasted files into a composer's upload queue. */
 export function pasteFileHandler(addFiles: (files: Iterable<File>) => void) {
   return (e: React.ClipboardEvent) => {
@@ -603,6 +713,10 @@ export function ResourcePills({
   onRemove,
   canRemove,
   onRemovePending,
+  onRename,
+  canRename,
+  draft = false,
+  variant = "card",
   className,
   pillClassName,
   fileHref,
@@ -612,10 +726,26 @@ export function ResourcePills({
   /** Pill radius — figure follows (concentric rays). `md` for
  Numo composer nesting. */
   radius?: PillRadius;
+  /** Runs once the person confirmed the removal (MIN-742). */
   onRemove?: (resource: ResourceLike) => void;
   /** Per-resource gate for the X (default: every one when onRemove is set). */
   canRemove?: (resource: ResourceLike) => boolean;
+  /** Cancels an upload in flight, after the same confirmation. */
   onRemovePending?: (localId: string) => void;
+  /** Rename a file or a link (MIN-742). A rejection stays in the dialog. */
+  onRename?: (resource: ResourceLike, fileName: string) => void | Promise<void>;
+  /** Per-resource gate for the pencil (default: `canRemove`). Pages are
+      never renamed: they show their page's live title. */
+  canRename?: (resource: ResourceLike) => boolean;
+  /** The resources belong to a composer and are not saved yet: removing one
+      only takes it out of what will be sent. */
+  draft?: boolean;
+  /**
+   * `card` (default, MIN-742): Finder-like cards with the image or the type's
+   * icon, the name on two lines and the size. `pill`: the compact chip, for a
+   * strip that shares one line with other context chips (Numo's composer).
+   */
+  variant?: "card" | "pill";
   className?: string;
   /** Applied to each chip — e.g. `shadow-none` in the Numo composer. */
   pillClassName?: string;
@@ -628,7 +758,15 @@ export function ResourcePills({
   ) => string;
 }) {
   const t = useTranslations("Resources");
+  const tCommon = useTranslations("Common");
+  const locale = useLocale();
   const [preview, setPreview] = useState<ResourceLike | null>(null);
+  const [renaming, setRenaming] = useState<ResourceLike | null>(null);
+  // What waits for its confirmation: a saved or landed resource, or an
+  // upload in flight (by its local id).
+  const [removing, setRemoving] = useState<
+    { resource: ResourceLike } | { pending: PendingResource } | null
+  >(null);
 
   const done = resources ?? [];
   const inFlight = pending ?? [];
@@ -667,8 +805,10 @@ export function ResourcePills({
     </ResourceFigure>
   );
 
+  const cards = variant === "card";
+
   return (
-    <div className={cn("flex flex-wrap items-center gap-1.5", className)}>
+    <div className={cn("flex flex-wrap", cards ? "items-start gap-2" : "items-center gap-1.5", className)}>
       {done.map((a) => {
         // A resource is a link when it says so AND carries an URL; anything
         // else is a file, which is what every row written before MIN-184 is.
@@ -726,6 +866,102 @@ export function ResourcePills({
           </>
         );
         const removable = !!onRemove && (canRemove?.(a) ?? true);
+        const renamable = !!onRename && isRenamableResource(a) &&
+          (canRename?.(a) ?? canRemove?.(a) ?? true);
+        // The pill's hover commands; a card puts them in its menu instead.
+        const actions = [
+          ...(renamable
+            ? [{
+                label: t("rename"),
+                onClick: () => setRenaming(a),
+                icon: <HugeiconsIcon icon={Edit04Icon} className="size-3" />,
+              }]
+            : []),
+          ...(removable
+            ? [{
+                label: t("remove"),
+                onClick: () => setRemoving({ resource: a }),
+                icon: <HugeiconsIcon icon={Cancel01Icon} className="size-3" />,
+              }]
+            : []),
+        ];
+        const key = a.id ?? url ?? pageId ?? path ?? a.file_name;
+
+        if (cards) {
+          const typeTile = (
+            <ResourceTile
+              icon={<ResourceTypeIcon mime={mime} name={a.file_name} className="size-6" />}
+              label={tileExtension(a.file_name)}
+            />
+          );
+          const faviconTile = (
+            <ResourceTile
+              icon={a.icon_data_url ? (
+                // A favicon is an inline data URI: nothing to optimize.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={a.icon_data_url} alt="" aria-hidden className="size-6 rounded-[3px] object-contain" />
+              ) : (
+                <HugeiconsIcon icon={Link02Icon} className="size-6 text-sky-600 dark:text-sky-400" aria-hidden />
+              )}
+            />
+          );
+          // A link shows its page's social image when it has one, else the
+          // favicon tile (MIN-742).
+          const figure = url ? (
+            a.preview_data_url
+              ? <ResourceThumbnail src={a.preview_data_url} fallback={faviconTile} />
+              : faviconTile
+          ) : pageId ? (
+            <ResourceTile
+              icon={a.page?.icon ? (
+                <span className="text-2xl leading-none">{a.page.icon}</span>
+              ) : (
+                <HugeiconsIcon icon={File02Icon} className="size-6 text-indigo-500 dark:text-indigo-400" aria-hidden />
+              )}
+            />
+          ) : previewKind === "image" && path ? (
+            <ResourceThumbnail
+              src={fileHref?.(a, "preview") ?? attachmentFileUrl(path)}
+              fallback={typeTile}
+            />
+          ) : typeTile;
+          // A click or a right-click on the card opens these (MIN-742).
+          const items: ResourceCardItem[] = [
+            ...(pageHref
+              ? [{ key: "open", label: t("openPage"), icon: <HugeiconsIcon icon={File02Icon} />, href: pageHref, internal: true }]
+              : url
+                ? [{ key: "open", label: t("openLink"), icon: <HugeiconsIcon icon={LinkSquare02Icon} />, href: url, external: true }]
+                : previewKind && path
+                  ? [{ key: "open", label: t("preview"), icon: <HugeiconsIcon icon={ViewIcon} />, onSelect: () => setPreview(a) }]
+                  : []),
+            ...(renamable
+              ? [{ key: "rename", label: t("rename"), icon: <HugeiconsIcon icon={Edit04Icon} />, onSelect: () => setRenaming(a) }]
+              : []),
+            ...(path
+              ? [{ key: "download", label: t("download"), icon: <HugeiconsIcon icon={Download01Icon} />, href: fileHref?.(a, "download") ?? attachmentFileUrl(path, true), download: true }]
+              : []),
+            ...(removable
+              ? [{ key: "remove", label: t("remove"), icon: <HugeiconsIcon icon={Delete02Icon} />, destructive: true, onSelect: () => setRemoving({ resource: a }) }]
+              : []),
+          ];
+          const detail = url
+            ? hostOf(url)
+            : pageId
+              ? t("addPage")
+              : formatFileSize(a.size_bytes ?? 0, locale);
+          return (
+            <ResourceCard
+              key={key}
+              name={fullName}
+              detail={detail}
+              figure={figure}
+              items={items}
+              menuLabel={t("actions")}
+              struck={!!pageId && !pageHref}
+              className={pillClassName}
+            />
+          );
+        }
         const inner = (
           <>
             {pageHref ? (
@@ -794,23 +1030,13 @@ export function ResourcePills({
             )}
           </>
         );
-        const key = a.id ?? url ?? pageId ?? path ?? a.file_name;
-
         return (
           <EntityPill
             key={key}
             radius={radius}
             highlight
             className={pillClassName}
-            action={
-              removable
-                ? {
-                    label: t("remove"),
-                    onClick: () => onRemove(a),
-                    icon: <HugeiconsIcon icon={Cancel01Icon} className="size-3" />,
-                  }
-                : undefined
-            }
+            actions={actions}
           >
             {inner}
           </EntityPill>
@@ -819,7 +1045,24 @@ export function ResourcePills({
 
       {inFlight
         .filter((p) => p.status === "uploading")
-        .map((p) => (
+        .map((p) => cards ? (
+          <ResourceCard
+            key={p.localId}
+            busy
+            name={p.file_name}
+            detail={formatFileSize(p.size_bytes, locale)}
+            figure={<ResourceTile icon={<Spinner className="size-5 text-muted-foreground" />} label={tileExtension(p.file_name)} />}
+            menuLabel={t("actions")}
+            items={onRemovePending ? [{
+              key: "remove",
+              label: t("remove"),
+              icon: <HugeiconsIcon icon={Delete02Icon} />,
+              destructive: true,
+              onSelect: () => setRemoving({ pending: p }),
+            }] : []}
+            className={pillClassName}
+          />
+        ) : (
           <EntityPill
             key={p.localId}
             radius={radius}
@@ -829,7 +1072,7 @@ export function ResourcePills({
               onRemovePending
                 ? {
                     label: t("remove"),
-                    onClick: () => onRemovePending(p.localId),
+                    onClick: () => setRemoving({ pending: p }),
                     icon: <HugeiconsIcon icon={Cancel01Icon} className="size-3" />,
                   }
                 : undefined
@@ -853,8 +1096,89 @@ export function ResourcePills({
         mimeType={preview.mime_type}
         open
         onOpenChange={open => { if (!open) setPreview(null); }}
-        onRemove={onRemove && (canRemove?.(preview) ?? true) ? () => onRemove(preview) : undefined}
+        onRemove={onRemove && (canRemove?.(preview) ?? true) ? () => setRemoving({ resource: preview }) : undefined}
+        onRename={onRename && isRenamableResource(preview) && (canRename?.(preview) ?? canRemove?.(preview) ?? true)
+          ? () => setRenaming(preview)
+          : undefined}
       />}
+
+      {onRename && (
+        <RenameResourceDialog
+          resource={renaming}
+          onOpenChange={(open) => { if (!open) setRenaming(null); }}
+          onSubmit={onRename}
+        />
+      )}
+
+      <ConfirmDeleteDialog
+        open={removing !== null}
+        onOpenChange={(open) => { if (!open) setRemoving(null); }}
+        title={t("removeConfirmTitle", {
+          name: removing
+            ? "pending" in removing
+              ? removing.pending.file_name
+              : resourceDisplayName(removing.resource)
+            : "",
+        })}
+        description={
+          removing && "pending" in removing
+            ? t("removeUploadConfirmDescription")
+            : draft
+              ? t("removeDraftConfirmDescription")
+              : t("removeConfirmDescription")
+        }
+        confirmLabel={t("remove")}
+        cancelLabel={tCommon("cancel")}
+        onConfirm={() => {
+          if (!removing) return;
+          if ("pending" in removing) onRemovePending?.(removing.pending.localId);
+          else onRemove?.(removing.resource);
+        }}
+      />
     </div>
   );
+}
+
+/**
+ * The chips of a composer's queue (create dialogs, comment and reply
+ * composers): landed entries by their future id, uploads in flight, removal
+ * and renaming before anything is saved (MIN-742).
+ */
+export function ComposerResourcePills({
+  uploads,
+  className,
+  radius,
+  pillClassName,
+}: {
+  uploads: Pick<AttachmentUploads, "pending" | "remove" | "rename">;
+  className?: string;
+  radius?: PillRadius;
+  pillClassName?: string;
+}) {
+  return (
+    <ResourcePills
+      resources={landedResources(uploads.pending)}
+      pending={uploads.pending}
+      radius={radius}
+      draft
+      onRemove={(a) => {
+        if (a.id) uploads.remove(a.id);
+      }}
+      onRemovePending={uploads.remove}
+      onRename={(a, fileName) => {
+        if (a.id) uploads.rename(a.id, fileName);
+      }}
+      className={className}
+      pillClassName={pillClassName}
+    />
+  );
+}
+
+/** `https://www.linear.app/docs` → `linear.app`: what a link card shows under its title. */
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
 }

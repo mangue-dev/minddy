@@ -141,6 +141,9 @@ describe("displayed size", () => {
     expect(formatFileSize(2_400_000)).toBe("2.4 MB");
     // Beyond ten units, the decimal no longer learns anything.
     expect(formatFileSize(24_000_000)).toBe("24 MB");
+    // The locale's own symbols (MIN-742).
+    expect(formatFileSize(312_000, "fr").replace(/\s/g, " ")).toBe("312 ko");
+    expect(formatFileSize(820, "fr")).toBe("820 o");
   });
 });
 

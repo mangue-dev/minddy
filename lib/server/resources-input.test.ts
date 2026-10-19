@@ -213,3 +213,40 @@ describe("parseResourcesInput — les trois formes ensemble", () => {
     ).toBeNull();
   });
 });
+
+describe("parseResourcesInput — ids chosen by a composer (MIN-742)", () => {
+  const ID = "44444444-4444-4444-8444-44444444444A";
+
+  it("keeps a valid UUID on every form, lowercased", () => {
+    const parsed = parseResourcesInput(
+      [file({ id: ID }), link({ id: ID.replace("A", "b") }), page({ id: ID.replace("A", "c") })],
+      PREFIX,
+    );
+    expect(parsed?.map((resource) => resource.id)).toEqual([
+      ID.toLowerCase(),
+      ID.replace("A", "b").toLowerCase(),
+      ID.replace("A", "c").toLowerCase(),
+    ]);
+  });
+
+  it("leaves the id out when none is sent", () => {
+    expect(parseResourcesInput([file()], PREFIX)?.[0]).not.toHaveProperty("id");
+  });
+
+  it("refuses the whole batch on a malformed or repeated id", () => {
+    expect(parseResourcesInput([file({ id: "not-a-uuid" })], PREFIX)).toBeNull();
+    expect(parseResourcesInput([file({ id: 42 })], PREFIX)).toBeNull();
+    expect(parseResourcesInput([file({ id: ID }), link({ id: ID.toLowerCase() })], PREFIX)).toBeNull();
+  });
+});
+
+describe("parseResourcesInput — a link's og:image thumbnail (MIN-742)", () => {
+  it("keeps a WebP data URI and refuses anything else", () => {
+    const thumbnail = "data:image/webp;base64,UklGRg==";
+    const [parsed] = parseResourcesInput([link({ preview_data_url: thumbnail })], PREFIX) ?? [];
+    expect((parsed as { preview_data_url?: string }).preview_data_url).toBe(thumbnail);
+    expect(parseResourcesInput([link({ preview_data_url: "https://evil.example/x.png" })], PREFIX)).toBeNull();
+    expect(parseResourcesInput([link({ preview_data_url: "data:image/svg+xml;base64,PHN2Zz4=" })], PREFIX)).toBeNull();
+    expect(parseResourcesInput([link({ preview_data_url: `data:image/webp;base64,${"A".repeat(70 * 1024)}` })], PREFIX)).toBeNull();
+  });
+});

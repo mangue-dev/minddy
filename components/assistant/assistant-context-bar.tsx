@@ -417,8 +417,12 @@ export function AssistantContextBar({
         <ResourcePills
           resources={[resource]}
           radius="md"
+          // One line shared with the context chips: the compact form.
+          variant="pill"
           className="flex-nowrap"
           pillClassName="shadow-none"
+          // The composer's own attachments, not sent yet (MIN-742).
+          draft
           onRemove={onRemoveResource}
         />
       ),
@@ -431,6 +435,8 @@ export function AssistantContextBar({
           <ResourcePills
             pending={[resource]}
             radius="md"
+            // One line shared with the context chips: the compact form.
+            variant="pill"
             className="flex-nowrap"
             pillClassName="shadow-none"
             onRemovePending={onRemovePending}

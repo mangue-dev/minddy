@@ -52,6 +52,8 @@ export interface Attachment {
   url?: string | null;
   /** Favicon of a link, `data:image/…;base64,…`; null when the site had none. */
   icon_data_url?: string | null;
+  /** The page's og:image as a small WebP data URI (MIN-742); null without one. */
+  preview_data_url?: string | null;
   /** Set for a page resource, null otherwise (attachments_kind_ck, MIN-275). */
   page_id?: string | null;
   /**
@@ -78,6 +80,9 @@ export type ResourceKind = "file" | "link" | "page";
     validates the path prefix and creates the `attachments` row. */
 export interface AttachmentInput {
   kind?: "file";
+  /** The row id a composer chose before saving (MIN-742), so the text it
+      writes can mention the resource. Absent: the server picks one. */
+  id?: string;
   storage_path: string;
   file_name: string;
   mime_type: string;
@@ -92,10 +97,14 @@ export type FileResourceInput = AttachmentInput;
     link's title and favicon for it. */
 export interface LinkResourceInput {
   kind: "link";
+  /** See {@link AttachmentInput.id}. */
+  id?: string;
   url: string;
   /** The link's display name — the page title, or its hostname. */
   file_name: string;
   icon_data_url?: string | null;
+  /** The page's og:image thumbnail, from the link preview (MIN-742). */
+  preview_data_url?: string | null;
 }
 
 /**
@@ -105,6 +114,8 @@ export interface LinkResourceInput {
  */
 export interface PageResourceInput {
   kind: "page";
+  /** See {@link AttachmentInput.id}. */
+  id?: string;
   page_id: string;
   /** Snapshot of the page title at that moment — the display name is resolved
       live at read time, this is only the fallback. */

@@ -34,8 +34,12 @@ export function TypedMentionChip({
   const t = useTranslations("Common");
   const links = useMentionLinks();
   const local = links?.label?.(type, id) ?? null;
-  const resolved = useResolvedMentionLabel(local ? null : type, local ? null : id);
-  const label = local ?? resolved;
+  // An attachment is mentioned only from the surface that holds it (MIN-742):
+  // its pill resolves from that surface's attachments alone, so a mention of
+  // another ticket's file reads as unavailable instead of asking the server.
+  const scopedOnly = type === "resource";
+  const resolved = useResolvedMentionLabel(local || scopedOnly ? null : type, local || scopedOnly ? null : id);
+  const label = local ?? (scopedOnly ? null : resolved);
   // A copy of this pill carries what it shows, never its stored label.
   useEffect(() => {
     if (label !== undefined) rememberShownMention(type, id, label);

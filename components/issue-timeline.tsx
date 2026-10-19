@@ -49,6 +49,7 @@ import { DictateButton } from "@/components/ai-elements/dictate-button";
 import {
   AttachButton,
   ResourcePills,
+  ComposerResourcePills,
   DropOverlay,
   pasteFileHandler,
   useFileDrop,
@@ -57,10 +58,11 @@ import { Markdown } from "@/components/markdown";
 import { displayName } from "@/lib/display-name";
 import { UserAvatar } from "@/components/user-avatar";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
-import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
+import { landedResources, useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useCommentLive } from "@/lib/use-comment-live";
 import type { CommentLiveTable } from "@/lib/comment-live-topic";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
+import { useResourceMentions } from "@/lib/use-resource-mentions";
 
 /**
  * What the viewer may do in a thread (MIN-693). `canComment` covers writing,
@@ -429,6 +431,7 @@ export function CommentBlock({
   onEdit,
   onDelete,
   onDeleteAttachment,
+  onRenameAttachment,
   deletesReplies,
   liveTable = "comments",
   isReply = false,
@@ -442,6 +445,8 @@ export function CommentBlock({
   onEdit: (commentId: string, body: string) => Promise<void>;
   onDelete: (commentId: string) => Promise<void>;
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
+  /** Rename one of this comment's attachments (MIN-742). */
+  onRenameAttachment?: (attachmentId: string, fileName: string) => Promise<void>;
   deletesReplies: boolean;
   /** Selects the private Realtime namespace for the backing comment table. */
   liveTable?: CommentLiveTable;
@@ -455,6 +460,8 @@ export function CommentBlock({
   const tAssistant = useTranslations("Assistant");
   const tToolCall = useTranslations("ToolCall");
   const tConnection = useTranslations("ServerUnavailable");
+  // A comment's text cites its own attachments, and only those (MIN-742).
+  const scopedMentions = useResourceMentions(mentions, comment.attachments);
   const viaNumo = !!comment.via_assistant;
   const viaMcp = !viaNumo && !!comment.via_mcp;
   const github = comment.github ?? null;
@@ -627,8 +634,8 @@ export function CommentBlock({
             <Markdown
               className="text-foreground"
               members={ctx.members}
-              mentionScan={mentions?.scan}
-              mentionLinks={mentions?.links}
+              mentionScan={scopedMentions?.scan}
+              mentionLinks={scopedMentions?.links}
             >
               {liveBody}
             </Markdown>
@@ -653,7 +660,7 @@ export function CommentBlock({
             value={draft}
             onChange={setDraft}
             members={ctx.members}
-            mentions={mentions}
+            mentions={scopedMentions}
             onSubmit={() => void saveEdit()}
             onEscape={() => setEditing(false)}
             autoFocus
@@ -685,8 +692,8 @@ export function CommentBlock({
           <Markdown
             className="text-foreground"
             members={ctx.members}
-            mentionScan={mentions?.scan}
-            mentionLinks={mentions?.links}
+            mentionScan={scopedMentions?.scan}
+            mentionLinks={scopedMentions?.links}
           >
             {comment.body}
           </Markdown>
@@ -703,6 +710,13 @@ export function CommentBlock({
                       toast.error((e as Error).message)
                     );
                   }
+                }
+              : undefined
+          }
+          onRename={
+            mine && !comment.delivery && onRenameAttachment
+              ? async (a, fileName) => {
+                  if (a.id) await onRenameAttachment(a.id, fileName);
                 }
               : undefined
           }
@@ -803,6 +817,8 @@ export function ReplyComposer({
   const uploads = useAttachmentUploads(() => `projects/${projectId}`);
   const drop = useFileDrop(uploads.addFiles);
   const meName = actorName(members, currentUserId, t);
+  // A reply cites the attachments added to it (MIN-742).
+  const replyMentions = useResourceMentions(mentions, landedResources(uploads.pending));
 
   const close = () => {
     setDraft("");
@@ -851,22 +867,13 @@ export function ReplyComposer({
       <DropOverlay show={allowAttachments && drop.dragging} />
       {/* Attachments are context — they sit ABOVE the text being written. */}
       {allowAttachments && (
-        <ResourcePills
-          resources={uploads.pending.filter((p) => p.status === "done")}
-          pending={uploads.pending}
-          onRemove={(a) => {
-            const match = uploads.pending.find((p) => p.storage_path === a.storage_path);
-            if (match) uploads.remove(match.localId);
-          }}
-          onRemovePending={uploads.remove}
-          className="px-3.5 pt-2.5"
-        />
+        <ComposerResourcePills uploads={uploads} className="px-3.5 pt-2.5" />
       )}
       <CommentEditor
         value={draft}
         onChange={setDraft}
         members={members}
-        mentions={mentions}
+        mentions={replyMentions}
         onSubmit={() => void submit()}
         onEscape={() => {
           if (!draft.trim()) close();
@@ -928,6 +935,7 @@ function CommentCard({
   onEditComment,
   onDeleteComment,
   onDeleteAttachment,
+  onRenameAttachment,
 }: {
   item: CommentItem;
   ctx: EventContext;
@@ -947,6 +955,7 @@ function CommentCard({
   onEditComment: (commentId: string, body: string) => Promise<void>;
   onDeleteComment: (commentId: string) => Promise<void>;
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
+  onRenameAttachment?: (attachmentId: string, fileName: string) => Promise<void>;
 }) {
   // Visibility is read on the ROOT: it is this from which any response inherits.
   const threadIsPublic = item.comment.visibility === "public";
@@ -975,6 +984,7 @@ function CommentCard({
           onEdit={onEditComment}
           onDelete={onDeleteComment}
           onDeleteAttachment={onDeleteAttachment}
+          onRenameAttachment={onRenameAttachment}
           deletesReplies={item.replies.length > 0}
           liveTable={liveTable}
         />
@@ -989,6 +999,7 @@ function CommentCard({
             onEdit={onEditComment}
             onDelete={onDeleteComment}
             onDeleteAttachment={onDeleteAttachment}
+            onRenameAttachment={onRenameAttachment}
             deletesReplies={false}
             liveTable={liveTable}
             isReply
@@ -1090,6 +1101,7 @@ export function IssueActivity({
   onEditComment,
   onDeleteComment,
   onDeleteAttachment,
+  onRenameAttachment,
   canComment = true,
   canModerate = true,
 }: {
@@ -1120,6 +1132,8 @@ export function IssueActivity({
   onEditComment: (commentId: string, body: string) => Promise<void>;
   onDeleteComment: (commentId: string) => Promise<void>;
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
+  /** Rename a comment's attachment (MIN-742); absent, attachments keep their name. */
+  onRenameAttachment?: (attachmentId: string, fileName: string) => Promise<void>;
   /** The viewer may comment here (project role, MIN-693). */
   canComment?: boolean;
   /** The viewer has project write access: public replies and moderation. */
@@ -1176,6 +1190,7 @@ export function IssueActivity({
                   onEditComment={onEditComment}
                   onDeleteComment={onDeleteComment}
                   onDeleteAttachment={onDeleteAttachment}
+                  onRenameAttachment={onRenameAttachment}
                 />
               );
             }
@@ -1240,7 +1255,11 @@ export function CommentComposer({
   const [posting, setPosting] = useState(false);
   const [visibility, setVisibility] = useState<CommentVisibility>("internal");
   const uploads = useAttachmentUploads(() => `projects/${projectId}`);
-  const mentions = useDescriptionMentions(projectId, members);
+  // The comment cites the attachments added to it (MIN-742).
+  const mentions = useResourceMentions(
+    useDescriptionMentions(projectId, members),
+    landedResources(uploads.pending),
+  );
   const drop = useFileDrop(uploads.addFiles);
   const isPublic = visibility === "public";
 
@@ -1287,16 +1306,7 @@ export function CommentComposer({
       <DropOverlay show={allowAttachments && drop.dragging} />
       {/* Attachments are context — they sit ABOVE the text being written. */}
       {allowAttachments && (
-        <ResourcePills
-          resources={uploads.pending.filter((p) => p.status === "done")}
-          pending={uploads.pending}
-          onRemove={(a) => {
-            const match = uploads.pending.find((p) => p.storage_path === a.storage_path);
-            if (match) uploads.remove(match.localId);
-          }}
-          onRemovePending={uploads.remove}
-          className="px-3.5 pt-2.5"
-        />
+        <ComposerResourcePills uploads={uploads} className="px-3.5 pt-2.5" />
       )}
       <CommentEditor
         value={draft}

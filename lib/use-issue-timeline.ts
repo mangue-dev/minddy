@@ -9,10 +9,11 @@ import { onlineManager, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import { editCommentOptimistically } from "./optimistic/comment-edits";
 import { timelineReadState } from "./timeline-read-state";
-import { publishCommentWrite, removeCommentThread } from "./comment-cache";
+import { publishCommentWrite, removeCommentThread, renameCommentAttachment } from "./comment-cache";
 import {
   addCommentApi,
   deleteResourceApi,
+  renameResourceApi,
   deleteCommentApi,
   updateCommentApi,
 } from "./comments-api";
@@ -213,5 +214,14 @@ export function useIssueTimeline(issueId: string | null, birth?: IssueBirth | nu
     [issueId, queryClient]
   );
 
-  return { items, readState, retryRead, addComment, updateComment, deleteComment, deleteAttachment };
+  const renameAttachment = useCallback(
+    async (attachmentId: string, fileName: string) => {
+      const saved = await renameResourceApi(attachmentId, fileName);
+      await publishCommentWrite<Comment>(queryClient, commentsKey(issueId as string),
+        (comments) => renameCommentAttachment(comments, attachmentId, saved.file_name));
+    },
+    [issueId, queryClient]
+  );
+
+  return { items, readState, retryRead, addComment, updateComment, deleteComment, deleteAttachment, renameAttachment };
 }

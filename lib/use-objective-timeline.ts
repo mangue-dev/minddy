@@ -1,11 +1,12 @@
 "use client";
 
-import { mergeComment, publishCommentWrite, removeCommentThread } from "./comment-cache";
+import { mergeComment, publishCommentWrite, removeCommentThread, renameCommentAttachment } from "./comment-cache";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import {
   addObjectiveCommentApi,
   deleteResourceApi,
+  renameResourceApi,
   deleteCommentApi,
   updateCommentApi,
 } from "./comments-api";
@@ -94,5 +95,15 @@ export function useObjectiveTimeline(objectiveId: string | null) {
     [objectiveId, queryClient]
   );
 
-  return { items, addComment, updateComment, deleteComment, deleteAttachment };
+  const renameAttachment = useCallback(
+    async (attachmentId: string, fileName: string) => {
+      const saved = await renameResourceApi(attachmentId, fileName);
+      queryClient.setQueryData<Comment[]>(commentsKey(objectiveId as string),
+        (comments) => renameCommentAttachment(comments, attachmentId, saved.file_name));
+      void queryClient.invalidateQueries({ queryKey: commentsKey(objectiveId as string) });
+    },
+    [objectiveId, queryClient]
+  );
+
+  return { items, addComment, updateComment, deleteComment, deleteAttachment, renameAttachment };
 }

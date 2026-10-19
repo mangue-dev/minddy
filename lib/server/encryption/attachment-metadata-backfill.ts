@@ -10,7 +10,7 @@ import { isContentEncryptionEnabled } from "./content-config";
 import { getContentKeys } from "./registry";
 
 const COLUMNS: Record<AttachmentTable, AttachmentColumn[]> = {
-  attachments: ["file_name", "url", "icon_data_url"],
+  attachments: ["file_name", "url", "icon_data_url", "preview_data_url"],
   page_files: ["file_name"],
 };
 
@@ -20,6 +20,7 @@ type MetadataRow = {
   file_name: string;
   url?: string | null;
   icon_data_url?: string | null;
+  preview_data_url?: string | null;
 };
 
 /** Rotate or convert one bounded batch of attachment or page-file metadata. */
@@ -44,7 +45,7 @@ export async function backfillAttachmentMetadataBatch(
     result.scanned++;
     try {
       if (!await recordBackfillAttempt(service, table,
-        "content_encryption_attempted_at", { id: row.id, file_name: row.file_name, ...(table === "attachments" ? { url: row.url, icon_data_url: row.icon_data_url } : {}) })) {
+        "content_encryption_attempted_at", { id: row.id, file_name: row.file_name, ...(table === "attachments" ? { url: row.url, icon_data_url: row.icon_data_url, preview_data_url: row.preview_data_url } : {}) })) {
         result.conflicted++;
         continue;
       }
@@ -74,12 +75,13 @@ export async function backfillAttachmentMetadataBatch(
       if (signal?.aborted) { result.interrupted = true; break; }
       const changed = Object.keys(replacements).length > 0;
       const committed = table === "attachments"
-        ? await service.rpc("migrate_attachment_metadata", {
+        ? await service.rpc("migrate_attachment_metadata_v2", {
           p_id: row.id, p_old_file_name: row.file_name, p_old_url: row.url,
-          p_old_icon: row.icon_data_url,
+          p_old_icon: row.icon_data_url, p_old_preview: row.preview_data_url ?? null,
           ...(changed ? { p_new_file_name: replacements.file_name ?? null,
             p_new_url: replacements.url ?? null,
-            p_new_icon: replacements.icon_data_url ?? null } : {}),
+            p_new_icon: replacements.icon_data_url ?? null,
+            p_new_preview: replacements.preview_data_url ?? null } : {}),
         })
         : await service.rpc("migrate_page_file_metadata", {
           p_id: row.id, p_old_file_name: row.file_name,

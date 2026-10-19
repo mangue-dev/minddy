@@ -33,6 +33,8 @@ import {
   useIdleDocumentEditorPreload,
 } from "@/components/editor/document-editor-lazy";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
+import { useResourceMentions } from "@/lib/use-resource-mentions";
+import { useObjectiveResources } from "@/lib/use-objective-resources";
 import {
   AssigneeValue,
   DueDateValue,
@@ -272,7 +274,7 @@ export function ObjectiveDetail({
   /** The project board, filtered on this objective — the button and ⌘O lead there. */
   const issuesHref = `/projects/${projectId}?objective=${objective.id}`;
 
-  const { items, addComment, updateComment, deleteComment, deleteAttachment } =
+  const { items, addComment, updateComment, deleteComment, deleteAttachment, renameAttachment } =
     useObjectiveTimeline(objective.id);
 
   const previousObjectiveId = useRef(objective.id);
@@ -400,7 +402,12 @@ export function ObjectiveDetail({
     [members, objectives, issues, projectKey]
   );
 
-  const mentions = useDescriptionMentions(projectId, members);
+  // The description cites the objective's own resources (MIN-742).
+  const { resources: objectiveResources } = useObjectiveResources(objective.id);
+  const mentions = useResourceMentions(
+    useDescriptionMentions(projectId, members),
+    objectiveResources,
+  );
 
   const commitName = () => {
     nameEdited.current = false;
@@ -653,6 +660,7 @@ export function ObjectiveDetail({
             onEditComment={updateComment}
             onDeleteComment={deleteComment}
             onDeleteAttachment={deleteAttachment}
+            onRenameAttachment={renameAttachment}
             canComment={canComment}
             canModerate={canWrite}
           />

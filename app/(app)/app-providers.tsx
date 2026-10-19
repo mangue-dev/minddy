@@ -24,6 +24,7 @@ import { BulkActionsProvider } from "@/lib/bulk-actions-context";
 import { CurrentViewProvider } from "@/lib/current-view-context";
 import { AppTabsProvider } from "@/lib/app-tabs-context";
 import { IssuePanelProvider } from "@/lib/issue-panel-context";
+import { ResourcePreviewHost } from "@/components/resource-preview-host";
 import { PrUnlinkConfirmationProvider } from "@/components/pull-requests/pr-unlink-confirmation";
 import { AppShellChrome } from "@/components/app-shell-chrome";
 import { AssistantFab } from "@/components/assistant-fab";
@@ -109,6 +110,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                                 <PrUnlinkConfirmationProvider>
                                   <OnboardingProvider>
                                     <AppShellChrome>{children}</AppShellChrome>
+                                    <ResourcePreviewHost />
                                   </OnboardingProvider>
                                 </PrUnlinkConfirmationProvider>
                               </BulkActionsProvider>

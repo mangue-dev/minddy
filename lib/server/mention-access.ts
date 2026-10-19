@@ -12,6 +12,7 @@ import {
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { issueStore } from "@/lib/server/issue-store";
 import { objectiveStore } from "@/lib/server/objective-store";
+import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 import { decodePageProjection } from "@/lib/server/page-content";
 import { decodeProjectName } from "@/lib/server/project-content";
 import { accessibleProjectIds } from "@/lib/server/project-access";
@@ -27,8 +28,14 @@ import { getServiceClient } from "@/lib/supabase-service";
  * also follows renames — and nothing at all otherwise: the caller shows a
  * neutral "unavailable" mention, without name, project or metadata.
  *
- * Access is the reader's project access for issues, objectives, pages and
- * projects. A member is visible to a reader who shares a project with them.
+ * Access is the reader's project access for issues, objectives, pages,
+ * resources and projects. A member is visible to a reader who shares a
+ * project with them.
+ *
+ * A resource (an attachment, MIN-742) is mentioned only from the surface that
+ * holds it, and the app's pills resolve it from that surface alone. This
+ * resolution serves what agents read and plain previews: the current name of
+ * the attachment, under project access.
  */
 
 export interface MentionRef {
@@ -76,7 +83,7 @@ export async function resolveMentionTargets(
     [...unique.values()].filter((ref) => ref.type === type).map((ref) => ref.id);
 
   const none = Promise.resolve([] as Row[]);
-  const [issues, objectives, pages, projects, memberships] = await Promise.all([
+  const [issues, objectives, pages, projects, memberships, resources] = await Promise.all([
     // Only clear columns: an issue's label is its identifier.
     idsOf("issue").length
       ? issueStore(service, userId).select("id, project_id, number, deleted_at").in("id", idsOf("issue"))
@@ -106,10 +113,15 @@ export async function resolveMentionTargets(
               .map((row) => ({ project_id: row.id, user_id: row.owner_id }))),
         ]).then(([members, owners]) => [...members, ...owners])
       : none,
+    idsOf("resource").length
+      ? service.from("attachments")
+        .select("id, project_id, file_name")
+        .in("id", idsOf("resource")).then((result) => rows(result, "resource"))
+      : none,
   ]);
 
   const projectIds = new Set<string>();
-  for (const row of [...issues, ...objectives, ...pages]) {
+  for (const row of [...issues, ...objectives, ...pages, ...resources]) {
     if (typeof row.project_id === "string") projectIds.add(row.project_id);
   }
   for (const row of projects) projectIds.add(String(row.id));
@@ -141,6 +153,14 @@ export async function resolveMentionTargets(
     const row = await decodePageProjection(stored, userId);
     const title = typeof row.title === "string" ? row.title.trim() : "";
     resolution.set(`page:${row.id}`, title || null);
+  }
+  for (const stored of resources) {
+    if (!allowed.has(String(stored.project_id))) continue;
+    // The attachment's own name, decoded like every attachment read. A page
+    // resource keeps the title snapshot taken when it was added.
+    const row = await decodeAttachmentRow("attachments", stored, userId);
+    const name = typeof row.file_name === "string" ? row.file_name.trim() : "";
+    resolution.set(`resource:${row.id}`, name || null);
   }
   for (const row of projects) {
     if (!row.deleted_at && allowed.has(String(row.id))) {

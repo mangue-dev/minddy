@@ -2,9 +2,9 @@
 
 import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { deleteResourceApi } from "./comments-api";
+import { deleteResourceApi, renameResourceApi } from "./comments-api";
 import { objectiveResourcesOptions } from "./secondary-view-queries";
-import type { ResourceInput } from "./types";
+import type { Attachment, ResourceInput } from "./types";
 
 const resourcesKey = (objectiveId: string) =>
   ["objective-resources", objectiveId] as const;
@@ -62,5 +62,17 @@ export function useObjectiveResources(objectiveId: string | null) {
     [invalidate]
   );
 
-  return { resources: data ?? [], add, remove };
+  // The row comes back renamed: show it at once, then let the next read
+  // confirm it (MIN-742).
+  const rename = useCallback(
+    async (resourceId: string, fileName: string) => {
+      const saved = await renameResourceApi(resourceId, fileName);
+      queryClient.setQueryData<Attachment[]>(resourcesKey(objectiveId as string), (rows) =>
+        rows?.map((row) => (row.id === resourceId ? { ...row, file_name: saved.file_name } : row)));
+      invalidate();
+    },
+    [queryClient, invalidate, objectiveId]
+  );
+
+  return { resources: data ?? [], add, remove, rename };
 }
