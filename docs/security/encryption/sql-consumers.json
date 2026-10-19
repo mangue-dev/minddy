@@ -1394,7 +1394,7 @@
       "functionReferences": []
     },
     "guard_attachment_metadata()": {
-      "sha256": "8aa94ad1747f057d2e3dd9899c7677b3a320b46a3ade0485274f28fc45a5db62",
+      "sha256": "95fe580e6cc76ccca89b1aad3e9dbe63d01acb3a552864a4b9670b062dbb8050",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -6196,6 +6196,21 @@
     },
     "migrate_attachment_metadata(uuid,text,text,text,text,text,text)": {
       "sha256": "4f71ee10963a8b6d1edb7de0a82f456001b0afc3acaa3400b708327151c018e7",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "attachments"
+      ],
+      "protectedRelations": [
+        "attachments"
+      ],
+      "functionReferences": []
+    },
+    "migrate_attachment_metadata_v2(uuid,text,text,text,text,text,text,text,text)": {
+      "sha256": "ac6dde6493768e517f06d9f102af9b559a0bfd6d55819b5604c18b2c0486e459",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
