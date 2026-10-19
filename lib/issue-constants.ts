@@ -119,3 +119,16 @@ export const EFFORT_MAP: Record<IssueEffort, EffortMeta> = Object.fromEntries(
 export function issueIdentifier(projectKey: string, number: number): string {
   return `${projectKey}-${number}`;
 }
+
+/**
+ * The identifier the project's next issue will receive, e.g. "MIND-43", read
+ * from the counter that reserves issue numbers. Null when the project row does
+ * not carry the counter, so callers fall back to a generic label.
+ */
+export function nextIssueIdentifier(project: {
+  key: string;
+  issue_seq?: number | null;
+}): string | null {
+  if (typeof project.issue_seq !== "number" || !Number.isInteger(project.issue_seq)) return null;
+  return issueIdentifier(project.key, Math.max(project.issue_seq, 0) + 1);
+}

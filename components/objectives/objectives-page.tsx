@@ -464,6 +464,9 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
       onOpenChange={setDialogOpen}
       members={members}
       objective={null}
+      // The objectives page creates in its own project: the "Create in"
+      // row names it without offering another one.
+      projects={[project]}
       projectId={projectId}
       projectKey={project.key}
       onCreate={async (input) => {

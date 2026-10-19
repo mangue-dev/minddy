@@ -16,7 +16,8 @@ const fixture = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => fixture.mobile }));
 vi.mock("next-intl", () => ({ useTranslations: (namespace: keyof typeof en) =>
-  (key: string) => (en[namespace] as Record<string, string>)[key] ?? key,
+  (key: string, values?: Record<string, string>) => ((en[namespace] as Record<string, string>)[key] ?? key)
+    .replace(/\{(\w+)\}/g, (match, name: string) => values?.[name] ?? match),
 }));
 vi.mock("@hugeicons/react", () => ({ HugeiconsIcon: () => null }));
 vi.mock("@/components/ui/app-tooltip", () => ({ AppTooltip: ({ children }: { children: React.ReactNode }) => children }));
@@ -101,6 +102,15 @@ vi.mock("@/lib/use-issues-query", () => ({ useIssuesQuery: (project: string | nu
   fixture.queryProjects.push(project);
   return { issues: project ? fixture.issues : [], loading: false };
 } }));
+vi.mock("@/lib/use-members-query", () => ({ useMembersQuery: () => ({ members: [] }) }));
+vi.mock("@/lib/use-categories-query", () => ({ useCategoriesQuery: () => ({ categories: [] }) }));
+// The real select is a searchable menu (SearchSelect, stubbed out here): one
+// button per project is enough to drive "Create in".
+vi.mock("@/components/creation-project-select", () => ({ CreationProjectSelect: ({ projects, value, onChange }: {
+  projects: Project[]; value: string; onChange: (projectId: string) => void;
+}) => React.createElement("div", { "data-create-in": value }, projects.map((p) =>
+  React.createElement("button", { key: p.id, type: "button", onClick: () => onChange(p.id) }, `Create in ${p.name}`))),
+}));
 vi.mock("@/lib/use-objectives-query", () => ({ useObjectivesQuery: (project: string | null) => ({ objectives: project ? fixture.objectives : [], loading: false }) }));
 vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: { id: "user", user_metadata: { smart_fill: fixture.smartFill, smart_fill_created: fixture.smartFillCreated, smart_fill_relations: fixture.smartFillRelations } } }) }));
 vi.mock("@/lib/use-analytics", () => ({ useAnalytics: () => ({ track: vi.fn() }) }));
@@ -138,7 +148,7 @@ vi.mock("@/components/semantic-issue-group", () => ({ SemanticIssueGroup: () => 
 vi.mock("@/components/project-orb", () => ({ ProjectOrb: () => null }));
 vi.mock("@/components/numo-icon", () => ({ NumoIcon: () => null }));
 vi.mock("@/components/agent-beam", () => ({ AgentBeamOverlay: () => null }));
-vi.mock("@/components/ai-elements/dictate-button", () => ({ DictateButton: ({ showLabel }: { showLabel: boolean }) => React.createElement("button", { type: "button", "data-prominent-dictation": showLabel }, "Dictate") }));
+vi.mock("@/components/ai-elements/dictate-button", () => ({ DictateButton: ({ showLabel = false }: { showLabel?: boolean }) => React.createElement("button", { type: "button", "data-prominent-dictation": String(showLabel) }, "Dictate") }));
 vi.mock("@/components/send-shortcut", () => ({ SendShortcutTooltip: ({ children }: { children: React.ReactNode }) => children }));
 vi.mock("@/components/draft-recovery-row", () => ({ DraftRecoveryRow: ({ drafts, onRecover }: { drafts: { id: string }[]; onRecover: (id: string) => void }) =>
   React.createElement("div", null, drafts.map((draft) => React.createElement("button", { key: draft.id, type: "button", onClick: () => onRecover(draft.id) }, "Recover draft"))),
@@ -153,8 +163,8 @@ import { CreationRelationsCompact } from "@/components/creation-relations";
 
 let root: Root;
 let host: HTMLDivElement;
-const project = { id: "project", name: "Current project", key: "MIN" } as Project;
-const otherProject = { id: "other", name: "Other project", key: "OTH" } as Project;
+const project = { id: "project", name: "Current project", key: "MIN", issue_seq: 499 } as Project;
+const otherProject = { id: "other", name: "Other project", key: "OTH", issue_seq: 9 } as Project;
 const issue = { id: "target-issue", project_id: "project", number: 12, title: "Target issue", status: "todo" } as Issue;
 const objective = { id: "target-objective", project_id: "project", name: "Target objective", status: "planned" } as Objective;
 
@@ -198,12 +208,17 @@ async function mountDialog(kind: "issue" | "objective", withProjectMenu = true) 
   const create = vi.fn().mockResolvedValue({ id: "created" });
   const createOther = vi.fn().mockResolvedValue({ id: "created" });
   let open = true;
+  let projects = [project, otherProject];
   const render = () => root.render(kind === "issue"
-    ? React.createElement(CreateIssueDialog, { open, onOpenChange, projectId: project.id, projects: [project, otherProject], members: [], categories: [], objectives: [], onCreate: create, onCreateInProject: createOther })
+    ? React.createElement(CreateIssueDialog, { open, onOpenChange, projectId: project.id, projects, members: [], categories: [], objectives: [], onCreate: create, onCreateInProject: createOther })
     : React.createElement(ObjectiveDialog, { open, onOpenChange, projectId: project.id, projectKey: project.key, projects: withProjectMenu ? [project, otherProject] : [], members: [], onCreate: create, onCreateInProject: createOther, onUpdate: vi.fn() }));
   const onOpenChange = (next: boolean) => { open = next; render(); };
   await act(render);
-  return { create, createOther, reopen: () => act(() => onOpenChange(true)) };
+  return {
+    create, createOther,
+    reopen: () => act(() => onOpenChange(true)),
+    setProjects: (next: Project[]) => act(() => { projects = next; render(); }),
+  };
 }
 
 describe("creation relation controls", () => {
@@ -218,13 +233,14 @@ describe("creation relation controls", () => {
     await click("Create more toggle");
     await click("Smart Fill");
     await typeTitle("Issue with a one-ticket override");
-    if (crossProject) await click("Other project");
-    else await act(async () => { host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
-    const overriddenInput = (crossProject ? dialog.createOther : dialog.create).mock.calls[0].at(-1);
-    expect(overriddenInput).toMatchObject({ smart_fill: !defaultFill });
+    if (crossProject) await click("Create in Other project");
+    await act(async () => { host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
+    const target = crossProject ? dialog.createOther : dialog.create;
+    expect(target.mock.calls[0].at(-1)).toMatchObject({ smart_fill: !defaultFill });
     await typeTitle("Issue using account preferences");
     await act(async () => { host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
-    expect(dialog.create).toHaveBeenLastCalledWith(expect.objectContaining({ smart_fill: defaultFill }));
+    // Create more keeps the project just used.
+    expect(target).toHaveBeenLastCalledWith(...(crossProject ? [otherProject.id] : []), expect.objectContaining({ smart_fill: defaultFill }));
   });
 
   it("retains the Smart Fill override when a Create more submission fails", async () => {
@@ -285,7 +301,7 @@ describe("creation relation controls", () => {
     expect(host.textContent).toContain("Target objective");
   });
 
-  it.each(["issue", "objective"] as const)("submits removable %s pills with the keyboard shortcut and protects cross-project creation", async (kind) => {
+  it.each(["issue", "objective"] as const)("submits removable %s pills with the keyboard shortcut", async (kind) => {
     // Smart Fill owns relations while it is on (MIN-717): pick them by hand.
     if (kind === "issue") fixture.smartFillCreated = false;
     const dialog = await mountDialog(kind);
@@ -293,11 +309,8 @@ describe("creation relation controls", () => {
     const pill = host.querySelector(`[aria-label="${en.Relations.blocked_by}: Target objective"]`)!;
     expect(pill).not.toBeNull();
     expect(pill.compareDocumentPosition(host.querySelector("textarea")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect([...host.querySelectorAll("button")].find((button) => button.textContent === "Other project")?.disabled).toBe(true);
-    expect(host.textContent).toContain(en.Relations.crossProjectUnavailable);
     await click(`${en.Common.remove}: ${en.Relations.blocked_by}: Target objective`);
     expect(host.querySelector(`[aria-label="${en.Relations.blocked_by}: Target objective"]`)).toBeNull();
-    expect([...host.querySelectorAll("button")].find((button) => button.textContent === "Other project")?.disabled).toBe(false);
     await addRelation("blocks", "issue");
     await typeTitle("New entity");
     await act(() => { host.querySelector("textarea")!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", ctrlKey: true, bubbles: true, cancelable: true })); });
@@ -372,14 +385,23 @@ describe("creation relation controls", () => {
   });
 });
 
-it.each(["issue", "objective"] as const)("keeps mobile %s dictation and submission available without submitting on Next", async (kind) => {
+it.each(["issue", "objective"] as const)("keeps mobile %s dictation beside submission without submitting on Next", async (kind) => {
   fixture.mobile = true;
   const dialog = await mountDialog(kind);
-  const recorder = host.querySelectorAll('[data-prominent-dictation="true"]');
+  // One unlabeled recorder, right after the create button in the fixed footer.
+  const recorder = host.querySelectorAll("[data-prominent-dictation]");
   expect(recorder).toHaveLength(1);
-  expect(recorder[0].closest(".creation-form-body")).not.toBeNull();
+  expect(recorder[0].getAttribute("data-prominent-dictation")).toBe("false");
   const footer = host.querySelector(".creation-form-footer")!;
   expect(footer.closest(".creation-form-body")).toBeNull();
+  const submitRow = footer.querySelector(".creation-submit")!;
+  expect(submitRow.lastElementChild?.contains(recorder[0])).toBe(true);
+  expect(submitRow.querySelector('button[type="submit"]')).not.toBeNull();
+  // "Create in" shares the sheet title's row instead of adding one.
+  const header = host.querySelector("[data-mobile-sheet-header]")!;
+  expect(header.textContent).toContain(kind === "issue" ? en.IssueUI.newIssueTitle : en.Objectives.newObjective);
+  expect(header.querySelector("[data-create-in]")).not.toBeNull();
+  expect(host.querySelectorAll("[data-create-in]")).toHaveLength(1);
   await typeTitle("Mobile draft");
   const title = host.querySelector("textarea")!;
   await act(() => title.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true })));
@@ -387,4 +409,74 @@ it.each(["issue", "objective"] as const)("keeps mobile %s dictation and submissi
   expect(document.activeElement).toBe(host.querySelector(".creation-description [contenteditable=true]"));
   await act(() => footer.querySelector<HTMLButtonElement>('button[type="submit"]')!.click());
   expect(dialog.create).toHaveBeenCalledOnce();
+});
+
+describe("Create in project (MIN-741)", () => {
+  const submitButton = () => host.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+  const submitForm = () => act(async () => { host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
+
+  it("names the identifier the next issue receives and follows the project's counter", async () => {
+    const dialog = await mountDialog("issue");
+    expect(submitButton().textContent).toBe("Create MIN-500");
+    // Another member's issue reserved 500: realtime bumps the counter.
+    await dialog.setProjects([{ ...project, issue_seq: 500 }, otherProject]);
+    expect(submitButton().textContent).toBe("Create MIN-501");
+    await click("Create in Other project");
+    expect(submitButton().textContent).toBe("Create OTH-10");
+  });
+
+  it.each(["issue", "objective"] as const)("places the %s project select beside the close button, outside the form", async (kind) => {
+    await mountDialog(kind);
+    const select = host.querySelectorAll("[data-create-in]");
+    expect(select).toHaveLength(1);
+    expect(select[0].closest("form")).toBeNull();
+    expect(host.querySelector("[data-mobile-sheet-header]")).toBeNull();
+  });
+
+  it("falls back to a generic label without the counter", async () => {
+    const dialog = await mountDialog("issue");
+    await dialog.setProjects([{ ...project, issue_seq: undefined }, otherProject]);
+    expect(submitButton().textContent).toBe(en.IssueUI.createTicket);
+  });
+
+  it("copies the identifier from the split menu while creating", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+    const dialog = await mountDialog("issue");
+    await typeTitle("Copied issue");
+    await click("Create and copy MIN-500");
+    expect(writeText).toHaveBeenCalledWith("MIN-500");
+    expect(dialog.create).toHaveBeenCalledWith(expect.objectContaining({ title: "Copied issue" }));
+  });
+
+  it("clears project-scoped choices when the issue moves to another project", async () => {
+    fixture.smartFillCreated = false;
+    const dialog = await mountDialog("issue");
+    await addRelation("related", "objective");
+    await click("Create in Other project");
+    expect(host.textContent).not.toContain("Target objective");
+    await typeTitle("Moved issue");
+    await submitForm();
+    expect(dialog.create).not.toHaveBeenCalled();
+    expect(dialog.createOther).toHaveBeenCalledWith(otherProject.id, expect.objectContaining({
+      title: "Moved issue", relations: [], category_ids: [], objective_id: null, parent_id: null, copy_resources: [],
+    }));
+    // The dialog closed on creation; reopening starts in its own project.
+    await dialog.reopen();
+    expect(host.querySelector("[data-create-in]")?.getAttribute("data-create-in")).toBe(project.id);
+  });
+
+  it("creates an objective with a plain button in the selected project", async () => {
+    const dialog = await mountDialog("objective");
+    expect(submitButton().textContent).toBe(en.Objectives.createObjective);
+    await addRelation("blocks", "issue");
+    await click("Create in Other project");
+    expect(host.textContent).not.toContain("MIN-12");
+    await typeTitle("Moved objective");
+    await submitForm();
+    expect(dialog.create).not.toHaveBeenCalled();
+    expect(dialog.createOther).toHaveBeenCalledWith(otherProject.id, expect.objectContaining({
+      name: "Moved objective", lead_user_id: null, relations: [], copy_resources: [],
+    }));
+  });
 });

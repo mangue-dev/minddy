@@ -9,7 +9,7 @@ import { createUuid } from "@/lib/create-uuid";
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { DropdownMenuItem, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
 import { SplitButton } from "@/components/ui/split-button";
 import { Switch } from "@/components/ui/switch";
@@ -40,8 +40,12 @@ import {
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { AgentBeamOverlay } from "@/components/agent-beam";
-import { ProjectOrb } from "@/components/project-orb";
-import { projectOrbSeed } from "@/lib/project-orb-colors";
+import { CreationProjectSelect } from "@/components/creation-project-select";
+import { useMembersQuery } from "@/lib/use-members-query";
+import { useCategoriesQuery } from "@/lib/use-categories-query";
+import { useObjectivesQuery } from "@/lib/use-objectives-query";
+import { capabilitiesForProject } from "@/lib/use-project-capabilities";
+import { nextIssueIdentifier } from "@/lib/issue-constants";
 import {
   AssigneeCompact,
   CategoriesCompact,
@@ -118,13 +122,16 @@ export function CreateIssueDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectId: string;
-  /** All the user's projects — powers the "create in another project" menu. */
+  /** All the user's projects — the "Create in" select lists those the
+      viewer can write. */
   projects: Project[];
+  /** Members, categories and objectives of `projectId`; another selected
+      project loads its own. */
   members: Member[];
   categories: Category[];
   objectives: Objective[];
   onCreate: (input: CreateIssueInput) => Promise<unknown>;
-  /** Create in an arbitrary project (the split-button dropdown targets). */
+  /** Create in another project chosen in the "Create in" select. */
   onCreateInProject: (
     targetProjectId: string,
     input: CreateIssueInput,
@@ -169,6 +176,25 @@ export function CreateIssueDialog({
   const tRelations = useTranslations("Relations");
   const { user } = useAuth();
   const { track } = useAnalytics();
+  /**
+   * "Create in" (MIN-741): the project the issue lands in, `projectId` when the
+   * dialog opens. Everything project-scoped follows the selection — pickers,
+   * drafts, mentions, relation search, dictation and the upload prefix.
+   */
+  const [selectedProjectId, setSelectedProjectId] = useState(projectId);
+  useEffect(() => {
+    if (open) setSelectedProjectId(projectId);
+  }, [open, projectId]);
+  const activeProjectId = selectedProjectId;
+  const inHomeProject = activeProjectId === projectId;
+  // The opening project's data comes from the caller; another one loads here.
+  const foreignProjectId = open && !inHomeProject ? activeProjectId : null;
+  const foreignMembers = useMembersQuery(foreignProjectId, foreignProjectId !== null).members;
+  const foreignCategories = useCategoriesQuery(foreignProjectId).categories;
+  const foreignObjectives = useObjectivesQuery(foreignProjectId).objectives;
+  const scopedMembers = inHomeProject ? members : foreignMembers;
+  const scopedCategories = inHomeProject ? categories : foreignCategories;
+  const scopedObjectives = inHomeProject ? objectives : foreignObjectives;
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   /** The editor document of `description`, as last committed (MIN-728);
@@ -179,7 +205,11 @@ export function CreateIssueDialog({
   const [fields, setFields] = useState(DEFAULTS);
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [relations, setRelations] = useState<PendingRelationInput[]>([]);
-  useEffect(() => { setRelations([]); }, [projectId]);
+  // Relations and categories belong to one project: a new target starts empty.
+  useEffect(() => {
+    setRelations([]);
+    setCategoryIds([]);
+  }, [activeProjectId]);
   const [createMore, setCreateMore] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   // Which field picker a keyboard shortcut (S/P/E/A/L/D/O) has opened, if any.
@@ -216,10 +246,10 @@ export function CreateIssueDialog({
   // ⌘/Ctrl + Enter creates the ticket, from wherever you are in the form — y
   // understood from the description, which the title field does not cover.
   const submitShortcut = useSubmitShortcut();
-  const uploads = useAttachmentUploads(() => `projects/${projectId}`);
+  const uploads = useAttachmentUploads(() => `projects/${activeProjectId}`);
   const drop = useFileDrop(uploads.addFiles);
-  const drafts = useDrafts("issue", projectId, open);
-  const mentions = useDescriptionMentions(projectId, members);
+  const drafts = useDrafts("issue", activeProjectId, open);
+  const mentions = useDescriptionMentions(activeProjectId, scopedMembers);
   // This dialog mounts with its board: warm the editor chunk once the page
   // has painted, so opening the form never shows the loading fallback.
   useIdleDocumentEditorPreload();
@@ -269,36 +299,48 @@ export function CreateIssueDialog({
   // this project's members, so only seed when the user actually belongs here.
   const defaultAssigneeId =
     user?.user_metadata?.auto_assign_created === true &&
-    members.some((m) => m.user_id === user.id)
+    scopedMembers.some((m) => m.user_id === user.id)
       ? user.id
       : DEFAULTS.assignee_id;
 
+  // The project-scoped presets: the caller's objective, parent and assignee
+  // describe the board it opened from, so they only hold in that project.
+  const scopedPresets = {
+    objective_id: inHomeProject ? initialObjectiveId ?? DEFAULTS.objective_id : null,
+    parent_id: inHomeProject ? initialParentId ?? DEFAULTS.parent_id : null,
+    assignee_id: (inHomeProject ? initialAssigneeId : null) ?? defaultAssigneeId,
+  };
+
   // The field values a freshly-opened dialog starts from: base defaults plus the
-  // same presets the open effect applies (column status, objective, auto-assign).
+  // same presets the open effects apply (column status, objective, auto-assign).
   // Used both to seed on open and to reset after a "create more" submit.
   const freshFields = () => ({
     ...DEFAULTS,
     status: initialStatus ?? DEFAULTS.status,
-    objective_id: initialObjectiveId ?? DEFAULTS.objective_id,
-    parent_id: initialParentId ?? DEFAULTS.parent_id,
-    assignee_id: initialAssigneeId ?? defaultAssigneeId,
+    ...scopedPresets,
   });
 
   // Apply the presets each time the dialog opens (a column's "+" reopens it with
   // that column's status; objective mode reopens it with the objective set;
   // family mode reopens it under the active parent; the auto-assign
-  // preference seeds the assignee). Re-seeding on
-  // defaultAssigneeId also covers members loading in after the dialog opens.
+  // preference seeds the assignee).
+  useEffect(() => {
+    if (!open) return;
+    setFields((f) => ({ ...f, status: initialStatus ?? DEFAULTS.status }));
+  }, [open, initialStatus]);
+  // Changing the "Create in" project resets the project-scoped fields to that
+  // project's presets. Re-seeding on defaultAssigneeId also covers members
+  // loading in after the dialog opens or the project changes.
+  const { objective_id: presetObjectiveId, parent_id: presetParentId, assignee_id: presetAssigneeId } = scopedPresets;
   useEffect(() => {
     if (!open) return;
     setFields((f) => ({
       ...f,
-      status: initialStatus ?? DEFAULTS.status,
-      objective_id: initialObjectiveId ?? DEFAULTS.objective_id,
-      parent_id: initialParentId ?? DEFAULTS.parent_id,
-      assignee_id: initialAssigneeId ?? defaultAssigneeId,
+      objective_id: presetObjectiveId,
+      parent_id: presetParentId,
+      assignee_id: presetAssigneeId,
     }));
-  }, [open, initialStatus, initialObjectiveId, initialParentId, initialAssigneeId, defaultAssigneeId]);
+  }, [open, presetObjectiveId, presetParentId, presetAssigneeId]);
 
   // The starting content, placed ONCE per opening. The flag is a ref and
   // not an effect dependency: `initialCategoryIds` is an array, therefore a
@@ -383,6 +425,7 @@ export function CreateIssueDialog({
 
   const reset = () => {
     clearContent();
+    setSelectedProjectId(projectId);
     setFields(DEFAULTS);
     setCategoryIds([]);
     setCreateMore(false);
@@ -411,7 +454,7 @@ export function CreateIssueDialog({
   const saveDraft = async () => {
     await drafts.save({
       id: activeDraftId ?? createUuid(),
-      projectId,
+      projectId: activeProjectId,
       updatedAt: Date.now(),
       title,
       description,
@@ -497,7 +540,7 @@ export function CreateIssueDialog({
       objective_id: draft.objective_id,
       // Drafts never recorded a parent: the dialog's own preset reasserts
       // itself, so a draft recovered on a family board still lands there.
-      parent_id: initialParentId ?? DEFAULTS.parent_id,
+      parent_id: presetParentId,
       due_date: draft.due_date,
       recurrence: draft.recurrence ?? null,
     });
@@ -507,9 +550,27 @@ export function CreateIssueDialog({
     setActiveDraftId(draft.id);
   };
 
-  // `target` is set only when creating in a different project (dropdown item).
   const tPages = useTranslations("Pages");
-  const submit = async (keepOpen: boolean, target?: Project) => {
+  const writableProjects = projects.filter(
+    (p) => p.id === projectId || capabilitiesForProject(p, user?.id).canWrite
+  );
+  const activeProject = projects.find((p) => p.id === activeProjectId) ?? null;
+  // The identifier the issue will receive (MIN-741): the project's counter
+  // follows every reservation through realtime, so it stays current while
+  // issues are created elsewhere.
+  const nextIdentifier = activeProject ? nextIssueIdentifier(activeProject) : null;
+
+  const changeProject = (next: string) => {
+    if (next === activeProjectId) return;
+    setSelectedProjectId(next);
+    setOpenPicker(null);
+    // The recovered draft belongs to the previous project's list.
+    setActiveDraftId(null);
+  };
+
+  // `copyIdentifier`: the split menu's "Create and copy" — written while the
+  // click still counts as a user gesture, before the request is awaited.
+  const submit = async (keepOpen: boolean, copyIdentifier = false) => {
     const trimmed = title.trim();
     if (!trimmed || submitting) return;
     // An image still uploading has no address yet (MIN-728).
@@ -517,63 +578,47 @@ export function CreateIssueDialog({
       toast.info(tPages("waitForUploads"));
       return;
     }
-    const other = target && target.id !== projectId ? target : null;
-    if (other && relations.length > 0) {
-      toast.info(tRelations("crossProjectUnavailable"));
-      return;
+    const identifier = copyIdentifier ? nextIdentifier : null;
+    if (identifier) {
+      void navigator.clipboard.writeText(identifier).catch(() => {
+        toast.error(t("copyIdentifierFailed"));
+      });
     }
     setSubmitting(true);
     try {
-      if (other) {
-        // Cross-project: statuses / priority / effort / due date are portable.
-        // The assignee is a person (may belong to the target too) and categories
-        // travel by NAME — the server keeps each only if the target project has
-        // a matching member / category, and drops it otherwise. Attachments are
-        // COPIED into the target project by the server (their storage paths carry
-        // THIS project's prefix, so they can't be referenced as-is). Only the
-        // objective can't travel (an objective is scoped to one project).
-        const categoryNames = categories
-          .filter((c) => categoryIds.includes(c.id))
-          .map((c) => c.name);
-        await onCreateInProject(other.id, {
-          title: trimmed,
-          description: description.trim() || null,
-          ...(description.trim() && descriptionDocument.current
-            ? { description_doc: descriptionDocument.current }
-            : {}),
-          status: fields.status,
-          priority: fields.priority,
-          effort: fields.effort,
-          due_date: fields.due_date,
-          recurrence: fields.recurrence,
-          assignee_id: fields.assignee_id,
-          category_names: categoryNames,
-          copy_resources: uploads.inputs,
-          smart_fill: smartFill,
-        });
-        toast.success(
-          smartFill
-            ? t("smartFillPendingToast")
-            : t("issueCreatedInProjectToast", { project: other.name }),
-        );
+      const input: CreateIssueInput = {
+        title: trimmed,
+        description: description.trim() || null,
+        ...(description.trim() && descriptionDocument.current
+          ? { description_doc: descriptionDocument.current }
+          : {}),
+        ...fields,
+        category_ids: categoryIds,
+        relations,
+        smart_fill: smartFill,
+      };
+      if (inHomeProject) {
+        await onCreate({ ...input, resources: uploads.inputs });
       } else {
-        await onCreate({
-          title: trimmed,
-          description: description.trim() || null,
-          ...(description.trim() && descriptionDocument.current
-            ? { description_doc: descriptionDocument.current }
-            : {}),
-          ...fields,
-          category_ids: categoryIds,
-          resources: uploads.inputs,
-          relations,
-          smart_fill: smartFill,
-        });
-        // Smart-fill: the card is not yet there (the server fills before
-        // to insert), and the toast is the only thing that says it's coming.
-        // Without it, we close a form on a board that has not moved.
-        toast.success(smartFill ? t("smartFillPendingToast") : t("issueCreatedToast"));
+        // Files uploaded before the project changed carry the previous
+        // project's storage prefix: the server copies them into the target
+        // (and drops pages that do not belong there, MIN-275). Assignee,
+        // objective and categories come from the target's own pickers and are
+        // validated against it server-side.
+        await onCreateInProject(activeProjectId, { ...input, copy_resources: uploads.inputs });
       }
+      // Smart-fill: the card is not yet there (the server fills before
+      // inserting), and the toast is the only thing that says it's coming.
+      // Without it, we close a form on a board that has not moved.
+      toast.success(
+        smartFill
+          ? t("smartFillPendingToast")
+          : identifier
+            ? t("issueCreatedCopiedToast", { identifier })
+            : inHomeProject
+              ? t("issueCreatedToast")
+              : t("issueCreatedInProjectToast", { project: activeProject?.name ?? "" }),
+      );
       // Analytics (MIN-78): metadata only — never the title or the
       // description, only their presence and the length range.
       track("issue_created", {
@@ -584,7 +629,7 @@ export function CreateIssueDialog({
         priority: fields.priority,
         status: fields.status,
         effort: fields.effort,
-        cross_project: other !== null,
+        cross_project: !inHomeProject,
         resource_count: uploads.inputs.length,
         description_length_bucket: lengthBucket(description),
         created_from_draft: activeDraftId !== null,
@@ -600,7 +645,8 @@ export function CreateIssueDialog({
       clearDictationHistory();
       if (keepOpen) {
         // Rapid entry: reset the whole draft to a blank slate (title, description
-        // AND every property), exactly as if the dialog had just been reopened.
+        // AND every property), exactly as if the dialog had just been reopened —
+        // in the project just used.
         clearContent();
         setFields(freshFields());
         smartFillTouchedRef.current = false;
@@ -618,9 +664,6 @@ export function CreateIssueDialog({
       setSubmitting(false);
     }
   };
-
-  const currentProject = projects.find((p) => p.id === projectId) ?? null;
-  const otherProjects = projects.filter((p) => p.id !== projectId);
 
   const applyPatch = (patch: IssueDraftPatch) => {
     if (typeof patch.title === "string") setTitle(patch.title);
@@ -653,7 +696,7 @@ export function CreateIssueDialog({
     clearHistory: clearDictationHistory,
     reset: resetDictation,
   } = useIssueDictation({
-    projectId,
+    projectId: activeProjectId,
     mode: "create",
     // Armed smart-fill: dictation no longer poses priority, effort, categories or
     // objective — the route removes these arguments from its tool, and it is Smart-fill
@@ -670,6 +713,18 @@ export function CreateIssueDialog({
     applyPatch,
   });
 
+  // The destination decides which members, categories, objectives and
+  // relations the rest of the form offers.
+  const projectSelect = (placement: "dialog" | "sheet") => (
+    <CreationProjectSelect
+      projects={writableProjects}
+      value={activeProjectId}
+      onChange={changeProject}
+      placement={placement}
+      disabled={submitting || numoBusy}
+    />
+  );
+
   const dictationControl = <CreationDictation mobile={mobile} busy={numoBusy} busyLabel={t("numoWorking")}
     context="issue_form" onTranscription={(text) => { track("issue_dictation_used", { surface: "create_dialog" }); onTranscript(text); }}
     disabled={submitting} shortcutKey="mod+shift+d" onProcessingChange={setTranscribing}
@@ -681,10 +736,23 @@ export function CreateIssueDialog({
         <DialogContent
           ref={contentRef}
           aria-describedby={undefined}
-          className="creation-sheet p-8 max-sm:p-5 sm:max-w-2xl"
+          // The extra top padding clears the "Create in" pill and the close button.
+          className="creation-sheet p-8 pt-15 max-sm:p-5 max-sm:pt-15 sm:max-w-2xl"
           onInteractOutside={keepOverlayOpenForPopper}
         >
-          <DialogTitle className={mobile ? "shrink-0 pr-10" : "sr-only"}>{t("newIssueTitle")}</DialogTitle>
+          {/* "Create in" (MIN-741): level with the close button on desktop;
+              on phones it joins the sheet title instead of adding a row. */}
+          {mobile ? (
+            <div data-mobile-sheet-header className="flex shrink-0 items-center gap-2">
+              <DialogTitle className="shrink-0">{t("newIssueTitle")}</DialogTitle>
+              {projectSelect("sheet")}
+            </div>
+          ) : (
+            <>
+              <DialogTitle className="sr-only">{t("newIssueTitle")}</DialogTitle>
+              {projectSelect("dialog")}
+            </>
+          )}
 
           <form
             {...submitShortcut}
@@ -698,7 +766,6 @@ export function CreateIssueDialog({
           >
             <DropOverlay show={drop.dragging} />
             <MobileSheetScrollArea className="creation-form-body">
-              {mobile && dictationControl}
               {/* Recent drafts — a row above the title to restore or delete an
                 abandoned draft (MIN-41). Hidden once the form has content. */}
               {title.trim() === "" && description.trim() === "" && (
@@ -726,8 +793,8 @@ export function CreateIssueDialog({
                 className="mb-3"
               />
               <CreationRelationPills
-                projectId={projectId}
-                projectKey={currentProject?.key ?? ""}
+                projectId={activeProjectId}
+                projectKey={activeProject?.key ?? ""}
                 active={open}
                 value={relations}
                 onChange={setRelations}
@@ -759,7 +826,7 @@ export function CreateIssueDialog({
                 mentions={mentions}
                 key={editorKey}
                 value={description}
-                uploadScope={`projects/${projectId}`}
+                uploadScope={`projects/${activeProjectId}`}
                 onUploadingChange={setImagesUploading}
                 onCommit={(markdown, content) => {
                   setDescription(markdown);
@@ -816,8 +883,8 @@ export function CreateIssueDialog({
                     <CreationProperty mobile={mobile} label={tField("categories")}>
                       <CategoriesCompact
                         showValue={mobile}
-                        categories={categories}
-                        projectId={projectId}
+                        categories={scopedCategories}
+                        projectId={activeProjectId}
                         value={categoryIds}
                         onChange={setCategoryIds}
                         open={openPicker === "category"}
@@ -834,7 +901,7 @@ export function CreateIssueDialog({
                     onChange={(assignee_id) =>
                       setFields((f) => ({ ...f, assignee_id }))
                     }
-                    members={members}
+                    members={scopedMembers}
                     open={openPicker === "assignee"}
                     onOpenChange={(o) => setOpenPicker(o ? "assignee" : null)}
                     shortcutHint={KEY_FOR_FIELD.assignee}
@@ -860,8 +927,8 @@ export function CreateIssueDialog({
                       onChange={(objective_id) =>
                         setFields((f) => ({ ...f, objective_id }))
                       }
-                      objectives={objectives}
-                      projectId={projectId}
+                      objectives={scopedObjectives}
+                      projectId={activeProjectId}
                       open={openPicker === "objective"}
                       onOpenChange={(o) => setOpenPicker(o ? "objective" : null)}
                       shortcutHint={KEY_FOR_FIELD.objective}
@@ -875,8 +942,8 @@ export function CreateIssueDialog({
                 {!(smartFill && smartFillLinksRelations) && (
                   <CreationProperty mobile={mobile} label={tRelations("relations")}>
                     <CreationRelationsCompact
-                      projectId={projectId}
-                      projectKey={currentProject?.key ?? ""}
+                      projectId={activeProjectId}
+                      projectKey={activeProject?.key ?? ""}
                       active={open}
                       value={relations}
                       onChange={setRelations}
@@ -900,15 +967,14 @@ export function CreateIssueDialog({
             {/* Submission stays visible while the mobile form body scrolls. */}
             <div className="creation-form-footer mt-6 flex flex-wrap items-center gap-3 sm:mt-8">
               {!mobile && dictationControl}
-              {/* The proposed wiki is that of THIS project. Create the ticket in a
- other project (the creation menu entry) sends the
- files, never the pages: the server discards those which
- do not belong to the arrival project (MIN-275). */}
+              {/* The proposed wiki is that of the selected project. Pages cited
+                  before switching project are discarded by the server when they
+                  do not belong to the arrival project (MIN-275). */}
               <AddResourceButton
                 onFiles={uploads.addFiles}
                 onLink={uploads.addLink}
                 onPage={uploads.addPage}
-                projectId={projectId}
+                projectId={activeProjectId}
                 disabled={submitting}
               />
               <div className="ml-auto flex items-center gap-4">
@@ -928,36 +994,29 @@ export function CreateIssueDialog({
   line, full width, when the bar passes the line. No Cancel button:
   the dialog's own close X already does that job. */}
               <div className="creation-submit flex items-center justify-end gap-2 app-mobile:w-full app-desktop:ml-1">
-                {otherProjects.length > 0 && currentProject ? (
+                {nextIdentifier ? (
                   /* The tooltip clings to the action, not the chevron: its
- props pass through `SplitButton` to the left button,
- the only one that ⌘↵ activates. */
+                     props pass through `SplitButton` to the left button,
+                     the only one that ⌘↵ activates. */
                   <SendShortcutTooltip
                     scope="form"
-                    label={t("createInProject", { project: currentProject.name })}
+                    label={t("createIdentifier", { identifier: nextIdentifier })}
                   >
                     <SplitButton
                       type="submit"
                       disabled={submitting || numoBusy || !title.trim() || uploads.uploading}
                       className="app-mobile:w-full"
                       actionClassName="app-mobile:flex-1"
-                      menuLabel={t("createInOtherProject")}
-                      menu={<>
-                        {relations.length > 0 && <DropdownMenuLabel className="max-w-60 whitespace-normal">{tRelations("crossProjectUnavailable")}</DropdownMenuLabel>}
-                        {otherProjects.map((p) => (
-                        <DropdownMenuItem
-                          key={p.id}
-                          disabled={relations.length > 0}
-                          onSelect={() => void submit(createMore, p)}
-                        >
-                          <ProjectOrb seed={projectOrbSeed(p)} iconUrl={p.icon_url} className="size-4" />
-                          <span className="truncate">{p.name}</span>
+                      menuLabel={t("moreCreateOptions")}
+                      menu={
+                        <DropdownMenuItem onSelect={() => void submit(createMore, true)}>
+                          {t("createAndCopyIdentifier", { identifier: nextIdentifier })}
                         </DropdownMenuItem>
-                      ))}</>}
+                      }
                     >
                       {submitting && <Spinner />}
                       <span className="max-w-[14rem] truncate py-0.5 leading-normal">
-                        {t("createInProject", { project: currentProject.name })}
+                        {t("createIdentifier", { identifier: nextIdentifier })}
                       </span>
                     </SplitButton>
                   </SendShortcutTooltip>
@@ -973,6 +1032,8 @@ export function CreateIssueDialog({
                     </Button>
                   </SendShortcutTooltip>
                 )}
+                {/* On phones the recorder sits beside the create button. */}
+                {mobile && dictationControl}
               </div>
             </div>
           </form>

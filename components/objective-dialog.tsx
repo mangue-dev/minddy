@@ -13,9 +13,7 @@ import { createUuid } from "@/lib/create-uuid";
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { DropdownMenuItem, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
-import { SplitButton } from "@/components/ui/split-button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -34,8 +32,10 @@ import { AssigneeCompact } from "@/components/issue-compact-fields";
 import { ObjectiveStatusIndicator } from "@/components/issue-indicators";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { SearchSelect, type PickerOption } from "@/components/search-select";
-import { ProjectOrb } from "@/components/project-orb";
-import { projectOrbSeed } from "@/lib/project-orb-colors";
+import { CreationProjectSelect } from "@/components/creation-project-select";
+import { useMembersQuery } from "@/lib/use-members-query";
+import { useAuth } from "@/lib/auth-context";
+import { capabilitiesForProject } from "@/lib/use-project-capabilities";
 import { DraftRecoveryRow } from "@/components/draft-recovery-row";
 import { CloseDraftDialog } from "@/components/close-draft-dialog";
 import { CreationDictation, CreationProperty } from "@/components/creation-form-layout";
@@ -204,13 +204,14 @@ export function ObjectiveDialog({
   initialName?: string;
   onCreate: (input: CreateObjectiveInput) => Promise<unknown>;
   onUpdate: (id: string, updates: ObjectiveUpdateInput) => Promise<unknown>;
-  /** All the user's projects — powers the "create in another project" split. */
+  /** The user's projects — the "Create in" select lists those the viewer can
+      write. Without `onCreateInProject`, only `projectId` is offered. */
   projects?: Project[];
-  /** The project `onCreate` targets — labels the split button's primary action. */
+  /** The project `onCreate` targets, selected when the dialog opens. */
   projectId?: string;
   /** Identifier prefix when this dialog is mounted without a project menu. */
   projectKey?: string;
-  /** Create in an arbitrary project (the split-button dropdown targets). */
+  /** Create in another project chosen in the "Create in" select. */
   onCreateInProject?: (
     targetProjectId: string,
     input: CreateObjectiveInput
@@ -224,6 +225,21 @@ export function ObjectiveDialog({
   const tDrafts = useTranslations("Drafts");
   const tRelations = useTranslations("Relations");
   const { track } = useAnalytics();
+  const { user } = useAuth();
+  /**
+   * "Create in" (MIN-741): the project the objective lands in, `projectId`
+   * when the dialog opens. Drafts, uploads, mentions, dictation, relations and
+   * the lead picker follow the selection.
+   */
+  const [selectedProjectId, setSelectedProjectId] = useState(projectId);
+  useEffect(() => {
+    if (open) setSelectedProjectId(projectId);
+  }, [open, projectId]);
+  const activeProjectId = selectedProjectId ?? projectId;
+  const inHomeProject = activeProjectId === projectId;
+  const foreignProjectId = open && !inHomeProject ? activeProjectId ?? null : null;
+  const foreignMembers = useMembersQuery(foreignProjectId, foreignProjectId !== null).members;
+  const scopedMembers = inHomeProject ? members : foreignMembers;
   // Mounts with the objectives page: warm the editor chunk once painted.
   useIdleDocumentEditorPreload();
   const [form, setForm] = useState(EMPTY);
@@ -268,17 +284,28 @@ export function ObjectiveDialog({
   // is project-scoped (the draft store, the storage prefix, the dictation route)
   // and each only makes sense while composing — editing an objective happens in
   // the side panel, whose own attach button and mic write straight to it.
-  const composerEnabled = !objective && !!projectId;
-  const drafts = useDrafts("objective", projectId ?? null, open && composerEnabled);
-  const uploads = useAttachmentUploads(() => `projects/${projectId ?? ""}`);
+  const composerEnabled = !objective && !!activeProjectId;
+  const drafts = useDrafts("objective", activeProjectId ?? null, open && composerEnabled);
+  const uploads = useAttachmentUploads(() => `projects/${activeProjectId ?? ""}`);
   const drop = useFileDrop(uploads.addFiles);
-  const mentions = useDescriptionMentions(projectId ?? null, members);
+  const mentions = useDescriptionMentions(activeProjectId ?? null, scopedMembers);
 
-  const currentProject = projects.find((p) => p.id === projectId) ?? null;
-  const otherProjects = projects.filter((p) => p.id !== projectId);
-  // Only in create mode, and only when there's somewhere else to create it.
-  const showSplit =
-    !objective && !!onCreateInProject && !!currentProject && otherProjects.length > 0;
+  const activeProject = projects.find((p) => p.id === activeProjectId) ?? null;
+  // Another project is only offered when the caller can create there.
+  const selectableProjects = projects.filter((p) =>
+    p.id === projectId ||
+    (!!onCreateInProject && capabilitiesForProject(p, user?.id).canWrite)
+  );
+
+  // The lead and relations belong to one project: a new target starts without.
+  const changeProject = (next: string) => {
+    if (next === activeProjectId) return;
+    setSelectedProjectId(next);
+    setForm((f) => ({ ...f, lead_user_id: null }));
+    setRelations([]);
+    // The recovered draft belongs to the previous project's list.
+    setActiveDraftId(null);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -303,6 +330,7 @@ export function ObjectiveDialog({
 
   const closeAndReset = () => {
     descriptionDocument.current = null;
+    setSelectedProjectId(projectId);
     setForm(EMPTY);
     setRelations([]);
     editorNonEmptyRef.current = false;
@@ -323,10 +351,10 @@ export function ObjectiveDialog({
 
   // Snapshot the form as a local draft (MIN-41), reusing the active id.
   const saveDraft = async () => {
-    if (!projectId) return;
+    if (!activeProjectId) return;
     await drafts.save({
       id: activeDraftId ?? createUuid(),
-      projectId,
+      projectId: activeProjectId,
       updatedAt: Date.now(),
       name: form.name,
       description: form.description,
@@ -406,18 +434,13 @@ export function ObjectiveDialog({
     setActiveDraftId(draft.id);
   };
 
-  // `target` is set only when creating in a different project (dropdown item).
   const tPages = useTranslations("Pages");
-  const submit = async (target?: Project) => {
+  const submit = async () => {
     const name = form.name.trim();
     if (!name || submitting) return;
     // An image still uploading has no address yet (MIN-728).
     if (imagesUploading) {
       toast.info(tPages("waitForUploads"));
-      return;
-    }
-    if (target && target.id !== projectId && relations.length > 0) {
-      toast.info(tRelations("crossProjectUnavailable"));
       return;
     }
     setSubmitting(true);
@@ -432,30 +455,21 @@ export function ObjectiveDialog({
       target_date: form.target_date,
       color: form.color,
     };
-    const other =
-      target && projectId && target.id !== projectId ? target : null;
     try {
       if (objective) {
         await onUpdate(objective.id, payload);
         if (payload.description_doc) rememberDocument(payload.description_doc);
         toast.success(t("updatedToast"));
-      } else if (other && onCreateInProject) {
-        // Cross-project: the lead references THIS project's members and doesn't
-        // exist in the target — only the portable fields travel. Resources are
-        // COPIED into the target project by the server (their storage paths
-        // carry THIS project's prefix, so they can't be referenced as-is).
-        await onCreateInProject(other.id, {
-          name,
-          description: form.description.trim() || null,
-          ...(form.description.trim() && descriptionDocument.current
-            ? { description_doc: descriptionDocument.current }
-            : {}),
-          status: form.status,
-          target_date: form.target_date,
-          color: form.color,
+      } else if (!inHomeProject && activeProjectId && onCreateInProject) {
+        // Another project: the lead and relations were picked among its own
+        // members and issues. Files uploaded before the project changed carry
+        // the previous prefix, so the server COPIES them into the target.
+        await onCreateInProject(activeProjectId, {
+          ...payload,
+          relations,
           copy_resources: uploads.inputs,
         });
-        toast.success(t("createdInProjectToast", { project: other.name }));
+        toast.success(t("createdInProjectToast", { project: activeProject?.name ?? "" }));
       } else {
         await onCreate({ ...payload, resources: uploads.inputs, relations });
         toast.success(t("createdToast"));
@@ -504,11 +518,22 @@ export function ObjectiveDialog({
   // dies with the dialog (nothing persisted).
   const { busy: numoBusy, onTranscript, reset: resetDictation } =
     useObjectiveDictation({
-      projectId: projectId ?? "",
+      projectId: activeProjectId ?? "",
       mode: "create",
       getDraft: () => form,
       applyPatch,
     });
+
+  const showProjectSelect = composerEnabled && !!activeProject;
+  const projectSelect = (placement: "dialog" | "sheet") => activeProject && (
+    <CreationProjectSelect
+      projects={selectableProjects}
+      value={activeProject.id}
+      onChange={changeProject}
+      placement={placement}
+      disabled={submitting || numoBusy}
+    />
+  );
 
   const dictationControl = <CreationDictation mobile={mobile} busy={numoBusy} busyLabel={t("numoWorking")}
     context="objective_form" onTranscription={(text) => { track("objective_dictation_used", { surface: "create_dialog" }); onTranscript(text); }}
@@ -519,14 +544,26 @@ export function ObjectiveDialog({
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent
           aria-describedby={undefined}
-          className="creation-sheet p-8 max-sm:p-5 sm:max-w-2xl"
+          // In creation, the extra top padding clears the "Create in" pill and
+          // the close button.
+          className={cn("creation-sheet p-8 max-sm:p-5 sm:max-w-2xl", showProjectSelect && "pt-15 max-sm:pt-15")}
           onInteractOutside={keepOverlayOpenForPopper}
         >
           {/* Screen reader title: when editing, the name of the objective says
  better what it is than a generic title. */}
-          <DialogTitle className={mobile ? "shrink-0 pr-10" : "sr-only"}>
-            {objective ? objective.name : t("newObjective")}
-          </DialogTitle>
+          {/* "Create in" (MIN-741): level with the close button on desktop;
+              on phones it joins the sheet title instead of adding a row. */}
+          {mobile && showProjectSelect ? (
+            <div data-mobile-sheet-header className="flex shrink-0 items-center gap-2">
+              <DialogTitle className="shrink-0">{t("newObjective")}</DialogTitle>
+              {projectSelect("sheet")}
+            </div>
+          ) : (
+            <DialogTitle className={mobile ? "shrink-0 pr-10" : "sr-only"}>
+              {objective ? objective.name : t("newObjective")}
+            </DialogTitle>
+          )}
+          {!mobile && showProjectSelect && projectSelect("dialog")}
 
           <form
             {...submitShortcut}
@@ -538,7 +575,6 @@ export function ObjectiveDialog({
           >
             {composerEnabled && <DropOverlay show={drop.dragging} />}
             <MobileSheetScrollArea className="creation-form-body">
-              {mobile && composerEnabled && dictationControl}
               {/* Recent drafts — a row above the name to restore or delete an
                 abandoned draft (MIN-41). Hidden once the form has content. */}
               {composerEnabled &&
@@ -571,8 +607,8 @@ export function ObjectiveDialog({
               )}
               {composerEnabled && (
                 <CreationRelationPills
-                  projectId={projectId!}
-                  projectKey={currentProject?.key ?? projectKey ?? ""}
+                  projectId={activeProjectId!}
+                  projectKey={activeProject?.key ?? projectKey ?? ""}
                   active={open}
                   value={relations}
                   onChange={setRelations}
@@ -610,7 +646,7 @@ export function ObjectiveDialog({
                 key={editorKey}
                 mentions={mentions}
                 value={form.description}
-                uploadScope={projectId ? `projects/${projectId}` : null}
+                uploadScope={activeProjectId ? `projects/${activeProjectId}` : null}
                 onUploadingChange={setImagesUploading}
                 document={objective ? storedDocument : null}
                 onCommit={(description, content) => {
@@ -626,7 +662,7 @@ export function ObjectiveDialog({
                 onEmptyChange={(empty) => {
                   editorNonEmptyRef.current = !empty;
                 }}
-                placeholder={t("descriptionPlaceholder")}
+                placeholder={t("createDescriptionPlaceholder")}
                 className="creation-description mt-2 min-h-16"
               />
               )}
@@ -644,7 +680,7 @@ export function ObjectiveDialog({
                     showValue={mobile}
                     value={form.lead_user_id}
                     onChange={(lead_user_id) => setForm((f) => ({ ...f, lead_user_id }))}
-                    members={members}
+                    members={scopedMembers}
                     noneLabel={t("noLead")}
                   />
                 </CreationProperty>
@@ -667,8 +703,8 @@ export function ObjectiveDialog({
                 {composerEnabled && (
                   <CreationProperty mobile={mobile} label={tRelations("relations")}>
                     <CreationRelationsCompact
-                      projectId={projectId!}
-                      projectKey={currentProject?.key ?? projectKey ?? ""}
+                      projectId={activeProjectId!}
+                      projectKey={activeProject?.key ?? projectKey ?? ""}
                       active={open}
                       value={relations}
                       onChange={setRelations}
@@ -687,68 +723,33 @@ export function ObjectiveDialog({
                   onFiles={uploads.addFiles}
                   onLink={uploads.addLink}
                   onPage={uploads.addPage}
-                  projectId={projectId}
+                  projectId={activeProjectId}
                   disabled={submitting}
                 />
               )}
               {/* No Cancel button: the dialog's own close X already does
                   that job. */}
               <div className="creation-submit ml-auto flex items-center justify-end gap-2 app-mobile:w-full">
-                {showSplit ? (
-                  /* The tooltip attaches to the action, not the chevron: its
- props pass through `SplitButton` to the left button,
- the only one that ⌘↵ activates. */
-                  <SendShortcutTooltip
-                    scope="form"
-                    label={t("createInProject", { project: currentProject!.name })}
+                <SendShortcutTooltip
+                  scope="form"
+                  label={objective ? tCommon("save") : t("createObjective")}
+                >
+                  <Button
+                    type="submit"
+                    className="rounded-full px-4 app-mobile:w-full"
+                    disabled={
+                      submitting ||
+                      numoBusy ||
+                      !form.name.trim() ||
+                      uploads.uploading
+                    }
                   >
-                    <SplitButton
-                      type="submit"
-                      disabled={
-                        submitting ||
-                        numoBusy ||
-                        !form.name.trim() ||
-                        uploads.uploading
-                      }
-                      className="app-mobile:w-full"
-                      actionClassName="app-mobile:flex-1"
-                      menuLabel={t("createInOtherProject")}
-                      menu={<>
-                        {relations.length > 0 && <DropdownMenuLabel className="max-w-60 whitespace-normal">{tRelations("crossProjectUnavailable")}</DropdownMenuLabel>}
-                        {otherProjects.map((p) => (
-                        <DropdownMenuItem key={p.id} onSelect={() => void submit(p)}
-                          disabled={relations.length > 0}>
-                          <ProjectOrb seed={projectOrbSeed(p)} iconUrl={p.icon_url} className="size-4" />
-                          <span className="truncate">{p.name}</span>
-                        </DropdownMenuItem>
-                      ))}</>}
-                    >
-                      {submitting && <Spinner />}
-                      <span className="max-w-[14rem] truncate py-0.5 leading-normal">
-                        {t("createInProject", { project: currentProject!.name })}
-                      </span>
-                    </SplitButton>
-                  </SendShortcutTooltip>
-                ) : (
-                  <SendShortcutTooltip
-                    scope="form"
-                    label={objective ? tCommon("save") : tCommon("create")}
-                  >
-                    <Button
-                      type="submit"
-                      className="rounded-full px-4 app-mobile:w-full"
-                      disabled={
-                        submitting ||
-                        numoBusy ||
-                        !form.name.trim() ||
-                        uploads.uploading
-                      }
-                    >
-                      {submitting && <Spinner />}
-                      {objective ? tCommon("save") : tCommon("create")}
-                    </Button>
-                  </SendShortcutTooltip>
-                )}
+                    {submitting && <Spinner />}
+                    {objective ? tCommon("save") : t("createObjective")}
+                  </Button>
+                </SendShortcutTooltip>
+                {/* On phones the recorder sits beside the create button. */}
+                {mobile && composerEnabled && dictationControl}
               </div>
             </div>
           </form>
