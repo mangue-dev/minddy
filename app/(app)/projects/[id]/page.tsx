@@ -40,7 +40,7 @@ import { useMyCycleQuery } from "@/lib/use-my-cycle-query";
 import { cycleCompletionPercent } from "@/lib/cycle";
 import { useBoardViews } from "@/lib/use-board-views";
 import { usePublishCurrentView } from "@/lib/current-view-context";
-import { buildViewHref } from "@/lib/saved-view-href";
+import { buildViewHref } from "@/lib/view-href";
 import { boardViewTabHref } from "@/lib/board-view-tab";
 import { ME_ASSIGNEE, filterIssues, visibleStatuses } from "@/lib/view-filter";
 import {
@@ -543,19 +543,17 @@ function ProjectBoard() {
     ? issues.find((i) => i.id === openIssueId) ?? null
     : null;
 
-  // “Save current view” (⌘K): the active view of a board lives in
-  // localStorage, not in the address — without this postback, the view
-  // saved would reopen the board on the currently stored view, not on
-  // the one we were looking at. `?view=` is precisely the instruction that restores it
-  // (see useBoardViews). The ticket opened in the side panel does not go away
-  // not with: a saved view retains the page, not what is placed in front of it.
+  // The active view of a board lives in localStorage, not in the address —
+  // without this publication, a restored app tab would reopen the board on the
+  // currently stored view, not on the one we were looking at. `?view=` is
+  // precisely the instruction that restores it (see useBoardViews). The issue
+  // open in the side panel is an overlay and stays out of the address.
   usePublishCurrentView(
     activeView && project
       ? {
           href: buildViewHref(pathname, searchParams.toString(), {
             view: activeView.id,
           }),
-          label: `${project.name} · ${activeView.name}`,
         }
       : null
   );

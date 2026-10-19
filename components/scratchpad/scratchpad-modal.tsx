@@ -90,7 +90,7 @@ function SavedAgo({ updatedAt }: { updatedAt: string | null }) {
 
 function ScratchpadBody() {
   const t = useTranslations("Scratchpad");
-  const { isOpen, setOpen } = useScratchpad();
+  const { isOpen, setOpen, focusTaskIndex, clearFocusTask } = useScratchpad();
   const { user } = useAuth();
   // The notebook spans projects, so its mention picker uses the same global
   // source as Numo's global composer and only loads when "@" is typed.
@@ -258,6 +258,8 @@ function ScratchpadBody() {
               applyExternalRef={applyRef}
               removeSettledRef={removeSettledRef}
               startAllRef={startAllRef}
+              focusTaskIndex={focusTaskIndex}
+              onFocusTask={clearFocusTask}
               mentions={{
                 options: mentionables,
                 links,

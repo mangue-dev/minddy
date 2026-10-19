@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { AppTabRouteBoundary, useAppTabActive, useAppTabRoute } from "@/lib/app-tab-route-context";
 import { useOptionalAppTabNavigation } from "@/lib/app-tab-navigation-context";
-import { useTranslations } from "next-intl";
 
 import { RoutinesPanel } from "@/components/routines/routines-panel";
 import type { RoutineDetailIntent } from "@/components/routines/routine-detail";
@@ -15,7 +14,6 @@ export function RoutinesPage() {
 }
 
 function RoutinesPageInner() {
-  const t = useTranslations("Routines");
   const { pathname, searchParams } = useAppTabRoute();
   const active = useAppTabActive();
   const navigation = useOptionalAppTabNavigation();
@@ -72,7 +70,6 @@ function RoutinesPageInner() {
     href: selectedId
       ? `/routines?routine=${encodeURIComponent(selectedId)}`
       : "/routines",
-    label: t("tab"),
   });
 
   return (

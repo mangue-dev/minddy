@@ -1313,21 +1313,6 @@ export interface ViewUpdateInput {
   display?: ViewDisplay;
 }
 
-/**
- * A SAVED VIEW — a screen retained from the command palette, not to
- * with `View` just above (the filters of a kanban). This
- * only knows an internal address, and it is strictly personal.
- */
-export interface SavedView {
-  id: string;
-  user_id: string;
-  name: string;
-  /** Chemin absolu interne, query comprise (`/projects/x/objectives?open=y`). */
-  href: string;
-  created_at: string;
-  updated_at: string;
-}
-
 /** Public-link sharing level of a view — "private" = no share row exists. */
 export type ViewShareLevel = "private" | "password" | "public";
 

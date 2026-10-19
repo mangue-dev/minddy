@@ -262,56 +262,56 @@
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 357,
+    "line": 356,
     "storage": false
   },
   {
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 374,
+    "line": 373,
     "storage": false
   },
   {
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 438,
+    "line": 437,
     "storage": false
   },
   {
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 459,
+    "line": 458,
     "storage": false
   },
   {
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 598,
+    "line": 596,
     "storage": false
   },
   {
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 655,
+    "line": 653,
     "storage": false
   },
   {
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 694,
+    "line": 692,
     "storage": false
   },
   {
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 709,
+    "line": 707,
     "storage": false
   },
   {
@@ -521,7 +521,7 @@
     "file": "app/api/issue-pull-requests/route.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 22,
+    "line": 23,
     "storage": false
   },
   {
@@ -606,20 +606,6 @@
     "operation": "from",
     "resource": "projects",
     "line": 50,
-    "storage": false
-  },
-  {
-    "file": "app/api/me/saved-views/[id]/route.ts",
-    "operation": "from",
-    "resource": "saved_views",
-    "line": 45,
-    "storage": false
-  },
-  {
-    "file": "app/api/me/saved-views/route.ts",
-    "operation": "from",
-    "resource": "saved_views",
-    "line": 13,
     "storage": false
   },
   {
@@ -766,7 +752,7 @@
     "file": "app/api/projects/[id]/dictate-feedback/route.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 92,
+    "line": 87,
     "storage": false
   },
   {
@@ -1522,210 +1508,210 @@
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 211,
+    "line": 209,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 229,
+    "line": 227,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "hidden_projects",
-    "line": 235,
+    "line": 233,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "user_numo_preferences",
-    "line": 272,
+    "line": 269,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 288,
+    "line": 285,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "page_files",
-    "line": 299,
+    "line": 296,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 311,
+    "line": 308,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "views",
-    "line": 326,
-    "storage": false
-  },
-  {
-    "file": "lib/server/account-export.ts",
-    "operation": "from",
-    "resource": "saved_views",
-    "line": 327,
+    "line": 323,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_routines",
-    "line": 329,
+    "line": 325,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "cycles",
-    "line": 331,
+    "line": 327,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 333,
+    "line": 329,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "notifications",
-    "line": 338,
+    "line": 334,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 350,
+    "line": 346,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 356,
+    "line": 352,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "ai_usage",
-    "line": 368,
+    "line": 364,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "api_keys",
-    "line": 376,
+    "line": 372,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 381,
+    "line": 377,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "git_connections",
-    "line": 386,
+    "line": 382,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "git_user_identities",
-    "line": 393,
+    "line": 389,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 398,
+    "line": 394,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 412,
+    "line": 408,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "issue_categories",
-    "line": 442,
+    "line": 438,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": null,
-    "line": 115,
+    "line": 114,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 280,
+    "line": 278,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": null,
-    "line": 364,
+    "line": 362,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 385,
+    "line": 383,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 401,
+    "line": 399,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 426,
+    "line": 424,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "objectives",
-    "line": 535,
+    "line": 533,
+    "storage": false
+  },
+  {
+    "file": "lib/server/account-import.ts",
+    "operation": "from",
+    "resource": "objectives",
+    "line": 541,
     "storage": false
   },
   {
@@ -1738,15 +1724,15 @@
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
-    "resource": "objectives",
-    "line": 545,
+    "resource": "categories",
+    "line": 549,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "categories",
-    "line": 551,
+    "line": 556,
     "storage": false
   },
   {
@@ -1759,15 +1745,8 @@
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
-    "resource": "categories",
-    "line": 560,
-    "storage": false
-  },
-  {
-    "file": "lib/server/account-import.ts",
-    "operation": "from",
     "resource": "user_numo_preferences",
-    "line": 826,
+    "line": 824,
     "storage": false
   },
   {
@@ -1823,21 +1802,21 @@
     "file": "lib/server/agent/model.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 119,
+    "line": 106,
     "storage": false
   },
   {
     "file": "lib/server/agent/model.ts",
     "operation": "from",
     "resource": "user_ai_capability_assignments",
-    "line": 147,
+    "line": 134,
     "storage": false
   },
   {
     "file": "lib/server/agent/model.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 156,
+    "line": 143,
     "storage": false
   },
   {
@@ -2103,28 +2082,28 @@
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_request_issues",
-    "line": 894,
+    "line": 896,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_request_issues",
-    "line": 920,
+    "line": 922,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 949,
+    "line": 951,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 1001,
+    "line": 1003,
     "storage": false
   },
   {
@@ -3524,7 +3503,7 @@
     "file": "lib/server/encryption/backfill-attempt.ts",
     "operation": "rpc",
     "resource": "record_encryption_backfill_progress",
-    "line": 36,
+    "line": 35,
     "storage": false
   },
   {
@@ -4865,20 +4844,6 @@
     "storage": false
   },
   {
-    "file": "lib/server/encryption/saved-view-bookmark-backfill.ts",
-    "operation": "from",
-    "resource": "saved_views",
-    "line": 23,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/saved-view-bookmark-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_verified_content_backfill",
-    "line": 57,
-    "storage": false
-  },
-  {
     "file": "lib/server/encryption/scratchpad-backfill.ts",
     "operation": "from",
     "resource": "user_scratchpad",
@@ -5470,91 +5435,91 @@
     "file": "lib/server/feedback/review.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 184,
+    "line": 180,
     "storage": false
   },
   {
     "file": "lib/server/feedback/review.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 206,
+    "line": 202,
     "storage": false
   },
   {
     "file": "lib/server/feedback/review.ts",
     "operation": "from",
     "resource": "feedback_posts",
-    "line": 254,
+    "line": 248,
     "storage": false
   },
   {
     "file": "lib/server/feedback/review.ts",
     "operation": "from",
     "resource": "feedback_posts",
-    "line": 269,
+    "line": 263,
     "storage": false
   },
   {
     "file": "lib/server/feedback/review.ts",
     "operation": "rpc",
     "resource": "claim_feedback_posts_for_review",
-    "line": 297,
+    "line": 290,
     "storage": false
   },
   {
     "file": "lib/server/feedback/review.ts",
     "operation": "rpc",
     "resource": "claim_feedback_post_for_review",
-    "line": 360,
+    "line": 352,
     "storage": false
   },
   {
     "file": "lib/server/feedback/review.ts",
     "operation": "from",
     "resource": "feedback_posts",
-    "line": 404,
+    "line": 396,
     "storage": false
   },
   {
     "file": "lib/server/feedback/review.ts",
     "operation": "from",
     "resource": "feedback_merge_rejections",
-    "line": 415,
+    "line": 407,
     "storage": false
   },
   {
     "file": "lib/server/feedback/review.ts",
     "operation": "from",
     "resource": "feedback_merge_rejections",
-    "line": 416,
+    "line": 408,
     "storage": false
   },
   {
     "file": "lib/server/feedback/review.ts",
     "operation": "from",
     "resource": "feedback_posts",
-    "line": 431,
+    "line": 423,
     "storage": false
   },
   {
     "file": "lib/server/feedback/review.ts",
     "operation": "from",
     "resource": "feedback_posts",
-    "line": 652,
+    "line": 643,
     "storage": false
   },
   {
     "file": "lib/server/feedback/review.ts",
     "operation": "from",
     "resource": "feedback_posts",
-    "line": 662,
+    "line": 653,
     "storage": false
   },
   {
     "file": "lib/server/feedback/review.ts",
     "operation": "from",
     "resource": "feedback_posts",
-    "line": 764,
+    "line": 755,
     "storage": false
   },
   {
@@ -5624,7 +5589,7 @@
     "file": "lib/server/feedback/voice.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 72,
+    "line": 69,
     "storage": false
   },
   {
@@ -6961,28 +6926,28 @@
     "file": "lib/server/issue-relation-inference.ts",
     "operation": "from",
     "resource": "issue_relation_inferences",
-    "line": 437,
+    "line": 427,
     "storage": false
   },
   {
     "file": "lib/server/issue-relation-inference.ts",
     "operation": "from",
     "resource": "issue_relation_inferences",
-    "line": 442,
+    "line": 432,
     "storage": false
   },
   {
     "file": "lib/server/issue-relation-inference.ts",
     "operation": "from",
     "resource": "issue_relation_inferences",
-    "line": 699,
+    "line": 687,
     "storage": false
   },
   {
     "file": "lib/server/issue-relation-inference.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 847,
+    "line": 832,
     "storage": false
   },
   {
@@ -7556,21 +7521,21 @@
     "file": "lib/server/numo/start-intent.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 160,
+    "line": 159,
     "storage": false
   },
   {
     "file": "lib/server/numo/start-intent.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 176,
+    "line": 175,
     "storage": false
   },
   {
     "file": "lib/server/numo/start-intent.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 246,
+    "line": 245,
     "storage": false
   },
   {
@@ -7717,259 +7682,259 @@
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "begin_numo_turn_with_budget",
-    "line": 258,
+    "line": 259,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "begin_numo_turn",
-    "line": 264,
+    "line": 265,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 340,
+    "line": 341,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "append_numo_turn_event",
-    "line": 349,
+    "line": 350,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 500,
+    "line": 501,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "claim_numo_tool_operation_protected",
-    "line": 614,
+    "line": 615,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "claim_numo_tool_operation",
-    "line": 622,
+    "line": 623,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "complete_numo_tool_operation_protected",
-    "line": 664,
+    "line": 665,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "complete_numo_tool_operation",
-    "line": 673,
+    "line": 674,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 700,
+    "line": 701,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "checkpoint_numo_turn",
-    "line": 714,
+    "line": 715,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 721,
+    "line": 722,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 759,
+    "line": 760,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 775,
+    "line": 776,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 786,
+    "line": 787,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 799,
+    "line": 800,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "claim_numo_turn",
-    "line": 873,
+    "line": 874,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 926,
+    "line": 927,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 935,
+    "line": 936,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "checkpoint_numo_tool_round_protected",
-    "line": 1054,
+    "line": 1055,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "checkpoint_numo_tool_round",
-    "line": 1060,
+    "line": 1061,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1215,
+    "line": 1216,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1221,
+    "line": 1222,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1250,
+    "line": 1251,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1284,
+    "line": 1285,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1343,
+    "line": 1344,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1353,
+    "line": 1354,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 1372,
+    "line": 1373,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1376,
+    "line": 1377,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1394,
+    "line": 1395,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1404,
+    "line": 1405,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1415,
+    "line": 1416,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1428,
+    "line": 1429,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 1436,
+    "line": 1437,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "retry_numo_turn",
-    "line": 1451,
+    "line": 1452,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "recover_stale_numo_turns",
-    "line": 1466,
+    "line": 1467,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1468,
+    "line": 1469,
     "storage": false
   },
   {
@@ -9779,62 +9744,6 @@
     "storage": false
   },
   {
-    "file": "lib/server/saved-view-bookmark.ts",
-    "operation": "from",
-    "resource": "saved_view_bookmark_encryption_scope",
-    "line": 26,
-    "storage": false
-  },
-  {
-    "file": "lib/server/saved-views.ts",
-    "operation": "from",
-    "resource": "saved_views",
-    "line": 54,
-    "storage": false
-  },
-  {
-    "file": "lib/server/saved-views.ts",
-    "operation": "from",
-    "resource": "saved_views",
-    "line": 59,
-    "storage": false
-  },
-  {
-    "file": "lib/server/saved-views.ts",
-    "operation": "from",
-    "resource": "saved_views",
-    "line": 68,
-    "storage": false
-  },
-  {
-    "file": "lib/server/saved-views.ts",
-    "operation": "from",
-    "resource": "saved_views",
-    "line": 79,
-    "storage": false
-  },
-  {
-    "file": "lib/server/saved-views.ts",
-    "operation": "from",
-    "resource": "saved_views",
-    "line": 90,
-    "storage": false
-  },
-  {
-    "file": "lib/server/saved-views.ts",
-    "operation": "from",
-    "resource": "saved_views",
-    "line": 129,
-    "storage": false
-  },
-  {
-    "file": "lib/server/saved-views.ts",
-    "operation": "from",
-    "resource": "saved_views",
-    "line": 138,
-    "storage": false
-  },
-  {
     "file": "lib/server/scratchpad.ts",
     "operation": "from",
     "resource": "user_scratchpad",
@@ -9943,28 +9852,28 @@
     "file": "lib/server/smart-fill.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 138,
+    "line": 136,
     "storage": false
   },
   {
     "file": "lib/server/smart-fill.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 145,
+    "line": 143,
     "storage": false
   },
   {
     "file": "lib/server/smart-fill.ts",
     "operation": "from",
     "resource": "api_keys",
-    "line": 153,
+    "line": 151,
     "storage": false
   },
   {
     "file": "lib/server/smart-fill.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 162,
+    "line": 160,
     "storage": false
   },
   {
@@ -10006,21 +9915,21 @@
     "file": "lib/server/stats.ts",
     "operation": "rpc",
     "resource": "get_user_stats",
-    "line": 203,
+    "line": 205,
     "storage": false
   },
   {
     "file": "lib/server/stats.ts",
     "operation": "rpc",
     "resource": "get_cycle_stats",
-    "line": 215,
+    "line": 217,
     "storage": false
   },
   {
     "file": "lib/server/stats.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 224,
+    "line": 226,
     "storage": false
   },
   {

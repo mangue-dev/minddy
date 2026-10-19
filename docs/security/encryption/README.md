@@ -52,6 +52,23 @@ retired behavior, not current inventory. Dropping the tables does not erase
 copies that older deployments may have left outside the database: see
 [Agent execution storage retirement](agent-ephemeral-storage.md).
 
+## Retired palette bookmarks after MIN-725
+
+MIN-725 removed the command palette's personal saved views. Migration
+`20270109200068_drop_saved_views.sql` dropped the `saved_views` table, its
+`saved_view_bookmark_encryption_scope` activation marker and the
+`guard_saved_view_bookmark` and `activate_saved_view_bookmarks` functions; the
+retained bookmarks were deleted with the table. It also rewrote
+`record_encryption_backfill_progress` and `migrate_verified_content_backfill`
+without their `saved_views` branch.
+
+The bookmark repository, codec, bounded backfill, API routes and SQL regression
+were removed from the application at the same time. Account export no longer
+writes a `saved_views` section, and import ignores the section in older files.
+Board views (`views` and `view_shares`) are unaffected. The dated bookmark
+checkpoint below is historical evidence of retired behavior, not current
+inventory.
+
 ## Current corrective checkpoint: review of `2ddcbbd4e`
 
 The current code and evidence are recorded in the
@@ -249,10 +266,10 @@ registrations; orphan cleanup then removes the object.
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 164 application tables and 1,428 columns, their primary
+- `schema.json` records 170 application tables and 1,503 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
-  column exactly once. Its 137 encryption targets include the original content,
+  column exactly once. Its 140 encryption targets include the original content,
   derived copies, arbitrary user JSON, private identities, credentials and share
   tokens. The relay audit detail target was removed by an action-specific SQL
   guard and historical scrub; opaque attachment object paths replace two path
@@ -260,10 +277,10 @@ in [the closure matrix](closure-matrix.md).
   forge mention and provider-operation resource identities
   now use purpose-separated one-way equality digests. This is a target
   policy, not evidence that those columns are encrypted.
-- `consumers.json` records 1,429 TypeScript/JavaScript table, view, RPC and object-store
+- `consumers.json` records 1,483 TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 430 functions, six views and 369 application triggers. Function
+- `sql-consumers.json` records 459 functions, six views and 371 application triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -1914,6 +1931,9 @@ caches and rejects a wrong root key. `MINDDY_VIEW_CONTENT_ENCRYPTION_ENABLED`
 remains disabled in production. The global MIN-591 boundary remains open.
 
 ## Personal saved-view bookmark checkpoint — 25 September 2026
+
+Retired since MIN-725: migration `20270109200068` dropped these bookmarks; this
+checkpoint is historical evidence.
 
 `saved_views.name` and `href` use one user-key format-3 envelope. Name equality
 uses a purpose-separated user blind-index key pinned to version one, so content

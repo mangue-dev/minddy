@@ -27,7 +27,7 @@
 // share it); this component is controlled via `open` / `onOpenChange`.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AiAutoRotateIcon as CycleIcon, Bookmark01Icon, BookmarkAdd01Icon, Cancel01Icon, CircleIcon, ComputerIcon, Copy01Icon, Delete02Icon, GitPullRequestIcon, Link02Icon, MoonIcon, Edit04Icon, SignalFull01Icon, Sun01Icon, Target01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { AiAutoRotateIcon as CycleIcon, Cancel01Icon, CircleIcon, ComputerIcon, Copy01Icon, Delete02Icon, GitPullRequestIcon, Link02Icon, MoonIcon, SignalFull01Icon, StickyNote02Icon, Sun01Icon, Target01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import {
   useCallback,
   useMemo,
@@ -58,6 +58,8 @@ import { useSemanticIssueSearch } from "@/lib/use-semantic-issue-search";
 
 /** Palette category of the issues found by meaning (MIN-718), always last. */
 const SEMANTIC_CATEGORY = "semantic-issues";
+/** Palette category of the task notebook's remaining tasks (MIN-725). */
+const SCRATCHPAD_CATEGORY = "scratchpad-tasks";
 import { NumoIcon } from "@/components/numo-icon";
 import { AppIcon } from "@/components/icon";
 import { projectOrbIcon } from "@/components/project-orb";
@@ -81,8 +83,6 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { useCreate } from "@/lib/create-context";
-import { useCurrentView } from "@/lib/current-view-context";
-import { useSavedViewsQuery } from "@/lib/use-saved-views-query";
 import { useProjects } from "@/lib/projects-context";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
 import {
@@ -105,13 +105,17 @@ import { useMobileLayout } from "@/lib/use-mobile-layout";
 import type {
   Issue,
   Member,
-  SavedView,
   SearchIndexIssue,
   SearchIndexPage,
   SearchIndexResponse,
 } from "@/lib/types";
 import type { PaletteGroup, PaletteItem as GroupItem } from "@/components/header-search-pill";
 import { usePageContentSearch } from "@/lib/use-page-search";
+import { useScratchpad } from "@/lib/scratchpad-context";
+import { useScratchpadSummary } from "@/lib/use-scratchpad-query";
+import { scratchpadSearchTasks } from "@/lib/scratchpad-search";
+import { shownMentionLabel } from "@/lib/mention-resolution";
+import type { MentionLinkType } from "@/lib/mention-link";
 import { withPageContentHits } from "@/lib/palette-page-hits";
 import "./command-palette.css";
 
@@ -128,11 +132,6 @@ const GROUP_BOOSTS: Record<string, number> = {
   // having asked them is already having said which ones.
   "settings-project": 135,
   "settings-account": 130,
-  // Saved views come before everything: they are the only lines that
-  // the user has made it himself to come back to it quickly. The boost follows the
-  // position of the group (see `categories`), so that a search does not
-  // does not return where the display no longer puts them.
-  views: 320,
   account: 100,
   issues: 80,
   objectives: 80,
@@ -143,6 +142,8 @@ const GROUP_BOOSTS: Record<string, number> = {
   // content itself is not decided here: it comes from the engine, which puts a
   // title match above a description match (the excerpt).
   "wiki-pages": 80,
+  // Notebook tasks are data too, written by the user for themselves.
+  [SCRATCHPAD_CATEGORY]: 80,
 };
 
 /** Ticket status icon: the SAME indicator as board cards and
@@ -244,6 +245,8 @@ export function CommandPalette({
   const tCycles = useTranslations("Cycles");
   const tNav = useTranslations("Nav");
   const tAction = useTranslations("CommandPaletteActions");
+  const tScratch = useTranslations("Scratchpad");
+  const tCommon = useTranslations("Common");
   const pathname = usePathname();
   const router = useAppRouter();
   const appTabs = useOptionalAppTabSession();
@@ -255,13 +258,6 @@ export function CommandPalette({
   // The account theme: the choice is persisted to user_metadata so it
   // follows the account to every device (lib/use-account-theme.ts).
   const { theme, setTheme } = useAccountTheme();
-
-  // Saved views: the current screen, retained under a name, re-openable from
-  // any device. The list only loads when you open the
-  // palette — closed, it renders nothing, and it is the only place that reads it.
-  const { savedViews, createSavedView, renameSavedView, deleteSavedView } =
-    useSavedViewsQuery(open);
-  const currentView = useCurrentView();
 
   // Group selection (MIN-75): a board publishes its selection via context.
   // The “Actions” pill opens ⌘K in BULK MODE — the palette then displays the
@@ -278,8 +274,8 @@ export function CommandPalette({
   const handleHoverPrefetch = useCallback((item: PaletteItem) => {
     if (!onPrefetchDestination) return;
     // Issue rows open a panel, not a tab: their href would prefetch a
-    // project route per row while scrolling the list. Destinations, saved
-    // views and pages carry the real navigation.
+    // project route per row while scrolling the list. Destinations and pages
+    // carry the real navigation.
     if (item.entityType === "issue") return;
     const destination = paletteDestinationHref(item.href);
     if (!destination || prefetchAttempted.current.has(destination)) return;
@@ -313,26 +309,17 @@ export function CommandPalette({
     [currentProjectId, members, searchIndex]
   );
 
-  // The cmdk groups become the categories of the palette (order preserved),
-  // plus “Saved views”, which ONLY exists in the palette: neither the nav
-  // mobile nor the sidebar serve these lines.
+  // The cmdk groups become the categories of the palette (order preserved).
+  // With an empty query the list follows this order, not `searchBoost`.
+  // Tickets are the one exception: they always come after every command,
+  // navigation target, setting, objective, and page so a large ticket index
+  // cannot bury a more specific result.
   //
-  // It goes AT THE HEAD, and it is the position that counts: with an empty request, the
-  // list follows the order of the categories (`buildCategoryOrder`), not the
-  // `searchBoost` — these only categorize a current search. In tail,
-  // saved views were found under tickets and pages, so
-  // under thousands of lines: the exact opposite of the rapid access that we have
-  // made yourself. Tickets are the one exception: they always come after every
-  // command, navigation target, setting, objective, and page so a large ticket
-  // index cannot bury a more specific result.
+  // The task notebook's category has no group of its own: its rows are built
+  // here, from the note (see `taskItems`).
   const categories = useMemo<CategoryDefinition[]>(
-    () => [
-      {
-        id: "views",
-        label: tNav("savedViews"),
-        searchBoost: GROUP_BOOSTS.views,
-      },
-      ...moveIssueGroupsToEnd(groups).map((g, i) => {
+    () =>
+      moveIssueGroupsToEnd([...groups, { key: SCRATCHPAD_CATEGORY, heading: tScratch("title") }]).map((g, i) => {
         const id = g.key ?? g.heading ?? `group-${i}`;
         return {
           id,
@@ -340,8 +327,7 @@ export function CommandPalette({
           searchBoost: GROUP_BOOSTS[id] ?? 0,
         };
       }),
-    ],
-    [groups, tNav]
+    [groups, tScratch]
   );
 
   const themeLabel = tNav("changeTheme");
@@ -434,54 +420,55 @@ export function CommandPalette({
       entityType: "theme",
     });
 
-    // Saved views, FIRST in their group — that's what we come from
-    // search there. Enter opens the selected address; ⌘; gives rename and forget.
-    // (Display sorting only classifies the categories among themselves: in a
-    // group, the order of the table is the order on the screen.)
-    for (const view of savedViews) {
-      mapped.push({
-        id: `saved-view-${view.id}`,
-        title: view.name,
-        icon: <HugeiconsIcon icon={Bookmark01Icon} className="size-4" />,
-        filterCategory: "views",
-        entityType: "saved-view",
-        data: view,
-        href: view.href,
-        execute: () => {
-          track("saved_view_opened", {});
-          const destination = paletteDestinationHref(view.href);
-          if (destinationOnly && destination) onDestinationSelect?.(destination);
-          else router.push(view.href);
-        },
-      });
-    }
-
-    // “Save current view” closes the group: we use it once
-    // per view, when we reopen the views every day. No `execute` → the
-    // select opens the inline name field (provider "saved-view-actions"),
-    // like the grouped mode fields. The screen is only read upon validation.
-    if (!navigationSearch) mapped.push({
-      id: "cmd-save-view",
-      title: tNav("saveCurrentView"),
-      keywords: [
-        "vue",
-        "view",
-        "enregistrer",
-        "sauvegarder",
-        "save",
-        "bookmark",
-        "favori",
-        "signet",
-        "raccourci",
-        "shortcut",
-      ],
-      icon: <HugeiconsIcon icon={BookmarkAdd01Icon} className="size-4" />,
-      filterCategory: "views",
-      entityType: "save-view",
-    });
-
     return mapped;
-  }, [groups, toPaletteItem, themeLabel, track, savedViews, router, tNav, navigationSearch, mobile, destinationOnly, onDestinationSelect]);
+  }, [groups, toPaletteItem, themeLabel, navigationSearch, mobile, destinationOnly]);
+
+  // The task notebook (MIN-725): its remaining tasks answer a search, without
+  // crowding the default list (`searchOnly`). Choosing one opens the notebook
+  // on that task. The note comes
+  // from the cache the header badge already keeps warm and live.
+  const { open: openScratchpad } = useScratchpad();
+  const { content: scratchpadContent } = useScratchpadSummary();
+  // A typed mention reads as its target's CURRENT label (MIN-734): from the
+  // rows this palette already holds, else what a pill on screen showed.
+  const mentionLabel = useCallback(
+    (type: MentionLinkType, id: string): string | null | undefined => {
+      const local = (() => {
+        switch (type) {
+          case "project": return projects.find((p) => p.id === id)?.name;
+          case "issue": return searchIndex?.issues.find((i) => i.id === id)?.title;
+          case "objective": return searchIndex?.objectives.find((o) => o.id === id)?.name;
+          case "page": return searchIndex?.pages.find((p) => p.id === id)?.title;
+          case "member": {
+            for (const list of Object.values(searchIndex?.members ?? {})) {
+              const member = list.find((m) => m.user_id === id);
+              if (member) return displayName(member);
+            }
+            return undefined;
+          }
+        }
+      })();
+      return local ?? shownMentionLabel(type, id);
+    },
+    [projects, searchIndex]
+  );
+  const taskItems = useMemo<CpPaletteItem[]>(() => {
+    if (destinationOnly || !scratchpadContent) return [];
+    return scratchpadSearchTasks(scratchpadContent, mentionLabel, tCommon("mentionUnavailable")).map((task) => ({
+      id: `scratchpad-task-${task.index}`,
+      title: task.text,
+      icon: <HugeiconsIcon icon={StickyNote02Icon} className="size-4" />,
+      contextLabel: task.section ?? undefined,
+      keywords: task.section ? [task.section] : undefined,
+      filterCategory: SCRATCHPAD_CATEGORY,
+      entityType: "scratchpad-task",
+      searchOnly: true,
+      execute: () => {
+        track("command_executed", { command_id: "scratchpad-task", category: SCRATCHPAD_CATEGORY });
+        openScratchpad("palette", { taskIndex: task.index });
+      },
+    }));
+  }, [destinationOnly, scratchpadContent, mentionLabel, tCommon, track, openScratchpad]);
 
   // Pages whose CONTENT answers the query (MIN-276), applied here rather than
   // in the shell: typing and search results only re-render the palette, and a
@@ -489,11 +476,11 @@ export function CommandPalette({
   const pageContentHits = usePageContentSearch(open);
   const searchItems = useMemo(
     () =>
-      withPageContentHits(items, pageContentHits, (page) => {
+      withPageContentHits([...items, ...taskItems], pageContentHits, (page) => {
         const row = pageItem?.(page);
         return row ? toPaletteItem(row, "wiki-pages") : null;
       }),
-    [items, pageContentHits, pageItem, toPaletteItem]
+    [items, taskItems, pageContentHits, pageItem, toPaletteItem]
   );
 
   // === Contextual issue actions (⌘; / →) ===
@@ -873,120 +860,6 @@ export function CommandPalette({
       ],
     };
   }, [theme, setTheme, tNav, themeLabel]);
-
-  // === Saved views: save, rename, forget ===
-  // A single provider for the two lines of the group, because they are the
-  // two sides of the same gesture: “Save current view” asks for a name,
-  // a saved view is renamed or forgotten.
-  const savedViewProvider = useMemo<ActionProvider>(() => {
-    // The inline form displays “<action label>: <field>”. TEA
-    // wording of the FIELD serves as replacement text (it overrides
-    // `placeholder`), so we put the example there — “Save the current view:
-    // View name” said the same thing twice, and the question asked
-    // was nowhere.
-    const nameField = (initial?: string) => ({
-      fields: [
-        {
-          key: "name",
-          type: "text" as const,
-          label: tNav("saveViewNamePlaceholder"),
-        },
-      ],
-      ...(initial ? { prefilledValues: { name: initial } } : {}),
-    });
-
-    return {
-      id: "saved-view-actions",
-      handles: ["save-view", "saved-view"],
-      priority: 60,
-      getActions: (item): ContextualAction[] => {
-        if (item.entityType === "save-view") {
-          return [
-            {
-              id: "saved-view.create",
-              // Not “Save current view”: that’s the name of the
-              // LINE that we have just chosen. Once inside, the screen does not
-              // doesn't repeat the gesture, he asks the remaining question.
-              label: tNav("nameThisView"),
-              icon: BookmarkAdd01Icon,
-              category: "primary",
-              requiresForm: {
-                // `getActions` is executed when the menu is opened: the proposed name
-                // is that of the screen AT THIS MOMENT, not that of a rendering
-                // previous.
-                ...nameField(currentView.resolveLabel() ?? undefined),
-                onSubmit: async (values): Promise<ActionResult> => {
-                  // The address is resolved NOW, in the manager: the
-                  // page may have changed selection since opening ⌘K.
-                  const href = currentView.resolveHref();
-                  try {
-                    const view = await createSavedView({
-                      name: String(values.name ?? ""),
-                      href,
-                    });
-                    toast.success(tNav("viewSaved", { name: view.name }));
-                  } catch (err) {
-                    toast.error((err as Error).message);
-                    return { success: false, closeMenu: false };
-                  }
-                  return { success: true, closeMenu: true };
-                },
-              },
-            },
-          ];
-        }
-
-        const view = item.data as SavedView | undefined;
-        if (!view) return [];
-
-        return [
-          {
-            id: "saved-view.rename",
-            label: tNav("renameSavedView"),
-            icon: Edit04Icon,
-            category: "secondary",
-            priority: 10,
-            requiresForm: {
-              ...nameField(view.name),
-              onSubmit: async (values): Promise<ActionResult> => {
-                try {
-                  const next = await renameSavedView(
-                    view.id,
-                    String(values.name ?? "")
-                  );
-                  toast.success(tNav("savedViewRenamed", { name: next.name }));
-                } catch (err) {
-                  toast.error((err as Error).message);
-                  return { success: false, closeMenu: false };
-                }
-                // closeMenu:false → return to the list, the line bears the
-                // nouveau nom.
-                return { success: true, closeMenu: false };
-              },
-            },
-          },
-          {
-            id: "saved-view.delete",
-            label: tNav("deleteSavedView"),
-            icon: Delete02Icon,
-            category: "danger",
-            priority: 0,
-            execute: async (): Promise<ActionResult> => {
-              try {
-                await deleteSavedView(view.id);
-                track("saved_view_deleted", {});
-                toast.success(tNav("savedViewDeleted", { name: view.name }));
-              } catch (err) {
-                toast.error((err as Error).message);
-                return { success: false, closeMenu: false };
-              }
-              return { success: true, closeMenu: false };
-            },
-          },
-        ];
-      },
-    };
-  }, [currentView, createSavedView, renameSavedView, deleteSavedView, track, tNav]);
 
   // === Group selection (MIN-75): options like normal palette lines ===
   // In bulk mode, `bulkItems` REPLACES the usual list. Number and Delete
@@ -1389,8 +1262,8 @@ export function CommandPalette({
   }, [bulkRequest, tIssueUI, tStatus, tPriority, tField, tPr]);
 
   const providers = useMemo(
-    () => [issueProvider, entityProvider, themeProvider, savedViewProvider, bulkFieldProvider],
-    [issueProvider, entityProvider, themeProvider, savedViewProvider, bulkFieldProvider]
+    () => [issueProvider, entityProvider, themeProvider, bulkFieldProvider],
+    [issueProvider, entityProvider, themeProvider, bulkFieldProvider]
   );
 
   // Issues found by meaning (MIN-718): the palette's own issue rows, looked up

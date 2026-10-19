@@ -1463,19 +1463,6 @@
       "protectedRelations": [],
       "functionReferences": []
     },
-    "guard_saved_view_bookmark()": {
-      "sha256": "2ddbe2e0e0a4e84a922558bfb802e787b09c4722e460621c21a8169d73ac95e1",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [
-        "saved_view_bookmark_encryption_scope"
-      ],
-      "protectedRelations": [],
-      "functionReferences": []
-    },
     "guard_user_ai_key_content()": {
       "sha256": "5ccb18a45480e8570fae5e18386f1c60fdb75c315f712e1ee0643731a08a42af",
       "securityDefiner": true,
@@ -2391,24 +2378,6 @@
       ],
       "protectedRelations": [
         "oauth_clients"
-      ],
-      "functionReferences": [
-        "require_encryption_read_committed"
-      ]
-    },
-    "activate_saved_view_bookmarks()": {
-      "sha256": "c6b02724c40e5e1e261891e2c8aafff707e6ace303dffb34d28d8e40221b2a4f",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [
-        "saved_views",
-        "saved_view_bookmark_encryption_scope"
-      ],
-      "protectedRelations": [
-        "saved_views"
       ],
       "functionReferences": [
         "require_encryption_read_committed"
@@ -5513,14 +5482,12 @@
       "relations": [
         "pages",
         "views",
-        "projects",
-        "saved_views"
+        "projects"
       ],
       "protectedRelations": [
         "pages",
         "views",
-        "projects",
-        "saved_views"
+        "projects"
       ],
       "functionReferences": []
     },
@@ -6008,7 +5975,6 @@
         "objectives",
         "page_files",
         "attachments",
-        "saved_views",
         "stat_events",
         "view_shares",
         "issue_events",
@@ -6040,7 +6006,6 @@
         "objectives",
         "page_files",
         "attachments",
-        "saved_views",
         "stat_events",
         "view_shares",
         "issue_events",
@@ -7568,10 +7533,6 @@
       "function": "guard_push_content()",
       "definition": "CREATE TRIGGER push_content_guard BEFORE INSERT OR UPDATE ON push_subscriptions FOR EACH ROW EXECUTE FUNCTION guard_push_content()"
     },
-    "saved_views.saved_view_bookmark_guard": {
-      "function": "guard_saved_view_bookmark()",
-      "definition": "CREATE TRIGGER saved_view_bookmark_guard BEFORE INSERT OR UPDATE ON saved_views FOR EACH ROW EXECUTE FUNCTION guard_saved_view_bookmark()"
-    },
     "views.a_min591_fence_050429eb83ef37a2": {
       "function": "guard_encryption_snapshot_write()",
       "definition": "CREATE TRIGGER a_min591_fence_050429eb83ef37a2 BEFORE INSERT OR UPDATE ON views FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('view_content_encryption_scope', 'global')"
@@ -7615,10 +7576,6 @@
     "projects.projects_retire_storage_owner": {
       "function": "retire_project_storage_owner()",
       "definition": "CREATE TRIGGER projects_retire_storage_owner AFTER DELETE ON projects FOR EACH ROW EXECUTE FUNCTION retire_project_storage_owner()"
-    },
-    "saved_views.saved_views_set_updated_at": {
-      "function": "set_updated_at()",
-      "definition": "CREATE TRIGGER saved_views_set_updated_at BEFORE UPDATE ON saved_views FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
     },
     "view_shares.view_shares_set_updated_at": {
       "function": "set_updated_at()",
@@ -7867,10 +7824,6 @@
     "pr_comment_edits.pr_comment_edit_body_guard": {
       "function": "guard_pr_comment_edit_body()",
       "definition": "CREATE TRIGGER pr_comment_edit_body_guard BEFORE INSERT OR UPDATE ON pr_comment_edits FOR EACH ROW EXECUTE FUNCTION guard_pr_comment_edit_body()"
-    },
-    "saved_views.a_min591_fence_8bbf57a23c751e76": {
-      "function": "guard_encryption_snapshot_write()",
-      "definition": "CREATE TRIGGER a_min591_fence_8bbf57a23c751e76 BEFORE INSERT OR UPDATE ON saved_views FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('saved_view_bookmark_encryption_scope', 'global')"
     },
     "stat_events.a_min591_fence_cb9872e98fe638be": {
       "function": "guard_encryption_snapshot_write()",
@@ -8460,10 +8413,6 @@
       "function": "guard_forge_repository_identity()",
       "definition": "CREATE TRIGGER pull_requests_repository_identity_guard BEFORE INSERT OR UPDATE ON pull_requests FOR EACH ROW EXECUTE FUNCTION guard_forge_repository_identity()"
     },
-    "saved_views.saved_views_encryption_checked_at_attempt": {
-      "function": "rotate_encryption_backfill_attempt()",
-      "definition": "CREATE TRIGGER saved_views_encryption_checked_at_attempt BEFORE UPDATE ON saved_views FOR EACH ROW EXECUTE FUNCTION rotate_encryption_backfill_attempt('encryption_checked_at', 'encryption_attempted_at')"
-    },
     "forge_mention_throttle.a_min591_fence_663270aabe93763b": {
       "function": "guard_encryption_snapshot_write()",
       "definition": "CREATE TRIGGER a_min591_fence_663270aabe93763b BEFORE INSERT OR UPDATE ON forge_mention_throttle FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('forge_mention_key_encryption_scope', 'global')"
@@ -8655,10 +8604,6 @@
     "pr_comment_edits.pr_comment_edits_repository_identity_guard": {
       "function": "guard_forge_repository_identity()",
       "definition": "CREATE TRIGGER pr_comment_edits_repository_identity_guard BEFORE INSERT OR UPDATE ON pr_comment_edits FOR EACH ROW EXECUTE FUNCTION guard_forge_repository_identity()"
-    },
-    "saved_view_bookmark_encryption_scope.a_min591_marker_change": {
-      "function": "guard_encryption_marker_change()",
-      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON saved_view_bookmark_encryption_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
     },
     "ai_decision_evaluations.ai_decision_evaluation_content_guard": {
       "function": "guard_ai_decision_evaluation_content()",

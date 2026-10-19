@@ -3,9 +3,9 @@
 /**
  * What the current screen is, when the URL isn't enough to tell.
  *
- * “Save current view” (command palette) starts from the address:
- * it already has the route, the wiki page, the settings tab, the objective
- * open. But many surfaces keep their selection in MEMORY and
+ * An app tab restores its screen from the address: it already has the route,
+ * the wiki page, the settings tab, the objective open. But many surfaces keep
+ * their selection in MEMORY and
  * voluntarily clean up the URL behind them — /pull-requests keeps the clicked
  * PR outside the address, a board keeps its view active in localStorage.
  *
@@ -17,8 +17,7 @@
  * PR clicked, a changed board view — would go back through the provider and
  * would re-render the entire shell and the page under it, for a value that
  * the broad provider tree needs to display. The tab route synchronizer subscribes
- * through useSyncExternalStore; the palette reads resolveHref()/resolveLabel()
- * when its actions are invoked.
+ * through useSyncExternalStore.
  *
  * Ownership: the same lock as `useAssistantContext` — a page that is
  * disassembles only unpublishes if it is still the owner, otherwise navigation
@@ -28,7 +27,6 @@
 
 import {
   createContext,
-  useCallback,
   useContext,
   useEffect,
   useId,
@@ -37,20 +35,14 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { buildViewHref } from "@/lib/saved-view-href";
 import { useOptionalAppTabNavigation } from "@/lib/app-tab-navigation-context";
 
 export interface CurrentViewSnapshot {
   /**
-   * The internal address that exactly re-opens this screen, query included. There
-   * page makes it herself — she knows what she displays.
+   * The internal address that exactly re-opens this screen, query included.
+   * The page builds it itself — it knows what it displays.
    */
   href: string;
-  /**
-   * Name proposed by default in the palette field (“Conversations ·
-   * MIN-42"). Optional: without it, the field opens empty.
-   */
-  label?: string;
 }
 
 /**
@@ -65,7 +57,6 @@ interface TaggedPublication {
 
 interface CurrentViewContextValue {
   publish: (next: CurrentViewSnapshot | null, ownerId: string, tabId: string | null) => void;
-  read: () => CurrentViewSnapshot | null;
   readTagged: () => TaggedPublication | null;
   subscribe: (listener: () => void) => () => void;
 }
@@ -94,7 +85,6 @@ export function CurrentViewProvider({ children }: { children: ReactNode }) {
         publicationRef.current = null;
         listeners.current.forEach((listener) => listener());
       },
-      read: () => publicationRef.current?.snapshot ?? null,
       readTagged: () => publicationRef.current,
       subscribe: (listener) => {
         listeners.current.add(listener);
@@ -153,40 +143,4 @@ export function usePublishCurrentView(
     publish(key ? (JSON.parse(key) as CurrentViewSnapshot) : null, ownerId, tagged);
     return () => publish(null, ownerId, tagged);
   }, [key, ownerId, publish, ownerTabId]);
-}
-
-export interface CurrentView {
-  /** The address to register, resolved at the time of the call. */
-  resolveHref: () => string;
-  /** The name that the page suggests, resolved at the time of the call. */
-  resolveLabel: () => string | null;
-}
-
-/**
- * Read by the palette, never during a render: the two resolvers are called
- * in an event manager (clicking on “Save”, opening the
- * action menu). Reading `window.location` is therefore safe — no server rendering
- * to detune, and no `useSearchParams` which would impose a boundary
- * `<Suspense>` around the entire shell.
- */
-export function useCurrentView(): CurrentView {
-  const ctx = useContext(CurrentViewContext);
-  const read = ctx?.read;
-
-  const resolveHref = useCallback(() => {
-    const published = read?.() ?? null;
-    if (published) return published.href;
-    if (typeof window === "undefined") return "/";
-    return buildViewHref(window.location.pathname, window.location.search);
-  }, [read]);
-
-  const resolveLabel = useCallback(
-    () => read?.()?.label ?? null,
-    [read]
-  );
-
-  return useMemo(
-    () => ({ resolveHref, resolveLabel }),
-    [resolveHref, resolveLabel]
-  );
 }

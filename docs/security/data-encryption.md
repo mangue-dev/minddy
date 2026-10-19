@@ -123,7 +123,7 @@ must be checked before a column is declared migrated.
 | `project_invitations` | `invited_email` with an HMAC equality index; purge ciphertext and index when accepted, rejected, cancelled or expired | IDs, inviter/invitee references, status and dates. `token` is a bearer secret and needs a one-way digest, not reversible encryption. |
 | `feedback_users` | `email`, private `name`, `external_id` if it identifies a person; equality needs scoped blind indexes | ID, project ID, verification state and dates. Public pseudonyms remain clear only when published by design. |
 | `assistant_messages`, `conversations` | Message bodies, tool payloads, context, titles and error text that may echo user content | IDs, roles, state, routing references and timestamps. |
-| `project_drafts`, `user_scratchpad`, `views`, `saved_views`, `categories` | User-authored names, bodies, filters, links and drafts | IDs, ownership references, type, position, flags and timestamps. |
+| `project_drafts`, `user_scratchpad`, `views`, `categories` | User-authored names, bodies, filters, links and drafts | IDs, ownership references, type, position, flags and timestamps. |
 | `attachments`, `page_files` and storage objects | User file names, user-supplied URLs, extracted text and object bytes | IDs, references, MIME type, size and dates. Object storage needs its own envelope and migration. |
 | Credential tables | Existing encrypted blobs need a key migration plan; never copy decrypted secrets into SQL literals | IDs, owner references, key hashes/prefixes, provider and dates. |
 

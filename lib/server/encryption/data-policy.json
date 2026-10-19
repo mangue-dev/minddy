@@ -3341,51 +3341,6 @@
       ]
     }
   },
-  "saved_view_bookmark_encryption_scope": {
-    "scope": {
-      "kind": "system",
-      "id": "saved-view-bookmark"
-    },
-    "encrypted": [],
-    "clear": {
-      "routing_identity": [
-        "id"
-      ],
-      "timestamp": [
-        "activated_at"
-      ]
-    }
-  },
-  "saved_views": {
-    "scope": {
-      "kind": "user",
-      "column": "user_id"
-    },
-    "encrypted": [
-      "href",
-      "name"
-    ],
-    "clear": {
-      "routing_identity": [
-        "id",
-        "user_id"
-      ],
-      "timestamp": [
-        "created_at",
-        "encryption_attempted_at",
-        "encryption_checked_at",
-        "updated_at"
-      ],
-      "bounded_metadata": [
-        "content_revision"
-      ],
-      "encryption_metadata": [
-        "encrypted_content",
-        "encryption_version",
-        "name_index"
-      ]
-    }
-  },
   "share_unlock_attempts": {
     "scope": {
       "kind": "system",

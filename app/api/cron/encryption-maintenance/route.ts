@@ -64,8 +64,6 @@ import { backfillProjectIconsBatch } from
   "@/lib/server/encryption/project-icon-backfill";
 import { backfillViewContentBatch } from
   "@/lib/server/encryption/view-content-backfill";
-import { backfillSavedViewBookmarksBatch } from
-  "@/lib/server/encryption/saved-view-bookmark-backfill";
 import { backfillAgentRoutineContentBatch } from
   "@/lib/server/encryption/agent-routine-content-backfill";
 import { backfillProjectContentBatch } from
@@ -184,7 +182,6 @@ export async function GET(request: NextRequest) {
       contentEnabled ? maintenancePass(() => backfillForgeDefaultBranchesBatch(30, signal)) : Promise.resolve(null),
       contentEnabled ? maintenancePass(() => backfillProjectIconsBatch(10, signal)) : Promise.resolve(null),
       contentEnabled ? maintenancePass(() => backfillViewContentBatch(30, signal)) : Promise.resolve(null),
-      contentEnabled ? maintenancePass(() => backfillSavedViewBookmarksBatch(30, signal)) : Promise.resolve(null),
       contentEnabled ? bundlePass(() => backfillAgentRoutineContentBatch(30, signal)) : Promise.resolve(null),
       contentEnabled ? maintenancePass(() => backfillProjectContentBatch(30, signal)) : Promise.resolve(null),
       contentEnabled ? maintenancePass(() => backfillPageContentBatch(30, signal)) : Promise.resolve(null),
@@ -256,34 +253,33 @@ export async function GET(request: NextRequest) {
     const forgeDefaultBranches = outcomes[39];
     const projectIcons = outcomes[40];
     const viewContent = outcomes[41];
-    const savedViewBookmarks = outcomes[42];
-    const agentRoutines = outcomes[43];
-    const projectContent = outcomes[44];
-    const pageContent = outcomes[45];
-    const userAiKeys = outcomes[46];
-    const relayInstances = outcomes[47];
-    const projectWebhookSecrets = outcomes[48];
-    const relayProvisioning = outcomes[49];
-    const relayUserDeliveries = outcomes[50];
-    const forgeOAuthConnections = outcomes[51];
-    const forgeOAuthIdentities = outcomes[52];
-    const mcpConnections = outcomes[53];
-    const mcpAttempts = outcomes[54];
-    const appTabs = outcomes[55];
-    const aiDecisionEvaluations = outcomes[56];
-    const stripeWebhookPayloads = outcomes[57];
-    const billingIdentity = outcomes[58];
-    const oauthClients = outcomes[59];
-    const oauthCodes = outcomes[60];
-    const apiKeys = outcomes[61];
-    const integrations = outcomes[62];
-    const push = outcomes[63];
-    const forgeAttachments = outcomes[64].status === "fulfilled"
-      ? outcomes[64].value : { scanned: 0, migrated: 0, failed: 1 };
-    const forgeAttachmentRotation = outcomes[65].status === "fulfilled"
-      ? outcomes[65].value : { scanned: 0, rotated: 0, failed: 1 };
-    const richDocuments = outcomes[66].status === "fulfilled"
-      ? outcomes[66].value : { removed: 0, failed: true };
+    const agentRoutines = outcomes[42];
+    const projectContent = outcomes[43];
+    const pageContent = outcomes[44];
+    const userAiKeys = outcomes[45];
+    const relayInstances = outcomes[46];
+    const projectWebhookSecrets = outcomes[47];
+    const relayProvisioning = outcomes[48];
+    const relayUserDeliveries = outcomes[49];
+    const forgeOAuthConnections = outcomes[50];
+    const forgeOAuthIdentities = outcomes[51];
+    const mcpConnections = outcomes[52];
+    const mcpAttempts = outcomes[53];
+    const appTabs = outcomes[54];
+    const aiDecisionEvaluations = outcomes[55];
+    const stripeWebhookPayloads = outcomes[56];
+    const billingIdentity = outcomes[57];
+    const oauthClients = outcomes[58];
+    const oauthCodes = outcomes[59];
+    const apiKeys = outcomes[60];
+    const integrations = outcomes[61];
+    const push = outcomes[62];
+    const forgeAttachments = outcomes[63].status === "fulfilled"
+      ? outcomes[63].value : { scanned: 0, migrated: 0, failed: 1 };
+    const forgeAttachmentRotation = outcomes[64].status === "fulfilled"
+      ? outcomes[64].value : { scanned: 0, rotated: 0, failed: 1 };
+    const richDocuments = outcomes[65].status === "fulfilled"
+      ? outcomes[65].value : { removed: 0, failed: true };
     const failed = outcomes.some((outcome) => outcome.status === "rejected") || rotation.failed > 0 ||
       (forgeAttachments?.failed ?? 0) > 0 ||
       (forgeAttachmentRotation?.failed ?? 0) > 0 ||
@@ -291,7 +287,7 @@ export async function GET(request: NextRequest) {
         (scratchpad.value.failed > 0 || scratchpad.value.interrupted)) ||
       (statistics.status === "fulfilled" && statistics.value !== null &&
         (statistics.value.failed > 0 || statistics.value.interrupted)) ||
-      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, issueSidecar, githubCommentUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit, attachmentObjects, attachmentMetadata, pageFileMetadata, feedbackUsers, feedbackOtp, shareTokens, numoSurfaces, feedbackSso, forgeMention, numoActivity, providerResources, appConfig, feedbackMerge, numoTurnIntents, numoConversationTitles, numoUserMessages, numoFinalContent, numoErrors, numoToolContent, forgeRepositoryNames, forgeDefaultBranches, projectIcons, viewContent, savedViewBookmarks, agentRoutines, projectContent, pageContent, userAiKeys, relayInstances, projectWebhookSecrets, relayProvisioning, relayUserDeliveries, forgeOAuthConnections, forgeOAuthIdentities, mcpConnections, mcpAttempts, appTabs, aiDecisionEvaluations, stripeWebhookPayloads, billingIdentity, oauthClients, oauthCodes, apiKeys, integrations, push].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
+      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, issueSidecar, githubCommentUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit, attachmentObjects, attachmentMetadata, pageFileMetadata, feedbackUsers, feedbackOtp, shareTokens, numoSurfaces, feedbackSso, forgeMention, numoActivity, providerResources, appConfig, feedbackMerge, numoTurnIntents, numoConversationTitles, numoUserMessages, numoFinalContent, numoErrors, numoToolContent, forgeRepositoryNames, forgeDefaultBranches, projectIcons, viewContent, agentRoutines, projectContent, pageContent, userAiKeys, relayInstances, projectWebhookSecrets, relayProvisioning, relayUserDeliveries, forgeOAuthConnections, forgeOAuthIdentities, mcpConnections, mcpAttempts, appTabs, aiDecisionEvaluations, stripeWebhookPayloads, billingIdentity, oauthClients, oauthCodes, apiKeys, integrations, push].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
         (outcome.value.failed > 0 || outcome.value.interrupted));
     const result = {
       ...(invitation.status === "fulfilled" ? invitation.value : { invitation_failed: true }),
@@ -387,10 +383,6 @@ export async function GET(request: NextRequest) {
         ...(contentEnabled ? {
           view_content: viewContent.status === "fulfilled"
             ? viewContent.value : { failed: true },
-        } : {}),
-        ...(contentEnabled ? {
-          saved_view_bookmarks: savedViewBookmarks.status === "fulfilled"
-            ? savedViewBookmarks.value : { failed: true },
         } : {}),
         ...(contentEnabled ? {
           agent_routines: agentRoutines.status === "fulfilled"

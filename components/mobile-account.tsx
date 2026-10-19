@@ -1,11 +1,10 @@
 "use client";
 
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
-import { Analytics01Icon, ComputerIcon, Copy01Icon, CreditCardIcon, Delete02Icon, LogOutIcon, MoonIcon, Settings01Icon, Shield01Icon, Sun01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { Analytics01Icon, ComputerIcon, CreditCardIcon, Delete02Icon, LogOutIcon, MoonIcon, Settings01Icon, Shield01Icon, Sun01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useMemo, type SVGProps } from "react";
 import { useTranslations } from "next-intl";
 import { useAppRouter } from "@/lib/use-app-router";
-import { toast } from "sonner";
 import type { IconComponent } from "@/components/icon";
 import { useAuth } from "@/lib/auth-context";
 import { useIsAdmin } from "@/lib/use-is-admin";
@@ -106,34 +105,6 @@ export function useAccountActions(): {
             },
           ]
         : []),
-      // Copy the git sync prompt to the clipboard (located
-      // FR/EN) ready to paste into a code agent — no navigation, just a
-      // writeText + toast, like the “Copy prompt” action of a ticket.
-      {
-        key: "cmd-git-sync-prompt",
-        label: t("syncPrompt"),
-        icon: dataIcon(Copy01Icon),
-        keywords: [
-          "git",
-          "sync",
-          "synchroniser",
-          "synchronize",
-          "prompt",
-          "copier",
-          "copy",
-          "rebase",
-          "push",
-          "pull",
-          "dépôt",
-          "depot",
-          "repo",
-        ],
-        onSelect: () => {
-          void navigator.clipboard
-            .writeText(t("syncPromptText"))
-            .then(() => toast.success(t("syncPromptCopied")));
-        },
-      },
       ...THEME_CHOICES.map((c) => ({
         key: `cmd-${c.value}`,
         label: t(c.key as Parameters<typeof t>[0]),

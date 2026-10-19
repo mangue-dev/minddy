@@ -19,7 +19,6 @@ import { appendStatEvents, type StatEventRow } from "@/lib/server/stat-events";
 import { uploadPrivateAttachmentObject } from "@/lib/server/attachments";
 import { storeProjectIcon } from "@/lib/server/project-icon";
 import { encodeView } from "@/lib/server/view-content";
-import { createSavedView } from "@/lib/server/saved-views";
 import { encodePage } from "@/lib/server/page-content";
 import { isDatabaseSchema, type DatabaseValues } from "@/lib/page-databases";
 import { encodeRoutine } from "@/lib/server/routine-content";
@@ -166,7 +165,6 @@ async function validateAccountImportScope(
   const objectiveIds = uniqueIds(document.objectives);
   const categoryIds = uniqueIds(document.categories ?? []);
   uniqueIds(document.views);
-  uniqueIds(document.saved_views ?? []);
   uniqueIds(document.agent_routines ?? []);
   const cycleIds = uniqueIds(document.cycles);
   uniqueIds(document.assistant_conversations);
@@ -851,12 +849,6 @@ async function importAccountTransferCore(
     }))).filter((row): row is Record<string, unknown> => row !== null),
   );
 
-  for (const bookmark of document.saved_views ?? []) {
-    const saved = await createSavedView(service, userId,
-      { name: bookmark.name, href: bookmark.href });
-    if (!saved.ok) throw new Error("Unable to import saved view");
-    result.personalData += 1;
-  }
   await upsertRows(service, "agent_routines",
     (await Promise.all((document.agent_routines ?? []).map(async (source) => {
       const id = uuidValue(source, "id");

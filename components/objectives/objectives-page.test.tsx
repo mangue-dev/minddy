@@ -67,7 +67,7 @@ it("consumes a completed objective deep link through native history and publishe
   const replace = vi.spyOn(window.history, "replaceState"); await render();
   expect(host.querySelector('[data-objective="done"]')).not.toBeNull();
   expect(replace).toHaveBeenCalledWith(null, "", "/projects/p/objectives");
-  expect(state.publication).toEqual({ href: "/projects/p/objectives?open=done", label: "Project P · Done" });
+  expect(state.publication).toEqual({ href: "/projects/p/objectives?open=done" });
   await render({ search: "" }); await render({ active: false, search: "" }); await render({ search: "" });
   expect(host.querySelector('[data-objective="done"]')).not.toBeNull();
 });

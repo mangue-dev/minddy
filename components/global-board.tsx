@@ -20,7 +20,7 @@ import { useAppTabLocalState } from "@/lib/app-tab-local-state";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
 import { useGeneratingViews } from "@/lib/use-generating-views";
 import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
-import { buildViewHref } from "@/lib/saved-view-href";
+import { buildViewHref } from "@/lib/view-href";
 import { boardViewTabHref } from "@/lib/board-view-tab";
 import { filterIssues, visibleStatuses } from "@/lib/view-filter";
 import { STATUSES, type IssueStatus } from "@/lib/issue-constants";
@@ -170,7 +170,7 @@ function GlobalBoardInner() {
       return;
     }
     // `?view=<id>` designates a VIEW, therefore not the cycle — and the cycle mode, itself,
-    // is stored (localStorage). Without this output, a saved view
+    // is stored (localStorage). Without this output, a `?view=` link
     // opened while the cycle was in memory correctly selected the view
     // below, but displayed the cycle above: the shortcut did not take
     // where he said. It's the same gesture as clicking on a view pad
@@ -373,15 +373,13 @@ function GlobalBoardInner() {
     cycleIssues.length > 0 &&
     cycleIssues.every((i) => ["done", "canceled", "duplicate"].includes(i.status));
 
-  // “Save current view” (⌘K): cycle mode and active view are
-  // two states kept outside the address (localStorage), and `?view=` them
-  // restores both — "cycle" is the instruction this page consumes
+  // Cycle mode and the active view are two states kept outside the address
+  // (localStorage), and `?view=` restores both for the app tab — "cycle" is the instruction this page consumes
   // in cycle mode, a view id otherwise.
   usePublishCurrentView({
     href: buildViewHref(pathname, searchParams.toString(), {
       view: cycleMode ? "cycle" : activeViewId,
     }),
-    label: cycleMode ? tBoard("cycleTab") : (activeView?.name ?? t("allTitle")),
   });
 
   // Numo rides along: the cycle while it's on screen ("remplis mon cycle"),

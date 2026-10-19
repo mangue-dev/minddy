@@ -9,7 +9,7 @@ END $$;
 DO $test$
 DECLARE actor uuid := gen_random_uuid(); project uuid := gen_random_uuid();
   page uuid := gen_random_uuid(); view_id uuid := gen_random_uuid();
-  bookmark uuid := gen_random_uuid(); target record; expected jsonb;
+  target record; expected jsonb;
   revision bigint; after_revision bigint; changed integer; checked jsonb;
 BEGIN
   INSERT INTO auth.users(id) VALUES(actor);
@@ -19,12 +19,10 @@ BEGIN
     VALUES(page,project,'Page fixture','{"type":"doc","content":[]}','{}','a',actor);
   INSERT INTO public.views(id,project_id,kind,name,filters,display)
     VALUES(view_id,project,'custom','View fixture','{}','{}');
-  INSERT INTO public.saved_views(id,user_id,name,href)
-    VALUES(bookmark,actor,'Bookmark fixture','/all');
 
   FOR target IN SELECT * FROM (VALUES
     ('projects',project,'name'),('pages',page,'title'),
-    ('views',view_id,'name'),('saved_views',bookmark,'name')
+    ('views',view_id,'name')
   ) AS targets(table_name,row_id,content_column) LOOP
     EXECUTE format('SELECT jsonb_build_object(''id'',id,''content_revision'',content_revision,
       ''encrypted_content'',encrypted_content,''encryption_version'',encryption_version)

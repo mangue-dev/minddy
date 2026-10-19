@@ -1,4 +1,4 @@
-import { buildViewHref } from "@/lib/saved-view-href";
+import { buildViewHref } from "@/lib/view-href";
 import type { View } from "@/lib/types";
 
 type BoardViewIdentity = Pick<View, "id" | "kind">;

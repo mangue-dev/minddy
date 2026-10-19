@@ -87,12 +87,25 @@ describe("account transfer compatibility", () => {
     }
   });
 
+  it("accepts a v4 file with palette bookmarks and leaves them out of the document", () => {
+    const result = validateAccountTransfer({
+      ...emptyDocument,
+      format_version: CURRENT_ACCOUNT_EXPORT_VERSION,
+      saved_views: [{ id: "bookmark", name: "Mine", href: "/all?assignee=me" }],
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document).not.toHaveProperty("saved_views");
+  });
+
   it("ignores malformed retired sections instead of rejecting the file", () => {
     expect(validateAccountTransfer({
       ...emptyDocument,
       format_version: 3,
       preferences: "legacy",
       code_agent_conversations: "legacy",
+      saved_views: "legacy",
     })).toMatchObject({ ok: true });
   });
 
