@@ -31,7 +31,7 @@ describe("new-tab palette destinations", () => {
     expect(paletteDestinationHref(href)).toBeNull();
   });
 
-  it("canonicalizes saved-view selections without dropping their scope", () => {
+  it("canonicalizes board-view selections without dropping their scope", () => {
     expect(paletteDestinationHref("/projects/project-1/?view=view-1&family=parent-1"))
       .toBe("/projects/project-1?family=parent-1&view=view-1");
   });

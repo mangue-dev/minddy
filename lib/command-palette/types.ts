@@ -52,6 +52,12 @@ export interface PaletteItem {
    */
   exactKeywords?: string[];
   /**
+   * Shown only as a search result: an empty query in the "all" view leaves it
+   * out, while its own category tab still lists it. For personal content that
+   * would crowd the default list, such as notebook tasks.
+   */
+  searchOnly?: boolean;
+  /**
    * Entity type used to route the item to ActionProviders.
    * Falls back to filterCategory when omitted.
    */

@@ -145,15 +145,12 @@ export function createMinddyEntityActionsProvider(
 
   return {
     id: "minddy-entity-actions",
-    handles: ["navigation", "project", "objective", "page", "issue", "saved-view"],
+    handles: ["navigation", "project", "objective", "page", "issue"],
     priority: 40,
     getActions: (item): ContextualAction[] => {
-      const actions = linkActions(
-        item,
-        item.entityType !== "navigation" && item.entityType !== "saved-view"
-      );
+      const actions = linkActions(item, item.entityType !== "navigation");
 
-      if (item.entityType === "navigation" || item.entityType === "saved-view") {
+      if (item.entityType === "navigation") {
         return actions;
       }
 

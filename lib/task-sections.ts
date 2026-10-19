@@ -45,3 +45,26 @@ export function taskSectionHeadings(
   }
   return sectionHeadingChain(before);
 }
+
+/**
+ * Position of the `index`-th task item of the document, in reading order —
+ * the same order `parsePlan` numbers the note's checkbox lines, so a task
+ * found in the Markdown (the palette, MIN-725) lands on its item. `null` when
+ * the document has fewer tasks.
+ */
+export function findTaskItemPos(editor: Editor, index: number): number | null {
+  if (!Number.isInteger(index) || index < 0) return null;
+  let seen = -1;
+  let found: number | null = null;
+  editor.state.doc.descendants((node, pos) => {
+    if (found !== null) return false;
+    if (node.type.name !== "taskItem") return true;
+    seen += 1;
+    if (seen === index) {
+      found = pos;
+      return false;
+    }
+    return true;
+  });
+  return found;
+}

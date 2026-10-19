@@ -51,7 +51,7 @@ it("reads and publishes the scoped selection and changes it through native histo
   await act(() => state.select("two"));
   expect(replace).toHaveBeenCalledWith(null, "", "/routines?routine=two");
   expect(state.selected).toBe("two");
-  expect(state.publication).toEqual({ href: "/routines?routine=two", label: "tab" });
+  expect(state.publication).toEqual({ href: "/routines?routine=two" });
   await render(true, "routine=two"); await render(false, "routine=two"); await render(true, "routine=two");
   expect(state.selected).toBe("two");
 });

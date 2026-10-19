@@ -18,7 +18,6 @@ import {
 } from "@/lib/account-transfer";
 import { downloadProjectIcon } from "@/lib/server/project-icon";
 import { decodeView } from "@/lib/server/view-content";
-import { decodeSavedView } from "@/lib/server/saved-view-bookmark";
 import { decodeRoutine } from "@/lib/server/routine-content";
 import { decodeProject } from "@/lib/server/project-content";
 import { decodePageProjection } from "@/lib/server/page-content";
@@ -173,7 +172,6 @@ export interface AccountExport {
   categories: Row[];
   issue_categories: Row[];
   views: Row[];
-  saved_views: Row[];
   agent_routines: Row[];
   cycles: Row[];
   scratchpad: Row | null;
@@ -253,7 +251,6 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     objectives,
     categories,
     views,
-    savedViews,
     routines,
     cycles,
     scratchpad,
@@ -324,7 +321,6 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
           .order("created_at")
       : Promise.resolve({ data: [] as Row[], error: null }),
     service.from("views").select("*").eq("user_id", userId),
-    service.from("saved_views").select("*").eq("user_id", userId),
     ownedIds.length
       ? service.from("agent_routines").select("*").in("project_id", ownedIds)
       : Promise.resolve({ data: [] as Row[], error: null }),
@@ -520,8 +516,6 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     issue_categories: issueCategories,
     views: await Promise.all(list("views", views).map((row) =>
       decodeView(row, userId))),
-    saved_views: await Promise.all(list("saved_views", savedViews).map((row) =>
-      decodeSavedView(row, userId))),
     agent_routines: await Promise.all(list("agent_routines", routines).map((row) =>
       decodeRoutine(row, userId))),
     cycles: list("cycles", cycles),

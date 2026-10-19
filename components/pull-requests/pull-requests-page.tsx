@@ -647,12 +647,10 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   selectedIdRef.current = selectedId;
   if (selected) selectedRowRef.current = selected;
 
-  // “Save current view” (⌘K): the open PR is a selection of
-  // the page, derived rather than pushed into the address — `?pr=` is precisely
-  // which restores it (and the pin on the server side, even if it's six months old).
+  // The open PR is a selection of the page, derived rather than pushed into
+  // the address — `?pr=` is precisely what restores it in an app tab (and the pin on the server side, even if it's six months old).
   usePublishCurrentView(browse ? null : {
     href: selected ? `/pull-requests?pr=${encodeURIComponent(selected.prId)}` : "/pull-requests",
-    label: selected ? `${t("title")} · ${selected.title}` : t("title"),
   });
 
   // Publish the selected PR to Numo even when it has no linked issue. The PR id

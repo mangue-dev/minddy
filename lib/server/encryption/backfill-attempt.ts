@@ -17,7 +17,6 @@ const ATTEMPT_COLUMNS = {
   forge_repository_names: ["encryption_attempted_at"],
   projects: ["encryption_attempted_at", "icon_attempted_at"],
   pages: ["encryption_attempted_at"],
-  saved_views: ["encryption_attempted_at"],
   forge_relay_deliveries: ["content_encryption_attempted_at"],
   view_shares: ["content_encryption_attempted_at"],
   github_issue_sync_metadata: ["content_encryption_attempted_at"],

@@ -8,7 +8,7 @@ DO $$ BEGIN
 END $$;
 DO $test$
 DECLARE actor uuid:=gen_random_uuid(); project uuid:=gen_random_uuid();
-  page_id uuid:=gen_random_uuid(); view_id uuid:=gen_random_uuid(); bookmark_id uuid:=gen_random_uuid();
+  page_id uuid:=gen_random_uuid(); view_id uuid:=gen_random_uuid();
   table_name text; target_id uuid; before_row jsonb; after_row jsonb; expected jsonb; replacement jsonb;
   icon_path text; fixture_icon_url text;
   cipher text:='{"format":3,"keyVersion":1,"data":"opaque"}';
@@ -19,10 +19,9 @@ BEGIN
     VALUES(page_id,project,'Fixture page','{"type":"doc","content":[]}','{}','a',actor);
   INSERT INTO public.views(id,project_id,user_id,kind,name,filters,display)
     VALUES(view_id,project,NULL,'custom','Fixture view','{}','{}');
-  INSERT INTO public.saved_views(id,user_id,name,href) VALUES(bookmark_id,actor,'Fixture bookmark','/issues');
-  FOREACH table_name IN ARRAY ARRAY['pages','views','saved_views','projects'] LOOP
+  FOREACH table_name IN ARRAY ARRAY['pages','views','projects'] LOOP
     target_id:=CASE table_name WHEN 'projects' THEN project WHEN 'pages' THEN page_id
-      WHEN 'views' THEN view_id ELSE bookmark_id END;
+      ELSE view_id END;
     EXECUTE format('SELECT to_jsonb(t) FROM public.%I t WHERE id=$1',table_name) INTO before_row USING target_id;
     expected:=jsonb_build_object('id',target_id,'content_revision',before_row->'content_revision',
       'encryption_version',before_row->'encryption_version','encrypted_content',before_row->'encrypted_content');
@@ -36,8 +35,6 @@ BEGIN
           'page_is_database',false,'page_has_values',false,'page_is_blank',true);
       WHEN 'views' THEN expected:=expected || jsonb_build_object('project_id',project,'user_id',NULL);
         replacement:=replacement || jsonb_build_object('filters',NULL,'display',NULL);
-      ELSE expected:=expected || jsonb_build_object('user_id',actor);
-        replacement:=replacement || jsonb_build_object('href',NULL,'name_index',repeat('a',64));
     END CASE;
     IF NOT public.migrate_verified_content_backfill(table_name,expected,replacement) OR
         public.migrate_verified_content_backfill(table_name,expected,replacement) THEN

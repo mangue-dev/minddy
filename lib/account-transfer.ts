@@ -16,15 +16,17 @@ export const ACCOUNT_TRANSFER_VERSION = 1;
 export const CURRENT_ACCOUNT_EXPORT_VERSION = 4;
 export const SUPPORTED_ACCOUNT_EXPORT_VERSIONS = [2, 3, CURRENT_ACCOUNT_EXPORT_VERSION] as const;
 /**
- * Sections written by older exports for the retired code agent (MIN-721):
- * `preferences` held its default model, reasoning, branch prefix and sandbox
- * settings, and `code_agent_conversations` its conversation history. Their
- * tables no longer exist, so these sections are accepted without validation
- * and left out of the normalized document.
+ * Sections written by older exports for retired features. For the code agent
+ * (MIN-721), `preferences` held its default model, reasoning, branch prefix and
+ * sandbox settings, and `code_agent_conversations` its conversation history.
+ * `saved_views` held the command palette bookmarks (MIN-725). Their tables no
+ * longer exist, so these sections are accepted without validation and left out
+ * of the normalized document.
  */
 export const RETIRED_ACCOUNT_TRANSFER_SECTIONS = [
   "preferences",
   "code_agent_conversations",
+  "saved_views",
 ] as const;
 export const MAX_ACCOUNT_TRANSFER_BYTES = 100 * 1024 * 1024;
 
@@ -49,7 +51,6 @@ export interface AccountTransferDocument {
   categories?: TransferRow[];
   issue_categories?: TransferRow[];
   views: TransferRow[];
-  saved_views?: TransferRow[];
   agent_routines?: TransferRow[];
   cycles: TransferRow[];
   scratchpad: TransferRow | null;
@@ -154,7 +155,7 @@ export function validateAccountTransfer(input: unknown): TransferValidationResul
     }
   }
 
-  for (const field of ["categories", "issue_categories", "saved_views", "agent_routines", "numo_preferences"] as const) {
+  for (const field of ["categories", "issue_categories", "agent_routines", "numo_preferences"] as const) {
     if (input[field] !== undefined &&
       (!Array.isArray(input[field]) || !input[field].every(isRecord))) {
       return { ok: false, error: "invalidField", field };
@@ -191,7 +192,6 @@ export function validateAccountTransfer(input: unknown): TransferValidationResul
       categories: (input.categories as TransferRow[] | undefined) ?? [],
       issue_categories: (input.issue_categories as TransferRow[] | undefined) ?? [],
       views: input.views as TransferRow[],
-      saved_views: (input.saved_views as TransferRow[] | undefined) ?? [],
       agent_routines: (input.agent_routines as TransferRow[] | undefined) ?? [],
       cycles: input.cycles as TransferRow[],
       scratchpad: (input.scratchpad as TransferRow | null | undefined) ?? null,

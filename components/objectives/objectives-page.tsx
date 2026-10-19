@@ -23,7 +23,7 @@ import {
   useAssistantPanelActions,
 } from "@/lib/assistant-panel-context";
 import { usePublishCurrentView } from "@/lib/current-view-context";
-import { buildViewHref } from "@/lib/saved-view-href";
+import { buildViewHref } from "@/lib/view-href";
 import { useObjectivesQuery, objectiveProgress } from "@/lib/use-objectives-query";
 import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useMembersQuery } from "@/lib/use-members-query";
@@ -424,25 +424,14 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
     consumeSelection();
   }, [active, openParam, objectives, consumeSelection, state]);
 
-  // “Save current view” (⌘K): The open lens in the view pane
-  // right is a SELECTION on the page, not an overlay — it makes
-  // therefore part of the view. It leaves the address as soon as `?open=` is consumed
-  // above, hence this publication; `?open=` is also what restores it.
-  //
-  // The proposed name CARRIES THE PROJECT, and it is not cosmetic: the field
-  // comes pre-populated and pre-selected, so Enter accepts it as is — and
-  // saving overwrites the view of the same name. “Objectives” quite simply, is the
-  // same name on each project: save the objectives of a second project
-  // would have replaced those of the first, without a word.
+  // The open objective in the right pane is a SELECTION on the page, not an
+  // overlay — it belongs to the screen's address. It leaves the URL as soon as
+  // `?open=` is consumed above, hence this publication for the app tab;
+  // `?open=` is also what restores it.
   usePublishCurrentView(browse ? null : {
     href: buildViewHref(pathname, searchParams.toString(), {
       open: selected?.id ?? null,
     }),
-    label: project
-      ? selected
-        ? `${project.name} · ${selected.name}`
-        : `${project.name} · ${t("title")}`
-      : t("title"),
   });
 
   // Objective creation is keyboard-driven by the app-wide `O` shortcut now

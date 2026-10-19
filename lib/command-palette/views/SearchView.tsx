@@ -223,8 +223,10 @@ export function SearchView({
       result = result.filter((item) => item.filterCategory === categoryFilter);
     }
 
-    // No query: return as-is (no scoring needed)
+    // No query: return as-is (no scoring needed), without the search-only
+    // rows unless their own tab asked for them.
     if (!debouncedQuery.trim()) {
+      if (categoryFilter === "all") result = result.filter((item) => !item.searchOnly);
       return orderByTier(result, "");
     }
 

@@ -167,3 +167,28 @@ describe("issue order in the palette (MIN-726)", () => {
     expect(resultIds()[0]).toBe("i-done");
   });
 });
+
+describe("search-only rows (MIN-725)", () => {
+  it("leave the default list alone but answer a query and their own tab", async () => {
+    const registry = createActionRegistry();
+    registry.register(ItemActionsProvider);
+    const withTasks = [...categories, { id: "tasks", label: "Task notebook" }];
+    const rows: PaletteItem[] = [
+      { id: "cmd", title: "Invoice settings", filterCategory: "commands" },
+      { id: "task-1", title: "Send the invoice", filterCategory: "tasks", searchOnly: true },
+    ];
+    await act(() => root.render(
+      <PaletteConfigProvider value={{ t: translate, locale: "en", categories: withTasks, categoryOrder: buildCategoryOrder(withTasks), registry, shortcuts: { actionsKey: ";" } }}>
+        <SearchView items={rows} actionContext={context} onClose={vi.fn()} />
+      </PaletteConfigProvider>
+    ));
+    expect(resultIds()).toEqual(["cmd"]);
+    await act(() => usePaletteStore.getState().setQuery("invoice"));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 80)); });
+    expect(resultIds()).toEqual(["cmd", "task-1"]);
+    await act(() => usePaletteStore.getState().setQuery(""));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 80)); });
+    await act(() => usePaletteStore.getState().setCategoryFilter("tasks"));
+    expect(resultIds()).toEqual(["task-1"]);
+  });
+});

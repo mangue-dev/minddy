@@ -239,11 +239,6 @@ export interface AnalyticsEventProps {
   view_shared: { has_password: boolean };
   tab_reordered: NoProps;
 
-  // ── Saved views of the palette (one screen retained under a name) ──
-  saved_view_created: NoProps;
-  saved_view_opened: NoProps;
-  saved_view_deleted: NoProps;
-
   // ── Group selection (MIN-75) ──
   bulk_selection_started: { surface: string };
   bulk_action_executed: { action: string; count: number };
@@ -642,10 +637,6 @@ const EVENT_NAMES = [
   "view_deleted",
   "view_shared",
   "tab_reordered",
-  // Saved views of the palette
-  "saved_view_created",
-  "saved_view_opened",
-  "saved_view_deleted",
   // Bulk selection
   "bulk_selection_started",
   "bulk_action_executed",

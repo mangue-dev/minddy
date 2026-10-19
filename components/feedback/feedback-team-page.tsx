@@ -51,7 +51,7 @@ import { SearchMenu } from "@/components/search-menu";
 import { SearchSelect } from "@/components/search-select";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { usePublishCurrentView } from "@/lib/current-view-context";
-import { buildViewHref } from "@/lib/saved-view-href";
+import { buildViewHref } from "@/lib/view-href";
 import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { CategoryValue, ObjectiveValue, PropertyRow, TRIGGER } from "@/components/issue-property-fields";
@@ -727,23 +727,14 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   // panneau d'issue publie l'issue ouverte.
   const selectedPost = posts.find((p) => p.id === selectedId) ?? null;
 
-  // “Save current view” (⌘K): the open return to the right is a
-  // page selection, but `?post=` is consumed then deleted from the address
-  // (same idiom as `?open=` of objectives) — without this publication, the view
-  // saved would reopen the list on its first element.
-  //
-  // The proposed name bears the PROJECT, as on the objectives: the field is arriving
-  // pre-selected, Enter accepts it, and “Returns” for short is the same
-  // name on each project — the second view would overwrite the first.
+  // The open feedback on the right is a page selection, but `?post=` is
+  // consumed then deleted from the address (same idiom as `?open=` of
+  // objectives) — without this publication, a restored app tab would reopen
+  // the list on its first element.
   usePublishCurrentView(browse ? null : {
     href: buildViewHref(pathname, collectionFilterParams(properties, searchParams).toString(), {
       post: selectedPost?.id ?? null,
     }),
-    label: project
-      ? selectedPost
-        ? `${project.name} · ${selectedPost.title}`
-        : `${project.name} · ${t("title")}`
-      : t("title"),
   });
 
   useAssistantContext(
@@ -815,7 +806,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   // declined, discarded, or review-hidden target still widens the list.
   //
   // We EXPECT the list to carry the targeted return, like the objectives page
-  // wait for his. Cold (new tab, saved view, tracked notification
+  // wait for his. Cold (new tab, restored app tab, tracked notification
   // from a link), `posts` is still empty: the guard effect just above
   // reset the selection to zero on the next rendering — and `?post=` had already been
   // erased from the address, so nothing could restore it. The link

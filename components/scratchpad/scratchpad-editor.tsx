@@ -31,6 +31,8 @@ import type { PageSlashItem } from "@/components/pages/page-slash-command";
 import { useDictation } from "@/components/scratchpad/use-dictation";
 import { DictateWaveform } from "@/components/ai-elements/dictate-waveform";
 import { eventKey } from "@/lib/keyboard/event-key";
+import { findTaskItemPos } from "@/lib/task-sections";
+import { flashBlockAt } from "@/components/pages/block-flash";
 import type { DocumentEditorMentions } from "@/components/editor/document-editor";
 
 /** mm:ss for the dictation timer. */
@@ -95,6 +97,8 @@ export function ScratchpadEditor({
   applyExternalRef,
   removeSettledRef,
   startAllRef,
+  focusTaskIndex = null,
+  onFocusTask,
   mentions,
   uploadScope = null,
 }: {
@@ -125,6 +129,10 @@ export function ScratchpadEditor({
   removeSettledRef?: MutableRefObject<(() => number) | null>;
   /** Populated with an action that sets all tasks yet to be done in the notebook to "in progress" (returns how many) — the header gestures, which carry over the entire note. */
   startAllRef?: MutableRefObject<(() => number) | null>;
+  /** A task to land on once the editor is ready — its order among the note's
+      tasks (a palette search hit, MIN-725). `onFocusTask` reports it done. */
+  focusTaskIndex?: number | null;
+  onFocusTask?: () => void;
   /** Cross-project references placed with "@" in the notebook. */
   mentions?: DocumentEditorMentions;
   /** Where the note's images are stored: the account's own scope (MIN-728). */
@@ -344,6 +352,27 @@ export function ScratchpadEditor({
         : undefined,
     [mentions]
   );
+
+  // A palette search hit (MIN-725): land on that task, caret at the end of its
+  // line, scrolled into view, and blink it blue like a block reached from a
+  // page's table of contents (block-flash.ts). Done once per request, even
+  // when the note has lost that task meanwhile — the notebook then simply opens.
+  // The blink outlives this effect (clearing the request re-runs it), so only
+  // the next hit or unmounting turns it off.
+  const unflashRef = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    if (!editor || editor.isDestroyed || focusTaskIndex === null) return;
+    const pos = findTaskItemPos(editor, focusTaskIndex);
+    const line = pos === null ? null : editor.state.doc.nodeAt(pos)?.firstChild;
+    if (pos !== null && line) {
+      // Inside the item's first block: the item, then its paragraph.
+      editor.chain().focus().setTextSelection(pos + 2 + line.content.size).scrollIntoView().run();
+      unflashRef.current?.();
+      unflashRef.current = flashBlockAt(editor, pos);
+    }
+    onFocusTask?.();
+  }, [editor, focusTaskIndex, onFocusTask]);
+  useEffect(() => () => unflashRef.current?.(), []);
 
   // Persist any pending edit when the modal closes (component unmounts).
   useEffect(

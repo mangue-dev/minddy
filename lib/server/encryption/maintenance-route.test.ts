@@ -38,7 +38,6 @@ const workers: Array<[string, string[]]> = [
   ["@/lib/server/encryption/forge-default-branch-backfill", ["backfillForgeDefaultBranchesBatch"]],
   ["@/lib/server/encryption/project-icon-backfill", ["backfillProjectIconsBatch"]],
   ["@/lib/server/encryption/view-content-backfill", ["backfillViewContentBatch"]],
-  ["@/lib/server/encryption/saved-view-bookmark-backfill", ["backfillSavedViewBookmarksBatch"]],
   ["@/lib/server/encryption/agent-routine-content-backfill", ["backfillAgentRoutineContentBatch"]],
   ["@/lib/server/encryption/project-content-backfill", ["backfillProjectContentBatch"]],
   ["@/lib/server/encryption/page-content-backfill", ["backfillPageContentBatch"]],

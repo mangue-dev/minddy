@@ -34,7 +34,6 @@
       "content/knowledge/productivity.md",
       "components/board-toolbar.tsx",
       "components/sidebar-filter-field.tsx",
-      "app/api/me/saved-views/route.ts",
       "app/api/views/[id]/share/route.ts",
       "app/share/[token]/page.tsx",
       "content/knowledge/feedback.md",

@@ -9,7 +9,6 @@ import {
   useWikiPageNavigation,
   type PaletteModelState,
 } from "./use-palette-data-groups";
-import { useSavedViewsQuery } from "./use-saved-views-query";
 import { useObjectivesQuery } from "./use-objectives-query";
 
 let host: HTMLDivElement;
@@ -105,18 +104,16 @@ describe("useWikiPageNavigation", () => {
 });
 
 describe("closed palette inputs", () => {
-  it("return the same empty lists on every render before they load", async () => {
+  it("return the same empty list on every render before it loads", async () => {
     const client = new QueryClient();
-    const seen: { views: unknown; objectives: unknown }[] = [];
+    const seen: unknown[] = [];
     function Inputs({ tick }: { tick: number }) {
-      const { savedViews } = useSavedViewsQuery(false);
       const { objectives } = useObjectivesQuery(null);
-      seen[tick] = { views: savedViews, objectives };
+      seen[tick] = objectives;
       return null;
     }
     await render(<QueryClientProvider client={client}><Inputs tick={0} /></QueryClientProvider>);
     await render(<QueryClientProvider client={client}><Inputs tick={1} /></QueryClientProvider>);
-    expect(seen[1].views).toBe(seen[0].views);
-    expect(seen[1].objectives).toBe(seen[0].objectives);
+    expect(seen[1]).toBe(seen[0]);
   });
 });
