@@ -63,11 +63,11 @@ beforeEach(() => {
 describe("authenticated current-format backfill checks", () => {
   it.each(["corrupt", "healthy"])("checks attachment ciphertext: %s", async (value) => {
     state.rows = [{ id: "attachment", project_id: "project",
-      file_name: value, url: null, icon_data_url: null }];
+      file_name: value, url: null, icon_data_url: null, preview_data_url: null }];
     const result = await backfillAttachmentMetadataBatch("attachments", 1);
     expect(result).toMatchObject(value === "corrupt"
       ? { failed: 1, unchanged: 0 } : { failed: 0, unchanged: 1 });
-    expect(state.calls).toEqual(value === "corrupt" ? [] : ["migrate_attachment_metadata"]);
+    expect(state.calls).toEqual(value === "corrupt" ? [] : ["migrate_attachment_metadata_v2"]);
   });
 
   it.each(["corrupt", "healthy"])("checks relay ciphertext: %s", async (value) => {

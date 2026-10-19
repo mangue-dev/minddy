@@ -32,13 +32,15 @@ function props(attrs: Record<string, unknown>, editable = true) {
 }
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true); deleteNode.mockClear(); viewer.props = null;
+  vi.stubGlobal("matchMedia", (query: string) => ({ matches: false, media: query, addEventListener() {}, removeEventListener() {} }));
   container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
 });
 afterEach(async () => { await act(() => root.unmount()); container.remove(); vi.unstubAllGlobals(); });
 const render = async (children: ReactNode) => {
   await act(() => root.render(<NextIntlClientProvider locale="en" messages={{ Pages: {
     filePreview: "Preview file", fileDownload: "Download", blockFile: "File", imageOpen: "Open image", blockImage: "Image", imageCaption: "Caption", imageResize: "Resize",
-  } }}>{children}</NextIntlClientProvider>));
+  }, Resources: { remove: "Remove", removeConfirmTitle: "Remove “{name}”?", removeBlockConfirmDescription: "Undo in the editor." },
+  Common: { cancel: "Cancel" } }}>{children}</NextIntlClientProvider>));
 };
 
 it("opens private text blocks in the shared reader while retaining modified-click download navigation", async () => {
@@ -57,7 +59,13 @@ it("opens private text blocks in the shared reader while retaining modified-clic
   expect(viewer.props?.open).toBe(true);
   expect(viewer.props?.src).toBe(`${src}?preview=1`);
   expect(viewer.props?.downloadHref).toBe(`${src}?download=1`);
-  expect(viewer.props?.onRemove).toBe(deleteNode);
+  // Removing from the reader asks first (MIN-742).
+  await act(async () => (viewer.props!.onRemove as () => void)());
+  expect(deleteNode).not.toHaveBeenCalled();
+  expect(document.querySelector('[role="alertdialog"]')?.textContent).toContain("Remove “notes.text”?");
+  const confirm = [...document.querySelectorAll<HTMLButtonElement>('[role="alertdialog"] button')].find((b) => b.textContent === "Remove");
+  await act(async () => confirm!.click());
+  expect(deleteNode).toHaveBeenCalledOnce();
   expect(container.querySelector('a[download="notes.text"]')?.getAttribute("href")).toBe(`${src}?download=1`);
 });
 

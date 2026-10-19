@@ -419,9 +419,12 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         render: () => (
           <ResourcePills
             radius="md"
+            // One line shared with the context chips: the compact form.
+            variant="pill"
             className="flex-nowrap"
             pillClassName="shadow-none"
             resources={[resource]}
+            draft
             onRemove={removeUploadedResource}
           />
         ),
@@ -433,6 +436,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           render: () => (
             <ResourcePills
               radius="md"
+              // One line shared with the context chips: the compact form.
+              variant="pill"
               className="flex-nowrap"
               pillClassName="shadow-none"
               pending={[resource]}
@@ -854,7 +859,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         if (!option) continue;
         // A forge account or Numo quotes a WRITER, not an entity the
         // conversation carries: they never serialize as context.
-        if (option.type === "forge" || option.type === "numo") continue;
+        // An attachment mention belongs to the surface that holds it
+        // (MIN-742); the Numo composer offers none.
+        if (option.type === "forge" || option.type === "numo" || option.type === "resource") continue;
         const key = `${option.type}:${option.id}`;
         if (seen.has(key)) continue;
         seen.add(key);

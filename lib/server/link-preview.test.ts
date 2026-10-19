@@ -251,3 +251,52 @@ describe("resolveLinkPreview — ce qui aboutit", () => {
     expect(preview.title).toBe("Site");
   });
 });
+
+describe("resolveLinkPreview — the page's social image (MIN-742)", () => {
+  it("downloads og:image when asked, before the favicon", async () => {
+    replies(
+      () => htmlResponse('<title>Site</title><meta property="og:image" content="/cover.jpg"><link rel="icon" href="/fav.png">'),
+      () => response(Buffer.from([7, 7]), { headers: { "content-type": "image/jpeg" } }),
+      () => response(Buffer.from([1]), { headers: { "content-type": "image/png" } })
+    );
+    const preview = await resolveLinkPreview("https://exemple.com", { withImage: true });
+    expect(pinnedRequest.mock.calls[1][0].toString()).toBe("https://exemple.com/cover.jpg");
+    expect(preview.image?.contentType).toBe("image/jpeg");
+    expect(preview.image?.bytes.byteLength).toBe(2);
+    expect(preview.icon?.contentType).toBe("image/png");
+  });
+
+  it("leaves the image out when the page has none or it is not an image", async () => {
+    replies(
+      () => htmlResponse('<title>Site</title><meta name="twitter:image" content="https://cdn.exemple.com/x">'),
+      () => htmlResponse("<html>404</html>"),
+      () => response(Buffer.from([9]), { headers: { "content-type": "image/x-icon" } })
+    );
+    const preview = await resolveLinkPreview("https://exemple.com", { withImage: true });
+    expect(preview.image).toBeNull();
+    expect(preview.icon?.contentType).toBe("image/x-icon");
+  });
+
+  it("never fetches it for a project icon, which only needs the favicon", async () => {
+    replies(
+      () => htmlResponse('<meta property="og:image" content="/cover.jpg"><link rel="icon" href="/fav.png">'),
+      () => response(Buffer.from([1]), { headers: { "content-type": "image/png" } })
+    );
+    const preview = await resolveLinkPreview("https://exemple.com");
+    expect(pinnedRequest).toHaveBeenCalledTimes(2);
+    expect(pinnedRequest.mock.calls[1][0].toString()).toBe("https://exemple.com/fav.png");
+    expect(preview).not.toHaveProperty("image");
+  });
+
+  it("refuses an og:image that points at a private address", async () => {
+    lookup.mockImplementation(async (host: string) =>
+      host === "internal.exemple.com" ? [{ address: "10.0.0.5" }] : [{ address: "93.184.216.34" }]);
+    replies(
+      () => htmlResponse('<meta property="og:image" content="https://internal.exemple.com/a.png">'),
+      () => response(Buffer.from([9]), { headers: { "content-type": "image/x-icon" } })
+    );
+    const preview = await resolveLinkPreview("https://exemple.com", { withImage: true });
+    expect(preview.image).toBeNull();
+    expect(pinnedRequest.mock.calls.every(([url]) => !String(url).includes("internal"))).toBe(true);
+  });
+});

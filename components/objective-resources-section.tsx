@@ -33,7 +33,7 @@ export function ObjectiveResourcesSection({
 }) {
   const t = useTranslations("Resources");
   const { user } = useAuth();
-  const { resources, add, remove } = useObjectiveResources(objectiveId);
+  const { resources, add, remove, rename } = useObjectiveResources(objectiveId);
 
   const uploads = useAttachmentUploads(() => `projects/${projectId}`, {
     onUploaded: (input, localId) => {
@@ -86,6 +86,9 @@ export function ObjectiveResourcesSection({
             resources.some((x) => x.id === a.id && x.created_by === user?.id)
           }
           onRemovePending={uploads.remove}
+          onRename={async (a, fileName) => {
+            if (a.id) await rename(a.id, fileName);
+          }}
         />
       )}
     </div>

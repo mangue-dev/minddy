@@ -2,7 +2,7 @@
 
 import { fetchClientRead } from "./client-read";
 
-import type { Comment, IssueEvent, ResourceInput } from "./types";
+import type { Attachment, Comment, IssueEvent, ResourceInput } from "./types";
 import type { CommentVisibility } from "./feedback/types";
 import { trackEvent } from "./analytics";
 import { lengthBucket } from "./analytics-sanitize";
@@ -189,6 +189,20 @@ export async function addObjectiveCommentApi(
 }
 
 /** One resource, file or link — the uploader's own only (checked server-side). */
+/** Rename one saved file or link (MIN-742); answers the updated row. */
+export async function renameResourceApi(resourceId: string, fileName: string): Promise<Attachment> {
+  const saved = await parseJson<Attachment>(
+    await fetch(`/api/resources/${resourceId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file_name: fileName }),
+    })
+  );
+  // Neither the old nor the new name: only that a resource was renamed.
+  trackEvent("resource_renamed", { kind: saved.kind === "link" ? "link" : "file" });
+  return saved;
+}
+
 export async function deleteResourceApi(resourceId: string): Promise<void> {
   const response = await fetch(`/api/resources/${resourceId}`, {
     method: "DELETE",

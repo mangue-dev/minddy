@@ -990,14 +990,21 @@
     "file": "app/api/resources/[id]/route.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 29,
+    "line": 30,
     "storage": false
   },
   {
     "file": "app/api/resources/[id]/route.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 48,
+    "line": 49,
+    "storage": false
+  },
+  {
+    "file": "app/api/resources/[id]/route.ts",
+    "operation": "from",
+    "resource": "attachments",
+    "line": 93,
     "storage": false
   },
   {
@@ -2530,140 +2537,147 @@
     "file": "lib/server/attachments.ts",
     "operation": "from",
     "resource": "attachment_object_encryption_scope",
-    "line": 179,
+    "line": 208,
     "storage": false
   },
   {
     "file": "lib/server/attachments.ts",
     "operation": "from",
     "resource": "attachment_object_aliases",
-    "line": 205,
+    "line": 234,
     "storage": false
   },
   {
     "file": "lib/server/attachments.ts",
     "operation": "from",
     "resource": "attachment_object_encryption_scope",
-    "line": 219,
+    "line": 248,
     "storage": false
   },
   {
     "file": "lib/server/attachments.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 224,
+    "line": 253,
     "storage": true
   },
   {
     "file": "lib/server/attachments.ts",
     "operation": "from",
     "resource": "attachment_object_encrypted",
-    "line": 230,
+    "line": 259,
     "storage": false
   },
   {
     "file": "lib/server/attachments.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 329,
+    "line": 358,
     "storage": false
   },
   {
     "file": "lib/server/attachments.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 483,
+    "line": 516,
     "storage": false
   },
   {
     "file": "lib/server/attachments.ts",
     "operation": "rpc",
     "resource": "attachment_object_owners",
-    "line": 533,
+    "line": 566,
     "storage": false
   },
   {
     "file": "lib/server/attachments.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 567,
+    "line": 604,
     "storage": false
   },
   {
     "file": "lib/server/attachments.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 625,
+    "line": 633,
     "storage": false
   },
   {
     "file": "lib/server/attachments.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 641,
+    "line": 691,
+    "storage": false
+  },
+  {
+    "file": "lib/server/attachments.ts",
+    "operation": "from",
+    "resource": "attachments",
+    "line": 707,
     "storage": true
   },
   {
     "file": "lib/server/attachments.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 688,
+    "line": 754,
     "storage": true
   },
   {
     "file": "lib/server/attachments.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 702,
+    "line": 768,
     "storage": true
   },
   {
     "file": "lib/server/attachments.ts",
     "operation": "from",
     "resource": "attachment_object_encrypted",
-    "line": 708,
+    "line": 774,
     "storage": false
   },
   {
     "file": "lib/server/attachments.ts",
     "operation": "from",
     "resource": null,
-    "line": 742,
+    "line": 808,
     "storage": false
   },
   {
     "file": "lib/server/attachments.ts",
     "operation": "from",
     "resource": "attachment_object_aliases",
-    "line": 769,
+    "line": 835,
     "storage": false
   },
   {
     "file": "lib/server/attachments.ts",
     "operation": "from",
     "resource": "attachment_object_encrypted",
-    "line": 772,
+    "line": 838,
     "storage": false
   },
   {
     "file": "lib/server/attachments.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 806,
+    "line": 872,
     "storage": true
   },
   {
     "file": "lib/server/attachments.ts",
     "operation": "rpc",
     "resource": "orphan_attachment_objects",
-    "line": 861,
+    "line": 927,
     "storage": false
   },
   {
     "file": "lib/server/attachments.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 874,
+    "line": 940,
     "storage": true
   },
   {
@@ -3440,21 +3454,21 @@
     "file": "lib/server/encryption/attachment-metadata-backfill.ts",
     "operation": "from",
     "resource": null,
-    "line": 37,
+    "line": 38,
     "storage": false
   },
   {
     "file": "lib/server/encryption/attachment-metadata-backfill.ts",
     "operation": "rpc",
-    "resource": "migrate_attachment_metadata",
-    "line": 77,
+    "resource": "migrate_attachment_metadata_v2",
+    "line": 78,
     "storage": false
   },
   {
     "file": "lib/server/encryption/attachment-metadata-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_page_file_metadata",
-    "line": 84,
+    "line": 86,
     "storage": false
   },
   {
@@ -7339,35 +7353,42 @@
     "file": "lib/server/mention-access.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 90,
+    "line": 97,
     "storage": false
   },
   {
     "file": "lib/server/mention-access.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 95,
-    "storage": false
-  },
-  {
-    "file": "lib/server/mention-access.ts",
-    "operation": "from",
-    "resource": "project_members",
     "line": 102,
     "storage": false
   },
   {
     "file": "lib/server/mention-access.ts",
     "operation": "from",
-    "resource": "projects",
-    "line": 104,
+    "resource": "project_members",
+    "line": 109,
     "storage": false
   },
   {
     "file": "lib/server/mention-access.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 122,
+    "line": 111,
+    "storage": false
+  },
+  {
+    "file": "lib/server/mention-access.ts",
+    "operation": "from",
+    "resource": "attachments",
+    "line": 117,
+    "storage": false
+  },
+  {
+    "file": "lib/server/mention-access.ts",
+    "operation": "from",
+    "resource": "projects",
+    "line": 134,
     "storage": false
   },
   {

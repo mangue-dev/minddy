@@ -47,6 +47,8 @@ import {
   useIdleDocumentEditorPreload,
 } from "@/components/editor/document-editor-lazy";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
+import { useResourceMentions } from "@/lib/use-resource-mentions";
+import { useIssueResources } from "@/lib/use-issue-resources";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { CommentEditor, extractMentions } from "@/components/editor/comment-editor";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
@@ -138,6 +140,9 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   // only on the side where there is still something to discover.
   const detailFade = useScrollFade<HTMLDivElement>();
   const selected = triageIssues.find((i) => i.id === selectedId) ?? null;
+  // The description cites the selected ticket's own resources (MIN-742).
+  const { resources: selectedResources } = useIssueResources(selected?.id ?? null);
+  const descriptionMentions = useResourceMentions(mentions, selectedResources);
   // The selected issue's description document (MIN-728); `undefined` while it loads.
   // The selected issue's live description (MIN-728), as in the issue panel.
   const tPages = useTranslations("Pages");
@@ -299,6 +304,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
     updateComment,
     deleteComment,
     deleteAttachment,
+    renameAttachment,
   } = useIssueTimeline(
     selected?.id ?? null,
     // Cf. issue-side-panel: the birth of the ticket comes from its own line
@@ -589,7 +595,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
                     // Formatted while the live session loads (see the issue panel).
                     <LazyDocumentEditor
                       key={`${selected.id}:preview`}
-                      mentions={mentions}
+                      mentions={descriptionMentions}
                       value={selected.description ?? ""}
                       placeholder={tIssueUI("descriptionPlaceholder")}
                       readOnly
@@ -597,7 +603,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
                   ) : liveReady ? (
                     <LazyDocumentEditor
                       key={`${selected.id}:live`}
-                      mentions={mentions}
+                      mentions={descriptionMentions}
                       value={selected.description ?? ""}
                       uploadScope={`projects/${selected.project_id}`}
                       document={liveDescription.doc}
@@ -608,7 +614,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
                   ) : (
                   <LazyDocumentEditor
                     key={selected.id}
-                    mentions={mentions}
+                    mentions={descriptionMentions}
                     value={selected.description ?? ""}
                     uploadScope={`projects/${selected.project_id}`}
                     document={selectedDocument}
@@ -700,6 +706,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
                   onEditComment={updateComment}
                   onDeleteComment={deleteComment}
                   onDeleteAttachment={deleteAttachment}
+                  onRenameAttachment={renameAttachment}
                   canComment={canComment}
                   canModerate={canWrite}
                 />

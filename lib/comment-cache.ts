@@ -32,6 +32,20 @@ export function removeCommentThread<T extends CachedComment>(
   );
 }
 
+/** The comments with one attachment renamed (MIN-742); others untouched. */
+export function renameCommentAttachment<
+  T extends CachedComment & { attachments?: Array<{ id: string; file_name: string }> },
+>(comments: T[] | undefined, attachmentId: string, fileName: string): T[] | undefined {
+  return comments?.map((comment) =>
+    comment.attachments?.some((attachment) => attachment.id === attachmentId)
+      ? {
+          ...comment,
+          attachments: comment.attachments.map((attachment) =>
+            attachment.id === attachmentId ? { ...attachment, file_name: fileName } : attachment),
+        }
+      : comment);
+}
+
 /**
  * Publish the acknowledged write before background reconciliation. Cancel any
  * older read first so it cannot put the pre-write discussion back on screen.

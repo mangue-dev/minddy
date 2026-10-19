@@ -3,7 +3,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useTranslations } from "next-intl";
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 export const IMAGE_HERO_TRANSITION = {
@@ -64,6 +64,24 @@ export function PreviewViewer({ label, open, onOpenChange, children, action, clo
     dialog.current?.close();
     restoreScroll.current?.();
   }, []);
+
+  // Escape belongs to the reader while it is open. A layer below (the issue
+  // side panel, a sheet) listens on the document in the capture phase and
+  // would close as well; the window's capture phase runs first. The reader's
+  // own actions menu keeps its Escape, which closes only the menu.
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || !dialog.current?.open) return;
+      const target = event.target instanceof Element ? event.target : null;
+      if (target?.closest("[role=menu]") && dialog.current.contains(target)) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      onOpenChange(false);
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [open, onOpenChange]);
 
   const duration = reducedMotion ? 0 : 0.55;
   if (!mounted) return null;

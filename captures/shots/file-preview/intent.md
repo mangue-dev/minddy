@@ -1,7 +1,9 @@
 # MIN-680 file reader
 
 Show the actual shared React reader with a localized CSV example, the large
-Close control and the File actions menu. The isolated fixture uses the real
+Close control and the File actions menu (Download, Rename and Remove since
+MIN-742; the reader's Rename and Remove close it and leave the dialogs to the
+surface). The isolated fixture uses the real
 `FileViewer`, `ImageViewer`, `PreviewViewer`, Mangue buttons/theme provider and
 sandboxed CSV renderer. It does not navigate an authenticated account or write
 business data. Page-file authorization is covered by the route tests.

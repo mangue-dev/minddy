@@ -74,6 +74,8 @@ import {
   useIdleDocumentEditorPreload,
 } from "@/components/editor/document-editor-lazy";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
+import { useResourceMentions } from "@/lib/use-resource-mentions";
+import { useIssueResources } from "@/lib/use-issue-resources";
 import { useRichDocument } from "@/lib/use-rich-document";
 import { useDescriptionCollaboration } from "@/lib/use-description-collaboration";
 import type { JSONContent } from "@tiptap/core";
@@ -269,7 +271,7 @@ export function IssueSidePanel({
   // “Custom”: the free instructions dialog that copies the prompt.
   const [customPromptOpen, setCustomPromptOpen] = useState(false);
 
-  const { items, readState, retryRead, addComment, updateComment, deleteComment, deleteAttachment } =
+  const { items, readState, retryRead, addComment, updateComment, deleteComment, deleteAttachment, renameAttachment } =
     useIssueTimeline(
       issue?.id ?? null,
       // The ticket bears its own birth: enough to open its timeline itself
@@ -597,10 +599,16 @@ export function IssueSidePanel({
     },
     [issue?.project_id, onOpenIssue, openGlobalIssue],
   );
-  const mentions = useDescriptionMentions(
-    issue?.project_id ?? null,
-    members,
-    openMentionedIssue,
+  // The description and the plan can cite the ticket's own resources, and
+  // only those (MIN-742). Comments cite their own (components/issue-timeline).
+  const { resources: issueResources } = useIssueResources(issue?.id ?? null);
+  const mentions = useResourceMentions(
+    useDescriptionMentions(
+      issue?.project_id ?? null,
+      members,
+      openMentionedIssue,
+    ),
+    issueResources,
   );
 
   // Voice editing (Numo): dictated commands become immediate field updates.
@@ -1219,6 +1227,7 @@ export function IssueSidePanel({
                   onEditComment={updateComment}
                   onDeleteComment={deleteComment}
                   onDeleteAttachment={deleteAttachment}
+                  onRenameAttachment={renameAttachment}
                   canComment={canComment}
                   canModerate={canWrite}
                 />

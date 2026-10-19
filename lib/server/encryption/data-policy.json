@@ -455,6 +455,7 @@
     "encrypted": [
       "file_name",
       "icon_data_url",
+      "preview_data_url",
       "url"
     ],
     "clear": {

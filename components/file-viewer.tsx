@@ -6,7 +6,7 @@ import { isPlainNavigationClick } from "@/components/editor-node-link";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/theme-provider";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Download01Icon, MoreHorizontalIcon, Delete02Icon } from "@hugeicons/core-free-icons";
+import { Download01Icon, MoreHorizontalIcon, Delete02Icon, Edit04Icon } from "@hugeicons/core-free-icons";
 import { ImageViewer, PreviewViewer } from "@/components/image-viewer";
 import { Markdown } from "@/components/markdown";
 import { attachmentPreviewKind, isCsvAttachment, isMarkdownFileName, isPlainTextAttachment, withAttachmentPreviewTheme, type AttachmentPreviewKind } from "@/lib/attachment-preview";
@@ -110,11 +110,12 @@ function AttachmentPreview({
 }
 
 /** Kept inside the native dialog: body portals are inert below its top layer. */
-function FilePreviewActions({ close, downloadHref, fileName, onRemove }: {
+function FilePreviewActions({ close, downloadHref, fileName, onRemove, onRename }: {
   close: () => void;
   downloadHref: string;
   fileName: string;
   onRemove?: () => void;
+  onRename?: () => void;
 }) {
   const common = useTranslations("Common");
   const t = useTranslations("Resources");
@@ -199,6 +200,14 @@ function FilePreviewActions({ close, downloadHref, fileName, onRemove }: {
         className="flex min-h-10 items-center gap-2 rounded-sm px-2 text-sm hover:bg-accent focus:bg-accent focus:outline-none">
         <HugeiconsIcon icon={Download01Icon} className="size-4" aria-hidden />{t("download")}
       </a>
+      {/* Rename and Remove close the viewer first: their dialogs open in the
+          page, which is inert below this native dialog's top layer. */}
+      {onRename && <button type="button" role="menuitem" tabIndex={-1}
+        className="flex min-h-10 w-full items-center gap-2 rounded-sm px-2 text-sm hover:bg-accent focus:bg-accent focus:outline-none"
+        onClick={() => { close(); onRename(); }}>
+        <HugeiconsIcon icon={Edit04Icon} className="size-4" aria-hidden />{t("rename")}
+      </button>}
+      {onRemove && <div role="separator" className="-mx-2 my-1 h-px bg-border" />}
       {onRemove && <button type="button" role="menuitem" tabIndex={-1}
         className="flex min-h-10 w-full items-center gap-2 rounded-sm px-2 text-sm text-destructive hover:bg-destructive-surface-hover focus:bg-destructive-surface-hover focus:outline-none"
         onClick={() => { close(); onRemove(); }}>
@@ -210,18 +219,20 @@ function FilePreviewActions({ close, downloadHref, fileName, onRemove }: {
 }
 
 /** One full-screen reader for stored issue resources and page files. */
-export function FileViewer({ src, downloadHref, fileName, mimeType, open, onOpenChange, onRemove }: {
+export function FileViewer({ src, downloadHref, fileName, mimeType, open, onOpenChange, onRemove, onRename }: {
   src: string;
   downloadHref: string;
   fileName: string;
   mimeType?: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Asked once the viewer has closed; the caller confirms (MIN-742). */
   onRemove?: () => void;
+  onRename?: () => void;
 }) {
   const kind = attachmentPreviewKind(mimeType, fileName);
   if (!kind) return null;
-  const action = (close: () => void) => <FilePreviewActions close={close} downloadHref={downloadHref} fileName={fileName} onRemove={onRemove} />;
+  const action = (close: () => void) => <FilePreviewActions close={close} downloadHref={downloadHref} fileName={fileName} onRemove={onRemove} onRename={onRename} />;
   const props = { label: fileName, open, onOpenChange, action };
   if (kind === "image") return <ImageViewer {...props} src={src} alt={fileName} />;
   return <PreviewViewer {...props}>

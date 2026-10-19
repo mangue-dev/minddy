@@ -2,7 +2,7 @@ import "server-only";
 
 import sharp from "sharp";
 import { resolveLinkPreview } from "@/lib/server/favicon";
-import { MAX_ICON_DATA_URL_BYTES } from "@/lib/server/attachments";
+import { MAX_ICON_DATA_URL_BYTES, MAX_PREVIEW_DATA_URL_BYTES } from "@/lib/server/attachments";
 import type { LinkResourceInput } from "@/lib/types";
 
 /**
@@ -31,16 +31,41 @@ import type { LinkResourceInput } from "@/lib/types";
     without making the line grow. */
 const ICON_SIZE = 32;
 
+/** The card's figure box is 96 × 72 CSS px: twice that for dense screens. */
+const PREVIEW_WIDTH = 192;
+const PREVIEW_HEIGHT = 144;
+
 export async function resolveLinkResource(
   rawUrl: string
 ): Promise<LinkResourceInput> {
-  const preview = await resolveLinkPreview(rawUrl);
+  const preview = await resolveLinkPreview(rawUrl, { withImage: true });
   return {
     kind: "link",
     url: preview.url,
     file_name: preview.title.slice(0, 200),
     icon_data_url: preview.icon ? await toIconDataUrl(preview.icon) : null,
+    preview_data_url: preview.image ? await toPreviewDataUrl(preview.image) : null,
   };
+}
+
+/**
+ * The page's social image as the link card shows it (MIN-742): shrunk to fit
+ * the card's figure, never enlarged, as WebP in the row like the favicon.
+ * A few kB; an image sharp cannot read, or that stays too heavy, leaves the
+ * card on its favicon tile.
+ */
+async function toPreviewDataUrl(image: { bytes: Buffer }): Promise<string | null> {
+  try {
+    const webp = await sharp(image.bytes, { animated: false })
+      .rotate()
+      .resize(PREVIEW_WIDTH, PREVIEW_HEIGHT, { fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 72 })
+      .toBuffer();
+    const url = dataUrl("image/webp", webp);
+    return url.length <= MAX_PREVIEW_DATA_URL_BYTES ? url : null;
+  } catch {
+    return null;
+  }
 }
 
 async function toIconDataUrl(icon: {

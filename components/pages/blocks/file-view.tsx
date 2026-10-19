@@ -9,7 +9,7 @@ import {
   ReactNodeViewRenderer,
   type NodeViewProps,
 } from "@tiptap/react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { FileViewer } from "@/components/file-viewer";
 import { attachmentPreviewKind } from "@/lib/attachment-preview";
 import { useLocale, useTranslations } from "next-intl";
@@ -21,6 +21,8 @@ import {
 } from "@/components/editor-node-link";
 import { fileDownloadHref, filePreviewHref, formatFileSize } from "@/lib/page-files";
 import { usePageUploadsContext } from "@/components/pages/page-uploads";
+import { RenameResourceDialog } from "@/components/resources";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 
 /**
  * The view of a file block (MIN-280): a line, with the name, the weight and the
@@ -36,9 +38,15 @@ import { usePageUploadsContext } from "@/components/pages/page-uploads";
  * The download address depends on the form of the `src` — application or URL
  * signed by a published page: cf. `fileDownloadHref` (lib/page-files.ts).
  */
-export function FileView({ node, selected, editor, deleteNode }: NodeViewProps) {
+export function FileView({ node, selected, editor, deleteNode, updateAttributes }: NodeViewProps) {
   const editable = useEditorEditable(editor);
   const t = useTranslations("Pages");
+  const tResources = useTranslations("Resources");
+  const tCommon = useTranslations("Common");
+  // Removing and renaming from the viewer ask first (MIN-742), like every
+  // attachment surface.
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [renaming, setRenaming] = useState(false);
   const locale = useLocale();
   const uploads = usePageUploadsContext();
 
@@ -58,6 +66,8 @@ export function FileView({ node, selected, editor, deleteNode }: NodeViewProps) 
   const href = src ? fileDownloadHref(src) : null;
   const previewSrc = src && attachmentPreviewKind(mime, name) ? filePreviewHref(src) : null;
   const [previewOpen, setPreviewOpen] = useState(false);
+  // Stable while the dialog is open, so it keeps what is being typed.
+  const renamedResource = useMemo(() => ({ file_name: name }), [name]);
 
   const failed = upload?.status === "failed";
   const abandoned = !src && !upload;
@@ -171,7 +181,26 @@ export function FileView({ node, selected, editor, deleteNode }: NodeViewProps) 
         </a>
       )}
       {previewSrc && href && <FileViewer src={previewSrc} downloadHref={href} fileName={name} mimeType={mime}
-        open={previewOpen} onOpenChange={setPreviewOpen} onRemove={editable ? deleteNode : undefined} />}
+        open={previewOpen} onOpenChange={setPreviewOpen}
+        onRemove={editable ? () => setConfirmRemove(true) : undefined}
+        onRename={editable ? () => setRenaming(true) : undefined} />}
+      {/* Mounted on demand: a page can hold many blocks. */}
+      {confirmRemove && <ConfirmDeleteDialog
+        open
+        onOpenChange={setConfirmRemove}
+        title={tResources("removeConfirmTitle", { name })}
+        description={tResources("removeBlockConfirmDescription")}
+        confirmLabel={tResources("remove")}
+        cancelLabel={tCommon("cancel")}
+        onConfirm={() => deleteNode()}
+      />}
+      {renaming && <RenameResourceDialog
+        resource={renamedResource}
+        onOpenChange={setRenaming}
+        // The block's name is the document's own attribute: renaming is an
+        // ordinary, undoable edit of the page.
+        onSubmit={(_resource, fileName) => updateAttributes({ name: fileName })}
+      />}
     </NodeViewWrapper>
   );
 }

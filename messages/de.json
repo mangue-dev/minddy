@@ -308,7 +308,9 @@
     "cannotChangeOwner": "Die Rolle des Inhabers ändert sich nur durch eine Eigentumsübertragung.",
     "transferTargetNotMember": "Das Eigentum kann nur an ein Mitglied übertragen werden, nicht an einen Leser.",
     "transferKeyConflict": "Der neue Inhaber hat bereits ein Projekt mit diesem Schlüssel. Ändern Sie zuerst den Schlüssel.",
-    "transferStorageQuota": "Der Speicher des neuen Inhabers reicht für die Dateien dieses Projekts nicht aus."
+    "transferStorageQuota": "Der Speicher des neuen Inhabers reicht für die Dateien dieses Projekts nicht aus.",
+    "resourceNameInvalid": "Geben Sie einen Namen für diese Ressource ein.",
+    "resourceNotRenamable": "Eine Seitenressource trägt den Titel ihrer Seite."
   },
   "RelayClaim": {
     "title": "GitHub verbinden",
@@ -354,7 +356,17 @@
     "dropOnIssue": "Anhängen an {id}",
     "addedTo": "Anhang zu {id} hinzugefügt.",
     "kb": "KB",
-    "mb": "MB"
+    "mb": "MB",
+    "rename": "Umbenennen",
+    "renameDialogTitle": "Ressource umbenennen",
+    "renameLabel": "Name",
+    "renameEmpty": "Geben Sie einen Namen ein.",
+    "renameFailed": "Diese Ressource konnte nicht umbenannt werden.",
+    "removeConfirmTitle": "„{name}“ entfernen?",
+    "removeConfirmDescription": "Sie wird für alle entfernt. Erwähnungen davon werden als nicht verfügbar angezeigt.",
+    "removeDraftConfirmDescription": "Sie wird nicht gesendet. Erwähnungen davon in Ihrem Text werden als nicht verfügbar angezeigt.",
+    "removeUploadConfirmDescription": "Der Upload wird abgebrochen und die Datei nicht angehängt.",
+    "removeBlockConfirmDescription": "Der Block wird von der Seite entfernt. Sie können das im Editor rückgängig machen."
   },
   "Billing": {
     "usageAria": "Planverwendung",

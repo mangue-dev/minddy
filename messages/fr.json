@@ -308,7 +308,9 @@
     "cannotChangeOwner": "Le rôle du propriétaire ne change que par un transfert de propriété.",
     "transferTargetNotMember": "La propriété ne peut être transférée qu’à un membre, pas à un lecteur.",
     "transferKeyConflict": "Le nouveau propriétaire a déjà un projet avec cette clé. Changez d’abord la clé.",
-    "transferStorageQuota": "Le stockage du nouveau propriétaire ne peut pas contenir les fichiers de ce projet."
+    "transferStorageQuota": "Le stockage du nouveau propriétaire ne peut pas contenir les fichiers de ce projet.",
+    "resourceNameInvalid": "Saisissez un nom pour cette ressource.",
+    "resourceNotRenamable": "Une ressource de page porte le titre de sa page."
   },
   "RelayClaim": {
     "title": "Connecter GitHub",
@@ -354,7 +356,17 @@
     "dropOnIssue": "Joindre à {id}",
     "addedTo": "Pièce jointe ajoutée à {id}.",
     "kb": "Ko",
-    "mb": "Mo"
+    "mb": "Mo",
+    "rename": "Renommer",
+    "renameDialogTitle": "Renommer la ressource",
+    "renameLabel": "Nom",
+    "renameEmpty": "Saisissez un nom.",
+    "renameFailed": "Impossible de renommer cette ressource.",
+    "removeConfirmTitle": "Retirer « {name} » ?",
+    "removeConfirmDescription": "Elle est retirée pour tout le monde. Ses mentions s'afficheront comme indisponibles.",
+    "removeDraftConfirmDescription": "Elle ne sera pas envoyée. Ses mentions dans votre texte s'afficheront comme indisponibles.",
+    "removeUploadConfirmDescription": "L'envoi s'arrête et le fichier ne sera pas joint.",
+    "removeBlockConfirmDescription": "Le bloc est retiré de la page. Vous pouvez l'annuler depuis l'éditeur."
   },
   "Billing": {
     "usageAria": "Usage du plan",

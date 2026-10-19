@@ -3,7 +3,8 @@ import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
-import { removeStorageObjects } from "@/lib/server/attachments";
+import { removeStorageObjects, renameAttachment } from "@/lib/server/attachments";
+import { normalizeResourceName } from "@/lib/resource-name";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -65,4 +66,60 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     await removeStorageObjects(service, [data.storage_path]);
   }
   return NextResponse.json({ ok: true });
+}
+
+/**
+ * PATCH /api/resources/[id] — rename one file or link (MIN-742). Body:
+ * `{ file_name }`. Answers the updated row.
+ *
+ * The same two guards as DELETE, for the same reasons: the uploader alone, and
+ * only while they still belong to the project with the matching capability.
+ * A page resource has no name of its own (the chip shows the page's live
+ * title), so it is refused.
+ */
+export async function PATCH(request: NextRequest, { params }: RouteContext) {
+  const { id } = await params;
+  const auth = await getAuthedUser(request);
+  if (!auth.ok) return auth.response;
+  const t = await getTranslations("ApiErrors");
+
+  const body = (await request.json().catch(() => null)) as { file_name?: unknown } | null;
+  const fileName = normalizeResourceName(body?.file_name);
+  if (!fileName) {
+    return NextResponse.json({ error: t("resourceNameInvalid") }, { status: 400 });
+  }
+
+  const service = getServiceClient();
+  const { data: row } = await service
+    .from("attachments")
+    .select("project_id, comment_id, kind")
+    .eq("id", id)
+    .eq("created_by", auth.user.id)
+    .maybeSingle();
+
+  const access = row ? await getProjectAccess(auth.user.id, row.project_id as string) : null;
+  if (!row || !access) {
+    return NextResponse.json({ error: t("resourceNotFound") }, { status: 404 });
+  }
+  if (!(row.comment_id ? access.canComment : access.canWrite)) {
+    return NextResponse.json({ error: t("readOnlyProject") }, { status: 403 });
+  }
+  if (row.kind === "page") {
+    return NextResponse.json({ error: t("resourceNotRenamable") }, { status: 400 });
+  }
+
+  try {
+    const renamed = await renameAttachment(service, {
+      id,
+      projectId: row.project_id as string,
+      fileName,
+    });
+    if (!renamed) {
+      return NextResponse.json({ error: t("resourceNotFound") }, { status: 404 });
+    }
+    return NextResponse.json(renamed);
+  } catch (error) {
+    console.error("[api/resources/:id] rename failed:", (error as Error).message);
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
+  }
 }

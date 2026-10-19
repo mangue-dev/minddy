@@ -32,9 +32,13 @@ export const MAX_ATTACHMENTS_PER_ENTITY = 10;
 export const MAX_LINK_URL_LENGTH = 2000;
 /** A favicon reduced to 32 px WebP weighs ~1-2 Ko; past this it isn't one. */
 export const MAX_ICON_DATA_URL_BYTES = 24 * 1024;
+/** A link's og:image thumbnail (MIN-742): 192 × 144 px of WebP is ~5-20 kB. */
+export const MAX_PREVIEW_DATA_URL_BYTES = 64 * 1024;
 
 /** `data:image/png;base64,…` — the only shape a favicon may take in a row. */
 const ICON_DATA_URL_RE = /^data:image\/(png|jpeg|webp|x-icon|vnd\.microsoft\.icon|gif);base64,[A-Za-z0-9+/=]+$/;
+/** A link's thumbnail, as the link preview produces it. */
+const PREVIEW_DATA_URL_RE = /^data:image\/(webp|png|jpeg);base64,[A-Za-z0-9+/=]+$/;
 
 /** The link half of {@link parseResourcesInput}. Null on anything malformed. */
 function parseLinkResource(a: Record<string, unknown>): LinkResourceInput | null {
@@ -66,7 +70,20 @@ function parseLinkResource(a: Record<string, unknown>): LinkResourceInput | null
     icon = candidate;
   }
 
-  return { kind: "link", url: raw, file_name: fileName, icon_data_url: icon };
+  let preview: string | null = null;
+  if (a.preview_data_url != null) {
+    if (typeof a.preview_data_url !== "string") return null;
+    const candidate = a.preview_data_url.trim();
+    if (!PREVIEW_DATA_URL_RE.test(candidate) || candidate.length > MAX_PREVIEW_DATA_URL_BYTES) {
+      return null;
+    }
+    preview = candidate;
+  }
+
+  return {
+    kind: "link", url: raw, file_name: fileName, icon_data_url: icon,
+    ...(preview ? { preview_data_url: preview } : {}),
+  };
 }
 
 const UUID_RE =
@@ -111,23 +128,35 @@ export function parseResourcesInput(
   if (!Array.isArray(raw) || raw.length > max) return null;
 
   const out: ResourceInput[] = [];
+  const ids = new Set<string>();
   for (const item of raw) {
     if (!item || typeof item !== "object") return null;
     const a = item as Record<string, unknown>;
     const kind = a.kind ?? "file";
     if (kind !== "file" && kind !== "link" && kind !== "page") return null;
+    // The id a composer chose (MIN-742), so a mention written before the save
+    // points at the row. Optional; when present it must be a fresh UUID.
+    let id: string | undefined;
+    if (a.id != null) {
+      if (typeof a.id !== "string" || !UUID_RE.test(a.id)) return null;
+      id = a.id.toLowerCase();
+      if (ids.has(id)) return null;
+      ids.add(id);
+    }
+    const withId = <T extends ResourceInput>(resource: T): T =>
+      id ? { ...resource, id } : resource;
 
     if (kind === "link") {
       const link = parseLinkResource(a);
       if (!link) return null;
-      out.push(link);
+      out.push(withId(link));
       continue;
     }
 
     if (kind === "page") {
       const page = parsePageResource(a);
       if (!page) return null;
-      out.push(page);
+      out.push(withId(page));
       continue;
     }
 
@@ -156,12 +185,12 @@ export function parseResourcesInput(
     ) {
       return null;
     }
-    out.push({
+    out.push(withId({
       storage_path: path,
       file_name: fileName,
       mime_type: a.mime_type.slice(0, 120) || "application/octet-stream",
       size_bytes: Math.round(a.size_bytes),
-    });
+    }));
   }
   return out;
 }
@@ -400,6 +429,7 @@ function attachmentRow(parent: AttachmentParent, a: ResourceInput) {
       kind: "link" as const,
       url: a.url,
       icon_data_url: a.icon_data_url ?? null,
+      preview_data_url: a.preview_data_url ?? null,
       storage_path: null,
       page_id: null,
       file_name: a.file_name,
@@ -446,6 +476,9 @@ async function prepareAttachmentRow(parent: AttachmentParent, resource: Resource
     icon_data_url: "icon_data_url" in row && row.icon_data_url
       ? await encodeAttachmentValue("attachments", parent.projectId,
         id, "icon_data_url", row.icon_data_url) : null,
+    preview_data_url: "preview_data_url" in row && row.preview_data_url
+      ? await encodeAttachmentValue("attachments", parent.projectId,
+        id, "preview_data_url", row.preview_data_url) : null,
   };
 }
 
@@ -560,10 +593,14 @@ export async function insertAttachments(
   await assertPagesInProject(service, args.projectId, args.resources);
   await assertUploadedByActor(service, args.createdBy, args.resources);
   const protect = await shouldEncryptAttachmentMetadata(service);
+  // A composer names each resource before it is saved (MIN-742), so the text
+  // written next to it can already mention it. A retry sends the same ids,
+  // which keeps the upsert below idempotent.
   const rows = await Promise.all(args.resources.map((resource, index) =>
     prepareAttachmentRow(args, resource,
-      args.idempotencyKey ? commentResourceId(args.idempotencyKey, index)
-        : crypto.randomUUID(), protect)));
+      resource.id ?? (args.idempotencyKey
+        ? commentResourceId(args.idempotencyKey, index)
+        : crypto.randomUUID()), protect)));
   const table = service.from("attachments");
   // Only explicit comment retries use deterministic IDs. A lost response can
   // then retry the atomic resource batch without duplicating successful rows.
@@ -574,6 +611,35 @@ export async function insertAttachments(
   if (error) throw new Error(`resources insert failed: ${error.message}`);
   return Promise.all((data ?? []).map((row) =>
     decodeAttachmentRow("attachments", row))) as Promise<Attachment[]>;
+}
+
+/**
+ * Give one resource a new display name (MIN-742). The name goes through the
+ * attachment codec like every other write, so a protected project stores it
+ * encrypted. Callers have checked who may rename; a page resource is refused
+ * here as well, because its name is the page's live title.
+ *
+ * Returns the decoded row, or `null` when no row matched.
+ */
+export async function renameAttachment(
+  service: SupabaseClient,
+  args: { id: string; projectId: string; fileName: string },
+): Promise<Attachment | null> {
+  const protect = await shouldEncryptAttachmentMetadata(service);
+  const fileName = protect
+    ? await encodeAttachmentValue("attachments", args.projectId, args.id,
+      "file_name", args.fileName)
+    : args.fileName;
+  const { data, error } = await service
+    .from("attachments")
+    .update({ file_name: fileName })
+    .eq("id", args.id)
+    .eq("project_id", args.projectId)
+    .neq("kind", "page")
+    .select("*")
+    .maybeSingle();
+  if (error) throw new Error(`resource rename failed: ${error.message}`);
+  return data ? await decodeAttachmentRow("attachments", data) as Attachment : null;
 }
 
 /** Stable per-comment slot IDs keep concurrent attachment retries idempotent. */

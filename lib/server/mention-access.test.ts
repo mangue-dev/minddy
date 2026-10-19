@@ -12,6 +12,8 @@ const PAGE_HIDDEN = "44444444-4444-4444-8444-444444444441";
 const MEMBER = "55555555-5555-4555-8555-555555555551";
 const STRANGER = "55555555-5555-4555-8555-555555555552";
 const OWNER = "55555555-5555-4555-8555-555555555553";
+const FILE_OK = "66666666-6666-4666-8666-666666666661";
+const FILE_HIDDEN = "66666666-6666-4666-8666-666666666662";
 
 const h = vi.hoisted(() => ({ tables: {} as Record<string, Array<Record<string, unknown>>> }));
 
@@ -33,6 +35,12 @@ vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => service }));
 vi.mock("@/lib/server/issue-store", () => ({ issueStore: () => query("issues") }));
 vi.mock("@/lib/server/objective-store", () => ({ objectiveStore: () => query("objectives") }));
 vi.mock("@/lib/server/page-content", () => ({ decodePageProjection: async (row: unknown) => row }));
+vi.mock("@/lib/server/attachment-content", () => ({
+  decodeAttachmentRow: async (_table: string, row: { file_name: string }) => ({
+    ...row,
+    file_name: row.file_name.replace(/^cipher:/, ""),
+  }),
+}));
 vi.mock("@/lib/server/project-content", () => ({
   decodeProjectName: async (row: { name: string }) => row.name,
 }));
@@ -59,6 +67,10 @@ beforeEach(() => {
     ],
     pages: [{ id: PAGE_HIDDEN, project_id: HIDDEN, title: "Secret roadmap", deleted_at: null }],
     objectives: [],
+    attachments: [
+      { id: FILE_OK, project_id: ALLOWED, file_name: "cipher:Spec v2.pdf" },
+      { id: FILE_HIDDEN, project_id: HIDDEN, file_name: "cipher:Secret budget.xlsx" },
+    ],
     project_members: [
       { project_id: ALLOWED, user_id: MEMBER },
       { project_id: HIDDEN, user_id: STRANGER },
@@ -67,6 +79,15 @@ beforeEach(() => {
 });
 
 describe("resolving mention targets", () => {
+  it("names a resource by its decoded name, only inside a project the reader can open", async () => {
+    const resolution = await resolveMentionTargets("reader", [
+      { type: "resource", id: FILE_OK },
+      { type: "resource", id: FILE_HIDDEN },
+    ]);
+    expect(resolution.get(`resource:${FILE_OK}`)).toBe("Spec v2.pdf");
+    expect(resolution.get(`resource:${FILE_HIDDEN}`)).toBeNull();
+  });
+
   it("gives the current label of what the reader can open, and null otherwise", async () => {
     const resolution = await resolveMentionTargets("reader", [
       { type: "issue", id: ISSUE_OK },

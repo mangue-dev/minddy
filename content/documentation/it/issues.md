@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 22,
+  "revision": 23,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work; MIN-693 project roles; MIN-717 Smart Fill relations; MIN-718 hybrid issue search; MIN-728 one editor engine; MIN-733 always-on AI features; MIN-736 closed columns hidden by default; MIN-737 account settings reorganization; MIN-741 creation dialogs",
+    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work; MIN-693 project roles; MIN-717 Smart Fill relations; MIN-718 hybrid issue search; MIN-728 one editor engine; MIN-733 always-on AI features; MIN-736 closed columns hidden by default; MIN-737 account settings reorganization; MIN-741 creation dialogs; MIN-742 resources",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -117,13 +117,15 @@
       "components/settings/account-smart-fill-section.tsx",
       "content/documentation/reviews/min-737-settings-reorganization.md",
       "components/creation-project-select.tsx",
-      "content/documentation/reviews/min-741-creation-dialogs.md"
+      "content/documentation/reviews/min-741-creation-dialogs.md",
+      "lib/use-resource-mentions.ts",
+      "content/documentation/reviews/min-742-resources.md"
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; it translation of removal edits; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-717 Smart Fill relations source review inherited from en revision 14; it translation of added passages; no browser walkthrough); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-728 one editor engine: source and unit-test review of the shared editor on this surface; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-734 typed mentions: source and unit-test review of the mention format, rendering and access rules; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (Command/Ctrl+K opens the selection actions: source and unit-test review of bulk-actions-context and use-command-palette-launcher; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-733 removal of the instance AI switches: source and unit-test review of the admin registry and every former switch reader; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 default status columns: source and unit-test review of lib/view-filter.ts and the board status filter; no browser walkthrough, no new captures); agent:/root (MIN-737 account settings reorganization: source review of the Smart Fill tab and its cards in components/settings/account-smart-fill-section.tsx; unchanged evidence retained; no browser walkthrough, no new captures); agent:/root (MIN-741 creation dialogs: source and unit-test review of the Create in project control, the cleared project-scoped fields and the identifier create button with its copy menu; create-an-issue-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-product screen new-issue) and inspected; no other browser walkthrough)",
-    "language": "agent:/root (it new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_it (it translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root/min693_it with agent:/root (it MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (it translation of MIN-717 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it translation of the MIN-728 passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it added sentences, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (it removal of the sentences describing instance AI switches; retained-meaning self-review; agent review, not human acceptance); agent:/root (it MIN-736 added sentences with catalog status labels; agent review, not human acceptance); agent:/root (it MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (it MIN-741 Create in passages and figure alt text with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 23,
+    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; it translation of removal edits; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-717 Smart Fill relations source review inherited from en revision 14; it translation of added passages; no browser walkthrough); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-728 one editor engine: source and unit-test review of the shared editor on this surface; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-734 typed mentions: source and unit-test review of the mention format, rendering and access rules; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (Command/Ctrl+K opens the selection actions: source and unit-test review of bulk-actions-context and use-command-palette-launcher; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-733 removal of the instance AI switches: source and unit-test review of the admin registry and every former switch reader; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 default status columns: source and unit-test review of lib/view-filter.ts and the board status filter; no browser walkthrough, no new captures); agent:/root (MIN-737 account settings reorganization: source review of the Smart Fill tab and its cards in components/settings/account-smart-fill-section.tsx; unchanged evidence retained; no browser walkthrough, no new captures); agent:/root (MIN-741 creation dialogs: source and unit-test review of the Create in project control, the cleared project-scoped fields and the identifier create button with its copy menu; create-an-issue-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-product screen new-issue) and inspected; no other browser walkthrough); agent:/root (MIN-742 resources: source and unit-test review of renaming, removal confirmation, resource cards with a click and right-click menu and og:image link previews, file mentions opening the reader, and resource mentions scoped to their surface; issue-file-preview recaptured on 2026-10-19 in all six locales with captures/shots/file-preview and inspected; no other browser walkthrough)",
+    "language": "agent:/root (it new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_it (it translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root/min693_it with agent:/root (it MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (it translation of MIN-717 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it translation of the MIN-728 passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it added sentences, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (it removal of the sentences describing instance AI switches; retained-meaning self-review; agent review, not human acceptance); agent:/root (it MIN-736 added sentences with catalog status labels; agent review, not human acceptance); agent:/root (it MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (it MIN-741 Create in passages and figure alt text with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (it MIN-742 changed passages and figure alt text with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-19"
   },
   "related": [
@@ -169,7 +171,7 @@
       "src": "/documentation/it/new-issue.png",
       "alt": "Bozza non inviata nel progetto Aurora con titolo, descrizione, proprietà selezionabili manualmente e il pulsante Crea AUR-19.",
       "caption": "Descrivi il risultato atteso e scegli le proprietà utili prima di creare il ticket.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -185,7 +187,7 @@
       "src": "/documentation/it/triage-incoming.png",
       "alt": "Ticket dimostrativo DOC-11 in arrivo con segnalazione, proprietà e comandi per duplicato, Rifiuta e Accetta.",
       "caption": "Leggi la segnalazione ricevuta prima di accettarla, rifiutarla o collegare un duplicato.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -201,7 +203,7 @@
       "src": "/documentation/it/issue-statuses.png",
       "alt": "Gli otto stati del ticket nel selettore, con Backlog selezionato.",
       "caption": "La spunta indica lo stato attuale. Scegli quello che rispecchia lo stato effettivo del lavoro.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -217,7 +219,7 @@
       "src": "/documentation/it/work-resources.png",
       "alt": "Finestra di aggiunta di un link con un indirizzo di contatto d’esempio.",
       "caption": "Controlla la destinazione prima di aggiungere la risorsa. Questo link d’esempio non è stato inviato.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -233,7 +235,7 @@
       "src": "/documentation/it/work-dependencies.png",
       "alt": "Ricerca di un ticket bloccante tramite identificativo.",
       "caption": "Scegli la direzione della relazione prima della destinazione. Il selettore è mostrato senza inviare la relazione.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -249,7 +251,7 @@
       "src": "/documentation/it/work-sub-issues.png",
       "alt": "Campo per creare un sotto-ticket in un ticket principale dimostrativo.",
       "caption": "Il campo crea un figlio di questo ticket; ogni figlio conserva stato e discussione propri.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -265,7 +267,7 @@
       "src": "/documentation/it/work-implementation-plan.png",
       "alt": "Piano dimostrativo con due attività di lavoro completate su sei.",
       "caption": "Il piano salvato distingue passaggi completati, attivi e in attesa. L’avanzamento non dimostra l’esecuzione dell’attività di codice fittizia.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -281,7 +283,7 @@
       "src": "/documentation/it/issue-date-recurrence.png",
       "alt": "Selettore di scadenza ricorrente con anteprima settimanale la domenica e orario facoltativo.",
       "caption": "La modalità ricorrente mostra la cadenza settimanale. Conferma la prima scadenza prima di creare il ticket.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -297,7 +299,7 @@
       "src": "/documentation/it/import-issues-preview-workflow.png",
       "alt": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate.",
       "caption": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate. L’importazione non è stata inviata; la pianificazione IA facoltativa è stata bloccata per la cattura.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -312,11 +314,11 @@
       "id": "issue-file-preview",
       "kind": "screenshot",
       "src": "/documentation/it/file-preview.png",
-      "alt": "Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica e Rimuovi.",
-      "caption": "Il visualizzatore condiviso colloca Chiudi sotto l’anteprima. Il menu Azioni del file offre Scarica e, con i permessi necessari, Rimuovi.",
-      "revision": 22,
+      "alt": "Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica, Rinomina e Rimuovi.",
+      "caption": "Il visualizzatore condiviso colloca Chiudi sotto l’anteprima. Il menu Azioni del file offre Scarica e, con i permessi necessari, Rinomina e Rimuovi.",
+      "revision": 23,
       "reviewed": true,
-      "capturedAt": "2026-10-12",
+      "capturedAt": "2026-10-19",
       "viewport": [
         1168,
         808
@@ -358,7 +360,7 @@ Conferma la creazione e apri il nuovo ticket. Controlla identificativo e progett
 
 ![Bozza non inviata nel progetto Aurora con titolo, descrizione, proprietà selezionabili manualmente e il pulsante Crea AUR-19.](/documentation/it/new-issue.png)
 
-La descrizione, i commenti e la finestra di creazione del ticket usano lo stesso editor delle pagine del progetto, senza le maniglie dei blocchi. Digita `/` per inserire un titolo, un elenco, un'attività, una citazione, un **Riquadro**, un blocco di codice, un blocco **Commuta** o un divisore, e `@` per menzionare una persona, un ticket, un obiettivo o una pagina. Più persone possono modificare la stessa descrizione contemporaneamente: il cursore di ciascuna appare con il suo nome e il suo colore, e le modifiche di Numo o di un agente collegato appaiono appena salvate. Numo, gli agenti collegati e le esportazioni CSV leggono il testo in Markdown, che si aggiorna pochi secondi dopo la fine della digitazione. Seleziona del testo per metterlo in grassetto, corsivo, barrato o codice, o per aggiungere un link. Incolla o trascina un'immagine per inserirla nella descrizione; gli altri tipi di file vanno nelle risorse del ticket. Una menzione punta alla sua destinazione, non al suo nome: segue una rinomina e resiste alle modifiche e al copia-incolla in un’altra descrizione, un commento, una pagina o il compositore di Numo. Chi non può aprire la destinazione vede una menzione **Non disponibile**, senza nome né progetto.
+La descrizione, i commenti e la finestra di creazione del ticket usano lo stesso editor delle pagine del progetto, senza le maniglie dei blocchi. Digita `/` per inserire un titolo, un elenco, un'attività, una citazione, un **Riquadro**, un blocco di codice, un blocco **Commuta** o un divisore, e `@` per menzionare una persona, un ticket, un obiettivo o una pagina. Il menu `@` elenca anche le risorse allegate a ciò che stai scrivendo: il ticket o l’obiettivo per la descrizione e il piano, un commento per i propri file o una finestra di creazione per i file aggiunti lì. Una menzione di una risorsa allegata altrove appare come **Non disponibile**. Più persone possono modificare la stessa descrizione contemporaneamente: il cursore di ciascuna appare con il suo nome e il suo colore, e le modifiche di Numo o di un agente collegato appaiono appena salvate. Numo, gli agenti collegati e le esportazioni CSV leggono il testo in Markdown, che si aggiorna pochi secondi dopo la fine della digitazione. Seleziona del testo per metterlo in grassetto, corsivo, barrato o codice, o per aggiungere un link. Incolla o trascina un'immagine per inserirla nella descrizione; gli altri tipi di file vanno nelle risorse del ticket. Una menzione punta alla sua destinazione, non al suo nome: segue una rinomina e resiste alle modifiche e al copia-incolla in un’altra descrizione, un commento, una pagina o il compositore di Numo. Chi non può aprire la destinazione vede una menzione **Non disponibile**, senza nome né progetto.
 
 ### Verificare salvataggio e visibilità {#issue-save}
 
@@ -432,9 +434,9 @@ Apri la cronologia di discussione del ticket per aggiungere un commento. Spiega 
 
 Allega una pagina pertinente del progetto, un file o un collegamento attraverso i controlli delle risorse. Una pagina collegata è una risorsa aggiornata: il suo titolo segue le rinominazioni e il contenuto può evolvere. Un file è un allegato memorizzato, non una garanzia che un URL esterno resti disponibile.
 
-Fai clic su una risorsa file supportata per aprire l’anteprima su tutta la finestra. Immagini, PDF, Markdown (`.md`), testo semplice (`.txt`, `.text`), CSV e formati audio o video supportati usano lo stesso visualizzatore. Il Markdown viene formattato, il testo resta letterale e il CSV si apre come tabella scorrevole. Usa Chiudi o Escape per tornare al ticket. Il menu Azioni del file (`…`) offre Scarica e, se puoi rimuovere quella risorsa, Rimuovi. La rimozione scollega la risorsa da questo contesto. I formati non supportati mantengono l’azione di download.
+Le risorse appaiono come schede: l’immagine stessa o l’icona del tipo di file, il nome e la dimensione. Un link mostra l’immagine di anteprima della sua pagina quando il sito ne fornisce una, altrimenti la sua favicon. Fai clic o clic destro su una scheda per aprirne il menu: Anteprima, Apri collegamento o Apri pagina, poi Rinomina, Scarica e Rimuovi quando si applicano. Anteprima apre un file supportato su tutta la finestra. Immagini, PDF, Markdown (`.md`), testo semplice (`.txt`, `.text`), CSV e formati audio o video supportati usano lo stesso visualizzatore. Il Markdown viene formattato, il testo resta letterale e il CSV si apre come tabella scorrevole. Usa Chiudi o Escape per tornare al ticket. Il menu Azioni del file (`…`) offre Scarica e, se puoi modificare quella risorsa, Rinomina e Rimuovi. Un clic sulla menzione di un file in un testo apre lo stesso visualizzatore. Minddy chiede una conferma prima di rimuovere una risorsa, che viene poi scollegata da questo contesto. Una risorsa pagina mantiene il titolo della sua pagina e non si può rinominare. I formati non supportati mantengono l’azione di download.
 
-![Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica e Rimuovi.](/documentation/it/file-preview.png)
+![Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica, Rinomina e Rimuovi.](/documentation/it/file-preview.png)
 
 ![Finestra di aggiunta di un link con un indirizzo di contatto d’esempio.](/documentation/it/work-resources.png)
 

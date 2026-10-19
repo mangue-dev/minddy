@@ -16,7 +16,10 @@ export type MentionTargetType =
   | "forge"
   | "issue"
   | "objective"
-  | "page";
+  | "page"
+  /** An attachment (MIN-742): its destination is the resource itself,
+      resolved by the surface that holds it, never a route. */
+  | "resource";
 
 /**
  * The path opened by a mention, or `null` when it leads nowhere.
@@ -45,7 +48,8 @@ export function mentionTargetPath(
     case "page":
       return `/projects/${projectId}/pages/${id}`;
     default:
-      // member, numo, forge: no one has a screen to open.
+      // member, numo, forge: no one has a screen to open. A resource opens
+      // from its surface (lib/use-resource-mentions.ts), not from a route.
       return null;
   }
 }

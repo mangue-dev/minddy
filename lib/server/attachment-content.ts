@@ -10,7 +10,7 @@ import { decodePageProjection } from "./page-content";
 const PREFIX = "mdya3";
 const ENCODED = /^mdya3:([1-9][0-9]*):([A-Za-z0-9_-]+)$/;
 export type AttachmentTable = "attachments" | "page_files";
-export type AttachmentColumn = "file_name" | "url" | "icon_data_url";
+export type AttachmentColumn = "file_name" | "url" | "icon_data_url" | "preview_data_url";
 
 function binding(table: AttachmentTable, projectId: string, id: string,
   column: AttachmentColumn) {
@@ -91,7 +91,7 @@ export async function decodeAttachmentRow<T extends Record<string, unknown>>(
   }
   const next: Record<string, unknown> = { ...row };
   const columns: AttachmentColumn[] = table === "attachments"
-    ? ["file_name", "url", "icon_data_url"] : ["file_name"];
+    ? ["file_name", "url", "icon_data_url", "preview_data_url"] : ["file_name"];
   for (const column of columns) {
     if (typeof row[column] === "string") {
       next[column] = await decodeAttachmentValue(table, owner,

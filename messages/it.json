@@ -308,7 +308,9 @@
     "cannotChangeOwner": "Il ruolo del proprietario cambia solo trasferendo la proprietà.",
     "transferTargetNotMember": "La proprietà può passare solo a un membro, non a un lettore.",
     "transferKeyConflict": "Il nuovo proprietario ha già un progetto con questa chiave. Cambia prima la chiave.",
-    "transferStorageQuota": "Lo spazio del nuovo proprietario non basta per i file di questo progetto."
+    "transferStorageQuota": "Lo spazio del nuovo proprietario non basta per i file di questo progetto.",
+    "resourceNameInvalid": "Inserisci un nome per questa risorsa.",
+    "resourceNotRenamable": "Una risorsa di pagina porta il titolo della sua pagina."
   },
   "RelayClaim": {
     "title": "Connetti GitHub",
@@ -354,7 +356,17 @@
     "dropOnIssue": "Allega a {id}",
     "addedTo": "Allegato aggiunto a {id}.",
     "kb": "KB",
-    "mb": "MB"
+    "mb": "MB",
+    "rename": "Rinomina",
+    "renameDialogTitle": "Rinomina la risorsa",
+    "renameLabel": "Nome",
+    "renameEmpty": "Inserisci un nome.",
+    "renameFailed": "Non è stato possibile rinominare questa risorsa.",
+    "removeConfirmTitle": "Rimuovere «{name}»?",
+    "removeConfirmDescription": "Viene rimossa per tutti. Le sue menzioni risulteranno non disponibili.",
+    "removeDraftConfirmDescription": "Non verrà inviata. Le sue menzioni nel testo risulteranno non disponibili.",
+    "removeUploadConfirmDescription": "Il caricamento si interrompe e il file non verrà allegato.",
+    "removeBlockConfirmDescription": "Il blocco viene rimosso dalla pagina. Puoi annullare dall'editor."
   },
   "Billing": {
     "usageAria": "Uso del piano",

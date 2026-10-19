@@ -286,7 +286,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       .from("attachments")
       .select(
         "id, project_id, issue_id, comment_id, objective_id, kind, url, page_id, " +
-          "storage_path, icon_data_url, file_name, mime_type, size_bytes, created_at"
+          "storage_path, icon_data_url, preview_data_url, file_name, mime_type, size_bytes, created_at"
       )
       .eq("created_by", userId)
       .order("created_at"),

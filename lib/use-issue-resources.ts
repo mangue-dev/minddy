@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { deleteResourceApi } from "./comments-api";
+import { deleteResourceApi, renameResourceApi } from "./comments-api";
 import type { Attachment, ResourceInput } from "./types";
 
 const resourcesKey = (issueId: string) => ["issue-resources", issueId] as const;
@@ -72,5 +72,17 @@ export function useIssueResources(issueId: string | null) {
     [invalidate]
   );
 
-  return { resources: data ?? [], add, remove };
+  // The row comes back renamed: show it at once, then let the next read
+  // confirm it (MIN-742).
+  const rename = useCallback(
+    async (resourceId: string, fileName: string) => {
+      const saved = await renameResourceApi(resourceId, fileName);
+      queryClient.setQueryData<Attachment[]>(resourcesKey(issueId as string), (rows) =>
+        rows?.map((row) => (row.id === resourceId ? { ...row, file_name: saved.file_name } : row)));
+      invalidate();
+    },
+    [queryClient, invalidate, issueId]
+  );
+
+  return { resources: data ?? [], add, remove, rename };
 }

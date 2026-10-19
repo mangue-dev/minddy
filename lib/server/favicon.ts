@@ -21,6 +21,10 @@ import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 const MAX_ICON_BYTES = 512 * 1024; // 512 Ko
 const MAX_HTML_BYTES = 1024 * 1024; // 1 MB — we only read the HTML for the <head>
+/** A social image is a photo, larger than an icon; it is shrunk right after. */
+const MAX_PREVIEW_IMAGE_BYTES = 5 * 1024 * 1024;
+/** What a link card can show: the formats sharp reads and browsers draw. */
+const PREVIEW_IMAGE_MIME = new Set(["image/png", "image/jpeg", "image/webp", "image/gif", "image/avif"]);
 const MAX_REDIRECTS = 3;
 const FETCH_TIMEOUT_MS = 10_000;
 const USER_AGENT = `${SITE_NAME}-favicon/1.0 (+${SITE_URL})`;
@@ -125,6 +129,28 @@ function decodeBasicEntities(text: string): string {
     .replace(/&amp;/gi, "&");
 }
 
+/** The page's social image (MIN-742): `og:image`, then its variants and the
+    Twitter card, best first. */
+function parsePreviewImages(html: string): string[] {
+  const names = ["og:image:secure_url", "og:image", "og:image:url", "twitter:image", "twitter:image:src"];
+  return [...new Set(names.map((name) => extractMetaContent(html, name)?.trim())
+    .filter((value): value is string => !!value))];
+}
+
+/** Downloads a social image and checks it is one. null if unusable. */
+async function tryFetchPreviewImage(rawUrl: string): Promise<ResolvedIcon | null> {
+  try {
+    const response = await guardedFetch(rawUrl, MAX_PREVIEW_IMAGE_BYTES);
+    if (!response.ok) return null;
+    const contentType = response.headers.get("content-type");
+    const mime = contentType?.split(";")[0]?.trim().toLowerCase() ?? "";
+    if (!PREVIEW_IMAGE_MIME.has(mime) || response.bytes.byteLength === 0) return null;
+    return { url: response.url.toString(), contentType: mime, bytes: response.bytes };
+  } catch {
+    return null;
+  }
+}
+
 export interface ResolvedIcon {
   url: string;
   contentType: string;
@@ -153,6 +179,8 @@ export interface LinkPreview {
   title: string;
   /** The downloaded favicon, null if the site has none usable. */
   icon: ResolvedIcon | null;
+  /** The downloaded social image, when asked for and the page has one. */
+  image?: ResolvedIcon | null;
 }
 
 /**
@@ -165,7 +193,10 @@ export interface LinkPreview {
  * favicon renders a partial preview — the hostname for title, `icon: null` —
  * because a link remains a valid link even if its site is turned off.
  */
-export async function resolveLinkPreview(siteUrl: string): Promise<LinkPreview> {
+export async function resolveLinkPreview(
+  siteUrl: string,
+  { withImage = false }: { withImage?: boolean } = {},
+): Promise<LinkPreview> {
   // Same completion as on the keyboard, and with the same code: `minddy_add_resource`
   // and Numo's `add_resource` tool arrive here WITHOUT having gone through the
   // dialog, and must accept “linear.app” as it.
@@ -173,6 +204,7 @@ export async function resolveLinkPreview(siteUrl: string): Promise<LinkPreview> 
 
   let base: URL | null = null;
   let candidates: IconCandidate[] = [];
+  let images: string[] = [];
   let title: string | null = null;
   try {
     // A page that is too big is CUT, not thrown away: what we are looking for (`<head>`)
@@ -183,6 +215,7 @@ export async function resolveLinkPreview(siteUrl: string): Promise<LinkPreview> 
       const html = response.bytes.toString("utf8");
       candidates = parseIconLinks(html);
       title = parsePageTitle(html);
+      if (withImage) images = parsePreviewImages(html);
     }
   } catch (err) {
     // An invalid URL (protocol, private IP, DNS) is unrecoverable; a website
@@ -198,6 +231,21 @@ export async function resolveLinkPreview(siteUrl: string): Promise<LinkPreview> 
   const url = (base ?? new URL(normalized)).toString();
   const hostname = (base ?? new URL(normalized)).hostname.replace(/^www\./, "");
 
+  // Only for a link resource: a project icon has no use for it.
+  let image: ResolvedIcon | null = null;
+  for (const candidate of images.slice(0, 3)) {
+    let href: string;
+    try {
+      href = new URL(candidate, base ?? undefined).toString();
+    } catch {
+      continue;
+    }
+    image = await tryFetchPreviewImage(href);
+    if (image) break;
+  }
+  const found = (icon: ResolvedIcon | null): LinkPreview =>
+    ({ url, title: title ?? hostname, icon, ...(withImage ? { image } : {}) });
+
   for (const candidate of candidates.slice(0, 5)) {
     let href: string;
     try {
@@ -206,14 +254,14 @@ export async function resolveLinkPreview(siteUrl: string): Promise<LinkPreview> 
       continue;
     }
     const icon = await tryFetchIcon(href);
-    if (icon) return { url, title: title ?? hostname, icon };
+    if (icon) return found(icon);
   }
 
   if (base) {
     const fallback = await tryFetchIcon(new URL("/favicon.ico", base).toString());
-    if (fallback) return { url, title: title ?? hostname, icon: fallback };
+    if (fallback) return found(fallback);
   }
-  return { url, title: title ?? hostname, icon: null };
+  return found(null);
 }
 
 /**

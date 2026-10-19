@@ -116,8 +116,9 @@ vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: { id: "user", use
 vi.mock("@/lib/use-analytics", () => ({ useAnalytics: () => ({ track: vi.fn() }) }));
 vi.mock("@/lib/use-track-view", () => ({ useTrackView: vi.fn() }));
 vi.mock("@/lib/use-mention-sources", () => ({ useDescriptionMentions: () => [] }));
+vi.mock("@/lib/use-resource-mentions", () => ({ useResourceMentions: (base: unknown) => base }));
 vi.mock("@/lib/use-arrow-field", () => ({ useArrowField: (ref: React.RefObject<HTMLTextAreaElement>) => ({ ref, read: (e: React.ChangeEvent<HTMLTextAreaElement>) => e.target.value }) }));
-vi.mock("@/lib/use-attachment-uploads", () => ({ useAttachmentUploads: () => ({
+vi.mock("@/lib/use-attachment-uploads", () => ({ landedResources: () => [], useAttachmentUploads: () => ({
   inputs: [], pending: [], uploading: false, clear: vi.fn(), restore: vi.fn(), addFiles: vi.fn(),
 }) }));
 vi.mock("@/lib/use-drafts", () => ({ useDrafts: () => ({
@@ -132,7 +133,7 @@ vi.mock("@/lib/use-rich-document", () => ({
   useRichDocument: () => ({ document: null, remember: () => {} }),
 }));
 vi.mock("@/components/editor/document-editor-lazy", () => ({ LazyDocumentEditor: ({ className }: { className: string }) => React.createElement("div", { className }, React.createElement("div", { contentEditable: true, suppressContentEditableWarning: true, tabIndex: 0 }, "")), useIdleDocumentEditorPreload: vi.fn() }));
-vi.mock("@/components/resources", () => ({ AddResourceButton: () => null, ResourcePills: () => null, DropOverlay: () => null, pasteFileHandler: () => undefined, useFileDrop: () => ({ handlers: {} }) }));
+vi.mock("@/components/resources", () => ({ AddResourceButton: () => null, ResourcePills: () => null, ComposerResourcePills: () => null, DropOverlay: () => null, pasteFileHandler: () => undefined, useFileDrop: () => ({ handlers: {} }) }));
 vi.mock("@/components/issue-compact-fields", () => ({
   AssigneeCompact: () => null, CategoriesCompact: () => null, DueDateCompact: () => null,
   EffortCompact: () => null, ObjectiveCompact: () => null, PriorityCompact: () => null, StatusCompact: () => null,

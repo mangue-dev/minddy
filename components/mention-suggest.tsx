@@ -11,7 +11,8 @@
 // from the wiki are recognized by the same sign on both sides.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Book02Icon } from "@hugeicons/core-free-icons";
+import { Book02Icon, Link02Icon } from "@hugeicons/core-free-icons";
+import { ResourceTypeIcon } from "@/components/resource-type-icon";
 import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
@@ -36,7 +37,9 @@ export interface MentionOption {
     | "project"
     | "issue"
     | "objective"
-    | "page";
+    | "page"
+    /** An attachment of the surface being written (MIN-742). */
+    | "resource";
   id: string;
   /** What is written after the “@”. */
   label: string;
@@ -49,6 +52,9 @@ export interface MentionOption {
   color?: string | null;
   /** Pages: their emoji, when they have one (MIN-273). */
   icon?: string | null;
+  /** Resources: the file type, which picks the same colored icon as the
+      attachment chip. A link carries its favicon in `iconUrl` instead. */
+  mime?: string | null;
   /** Issues: their live workflow state replaces the generic page glyph. */
   status?: IssueStatus;
   /** Second row of the line: the title of a ticket, the name of the project of an objective. What distinguishes MIN-42 from MIN-43 when choosing. */
@@ -132,6 +138,21 @@ export function MentionFigure({
           <span className="text-[0.7rem] leading-none">{option.icon}</span>
         ) : (
           <HugeiconsIcon icon={Book02Icon} className="size-3" />
+        )}
+      </span>
+    );
+  }
+  if (option.type === "resource") {
+    return (
+      <span className={cn("flex shrink-0 items-center justify-center", className)}>
+        {option.iconUrl ? (
+          // A favicon is an inline data URI: nothing for next/image to optimize.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={option.iconUrl} alt="" aria-hidden className="size-4 rounded-[2px] object-contain" />
+        ) : option.mime === "text/uri-list" ? (
+          <HugeiconsIcon icon={Link02Icon} className="size-4 text-sky-600 dark:text-sky-400" aria-hidden />
+        ) : (
+          <ResourceTypeIcon mime={option.mime ?? "application/octet-stream"} name={option.label} className="size-4" />
         )}
       </span>
     );

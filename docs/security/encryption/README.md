@@ -1495,10 +1495,13 @@ opaque paths through a bounded worker; SQL references and a blind path alias
 swap atomically, and a per-object attempt queue prevents a failed object from
 starving later batches.
 
-`attachments.file_name`, link `url` and `icon_data_url`, plus
-`page_files.file_name`, use row- and project-bound envelopes when
+`attachments.file_name`, link `url`, `icon_data_url` and `preview_data_url`
+(the og:image thumbnail, MIN-742), plus `page_files.file_name`, use row- and
+project-bound envelopes when
 `MINDDY_ATTACHMENT_METADATA_ENCRYPTION_ENABLED=true`. Direct writers,
-imports and exports use the same codec. A bounded CAS worker rotates old values,
+imports and exports use the same codec. A bounded CAS worker rotates old values
+(`migrate_attachment_metadata_v2`; the 7-argument function remains for the
+previously deployed worker),
 and SQL guards reject changed clear metadata after activation. SQL regressions
 cover old-writer refusal, aliases, queue fairness and CAS. The isolated
 PostgreSQL dump/restore loads attachment rows and object registry records before

@@ -145,3 +145,30 @@ it("shows failed cross-origin downloads inside the top-layer reader", async () =
   expect(alert.textContent).toBe("Download failed. Try again.");
   expect(alert.closest("dialog")?.open).toBe(true);
 });
+
+it("keeps Escape to itself, so the panel below stays open (MIN-742)", async () => {
+  const panelEscape = vi.fn();
+  // A side panel or sheet listens on the document in the capture phase.
+  const listener = (event: KeyboardEvent) => { if (event.key === "Escape") panelEscape(); };
+  document.addEventListener("keydown", listener, true);
+  try {
+    await render();
+    const dialog = document.querySelector("dialog")!;
+    await key(dialog.querySelector("[data-preview-close]")!, "Escape");
+    await flush();
+    expect(panelEscape).not.toHaveBeenCalled();
+    expect(document.querySelector("dialog[open]")).toBeNull();
+  } finally {
+    document.removeEventListener("keydown", listener, true);
+  }
+});
+
+it("lets Escape close only its actions menu", async () => {
+  await render();
+  const dialog = document.querySelector("dialog")!;
+  await click(dialog.querySelector('[aria-label="File actions"]')!);
+  const menu = dialog.querySelector('[role="menu"]')!;
+  await key(menu.querySelector('[role="menuitem"]')!, "Escape");
+  expect(dialog.querySelector('[role="menu"]')).toBeNull();
+  expect(dialog.open).toBe(true);
+});

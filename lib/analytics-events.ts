@@ -220,6 +220,7 @@ export interface AnalyticsEventProps {
     compressed?: boolean;
   };
   resource_removed: { target: "issue" | "objective" | "comment" };
+  resource_renamed: { kind: "file" | "link" };
   sub_issue_created: NoProps;
   issue_relation_added: { relation: string };
   issue_relation_removed: { relation: string };
@@ -620,6 +621,7 @@ const EVENT_NAMES = [
   "comment_deleted",
   "resource_added",
   "resource_removed",
+  "resource_renamed",
   "sub_issue_created",
   "issue_relation_added",
   "issue_relation_removed",

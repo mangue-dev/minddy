@@ -151,3 +151,20 @@ describe("insertAttachments — une ressource page", () => {
     expect(inserted[0][0]).toMatchObject({ kind: "file", page_id: null });
   });
 });
+
+describe("insertAttachments — the row id a composer chose (MIN-742)", () => {
+  it("saves each resource under its chosen id, and picks one otherwise", async () => {
+    const chosen = "55555555-5555-4555-8555-555555555555";
+    const { client, inserted } = fakeService([PAGE]);
+    await insertAttachments(client as never, {
+      ...parent,
+      resources: [
+        { id: chosen, kind: "link", url: "https://linear.app", file_name: "Linear" },
+        { kind: "page", page_id: PAGE, file_name: "Spec" },
+      ],
+    });
+    expect(inserted[0][0].id).toBe(chosen);
+    expect(inserted[0][1].id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(inserted[0][1].id).not.toBe(chosen);
+  });
+});

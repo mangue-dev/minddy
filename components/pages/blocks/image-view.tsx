@@ -20,6 +20,7 @@ import {
   clampImageWidth,
 } from "@/components/pages/blocks/image";
 import { FileViewer } from "@/components/file-viewer";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { fileDownloadHref } from "@/lib/page-files";
 import { usePageUploadsContext } from "@/components/pages/page-uploads";
 
@@ -46,6 +47,9 @@ import { usePageUploadsContext } from "@/components/pages/page-uploads";
 export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }: NodeViewProps) {
   const editable = useEditorEditable(editor);
   const t = useTranslations("Pages");
+  const tResources = useTranslations("Resources");
+  const tCommon = useTranslations("Common");
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const uploads = usePageUploadsContext();
   const src = (node.attrs.src as string | null) ?? null;
   const alt = (node.attrs.alt as string | null) ?? "";
@@ -250,7 +254,18 @@ export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }
         mimeType="image/png"
         open={zoomed}
         onOpenChange={setZoomed}
-        onRemove={editable ? deleteNode : undefined}
+        onRemove={editable ? () => setConfirmRemove(true) : undefined}
+      />}
+      {/* Removing from the viewer asks first (MIN-742). */}
+      {/* Mounted on demand: a page can hold many blocks. */}
+      {confirmRemove && <ConfirmDeleteDialog
+        open
+        onOpenChange={setConfirmRemove}
+        title={tResources("removeConfirmTitle", { name: alt || upload?.file.name || t("blockImage") })}
+        description={tResources("removeBlockConfirmDescription")}
+        confirmLabel={tResources("remove")}
+        cancelLabel={tCommon("cancel")}
+        onConfirm={() => deleteNode()}
       />}
 
     </NodeViewWrapper>

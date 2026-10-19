@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-693 project roles; MIN-728 one editor engine; MIN-736 closed columns hidden by default; MIN-741 creation dialogs",
+    "version": "0.11.1 development (UI refinements); MIN-693 project roles; MIN-728 one editor engine; MIN-736 closed columns hidden by default; MIN-741 creation dialogs; MIN-742 resources",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -53,13 +53,15 @@
       "lib/use-description-collaboration.ts",
       "docs/document-collaboration.md",
       "components/creation-project-select.tsx",
-      "content/documentation/reviews/min-741-creation-dialogs.md"
+      "content/documentation/reviews/min-741-creation-dialogs.md",
+      "lib/use-resource-mentions.ts",
+      "content/documentation/reviews/min-742-resources.md"
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained); agent:/root (MIN-670 source, pt-BR wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-728 one editor engine: source and unit-test review of the shared editor on this surface; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 objective board status filter: source review of the project page and objective header; no browser walkthrough, no new captures); agent:/root (MIN-741 creation dialogs: source and unit-test review of the Create in project control, the cleared lead and relations and the Create objective button; objectives-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-product screen reader-objectives) and inspected; no other browser walkthrough)",
-    "language": "agent:/root (pt-BR changed-passage review against English revision 7; earlier unchanged prose reviews retained); agent:/root (MIN-670 source, pt-BR wording and new-control review; existing procedural evidence retained); agent:/root (pt-BR changed-passage parity and localized-label review); agent:/root/min693_pt-BR with agent:/root (pt-BR MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (pt-BR translation of the MIN-728 passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (pt-BR MIN-736 added sentence with catalog status labels; agent review, not human acceptance); agent:/root (pt-BR MIN-741 Create in passages and figure alt text with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 14,
+    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained); agent:/root (MIN-670 source, pt-BR wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-728 one editor engine: source and unit-test review of the shared editor on this surface; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 objective board status filter: source review of the project page and objective header; no browser walkthrough, no new captures); agent:/root (MIN-741 creation dialogs: source and unit-test review of the Create in project control, the cleared lead and relations and the Create objective button; objectives-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-product screen reader-objectives) and inspected; no other browser walkthrough); agent:/root (MIN-742 resources: source and unit-test review of resource mentions scoped to their surface; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (pt-BR changed-passage review against English revision 7; earlier unchanged prose reviews retained); agent:/root (MIN-670 source, pt-BR wording and new-control review; existing procedural evidence retained); agent:/root (pt-BR changed-passage parity and localized-label review); agent:/root/min693_pt-BR with agent:/root (pt-BR MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (pt-BR translation of the MIN-728 passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (pt-BR MIN-736 added sentence with catalog status labels; agent review, not human acceptance); agent:/root (pt-BR MIN-741 Create in passages and figure alt text with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (pt-BR MIN-742 added sentence with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-19"
   },
   "related": [
@@ -81,7 +83,7 @@
       "src": "/documentation/pt-BR/reader-objectives.png",
       "alt": "Janela de criação de objetivo não enviada no projeto Aurora com um nome de resultado de exemplo e o botão Criar objetivo.",
       "caption": "Defina o resultado antes de escolher responsável, data prevista e status. Essa janela não criou um segundo objetivo.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -104,7 +106,7 @@ Um objetivo reúne os problemas de um projeto para acompanhar um resultado. Suas
 
 Abra o destino de objetivos do projeto e crie um objetivo. Ao criá-lo em outro lugar do aplicativo, escolha o projeto em **Criar em**, no canto superior esquerdo do formulário (ao lado do título **Novo objetivo** no celular); trocar de projeto remove o responsável e as relações escolhidos para o anterior. Dê um nome ao resultado desejado, acrescente contexto útil e defina os campos disponíveis de responsável, data-alvo, cor e estado. Um objetivo pertence a um projeto e é diferente de um ciclo pessoal que abrange vários projetos. A pessoa responsável acompanha o resultado; escolhê-la não transfere a propriedade do projeto. Só o proprietário ou um Membro pode ser responsável por um objetivo, e um responsável cujo papel muda para Leitor é removido dele.
 
-A descrição do objetivo e seus comentários usam o mesmo editor das páginas do projeto, sem as alças de bloco: digite `/` para inserir blocos e `@` para mencionar uma pessoa, um problema, um objetivo ou uma página. Várias pessoas podem editar a descrição ao mesmo tempo, com o cursor de cada uma exibido com seu nome e sua cor. Selecione um texto para formatá-lo ou adicionar um link, e cole ou solte uma imagem para inseri-la na descrição.
+A descrição do objetivo e seus comentários usam o mesmo editor das páginas do projeto, sem as alças de bloco: digite `/` para inserir blocos e `@` para mencionar uma pessoa, um problema, um objetivo ou uma página. O menu `@` também lista os recursos anexados ao que você está escrevendo: o problema ou objetivo para a descrição e o plano, um comentário para os próprios arquivos ou uma janela de criação para os arquivos adicionados nela. Uma menção a um recurso anexado em outro lugar aparece como **Indisponível**. Várias pessoas podem editar a descrição ao mesmo tempo, com o cursor de cada uma exibido com seu nome e sua cor. Selecione um texto para formatá-lo ou adicionar um link, e cole ou solte uma imagem para inseri-la na descrição.
 
 Abra cada problema relevante e escolha o objetivo nas propriedades, ou use os controles de problemas do objetivo. Confira se o trabalho desejado aparece sob o objetivo. Use a discussão e os recursos para decisões e páginas de referência que se apliquem ao resultado inteiro.
 

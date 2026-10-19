@@ -25,6 +25,7 @@ import {
   useIdleDocumentEditorPreload,
 } from "@/components/editor/document-editor-lazy";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
+import { useResourceMentions } from "@/lib/use-resource-mentions";
 import { useArrowField } from "@/lib/use-arrow-field";
 import { DraftRecoveryRow } from "@/components/draft-recovery-row";
 import { CloseDraftDialog } from "@/components/close-draft-dialog";
@@ -32,12 +33,12 @@ import { CreationDictation, CreationProperty } from "@/components/creation-form-
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 import {
   AddResourceButton,
-  ResourcePills,
+  ComposerResourcePills,
   DropOverlay,
   pasteFileHandler,
   useFileDrop,
 } from "@/components/resources";
-import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
+import { landedResources, useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { AgentBeamOverlay } from "@/components/agent-beam";
 import { CreationProjectSelect } from "@/components/creation-project-select";
@@ -249,7 +250,11 @@ export function CreateIssueDialog({
   const uploads = useAttachmentUploads(() => `projects/${activeProjectId}`);
   const drop = useFileDrop(uploads.addFiles);
   const drafts = useDrafts("issue", activeProjectId, open);
-  const mentions = useDescriptionMentions(activeProjectId, scopedMembers);
+  // The description can cite the resources added in this dialog (MIN-742).
+  const mentions = useResourceMentions(
+    useDescriptionMentions(activeProjectId, scopedMembers),
+    landedResources(uploads.pending),
+  );
   // This dialog mounts with its board: warm the editor chunk once the page
   // has painted, so opening the form never shows the loading fallback.
   useIdleDocumentEditorPreload();
@@ -777,19 +782,8 @@ export function CreateIssueDialog({
                 />
               )}
               {/* Resources are context — they sit ABOVE the text being written. */}
-              <ResourcePills
-                resources={uploads.pending.filter((p) => p.status === "done")}
-                pending={uploads.pending}
-                onRemove={(a) => {
-                  // A link has no storage path — match on whichever identifies it.
-                  const match = uploads.pending.find((p) =>
-                    a.kind === "link"
-                      ? p.url === a.url
-                      : p.storage_path === a.storage_path
-                  );
-                  if (match) uploads.remove(match.localId);
-                }}
-                onRemovePending={uploads.remove}
+              <ComposerResourcePills
+                uploads={uploads}
                 className="mb-3"
               />
               <CreationRelationPills
