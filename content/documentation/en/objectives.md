@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-693 project roles; MIN-728 one editor engine; MIN-736 closed columns hidden by default; MIN-741 creation dialogs",
+    "version": "0.11.1 development (UI refinements); MIN-693 project roles; MIN-728 one editor engine; MIN-736 closed columns hidden by default; MIN-741 creation dialogs; MIN-742 resources",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -53,13 +53,15 @@
       "lib/use-description-collaboration.ts",
       "docs/document-collaboration.md",
       "components/creation-project-select.tsx",
-      "content/documentation/reviews/min-741-creation-dialogs.md"
+      "content/documentation/reviews/min-741-creation-dialogs.md",
+      "lib/use-resource-mentions.ts",
+      "content/documentation/reviews/min-742-resources.md"
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-728 one editor engine: source and unit-test review of the shared editor on this surface; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 objective board status filter: source review of the project page and objective header; no browser walkthrough, no new captures); agent:/root (MIN-741 creation dialogs: source and unit-test review of the Create in project control, the cleared lead and relations and the Create objective button; objectives-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-product screen reader-objectives) and inspected; no other browser walkthrough)",
-    "language": "agent:/root (en changed-passage review against English revision 7; earlier unchanged prose reviews retained); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained); agent:/root (en changed-passage parity and localized-label review); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en editorial review of the MIN-728 passage); agent:/root (en MIN-736 added sentence with catalog status labels; agent review, not human acceptance); agent:/root (en MIN-741 Create in passages and figure alt text with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 14,
+    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-728 one editor engine: source and unit-test review of the shared editor on this surface; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 objective board status filter: source review of the project page and objective header; no browser walkthrough, no new captures); agent:/root (MIN-741 creation dialogs: source and unit-test review of the Create in project control, the cleared lead and relations and the Create objective button; objectives-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-product screen reader-objectives) and inspected; no other browser walkthrough); agent:/root (MIN-742 resources: source and unit-test review of resource mentions scoped to their surface; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (en changed-passage review against English revision 7; earlier unchanged prose reviews retained); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained); agent:/root (en changed-passage parity and localized-label review); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en editorial review of the MIN-728 passage); agent:/root (en MIN-736 added sentence with catalog status labels; agent review, not human acceptance); agent:/root (en MIN-741 Create in passages and figure alt text with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-742 added sentence with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-19"
   },
   "related": [
@@ -81,7 +83,7 @@
       "src": "/documentation/en/reader-objectives.png",
       "alt": "Unsubmitted objective-creation dialog in the Aurora project with a demonstration result name and the Create objective button.",
       "caption": "Name the result before choosing the lead, target date and status. This dialog has not created a second objective.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -104,7 +106,7 @@ An objective groups a project’s issues around an outcome. Create it and attach
 
 Open the project's Objectives destination and create an objective. When you create it from elsewhere in the app, choose its project in **Create in**, at the top left of the form (next to the **New objective** title on a phone); changing it removes the lead and relations chosen for the previous project. Name the result you want, add useful context, and set its available lead, target date, color and status fields. The lead is the person responsible for the outcome; choosing a lead does not transfer project ownership. Only the owner or a Member can lead an objective, and a lead whose role changes to Reader is removed from it. An objective belongs to a project; it is distinct from a personal cycle spanning several projects.
 
-The objective description and its comments use the same editor as project pages, without the block handles: type `/` to insert blocks and `@` to mention a person, issue, objective or page. Several people can edit the description at once, with each person's caret shown with their name and color. Select text to format it or add a link, and paste or drop an image to insert it in the description.
+The objective description and its comments use the same editor as project pages, without the block handles: type `/` to insert blocks and `@` to mention a person, issue, objective or page. The `@` menu also lists the resources attached to what you are writing: the issue or objective for its description and plan, a comment for its own files, or a creation dialog for the files added in it. A mention of a resource attached elsewhere shows as **Unavailable**. Several people can edit the description at once, with each person's caret shown with their name and color. Select text to format it or add a link, and paste or drop an image to insert it in the description.
 
 Open each relevant issue and choose the objective in its properties, or use the objective's issue controls. Check that the intended work appears under the objective. Use its discussion and resources for decisions and reference pages that apply to the whole outcome.
 

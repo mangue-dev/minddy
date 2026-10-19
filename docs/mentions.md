@@ -1,7 +1,8 @@
 # Mentions
 
 MIN-734. A mention is a typed reference to a person, an issue, an objective, a
-project or a page. This document is the contract between the editors, the
+project, a page or, since MIN-742, a resource (an attachment) of the surface
+being written. This document is the contract between the editors, the
 renderers, the server and the agents.
 
 ## Stored format
@@ -15,7 +16,7 @@ Fix [@MIN-42](mention:issue/9f1c2a3b-…) with [@Jean Dupont](mention:member/5ad
 | Part | Meaning |
 | --- | --- |
 | `@Label` | The label the author saw when mentioning. Readers of the raw Markdown (agents, webhooks, GitHub) see this text. |
-| `mention:<type>/<id>` | The target: `member`, `issue`, `objective`, `project` or `page`, and its stable id. |
+| `mention:<type>/<id>` | The target: `member`, `issue`, `objective`, `project`, `page` or `resource`, and its stable id. |
 
 `lib/mention-link.ts` builds, parses and rewrites the format
 (`mentionMarkdown`, `parseMentionHref`, `mentionLinks`, `mentionedIds`,
@@ -73,6 +74,7 @@ Access rules:
 | issue, objective, page | the reader has access to its project, and it is not trashed |
 | project | the reader has access to it |
 | member | the reader shares a project with them (as a member or its owner), or is them |
+| resource | the server: the reader has access to its project. The app: it is attached to the surface being read (see Resources) |
 
 In an editor, the pills a selection covers are marked `mention-selected` and
 painted in the selection color: an atom is not painted as selected text by
@@ -84,6 +86,39 @@ Copying rendered text puts each pill in the clipboard as its `mention:`
 anchor (HTML) and as `@Label` (plain text). Copying from an editor carries
 the label each pill showed (`transformCopied`, `shownMentionLabel`): the
 current label, or `unavailable`, never the stored one.
+
+## Resources
+
+A resource mention (`mention:resource/<attachment id>`, MIN-742) names an
+attachment of the surface it is written on, and only that surface:
+
+| Surface | Resources it can mention |
+| --- | --- |
+| Issue description and plan (panel, triage) | the issue's own resources |
+| Objective description | the objective's own resources |
+| Comment, reply, comment edit | that comment's own attachments |
+| Issue and objective creation dialogs, comment composers | the entries added in the composer |
+
+`lib/use-resource-mentions.ts` extends a surface's mention model with its
+resources: the `@` menu lists them after the people, and `MentionLinks`
+labels and opens them: a page resource in the app, a link in a new tab,
+and a file in the shared reader (`openResourcePreview`, rendered once by
+`components/resource-preview-host.tsx`); a format the reader cannot show
+downloads. `components/typed-mention-chip.tsx` resolves a resource pill from those
+links alone and never asks the server, so a mention of another ticket's
+attachment renders as **Unavailable**. `Markdown` passes its `mentionLinks`
+to its pills through context, which is how a rendered comment resolves its
+own attachments.
+
+A composer entry is mentionable before it is saved: its upload `localId` is a
+UUID that the client sends as the resource `id` (`ResourceInput.id`).
+`parseResourcesInput` keeps a valid, unrepeated UUID and `insertAttachments`
+saves the row under it, so the mention written next to the entry points at
+the row. A recovered draft keeps its ids.
+
+The server resolves resource mentions for agents and plain previews
+(`resolveMentionTargets`): the attachment's decoded name under project
+access. It does not check the surface; that scope is the app's.
 
 ## Plain-text previews and excerpts
 
@@ -157,3 +192,5 @@ the author's label.
 - `lib/mention-paste.test.ts`: paste into the Numo composer.
 - `lib/server/description-mentions.test.ts`: notifications from typed
   mentions.
+- `lib/use-resource-mentions.test.tsx`: resource options, labels and links
+  scoped to a surface.

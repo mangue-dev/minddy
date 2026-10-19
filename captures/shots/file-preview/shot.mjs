@@ -39,7 +39,7 @@ function Demo() {
  <ThemeProvider defaultTheme={new URLSearchParams(location.search).get("theme") === "dark" ? "dark" : "light"}>
  <main style={{transform:"translateZ(0)", width:"70%", marginLeft:"30%", padding:32}}><h1>${heading}</h1>
  <button id="open" onClick={()=>setOpen(true)}>${messages.Resources.preview}: {file}</button>
- <FileViewer src={"/"+mode} downloadHref={mode === "image" ? location.origin.replace("127.0.0.1","localhost")+"/download" : "/download"} fileName={file} mimeType={mode === "image" ? "image/png" : mode === "csv" ? "text/csv" : "application/octet-stream"} open={open} onOpenChange={setOpen} onRemove={()=>{document.body.dataset.removed="true";}} />
+ <FileViewer src={"/"+mode} downloadHref={mode === "image" ? location.origin.replace("127.0.0.1","localhost")+"/download" : "/download"} fileName={file} mimeType={mode === "image" ? "image/png" : mode === "csv" ? "text/csv" : "application/octet-stream"} open={open} onOpenChange={setOpen} onRemove={()=>{document.body.dataset.removed="true";}} onRename={()=>{document.body.dataset.renamed="true";}} />
  </main></ThemeProvider></NextIntlClientProvider>;
 }
 createRoot(document.getElementById("root")).render(<Demo/>);`;
@@ -117,6 +117,8 @@ try {
  await page.getByRole("button",{name:messages.Resources.actions,exact:true}).click();
  assert.equal(await page.getByRole("menu").evaluate(node=>Boolean(node.closest("dialog"))),true);
  await page.getByRole("menuitem",{name:messages.Resources.download,exact:true}).focus();
+ await page.keyboard.press("ArrowDown");
+ assert.equal(await page.getByRole("menuitem",{name:messages.Resources.rename,exact:true}).evaluate(node=>node === document.activeElement),true);
  await page.keyboard.press("ArrowDown");
  assert.equal(await page.getByRole("menuitem",{name:messages.Resources.remove,exact:true}).evaluate(node=>node === document.activeElement),true);
  const destination=resolve(root,`public/documentation/${locale}/file-preview.png`);
