@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-689 project creation invitations",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -39,14 +39,15 @@
       "components/create-issue-dialog.tsx",
       "components/issue-compact-fields.tsx",
       "lib/smart-fill.ts",
-      "content/documentation/reviews/second-pass-workflows-2026-10-10.md"
+      "content/documentation/reviews/second-pass-workflows-2026-10-10.md",
+      "content/documentation/reviews/min-689-project-invitations.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
-    "date": "2026-10-09"
+    "revision": 7,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-689 project creation invitations: source and unit-test review of the wizard's optional members step, the invitees saved with the project draft and the invitations sent after Finish; follow-up: people from the owner's other projects found by name and invited by account (components/create-project-wizard.tsx, lib/project-draft.ts, lib/server/collaborators.ts and their tests); no browser walkthrough, no new captures; first-project-steps retained because it does not show the wizard)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (en MIN-689 added passages and the collaborator-search follow-up with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [
     "accounts",
@@ -66,7 +67,7 @@
       "src": "/documentation/en/reader-first-project.png",
       "alt": "Completed demonstration issue with its description and saved comment.",
       "caption": "The completed state records the application reader check. It does not assert that the example website’s email link was tested.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -90,16 +91,19 @@ Use an account on the intended instance. In this example, create a demonstration
 If your team already has a project, give its owner your account email and accept the invitation in Inbox instead of creating a duplicate project.
 
 1. Open Home after signing in and choose New project in navigation. Choose a brand-new project in the wizard, then enter a name and a key of 2 to 5 letters. Keep the default icon and no repository for this manual example. You can leave the initial brief empty.
-2. In the finishing step, review Smart Assign and auto-assignment. Leave automatic assignment off if you intend to assign the demonstration issue yourself. Choose Finish, wait for creation and open the resulting project.
-3. Open the project and create an issue. Give it a concrete title, such as “Check the website contact link”. Describe the page, expected destination and how you will verify the result. If the Smart-fill button is shown and enabled, switch it off for this manual example before creating the issue. It controls filling this issue and is independent of the project’s automation and Smart Assign switches.
-4. Choose an assignee, priority and effort if they help plan the task. Confirm creation, then open the resulting issue and check its project and identifier.
-5. Change its status to in progress when work begins. Perform the check, then record the result in a comment. Use in review if someone still needs to inspect it.
-6. Set the status to done after the expected result is verified. Find the issue in the project's completed work or by its identifier to confirm the change.
+2. The wizard then offers to invite your team. Choose Skip for this manual example; to work with others, search for people from your other projects by name, or enter their emails, instead. Nothing is sent until you choose Finish.
+3. In the finishing step, review Smart Assign and auto-assignment. Leave automatic assignment off if you intend to assign the demonstration issue yourself. Choose Finish, wait for creation and open the resulting project.
+4. Open the project and create an issue. Give it a concrete title, such as “Check the website contact link”. Describe the page, expected destination and how you will verify the result. If the Smart-fill button is shown and enabled, switch it off for this manual example before creating the issue. It controls filling this issue and is independent of the project’s automation and Smart Assign switches.
+5. Choose an assignee, priority and effort if they help plan the task. Confirm creation, then open the resulting issue and check its project and identifier.
+6. Change its status to in progress when work begins. Perform the check, then record the result in a comment. Use in review if someone still needs to inspect it.
+7. Set the status to done after the expected result is verified. Find the issue in the project's completed work or by its identifier to confirm the change.
 
 ![Completed demonstration issue with its description and saved comment.](/documentation/en/reader-first-project.png)
 
 ## Recover from an unexpected result {#first-use-recovery}
 
 An invitation applies to one account and instance. If it is missing, verify the email you gave the owner and open Inbox on that same instance. You cannot join an arbitrary project by knowing its name. If an issue disappears from the current board after a status change, remove view filters or search its identifier before creating another copy.
+
+If not every invitation added in the wizard could be sent, the project is still created and a notification lists each person who was not invited with the reason. Check the pending invitations in the project's member settings before inviting again.
 
 On mobile, open the navigation menu to reach the project and use its issue controls. Status and property pickers provide the same task without a desktop keyboard shortcut. Save a project-specific decision as a page and link it to the issue when the task needs durable context.

@@ -34,6 +34,7 @@ import {
   type InvitationEmailColumns,
 } from "@/lib/server/encryption/invitation-email";
 import { createInvitationToken } from "@/lib/server/encryption/invitation-token-digest";
+import { resolveCollaborator } from "@/lib/server/collaborators";
 
 /**
  * Shared project-membership cores, used by /api/projects/[id]/members and the
@@ -57,6 +58,7 @@ type InviteError =
   | "projectNotFound"
   | "ownerOnlyInvite"
   | "invalidEmail"
+  | "collaboratorNotFound"
   | "invalidRole"
   | "alreadyOwner"
   | "alreadyMember"
@@ -68,6 +70,7 @@ export async function inviteMember({
   projectId,
   actorId,
   email,
+  userId,
   role = "member",
   canComment = false,
   origin,
@@ -75,7 +78,13 @@ export async function inviteMember({
 }: {
   projectId: string;
   actorId: string;
-  email: unknown;
+  email?: unknown;
+  /**
+   * Invite an account instead of an address (MIN-689). Allowed only for
+   * someone who has joined another project of the inviter; their verified
+   * email is then resolved here, never taken from the caller.
+   */
+  userId?: unknown;
   /** Role granted on acceptance (MIN-693): `member` (default) or `reader`. */
   role?: unknown;
   /** Reader-only: allowed to comment once accepted. */
@@ -106,8 +115,18 @@ export async function inviteMember({
   }
   const invitedCanComment = role === "reader" && canComment;
 
-  const normalized =
+  let normalized =
     typeof email === "string" ? email.trim().toLowerCase() : "";
+  let collaborator: { id: string; email: string } | null = null;
+  if (userId !== undefined && userId !== null) {
+    collaborator = typeof userId === "string" && userId
+      ? await resolveCollaborator(getServiceClient(), actorId, userId)
+      : null;
+    // The same answer whether the account is unknown, unverified or simply
+    // not a collaborator: an id must not probe who exists.
+    if (!collaborator) return { ok: false, status: 404, errorKey: "collaboratorNotFound" };
+    normalized = collaborator.email;
+  }
   // 254 = maximum length of an address (RFC 5321) — beyond that, it is not
   // an email, no need to query Supabase Auth with it.
   if (!normalized || normalized.length > 254 || !normalized.includes("@")) {
@@ -119,7 +138,9 @@ export async function inviteMember({
   // Resolve the email to an existing minddy account — live, via Supabase Auth.
   // `null` is no longer a rejection (MIN-197): the invitation goes out
   // anyway, without `invited_user_id`, and the email does the rest.
-  const memberUser = await findAuthUserByEmail(service, normalized);
+  // A collaborator is already known by id: no need to search the accounts
+  // by address, which pages through every user.
+  const memberUser = collaborator ?? await findAuthUserByEmail(service, normalized);
   if (memberUser) {
     if (memberUser.id === access.project.owner_id) {
       return { ok: false, status: 409, errorKey: "alreadyOwner" };

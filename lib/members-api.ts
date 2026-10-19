@@ -3,7 +3,7 @@
 import { fetchClientRead } from "./client-read";
 import { apiErrorCode, HttpResponseError } from "./backend-availability";
 
-import type { MembersResponse } from "./types";
+import type { Collaborator, MembersResponse } from "./types";
 import type { MemberRole } from "./project-roles";
 import { trackEvent } from "./analytics";
 
@@ -51,6 +51,37 @@ export async function inviteMemberApi(
       }),
     })
   );
+}
+
+/**
+ * Owner-only: invite someone who already joined another of your projects, by
+ * account (MIN-689). The server resolves and checks their address.
+ */
+export async function inviteCollaboratorApi(
+  projectId: string,
+  userId: string,
+  access: MemberAccessInput = { role: "member", can_comment: false }
+): Promise<void> {
+  trackEvent("project_member_invited", {});
+  await parseJson(
+    await fetch(`/api/projects/${projectId}/members`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: userId,
+        role: access.role,
+        can_comment: access.role === "reader" && access.can_comment,
+      }),
+    })
+  );
+}
+
+/** The people who joined one of your projects — the wizard proposes them by name. */
+export async function fetchCollaboratorsApi(signal?: AbortSignal): Promise<Collaborator[]> {
+  const data = await parseJson<{ collaborators: Collaborator[] }>(
+    await fetchClientRead("/api/me/collaborators", { signal })
+  );
+  return data.collaborators;
 }
 
 async function patchMembers<T>(projectId: string, body: Record<string, unknown>): Promise<T> {

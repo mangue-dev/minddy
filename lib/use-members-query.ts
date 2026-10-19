@@ -5,6 +5,7 @@ import { useCallback } from "react";
 import {
   cancelInvitationApi,
   fetchMembersApi,
+  inviteCollaboratorApi,
   inviteMemberApi,
   removeMemberApi,
   transferOwnershipApi,
@@ -35,6 +36,15 @@ export function useMembersQuery(projectId: string | null, enabled: boolean) {
   const invite = useCallback(
     async (email: string, access?: MemberAccessInput) => {
       await inviteMemberApi(projectId as string, email, access);
+      invalidate();
+    },
+    [projectId, invalidate]
+  );
+
+  /** Someone who joined another of my projects, invited by account (MIN-689). */
+  const inviteCollaborator = useCallback(
+    async (userId: string, access?: MemberAccessInput) => {
+      await inviteCollaboratorApi(projectId as string, userId, access);
       invalidate();
     },
     [projectId, invalidate]
@@ -106,6 +116,7 @@ export function useMembersQuery(projectId: string | null, enabled: boolean) {
     canComment: value.canComment,
     loading: on && isPending,
     invite,
+    inviteCollaborator,
     cancelInvitation,
     removeMember,
     updateMemberRole,

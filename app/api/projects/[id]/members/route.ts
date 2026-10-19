@@ -27,7 +27,8 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   return NextResponse.json(result.data);
 }
 
-/** POST /api/projects/[id]/members — owner invites by email. The address does not require
+/** POST /api/projects/[id]/members — owner invites by email, or by `user_id`
+ * for someone who already joined another of the owner's projects (MIN-689). The address does not require
  * an existing minddy account: the durable invitation attaches when that address
  * later completes registration. Email delivery is optional. */
 export async function POST(request: NextRequest, { params }: RouteContext) {
@@ -55,11 +56,13 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
 
-  const input = (body ?? {}) as { email?: unknown; role?: unknown; can_comment?: unknown };
+  const input = (body ?? {}) as { email?: unknown; user_id?: unknown; role?: unknown; can_comment?: unknown };
   const result = await inviteMember({
     projectId: id,
     actorId: auth.user.id,
     email: input.email,
+    // A collaborator picked by name: the server resolves and checks the address.
+    userId: input.user_id,
     role: input.role ?? "member",
     canComment: input.can_comment ?? false,
     // The email link must return to THIS deployment (dev, preview, prod) —

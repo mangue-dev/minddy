@@ -1,0 +1,2 @@
+{"date":"2026-10-19","commit":"0667725bd","variants":["en-light","en-light-finish"],"verdict":"ok","note":"Members step with two queued .example addresses and Continue CTA; finishing step shows 2 invitations to send. Local dev server on uncommitted MIN-689 changes; no project writes."}
+{"date":"2026-10-19","commit":"05812d48f","variants":["en-light","en-light-finish","en-light-settings"],"verdict":"ok","note":"Collaborator search: Tom Berger proposed, Alice Fontaine picked with avatar, one example.com address; settings card proposes Alice in Beacon. No project writes."}

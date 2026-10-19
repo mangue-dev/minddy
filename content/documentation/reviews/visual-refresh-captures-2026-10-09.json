@@ -4903,198 +4903,6 @@
   },
   {
     "locale": "en",
-    "screen": "project-members",
-    "src": "/documentation/en/project-members.png",
-    "date": "2026-10-19",
-    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
-    "workingTreeChanges": true,
-    "runtime": "http://localhost:3000",
-    "frameVersion": 2,
-    "stableFocus": true,
-    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=members",
-    "viewport": [
-      816,
-      414
-    ],
-    "padding": 24,
-    "deviceScaleFactor": 2,
-    "theme": "light",
-    "submitted": false,
-    "blockedWrites": [
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      },
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      }
-    ],
-    "displayAdaptation": [],
-    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
-  },
-  {
-    "locale": "fr",
-    "screen": "project-members",
-    "src": "/documentation/fr/project-members.png",
-    "date": "2026-10-19",
-    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
-    "workingTreeChanges": true,
-    "runtime": "http://localhost:3000",
-    "frameVersion": 2,
-    "stableFocus": true,
-    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=members",
-    "viewport": [
-      816,
-      430
-    ],
-    "padding": 24,
-    "deviceScaleFactor": 2,
-    "theme": "light",
-    "submitted": false,
-    "blockedWrites": [
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      },
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      }
-    ],
-    "displayAdaptation": [],
-    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
-  },
-  {
-    "locale": "de",
-    "screen": "project-members",
-    "src": "/documentation/de/project-members.png",
-    "date": "2026-10-19",
-    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
-    "workingTreeChanges": true,
-    "runtime": "http://localhost:3000",
-    "frameVersion": 2,
-    "stableFocus": true,
-    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=members",
-    "viewport": [
-      816,
-      430
-    ],
-    "padding": 24,
-    "deviceScaleFactor": 2,
-    "theme": "light",
-    "submitted": false,
-    "blockedWrites": [
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      },
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      }
-    ],
-    "displayAdaptation": [],
-    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
-  },
-  {
-    "locale": "es",
-    "screen": "project-members",
-    "src": "/documentation/es/project-members.png",
-    "date": "2026-10-19",
-    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
-    "workingTreeChanges": true,
-    "runtime": "http://localhost:3000",
-    "frameVersion": 2,
-    "stableFocus": true,
-    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=members",
-    "viewport": [
-      816,
-      430
-    ],
-    "padding": 24,
-    "deviceScaleFactor": 2,
-    "theme": "light",
-    "submitted": false,
-    "blockedWrites": [
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      },
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      }
-    ],
-    "displayAdaptation": [],
-    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
-  },
-  {
-    "locale": "it",
-    "screen": "project-members",
-    "src": "/documentation/it/project-members.png",
-    "date": "2026-10-19",
-    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
-    "workingTreeChanges": true,
-    "runtime": "http://localhost:3000",
-    "frameVersion": 2,
-    "stableFocus": true,
-    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=members",
-    "viewport": [
-      816,
-      430
-    ],
-    "padding": 24,
-    "deviceScaleFactor": 2,
-    "theme": "light",
-    "submitted": false,
-    "blockedWrites": [
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      },
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      }
-    ],
-    "displayAdaptation": [],
-    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
-  },
-  {
-    "locale": "pt-BR",
-    "screen": "project-members",
-    "src": "/documentation/pt-BR/project-members.png",
-    "date": "2026-10-19",
-    "sourceCommit": "c026e3f5911b35b93169def1bd8f60f864193249",
-    "workingTreeChanges": true,
-    "runtime": "http://localhost:3000",
-    "frameVersion": 2,
-    "stableFocus": true,
-    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=members",
-    "viewport": [
-      816,
-      430
-    ],
-    "padding": 24,
-    "deviceScaleFactor": 2,
-    "theme": "light",
-    "submitted": false,
-    "blockedWrites": [
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      },
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      }
-    ],
-    "displayAdaptation": [],
-    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
-  },
-  {
-    "locale": "en",
     "screen": "project-general",
     "src": "/documentation/en/project-general.png",
     "date": "2026-10-19",
@@ -5425,6 +5233,174 @@
     "viewport": [
       816,
       566
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "en",
+    "screen": "project-members",
+    "src": "/documentation/en/project-members.png",
+    "date": "2026-10-19",
+    "sourceCommit": "05812d48f25b5c850a0d799b2abb4516ac336ee1",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=members",
+    "viewport": [
+      816,
+      414
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "fr",
+    "screen": "project-members",
+    "src": "/documentation/fr/project-members.png",
+    "date": "2026-10-19",
+    "sourceCommit": "05812d48f25b5c850a0d799b2abb4516ac336ee1",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=members",
+    "viewport": [
+      816,
+      430
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "de",
+    "screen": "project-members",
+    "src": "/documentation/de/project-members.png",
+    "date": "2026-10-19",
+    "sourceCommit": "05812d48f25b5c850a0d799b2abb4516ac336ee1",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=members",
+    "viewport": [
+      816,
+      430
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "es",
+    "screen": "project-members",
+    "src": "/documentation/es/project-members.png",
+    "date": "2026-10-19",
+    "sourceCommit": "05812d48f25b5c850a0d799b2abb4516ac336ee1",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=members",
+    "viewport": [
+      816,
+      430
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "it",
+    "screen": "project-members",
+    "src": "/documentation/it/project-members.png",
+    "date": "2026-10-19",
+    "sourceCommit": "05812d48f25b5c850a0d799b2abb4516ac336ee1",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=members",
+    "viewport": [
+      816,
+      430
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "project-members",
+    "src": "/documentation/pt-BR/project-members.png",
+    "date": "2026-10-19",
+    "sourceCommit": "05812d48f25b5c850a0d799b2abb4516ac336ee1",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=members",
+    "viewport": [
+      816,
+      430
     ],
     "padding": 24,
     "deviceScaleFactor": 2,

@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-693 project roles; MIN-737 project settings reorganization",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-693 project roles; MIN-737 project settings reorganization; MIN-689 project creation invitations",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -56,13 +56,21 @@
       "components/settings/inline-edit-field.tsx",
       "components/project-categories.tsx",
       "components/settings/project-settings-page.tsx",
-      "content/documentation/reviews/min-737-settings-reorganization.md"
+      "content/documentation/reviews/min-737-settings-reorganization.md",
+      "components/create-project-wizard.tsx",
+      "lib/project-draft.ts",
+      "lib/members-api.ts",
+      "lib/server/collaborators.ts",
+      "lib/collaborator-search.ts",
+      "components/collaborator-suggestions.tsx",
+      "app/api/me/collaborators/route.ts",
+      "content/documentation/reviews/min-689-project-invitations.md"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; fr translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (hide-project confirmation from the sidebar menu: source and unit-test review of components/project-context-actions.tsx; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 project settings: source review of the General identity header edited in place (icon menu, name and key fields or phone sheet, no Save button), the Categories card, the three Members cards and the Hidden projects account tab; project-settings-steps and project-members-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-refresh screens project-general and project-members) and inspected; no other browser walkthrough)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root (fr translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root/min693_fr with agent:/root (fr MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (fr hide-project confirmation sentence, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (fr translation of the MIN-737 project-settings second-pass passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 12,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; fr translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (hide-project confirmation from the sidebar menu: source and unit-test review of components/project-context-actions.tsx; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 project settings: source review of the General identity header edited in place (icon menu, name and key fields or phone sheet, no Save button), the Categories card, the three Members cards and the Hidden projects account tab; project-settings-steps and project-members-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-refresh screens project-general and project-members) and inspected; no other browser walkthrough); agent:/root (MIN-689 project creation invitations: source and unit-test review of the wizard's optional members step, the Member role and per-address sending after creation, and the persistent notification for refused invitations; follow-up: search by name among people who joined one of the owner's projects with a verified email, never pending invitees, in the wizard and in the Members settings card renamed Invite people (components/project-members.tsx, lib/collaborator-search.ts, components/collaborator-suggestions.tsx), invited by account after a server-side recheck that refuses with collaboratorNotFound; project-members-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-refresh screen project-members) with the Invite people card and inspected (components/create-project-wizard.tsx, lib/project-draft.ts, lib/members-api.ts, lib/server/collaborators.ts, lib/server/members.ts, app/api/me/collaborators/route.ts and their tests); end-to-end walkthrough against the local candidate with throwaway accounts (wizard pick, settings pick, refusal of a pending invitee and of an unknown id); project-settings-steps retained because it does not show the members card)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root (fr translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root/min693_fr with agent:/root (fr MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (fr hide-project confirmation sentence, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (fr translation of the MIN-737 project-settings second-pass passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (fr translation of the MIN-689 passages and the collaborator-search follow-up with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-19"
   },
   "related": [
@@ -87,7 +95,7 @@
       "src": "/documentation/fr/project-general.png",
       "alt": "En-tête du projet avec l’icône et son badge de modification, le nom, la clé et les chiffres Tickets, Membres, Objectifs, Catégories et Créé en.",
       "caption": "Sélectionnez l’icône, le nom ou la clé pour les changer sur place ; la mise à la corbeille reste une action distincte, plus bas.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -102,9 +110,9 @@
       "id": "project-members-steps",
       "kind": "screenshot",
       "src": "/documentation/fr/project-members.png",
-      "alt": "Carte « Inviter par email » au-dessus de la carte Membres, qui liste trois membres de démonstration avec le propriétaire identifié.",
+      "alt": "Carte « Inviter des personnes » au-dessus de la carte Membres, qui liste trois membres de démonstration avec le propriétaire identifié.",
       "caption": "Invitez par l’adresse du compte et identifiez le propriétaire avant de retirer l’accès d’un membre.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -156,12 +164,16 @@ Le propriétaire peut aussi faire un clic droit sur le projet dans la barre lat�
 
 ## Inviter des personnes dans un projet {#project-members}
 
-Le propriétaire gère les membres dans **Paramètres du projet** → **Membres**. Demandez à la personne l’e-mail qu’elle utilise sur cette instance, puis, dans la carte **Inviter par email**, saisissez cette adresse, choisissez son rôle et choisissez **Inviter**. L’invitation figure dans la carte **Invitations en attente** jusqu’à son acceptation ; les membres actuels sont listés dans la carte **Membres**, dont le titre indique leur nombre. Choisissez **Membre** pour une personne qui travaille sur le projet, ou **Lecteur** pour une personne qui se contente de le suivre. Pour un lecteur, activez **Peut commenter** s’il doit participer aux discussions. Tant que l’invitation est en attente, le propriétaire peut modifier son rôle et l’option de commentaire. La même adresse sur une autre instance ne donne pas accès ici.
+Le propriétaire gère les membres dans **Paramètres du projet** → **Membres**. Dans la carte **Inviter des personnes**, cherchez un nom ou saisissez l’e-mail que la personne utilise sur cette instance. Pendant la saisie, **De vos projets** propose les personnes qui ont déjà rejoint l’un de vos autres projets, comme propriétaire, membre ou lecteur, avec un e-mail vérifié ; une personne seulement invitée n’est jamais proposée, pas plus que les membres actuels et les invitations en attente. Choisissez une personne pour la placer dans le champ avec son avatar et son nom, ou appuyez sur Entrée quand le nom ne correspond qu’à une seule personne. Toute autre personne est invitée par e-mail. Choisissez ensuite son rôle, puis **Inviter**. Une personne choisie parmi vos projets est invitée par son compte : Minddy vérifie de nouveau qu’elle a rejoint l’un de vos projets et refuse sinon avec « Cette personne ne fait pas partie de vos projets. » L’invitation figure dans la carte **Invitations en attente** jusqu’à son acceptation ; les membres actuels sont listés dans la carte **Membres**, dont le titre indique leur nombre. Choisissez **Membre** pour une personne qui travaille sur le projet, ou **Lecteur** pour une personne qui se contente de le suivre. Pour un lecteur, activez **Peut commenter** s’il doit participer aux discussions. Tant que l’invitation est en attente, le propriétaire peut modifier son rôle et l’option de commentaire. La même adresse sur une autre instance ne donne pas accès ici.
 
 La personne invitée se connecte avec ce compte et ouvre la boîte de réception. Elle accepte l’invitation pour rejoindre le projet avec le rôle qu’elle prévoit, ou la refuse si elle est inattendue. Le dialogue de premier démarrage aide à transmettre son e-mail au propriétaire ; il ne permet pas de rejoindre un projet sans invitation.
 
+Vous pouvez aussi inviter des personnes en créant le projet. À l’étape **Invitez votre équipe** de l’assistant, cherchez un nom ou saisissez un e-mail. Sous le champ, **De vos projets** propose les mêmes personnes que la carte **Inviter des personnes**, avant même la saisie, et se filtre pendant la saisie. Choisissez une personne, ou appuyez sur Entrée quand une seule correspond ; saisir l’adresse d’une de ces personnes l’ajoute aussi par son nom. Ajoutez toute autre personne par e-mail avec **Ajouter** ou Entrée. La limite d’invités de votre plan s’applique comme ici, et la liste est conservée avec le brouillon du projet si vous reprenez la création plus tard.
 
-![Carte « Inviter par email » au-dessus de la carte Membres, qui liste trois membres de démonstration avec le propriétaire identifié.](/documentation/fr/project-members.png)
+Rien n’est envoyé avant que vous choisissiez **Terminer** : le projet est d’abord créé, puis chaque personne reçoit une invitation avec le rôle **Membre**. Les personnes choisies parmi vos projets sont invitées par leur compte : Minddy vérifie de nouveau qu’elles ont rejoint l’un de vos projets et utilise leur adresse vérifiée. Les autres sont invitées par e-mail. Ces invitations figurent dans la carte **Invitations en attente**, où vous pouvez modifier leur rôle, et s’acceptent dans la boîte de réception comme les autres. Si certaines sont refusées, par exemple à cause de la limite d’invités du plan ou parce qu’une personne a quitté entre-temps le projet que vous partagiez (« Cette personne ne fait pas partie de vos projets. »), les autres partent quand même et une notification indique chaque personne non invitée avec la raison. Vérifiez la carte **Invitations en attente** avant de les inviter à nouveau. Une invitation en attente est enregistrée, ce qui ne garantit pas que son e-mail a été remis.
+
+
+![Carte « Inviter des personnes » au-dessus de la carte Membres, qui liste trois membres de démonstration avec le propriétaire identifié.](/documentation/fr/project-members.png)
 
 ### Rôles de propriétaire, de membre et de lecteur {#member-permissions}
 

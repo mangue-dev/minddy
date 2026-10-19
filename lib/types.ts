@@ -888,6 +888,18 @@ export interface SearchIndexResponse {
  * a minddy account — an account enumeration oracle, open to any member of the
  * project. The server reads it, the client does not see it.
  */
+/**
+ * Someone who has joined a project the current user also belongs to — owner,
+ * member or reader, never a pending invitee (GET /api/me/collaborators).
+ */
+export interface Collaborator {
+  user_id: string;
+  email: string;
+  full_name: string | null;
+  /** Seed of the generated avatar, as in `Member`. */
+  avatar_seed: string;
+}
+
 export interface Invitation {
   id: string;
   project_id: string;

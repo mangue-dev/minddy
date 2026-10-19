@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   draftIconUrl,
   draftOrbSeed,
+  normalizeInvitees,
+  normalizeInviteeUsers,
   projectDraftFromRow,
   projectDraftToRow,
   stepIndexOf,
@@ -27,6 +29,8 @@ const draft: ProjectDraftInput = {
   },
   smartAssignEnabled: false,
   autoAssignEnabled: true,
+  invitees: ["ana@example.com", "li@example.com"],
+  inviteeUsers: [{ userId: "u-1", email: "bo@example.com", name: "Bo", avatarSeed: "seed-1" }],
 };
 
 /** What the route returns for this draft. */
@@ -66,6 +70,22 @@ describe("projectDraftFromRow / projectDraftToRow", () => {
     // fall back on this default, not on `false`.
     expect(back.smartAssignEnabled).toBe(true);
     expect(back.autoAssignEnabled).toBe(false);
+    // Written before the members step existed: nobody to invite.
+    expect(back.invitees).toEqual([]);
+    expect(back.inviteeUsers).toEqual([]);
+  });
+
+  it("cleans a malformed invitee list instead of replaying it", () => {
+    const row = rowFor(draft);
+    expect(
+      projectDraftFromRow({ ...row, data: { ...row.data, invitees: "ana@example.com" } }).invitees,
+    ).toEqual([]);
+    expect(
+      projectDraftFromRow({
+        ...row,
+        data: { ...row.data, invitees: [" Ana@Example.com ", 42, "", "ana@example.com", null, "li@example.com"] },
+      }).invitees,
+    ).toEqual(["ana@example.com", "li@example.com"]);
   });
 
   it("rejects a step it does not know", () => {
@@ -101,6 +121,39 @@ describe("projectDraftFromRow / projectDraftToRow", () => {
   });
 });
 
+describe("normalizeInvitees", () => {
+  it("trims, lowercases and removes duplicates while keeping the order", () => {
+    expect(normalizeInvitees(["B@example.com", " a@example.com", "b@example.com "])).toEqual(["b@example.com", "a@example.com"]);
+  });
+});
+
+describe("normalizeInviteeUsers", () => {
+  it("keeps well-formed picks once each and fills the display fallbacks", () => {
+    expect(normalizeInviteeUsers([
+      { userId: "u-1", email: " Bo@Example.com ", name: "Bo", avatarSeed: "s" },
+      { userId: "u-1", email: "bo@example.com", name: "Bo again", avatarSeed: "s" },
+      { userId: "u-2", email: "cy@example.com", name: "  ", avatarSeed: 7 },
+      { email: "no-id@example.com" },
+      "u-3",
+      null,
+    ])).toEqual([
+      { userId: "u-1", email: "bo@example.com", name: "Bo", avatarSeed: "s" },
+      { userId: "u-2", email: "cy@example.com", name: null, avatarSeed: "u-2" },
+    ]);
+    expect(normalizeInviteeUsers({ userId: "u-1" })).toEqual([]);
+  });
+});
+
+describe("stepsFor", () => {
+  it("asks for members right before the finishing touches, whatever the origin", () => {
+    for (const origin of ["new", "existing", null] as const) {
+      const steps = stepsFor(origin);
+      expect(steps.at(-2)).toBe("members");
+      expect(steps.at(-1)).toBe("finish");
+    }
+  });
+});
+
 describe("stepIndexOf", () => {
   it("reopens at the stored step", () => {
     expect(stepIndexOf({ ...draft, step: "seed", updatedAt: "" })).toBe(
@@ -112,6 +165,13 @@ describe("stepIndexOf", () => {
     // Without an origin, the seed does not exist: a bare `indexOf` would return -1, and the
     // wizard would reopen on the last step (upper limit of `WizardDialog`).
     expect(stepIndexOf({ ...draft, origin: null, step: "seed", updatedAt: "" })).toBe(0);
+  });
+
+  it("still reopens a draft saved at the final step on the final step", () => {
+    // Drafts saved before the members step existed point at `finish` by name:
+    // they keep landing there, now one index further.
+    const steps = stepsFor("new");
+    expect(stepIndexOf({ ...draft, step: "finish", updatedAt: "" })).toBe(steps.length - 1);
   });
 });
 
