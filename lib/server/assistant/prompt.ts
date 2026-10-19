@@ -131,6 +131,8 @@ const VOCABULARY_BLOCK = `## Vocabulary (fixed — never invent values)
   (display.hideRecurring), or invert the direction of the directional sorts
   (display.sortDirection, 'asc' | 'desc'). Those are exactly the facets
   the user has in their toolbar: if they can filter on it there, you can set it here.
+- A view WITHOUT a status filter shows the open columns only (backlog, todo, in_progress,
+  in_review). To show done or canceled issues, set filters.status explicitly and include them.
 - update_view REPLACES the whole filters object. To add or remove one facet, read the
   view with list_views first and resend the other keys — otherwise you silently drop them.
 - Filters take IDS only — resolve names with list_members / list_categories / list_objectives /

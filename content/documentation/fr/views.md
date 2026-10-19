@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles; MIN-736 closed columns hidden by default",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -45,10 +45,10 @@
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min693_fr with agent:/root (fr MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
-    "date": "2026-10-17"
+    "revision": 8,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 default status columns: source and unit-test review of lib/view-filter.ts and the board status filter; no browser walkthrough, no new captures)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min693_fr with agent:/root (fr MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (fr MIN-736 added sentences with catalog status labels; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [
     "navigation",
@@ -70,7 +70,7 @@
       "src": "/documentation/fr/work-view-filters.png",
       "alt": "Filtres manuels d’une vue et menu de classement.",
       "caption": "Filtrez par propriétés du ticket ou choisissez un ordre. Le champ IA est facultatif pour ces commandes manuelles.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -86,7 +86,7 @@
       "src": "/documentation/fr/work-share-view.png",
       "alt": "Dialogue de partage d’une vue avec l’accès privé sélectionné.",
       "caption": "Les accès privé, protégé par mot de passe et public correspondent à trois choix distincts. Cette vue reste privée sur la capture.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -110,7 +110,7 @@ Une vue conserve vos filtres et votre affichage des tickets sans les copier ni l
 
 Partez du tableau d’un projet ou d’une surface personnelle transversale. Utilisez filtres, classement et affichage pour choisir le travail à voir. Contrôlez le périmètre avant d’enregistrer : une vue personnelle et une vue de projet n’ont pas la même limite d’accès.
 
-Filtrez selon les propriétés disponibles, comme état, responsable, priorité, catégories ou objectif. Classez les résultats pour clarifier la prochaine action. En kanban, les tickets restent regroupés par état ; modifier la vue ne modifie ni leurs états ni leurs affectations.
+Filtrez selon les propriétés disponibles, comme état, responsable, priorité, catégories ou objectif. Classez les résultats pour clarifier la prochaine action. En kanban, les tickets restent regroupés par état ; modifier la vue ne modifie ni leurs états ni leurs affectations. Sans filtre d’état qui lui soit propre, un tableau n’affiche que **Backlog**, **À faire**, **En cours** et **En revue**. Sélectionnez **Terminé** ou **Annulé** dans le filtre **Statut** pour afficher ces colonnes ; une vue conserve le filtre d’état enregistré avec elle.
 
 Enregistrez la vue avec un nom qui décrit son usage, sélectionnez-la de nouveau dans la navigation et vérifiez ses filtres. Modifiez-la ou supprimez-la lorsque son usage change. Pour les permissions de publication et la révocation, consultez le [partage d’une vue](#share-a-view).
 
@@ -118,7 +118,7 @@ Enregistrez la vue avec un nom qui décrit son usage, sélectionnez-la de nouvea
 
 ### Résultat vide ou inattendu {#view-recovery}
 
-Vérifiez chaque filtre, le projet actif et votre adhésion si des tickets manquent. Retirez les filtres restrictifs avant de conclure à une suppression. Un ticket modifié peut quitter une vue filtrée. Recherchez son identifiant ou utilisez le tableau sans filtre pour vérifier les valeurs.
+Vérifiez chaque filtre, le projet actif et votre adhésion si des tickets manquent. Retirez les filtres restrictifs avant de conclure à une suppression. Un ticket modifié peut quitter une vue filtrée. Recherchez son identifiant, ou sélectionnez **Terminé** et **Annulé** dans le filtre **Statut** d’un tableau sans autre filtre, pour vérifier les valeurs.
 
 Une vue enregistrée n’est pas une copie des tickets. Supprimer la vue retire sa configuration ; supprimer les tickets sélectionnés modifie le travail du projet.
 

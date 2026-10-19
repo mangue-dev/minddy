@@ -38,10 +38,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import {
-  StatusIndicator,
-  PriorityIndicator,
-} from "@/components/issue-indicators";
+import { PriorityIndicator } from "@/components/issue-indicators";
 import {
   IssueContextMenu,
   type ContextMenuAction,
@@ -58,14 +55,19 @@ import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { ShareViewDialog } from "@/components/share-view-dialog";
 import { FormDialog } from "@/components/form-dialog";
 import {
-  STATUSES,
   PRIORITIES,
   EFFORTS,
-  type IssueStatus,
   type IssuePriority,
   type IssueEffort,
 } from "@/lib/issue-constants";
-import { ME_ASSIGNEE, activeFilterCount, isDirectionalSort, reverseSortDirection } from "@/lib/view-filter";
+import {
+  ME_ASSIGNEE,
+  activeFilterCount,
+  isDefaultStatusFilter,
+  isDirectionalSort,
+  reverseSortDirection,
+} from "@/lib/view-filter";
+import { StatusFilterRows } from "@/components/status-filter-menu";
 import { CYCLE_TAB_KEY, mergeTabOrder } from "@/lib/tab-order";
 import { useTabOrderQuery } from "@/lib/use-tab-order-query";
 import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
@@ -225,7 +227,6 @@ function FiltersPopover({
   const tc = useTranslations("Common");
   const tf = useTranslations("Field");
   const tSort = useTranslations("Sort");
-  const ts = useTranslations("Status");
   const tp = useTranslations("Priority");
 
   const categoryOptions = useMemo(
@@ -307,19 +308,14 @@ function FiltersPopover({
             ))}
           </FilterSub>
         )}
-        <FilterSub label={tf("status")} count={f.status?.length ?? 0}>
-          {STATUSES.map((s) => (
-            <MenuToggleRow
-              key={s.value}
-              active={!!f.status?.includes(s.value)}
-              onSelect={() =>
-                setFilters({ ...f, status: toggle<IssueStatus>(f.status, s.value) })
-              }
-            >
-              <StatusIndicator status={s.value} className="size-4" />
-              {ts(s.value)}
-            </MenuToggleRow>
-          ))}
+        <FilterSub
+          label={tf("status")}
+          count={isDefaultStatusFilter(f.status) ? 0 : f.status?.length ?? 0}
+        >
+          <StatusFilterRows
+            status={f.status}
+            onChange={(status) => setFilters({ ...f, status })}
+          />
         </FilterSub>
         <FilterSub label={tf("priority")} count={f.priority?.length ?? 0}>
           {PRIORITIES.map((p) => (

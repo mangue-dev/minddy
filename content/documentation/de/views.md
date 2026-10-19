@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles; MIN-736 closed columns hidden by default",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -45,10 +45,10 @@
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min693_de with agent:/root (de MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
-    "date": "2026-10-17"
+    "revision": 8,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 default status columns: source and unit-test review of lib/view-filter.ts and the board status filter; no browser walkthrough, no new captures)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min693_de with agent:/root (de MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (de MIN-736 added sentences with catalog status labels; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [
     "navigation",
@@ -70,7 +70,7 @@
       "src": "/documentation/de/work-view-filters.png",
       "alt": "Manuelle Ansichtsfilter und Sortiermenü.",
       "caption": "Filtere nach Ticketeigenschaften oder wähle eine Reihenfolge. Für diese manuellen Bedienelemente ist das KI-Feld optional.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -86,7 +86,7 @@
       "src": "/documentation/de/work-share-view.png",
       "alt": "Freigabedialog einer Ansicht mit ausgewähltem privatem Zugriff.",
       "caption": "Privater, passwortgeschützter und öffentlicher Zugriff sind unterschiedliche Optionen. Die Ansicht bleibt hier privat.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -110,7 +110,7 @@ Eine Ansicht speichert Filter und Darstellung von Problemen, ohne diese zu kopie
 
 Beginne in einem Projektboard oder einer persönlichen projektübergreifenden Problemansicht. Wähle die benötigte Arbeit mit Filtern, Sortierung und Darstellungsfunktionen aus. Prüfe vor dem Speichern den Umfang: Eine persönliche Ansicht und eine Projektansicht haben nicht dieselbe Zugriffsgrenze.
 
-Filtere nach unterstützten Eigenschaften wie Status, zuständiger Person, Priorität, Kategorien oder Ziel. Sortiere die Ergebnisse so, dass die nächste Aktion klar wird. Im Kanban bleiben Probleme nach Status gruppiert; eine geänderte Ansicht bearbeitet weder Status noch Zuweisung.
+Filtere nach unterstützten Eigenschaften wie Status, zuständiger Person, Priorität, Kategorien oder Ziel. Sortiere die Ergebnisse so, dass die nächste Aktion klar wird. Im Kanban bleiben Probleme nach Status gruppiert; eine geänderte Ansicht bearbeitet weder Status noch Zuweisung. Ohne eigenen Statusfilter zeigt ein Board nur **Rückstand**, **Todo**, **In Bearbeitung** und **In Überprüfung**. Wähle **Fertig** oder **Abgebrochen** im Filter **Status**, um diese Spalten anzuzeigen; eine Ansicht behält den Statusfilter, den du mit ihr speicherst.
 
 Speichere die Ansicht unter einem Namen, der ihren Zweck beschreibt, wähle sie erneut in der Navigation und prüfe ihre Filter. Bearbeite oder entferne die gespeicherte Ansicht, wenn sich ihr Zweck ändert. Das Teilen ist eine gesonderte Veröffentlichung mit eigenen Berechtigungen und Widerrufsregeln.
 
@@ -118,7 +118,7 @@ Speichere die Ansicht unter einem Namen, der ihren Zweck beschreibt, wähle sie 
 
 ### Leere oder unerwartete Ergebnisse klären {#view-recovery}
 
-Prüfe alle Filter, das aktive Projekt und deine Mitgliedschaft, wenn erwartete Probleme fehlen. Entferne einschränkende Filter, bevor du von gelöschten Daten ausgehst. Nach der Bearbeitung kann ein Problem berechtigterweise aus einer gefilterten Ansicht verschwinden. Suche seine Kennung oder verwende ein ungefiltertes Projektboard, um die gespeicherten Werte zu prüfen.
+Prüfe alle Filter, das aktive Projekt und deine Mitgliedschaft, wenn erwartete Probleme fehlen. Entferne einschränkende Filter, bevor du von gelöschten Daten ausgehst. Nach der Bearbeitung kann ein Problem berechtigterweise aus einer gefilterten Ansicht verschwinden. Suche seine Kennung oder wähle auf einem sonst ungefilterten Projektboard **Fertig** und **Abgebrochen** im Filter **Status**, um die gespeicherten Werte zu prüfen.
 
 Eine gespeicherte Ansicht ist keine Kopie ihrer Probleme. Das Löschen der Ansicht entfernt ihre Konfiguration; das Löschen ausgewählter Probleme verändert dagegen die zugrunde liegende Projektarbeit.
 

@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles; MIN-736 closed columns hidden by default",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -45,10 +45,10 @@
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min693_pt-BR with agent:/root (pt-BR MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
-    "date": "2026-10-17"
+    "revision": 8,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 default status columns: source and unit-test review of lib/view-filter.ts and the board status filter; no browser walkthrough, no new captures)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min693_pt-BR with agent:/root (pt-BR MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (pt-BR MIN-736 added sentences with catalog status labels; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [
     "navigation",
@@ -71,7 +71,7 @@
       "src": "/documentation/pt-BR/work-view-filters.png",
       "alt": "Filtros manuais de uma visualização e menu de ordenação.",
       "caption": "Filtre pelas propriedades dos tickets ou escolha uma ordem. O campo de IA é opcional para esses controles manuais.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -87,7 +87,7 @@
       "src": "/documentation/pt-BR/work-share-view.png",
       "alt": "Janela de compartilhamento de visualização com acesso privado selecionado.",
       "caption": "Acesso privado, protegido por senha e público são escolhas distintas. A visualização continua privada nesta captura.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -111,7 +111,7 @@ Uma visualização salva filtros e ordenação do trabalho ao qual você tem ace
 
 Comece no quadro de um projeto ou em uma lista pessoal de problemas entre projetos. Use filtros, ordenação e controles de exibição para escolher o trabalho necessário. Confira o escopo antes de salvar: uma visualização pessoal e uma de projeto não representam o mesmo limite de acesso.
 
-Filtre por propriedades disponíveis, como estado, responsável, prioridade, categorias ou objetivo. Ordene o resultado para deixar clara a próxima ação. No kanban, os problemas continuam agrupados por estado; mudar uma visualização não altera estado nem atribuição.
+Filtre por propriedades disponíveis, como estado, responsável, prioridade, categorias ou objetivo. Ordene o resultado para deixar clara a próxima ação. No kanban, os problemas continuam agrupados por estado; mudar uma visualização não altera estado nem atribuição. Sem um filtro de estado próprio, um quadro mostra apenas **Backlog**, **A fazer**, **Em andamento** e **Em revisão**. Selecione **Concluído** ou **Cancelada** no filtro **Status** para mostrar essas colunas; uma visualização mantém o filtro de estado salvo com ela.
 
 Salve a visualização com um nome que descreva seu propósito, selecione-a novamente na navegação e verifique os filtros. Edite ou remova a visualização salva quando o propósito mudar. Compartilhá-la é uma operação de publicação separada com regras próprias de permissão e revogação.
 
@@ -119,7 +119,7 @@ Salve a visualização com um nome que descreva seu propósito, selecione-a nova
 
 ### Resolver resultados vazios ou inesperados {#view-recovery}
 
-Confira todos os filtros, o projeto ativo e sua participação quando problemas esperados não aparecerem. Limpe filtros restritivos antes de supor que dados foram excluídos. Após uma edição, um problema pode legitimamente sair de uma visualização filtrada. Pesquise seu identificador ou use um quadro de projeto sem filtros para inspecionar os valores salvos.
+Confira todos os filtros, o projeto ativo e sua participação quando problemas esperados não aparecerem. Limpe filtros restritivos antes de supor que dados foram excluídos. Após uma edição, um problema pode legitimamente sair de uma visualização filtrada. Pesquise seu identificador, ou selecione **Concluído** e **Cancelada** no filtro **Status** de um quadro de projeto sem outros filtros, para inspecionar os valores salvos.
 
 Uma visualização salva não é uma cópia de seus problemas. Excluir a visualização remove sua configuração, enquanto excluir problemas selecionados muda o trabalho subjacente do projeto.
 

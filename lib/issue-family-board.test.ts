@@ -70,11 +70,19 @@ describe("issue family board", () => {
     expect([...issueParentIds(issues)]).toEqual(["parent", "child-1"]);
   });
 
-  it("renders the same kanban sweep as every board — no triage, no duplicate", () => {
+  it("renders the same kanban sweep as every board — open columns by default, no triage, no duplicate", () => {
     // Like the objective page: `triage` (arrival zone) and `duplicate`
     // (closed as a copy) are not columns of their own, so members parked
     // there do not show on the family board.
-    const columns = familyBoardStatuses().map((s) => s.value);
+    expect(familyBoardStatuses().map((s) => s.value)).toEqual([
+      "backlog",
+      "todo",
+      "in_progress",
+      "in_review",
+    ]);
+    const columns = familyBoardStatuses([
+      "canceled", "done", "in_review", "in_progress", "todo", "backlog",
+    ]).map((s) => s.value);
     expect(columns).toEqual([
       "backlog",
       "todo",

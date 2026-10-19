@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_CONFIG, isDefaultConfig, issueComparator } from "./view-filter";
+import {
+  DEFAULT_CONFIG,
+  activeFilterCount,
+  configsEqual,
+  filterIssues,
+  isDefaultConfig,
+  issueComparator,
+  storedStatusFilter,
+  toggleStatusFilter,
+  visibleStatuses,
+} from "./view-filter";
 import type { Issue, IssueRelation } from "./types";
 import type { IssuePriority, IssueStatus } from "./issue-constants";
 
@@ -174,5 +184,72 @@ describe("smart sort — stacked boosts and fallbacks", () => {
     ];
     const sorted = [...issues].sort(issueComparator("smart", { now: NOW }));
     expect(sorted.map((i) => i.id)).toEqual(["due-soon", "high"]);
+  });
+});
+
+describe("default status columns (MIN-736)", () => {
+  const columns = (config = DEFAULT_CONFIG) =>
+    visibleStatuses(config).map((s) => s.value);
+  const withStatus = (status: IssueStatus[]) => ({
+    ...DEFAULT_CONFIG,
+    filters: { status },
+  });
+
+  it("shows only the open columns without a status filter", () => {
+    expect(columns()).toEqual(["backlog", "todo", "in_progress", "in_review"]);
+    const shown = filterIssues(
+      [
+        issue("open", { status: "in_review" }),
+        issue("done", { status: "done" }),
+        issue("canceled", { status: "canceled" }),
+      ],
+      DEFAULT_CONFIG,
+      { myUserId: null }
+    ).map((i) => i.id);
+    expect(shown).toEqual(["open"]);
+  });
+
+  it("brings Done and Canceled back when the filter selects them", () => {
+    const all = withStatus(["backlog", "todo", "in_progress", "in_review", "done", "canceled"]);
+    expect(columns(all)).toEqual([
+      "backlog", "todo", "in_progress", "in_review", "done", "canceled",
+    ]);
+    expect(filterIssues([issue("done", { status: "done" })], all, { myUserId: null }))
+      .toHaveLength(1);
+    expect(columns(withStatus(["done"]))).toEqual(["done"]);
+  });
+
+  it("keeps hideDone on top of an explicit selection", () => {
+    const config = { ...withStatus(["todo", "done"]), display: { hideDone: true } };
+    expect(columns(config)).toEqual(["todo"]);
+  });
+
+  it("treats the open selection as the default, not as a change", () => {
+    const explicit = withStatus(["in_review", "backlog", "todo", "in_progress"]);
+    expect(isDefaultConfig(DEFAULT_CONFIG)).toBe(true);
+    expect(isDefaultConfig(explicit)).toBe(true);
+    expect(configsEqual(explicit, DEFAULT_CONFIG)).toBe(true);
+    expect(activeFilterCount(explicit)).toBe(0);
+    expect(isDefaultConfig(withStatus(["todo"]))).toBe(false);
+    expect(activeFilterCount(withStatus(["todo", "done"]))).toBe(1);
+  });
+
+  it("toggles from the open statuses when nothing is stored", () => {
+    expect(toggleStatusFilter(undefined, "done")).toEqual([
+      "backlog", "todo", "in_progress", "in_review", "done",
+    ]);
+    expect(toggleStatusFilter(undefined, "backlog")).toEqual([
+      "todo", "in_progress", "in_review",
+    ]);
+    // Removing Done again lands back on the default: nothing to store.
+    expect(
+      toggleStatusFilter(["backlog", "todo", "in_progress", "in_review", "done"], "done")
+    ).toBeUndefined();
+  });
+
+  it("stores the default selection as no filter", () => {
+    expect(storedStatusFilter(["backlog", "todo", "in_progress", "in_review"])).toBeUndefined();
+    expect(storedStatusFilter([])).toBeUndefined();
+    expect(storedStatusFilter(["todo", "done"])).toEqual(["todo", "done"]);
   });
 });

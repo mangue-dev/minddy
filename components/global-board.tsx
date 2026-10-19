@@ -22,8 +22,9 @@ import { useGeneratingViews } from "@/lib/use-generating-views";
 import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
 import { buildViewHref } from "@/lib/view-href";
 import { boardViewTabHref } from "@/lib/board-view-tab";
-import { filterIssues, visibleStatuses } from "@/lib/view-filter";
-import { STATUSES, type IssueStatus } from "@/lib/issue-constants";
+import { filterIssues, statusColumns, visibleStatuses } from "@/lib/view-filter";
+import { StatusFilterMenu } from "@/components/status-filter-menu";
+import type { IssueStatus } from "@/lib/issue-constants";
 import {
 } from "@/lib/optimistic/issue-writes";
 import {
@@ -336,6 +337,20 @@ function GlobalBoardInner() {
         : [],
     [scopedIssues, selectedCycle]
   );
+  // The cycle board has no saved view: its own status filter (MIN-736) shows
+  // the open columns until Done or Canceled is chosen. Progress, capacity and
+  // the completion banner still read every issue of the cycle.
+  const [cycleStatusFilter, setCycleStatusFilter] = useAppTabLocalState<
+    IssueStatus[] | null
+  >("global-cycle-status", null);
+  const cycleStatuses = useMemo(
+    () => statusColumns(cycleStatusFilter),
+    [cycleStatusFilter]
+  );
+  const cycleBoardIssues = useMemo(() => {
+    const shown = new Set(cycleStatuses.map((s) => s.value));
+    return cycleIssues.filter((i) => shown.has(i.status));
+  }, [cycleIssues, cycleStatuses]);
   const currentCycleCompletionPercent = useMemo(() => {
     const currentCycleId = cycles?.current?.id;
     if (!currentCycleId) return null;
@@ -535,14 +550,20 @@ function GlobalBoardInner() {
           rightControls={
             cycleMode ? (
               cyclesEnabled && selectedCycle ? (
-                <CycleControls
-                  cycles={cycles}
-                  cycle={selectedCycle}
-                  selectedId={selectedCycleId}
-                  onSelect={setSelectedCycleId}
-                  filledPoints={cycleFilledPoints(cycleIssues)}
-                  completionPercent={cycleCompletionPercent(cycleIssues)}
-                />
+                <div className="flex items-center gap-1.5">
+                  <CycleControls
+                    cycles={cycles}
+                    cycle={selectedCycle}
+                    selectedId={selectedCycleId}
+                    onSelect={setSelectedCycleId}
+                    filledPoints={cycleFilledPoints(cycleIssues)}
+                    completionPercent={cycleCompletionPercent(cycleIssues)}
+                  />
+                  <StatusFilterMenu
+                    status={cycleStatusFilter}
+                    onChange={(next) => setCycleStatusFilter(next ?? null)}
+                  />
+                </div>
               ) : (
                 <span aria-hidden />
               )
@@ -569,8 +590,8 @@ function GlobalBoardInner() {
             )}
             <div className="min-h-0 flex-1">
               <GlobalKanbanBoard
-                issues={cycleIssues}
-                statuses={STATUSES}
+                issues={cycleBoardIssues}
+                statuses={cycleStatuses}
                 sort="manual"
                 comparator={cycleComparator}
                 readOnly={selectedPhase !== "current"}

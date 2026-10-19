@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles; MIN-736 closed columns hidden by default",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -45,10 +45,10 @@
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min693_it with agent:/root (it MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
-    "date": "2026-10-17"
+    "revision": 8,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 default status columns: source and unit-test review of lib/view-filter.ts and the board status filter; no browser walkthrough, no new captures)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min693_it with agent:/root (it MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (it MIN-736 added sentences with catalog status labels; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [
     "navigation",
@@ -70,7 +70,7 @@
       "src": "/documentation/it/work-view-filters.png",
       "alt": "Filtri manuali di una vista e menu di ordinamento.",
       "caption": "Filtra per proprietà dei ticket o scegli un ordine. Il campo IA è facoltativo per questi comandi manuali.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -86,7 +86,7 @@
       "src": "/documentation/it/work-share-view.png",
       "alt": "Finestra di condivisione di una vista con accesso privato selezionato.",
       "caption": "Accesso privato, protetto da password e pubblico sono scelte distinte. In questa schermata la vista rimane privata.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -110,7 +110,7 @@ Una vista salva filtri e ordinamento del lavoro a cui hai accesso, senza creare 
 
 Parti dal tabellone di un progetto o da un elenco personale di ticket tra progetti. Usa filtri, ordinamento e controlli di visualizzazione per scegliere il lavoro necessario. Controlla l’ambito prima di salvare: una vista personale e una vista di progetto non hanno lo stesso confine di accesso.
 
-Filtra per proprietà supportate, come stato, assegnatario, priorità, categorie o obiettivo. Ordina il risultato per rendere chiara la prossima azione. Nel kanban, i ticket restano raggruppati per stato; cambiare una vista non ne modifica stato o assegnazione.
+Filtra per proprietà supportate, come stato, assegnatario, priorità, categorie o obiettivo. Ordina il risultato per rendere chiara la prossima azione. Nel kanban, i ticket restano raggruppati per stato; cambiare una vista non ne modifica stato o assegnazione. Senza un proprio filtro di stato, un tabellone mostra solo **Backlog**, **Da fare**, **In corso** e **In revisione**. Seleziona **Fatto** o **Annullata** nel filtro **Stato** per mostrare queste colonne; una vista conserva il filtro di stato salvato con essa.
 
 Salva la vista con un nome che ne descriva lo scopo, selezionala di nuovo dalla navigazione e verifica i filtri. Modifica o rimuovi la vista salvata quando cambia il suo scopo. Condividere una vista è un’operazione di pubblicazione separata con proprie regole di permessi e revoca.
 
@@ -118,7 +118,7 @@ Salva la vista con un nome che ne descriva lo scopo, selezionala di nuovo dalla 
 
 ### Risolvere risultati vuoti o inattesi {#view-recovery}
 
-Controlla tutti i filtri, il progetto attivo e la tua appartenenza quando mancano ticket previsti. Rimuovi i filtri restrittivi prima di supporre che i dati siano stati eliminati. Dopo una modifica, un ticket può legittimamente uscire da una vista filtrata. Cerca il suo identificativo o usa un tabellone di progetto senza filtri per controllare i valori salvati.
+Controlla tutti i filtri, il progetto attivo e la tua appartenenza quando mancano ticket previsti. Rimuovi i filtri restrittivi prima di supporre che i dati siano stati eliminati. Dopo una modifica, un ticket può legittimamente uscire da una vista filtrata. Cerca il suo identificativo, oppure seleziona **Fatto** e **Annullata** nel filtro **Stato** di un tabellone di progetto senza altri filtri, per controllare i valori salvati.
 
 Una vista salvata non è una copia dei ticket. Eliminare la vista rimuove quella configurazione, mentre eliminare i ticket selezionati cambia il lavoro del progetto sottostante.
 

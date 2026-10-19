@@ -84,6 +84,7 @@ export function ObjectiveBoardHeader({
   onOpenIssue,
   progress,
   lead,
+  actions,
 }: {
   objective: Objective;
   /** All project objectives shown in the title selector. */
@@ -94,6 +95,8 @@ export function ObjectiveBoardHeader({
   onOpenIssue: (issueId: string) => void;
   progress: { done: number; total: number; percent: number };
   lead: Member | null;
+  /** Board controls at the header's far edge (the status filter). */
+  actions?: React.ReactNode;
 }) {
   const t = useTranslations("Objectives");
   const tStatus = useTranslations("ObjectiveStatus");
@@ -221,6 +224,7 @@ export function ObjectiveBoardHeader({
         )}
         <ObjectiveRelationsSection objective={objective} projectId={projectId} projectKey={projectKey} issues={issues} onOpenIssue={onOpenIssue} variant="board" />
       </div>
+      {actions && <div className="ml-auto flex shrink-0 items-center">{actions}</div>}
     </AppContentHeader>
   );
 }
