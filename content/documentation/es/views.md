@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles; MIN-736 closed columns hidden by default",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -45,10 +45,10 @@
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min693_es with agent:/root (es MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
-    "date": "2026-10-17"
+    "revision": 8,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 default status columns: source and unit-test review of lib/view-filter.ts and the board status filter; no browser walkthrough, no new captures)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min693_es with agent:/root (es MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (es MIN-736 added sentences with catalog status labels; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [
     "navigation",
@@ -70,7 +70,7 @@
       "src": "/documentation/es/work-view-filters.png",
       "alt": "Filtros manuales de una vista y menú de ordenación.",
       "caption": "Filtra por propiedades de las incidencias o elige un orden. El campo de IA es opcional para estos controles manuales.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -86,7 +86,7 @@
       "src": "/documentation/es/work-share-view.png",
       "alt": "Diálogo para compartir una vista con acceso privado seleccionado.",
       "caption": "El acceso privado, protegido por contraseña y público son opciones distintas. La vista permanece privada en esta captura.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -110,7 +110,7 @@ Una vista guarda los filtros y la presentación de las incidencias sin copiarlas
 
 Empieza desde un tablero de proyecto o una superficie personal de incidencias entre proyectos. Utiliza sus filtros y controles de ordenación y visualización para elegir el trabajo que necesitas. Comprueba el alcance antes de guardar: una vista personal y una de proyecto no tienen el mismo límite de acceso.
 
-Filtra por propiedades admitidas, como estado, responsable, prioridad, categorías u objetivo. Ordena el resultado para que la siguiente acción sea clara. En kanban, las incidencias siguen agrupadas por estado; cambiar una vista no modifica su estado ni asignación.
+Filtra por propiedades admitidas, como estado, responsable, prioridad, categorías u objetivo. Ordena el resultado para que la siguiente acción sea clara. En kanban, las incidencias siguen agrupadas por estado; cambiar una vista no modifica su estado ni asignación. Sin un filtro de estado propio, un tablero muestra solo **Registro**, **Pendiente**, **En curso** y **En examen**. Selecciona **Hecho** o **Cancelado** en el filtro **Estado** para mostrar esas columnas; una vista conserva el filtro de estado que guardes con ella.
 
 Guarda la vista con un nombre que describa su propósito, selecciónala de nuevo desde la navegación y verifica sus filtros. Edítala o retírala cuando cambie su propósito. Compartir una vista es una publicación aparte con sus propias reglas de permisos y revocación.
 
@@ -118,7 +118,7 @@ Guarda la vista con un nombre que describa su propósito, selecciónala de nuevo
 
 ### Resolver resultados vacíos o inesperados {#view-recovery}
 
-Comprueba todos los filtros, el proyecto activo y tu pertenencia cuando falten incidencias esperadas. Quita los filtros restrictivos antes de suponer que se han eliminado datos. Después de editar una incidencia, es normal que pueda salir de una vista filtrada. Busca su identificador o utiliza un tablero de proyecto sin filtros para examinar los valores guardados.
+Comprueba todos los filtros, el proyecto activo y tu pertenencia cuando falten incidencias esperadas. Quita los filtros restrictivos antes de suponer que se han eliminado datos. Después de editar una incidencia, es normal que pueda salir de una vista filtrada. Busca su identificador, o selecciona **Hecho** y **Cancelado** en el filtro **Estado** de un tablero de proyecto sin otros filtros, para examinar los valores guardados.
 
 Una vista guardada no es una copia de sus incidencias. Eliminarla retira su configuración, mientras que eliminar incidencias seleccionadas modifica el trabajo subyacente del proyecto.
 

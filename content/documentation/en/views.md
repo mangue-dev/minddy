@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-19",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles; MIN-736 closed columns hidden by default",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -45,10 +45,10 @@
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-17"
+    "revision": 8,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 default status columns: source and unit-test review of lib/view-filter.ts and the board status filter; no browser walkthrough, no new captures)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-736 added sentences with catalog status labels; agent review, not human acceptance)",
+    "date": "2026-10-19"
   },
   "related": [
     "navigation",
@@ -70,7 +70,7 @@
       "src": "/documentation/en/work-view-filters.png",
       "alt": "Manual view filters and the sorting menu.",
       "caption": "Filter by issue properties or choose a sort order. The AI field is optional for these manual controls.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -86,7 +86,7 @@
       "src": "/documentation/en/work-share-view.png",
       "alt": "View-sharing dialog with private access selected.",
       "caption": "Private, password-protected and public access are distinct choices. This capture keeps the view private.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -110,7 +110,7 @@ A view saves how you filter and display issues without copying or changing them.
 
 Start from a project board or a personal cross-project issue surface. Use its filters, sort and display controls to choose the work you need. Check the scope before saving: a personal view and a project view do not represent the same access boundary.
 
-Filter on supported properties such as status, assignee, priority, categories or objective. Sort the result to make the next action clear. In kanban, issues remain grouped by status; changing a view does not edit their status or assignment.
+Filter on supported properties such as status, assignee, priority, categories or objective. Sort the result to make the next action clear. In kanban, issues remain grouped by status; changing a view does not edit their status or assignment. Without a status filter of its own, a board shows only **Backlog**, **Todo**, **In progress** and **In review**. Select **Done** or **Canceled** in the **Status** filter to show those columns; a view keeps the status filter you save with it.
 
 Save the view with a name describing its purpose, then select it again from navigation and verify its filters. Edit or remove it when its purpose changes. For publication permissions and revocation, see [sharing a view](#share-a-view).
 
@@ -118,7 +118,7 @@ Save the view with a name describing its purpose, then select it again from navi
 
 ### Empty or unexpected results {#view-recovery}
 
-Check every filter, the active project and your membership when expected issues are absent. Clear restrictive filters before assuming data was deleted. After editing an issue, it can legitimately leave a filtered view. Search its identifier or use an unfiltered project board to inspect the saved values.
+Check every filter, the active project and your membership when expected issues are absent. Clear restrictive filters before assuming data was deleted. After editing an issue, it can legitimately leave a filtered view. Search its identifier, or select **Done** and **Canceled** in the **Status** filter of an otherwise unfiltered project board, to inspect the saved values.
 
 A saved view is not a copy of its issues. Deleting the view removes that view configuration, while deleting selected issues changes the underlying project work.
 
