@@ -2144,6 +2144,8 @@
     "waitForUploads": "Attendez la fin de l’envoi de l’image.",
     "uploadEmpty": "{name} est vide",
     "promotePrompt": "Convertis cette tâche de la page « {page} » de mon projet en ticket :\n\n{note}\n\nSi la tâche n'est pas assez claire pour en faire un bon ticket, relis le reste de la page pour le contexte, et pose-moi des questions avant de le créer. Une fois le ticket créé, coche cette tâche sur la page : elle vit désormais dans le ticket.",
+    "promoteToIssue": "Promouvoir en ticket",
+    "promotePagePrompt": "Convertis la page « {page} » de mon projet en ticket.\n\nLis d'abord la page : son titre, son contenu et, pour une entrée de base de données, ses propriétés. Si la page n'est pas assez claire pour en faire un bon ticket, ou s'il s'agit d'une base de données dont on ne sait pas ce que le ticket doit couvrir, pose-moi des questions avant de le créer. Une fois le ticket créé, joins-lui la page : elle reste à sa place.",
     "subpageUntitled": "Page sans titre",
     "insertBlock": "Insérer un bloc en dessous",
     "blockMenu": "Options du bloc",

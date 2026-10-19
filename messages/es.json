@@ -2144,6 +2144,8 @@
     "waitForUploads": "Espera a que termine de subirse la imagen.",
     "uploadEmpty": "{name} está vacío",
     "promotePrompt": "Convierte esta tarea de la página «{page}» de mi proyecto en una incidencia:\n\n{note}\n\nSi la tarea no está lo bastante clara como para crear una buena incidencia, lee el resto de la página para obtener contexto y hazme preguntas antes de crearla. Cuando exista la incidencia, marca la tarea como completada en la página; ahora su lugar está en la incidencia.",
+    "promoteToIssue": "Convertir en incidencia",
+    "promotePagePrompt": "Convierte la página «{page}» de mi proyecto en una incidencia.\n\nLee primero la página: su título, su contenido y, si es una entrada de base de datos, sus propiedades. Si la página no está lo bastante clara como para crear una buena incidencia, o si es una base de datos y no está claro qué debe cubrir la incidencia, hazme preguntas antes de crearla. Cuando exista la incidencia, adjúntale la página; la página se queda donde está.",
     "subpageUntitled": "Página sin título",
     "insertBlock": "Insertar un bloque a continuación",
     "blockMenu": "Opciones de bloqueo",

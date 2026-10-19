@@ -50,6 +50,9 @@ import { DateTimePicker } from "@/components/date-time-picker";
 import { SearchSelect } from "@/components/search-select";
 import { UserAvatar } from "@/components/user-avatar";
 import { usePagesQuery } from "@/lib/use-pages-query";
+import { useProjectCapabilities } from "@/lib/use-project-capabilities";
+import { usePromotePage } from "./page-promotion-context";
+import { NumoIcon } from "@/components/numo-icon";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { usePageDatabase } from "@/lib/use-page-database";
 import { displayName } from "@/lib/display-name";
@@ -379,6 +382,8 @@ export function PageDatabaseView({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates, keyboardCodes: { start: ["F8"], cancel: ["Escape"], end: ["F8", "Enter", "Space"] } }));
   const t = useTranslations("PageDatabase");
   const tPages = useTranslations("Pages");
+  const { canWrite } = useProjectCapabilities(projectId);
+  const promotePage = usePromotePage(projectId);
   const {
     pages,
     createPage,
@@ -1007,6 +1012,13 @@ export function PageDatabaseView({
                             <DropdownMenuItem onSelect={() => onOpen(entry.id)}>
                               <HugeiconsIcon icon={File02Icon} className="size-4" />
                               {t("openEntry")}
+                            </DropdownMenuItem>
+                          )}
+                          {/* One entry, one issue: a selection is not promoted in bulk. */}
+                          {targets.length === 1 && canWrite && (
+                            <DropdownMenuItem onSelect={() => void promotePage(entry)}>
+                              <NumoIcon animated={false} className="size-4" />
+                              {tPages("promoteToIssue")}
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem onSelect={() => setDuplicateTargets(targets)}>

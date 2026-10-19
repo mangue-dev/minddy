@@ -26,6 +26,7 @@ import { RetainedPageDocuments } from "./retained-page-documents";
 import { retainedPageDocumentCost } from "@/lib/retained-page-documents";
 import { PagesHome } from "@/components/pages/pages-home";
 import { PagePresenceProvider } from "@/components/pages/page-presence";
+import { PagePromotionProvider } from "@/components/pages/page-promotion-context";
 import { pageKey, usePagesQuery } from "@/lib/use-pages-query";
 import { computePageMove, type PageDropMode } from "@/lib/pages-move";
 import { isPageCycleError } from "@/lib/pages-api";
@@ -261,12 +262,14 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
       </CollectionSidebar>
   );
 
-  if (browse) return <PagePresenceProvider projectId={projectId} pageId={null}>{sidebar}</PagePresenceProvider>;
+  if (browse) return <PagePresenceProvider projectId={projectId} pageId={null}><PagePromotionProvider>{sidebar}</PagePromotionProvider></PagePresenceProvider>;
 
   return (
     // The PRESENCE is open here, and not in the page: the shell crosses
     // navigations, open page no (MIN-271).
     <PagePresenceProvider projectId={projectId} pageId={validPreview?.id ?? activePageId}>
+    {/* One promotion registry: the tree may promote a page open beside it. */}
+    <PagePromotionProvider>
     <div className="flex h-full min-h-0">
       {bare ? null : sidebar}
 
@@ -303,6 +306,7 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
         {validPreview && <PageView panel key={validPreview.id} projectId={projectId} pageId={validPreview.id} onNavigate={openPage} onNavigationReady={registerPreviewFlush} />}
       </SidePanelContent>
     </SidePanel>
+    </PagePromotionProvider>
     </PagePresenceProvider>
   );
 }

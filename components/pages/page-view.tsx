@@ -90,6 +90,7 @@ import {
   type PageHistoryTab,
 } from "@/components/pages/page-history";
 import { PageTaskSurface } from "@/components/pages/page-task-surface";
+import { useRegisterPagePromotionSource } from "@/components/pages/page-promotion-context";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { PageBreadcrumb } from "@/components/pages/page-breadcrumb";
 import { PageCommentLayer } from "@/components/pages/page-comment-layer";
@@ -482,6 +483,11 @@ function PageSurface({
   useEffect(() => { onNavigationReady?.(flushBeforeNavigation); }, [onNavigationReady, flushBeforeNavigation]);
   const titleRef = useRef(title);
   titleRef.current = title;
+  // Promoting this page from any menu first writes what this editor holds.
+  useRegisterPagePromotionSource(pageId, {
+    title: () => titleRef.current,
+    prepare: flushBeforeNavigation,
+  });
   const iconRef = useRef(icon);
   iconRef.current = icon;
   const contentRef = useRef<unknown>(null);

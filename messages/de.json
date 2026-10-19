@@ -2144,6 +2144,8 @@
     "waitForUploads": "Warte, bis das Bild hochgeladen ist.",
     "uploadEmpty": "{name} ist leer",
     "promotePrompt": "Wandle diese Aufgabe von der Seite „{page}“ meines Projekts in ein Problem um:\n\n{note}\n\nWenn die Aufgabe nicht klar genug ist, um daraus ein gutes Problem zu erstellen, lies den Rest der Seite, um den Kontext zu verstehen, und stelle mir vor dem Erstellen Fragen. Sobald das Problem erstellt wurde, hake die Aufgabe auf der Seite ab. Sie befindet sich jetzt im Problem.",
+    "promoteToIssue": "Zu Problem hochstufen",
+    "promotePagePrompt": "Wandle die Seite „{page}“ meines Projekts in ein Problem um.\n\nLies zuerst die Seite: ihren Titel, ihren Inhalt und bei einem Datenbankeintrag seine Eigenschaften. Wenn die Seite nicht klar genug ist, um daraus ein gutes Problem zu erstellen, oder wenn es eine Datenbank ist und unklar bleibt, was das Problem abdecken soll, stelle mir vor dem Erstellen Fragen. Sobald das Problem erstellt wurde, hänge die Seite daran an; die Seite bleibt, wo sie ist.",
     "subpageUntitled": "Unbenannte Seite",
     "insertBlock": "Fügen Sie unten einen Block ein",
     "blockMenu": "Blockoptionen",
