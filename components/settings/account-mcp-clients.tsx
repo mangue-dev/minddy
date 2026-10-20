@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {Field, FieldLabel} from "@/components/ui/field";
 import {McpServiceLogo} from "@/components/mcp-service-logo";
 import {SettingsGroup} from "@/components/settings/settings-ui";
@@ -76,6 +77,8 @@ export function AccountMcpClients() {
   const searchParams = useSearchParams();
   const { data, isPending, isError, refetch } = useMcpConnections(user?.id);
   const [editing, setEditing] = useState<McpConnection | "new" | null>(null);
+  // Removal is destructive, so the menu only opens a confirmation (DESIGN.md).
+  const [toRemove, setToRemove] = useState<McpConnection | null>(null);
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [token, setToken] = useState("");
@@ -420,10 +423,7 @@ export function AccountMcpClients() {
               </DropdownMenuItem>
               <DropdownMenuItem
                 variant="destructive"
-                onSelect={async () => {
-                  if (await mutate(`${endpoint}/${connection.id}`, "DELETE"))
-                    toast.success(t("removed"));
-                }}
+                onSelect={() => setToRemove(connection)}
               >
                 <HugeiconsIcon icon={Delete02Icon} />
                 {t("remove")}
@@ -432,6 +432,19 @@ export function AccountMcpClients() {
           </DropdownMenu>
         </div>
       ))}
+      <ConfirmDeleteDialog
+        open={!!toRemove}
+        onOpenChange={(open) => !open && setToRemove(null)}
+        title={t("removeConfirmTitle", { name: toRemove?.name ?? "" })}
+        description={t("removeConfirmDescription")}
+        confirmLabel={t("remove")}
+        cancelLabel={t("cancel")}
+        onConfirm={async () => {
+          if (!toRemove) return;
+          if (await mutate(`${endpoint}/${toRemove.id}`, "DELETE"))
+            toast.success(t("removed"));
+        }}
+      />
       <div className="space-y-3">
         <FieldLabel htmlFor={`${id}-search`}>{t("browse")}</FieldLabel>
         <Input

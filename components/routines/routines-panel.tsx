@@ -273,11 +273,11 @@ export function RoutinesPanel({
   /**
  * What the screen says when there is NO routine — the same phrase on both
  * sides, the column and the pane. A wall that prevents putting one (no
- * project, no linked repository, no owner) instead says: "create
+ * scheduler, no project, no owner) instead says: "create
  * your first routine" to someone who can't would be a dead end.
  */
   const emptyTitle = emptyReason
-    ? t(emptyReason as "emptyNoRepo")
+    ? t(emptyReason as "emptyNoProject")
     : t("emptyTitle");
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: routinesQueryKey() });
@@ -294,7 +294,7 @@ export function RoutinesPanel({
   useEffect(() => {
     if (!createIntent || agentCapabilitiesLoading || projectsLoading) return;
     if (anyEligible) openWizard();
-    else if (emptyReason) toast.error(t(emptyReason as "emptyNoRepo"));
+    else if (emptyReason) toast.error(t(emptyReason as "emptyNoProject"));
     onCreateIntentConsumed?.();
   }, [createIntent, agentCapabilitiesLoading, projectsLoading, anyEligible]); // eslint-disable-line react-hooks/exhaustive-deps
 

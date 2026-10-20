@@ -4,7 +4,6 @@ import { useTranslations } from "next-intl";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { AppIcon } from "@/components/icon";
 import {
-  BotIcon,
   FolderKanbanIcon,
   TicketIcon,
   UserGroupIcon,
@@ -67,11 +66,6 @@ export function BillingLimits() {
         limits.maxIssuesPerProject == null
           ? t("unlimited")
           : String(limits.maxIssuesPerProject),
-    },
-    {
-      icon: BotIcon,
-      label: t("limitAgents"),
-      value: limits.allowAgents ? t("included") : t("notIncluded"),
     },
     {
       icon: UserGroupIcon,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { ChecksSummary, PullRequestReviewComment } from "./agent-api";
-import { buildPullRequestFixPrompt } from "./pr-fix-prompt";
+import { buildPullRequestFixPrompt, buildPullRequestNumoFixPrompt } from "./pr-fix-prompt";
 
 function checksOf(
   entries: { name: string; state: string; description?: string | null }[],
@@ -123,5 +123,51 @@ describe("buildPullRequestFixPrompt", () => {
     );
     expect(prompt).not.toContain("review conversations");
     expect(prompt).not.toContain("head branch is behind");
+  });
+});
+
+describe("buildPullRequestNumoFixPrompt", () => {
+  const thread = {
+    id: 1,
+    root: {
+      id: 11,
+      in_reply_to_id: null,
+      created_at: "2026-09-01T00:00:00Z",
+      path: "src/app.tsx",
+      line: 12,
+      original_line: 12,
+      body: "Fix the loop",
+      user: { login: "ada", avatar_url: null },
+    } as PullRequestReviewComment,
+    comments: [],
+  };
+
+  it("asks Numo only for what it can do, never for a code change or a push", () => {
+    const prompt = buildPullRequestNumoFixPrompt(
+      { number: 42, title: "Add the fix card", url: null, base: "main", head: "fix-card" },
+      checksOf([{ name: "build", state: "failure", description: "tsc failed" }]),
+      { unresolvedThreads: [thread], branchOutOfDate: true },
+    );
+    expect(prompt).toContain("Pull request: #42 — Add the fix card");
+    expect(prompt).toContain("- build — tsc failed");
+    expect(prompt).toContain("Conversation 1 on src/app.tsx:12");
+    expect(prompt).toContain("The head branch is behind its base branch.");
+    expect(prompt).toContain("Reply to the conversations that need no code change");
+    expect(prompt).toContain("resolve the ones the current branch already addresses");
+    expect(prompt).toContain("\"Copy fix prompt\"");
+    expect(prompt).toContain("you cannot write code or push commits");
+    expect(prompt).not.toContain("push the fix");
+    expect(prompt).not.toContain("rebase or merge the base");
+  });
+
+  it("keeps the coding-agent prompt asking for the fix", () => {
+    const prompt = buildPullRequestFixPrompt(
+      { number: 42, title: "Add the fix card", url: null, base: "main", head: "fix-card" },
+      null,
+      { unresolvedThreads: [thread], branchOutOfDate: false },
+    );
+    expect(prompt).toContain("correct the code, and push the fix");
+    expect(prompt).toContain("address the reviewer's remarks");
+    expect(prompt).not.toContain("Copy fix prompt");
   });
 });

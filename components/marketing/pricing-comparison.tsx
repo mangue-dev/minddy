@@ -92,14 +92,11 @@ const GROUPS: ReadonlyArray<Group> = [
   {
     key: "agents",
     rows: [
-      // The MCP server has no plan guard (app/api/mcp), and every current plan
-      // includes the Numo agent.
+      // The MCP server has no plan guard (app/api/mcp).
       { key: "mcp", hint: true, value: EVERYWHERE },
       { key: "plan", hint: true, value: EVERYWHERE },
-      { key: "agent", hint: true, value: (plan) => plan.allowAgents },
-      // Pull requests follow the same plan guard as agents.
+      // Pull requests and provider keys follow the plans' `allowAgents` guard.
       { key: "pr", hint: true, value: (plan) => plan.allowAgents },
-      // Provider keys cover compatible AI calls; cloud execution remains metered.
       { key: "byok", hint: true, value: (plan) => plan.allowAgents },
     ],
   },

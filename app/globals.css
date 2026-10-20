@@ -1453,78 +1453,6 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
   animation-name: hero-fade-up-media;
 }
 
-/* ─── Figure of the agent loop (hero) ───────────────────────────────────
-   `components/marketing/agent-loop-figure.tsx`: the ticket arrives, the agent
-   writes your plan, the boxes are checked, the pull request is attached. Four
-   consecutive beats, played at LOADING — the figure is above the
-   waterline, an observer would only add hydration latency.
-
-   EVERYTHING IS IN `backwards`, never in `forwards`, and this is not a detail of
-   style: the arrival state of each animation IS the base state of the element
-   (box checked, line drawn, rail deployed). The filling therefore has only one
-   work — hold START state during timeout — and animation
-   drops the element at the end instead of freezing a composite layer of it (see the
-   comment from `reveal-in` below, same trap). Useful corollary: without JS,
-   without CSS or reduced movement, the figure appears already completed. */
-@keyframes loop-step-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-}
-.loop-step {
-  animation: loop-step-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
-  animation-delay: calc(var(--loop-i, 0) * 0.3s + 0.4s);
-}
-
-/* The line of the rail extends downwards: it announces the next time just
-   before he arrives, which makes the figure read as a sequence and not as
-   four stacked blocks. */
-@keyframes loop-rail-in {
-  from {
-    transform: scaleY(0);
-  }
-}
-.loop-rail {
-  transform-origin: top;
-  animation: loop-rail-in 0.35s ease-out backwards;
-  animation-delay: calc(var(--loop-i, 0) * 0.3s + 0.75s);
-}
-
-/* The checked box: it leaves empty (gray border, transparent background, check mark
-   invisible) and fills. None `to` — the implicit 100% takes the style of
-   base, that is to say the box checked in `primary` of the real `TaskRow`. */
-@keyframes loop-check-in {
-  from {
-    background-color: transparent;
-    border-color: var(--border);
-    color: transparent;
-  }
-}
-.loop-check {
-  animation: loop-check-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards;
-  animation-delay: calc(var(--loop-i, 0) * 0.22s + 1.35s);
-}
-
-/* The bar on a task done. `text-decoration` does not animate: it is therefore
-   a drawn line, drawn from left to right just after the box is checked. */
-@keyframes loop-strike-in {
-  from {
-    transform: scaleX(0);
-  }
-}
-.loop-strike::after {
-  content: "";
-  position: absolute;
-  inset-inline: 0;
-  top: 0.8em;
-  height: 1px;
-  background-color: currentColor;
-  transform-origin: left;
-  animation: loop-strike-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards;
-  animation-delay: calc(var(--loop-i, 0) * 0.22s + 1.45s);
-}
-
 /* ─── Blocs qui apparaissent au scroll (<Reveal>, <RevealGroup>) ─────────
    Without JS and in server rendering, nothing is hidden: `.reveal-ready` is not set
    only during editing, so the landing remains entirely readable if the script does not
@@ -1692,10 +1620,6 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
 @media (prefers-reduced-motion: reduce) {
   .hero-word,
   .hero-reveal,
-  .loop-step,
-  .loop-rail,
-  .loop-check,
-  .loop-strike::after,
   .reveal.reveal-ready,
   .reveal.reveal-ready[data-revealed="true"],
   .reveal-group.reveal-ready > *,

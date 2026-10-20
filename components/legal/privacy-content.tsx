@@ -41,7 +41,6 @@ export async function PrivacyContent({ locale }: { locale: Locale }) {
     { term: t("retentionAccount"), desc: t("retentionAccountDesc") },
     { term: t("retentionContent"), desc: t("retentionContentDesc") },
     { term: t("retentionNotifications"), desc: t("retentionNotificationsDesc") },
-    { term: t("retentionAgent"), desc: t("retentionAgentDesc") },
     { term: t("retentionFeedback"), desc: t("retentionFeedbackDesc") },
     { term: t("retentionAnalytics"), desc: t("retentionAnalyticsDesc") },
     { term: t("retentionBilling"), desc: t("retentionBillingDesc") },
@@ -110,8 +109,10 @@ export async function PrivacyContent({ locale }: { locale: Locale }) {
         <P>{t("processorP3")}</P>
       </Section>
 
-      <Section title={t("agentTitle")}>
-        <P>{t("agentText")}</P>
+      {/* MIN-747: Numo no longer runs code; disclose what the Git provider
+          connection still processes (pull requests, skill files). */}
+      <Section title={t("pullRequestsTitle")}>
+        <P>{t("pullRequestsText")}</P>
       </Section>
 
       {/* MIN-119: OpenRouter routes requests to the selected model's provider,

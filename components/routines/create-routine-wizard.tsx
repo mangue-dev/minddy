@@ -496,8 +496,6 @@ export function CreateRoutineWizard({
 const ROUTINE_ERROR_KEYS = new Set([
   "invalidTrigger",
   "ownerOnly",
-  "noRepo",
-  "workerConfigurationManagedInSettings",
   "unknownTimezone",
   "invalidSchedule",
   "titleRequired",

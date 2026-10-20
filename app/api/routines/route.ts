@@ -30,7 +30,6 @@ export const ROUTINE_ERROR_STATUS: Record<RoutineErrorKey, number> = {
   ownerOnly: 403,
   routineNotFound: 404,
   promptRequired: 400,
-  noRepo: 409,
   invalidSchedule: 400,
   invalidTrigger: 400,
   unknownTimezone: 400,

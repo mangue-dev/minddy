@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SelfHostingInstallWizard } from "@/components/marketing/self-hosting-install-wizard";
 import en from "@/messages/en.json";
+import { selfHostingRelease } from "@/lib/self-hosting-release";
 import { DocumentationHelpContext } from "@/components/documentation/documentation-help-context";
 
 vi.mock("@hugeicons/react", () => ({ HugeiconsIcon: () => null }));
@@ -134,14 +135,14 @@ describe("published self-hosting installation capabilities", () => {
         expect(host.textContent).toContain(copy.fullPreparedDone);
       }
     });
-    it(`${path} assistant prompt distinguishes published installation from candidate encryption tooling`, () => {
+    it(`${path} assistant prompt names the exact release and its encryption choice`, () => {
       choose(path === "full" ? "team" : path, "agent", path === "full");
       reach(copy.agentTitle);
       const prompt = copiedText();
-      expect(prompt).not.toMatch(/--encryption (enabled|disabled)/);
       expect(prompt).not.toContain("MINDDY_CONTENT_ENCRYPTION_ENABLED=");
-      expect(prompt).toContain("Exact release: v0.11.0");
-      expect(prompt).toContain("0.11.1 candidate");
+      expect(prompt).toContain(`Exact release: ${selfHostingRelease.tag}`);
+      expect(prompt).not.toContain("candidate");
+      expect(prompt).toContain("--encryption disabled");
       expect(prompt).toContain("MINDDY_DATA_ROOT_KEY");
       expect(prompt).toContain("https://example.test/docs/workspace-encryption");
       if (path === "full") {

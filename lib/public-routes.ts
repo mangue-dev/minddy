@@ -74,7 +74,7 @@ export const PUBLIC_ROUTES = [
     localized: { de: "/de", "pt-BR": "/pt-br", it: "/it", es: "/es" },
     namespace: "Landing",
     titleIsAbsolute: true,
-    lastModified: "2026-09-05",
+    lastModified: "2026-10-20",
     priority: 1,
   },
   {
@@ -88,7 +88,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/precios",
     },
     namespace: "Pricing",
-    lastModified: "2026-09-05",
+    lastModified: "2026-10-20",
     priority: 0.8,
   },
   {
@@ -134,7 +134,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/autoalojamiento/instalar",
     },
     namespace: "SelfHostingInstall",
-    lastModified: "2026-09-05",
+    lastModified: "2026-10-20",
     priority: 0.5,
   },
   // Platform hub for the native desktop apps and installable mobile PWA.
@@ -198,7 +198,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/alternativas/linear",
     },
     namespace: "AlternativeLinear",
-    lastModified: "2026-09-05",
+    lastModified: "2026-10-20",
     priority: 0.7,
   },
   {
@@ -212,7 +212,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/alternativas/jira",
     },
     namespace: "AlternativeJira",
-    lastModified: "2026-09-05",
+    lastModified: "2026-10-20",
     priority: 0.7,
   },
   {
@@ -226,7 +226,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/alternativas/notion",
     },
     namespace: "AlternativeNotion",
-    lastModified: "2026-09-05",
+    lastModified: "2026-10-20",
     priority: 0.7,
   },
   {
@@ -254,7 +254,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/terminos",
     },
     namespace: "Terms",
-    lastModified: "2026-08-05",
+    lastModified: "2026-10-20",
     priority: 0.3,
   },
   {
@@ -268,7 +268,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/privacidad",
     },
     namespace: "Privacy",
-    lastModified: "2026-10-05",
+    lastModified: "2026-10-20",
     priority: 0.3,
   },
   {
