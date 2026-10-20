@@ -6393,6 +6393,8 @@
     "enable": "Aktivieren",
     "remove": "Entfernen",
     "removed": "Verbindung entfernt",
+    "removeConfirmTitle": "{name} entfernen?",
+    "removeConfirmDescription": "Numo kann die Werkzeuge dieses Dienstes nicht mehr nutzen. Sie können ihn später wieder verbinden.",
     "testSuccess": "Verbunden. {count} Tools auf der ersten Seite gefunden.",
     "errorLoad": "Verbindungen konnten nicht geladen werden. Versuche es erneut.",
     "errorEndpoint": "Verwende eine öffentliche HTTPS-Adresse. Zugangsdaten gehören in die Authentifizierung oder Header, nicht in die URL.",

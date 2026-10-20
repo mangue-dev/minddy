@@ -6393,6 +6393,8 @@
     "enable": "Ativar",
     "remove": "Remover",
     "removed": "Conexão removida",
+    "removeConfirmTitle": "Remover {name}?",
+    "removeConfirmDescription": "O Numo não poderá mais usar as ferramentas deste serviço. Você pode conectá-lo de novo depois.",
     "testSuccess": "Conectado. {count} ferramentas encontradas na primeira página.",
     "errorLoad": "Não foi possível carregar as conexões. Tente novamente.",
     "errorEndpoint": "Use um endereço HTTPS público. Insira credenciais na autenticação ou nos cabeçalhos, não na URL.",
