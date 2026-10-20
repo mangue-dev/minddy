@@ -48,7 +48,7 @@ beforeEach(() => {
     links: { guide: "https://example.test/install", download: "https://example.test/download", release: "https://example.test/release", operations: "https://example.test/operations", encryption: "https://example.test/docs/workspace-encryption", localInstallation: "https://example.test/docs/install-locally", serverInstallation: "https://example.test/docs/install-a-server", mcpAccess: "https://example.test/docs/minddy-mcp#network-access" },
     guidePath: "/self-hosting",
     emailTemplates: { confirmSignup: { subject: "Confirm", body: "Confirm" }, resetPassword: { subject: "Reset", body: "Reset" } },
-    repositoryUrl: "https://github.com/mangue-dev/minddy", releaseTag: "v0.11.0", pnpmVersion: "10.28.0",
+    repositoryUrl: "https://github.com/mangue-dev/minddy", releaseTag: selfHostingRelease.tag, pnpmVersion: "10.28.0",
   }))));
 });
 
@@ -91,7 +91,7 @@ function choose(path: "local" | "team", method: "agent" | "manual", full = false
   reach(copy.routeTitle);
   clickCard(path === "local" ? copy.localTitle : copy.teamTitle);
   reach(copy.encryptionReleaseTitle);
-  expect(host.textContent).toContain("v0.11.0");
+  expect(host.textContent).toContain(selfHostingRelease.tag);
   expect(host.textContent).toContain(copy.encryptionReleaseKeyNote);
   expect(host.querySelector(`a[href="https://example.test/docs/workspace-encryption"]`)).toBeTruthy();
   expect(host.textContent).not.toContain(copy.encryptionEnabled);
@@ -128,7 +128,7 @@ describe("published self-hosting installation capabilities", () => {
       expect(command).not.toContain("--encryption");
       expect(command).not.toContain("MINDDY_CONTENT_ENCRYPTION_ENABLED=");
       expect(command).toContain(path === "local" ? "bootstrap:supabase" : "self-host:install");
-      if (path === "local") expect(command).toContain("git clone --branch v0.11.0");
+      if (path === "local") expect(command).toContain(`git clone --branch ${selfHostingRelease.tag}`);
       if (path === "full") {
         expect(command).toContain("--mode full --skip-start");
         expect(host.querySelector(`a[href="https://example.test/docs/install-a-server#install"]`)).toBeTruthy();
