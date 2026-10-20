@@ -36,4 +36,17 @@ describe("personal application tab content", () => {
     await expect(encodeAppTabValue(user, id, "href", "https://evil.example"))
       .rejects.toThrow();
   });
+
+  it("restores a destination saved before its screen moved", async () => {
+    const user = randomUUID();
+    const id = randomUUID();
+    const binding = { scope: { kind: "user" as const, id: user },
+      table: "app_tabs", column: "href", rowId: id };
+    // Sealed while /statistics was still a screen of its own.
+    const sealed = `mdye3:${await store.encrypt("/statistics", binding)}`;
+    const sealedOutside = `mdye3:${await store.encrypt("https://evil.example", binding)}`;
+    expect(await decodeAppTabValue(user, id, "href", sealed)).toBe("/settings");
+    expect(await decodeAppTabValue(user, id, "href", "/statistics")).toBe("/settings");
+    await expect(decodeAppTabValue(user, id, "href", sealedOutside)).rejects.toThrow();
+  });
 });
