@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 import { assertProductionRelease } from "./release-policy.mjs";
 import { selectReleaseScopes } from "./release-scope.mjs";
@@ -73,4 +76,65 @@ test("the release entry point promotes main before tagging production", () => {
   assert.match(releaseWorkflow, /git fetch origin production --tags/);
   assert.match(releaseScope, /rev-parse", "--verify", "origin\/production"/);
   assert.match(releaseScope, /changedFiles\(`\$\{productionRef\}\.\.HEAD`\)/);
+});
+
+test("production migrations run after approval and before the fast-forward, plan first", () => {
+  const workflow = readFileSync(
+    new URL("../.github/workflows/promote-production.yml", import.meta.url),
+    "utf8",
+  );
+  const approval = workflow.indexOf("environment: cloud-production");
+  const step = workflow.indexOf("- name: Apply production database migrations");
+  const fastForward = workflow.indexOf("- name: Fast-forward production");
+  assert.ok(approval !== -1 && approval < step, "migrations wait for the cloud-production approval");
+  assert.ok(step < fastForward, "the schema reaches production before Vercel builds the promoted SHA");
+
+  const block = workflow.slice(step, fastForward).match(/        run: \|\n([\s\S]*?)\n\n/)?.[1];
+  assert.ok(block, "the migration step has a run block");
+  const script = block.replace(/^          /gm, "");
+  const directory = mkdtempSync(join(tmpdir(), "minddy-production-migrations-"));
+  const bin = join(directory, "bin");
+  const migrations = join(directory, "supabase", "migrations");
+  mkdirSync(bin);
+  mkdirSync(migrations, { recursive: true });
+  // A stand-in for `npx supabase@…` that records each call in order.
+  writeFileSync(join(bin, "npx"), '#!/bin/sh\necho "$*" >> "$CALLS"\necho "Would push these migrations"\n');
+  chmodSync(join(bin, "npx"), 0o755);
+  const run = (env) => spawnSync("bash", ["-e", "-o", "pipefail", "-c", script], {
+    cwd: directory,
+    encoding: "utf8",
+    env: {
+      PATH: `${bin}:${process.env.PATH}`,
+      CALLS: join(directory, "calls.txt"),
+      GITHUB_STEP_SUMMARY: join(directory, "summary.md"),
+      SUPABASE_CLI_VERSION: "2.115.0",
+      PRODUCTION_DATABASE_URL: "postgresql://fixture@pooler.example.test:5432/postgres",
+      ...env,
+    },
+  });
+  const calls = () => readFileSync(join(directory, "calls.txt"), "utf8").trim().split("\n");
+  try {
+    // Built from a variable: lib/sql-migration-references.test.ts rejects
+    // literal migration names that are absent from supabase/migrations.
+    const version = "20270101000000";
+    writeFileSync(join(migrations, `${version}_first.sql`), "select 1;");
+    assert.notEqual(run({ PRODUCTION_DATABASE_URL: "" }).status, 0, "a missing secret stops the step");
+
+    const applied = run({});
+    assert.equal(applied.status, 0, applied.stderr);
+    assert.deepEqual(calls(), [
+      "--yes supabase@2.115.0 db push --db-url postgresql://fixture@pooler.example.test:5432/postgres --dry-run",
+      "--yes supabase@2.115.0 db push --db-url postgresql://fixture@pooler.example.test:5432/postgres --yes",
+    ]);
+    assert.match(readFileSync(join(directory, "summary.md"), "utf8"), /Production database migrations[\s\S]*Would push/);
+
+    rmSync(join(directory, "calls.txt"));
+    writeFileSync(join(migrations, `${version}_second.sql`), "select 2;");
+    const duplicated = run({});
+    assert.notEqual(duplicated.status, 0);
+    assert.match(duplicated.stdout, /Duplicate migration versions: 20270101000000/);
+    assert.throws(() => calls(), "a duplicated version stops before touching the database");
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });

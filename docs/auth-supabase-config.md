@@ -112,18 +112,34 @@ the loopback-only patterns `http://localhost:*/auth/callback` and
 an explicit fallback port, and application development without allowing a
 remote HTTP callback.
 
-**Consequence to be aware of**: a Vercel preview is not there, therefore a link requested
-from a preview to production (GoTrue falls back on `site_url`).
-This was already true for the registration confirmation; it is also for
-reset.
+**Consequence to be aware of**: a pull request preview is not there, therefore
+a link requested from a pull request preview falls back to `site_url`
+(GoTrue). This was already true for the registration confirmation; it is also
+for reset.
 
-Desktop OAuth on the hosted `https://preview.minddy.app` channel uses the
-production `/auth/callback` as a relay. Its `desktop=1` and `turn` parameters
-preserve the return to `minddy://auth`; the callback neither reads the system
-browser's session nor exchanges the code. The preview desktop exchanges it
-using its own PKCE verifier. Local and self-hosted desktop instances keep their
-own callback origins. Browser OAuth keeps its original origin because its
-PKCE verifier belongs to that browser origin.
+## The preview branch
+
+`preview.minddy.app` has its own Auth: the persistent `preview` branch of this
+project ([database environments](database-environments.md)). It inherited the
+settings recorded here when it was created and is checked with the same
+management API call, using the branch ref `dehkvxlygczjbnbubffn` instead of
+`cmzrlbnlytvgnomzgmqf`.
+Only its URLs differ:
+
+| Setting | Preview value |
+| --- | --- |
+| `site_url` | `https://preview.minddy.app` |
+| `uri_allow_list` | `https://preview.minddy.app/auth/callback?**` |
+
+The `?**` suffix keeps the desktop's `desktop=1` and `turn` parameters, so
+desktop OAuth on the preview channel returns to the preview callback, which
+relays the code to `minddy://auth` without reading the system browser's
+session. Local and self-hosted desktop instances also use their own callback
+origins. Google and GitHub sign-in on preview also need the branch's
+`https://dehkvxlygczjbnbubffn.supabase.co/auth/v1/callback` in each provider app.
+
+A setting changed on production is not copied to the branch: apply a policy
+change to both, and record it here.
 
 ## Points looked at and left as is
 

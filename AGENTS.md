@@ -293,6 +293,24 @@ must be reported separately from the default suite's skipped cases.
 and commands. CI runs two complete Vitest shards alongside validation and keeps
 the required `Tests & typecheck` gate dependent on both.
 
+## Database environments and migrations
+
+Preview (`main`, `preview.minddy.app`) and production (`production`,
+`www.minddy.app`) use two distinct databases; see
+[database environments](docs/database-environments.md).
+
+- Develop and verify against the preview database. The local `.env`, the
+  capture scripts and the test accounts point there, and pull request evidence
+  comes from it.
+- Apply a new migration to preview only: check that
+  `supabase/.temp/project-ref` is not the production ref, run
+  `supabase db push --dry-run`, confirm that only the new file is listed, then
+  `supabase db push`. State it in the pull request description.
+- Never apply a migration, a reset or another write to the production database
+  by hand. `Promote production` applies pending migrations at release time.
+- Keep each migration compatible with the previous release: add before use,
+  remove only once no deployed code reads the old shape.
+
 ## Encryption boundaries and operational gates
 
 Scoped managed keys, row/object codecs, and bounded backfill workers live in

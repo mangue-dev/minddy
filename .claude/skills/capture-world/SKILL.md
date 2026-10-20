@@ -1,19 +1,28 @@
 ---
 name: capture-world
-description: Crée et maintient le compte de démo de minddy et ses données, dans la base de production, sous garde-fous stricts. Utiliser quand une capture a besoin de données qui n'existent pas encore (un board rempli, plusieurs membres, des tickets de priorités variées), ou quand il faut inspecter/nettoyer le monde de démo. Ne pas utiliser pour prendre une capture — c'est capture-shot.
+description: Creates and maintains Minddy's demo account and its data on the preview database, under strict guardrails. Use when a capture needs data that does not exist yet (a filled board, several members, issues of varied priorities), when the demo world must be inspected or cleaned, or when the test accounts must be recreated on preview. Do not use it to take a capture — that is capture-shot.
 ---
 
 # capture-world
 
-Le monde de démo est un compte réel de minddy, sur la base de **production**,
-dont les données sont créées délibérément pour être photographiées. Ce skill
-le crée, le fait grandir, et tient son registre.
+The demo world is a real Minddy account on the **preview** database, whose
+data is created deliberately to be photographed. This skill creates it, grows
+it and keeps its register.
 
-## La base est celle de production. Lis ça avant tout.
+## The database is the shared preview one. Read this first.
 
-Il n'y a pas de Supabase locale sur ce projet. Chaque insertion touche la vraie
-base, à côté de vrais utilisateurs. Les règles ci-dessous ne sont pas des
-conseils.
+The scripts write to the database named by `MINDDY_PUBLIC_SUPABASE_URL` in the
+local `.env`: the preview database that `preview.minddy.app` serves
+([database environments](../../../docs/database-environments.md)). It is
+shared with other test accounts, so the rules below are not suggestions.
+Never point `.env` to production to seed it; the production copy of the world
+is no longer extended.
+
+To recreate the test accounts on a fresh or reset preview database, replay the
+seeds in order (`captures/world/seed/001-comptes.mjs` first, each with the
+user's approval for its `--apply`), then create the capture admin with
+`node captures/world/admin-account.mjs --apply`. That script is preview-only and
+writes its credentials to `.env` without printing them.
 
 **L'invariant, et il tient en une phrase :** aucune écriture ne peut atteindre
 une ligne qui n'appartient pas au monde de démo.

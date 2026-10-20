@@ -16,6 +16,23 @@ export const DEMO_EMAIL = "captures-demo@minddy.app";
 export const DEMO_EMAIL_PATTERN = /^captures-demo(\+[a-z0-9-]+)?@minddy\.app$/;
 
 /**
+ * The capture administrator: a dedicated account for the instance
+ * administration figures, never a real administrator. Its address, password
+ * and TOTP secret live in the local `.env` only (`CAPTURES_ADMIN_*`), and the
+ * pattern below is what `captures/world/admin-account.mjs` accepts.
+ */
+export const ADMIN_EMAIL_DEFAULT = "captures-admin@minddy.app";
+export const ADMIN_EMAIL_PATTERN = /^captures-admin(\+[a-z0-9-]+)?@minddy\.app$/;
+
+/**
+ * Minddy Cloud's production database and origins. The capture admin is a
+ * preview-only account: its script refuses this Supabase project and its
+ * session refuses these origins.
+ */
+export const PRODUCTION_SUPABASE_REFS = ["cmzrlbnlytvgnomzgmqf"];
+export const PRODUCTION_ORIGINS = ["https://www.minddy.app", "https://minddy.app"];
+
+/**
  * How each table relates to the demo world.
  *
  * A line is only “ours” if ALL anchors declared here are

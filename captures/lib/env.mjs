@@ -3,7 +3,7 @@
  * Capture scripts run outside of the Next runtime, which loads .env everything
  * alone — here you have to do it by hand.
  */
-import { readFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -46,6 +46,30 @@ export function requireEnv(name) {
   const value = process.env[name];
   if (!value) throw new Error(`captures: variable d'environnement manquante — ${name}`);
   return value;
+}
+
+/**
+ * Records generated credentials in `.env` without ever printing them. Only
+ * keys absent from the file are appended; an existing value is never
+ * replaced, so a rerun cannot overwrite a working credential.
+ */
+export function appendEnvValues(entries) {
+  loadEnv();
+  const path = resolve(ROOT, ".env");
+  const raw = readFileSync(path, "utf8");
+  const present = new Set(
+    raw.split("\n").map((line) => line.trim().split("=")[0]).filter(Boolean),
+  );
+  const lines = Object.entries(entries)
+    .filter(([key]) => !present.has(key))
+    .map(([key, value]) => {
+      if (/[\r\n]/.test(value)) throw new Error(`captures: ${key} cannot span several lines.`);
+      process.env[key] = value;
+      return `${key}=${value}`;
+    });
+  if (lines.length === 0) return [];
+  appendFileSync(path, `${raw.endsWith("\n") || raw === "" ? "" : "\n"}${lines.join("\n")}\n`);
+  return lines.map((line) => line.slice(0, line.indexOf("=")));
 }
 
 export { ROOT };

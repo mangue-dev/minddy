@@ -172,6 +172,30 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: node scripts/changelog-publish.mjs --check "$TARGET_SHA"
 
+      # Production receives migrations here and nowhere else: after approval,
+      # before Vercel builds the promoted SHA, so the deployment preflight finds
+      # the schema the candidate needs. The code still serving production runs
+      # against the new schema until the deployment completes, so migrations
+      # must stay backward compatible (see docs/database-environments.md).
+      - name: Apply production database migrations
+        env:
+          PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          SUPABASE_CLI_VERSION: "2.115.0"
+        run: |
+          test -n "$PRODUCTION_DATABASE_URL" || { echo "PRODUCTION_DATABASE_URL is not configured in cloud-production"; exit 1; }
+          duplicates=$(find supabase/migrations -maxdepth 1 -name '*.sql' -exec basename {} \; | sed 's/_.*//' | sort | uniq -d)
+          test -z "$duplicates" || { echo "Duplicate migration versions: $duplicates"; exit 1; }
+          supabase() { npx --yes "supabase@$SUPABASE_CLI_VERSION" "$@"; }
+          supabase db push --db-url "$PRODUCTION_DATABASE_URL" --dry-run > migration-plan.txt 2>&1 || { cat migration-plan.txt; exit 1; }
+          cat migration-plan.txt
+          {
+            echo "### Production database migrations"
+            echo '```'
+            cat migration-plan.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          supabase db push --db-url "$PRODUCTION_DATABASE_URL" --yes
+
       - name: Fast-forward production
         env:
           TARGET_SHA: ${{ inputs.sha }}

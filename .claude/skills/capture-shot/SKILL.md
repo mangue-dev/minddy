@@ -54,10 +54,16 @@ est bonne. Sans lui, tu n'as aucun critère.
 
 ### 2. Vérifier que les données existent
 
-Vérifier dans l'environnement de démonstration que les données nécessaires
-existent. Si elles sont absentes, tu ne les crées pas ici : tu passes la main à
-`capture-world`, qui demandera l'accord de l'utilisateur avant d'écrire quoi
-que ce soit dans la base de production.
+Check in the demonstration environment, the preview database, that the
+required data exists. If it is missing, do not create it here: hand over to
+`capture-world`, which asks the user before writing anything to the preview
+database. Capture against `https://preview.minddy.app` or a local server whose
+`.env` points to the preview database; `www.minddy.app` serves the production
+database, where the demo world is no longer maintained.
+
+Instance administration screens use the preview-only capture admin:
+`node captures/lib/admin-session.mjs` saves its session and
+`openPage({ session: "admin" })` opens it. Its credentials stay in `.env`.
 
 Même chose si l'image révèle que les données existantes rendent mal — une
 colonne trop vide, un titre qui déborde, trois tickets urgents d'un coup.

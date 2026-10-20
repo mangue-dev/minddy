@@ -67,3 +67,30 @@ test("does not include upstream response text or transport secrets in failures",
     });
   }
 });
+
+test("keeps preview and production builds on their own databases", async () => {
+  const declared = { ...env, MINDDY_PRODUCTION_SUPABASE_URL: "https://database.example.test/" };
+  let fetched = 0;
+  const fetcher = async () => {
+    fetched += 1;
+    return Response.json(schema());
+  };
+
+  await assert.rejects(checkDeploymentDatabase({ ...declared, VERCEL_ENV: "preview" }, fetcher),
+    /preview build targets the production database/);
+  await assert.rejects(checkDeploymentDatabase({
+    ...declared,
+    VERCEL_ENV: "production",
+    MINDDY_PUBLIC_SUPABASE_URL: "https://preview-database.example.test",
+  }, fetcher), /production build does not target the declared production database/);
+  assert.equal(fetched, 0, "a misrouted build stops before reading any schema");
+
+  await checkDeploymentDatabase({ ...declared, VERCEL_ENV: "production" }, fetcher);
+  await checkDeploymentDatabase({
+    ...declared,
+    VERCEL_ENV: "preview",
+    MINDDY_PUBLIC_SUPABASE_URL: "https://preview-database.example.test",
+  }, fetcher);
+  await checkDeploymentDatabase({ ...env, VERCEL_ENV: "preview" }, fetcher);
+  assert.equal(fetched, 3);
+});
