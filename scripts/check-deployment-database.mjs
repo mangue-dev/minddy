@@ -11,6 +11,40 @@ const REQUIRED_TABLES = {
 };
 
 /**
+ * Keeps each Vercel environment on its own database. When
+ * `MINDDY_PRODUCTION_SUPABASE_URL` declares the production project, a
+ * production build must target it and any other build must not: a preview
+ * that reached the production database would let untested code and its
+ * migrations act on production data.
+ * @param {Record<string, string | undefined>} env
+ * @param {URL} target
+ */
+function assertDatabaseEnvironment(env, target) {
+  const declared = env.MINDDY_PRODUCTION_SUPABASE_URL?.trim();
+  const vercelEnv = env.VERCEL_ENV?.trim();
+  if (!declared || !vercelEnv) return;
+  let production;
+  try {
+    production = new URL(declared);
+  } catch {
+    throw new Error("Database preflight requires MINDDY_PRODUCTION_SUPABASE_URL to be an HTTP(S) URL.");
+  }
+  const sameDatabase = production.origin === target.origin;
+  if (vercelEnv === "production" && !sameDatabase) {
+    throw new Error(
+      "Database preflight failed: this production build does not target the declared production database. " +
+      "See docs/database-environments.md.",
+    );
+  }
+  if (vercelEnv !== "production" && sameDatabase) {
+    throw new Error(
+      `Database preflight failed: this ${vercelEnv} build targets the production database. ` +
+      "Point it to the preview database; see docs/database-environments.md.",
+    );
+  }
+}
+
+/**
  * Check the target schema before Vercel can replace a working deployment.
  * @param {Record<string, string | undefined>} env
  */
@@ -26,6 +60,7 @@ export async function checkDeploymentDatabase(env = process.env, fetcher = fetch
   if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) {
     throw new Error("Database preflight requires an HTTP(S) URL without credentials.");
   }
+  assertDatabaseEnvironment(env, url);
   url.pathname = `${url.pathname.replace(/\/$/, "")}/rest/v1/`;
   url.search = "";
   url.hash = "";
@@ -65,8 +100,8 @@ export async function checkDeploymentDatabase(env = process.env, fetcher = fetch
     throw new Error(
       `Database preflight failed: missing required schema entries: ${missing.join(", ")}. ` +
       "Review and apply the candidate's database migrations before retrying this deployment. " +
-      "If preview shares a production database, coordinate the database upgrade with production first. " +
-      "See docs/preview-database-compatibility.md.",
+      "Preview receives migrations during development; production only from the Promote production workflow. " +
+      "See docs/database-environments.md.",
     );
   }
 }

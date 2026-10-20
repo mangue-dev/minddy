@@ -151,11 +151,12 @@ Short-lived work branches can have disposable preview deployments, but neither
 desktop cloud channel follows them. The preview channel follows `main`; the
 stable channel follows only the automation-managed `production` pointer.
 
-**Both serve the same Supabase project**: same accounts, same projects,
-same tickets. Switching doesn't duplicate anything. The only thing that doesn't follow is the
-session — cookies are by origin, so the first pass on the preview
-asks to reconnect once; return to stable finds the session
-production, remained intact.
+**Each channel has its own database** (MIN-740): stable serves production,
+preview serves the Supabase `preview` branch where `main` is tested. Accounts,
+projects and tickets therefore differ between channels, and a session belongs
+to one channel: the first switch to preview asks to sign in with a preview
+account, and returning to stable finds the production session intact. See
+[database environments](../docs/database-environments.md).
 
 The native application menu is the reference surface for channel, server,
 update, and diagnostic controls. Unlike a settings screen served by the selected
@@ -170,9 +171,10 @@ before having used a single page. `MINDDY_DESKTOP_ORIGIN` wins on him — on
 
 Decisions in [lib/desktop/channel.ts](../lib/desktop/channel.ts), tested.
 
-**A prerequisite on the Supabase side**, the same as in the following paragraph: the allowlist
-“Redirect URLs” must also accept `https://preview.minddy.app/auth/callback?**`,
-otherwise Google, GitHub and magic links fail on this channel.
+**A prerequisite on the Supabase side**, the same as in the following paragraph: the
+“Redirect URLs” allowlist of the preview branch must accept
+`https://preview.minddy.app/auth/callback?**`, otherwise Google, GitHub and magic
+links fail on this channel.
 
 ## Authentication, in one sentence
 

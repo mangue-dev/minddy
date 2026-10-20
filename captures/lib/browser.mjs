@@ -13,6 +13,9 @@ import { CAPTURE } from "./config.mjs";
 import { loadEnv, ROOT } from "./env.mjs";
 
 export const AUTH_STATE = resolve(ROOT, "captures/.auth/demo.json");
+/** The capture admin's session, preview only (captures/lib/admin-session.mjs). */
+export const ADMIN_AUTH_STATE = resolve(ROOT, "captures/.auth/admin.json");
+const AUTH_STATES = { demo: AUTH_STATE, admin: ADMIN_AUTH_STATE };
 export const CAPTURE_LOCALES = ["fr", "en", "de", "pt-BR", "it", "es"];
 const requestedLocales = process.env.CAPTURE_LOCALES?.split(",").filter(Boolean);
 const unsupportedLocales = requestedLocales?.filter(
@@ -34,18 +37,22 @@ const expectedPageThemes = new WeakMap();
  *
  *   theme   "light" | "dark"
  *   locale  any supported minddy locale
- * authed true to reuse the demo account session
+ * authed true to reuse a saved session
+ *   session "demo" (Camille Roy) | "admin" (the preview-only capture admin)
  */
 export async function openPage({
   theme = "light",
   locale = "fr",
   authed = true,
+  session = "demo",
   viewport = CAPTURE.viewport,
   frozenNow = CAPTURE.frozenNow,
   launchArgs = [],
 } = {}) {
   loadEnv();
-  if (authed) await requireAuthStateForUrl(AUTH_STATE, CAPTURE.baseUrl);
+  const authState = AUTH_STATES[session];
+  if (!authState) throw new Error(`captures: unknown session "${session}".`);
+  if (authed) await requireAuthStateForUrl(authState, CAPTURE.baseUrl);
 
   const browser = await chromium.launch({ args: launchArgs });
   const context = await browser.newContext({
@@ -63,7 +70,7 @@ export async function openPage({
     // Cuts CSS animations and Framer Motion transitions at source,
     // instead of waiting for the image to stop moving.
     reducedMotion: "reduce",
-    storageState: authed ? AUTH_STATE : undefined,
+    storageState: authed ? authState : undefined,
   });
 
   // Theme is read into localStorage by ThemeInitScript BEFORE the first

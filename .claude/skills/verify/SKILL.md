@@ -35,8 +35,8 @@ adresse en `verify-bot…@…` fait le même office.
 Puis login via l'UI (`input[type=email]`, `input[type=password]`, submit).
 **Nettoyage obligatoire à la fin** : supprimer les issues puis les projets du
 user (`projects.owner_id`), puis `admin.auth.admin.deleteUser(id)`.
-L'instance Supabase est la vraie instance liée au repo — ne jamais toucher aux
-données des autres utilisateurs.
+The Supabase instance is the preview database the local `.env` points to,
+never production. Never touch other users' data.
 
 ## Piloter (Playwright dans le scratchpad, pas dans le repo)
 

@@ -24,6 +24,9 @@ export const DEMO_ACCOUNTS = [
   { email: "captures-demo@minddy.app", fullName: "Camille Roy", role: "owner" },
   { email: "captures-demo+alice@minddy.app", fullName: "Alice Fontaine", role: "member" },
   { email: "captures-demo+tom@minddy.app", fullName: "Tom Berger", role: "member" },
+  // Performance tester (MIN-540, MIN-683): a separate sign-in for load
+  // measurements. No seed adds it to a project, so no capture shows it.
+  { email: "captures-demo+min540@minddy.app", fullName: "Performance Tester", role: "member" },
 ];
 
 /** Password shared by the family: a single variable to hold in `.env`. */

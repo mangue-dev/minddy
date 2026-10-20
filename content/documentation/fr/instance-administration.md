@@ -47,7 +47,7 @@
   },
   "review": {
     "revision": 9,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
     "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
@@ -64,11 +64,11 @@
       "id": "instance-administration-flow",
       "kind": "screenshot",
       "src": "/documentation/fr/instance-administration-overview.png",
-      "alt": "Vue d’ensemble administrateur avec indicateurs agrégés des comptes, de l’accueil et du contenu.",
-      "caption": "Vue d’ensemble affiche les indicateurs agrégés de l’instance. Finances est absent sur ce profil de démonstration, car aucune clé OpenRouter gérée n’est configurée.",
+      "alt": "Vue d’ensemble administrateur avec indicateurs agrégés des comptes, de l’activité, de l’accueil et des plans.",
+      "caption": "Vue d’ensemble affiche les indicateurs agrégés de l’instance ; la capture provient d’une instance de démonstration. Finances y apparaît, car une clé OpenRouter gérée y est configurée.",
       "revision": 9,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
         1488,
         1148
@@ -84,7 +84,7 @@
       "caption": "Modèles règle les valeurs par défaut et les usages dédiés. La capture montre la configuration existante ; aucun réglage de modèle ou de fournisseur n’a été modifié.",
       "revision": 9,
       "reviewed": true,
-      "capturedAt": "2026-10-19",
+      "capturedAt": "2026-10-20",
       "viewport": [
         1488,
         1148
@@ -104,7 +104,7 @@
 L’administration de l’instance est distincte de la propriété d’un projet. Définissez `ADMIN_EMAILS` dans l’environnement serveur avec les adresses confirmées des comptes autorisés. Le rôle `app_metadata.role=admin` signé côté serveur est aussi accepté. Une session administrateur exige `aal2`, une MFA inscrite et vérifiée, ainsi que les contrôles courants du compte et de la session. L’accès est refusé si ces contrôles échouent. Connectez-vous, validez le code TOTP et ouvrez `/admin`. Ne modifiez pas les rôles de la base pour contourner l’inscription MFA. La console et ses API privées restent `noindex`.
 
 
-![Vue d’ensemble administrateur avec indicateurs agrégés des comptes, de l’accueil et du contenu.](/documentation/fr/instance-administration-overview.png)
+![Vue d’ensemble administrateur avec indicateurs agrégés des comptes, de l’activité, de l’accueil et des plans.](/documentation/fr/instance-administration-overview.png)
 
 ![Réglages des modèles IA et du raisonnement de l’instance.](/documentation/fr/instance-administration-models.png)
 

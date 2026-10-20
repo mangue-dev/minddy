@@ -32,6 +32,6 @@ export async function requireAuthStateForUrl(path, rawUrl) {
   const origin = new URL(rawUrl).origin;
   throw new Error(
     `The saved capture session does not contain an authentication cookie for ${origin}. ` +
-      `Refresh it first with CAPTURE_BASE_URL=${origin} node captures/lib/session.mjs.`,
+      `Refresh it first with CAPTURE_BASE_URL=${origin} node captures/lib/${path.endsWith("admin.json") ? "admin-session" : "session"}.mjs.`,
   );
 }

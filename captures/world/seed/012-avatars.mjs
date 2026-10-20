@@ -85,12 +85,17 @@ for (const user of world.demoUsers) {
   console.log(
     `${user.full_name} : #${currentBackground ?? "?"} → #${backgroundOf(seed)} (famille « ${family} »)`,
   );
-  plan.update(
-    "user_avatars",
-    { user_id: user.id },
-    { seed, updated_at: new Date().toISOString() },
-    `portrait de ${user.full_name}`,
-  );
+  // A fresh account has no row yet: the app creates it on first use.
+  if (current) {
+    plan.update(
+      "user_avatars",
+      { user_id: user.id },
+      { seed, updated_at: new Date().toISOString() },
+      `portrait de ${user.full_name}`,
+    );
+  } else {
+    plan.insert("user_avatars", [{ user_id: user.id, seed }], `portrait de ${user.full_name}`);
+  }
 }
 
 const description = plan.describe();

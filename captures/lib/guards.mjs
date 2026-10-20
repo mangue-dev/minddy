@@ -35,10 +35,14 @@ import {
   WRITABLE_TABLES,
 } from "./config.mjs";
 
-/** Customer service-role. Bypasses RLS — hence all the guardrails above. */
+/**
+ * Service-role client. Bypasses RLS — hence all the guardrails above. It reads
+ * the same URL variable as the app, so `.env` points the captures and a local
+ * server at one database (the preview one, see docs/database-environments.md).
+ */
 function adminClient() {
   return createClient(
-    requireEnv("NEXT_PUBLIC_SUPABASE_URL"),
+    requireEnv("MINDDY_PUBLIC_SUPABASE_URL"),
     requireEnv("SUPABASE_SERVICE_ROLE_KEY"),
     { auth: { autoRefreshToken: false, persistSession: false } },
   );

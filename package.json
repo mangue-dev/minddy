@@ -74,7 +74,8 @@
     "ip-address": "^10.4.0",
     "hono": "^4.12.34",
     "dompurify": "^3.4.16",
-    "markdown-it@^14.0.0": "^14.3.1"
+    "markdown-it@^14.0.0": "^14.3.1",
+    "vite@^8.0.0": "~8.1.6"
   },
   "pnpm": {
     "overrides": {
@@ -87,7 +88,8 @@
       "ip-address": "^10.4.0",
       "hono": "^4.12.34",
       "dompurify": "^3.4.16",
-      "markdown-it@^14.0.0": "^14.3.1"
+      "markdown-it@^14.0.0": "^14.3.1",
+    "vite@^8.0.0": "~8.1.6"
     },
     "packageExtensions": {
       "streamdown": {

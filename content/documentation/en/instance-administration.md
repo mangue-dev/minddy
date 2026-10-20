@@ -47,7 +47,7 @@
   },
   "review": {
     "revision": 9,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
     "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
@@ -64,11 +64,11 @@
       "id": "instance-administration-flow",
       "kind": "screenshot",
       "src": "/documentation/en/instance-administration-overview.png",
-      "alt": "Administrator overview with aggregate account, onboarding and content metrics.",
-      "caption": "Overview shows aggregate instance indicators. Finances is absent on this demonstration profile because no managed OpenRouter key is configured.",
+      "alt": "Administrator overview with aggregate account, activity, onboarding and plan metrics.",
+      "caption": "Overview shows aggregate instance indicators; this capture comes from a demonstration instance. Finances appears because a managed OpenRouter key is configured there.",
       "revision": 9,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
         1488,
         1148
@@ -84,7 +84,7 @@
       "caption": "Models configures defaults and dedicated uses. This capture shows the existing configuration; no model or provider setting was changed.",
       "revision": 9,
       "reviewed": true,
-      "capturedAt": "2026-10-19",
+      "capturedAt": "2026-10-20",
       "viewport": [
         1488,
         1148
@@ -104,7 +104,7 @@
 Instance administration is separate from project ownership. Set `ADMIN_EMAILS` to authorized confirmed account addresses in the server environment. Server-signed `app_metadata.role=admin` is another accepted role source. A valid administrator session also requires `aal2`, enrolled verified MFA and current live account/session checks. The server fails closed when those checks fail. Sign in, complete TOTP and open `/admin`. Do not edit database roles to bypass enrollment. The administrator console and its private APIs remain `noindex`.
 
 
-![Administrator overview with aggregate account, onboarding and content metrics.](/documentation/en/instance-administration-overview.png)
+![Administrator overview with aggregate account, activity, onboarding and plan metrics.](/documentation/en/instance-administration-overview.png)
 
 ![Instance AI model and reasoning settings.](/documentation/en/instance-administration-models.png)
 

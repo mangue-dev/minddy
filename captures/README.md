@@ -11,7 +11,7 @@ Scope: **screenshots only.** No clips, no videos.
 
 ## What it is
 
-A dedicated demo account on the production base, whose data is
+A dedicated demo account on the preview database, whose data is
 deliberately created and versioned here. Playwright scripts that
 photograph the screens by connecting to them. A register which allows the agent
 to refresh an existing capture knowing what had been done before.
@@ -19,6 +19,7 @@ to refresh an existing capture knowing what had been done before.
 ```
 captures/
 world/demo world
+admin-account.mjs preview-only capture admin (instance administration figures)
 world.md readable register: account, projects, data, log
 seed/data addition scripts, idempotent and ordered
 shots/one capture = one folder
@@ -32,14 +33,18 @@ config.mjs authorized scope — source of truth
 guards.mjs security layer between seeds and database
 browser.mjs deterministic context (reduced-motion, frozen clock, etc.)
 session.mjs single connection, reused by all captures
+admin-session.mjs capture admin connection, password then TOTP
 frame.mjs staging (browser mockup)
 .auth/ session Playwright — never committed
 ```
 
-## The basis is that of PRODUCTION
+## The database is the shared preview one
 
-There is no local Supabase on this project. The scripts therefore write in
-the real basis, and the entire file is built around this constraint.
+The scripts write to the database that `.env` names in
+`MINDDY_PUBLIC_SUPABASE_URL`: the preview database, which `preview.minddy.app`
+serves (see [database environments](../docs/database-environments.md)). Other
+people's test accounts live there too, so the guardrails below still apply in
+full. The production demo world is no longer extended.
 
 The invariant is contained in a sentence: **no writing can reach a line
 which does not belong to the demo world.** Correct a title, change a status or
@@ -76,11 +81,30 @@ It refuses any account whose email does not match the demo reason.
 npm i -D playwright && npx playwright install chromium
 ```
 
-Then in `.env`, add the demo account password:
+Then in `.env`, point `MINDDY_PUBLIC_SUPABASE_URL`,
+`MINDDY_PUBLIC_SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` to the
+preview database and add the demo account password:
 
 ```
 CAPTURES_DEMO_PASSWORD=...
 ```
+
+### Capture admin
+
+The instance administration figures need an administrator session raised to
+aal2. `node captures/world/admin-account.mjs --apply` creates a dedicated
+capture admin on the preview database (it refuses production), with the admin
+role and a verified TOTP factor. It writes `CAPTURES_ADMIN_EMAIL`,
+`CAPTURES_ADMIN_PASSWORD` and `CAPTURES_ADMIN_TOTP_SECRET` to `.env` and never
+prints them; do not copy them elsewhere. Then:
+
+```bash
+CAPTURE_BASE_URL=https://preview.minddy.app node captures/lib/admin-session.mjs
+CAPTURE_BASE_URL=https://preview.minddy.app node captures/shots/documentation-admin/shot.mjs
+```
+
+Shots open that session with `openPage({ session: "admin" })`. It is never a
+real administrator account, and its session refuses production origins.
 
 Then, in Claude Code:
 
@@ -102,10 +126,10 @@ CAPTURE_BASE_URL=https://preview.minddy.app node captures/shots/<nom>/shot.mjs
 CAPTURE_BASE_URL=https://www.minddy.app node captures/shots/<nom>/shot.mjs
 ```
 
-`preview` and `www` share the SAME base: the demo world is the same for both
-sides, only the code differs. This is what makes `preview` useful here — a capture
-which breaks there and goes to prod signals a UI change not yet delivered,
-no missing data. Session is linked to origin: change target
+`preview` and `www` use different databases. The demo world maintained by
+`capture-world` lives on preview, so capture against `preview.minddy.app` or a
+local server whose `.env` points to the preview database. `www` only shows the
+older production copy of the world. Session is linked to origin: change target
 request to replay `node captures/lib/session.mjs` with the same
 `CAPTURE_BASE_URL`.
 

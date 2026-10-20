@@ -18,14 +18,14 @@ import { GET } from "@/app/auth/callback/route";
 
 beforeEach(() => vi.clearAllMocks());
 
-describe("desktop preview OAuth callback", () => {
-  it("relays through production with the desktop nonce and destination intact", async () => {
+describe("desktop OAuth callback", () => {
+  it("returns preview to its own callback with the desktop nonce and destination intact", async () => {
     const callback = oauthCallbackUrl(
       "https://preview.minddy.app",
       "/settings?tab=account",
       "desktop-turn",
     );
-    expect(callback.origin).toBe("https://www.minddy.app");
+    expect(callback.origin).toBe("https://preview.minddy.app");
     expect(callback.pathname).toBe("/auth/callback");
     expect(callback.searchParams.get("desktop")).toBe("1");
     expect(callback.searchParams.get("turn")).toBe("desktop-turn");

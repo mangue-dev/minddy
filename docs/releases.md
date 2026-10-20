@@ -54,6 +54,14 @@ Vercel Production deployment → `vX.Y.Z`
 - A public `vX.Y.Z` tag can only be created from the promoted `production` SHA
   after Vercel has reported a successful GitHub Deployment named `Production`.
 
+Each branch has its own database: `main` deploys preview against the
+Supabase `preview` branch, and `production` deploys Minddy Cloud against the
+production project. Migrations are applied to preview during development and
+reach production only through `Promote production`, which applies them after
+approval and before the fast-forward. See
+[database environments](database-environments.md) for the procedure and the
+backward-compatibility rule.
+
 There is no `develop` branch and no long-running release branch. Work stays on
 short-lived branches and converges on `main` through pull requests. A patch for
 an older major version may exceptionally use a temporary `release/X.x` branch,
@@ -134,8 +142,9 @@ registry manifest, whose publication is documented in
 [docs/mcp-registry-publication.md](docs/mcp-registry-publication.md) — creates
 the commit signed DCO, pushes `main` and waits for its remote CI. It then triggers
 `Promote production`, which is waiting for environment approval
-`cloud-production`, rechecks successful CI of exact SHA, rejects any discrepancies
-and advances `production` in fast-forward. Workflow waits for GitHub Deployment
+`cloud-production`, rechecks successful CI of exact SHA, rejects any discrepancies,
+applies the pending migrations to the production database and advances
+`production` in fast-forward. Workflow waits for GitHub Deployment
 Vercel `Production` to `success` status. It does not use any local Vercel tokens.
 
 A core release involves this Cloud promotion: the public tag cannot be

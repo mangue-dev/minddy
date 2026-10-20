@@ -47,7 +47,7 @@
   },
   "review": {
     "revision": 9,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
     "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
@@ -64,11 +64,11 @@
       "id": "instance-administration-flow",
       "kind": "screenshot",
       "src": "/documentation/es/instance-administration-overview.png",
-      "alt": "Resumen de administración con métricas agregadas de cuentas, incorporación y contenido.",
-      "caption": "Resumen muestra indicadores agregados de la instancia. Finanzas no aparece en este perfil de demostración porque no hay una clave gestionada de OpenRouter configurada.",
+      "alt": "Resumen de administración con métricas agregadas de cuentas, actividad, incorporación y planes.",
+      "caption": "Resumen muestra indicadores agregados de la instancia; la captura procede de una instancia de demostración. Finanzas aparece porque allí hay una clave gestionada de OpenRouter configurada.",
       "revision": 9,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
         1488,
         1148
@@ -84,7 +84,7 @@
       "caption": "Modelos configura valores predeterminados y usos específicos. La captura muestra la configuración existente; no se cambió ningún modelo ni proveedor.",
       "revision": 9,
       "reviewed": true,
-      "capturedAt": "2026-10-19",
+      "capturedAt": "2026-10-20",
       "viewport": [
         1488,
         1148
@@ -106,7 +106,7 @@ Administrar la instancia es distinto de ser propietario de un proyecto. `ADMIN_E
 
 
 
-![Resumen de administración con métricas agregadas de cuentas, incorporación y contenido.](/documentation/es/instance-administration-overview.png)
+![Resumen de administración con métricas agregadas de cuentas, actividad, incorporación y planes.](/documentation/es/instance-administration-overview.png)
 
 ![Configuración de modelos de IA y razonamiento de la instancia.](/documentation/es/instance-administration-models.png)
 

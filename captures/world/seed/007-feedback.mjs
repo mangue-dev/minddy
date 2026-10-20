@@ -65,8 +65,6 @@ const POSTS = [
     votes: 18,
     at: 0.1,
     category: "feature",
-    teamResponse:
-      "This is being built right now — it ships with the next release. It will post on open, update and resolve, with one channel per service.",
   },
   {
     title: "The uptime percentage is wrong after a partial outage",
@@ -138,7 +136,6 @@ function describeIntent(window) {
     const extras = [
       `${post.votes} votes`,
       post.status,
-      post.teamResponse ? "réponse d'équipe" : null,
       post.mergeSuggestedInto ? "fusion suggérée par l'IA" : null,
       post.category ? `catégorie ${categoryLabel(post.category)}` : null,
     ].filter(Boolean);
@@ -243,8 +240,9 @@ async function main() {
     source: "board",
     is_public: true,
     review_state: "published",
-    team_response: post.teamResponse ?? null,
-    team_response_at: post.teamResponse ? spreadInWindow(window, 0.9, 15) : null,
+    // A team response is a public comment since MIN-196 (`feedback_posts`
+    // no longer has `team_response`); comments are outside the demo write
+    // scope, so this seed leaves posts without one.
     // The two timestamps that keep the AI ​​cron apart.
     analyzed_at: now,
     classified_at: now,
