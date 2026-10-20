@@ -551,22 +551,331 @@
       "last30": "Last 30 days",
       "older": "Older"
     },
-    "starter": {
-      "s1": {
-        "title": "Explore and understand my work",
-        "prompt": "Give me an overview of what I'm working on right now."
+    "startersLabel": "Suggestions",
+    "starters": {
+      "general": {
+        "s1": {
+          "title": "Explore and understand my work",
+          "prompt": "Give me an overview of what I'm working on right now."
+        },
+        "s2": {
+          "title": "Create something new",
+          "prompt": "Help me create an issue for what I need to do."
+        },
+        "s3": {
+          "title": "Organize my work",
+          "prompt": "Help me organize my tasks and priorities."
+        },
+        "s4": {
+          "title": "Get help with a task",
+          "prompt": "I need help making progress on a task."
+        }
       },
-      "s2": {
-        "title": "Create something new",
-        "prompt": "Help me create an issue for what I need to do."
+      "home": {
+        "s1": {
+          "title": "Choose what to focus on today",
+          "prompt": "What should I focus on today? Look at my assigned issues, due dates and priorities."
+        },
+        "s2": {
+          "title": "Catch up on recent changes",
+          "prompt": "Summarize what changed in my projects since yesterday."
+        },
+        "s3": {
+          "title": "Find what's overdue",
+          "prompt": "Which of my issues are overdue or due this week?"
+        },
+        "s4": {
+          "title": "Capture a new issue",
+          "prompt": "Help me create an issue for what I need to do."
+        }
       },
-      "s3": {
-        "title": "Organize my work",
-        "prompt": "Help me organize my tasks and priorities."
+      "inbox": {
+        "s1": {
+          "title": "Summarize my inbox",
+          "prompt": "Summarize my unread notifications."
+        },
+        "s2": {
+          "title": "See what needs my attention",
+          "prompt": "Which items in my inbox need action from me first?"
+        },
+        "s3": {
+          "title": "Find what I was asked",
+          "prompt": "Where was I mentioned recently, and what was I asked?"
+        },
+        "s4": {
+          "title": "Turn a notification into an issue",
+          "prompt": "Help me create an issue from a notification in my inbox."
+        }
       },
-      "s4": {
-        "title": "Get help with a task",
-        "prompt": "I need help making progress on a task."
+      "all": {
+        "s1": {
+          "title": "Review my open issues",
+          "prompt": "Give me an overview of my open issues across all my projects."
+        },
+        "s2": {
+          "title": "Prioritize my backlog",
+          "prompt": "Help me prioritize my backlog: what should move up or down?"
+        },
+        "s3": {
+          "title": "Find stale issues",
+          "prompt": "Which of my issues haven't moved in a while and should be updated or closed?"
+        },
+        "s4": {
+          "title": "Plan my next cycle",
+          "prompt": "Help me choose the issues for my next cycle."
+        }
+      },
+      "board": {
+        "s1": {
+          "title": "Summarize this project",
+          "prompt": "Summarize where this project stands: progress, blockers and what's next."
+        },
+        "s2": {
+          "title": "Create an issue",
+          "prompt": "Help me create an issue in this project."
+        },
+        "s3": {
+          "title": "Find blocked work",
+          "prompt": "Which issues in this project are blocked or stuck?"
+        },
+        "s4": {
+          "title": "Split a large issue",
+          "prompt": "Help me split a large issue in this project into smaller ones."
+        }
+      },
+      "triage": {
+        "s1": {
+          "title": "Triage new issues",
+          "prompt": "Help me triage the new issues: suggest a priority, effort and category for each."
+        },
+        "s2": {
+          "title": "Spot duplicates",
+          "prompt": "Are there duplicates among the issues waiting in triage?"
+        },
+        "s3": {
+          "title": "Find what's urgent",
+          "prompt": "Which issues waiting in triage look urgent, and why?"
+        },
+        "s4": {
+          "title": "Assign objectives",
+          "prompt": "Suggest an objective for each issue waiting in triage."
+        }
+      },
+      "objectives": {
+        "s1": {
+          "title": "Review objective progress",
+          "prompt": "Summarize the progress of each objective in this project."
+        },
+        "s2": {
+          "title": "Draft a new objective",
+          "prompt": "Help me define a new objective and the issues it needs."
+        },
+        "s3": {
+          "title": "Find objectives at risk",
+          "prompt": "Which objectives are at risk of slipping, and why?"
+        },
+        "s4": {
+          "title": "Group loose issues",
+          "prompt": "Suggest objectives for the issues that don't belong to one yet."
+        }
+      },
+      "pages": {
+        "s1": {
+          "title": "Find a page",
+          "prompt": "Help me find a page in this project."
+        },
+        "s2": {
+          "title": "Write a new page",
+          "prompt": "Help me write a new page for this project."
+        },
+        "s3": {
+          "title": "Summarize the pages",
+          "prompt": "Give me an overview of the pages in this project."
+        },
+        "s4": {
+          "title": "Reorganize the pages",
+          "prompt": "Suggest a clearer structure for the pages in this project."
+        }
+      },
+      "page": {
+        "s1": {
+          "title": "Summarize this page",
+          "prompt": "Summarize this page in a few bullet points."
+        },
+        "s2": {
+          "title": "Improve the writing",
+          "prompt": "Improve the writing of this page without changing its meaning."
+        },
+        "s3": {
+          "title": "Turn it into issues",
+          "prompt": "Create issues from the action items in this page."
+        },
+        "s4": {
+          "title": "Continue writing",
+          "prompt": "Continue writing this page from where it stops."
+        }
+      },
+      "feedback": {
+        "s1": {
+          "title": "Summarize the feedback",
+          "prompt": "Summarize the main themes in this project's feedback."
+        },
+        "s2": {
+          "title": "Find the most requested ideas",
+          "prompt": "Which feedback posts are the most requested right now?"
+        },
+        "s3": {
+          "title": "Reply to feedback",
+          "prompt": "Help me write a reply to a feedback post."
+        },
+        "s4": {
+          "title": "Turn feedback into issues",
+          "prompt": "Promote the most voted feedback posts into issues."
+        }
+      },
+      "projectSettings": {
+        "s1": {
+          "title": "Explain these settings",
+          "prompt": "Explain what each setting of this project does."
+        },
+        "s2": {
+          "title": "Set up categories",
+          "prompt": "Suggest categories for the issues in this project."
+        },
+        "s3": {
+          "title": "Connect a repository",
+          "prompt": "How do I connect a Git repository to this project?"
+        },
+        "s4": {
+          "title": "Invite my team",
+          "prompt": "How do I invite members to this project?"
+        }
+      },
+      "issue": {
+        "s1": {
+          "title": "Summarize this issue",
+          "prompt": "Summarize this issue and its discussion."
+        },
+        "s2": {
+          "title": "Write an implementation plan",
+          "prompt": "Write an implementation plan for this issue."
+        },
+        "s3": {
+          "title": "Split into sub-issues",
+          "prompt": "Split this issue into smaller sub-issues."
+        },
+        "s4": {
+          "title": "Clarify the description",
+          "prompt": "Rewrite this issue's description to make it clearer."
+        }
+      },
+      "routines": {
+        "s1": {
+          "title": "Create a routine",
+          "prompt": "Help me create a routine for recurring work."
+        },
+        "s2": {
+          "title": "Review my routines",
+          "prompt": "Summarize what each of my routines does and when it runs."
+        },
+        "s3": {
+          "title": "Suggest routines",
+          "prompt": "Suggest routines that could save me time."
+        },
+        "s4": {
+          "title": "Adjust a routine",
+          "prompt": "Help me adjust a routine that isn't doing what I want."
+        }
+      },
+      "pullRequests": {
+        "s1": {
+          "title": "Review a pull request",
+          "prompt": "Review this pull request and point out the risks."
+        },
+        "s2": {
+          "title": "Summarize the changes",
+          "prompt": "Summarize what this pull request changes."
+        },
+        "s3": {
+          "title": "Answer review comments",
+          "prompt": "Help me answer the review comments on this pull request."
+        },
+        "s4": {
+          "title": "Check if it's ready to merge",
+          "prompt": "Is this pull request ready to merge? List what's left."
+        }
+      },
+      "statistics": {
+        "s1": {
+          "title": "Explain my statistics",
+          "prompt": "Explain what my statistics say about my work."
+        },
+        "s2": {
+          "title": "Spot trends",
+          "prompt": "What trends do you see in my recent activity?"
+        },
+        "s3": {
+          "title": "Compare with last month",
+          "prompt": "How does this month compare with last month?"
+        },
+        "s4": {
+          "title": "Find what slows me down",
+          "prompt": "Where does my work slow down the most?"
+        }
+      },
+      "settings": {
+        "s1": {
+          "title": "Explain these settings",
+          "prompt": "Explain the settings available for my account."
+        },
+        "s2": {
+          "title": "Tune my notifications",
+          "prompt": "Help me choose which notifications I should receive."
+        },
+        "s3": {
+          "title": "Connect my Git account",
+          "prompt": "How do I connect my GitHub or GitLab account?"
+        },
+        "s4": {
+          "title": "Use Minddy from my editor",
+          "prompt": "How do I connect Minddy to my coding agent with MCP?"
+        }
+      },
+      "billing": {
+        "s1": {
+          "title": "Explain my plan",
+          "prompt": "Explain what my current plan includes."
+        },
+        "s2": {
+          "title": "Understand my usage",
+          "prompt": "How much AI usage do I have left, and when does it reset?"
+        },
+        "s3": {
+          "title": "Compare plans",
+          "prompt": "Compare the available plans for me."
+        },
+        "s4": {
+          "title": "Manage my subscription",
+          "prompt": "How do I change or cancel my subscription?"
+        }
+      },
+      "trash": {
+        "s1": {
+          "title": "See what's in the trash",
+          "prompt": "Summarize what is currently in the trash."
+        },
+        "s2": {
+          "title": "Restore an item",
+          "prompt": "Help me find and restore a deleted item."
+        },
+        "s3": {
+          "title": "Find a deleted issue",
+          "prompt": "Help me find an issue I deleted."
+        },
+        "s4": {
+          "title": "Learn how long items stay",
+          "prompt": "How long do deleted items stay in the trash?"
+        }
       }
     },
     "contextIssue": "Issue in context",
