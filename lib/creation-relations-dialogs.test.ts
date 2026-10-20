@@ -315,6 +315,23 @@ describe("creation relation controls", () => {
     expect(dialog.create).toHaveBeenCalledWith(expect.objectContaining({ effort: "m", priority: "none", smart_fill: true }));
   });
 
+  it("opens the relations picker hidden by Smart Fill from R and keeps the relation chosen (MIN-749)", async () => {
+    const dialog = await mountDialog("issue");
+    const relationButton = () => host.querySelector(`[aria-label="${en.Relations.addRelationAria}"]`);
+    expect(relationButton()).toBeNull();
+    await act(() => { document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "r", bubbles: true })); });
+    expect(relationButton()).not.toBeNull();
+    expect(document.querySelector('input[aria-label="Search relations"]')).not.toBeNull();
+    await click(en.Relations.related);
+    await click("Target objective");
+    // The picker leaves again with Smart Fill on; the chosen relation stays.
+    expect(relationButton()).toBeNull();
+    expect(host.textContent).toContain("Target objective");
+    await typeTitle("Issue with a chosen relation");
+    await act(async () => { host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
+    expect(dialog.create).toHaveBeenCalledWith(expect.objectContaining({ smart_fill: true, relations: [expect.objectContaining({ target_id: objective.id })] }));
+  });
+
   it.each(["issue", "objective"] as const)("keeps %s selections when creation is rejected", async (kind) => {
     // Smart Fill owns relations while it is on (MIN-717): pick them by hand.
     if (kind === "issue") fixture.smartFillCreated = false;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, Link02Icon } from "@hugeicons/core-free-icons";
@@ -28,6 +28,14 @@ type CreationRelationsProps = {
   disabled?: boolean;
 };
 
+type CreationRelationsCompactProps = CreationRelationsProps & {
+  /** Controlled popover, so a dialog's R shortcut can open it (MIN-749). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** Key badge next to the tooltip, where the dialog handles that key. */
+  shortcutHint?: string;
+};
+
 /** Draft-only picker: no relation is written until creation succeeds. */
 export function CreationRelationsCompact({
   projectId,
@@ -36,10 +44,20 @@ export function CreationRelationsCompact({
   value,
   onChange,
   disabled,
-}: CreationRelationsProps) {
+  open: openProp,
+  onOpenChange,
+  shortcutHint,
+}: CreationRelationsCompactProps) {
   const t = useTranslations("Relations");
   const tCommon = useTranslations("Common");
-  const [open, setOpen] = useState(false);
+  const [ownOpen, setOwnOpen] = useState(false);
+  const open = openProp ?? ownOpen;
+  const openRef = useRef(open);
+  openRef.current = open;
+  const setOpen = (next: boolean) => {
+    setOwnOpen(next);
+    if (next !== openRef.current) onOpenChange?.(next);
+  };
   const [step, setStep] = useState<IssueRelationType | null>(null);
   const [query, setQuery] = useState("");
   const { issues, loading: issuesLoading } = useIssuesQuery(
@@ -54,11 +72,18 @@ export function CreationRelationsCompact({
     setStep(null);
     setQuery("");
   };
+  // Reset on a new dialog or project, not on mount: R mounts this picker
+  // already open while Smart Fill hides it (MIN-749).
+  const scope = `${active}:${projectId}`;
+  const scopeRef = useRef(scope);
   useEffect(() => {
+    if (scopeRef.current === scope) return;
+    scopeRef.current = scope;
     setOpen(false);
     setStep(null);
     setQuery("");
-  }, [active, projectId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs on a scope change only; `setOpen` reads the latest state through a ref.
+  }, [scope]);
 
   const linked = (id: string, type: "issue" | "objective") =>
     value.some((r) =>
@@ -95,6 +120,7 @@ export function CreationRelationsCompact({
         else resetPicker();
       }}
       tooltip={t("addRelationAria")}
+      shortcutHint={shortcutHint}
       searchValue={query}
       onSearchValueChange={setQuery}
       searchPlaceholder={step ? t("searchTarget") : undefined}

@@ -14,7 +14,7 @@ import { TruncatedText } from "@/components/ui/truncated-text";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, Link02Icon } from "@hugeicons/core-free-icons";
 import { useAppRouter } from "@/lib/use-app-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { RelationObjectiveLabel } from "@/components/relation-objective-label";
 import { SemanticIssueGroup } from "@/components/semantic-issue-group";
 import { useTranslations } from "next-intl";
@@ -37,6 +37,10 @@ import { RelationIcon, StatusIndicator } from "@/components/issue-indicators";
 import { PropertyRow, TRIGGER } from "@/components/issue-property-fields";
 import { SearchMenu } from "@/components/search-menu";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
+import { RELATION_SHORTCUT_HINT, RELATION_SHORTCUT_KEY } from "@/components/issue-field-shortcuts";
+import { isTypingTarget } from "@/lib/keyboard/keyboard-context";
+import { eventKey } from "@/lib/keyboard/event-key";
+import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
 import type { Issue, IssueRelationType, Objective } from "@/lib/types";
 
 export function ObjectiveRelationsSection({
@@ -70,6 +74,27 @@ export function ObjectiveRelationsSection({
   const [boardOpen, setBoardOpen] = useState(false);
   const [step, setStep] = useState<IssueRelationType | null>(null);
   const [query, setQuery] = useState("");
+
+  // R opens the add popover on the objective page (MIN-749), with the rules of
+  // the card shortcuts: no modifier, never while typing in a field, never under
+  // a dialog. G R stays Pull requests: the keyboard provider consumes an armed
+  // chord's second key on the window first. The board banner leaves R to the
+  // hovered card.
+  const openRef = useRef(open);
+  openRef.current = open;
+  const relationShortcut = variant === "panel" && canWrite;
+  useEffect(() => {
+    if (!relationShortcut) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.repeat || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+      if (eventKey(e) !== RELATION_SHORTCUT_KEY) return;
+      if (openRef.current || isTypingTarget(e.target) || hasVisibleOpenDialog()) return;
+      e.preventDefault();
+      setOpen(true);
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
+  }, [relationShortcut]);
 
   // This objective's relations, resolved from ITS perspective (resolveRelations
   // is entity-agnostic — the id comparison does not care what the entity is),
@@ -143,6 +168,7 @@ export function ObjectiveRelationsSection({
           }}
           align="end"
           tooltip={t("addRelationAria")}
+          shortcutHint={RELATION_SHORTCUT_HINT}
           searchValue={query}
           onSearchValueChange={setQuery}
           searchPlaceholder={step ? t("searchTarget") : undefined}

@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon, Copy01Icon, Delete02Icon, LinkSquare01Icon, GitPullRequestIcon, Link02Icon, Cancel01Icon, Target01Icon } from "@hugeicons/core-free-icons";
 import { RelationIcon } from "@/components/issue-indicators";
-import { KEY_FOR_FIELD, type ShortcutField } from "@/components/issue-field-shortcuts";
+import { KEY_FOR_FIELD, RELATION_SHORTCUT_HINT, type ShortcutField } from "@/components/issue-field-shortcuts";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
 import { usePrUnlinkConfirmation } from "@/components/pull-requests/pr-unlink-confirmation";
@@ -136,6 +136,7 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
               label: tRel("relations"),
               keywords: ["relation", "link", "lier", "bloc", "block"],
               icon: <HugeiconsIcon icon={Link02Icon} className="size-4" />,
+              shortcut: RELATION_SHORTCUT_HINT,
               children: RELATION_TYPES.map((type) => ({
                 id: `relation-${type}`,
                 label: tRel(`action_${type}`),

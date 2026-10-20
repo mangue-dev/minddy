@@ -62,6 +62,7 @@ import { RelationChips, type ChipRelation } from "@/components/relation-chips";
 import { resolveDisplayRelationsByIssue } from "@/lib/relation-constants";
 import {
   IssueShortcutMenu,
+  RELATION_SHORTCUT_KEY,
   useIssueFieldShortcuts,
 } from "@/components/issue-field-shortcuts";
 import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
@@ -177,6 +178,9 @@ export function IssueSidePanel({
   const menuPointerRef = useRef<{ x: number; y: number } | null>(null);
   const [relationType, setRelationType] = useState<IssueRelationType | null>(null);
   useEffect(() => setRelationType(null), [issue?.id, open]);
+  // The Relations row's add popover, opened by its button or by R.
+  const [relationsOpen, setRelationsOpen] = useState(false);
+  useEffect(() => setRelationsOpen(false), [issue?.id, open]);
   const [tab, setTab] = useIssuePanelTab(issue?.id ?? null, initialTab);
   // Remount the description editor when the description is rewritten under it
   // (dictation, or distant writing) — it only reads `value` during editing and
@@ -548,6 +552,9 @@ export function IssueSidePanel({
     open && !customPromptOpen && canWrite,
     {
       "shift+p": () => void copyPrompt(),
+      // R opens the Relations row's own popover, not a menu at the cursor:
+      // the panel already shows where relations are added (MIN-749).
+      [RELATION_SHORTCUT_KEY]: () => setRelationsOpen(true),
     }
   );
 
@@ -1142,6 +1149,8 @@ export function IssueSidePanel({
                     onAddRelation={onAddRelation}
                     onRemoveRelation={onRemoveRelation}
                     readOnly={readOnly}
+                    addOpen={relationsOpen}
+                    onAddOpenChange={setRelationsOpen}
                   />
 
                   <IssueResourcesSection

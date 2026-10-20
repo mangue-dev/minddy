@@ -2291,6 +2291,7 @@
       "labels": "Kategorien ändern",
       "dueDate": "Fälligkeitsdatum ändern",
       "objective": "Ziel ändern",
+      "relation": "Beziehung hinzufügen",
       "askNumo": "Numo fragen (Karte oder Auswahl)",
       "copyPrompt": "Als Eingabeaufforderung kopieren",
       "selectionCopyPrompt": "Kombinierte Eingabeaufforderung der Auswahl kopieren",

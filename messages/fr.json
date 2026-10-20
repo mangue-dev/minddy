@@ -2291,6 +2291,7 @@
       "labels": "Changer les catégories",
       "dueDate": "Changer l'échéance",
       "objective": "Changer l'objectif",
+      "relation": "Ajouter une relation",
       "askNumo": "Demander à Numo (carte ou sélection)",
       "copyPrompt": "Copier le prompt",
       "selectionCopyPrompt": "Copier le prompt combiné de la sélection",
