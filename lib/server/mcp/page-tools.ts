@@ -192,6 +192,7 @@ export function registerPageTools(server: McpServer): void {
     {
       title: "Get page",
       description:
+        "is_database says whether the page IS a database: true even when database_schema is empty and database_revision is 0 — a database with no columns yet, to fill with minddy_update_page_database rather than recreate. " +
         "Database pages include database_schema, database_revision, database_title_name, and entry property_values/created_at in subpages. Use minddy_update_page_database for columns and values. " +
         "ONE page in full: its title, its icon, its body in MARKDOWN, its version, " +
         "and its direct subpages (so you can walk down the tree without a second " +
@@ -257,7 +258,7 @@ export function registerPageTools(server: McpServer): void {
               "page's title and icon."
           ),
         markdown: BODY,
-        database: z.boolean().optional().describe("Create a database; then add columns with minddy_update_page_database."),
+        database: z.boolean().optional().describe("Create a database; then add columns with minddy_update_page_database. Never to replace one that exists: when minddy_get_page reports is_database, even with an empty schema, add the columns to that page instead."),
         icon: z
           .string()
           .optional()

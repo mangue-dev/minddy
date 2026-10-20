@@ -25,6 +25,7 @@ vi.mock("@/lib/server/page-tools", () => ({
   createPageForAgent: h.create,
 }));
 import { executeTool } from "./execute-tool";
+import { buildPageContextBlock } from "./prompt";
 import { CONVERSATION_ASSISTANT_TOOLS, PROJECT_ASSISTANT_TOOLS } from "./tools";
 const ctx = {
   projectId: "project",
@@ -145,6 +146,16 @@ describe("Numo database tool dispatch", () => {
     expect(h.create).toHaveBeenLastCalledWith(
       expect.objectContaining({ database: false, parentPageId: "database" }),
     );
+  });
+});
+
+describe("an open empty database (MIN-738)", () => {
+  it("steers a database request on the open page to that page, not a new one", () => {
+    const block = buildPageContextBlock({ projectId: "project", pageId: "database" });
+    expect(block).toContain("If is_database is true");
+    expect(block).toContain("update_page_database and create no other page");
+    const getPage = PROJECT_ASSISTANT_TOOLS.find((t) => t.function.name === "get_page");
+    expect(getPage?.function.description).toContain("true even when database_schema is an empty array");
   });
 });
 
