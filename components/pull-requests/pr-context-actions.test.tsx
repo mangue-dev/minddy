@@ -128,7 +128,11 @@ describe("usePrContextActions", () => {
       source: "pull_request", action: "fix", projectId: "project",
       pageContext: expect.objectContaining({ pullRequestId: "pr-1", prNumber: 7, prHeadRef: "fix-card", prBaseRef: "main" }),
     }));
-    expect(state.openIntent.mock.calls[0][0].prompt).toContain("Head branch: fix-card");
+    const numoPrompt = state.openIntent.mock.calls[0][0].prompt;
+    expect(numoPrompt).toContain("Head branch: fix-card");
+    // Numo never writes code (MIN-721): it gets its own prompt, not the coding-agent one.
+    expect(numoPrompt).toContain("Copy fix prompt");
+    expect(numoPrompt).not.toContain("push the fix");
   });
 
   it("confirms a state change, then rolls the list back when the forge refuses", async () => {
