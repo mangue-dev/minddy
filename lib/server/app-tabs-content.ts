@@ -42,16 +42,23 @@ export async function encodeAppTabValue(userId:string,id:string,
 export async function decodeAppTabValue(userId:string,id:string,
   column:Column,value:string|null):Promise<string|null> {
   if (value===null) return null;
-  if (!value.startsWith(marker)) return value;
+  // A destination saved before its screen moved (MIN-737 statistics) follows
+  // the move instead of failing the whole tab list.
+  if (!value.startsWith(marker))
+    return column === "href" ? normalizeAppTabLocation(value) ?? value : value;
   const store=getEncryptedStore();
   const cipher=store.fromDatabase<string>(value.slice(marker.length));
   if (store.formatOf(cipher)!==3) throw new Error("Invalid application tab envelope");
   const opened=await store.decrypt(cipher,binding(userId,id,column));
-  if (typeof opened!=="string" || (column === "href" ?
-      normalizeAppTabLocation(opened) !== opened :
-      !opened || opened.length > APP_TAB_MAX_NAME ||
+  if (typeof opened!=="string") throw new Error("Invalid application tab content");
+  if (column === "href") {
+    const destination = normalizeAppTabLocation(opened);
+    if (!destination) throw new Error("Invalid application tab content");
+    return destination;
+  }
+  if (!opened || opened.length > APP_TAB_MAX_NAME ||
       // eslint-disable-next-line no-control-regex -- Reject invalid restored tab names.
-      /[\u0000-\u001f\u007f]/.test(opened)))
+      /[\u0000-\u001f\u007f]/.test(opened))
     throw new Error("Invalid application tab content");
   return opened;
 }
