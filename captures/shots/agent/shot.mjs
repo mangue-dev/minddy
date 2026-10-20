@@ -26,6 +26,19 @@ import {
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
 import { catalog, toolCallLabel } from "../../lib/messages.mjs";
 
+/**
+ * Disconnected from the landing since 2026-10-20 (MIN-747): Numo no longer
+ * delegates code work (MIN-721), the `workflowAgent` slot is gone, and this
+ * script photographs a surface that no longer exists. The flag is read by
+ * `publish.mjs --shots`, which skips this folder. See `intent.md`.
+ */
+// Deliberately not exported AND not referenced: `publish.mjs` does not import it,
+// it tests the TEXT of the file (`/^const RETIRED = true/m`). The line is therefore
+// kept as-is — “cleaning” it would make the file publishable
+// again, silently.
+// oxlint-disable-next-line no-unused-vars
+const RETIRED = true;
+
 const SLOT = "workflowAgent";
 const OUT = "captures/shots/agent/out";
 const AURORA = "6cd36606-c297-4920-8ce3-31b5f3697be8";

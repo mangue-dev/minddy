@@ -1,5 +1,11 @@
 # The code agent run, as delegated work
 
+> **This capture is retired.** Since 2026-10-20 (MIN-747), Numo no longer
+> delegates code work (MIN-721): the delegated-work card, the worker thread and
+> the `workflowAgent` landing slot are gone, and `shot.mjs` declares
+> `const RETIRED = true`. The landing's second step now hands the issue to the
+> user's own coding agent and shows no capture. The text below is historical.
+
 Landing location: `workflowAgent`, second of the three stages of “Du
 ticket to pull request”. The text next to it says: *“Numo gathers the
 project context and delegates repository work to a code worker in a server
