@@ -67,6 +67,10 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+      # Root typecheck and tests import the shell source, including Electron's
+      # types, as in CI. No dependency script or native binary download runs.
+      - name: Install desktop test dependencies
+        run: npm --prefix desktop ci --ignore-scripts
       - run: pnpm run lint
       - run: pnpm run typecheck
       - run: node scripts/build-desktop.mjs
