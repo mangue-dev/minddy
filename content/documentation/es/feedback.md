@@ -20,12 +20,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-693 project roles; MIN-718 hybrid issue search; MIN-737 project settings reorganization; MIN-743 destructive-action confirmations",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -67,9 +67,9 @@
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, es wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 integrations list: source review of the Objective for new feedback line and its in-place objective creation; no browser walkthrough; feedback-objective-selection predates this layout and is retained pending recapture; MIN-737: publish-a-feedback-board-workflow recaptured on 2026-10-19 in all six locales from the local candidate on the demo board — email identity, URL concealed — and inspected); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for unlinking a feedback post from its issue and a visitor deleting their own public comment; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_de_es with agent:/root (es pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, es wording and new-control review; existing procedural evidence retained); agent:/root (es changed-passage parity and localized-label review); agent:/root/min693_es with agent:/root (es MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (es translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es translation of the MIN-737 project-settings second-pass passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (es MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 14,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -96,9 +96,9 @@
       "src": "/documentation/es/publish-a-feedback-board-workflow.png",
       "alt": "Tablero público de feedback activado, con identidad por código de correo, la acción Activar SSO y URL oculta.",
       "caption": "El propietario activa el tablero y elige cómo se identifican los visitantes. Este tablero de demostración usa la verificación por correo; su URL está oculta.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
-      "capturedAt": "2026-10-19",
+      "capturedAt": "2026-10-20",
       "viewport": [
         816,
         566
@@ -113,11 +113,11 @@
       "src": "/documentation/es/submit-and-follow-feedback-workflow.png",
       "alt": "Formulario de una solicitud de feedback con título, descripción y visibilidad pública activada.",
       "caption": "Un visitante identificado envía una solicitud y elige su visibilidad. El ejemplo se envió realmente con la revisión automática desactivada.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
-        625,
+        624,
         394
       ],
       "theme": "light",
@@ -129,7 +129,7 @@
       "src": "/documentation/es/feedback-objective-selection.png",
       "alt": "Vista previa de los componentes de selección de objetivo para un comentario y una integración, ambos con Docs.",
       "caption": "Selectores de objetivo con datos de demostración. Los nuevos comentarios heredan el ajuste de la integración.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -146,7 +146,7 @@
       "src": "/documentation/es/feedback-pages-and-views-workflow.png",
       "alt": "Guía de feedback publicada y seleccionada en la navegación del tablero, legible sin iniciar sesión.",
       "caption": "Publique una página, active las pestañas de páginas y selecciónela para el tablero. Esta página de demostración se abrió de forma anónima; su URL opaca conserva `noindex`.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -178,7 +178,7 @@ Elija si los visitantes se identifican mediante un código por email o el SSO co
 
 Desactivar el tablero deja sus páginas fuera del alcance de los visitantes. La recepción de servidor a servidor utiliza una clave de integración de feedback independiente y puede continuar sin tablero público. La elección de visibilidad de una solicitud, su estado de revisión y su estado de spam también determinan si aparece: activar el tablero no publica por sí solo todas las solicitudes.
 
-La revisión opcional de Numo se aplica al feedback enviado y depende de la configuración del proyecto y la instancia, los proveedores y el presupuesto del propietario. Si está activada, las solicitudes esperan la revisión antes de publicarse; si está desactivada, no esperan una revisión que no va a realizarse. Compruebe la cola después de enviar una solicitud de demostración. Numo solo envía respuestas públicas cuando se le solicita expresamente.
+El propietario activa o desactiva la **Revisión de Numo** en los ajustes de Sugerencias del proyecto; no hay un interruptor aparte para la instancia. Con la revisión activada, los envíos del tablero público y de las integraciones esperan la revisión antes de publicarse, mientras que el feedback creado por el equipo no queda retenido. Lo que se marca como sensible, como una vulnerabilidad o datos personales, pasa a privado y espera en **Por revisar**. La revisión usa el proveedor de IA de la instancia y el presupuesto de IA del propietario del proyecto: cuando el presupuesto se agota, el feedback espera, visible solo para el equipo, salvo que el propietario active **Publicar sin revisión cuando el presupuesto de IA se agota**. Con la revisión desactivada, el feedback se publica tal como se envió, sin categorías automáticas, filtro de bromas ni control de privacidad. Compruebe la cola después de enviar una solicitud de demostración. Numo solo envía respuestas públicas cuando se le solicita expresamente.
 
 ![Tablero público de feedback activado, con identidad por código de correo, la acción Activar SSO y URL oculta.](/documentation/es/publish-a-feedback-board-workflow.png)
 
@@ -188,7 +188,7 @@ Abra la URL pública del tablero. Puede leer solicitudes públicas sin una cuent
 
 Busque solicitudes existentes antes de publicar. Escriba un título concreto y describa la necesidad y su contexto. El título admite 200 caracteres y el cuerpo 10.000. La opción pública está seleccionada por defecto; desmárquela para enviar la solicitud de forma privada al equipo. Revise el texto para eliminar secretos antes del envío. La moderación opcional puede mantener la solicitud pendiente antes de que aparezca públicamente.
 
-Utilice el micrófono del formulario de envío para dictar el título y la descripción. Identifíquese primero a través del tablero, permita el acceso al micrófono y después detenga la grabación. Revise el texto antes de elegir Enviar. El dictado rellena el borrador; no envía la solicitud. La disponibilidad depende de la configuración de voz de la instancia, de proveedores operativos y del presupuesto de IA del propietario del proyecto. El consumo se factura a ese propietario según sus ajustes de proveedores, en lugar de a la cuenta del visitante.
+Utilice el micrófono del formulario de envío para dictar el título y la descripción. Identifíquese primero a través del tablero, permita el acceso al micrófono y después detenga la grabación. Revise el texto antes de elegir Enviar. El dictado rellena el borrador; no envía la solicitud. La disponibilidad depende de que la instancia tenga proveedores de transcripción y de IA operativos y del presupuesto de IA del propietario del proyecto; no hay un interruptor aparte de la instancia para la voz. El consumo se factura a ese propietario según sus ajustes de proveedores, en lugar de a la cuenta del visitante.
 
 Las grabaciones del tablero público están limitadas a 10 MiB. La transcripción permite, por tablero y hora, 20 solicitudes por visitante identificado y 40 por dirección IP; la interpretación del borrador tiene un límite independiente de 40 solicitudes por visitante y hora. Estos límites son distintos de los del dictado de la cuenta. Ante un mensaje de límite de solicitudes, espere antes de reintentar; si la voz no está disponible, escriba la solicitud.
 
@@ -218,7 +218,7 @@ Los miembros pueden eliminar comentarios públicos para moderarlos. Solo el auto
 
 La lista muestra el objetivo vinculado debajo del autor y las categorías. En las propiedades del objetivo, el número de comentarios cuenta las solicitudes existentes y no fusionadas, incluidas las privadas visibles para el equipo. Selecciona el número para abrir los comentarios filtrados por ese objetivo, con todos los estados.
 
-Como miembro del proyecto, elige **Objetivo** en las propiedades del comentario o al crearlo internamente. Elige **Ninguno** para quitar el vínculo. El objetivo debe pertenecer al mismo proyecto. Esta asociación es interna, no expone objetivos privados en el tablero público y no cuenta para el progreso de los tickets.
+Como propietario o Miembro, elige **Objetivo** en las propiedades del comentario o al crearlo internamente. Elige **Ninguno** para quitar el vínculo. El objetivo debe pertenecer al mismo proyecto. Esta asociación es interna, no expone objetivos privados en el tablero público y no cuenta para el progreso de los tickets.
 
 El propietario puede elegir un objetivo opcional al crear una integración de comentarios en **Configuración del proyecto** → **Integraciones**, o cambiarlo después en la línea **Objetivo de los nuevos comentarios** bajo una integración de comentarios existente. Ese selector también puede crear un objetivo nuevo. Los nuevos envíos de la API heredan ese objetivo, incluso con `analyze: false`. Cambiar el ajuste no mueve comentarios existentes. Si el objetivo está en la papelera, elige uno activo o elimina el ajuste antes del siguiente envío. Numo nunca elige un objetivo al revisar comentarios. Pídele explícitamente que vincule una solicitud o quite su vínculo.
 
@@ -230,7 +230,7 @@ Un grupo fusionado comparte un único objetivo. Cambiar el objetivo de la solici
 
 ## Fusionar feedback y vincularlo a entregas {#feedback-to-issue}
 
-Como miembro del proyecto, abra la solicitud y elija unirla a una solicitud canónica existente del mismo proyecto. Lea primero ambas necesidades: una redacción parecida no demuestra que busquen el mismo resultado. La solicitud actual se convierte en duplicada, los votos se unen por identidad y el duplicado redirige a la solicitud canónica. Revise el evento de unión en la actividad; la acción de deshacer utiliza ese evento. Rechace una sugerencia de unión incorrecta de la IA en lugar de aceptarla solo para vaciar la cola.
+Como propietario o Miembro, abra la solicitud y elija unirla a una solicitud canónica existente del mismo proyecto. Lea primero ambas necesidades: una redacción parecida no demuestra que busquen el mismo resultado. La solicitud actual se convierte en duplicada, los votos se unen por identidad y el duplicado redirige a la solicitud canónica. Revise el evento de unión en la actividad; la acción de deshacer utiliza ese evento. Rechace una sugerencia de unión incorrecta de la IA en lugar de aceptarla solo para vaciar la cola.
 
 ### Crear o vincular trabajo {#work}
 

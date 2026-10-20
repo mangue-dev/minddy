@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min-721 (en runner-removal edits and full retained meaning)",
-    "date": "2026-10-16"
+    "revision": 5,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "backups-and-restoration"
@@ -55,7 +55,7 @@
       "src": "/documentation/en/update-an-instance-flow.svg",
       "alt": "Diagram: Stop writes and scheduled work. Seal a complete pre-update backup. Target migrations, then target application. Verify recovery and reopen access.",
       "caption": "Read the stages in order. Stop writes and scheduled work. Seal a complete pre-update backup. Target migrations, then target application. Verify recovery and reopen access.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -92,14 +92,16 @@
 
 Upgrade one published release at a time. Inspect release notes, migration differences and compatibility rows. Do not combine a minddy update with a PostgreSQL major or Supabase image change. Verify target source, asset checksums and OCI digest and prepare it in a separate release directory with frozen dependencies. Announce the outage and abort deadline. Confirm a usable off-host backup and recent restoration. Preserve the current restartable application and its protected environment.
 
+Some migrations permanently delete data of retired features. Updating from v0.11.0 to v0.20.0 removes the custom domain records, the code-agent runs and conversations with their history and connections, and the command palette's saved views (personal bookmarks; board views remain). After these migrations, only the complete pre-update backup can bring them back.
+
 
 ![Diagram: Stop writes and scheduled work. Seal a complete pre-update backup. Target migrations, then target application. Verify recovery and reopen access.](/documentation/en/update-an-instance-flow.svg)
 
 ## Update the full reference profile {#full}
 
-Use the [installed full-profile Compose context](/docs/backups-and-restoration#context). Stop public ingress, all writes, workers and scheduler, then make the complete sealed backup. Copy the current environment mode `0600` to `TARGET_ENV_FILE` and change only `MINDDY_RELEASE`, `MINDDY_IMAGE`, `MINDDY_DEPLOY_DIR` and `MINDDY_ENV_FILE` for the verified target. Preserve URLs, credentials, encryption keys and feature choices. Delete `AGENT_EXECUTION_BACKEND`, `AGENT_RUNNER_URL`, `AGENT_RUNNER_SECRET` and `AGENT_CONTROL_ORIGIN` if an earlier release left them: the application no longer reads them, and `--remove-orphans` removes the retired `agent-runner` container. Run the sequence below from the installed context. It starts only backend dependencies, applies target migrations and checks application readiness while scheduler and Caddy remain stopped.
+Use the [installed full-profile Compose context](/docs/backups-and-restoration#context). Stop public ingress, all writes, workers and scheduler, then make the complete sealed backup. Copy the current environment mode `0600` to `TARGET_ENV_FILE` and change only `MINDDY_RELEASE`, `MINDDY_IMAGE`, `MINDDY_DEPLOY_DIR` and `MINDDY_ENV_FILE` for the verified target. Preserve URLs, credentials, encryption keys and feature choices. Delete `AGENT_EXECUTION_BACKEND`, `AGENT_RUNNER_URL`, `AGENT_RUNNER_SECRET`, `AGENT_CONTROL_ORIGIN` and the Vercel Sandbox variables `VERCEL_TOKEN`, `VERCEL_TEAM_ID` and `VERCEL_PROJECT_ID` if an earlier release left them: the application no longer reads them, and `--remove-orphans` removes the retired `agent-runner` container. Run the sequence below from the installed context. It starts only backend dependencies, applies target migrations and checks application readiness while scheduler and Caddy remain stopped.
 
-For the v0.10.30 to v0.11.0 update, the target introduces `MINDDY_DATA_ROOT_KEY`. Add it only when the existing configuration has no root; preserve every existing credential-encryption secret. The command below writes a new 32-byte root directly to the protected target file without displaying it and refuses to replace an invalid saved value. A root alone does not enable workspace-content encryption.
+For the v0.10.30 to v0.11.0 update, the target introduces `MINDDY_DATA_ROOT_KEY`. Add it only when the existing configuration has no root; preserve every existing credential-encryption secret. The command below writes a new 32-byte root directly to the protected target file without displaying it and refuses to replace an invalid saved value. When the source is v0.11.0 or later, the root normally exists and the command only checks it. A root alone does not enable workspace-content encryption: an environment without `MINDDY_CONTENT_ENCRYPTION_ENABLED=true` keeps it disabled.
 
 ```bash
 export TARGET_RELEASE_DIR=/srv/minddy/releases/vX.Y.NEXT

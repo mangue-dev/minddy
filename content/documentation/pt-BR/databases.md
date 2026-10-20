@@ -17,12 +17,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
-  "sourceRevision": 15,
+  "revision": 16,
+  "sourceRevision": 16,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate; MIN-684 page promotion; MIN-743 destructive-action confirmations; UI/UX refinements batch: Edit options from the column header",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -53,9 +53,9 @@
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:/root (optional-time and option-control source, component and isolated SQL review; unchanged claims retain prior evidence); agent:/root (MIN-690 recapture of create-a-database-steps on next dev at 8371778c4 with a throwaway database; other figures unchanged, evidence retained); agent:/root (MIN-684 page promotion: source and focused unit-test review of the menu entries, reader gating, save-before-promote and the Numo request; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for option deletion on Save in Edit options; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (UI/UX refinements batch: source review of the Edit options entry of Select and Multi-select column header menus in components/pages/database-column-name.tsx, which opens the same options dialog as the cells; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (pt-BR changed-passage and figure parity self-review); agent:/root (pt-BR updated alt text for the column type picker; agent review, not human acceptance); agent:/root (pt-BR translation of the MIN-684 single-entry promotion passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (pt-BR MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (pt-BR translation of the Edit options from the column header changed passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 16,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 7 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -80,7 +80,7 @@
       "src": "/documentation/pt-BR/database-setup-cards.png",
       "alt": "Prévia do componente com cartões para configurar uma nova base de dados com Numo ou importar uma existente.",
       "caption": "Sugestões para uma nova base com dados de demonstração. Escolha Numo ou importação, ou feche os cartões para continuar manualmente.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -97,7 +97,7 @@
       "src": "/documentation/pt-BR/database-property-types.png",
       "alt": "Seletor de tipo de coluna com um campo de busca, texto, número, seleções, datas, pessoas e caixa de seleção.",
       "caption": "Escolha um tipo adequado aos valores que serão armazenados.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -114,7 +114,7 @@
       "src": "/documentation/pt-BR/database-entry.png",
       "alt": "Registro de demonstração com descrição, duração 2.5, caixa marcada e seleção vazia.",
       "caption": "Abra um registro para ler o texto completo e editar os valores conforme o tipo.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -130,7 +130,7 @@
       "src": "/documentation/pt-BR/database-conversion-warning.png",
       "alt": "Aviso de conversão: mudar de Texto para Número limpa uma célula incompatível, com botões para cancelar ou confirmar.",
       "caption": "Confira o número real de células incompatíveis antes de confirmar. Cancelar preserva os valores atuais.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -146,7 +146,7 @@
       "src": "/documentation/pt-BR/database-import-review.png",
       "alt": "Revisão de um CSV local: duas páginas de registros e duas colunas, com o botão Importar banco de dados.",
       "caption": "Confira os registros analisados e o número de colunas antes de importar para o banco vazio.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -162,7 +162,7 @@
       "src": "/documentation/pt-BR/database-options.png",
       "alt": "Prévia do componente Editar opções com status em português, setas para cima e para baixo, lixeiras e a explicação da exclusão.",
       "caption": "Edite nomes, cores e ordem das opções em conjunto. A lixeira remove uma opção do rascunho; Salvar aplica as alterações. São exibidos dados de demonstração.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -179,7 +179,7 @@
       "src": "/documentation/pt-BR/database-date-time.png",
       "alt": "Prévia do seletor de data com 12 de outubro de 2026 selecionado, Adicione um horário ativado e Hora definida como 14:30.",
       "caption": "Ative Adicione um horário para inserir um horário. Esta prévia do componente usa dados de demonstração e o fuso horário do dispositivo.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -204,9 +204,9 @@ Um banco de dados combina uma tabela de propriedades estruturadas com uma págin
 
 ## Criar um banco de dados e suas colunas {#create-a-database}
 
-A área de configuração de uma nova base de dados oferece dois cartões: pedir ao Numo que prepare a estrutura ou importar uma base existente. O controle de fechar tem uma dica e oculta essas sugestões; a edição manual continua disponível.
+A área de configuração de uma nova base de dados oferece dois cartões: **Criar com Numo**, para preparar a estrutura, e **Importar um banco existente**. O controle de fechar, com o rótulo **Ocultar a ajuda de criação**, oculta essas sugestões; a edição manual continua disponível.
 
-Como membro do projeto, abra Páginas, use + e escolha um banco de dados. Um banco novo tem o nome das entradas e nenhuma coluna opcional. O aviso “Novo banco de dados” oferece configuração com Numo ou importação de um banco existente. A configuração manual continua disponível sem IA. Escolher a configuração com o Numo abre uma solicitação preparada com este banco de dados como contexto de página, depois que a criação termina. Confira e envie a solicitação para pedir a estrutura de que precisa; abrir a conversa não conclui a configuração. O trabalho real de IA exige um provedor configurado e uso disponível ou uma chave pessoal compatível. Examine o esquema e as entradas resultantes antes de confiar neles.
+Como proprietário ou Membro do projeto, abra Páginas, use + e escolha um banco de dados. Um banco novo tem o nome das entradas e nenhuma coluna opcional. O aviso “Novo banco de dados” oferece configuração com Numo ou importação de um banco existente. A configuração manual continua disponível sem IA. Escolher **Criar com Numo** abre uma solicitação preparada com este banco de dados como contexto de página, depois que a criação termina. Confira e envie a solicitação para pedir a estrutura de que precisa; abrir a conversa não conclui a configuração. O trabalho real de IA exige um provedor configurado e uso disponível ou uma chave pessoal compatível. Examine o esquema e as entradas resultantes antes de confiar neles.
 
 Abra “Colunas” e escolha “Adicionar coluna”, ou use a coluna + na borda direita da tabela. Dê um nome à coluna e escolha Texto, Número, Seleção, Seleção múltipla, Data de criação, Data, Pessoas ou Caixa de seleção. Use o seletor com pesquisa para encontrar o tipo. Salve, adicione uma entrada e confira se a coluna aparece na tabela e na página da entrada.
 
@@ -280,7 +280,7 @@ As alterações de esquema feitas por um agente usam a revisão atual do banco e
 
 ## Importar um banco de dados com o conteúdo das entradas {#import-a-database}
 
-Crie um banco de dados sem colunas opcionais nem entradas existentes. No banner do novo banco, escolha Importar um banco existente. Envie um ZIP do Notion no formato Markdown & CSV com subpáginas, um CSV de banco de dados ou um arquivo de banco de dados do minddy. Se o arquivo contiver vários bancos, selecione aquele que deseja importar.
+Crie um banco de dados sem colunas opcionais nem entradas existentes. No banner do novo banco, escolha **Importar um banco existente**. Envie um ZIP do Notion no formato Markdown & CSV com subpáginas, um CSV de banco de dados ou um arquivo de banco de dados do minddy. Se o arquivo contiver vários bancos, selecione aquele que deseja importar.
 
 Antes de confirmar, confira os nomes e tipos de coluna sugeridos e depois a quantidade de páginas. Quando a assistência à importação está configurada, o Numo pode sugerir tipos com base em uma amostra pequena; o mapeamento manual continua disponível. Propriedades de origem sem suporte são mantidas como texto. Valores incompatíveis bloqueiam a importação em vez de serem apagados sem aviso.
 

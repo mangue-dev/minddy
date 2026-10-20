@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "encryption-and-data-boundaries",
@@ -56,7 +56,7 @@
       "src": "/documentation/en/workspace-encryption-flow.svg",
       "alt": "Diagram: Dedicated root outside PostgreSQL. Wrapped project, user and system keys. Authorized server decryption. Database + Storage + matching keys restore.",
       "caption": "Restoring encrypted content requires matching data and keys, including the root kept outside the database.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -91,7 +91,7 @@
 
 ## Choose the new-install setting {#workspace-encryption}
 
-The `--encryption` installer and bootstrap options in this article belong to the identified 0.11.1 candidate tooling. The published v0.11.0 installer and bootstrap do not accept them. Its application runtime recognizes `MINDDY_CONTENT_ENCRYPTION_ENABLED`; the reference Compose service loads the protected file through `env_file`. An explicit flag change therefore requires recreating the application service with the same environment and checking the schema and actual behavior. Do not treat a generated `MINDDY_DATA_ROOT_KEY` as proof that workspace content is encrypted. Use matching, explicitly verified tooling and configuration for the selected release before onboarding users or changing an existing instance.
+The `--encryption` installer and bootstrap options in this article ship with this release's tooling. The v0.11.0 installer and bootstrap do not accept them. Its application runtime recognizes `MINDDY_CONTENT_ENCRYPTION_ENABLED`; the reference Compose service loads the protected file through `env_file`. An explicit flag change therefore requires recreating the application service with the same environment and checking the schema and actual behavior. Do not treat a generated `MINDDY_DATA_ROOT_KEY` as proof that workspace content is encrypted. Use matching, explicitly verified tooling and configuration for the selected release before onboarding users or changing an existing instance.
 
 New local and server installers enable workspace encryption by default and generate a dedicated `MINDDY_DATA_ROOT_KEY`. For a new server, pass `--encryption enabled` or `--encryption disabled` explicitly if needed. Both choices preserve credential encryption and generate the independent root; the opt-out concerns workspace content. For the local desktop path, prepare the selected configuration before opening the clone with the command below. The root is a 32-byte random value encoded as exactly 64 hexadecimal characters, kept outside PostgreSQL.
 

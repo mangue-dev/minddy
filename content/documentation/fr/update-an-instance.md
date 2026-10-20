@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min-721 (fr runner-removal edits and full retained meaning)",
-    "date": "2026-10-16"
+    "revision": 5,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "backups-and-restoration"
@@ -55,7 +55,7 @@
       "src": "/documentation/fr/update-an-instance-flow.svg",
       "alt": "Schéma: Arrêter écritures et jobs. Sceller la sauvegarde complète avant update. Migrations cibles, puis application cible. Vérifier récupération et rouvrir.",
       "caption": "Lisez les étapes dans cet ordre. Arrêter écritures et jobs. Sceller la sauvegarde complète avant update. Migrations cibles, puis application cible. Vérifier récupération et rouvrir.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -92,14 +92,16 @@
 
 Mettez à jour une version publiée à la fois. Examinez notes, différences de migrations et lignes de compatibilité. Ne combinez pas mise à jour minddy, changement majeur PostgreSQL ou images Supabase. Vérifiez code cible, sommes des assets et digest OCI, puis préparez un autre répertoire de release avec dépendances figées. Annoncez l’interruption et l’heure limite d’abandon. Confirmez sauvegarde hors serveur utilisable et restauration récente. Conservez application actuelle et environnement protégés redémarrables.
 
+Certaines migrations suppriment définitivement les données de fonctionnalités retirées. La mise à jour de v0.11.0 vers v0.20.0 supprime les enregistrements de domaines personnalisés, les exécutions et conversations de l’agent de code avec leur historique et leurs connexions, ainsi que les vues enregistrées de la palette de commandes (favoris personnels ; les vues de tableau restent). Après ces migrations, seule la sauvegarde complète d’avant la mise à jour peut les restaurer.
+
 
 ![Schéma: Arrêter écritures et jobs. Sceller la sauvegarde complète avant update. Migrations cibles, puis application cible. Vérifier récupération et rouvrir.](/documentation/fr/update-an-instance-flow.svg)
 
 ## Mettre à jour le profil full {#full}
 
-Reprenez le [contexte Compose full installé](/fr/documentation/backups-and-restoration#context). Arrêtez entrée publique, écritures, workers et planificateur, puis réalisez la sauvegarde complète scellée. Copiez l’environnement actuel en mode `0600` vers `TARGET_ENV_FILE` et changez uniquement `MINDDY_RELEASE`, `MINDDY_IMAGE`, `MINDDY_DEPLOY_DIR` et `MINDDY_ENV_FILE` pour la cible vérifiée. Gardez URLs, identifiants, clés et choix de fonctionnalités. Supprimez `AGENT_EXECUTION_BACKEND`, `AGENT_RUNNER_URL`, `AGENT_RUNNER_SECRET` et `AGENT_CONTROL_ORIGIN` si une release antérieure les a laissés : l’application ne les lit plus, et `--remove-orphans` retire l’ancien conteneur `agent-runner`. Exécutez la séquence ci-dessous dans le contexte installé. Elle démarre uniquement les dépendances backend, applique les migrations cibles et vérifie l’application pendant que Caddy et le planificateur restent arrêtés.
+Reprenez le [contexte Compose full installé](/fr/documentation/backups-and-restoration#context). Arrêtez entrée publique, écritures, workers et planificateur, puis réalisez la sauvegarde complète scellée. Copiez l’environnement actuel en mode `0600` vers `TARGET_ENV_FILE` et changez uniquement `MINDDY_RELEASE`, `MINDDY_IMAGE`, `MINDDY_DEPLOY_DIR` et `MINDDY_ENV_FILE` pour la cible vérifiée. Gardez URLs, identifiants, clés et choix de fonctionnalités. Supprimez `AGENT_EXECUTION_BACKEND`, `AGENT_RUNNER_URL`, `AGENT_RUNNER_SECRET`, `AGENT_CONTROL_ORIGIN` ainsi que les variables Vercel Sandbox `VERCEL_TOKEN`, `VERCEL_TEAM_ID` et `VERCEL_PROJECT_ID` si une release antérieure les a laissés : l’application ne les lit plus, et `--remove-orphans` retire l’ancien conteneur `agent-runner`. Exécutez la séquence ci-dessous dans le contexte installé. Elle démarre uniquement les dépendances backend, applique les migrations cibles et vérifie l’application pendant que Caddy et le planificateur restent arrêtés.
 
-Pour la mise à niveau de v0.10.30 vers v0.11.0, la cible introduit `MINDDY_DATA_ROOT_KEY`. Ajoutez cette clé uniquement si la configuration existante ne contient aucune racine et conservez tous les secrets existants de chiffrement des identifiants. La commande ci-dessous écrit directement une nouvelle racine de 32 octets dans le fichier cible protégé, sans l’afficher, et refuse de remplacer une valeur enregistrée invalide. La racine seule n’active pas le chiffrement du contenu.
+Pour la mise à niveau de v0.10.30 vers v0.11.0, la cible introduit `MINDDY_DATA_ROOT_KEY`. Ajoutez cette clé uniquement si la configuration existante ne contient aucune racine et conservez tous les secrets existants de chiffrement des identifiants. La commande ci-dessous écrit directement une nouvelle racine de 32 octets dans le fichier cible protégé, sans l’afficher, et refuse de remplacer une valeur enregistrée invalide. Si la source est v0.11.0 ou plus récente, la racine existe normalement et la commande la vérifie seulement. La racine seule n’active pas le chiffrement du contenu : un environnement sans `MINDDY_CONTENT_ENCRYPTION_ENABLED=true` le laisse désactivé.
 
 ```bash
 export TARGET_RELEASE_DIR=/srv/minddy/releases/vX.Y.NEXT

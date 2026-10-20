@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-19",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12); MIN-737 account settings reorganization",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -37,10 +37,10 @@
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-737 account settings reorganization: source review of the Privacy & data tab name; the retained screenshots predate the rename; no browser walkthrough, no new captures)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root (pt-BR MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-19"
+    "revision": 7,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [],
   "aliases": [],
@@ -54,9 +54,9 @@
       "src": "/documentation/pt-BR/transfer-between-instances-workflow.png",
       "alt": "Configurações de transferência com botão para importar um arquivo.",
       "caption": "Escolha o JSON íntegro exportado da conta de origem; confira o resultado antes de fechar.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         816,
         148
@@ -71,9 +71,9 @@
       "src": "/documentation/pt-BR/transfer-between-instances-export-workflow.png",
       "alt": "Controle de exportação da conta.",
       "caption": "Controle de exportação da conta. O arquivo exclui chaves e tokens; a captura mostra o botão antes do download.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         816,
         148
@@ -92,7 +92,7 @@
 
 ## Exportar e importar {#transfer-between-instances}
 
-Entre na instância de origem e abra a aba **Privacidade e dados** nas configurações da conta. Baixe a exportação JSON e guarde-a de forma privada: ela contém dados da conta e dos projetos. Crie sua conta na instância de destino ou entre na conta existente, confira o endereço e escolha ali o controle de importação. Selecione o arquivo exportado sem modificá-lo e aguarde o resultado antes de fechar a página.
+Entre na instância de origem e abra a aba **Privacidade e dados** nas configurações da conta. Escolha **Baixar meus dados** e guarde o arquivo JSON de forma privada: ele contém dados da conta e dos projetos, incluindo os bytes dos arquivos. Crie sua conta na instância de destino ou entre na conta existente, confira o endereço, abra a mesma aba e escolha **Importar um arquivo de transferência**. Selecione o arquivo exportado sem modificá-lo e aguarde o resultado antes de fechar a página.
 
 A importação acrescenta dados sem substituir os que já existem no destino. Os identificadores são mantidos quando podem ser reutilizados com segurança; os conflitos recebem novos identificadores. O resultado informa os identificadores remapeados e as associações a projetos ignoradas. As referências de associação a projetos existentes só são restauradas quando o projeto de destino já existe e a referência é autorizada. Após o recarregamento da página, confira projetos, tarefas, páginas e dados pessoais.
 
@@ -100,7 +100,7 @@ A importação acrescenta dados sem substituir os que já existem no destino. Os
 
 ## Reconectar serviços {#exclusions}
 
-Senhas, chaves de API, tokens OAuth, credenciais de repositórios e assinaturas não são transferidos. Configure e autorize novamente os serviços necessários no destino; um projeto exportado não comprova que o acesso ao provedor funciona. Examine os recursos de arquivo e sua disponibilidade, sem tratar o JSON como um backup operacional do banco de dados e dos bytes do Storage.
+Senhas, chaves de API, tokens OAuth, credenciais de repositórios e assinaturas não são transferidos. Configure e autorize novamente os serviços necessários no destino; um projeto exportado não comprova que o acesso ao provedor funciona. Examine os recursos de arquivo e sua disponibilidade, sem tratar o JSON como um backup operacional do banco de dados e dos bytes do Storage. Uma exportação criada pela v0.11.0 ou anterior pode conter visualizações salvas da paleta de comandos e conversas do agente de código; esta release não tem mais esses recursos e as ignora na importação.
 
 Mantenha a instância de origem até verificar o trabalho transferido. Se a importação falhar, guarde a mensagem de erro e confira o estado do destino antes de repetir a operação. Exclua ou proteja os arquivos de transferência quando não forem mais necessários; nunca os anexe a um relato público de erro.
 

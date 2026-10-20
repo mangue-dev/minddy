@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles; MIN-736 closed columns hidden by default; MIN-743 destructive-action confirmations",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -45,9 +45,9 @@
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 default status columns: source and unit-test review of lib/view-filter.ts and the board status filter; no browser walkthrough, no new captures); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for stopping view sharing; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min693_fr with agent:/root (fr MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (fr MIN-736 added sentences with catalog status labels; agent review, not human acceptance); agent:/root (fr MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 10,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -70,9 +70,9 @@
       "src": "/documentation/fr/work-view-filters.png",
       "alt": "Filtres manuels d’une vue et menu de classement.",
       "caption": "Filtrez par propriétés du ticket ou choisissez un ordre. Le champ IA est facultatif pour ces commandes manuelles.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         288,
         393
@@ -86,9 +86,9 @@
       "src": "/documentation/fr/work-share-view.png",
       "alt": "Dialogue de partage d’une vue avec l’accès privé sélectionné.",
       "caption": "Les accès privé, protégé par mot de passe et public correspondent à trois choix distincts. Cette vue reste privée sur la capture.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         496,
         230
@@ -112,7 +112,7 @@ Partez du tableau d’un projet ou d’une surface personnelle transversale. Uti
 
 Filtrez selon les propriétés disponibles, comme état, responsable, priorité, catégories ou objectif. Classez les résultats pour clarifier la prochaine action. En kanban, les tickets restent regroupés par état ; modifier la vue ne modifie ni leurs états ni leurs affectations. Sans filtre d’état qui lui soit propre, un tableau n’affiche que **Backlog**, **À faire**, **En cours** et **En revue**. Sélectionnez **Terminé** ou **Annulé** dans le filtre **Statut** pour afficher ces colonnes ; une vue conserve le filtre d’état enregistré avec elle.
 
-Enregistrez la vue avec un nom qui décrit son usage, sélectionnez-la de nouveau dans la navigation et vérifiez ses filtres. Modifiez-la ou supprimez-la lorsque son usage change. Pour les permissions de publication et la révocation, consultez le [partage d’une vue](#share-a-view).
+Enregistrez la vue avec un nom qui décrit son usage, sélectionnez-la de nouveau dans la barre des vues en haut du tableau (un menu sur un écran étroit) et vérifiez ses filtres. Modifiez-la ou supprimez-la lorsque son usage change. **Supprimer la vue** demande une confirmation, et un tableau garde toujours au moins une vue qui lui est propre. Pour les permissions de publication et la révocation, consultez le [partage d’une vue](#share-a-view).
 
 ![Filtres manuels d’une vue et menu de classement.](/documentation/fr/work-view-filters.png)
 

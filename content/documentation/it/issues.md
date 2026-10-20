@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 27,
-  "sourceRevision": 27,
+  "revision": 28,
+  "sourceRevision": 28,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work; MIN-693 project roles; MIN-717 Smart Fill relations; MIN-718 hybrid issue search; MIN-728 one editor engine; MIN-733 always-on AI features; MIN-736 closed columns hidden by default; MIN-737 account settings reorganization; MIN-741 creation dialogs; MIN-742 resources; MIN-743 destructive-action confirmations; MIN-746 Smart Fill properties set by shortcut; MIN-749 relation shortcut R; UI/UX refinements batch: Create in project shortcut, closed issues in relation pickers",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -110,13 +110,14 @@
       "components/objective-relations-section.tsx",
       "components/issue-field-shortcuts.tsx",
       "components/creation-relations.tsx",
-      "lib/keyboard/shortcuts.ts"
+      "lib/keyboard/shortcuts.ts",
+      "lib/server/assistant/prompt.ts"
     ]
   },
   "review": {
-    "revision": 27,
-    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; it translation of removal edits; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-717 Smart Fill relations source review inherited from en revision 14; it translation of added passages; no browser walkthrough); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-728 one editor engine: source and unit-test review of the shared editor on this surface; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-734 typed mentions: source and unit-test review of the mention format, rendering and access rules; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (Command/Ctrl+K opens the selection actions: source and unit-test review of bulk-actions-context and use-command-palette-launcher; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-733 removal of the instance AI switches: source and unit-test review of the admin registry and every former switch reader; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 default status columns: source and unit-test review of lib/view-filter.ts and the board status filter; no browser walkthrough, no new captures); agent:/root (MIN-737 account settings reorganization: source review of the Smart Fill tab and its cards in components/settings/account-smart-fill-section.tsx; unchanged evidence retained; no browser walkthrough, no new captures); agent:/root (MIN-741 creation dialogs: source and unit-test review of the Create in project control, the cleared project-scoped fields and the identifier create button with its copy menu; create-an-issue-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-product screen new-issue) and inspected; no other browser walkthrough); agent:/root (MIN-742 resources: source and unit-test review of renaming, removal confirmation, resource cards with a click and right-click menu and og:image link previews, file mentions opening the reader, and resource mentions scoped to their surface; issue-file-preview recaptured on 2026-10-19 in all six locales with captures/shots/file-preview and inspected; no other browser walkthrough); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for relation removal; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-746 Smart Fill properties set by shortcut: source and unit-test review of lib/smart-fill-fields.ts, the creation dialog and the server fill in lib/server/create-issue.ts, which only infers empty properties; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-749 relation shortcut R: source and unit-test review of components/issue-field-shortcuts.tsx, the board card, issue panel, objective page and new-issue dialog relation pickers and lib/keyboard/shortcuts.ts; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (UI/UX refinements batch: source review of the Command/Ctrl+Shift+P Create in shortcut, its caret restoration and key hint in components/creation-project-select.tsx and the create.changeProject entry in lib/keyboard/shortcuts.ts; relation pickers (board card, issue panel, objective page, creation dialogs) now also list done, canceled and duplicate issues after open ones, which the existing relation prose does not contradict, so no prose change for it; no browser walkthrough, no new captures; unchanged evidence retained; the create-an-issue-steps capture predates the Create in key hint and the new Smart Fill icon)",
-    "language": "agent:/root (it new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_it (it translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root/min693_it with agent:/root (it MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (it translation of MIN-717 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it translation of the MIN-728 passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it added sentences, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (it removal of the sentences describing instance AI switches; retained-meaning self-review; agent review, not human acceptance); agent:/root (it MIN-736 added sentences with catalog status labels; agent review, not human acceptance); agent:/root (it MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (it MIN-741 Create in passages and figure alt text with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (it MIN-742 changed passages and figure alt text with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (it MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (it translation of the MIN-746 added sentences; retained-meaning self-review; agent review, not human acceptance); agent:/root (it translation of MIN-749 added sentences, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it translation of the Create in shortcut changed passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 28,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 8 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -162,9 +163,9 @@
       "src": "/documentation/it/new-issue.png",
       "alt": "Bozza non inviata nel progetto Aurora con titolo, descrizione, proprietà selezionabili manualmente e il pulsante Crea AUR-19.",
       "caption": "Descrivi il risultato atteso e scegli le proprietà utili prima di creare il ticket.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
-      "capturedAt": "2026-10-19",
+      "capturedAt": "2026-10-20",
       "viewport": [
         720,
         396
@@ -178,7 +179,7 @@
       "src": "/documentation/it/triage-incoming.png",
       "alt": "Ticket dimostrativo DOC-11 in arrivo con segnalazione, proprietà e comandi per duplicato, Rifiuta e Accetta.",
       "caption": "Leggi la segnalazione ricevuta prima di accettarla, rifiutarla o collegare un duplicato.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -194,12 +195,12 @@
       "src": "/documentation/it/issue-statuses.png",
       "alt": "Gli otto stati del ticket nel selettore, con Backlog selezionato.",
       "caption": "La spunta indica lo stato attuale. Scegli quello che rispecchia lo stato effettivo del lavoro.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         288,
-        357
+        358
       ],
       "theme": "light",
       "padding": 24
@@ -210,9 +211,9 @@
       "src": "/documentation/it/work-resources.png",
       "alt": "Finestra di aggiunta di un link con un indirizzo di contatto d’esempio.",
       "caption": "Controlla la destinazione prima di aggiungere la risorsa. Questo link d’esempio non è stato inviato.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         496,
         212
@@ -226,12 +227,12 @@
       "src": "/documentation/it/work-dependencies.png",
       "alt": "Ricerca di un ticket bloccante tramite identificativo.",
       "caption": "Scegli la direzione della relazione prima della destinazione. Il selettore è mostrato senza inviare la relazione.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         368,
-        152
+        184
       ],
       "theme": "light",
       "padding": 24
@@ -242,9 +243,9 @@
       "src": "/documentation/it/work-sub-issues.png",
       "alt": "Campo per creare un sotto-ticket in un ticket principale dimostrativo.",
       "caption": "Il campo crea un figlio di questo ticket; ogni figlio conserva stato e discussione propri.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
         508,
         1096
@@ -258,9 +259,9 @@
       "src": "/documentation/it/work-implementation-plan.png",
       "alt": "Piano dimostrativo con due attività di lavoro completate su sei.",
       "caption": "Il piano salvato distingue passaggi completati, attivi e in attesa. L’avanzamento non dimostra l’esecuzione dell’attività di codice fittizia.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
         508,
         1416
@@ -274,12 +275,12 @@
       "src": "/documentation/it/issue-date-recurrence.png",
       "alt": "Selettore di scadenza ricorrente con anteprima settimanale la domenica e orario facoltativo.",
       "caption": "La modalità ricorrente mostra la cadenza settimanale. Conferma la prima scadenza prima di creare il ticket.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         324,
-        544
+        540
       ],
       "theme": "light",
       "padding": 24
@@ -290,9 +291,9 @@
       "src": "/documentation/it/import-issues-preview-workflow.png",
       "alt": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate.",
       "caption": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate. L’importazione non è stata inviata; la pianificazione IA facoltativa è stata bloccata per la cattura.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         816,
         977
@@ -307,7 +308,7 @@
       "src": "/documentation/it/file-preview.png",
       "alt": "Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica, Rinomina e Rimuovi.",
       "caption": "Il visualizzatore condiviso colloca Chiudi sotto l’anteprima. Il menu Azioni del file offre Scarica e, con i permessi necessari, Rinomina e Rimuovi.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -338,8 +339,6 @@ Un ticket descrive un’attività del progetto, dal lavoro in arrivo alla verifi
 
 ## Creare e modificare un ticket {#create-an-issue}
 
-Il comando per eliminare una bozza salvata apre una conferma. Annullare conserva la bozza; confermare elimina quella bozza salvata. La stessa conferma è disponibile quando si crea un obiettivo.
-
 Devi essere il proprietario o un Membro del progetto di destinazione; i lettori possono aprire i ticket ma non crearli né modificarli. Apri il progetto e il controllo per creare un ticket. Inserisci un titolo che identifichi il lavoro, poi aggiungi contesto, risultato previsto e vincoli nella descrizione. Il modulo si apre sul progetto corrente; scegline un altro in **Crea in**, in alto a sinistra del modulo (accanto al titolo **Nuovo ticket** sul telefono), soprattutto quando crei da una vista personale o tra progetti. Su un computer, Command/Ctrl+Maiusc+P apre questo menu anche mentre scrivi il titolo o la descrizione; quando scegli un progetto o chiudi il menu, il cursore torna esattamente dov’era. La pillola mostra questa scorciatoia, che esiste solo quando si può scegliere più di un progetto; sul telefono non viene indicata alcuna scorciatoia. Cambiare progetto rimuove le categorie, l’obiettivo e le relazioni scelti per il precedente. Il pulsante di creazione mostra l’identificativo che riceverà il ticket, ad esempio `MIN-42`, e tiene conto dei ticket creati nel frattempo; il suo menu crea il ticket e copia questo identificativo.
 
 Per creare il ticket manualmente, disattiva Riempimento intelligente se il pulsante è visibile e attivo. Vengono così mostrati i controlli di priorità, impegno, categorie, obiettivo e relazioni, che puoi impostare tu. Per impostare solo alcune di queste proprietà, lascia attivo Riempimento intelligente e, fuori dal titolo e dalla descrizione, premi il tasto della proprietà: P per la priorità, E per l’impegno, L per le categorie oppure O per l’obiettivo. Si apre il suo selettore e il valore scelto resta visibile. Riempimento intelligente deduce solo le proprietà lasciate vuote. La scelta vale per questo ticket; riaprendo il modulo di creazione viene ripristinata la preferenza dell’account. È indipendente dagli interruttori di automazione e Smart Assign del progetto. Finché Riempimento intelligente è attivo, dopo il salvataggio [collega anche il ticket ai ticket correlati](#smart-fill-relations), perciò il selettore delle relazioni è nascosto; R lo apre comunque. Le relazioni già scelte restano visibili sopra il titolo e vengono create insieme al ticket.
@@ -348,10 +347,12 @@ Imposta le proprietà utili prima di confermare: stato, priorità, impegno, asse
 
 Conferma la creazione e apri il nuovo ticket. Controlla identificativo e progetto. Riapri i selettori delle proprietà per cambiare i valori quando l’attività diventa più chiara. La descrizione spiega il lavoro; il piano di implementazione si mantiene separatamente nella scheda del piano.
 
+Il comando per eliminare una bozza salvata apre una conferma. Annullare conserva la bozza; confermare elimina quella bozza salvata. La stessa conferma è disponibile quando si crea un obiettivo.
+
 
 ![Bozza non inviata nel progetto Aurora con titolo, descrizione, proprietà selezionabili manualmente e il pulsante Crea AUR-19.](/documentation/it/new-issue.png)
 
-La descrizione, i commenti e la finestra di creazione del ticket usano lo stesso editor delle pagine del progetto, senza le maniglie dei blocchi. Digita `/` per inserire un titolo, un elenco, un'attività, una citazione, un **Riquadro**, un blocco di codice, un blocco **Commuta** o un divisore, e `@` per menzionare una persona, un ticket, un obiettivo o una pagina. Il menu `@` elenca anche le risorse allegate a ciò che stai scrivendo: il ticket o l’obiettivo per la descrizione e il piano, un commento per i propri file o una finestra di creazione per i file aggiunti lì. Una menzione di una risorsa allegata altrove appare come **Non disponibile**. Più persone possono modificare la stessa descrizione contemporaneamente: il cursore di ciascuna appare con il suo nome e il suo colore, e le modifiche di Numo o di un agente collegato appaiono appena salvate. Numo, gli agenti collegati e le esportazioni CSV leggono il testo in Markdown, che si aggiorna pochi secondi dopo la fine della digitazione. Seleziona del testo per metterlo in grassetto, corsivo, barrato o codice, o per aggiungere un link. Incolla o trascina un'immagine per inserirla nella descrizione; gli altri tipi di file vanno nelle risorse del ticket. Una menzione punta alla sua destinazione, non al suo nome: segue una rinomina e resiste alle modifiche e al copia-incolla in un’altra descrizione, un commento, una pagina o il compositore di Numo. Chi non può aprire la destinazione vede una menzione **Non disponibile**, senza nome né progetto.
+La descrizione, i commenti e la finestra di creazione del ticket usano lo stesso editor delle pagine del progetto, senza le maniglie dei blocchi. Digita `/` per inserire un titolo, un elenco, un'attività, una citazione, un **Riquadro**, un blocco di codice, un blocco **Commuta** o un divisore, e `@` per menzionare una persona, un ticket, un obiettivo o una pagina. Il menu `@` elenca anche le risorse allegate a ciò che stai scrivendo: il ticket o l’obiettivo per la descrizione e il piano, un commento per i propri file o una finestra di creazione per i file aggiunti lì. Una menzione di una risorsa allegata altrove appare come **Non disponibile**. Più persone possono modificare la stessa descrizione contemporaneamente: il cursore di ciascuna appare con il suo nome e il suo colore, e le modifiche di Numo o di un agente collegato appaiono appena salvate. Numo, gli agenti collegati e le esportazioni CSV leggono il testo in Markdown, che si aggiorna pochi secondi dopo la fine della digitazione. Seleziona del testo per metterlo in grassetto, corsivo, barrato o codice, o per aggiungere un link. Incolla o trascina un'immagine, oppure scegli **Immagine** nel menu `/`, per inserirla nella descrizione; gli altri tipi di file vanno nelle risorse del ticket. Una menzione punta alla sua destinazione, non al suo nome: segue una rinomina e resiste alle modifiche e al copia-incolla in un’altra descrizione, un commento, una pagina o il compositore di Numo. Chi non può aprire la destinazione vede una menzione **Non disponibile**, senza nome né progetto.
 
 ### Verificare salvataggio e visibilità {#issue-save}
 
@@ -372,9 +373,9 @@ Disattivare un interruttore annulla anche i passaggi non ancora eseguiti. Numo p
 
 ## Valutare il lavoro in arrivo nel triage {#triage-incoming-work}
 
-I filtri dell’elenco restringono i ticket in arrivo per priorità, impegno, assegnatario, obiettivo, categorie o integrazione. I valori della stessa proprietà sono alternative; proprietà diverse si combinano. Reimposta i filtri per mostrare nuovamente tutti i ticket in arrivo.
-
 Apri la destinazione Triaggio del progetto. Leggi il ticket in arrivo e il contesto della sua origine prima di accettarlo nel lavoro pianificato. Controlla se un ticket esistente rappresenta già la richiesta. Chiarisci risultato previsto, progetto, assegnatario, priorità e sforzo secondo necessità.
+
+I filtri dell’elenco restringono i ticket in arrivo per priorità, impegno, assegnatario, obiettivo, categorie o integrazione. I valori della stessa proprietà sono alternative; proprietà diverse si combinano. Reimposta i filtri per mostrare nuovamente tutti i ticket in arrivo.
 
 Scegli Accetta e conferma per spostare nel Backlog un ticket da mantenere. Scegli Rifiuta e conferma per impostarlo su Annullata. Se è un duplicato, usa il selettore dei duplicati per scegliere il ticket da mantenere. Il ticket in arrivo assume lo stato Duplicato e rimanda a quello scelto. Se descrivi la richiesta nella ricerca del selettore, compaiono anche ticket simili sotto **Correlati per significato**, dopo le corrispondenze testuali; vedi [Cercare i ticket per significato](/docs/navigation#search-by-meaning). Quando un elemento esce dal triage, viene selezionato il successivo. Verifica lo stato risultante o il collegamento al duplicato nel ticket stesso. Passare da una scheda all’altra senza eseguire una di queste azioni non chiude il ticket.
 
@@ -483,7 +484,7 @@ Non eliminare un figlio solo per riorganizzare la gerarchia. Controlla le relazi
 
 ## Mantenere un piano di implementazione {#implementation-plans}
 
-Apri la scheda del piano del ticket. La descrizione dovrebbe già indicare il problema e il risultato previsto. Aggiungi i passi di implementazione manualmente oppure chiedi a Numo di esaminare il repository collegato prima di proporre un piano a livello di codice. Un percorso o una funzione generati dall’IA non sono una prova se il repository non è stato realmente letto.
+Apri la scheda del piano del ticket. La descrizione dovrebbe già indicare il problema e il risultato previsto. Aggiungi i passi di implementazione manualmente oppure [copia il prompt **Generare un piano**](#copy-issue-prompt) per il tuo agente di programmazione, che esplora da sé il repository. Numo non può leggere il repository: può precisare la descrizione e, se glielo chiedi, scrivere un piano semplice, ma qualsiasi percorso di file o funzione che cita è un’ipotesi. Un percorso o una funzione in un piano è una prova solo se il repository è stato realmente letto.
 
 Il piano si modifica direttamente, come la descrizione: fai clic al suo interno e scrivi, senza modalità di modifica né pulsante di salvataggio. Un piano vuoto mostra un testo segnaposto. Più membri, Numo e gli agenti collegati possono modificare lo stesso piano contemporaneamente, ognuno con un cursore con il proprio nome, e un’attività spuntata da un agente compare nel tuo editor mentre scrivi altrove. Digita `- [ ]` seguito da uno spazio all’inizio di una riga, oppure scegli **Elenco attività** nel menu `/`, per aggiungere un’attività. Fai clic sulla casella di un’attività per completarla, oppure apri il suo menu per gli altri stati.
 
@@ -534,7 +535,7 @@ Scegli Azioni nella barra mobile della selezione per aprire la palette dei coman
 
 Quando lavori tra progetti, verifica la tua appartenenza a ciascun progetto coinvolto. Leggi gli eventuali risultati di errore parziale: i cambiamenti riusciti possono essere già salvati anche se un altro ticket è stato rifiutato. Controlla il risultato prima di riprovare sull’intera selezione.
 
-L’eliminazione riguarda tutti gli elementi selezionati, quindi conferma l’insieme prima di procedere. Rimuovi la selezione dopo l’operazione se passi ad altro lavoro. Se l’aggiornamento cambia i risultati dei filtri, i ticket possono uscire dalla vista mostrata pur restando nel progetto. Cerca gli identificativi per verificare il nuovo stato invece di ricrearli.
+L’eliminazione riguarda tutti gli elementi selezionati, quindi conferma l’insieme prima di procedere. **Sposta i ticket nel cestino** chiede una conferma; i ticket, con i loro commenti, file e link, possono essere ripristinati dal [cestino](/docs/trash-and-recovery) per 30 giorni. Rimuovi la selezione dopo l’operazione se passi ad altro lavoro. Se l’aggiornamento cambia i risultati dei filtri, i ticket possono uscire dalla vista mostrata pur restando nel progetto. Cerca gli identificativi per verificare il nuovo stato invece di ricrearli.
 
 ## Importare un backlog CSV dopo la verifica {#import-issues}
 

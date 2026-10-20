@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -50,10 +50,10 @@
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun); agent:/root (installation article labeled as supporting reference; primary wizard entry points verified; existing figures and procedural evidence retained); agent:/root/second_operations (managed runner blocker and key-volume recovery source review; existing helper evidence retained; no operational rerun); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/editorial_it_pt (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 it network guidance and terminology review); agent:/root (it installation-reference title review); agent:/root/second_operations (it added installation and recovery safeguards, full retained meaning); agent:/root/min-721 (it runner-removal edits and full retained meaning)",
-    "date": "2026-10-16"
+    "revision": 9,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "authentication-and-email",
@@ -78,7 +78,7 @@
       "src": "/documentation/it/self-hosted-compatibility-flow.svg",
       "alt": "Schema: Tag sorgente annotato. Asset e SHA256SUMS. Firma e digest OCI ufficiali. Profilo di compatibilità scelto.",
       "caption": "Segui le fasi in questo ordine. Tag sorgente annotato. Asset e `SHA256SUMS`. Firma e digest OCI ufficiali. Profilo di compatibilità scelto.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -110,7 +110,7 @@
       "src": "/documentation/it/install-a-server-flow.svg",
       "alt": "Schema: Release verificata e ambiente protetto. Installer: profilo full di riferimento. Supabase ufficiale, app, scheduler. Verifica account, file e recupero.",
       "caption": "Segui le fasi in questo ordine. Release verificata e ambiente protetto. Installer: profilo full di riferimento. Supabase ufficiale, app, scheduler. Verifica account, file e recupero.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -142,12 +142,12 @@
       "src": "/documentation/it/install-a-server-wizard.png",
       "alt": "Assistente pubblico di installazione con Supabase sullo stesso server selezionato.",
       "caption": "Il profilo full mantiene applicazione e Supabase sul tuo server. In questo esempio, l’accesso tramite rete privata è limitato alla rete locale.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         944,
-        1029
+        1067
       ],
       "theme": "light",
       "padding": 24,
@@ -159,7 +159,7 @@
       "src": "/documentation/it/managed-or-source-installation-flow.svg",
       "alt": "Schema: Il tuo progetto Supabase gestito. PostgreSQL, Auth, Storage, Realtime. Profilo OCI O applicazione dal tag. Job e backup specifici del profilo.",
       "caption": "La scelta tra immagine OCI e compilazione dai sorgenti cambia la gestione dell’applicazione, mentre il provider gestisce il backend.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -208,7 +208,7 @@ Scegli un’origine raggiungibile dal client MCP e dal browser di autorizzazione
 
 ## Scegliere una versione e un profilo supportati {#self-hosted-compatibility}
 
-Usa una versione immutabile del repository pubblico `mangue-dev/minddy`. La voce v0.11.0 supporta server Linux amd64 e arm64, Node.js 24, `pnpm` 10.28.0, Docker Engine da 27.0.0 e plugin Compose da 2.29.0. full fissa Supabase ufficiale `self-hosted/v0.7.2` al commit `549db119c44c25167461812041ba198bde2b31a4`. Mantieni l’intero insieme di immagini: aggiornare un singolo servizio crea una variante gestita dall’operatore.
+Usa una versione immutabile del repository pubblico `mangue-dev/minddy` e leggi i requisiti nella voce di `deploy/self-hosted/compatibility.json` il cui `minddyRelease` corrisponde a quella versione. Una versione del package senza una propria voce non è una release self-hosted supportata. Ogni voce pubblicata supporta server Linux amd64 e arm64, Node.js 24, `pnpm` 10.28.0, Docker Engine da 27.0.0 e plugin Compose da 2.29.0. full fissa Supabase ufficiale `self-hosted/v0.7.2` al commit `549db119c44c25167461812041ba198bde2b31a4`. Mantieni l’intero insieme di immagini: aggiornare un singolo servizio crea una variante gestita dall’operatore.
 
 managed usa un progetto Supabase su supabase.com che deve fornire PostgreSQL, Auth, Storage e Realtime e superare la verifica della versione. PostgreSQL da solo non basta. Lo stack locale Supabase CLI serve a sviluppo e valutazione, non alla produzione pubblica.
 
@@ -276,10 +276,10 @@ Parti da tag verificato e digest immutabile. Linux amd64 e arm64 sono supportati
 
 ### Configurare e avviare l’installer {#install}
 
-Esegui `pnpm self-host:install` dalla directory della release. Seleziona il profilo managed o full, l’origine dell’applicazione e l’indirizzo dell’amministratore. Per il profilo full, recupera prima il checkout upstream fissato. Il programma di installazione scrive un file di ambiente con permessi `0600`, genera i segreti mancanti con valori distinti, scarica le immagini del profilo scelto, avvia i servizi ed esegue un bootstrap idempotente. Mantiene il riferimento fissato dell’immagine e i segreti già presenti. L’esempio usa il digest `IMAGE` verificato nell’articolo sulla compatibilità. Per ricevere davvero le email di Auth, aggiungi inizialmente `--skip-start`, poi configura `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_ADMIN_EMAIL` e `SMTP_SENDER_NAME` nel file protetto prima di ripetere l’installazione. Mantieni `ENABLE_EMAIL_AUTOCONFIRM=false`. Il valore `supabase-mail` è un segnaposto e non corrisponde a una casella di posta per la produzione.
+Esegui `pnpm self-host:install` dalla directory della release. Seleziona il profilo managed o full, l’origine dell’applicazione e l’indirizzo dell’amministratore. Per il profilo full, recupera prima il checkout upstream fissato. Il programma di installazione scrive un file di ambiente con permessi `0600`, genera i segreti mancanti con valori distinti, scarica le immagini del profilo scelto, avvia i servizi ed esegue un bootstrap idempotente. Mantiene il riferimento fissato dell’immagine e i segreti già presenti. Il programma chiede anche se cifrare i contenuti dello spazio di lavoro: `--encryption enabled` (predefinito) o `--encryption disabled` risponde senza interazione e scrive `MINDDY_CONTENT_ENCRYPTION_ENABLED` con una `MINDDY_DATA_ROOT_KEY` indipendente. Una nuova esecuzione mantiene la scelta salvata e rifiuta una scelta diversa; consulta la [crittografia dello spazio di lavoro](/it/documentazione/workspace-encryption#workspace-encryption) prima di modificarla. L’esempio usa il digest `IMAGE` verificato nell’articolo sulla compatibilità. Per ricevere davvero le email di Auth, aggiungi inizialmente `--skip-start`, poi configura `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_ADMIN_EMAIL` e `SMTP_SENDER_NAME` nel file protetto prima di ripetere l’installazione. Mantieni `ENABLE_EMAIL_AUTOCONFIRM=false`. Il valore `supabase-mail` è un segnaposto e non corrisponde a una casella di posta per la produzione.
 
 
-Prima dell’avvio, confronta `MINDDY_RELEASE` e `MINDDY_IMAGE` nel file protetto con la voce di compatibilità scelta e l’asset container verificato. Il modello di v0.11.0 indica ancora 0.10.30. `--image` cambia soltanto il riferimento dell’immagine e non esiste un’opzione `--release`. Per una nuova installazione v0.11.0 preparata con `--skip-start`, imposta esplicitamente `MINDDY_RELEASE=0.11.0` e conserva il riferimento immutabile verificato. Non sostituire le credenziali generate né le chiavi di cifratura. La versione del package candidato non dimostra un profilo 0.11.1 supportato: questo snapshot non contiene la relativa voce di compatibilità.
+Prima dell’avvio, confronta `MINDDY_RELEASE` e `MINDDY_IMAGE` nel file protetto con la voce di compatibilità scelta e l’asset container verificato. Il programma di installazione copia `MINDDY_RELEASE` dal modello di distribuzione della release e `--image` cambia soltanto il riferimento dell’immagine; non esiste un’opzione `--release`. Il modello di v0.11.0, per esempio, indica ancora 0.10.30. Se il valore differisce dalla release che installi, prepara il file con `--skip-start`, imposta esplicitamente `MINDDY_RELEASE` su quella release e conserva il riferimento immutabile verificato. Non sostituire le credenziali generate né le chiavi di cifratura.
 
 ```bash
 node scripts/fetch-official-supabase.mjs --destination /srv/minddy/supabase

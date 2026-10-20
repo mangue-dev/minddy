@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -38,10 +38,10 @@
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root/second_operations (managed runner blocker and key-volume recovery source review; existing helper evidence retained; no operational rerun); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/second_operations (es added installation and recovery safeguards, full retained meaning); agent:/root/min-721 (es runner-removal edits and full retained meaning)",
-    "date": "2026-10-16"
+    "revision": 7,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "update-an-instance"
@@ -64,7 +64,7 @@
       "src": "/documentation/es/restore-and-roll-back-flow.svg",
       "alt": "Diagrama: Copia completa externa verificada. Destino vacío aislado y versiones iguales. Restaurar base, bytes y claves juntos. Verificar cuenta, contenido y archivos antes de abrir.",
       "caption": "Siga las etapas en este orden. Copia completa externa verificada. Destino vacío aislado y versiones iguales. Restaurar base, bytes y claves juntos. Verificar cuenta, contenido y archivos antes de abrir.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -194,7 +194,7 @@ Los bloques siguientes con `SUPABASE_COMPOSE_DIR`, `docker compose`, `supabase.e
 
 ### Bloquear escrituras y exportar SQL {#outage}
 
-Cierre la aplicación, los workers, el planificador y la API pública de Supabase. Detener solo el servidor web deja abiertas las escrituras de PostgREST y Storage. Defina `SUPABASE_DB_URL` de forma privada y elija una `BACKUP_DIR` nueva y cifrada. Exporte SQL con las herramientas de la versión instalada. Compruebe que todos los archivos SQL tienen contenido y que `data.sql` incluye las instrucciones `COPY` para `auth.users`, `storage.objects` y las tablas de la aplicación. La exportación habitual omite el historial de migraciones, por lo que sus dos exportaciones separadas son obligatorias. Conserve también las políticas gestionadas de Storage y Realtime.
+Cierre la aplicación, los workers, el planificador y la API pública de Supabase. Detener solo el servidor web deja abiertas las escrituras de PostgREST y Storage. Defina `SUPABASE_DB_URL` de forma privada, `FROM_TAG` con la etiqueta de la versión instalada actualmente y elija una `BACKUP_DIR` nueva y cifrada. Exporte SQL con las herramientas de la versión instalada. Compruebe que todos los archivos SQL tienen contenido y que `data.sql` incluye las instrucciones `COPY` para `auth.users`, `storage.objects` y las tablas de la aplicación. La exportación habitual omite el historial de migraciones, por lo que sus dos exportaciones separadas son obligatorias. Conserve también las políticas gestionadas de Storage y Realtime.
 
 ```bash
 set -euo pipefail

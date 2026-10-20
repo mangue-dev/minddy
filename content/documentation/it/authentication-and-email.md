@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -37,10 +37,10 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 4,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "instance-administration",
@@ -58,7 +58,7 @@
       "src": "/documentation/it/authentication-and-email-flow.svg",
       "alt": "Schema: Origine Auth e redirect configurati. SMTP proprio e modelli versionati. Conferma e accesso con password. Prove TOTP, recupero e vecchia password.",
       "caption": "Segui le fasi in questo ordine. Origine Auth e redirect configurati. SMTP proprio e modelli versionati. Conferma e accesso con password. Prove TOTP, recupero e vecchia password.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -93,7 +93,7 @@
 
 ## Configurare le email degli account, MFA e recupero {#authentication-and-email}
 
-Le email degli account dipendono da Supabase e GoTrue. Resend per le notifiche dell’applicazione non configura conferma o recupero password. Nel profilo full conserva l’overlay minddy in ogni comando Compose. Imposta `SITE_URL`, `API_EXTERNAL_URL`, `SUPABASE_PUBLIC_URL` e `ADDITIONAL_REDIRECT_URLS` sulle origini della tua istanza. Configura `SMTP_ADMIN_EMAIL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` e `SMTP_SENDER_NAME` con i valori del tuo provider. Mantieni la conferma email attiva e riavvia Auth nel contesto installato.
+Le email degli account dipendono da Supabase e GoTrue. Resend per le notifiche dell’applicazione non configura conferma o recupero password. Nel profilo full conserva l’overlay minddy in ogni comando Compose. Imposta `SITE_URL`, `API_EXTERNAL_URL`, `SUPABASE_PUBLIC_URL` e `ADDITIONAL_REDIRECT_URLS` sulle origini della tua istanza. Configura `SMTP_ADMIN_EMAIL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` e `SMTP_SENDER_NAME` con i valori del tuo provider. L’overlay imposta anche i limiti di sessione: `GOTRUE_SESSIONS_TIMEBOX` vale `8760h` (un anno) e `GOTRUE_SESSIONS_INACTIVITY_TIMEOUT` vale `720h` (30 giorni). Mantieni la conferma email attiva e riavvia Auth nel contesto installato.
 
 
 Prima di usare `compose` qui sotto, definisci la funzione del profilo full installato dal [contesto Compose di riferimento](/it/documentazione/backups-and-restoration#context).
@@ -107,7 +107,7 @@ compose up -d --wait auth
 
 ## Configurare Supabase gestito {#managed}
 
-Nella sezione Authentication del progetto gestito imposta Site URL e il redirect esatto `<app-origin>/auth/callback`. Configura SMTP e i due template email versionati. La conferma usa `token_hash` e `type=signup`. Richiedi password di almeno otto caratteri con minuscole, maiuscole e cifre, e abilita registrazione e verifica TOTP. Se disponibile, attiva il controllo delle password compromesse e registra i limiti del provider. Il profilo full nega l’accesso se quel controllo fallisce e deve poter raggiungere `api.pwnedpasswords.com`. Registra durata delle sessioni, rotazione refresh, revoca e limiti Auth: il bootstrap SQL non configura questi controlli.
+Nella sezione Authentication del progetto gestito imposta Site URL e il redirect esatto `<app-origin>/auth/callback`. Configura SMTP e i due template email versionati. La conferma usa `token_hash` e `type=signup`. Richiedi password di almeno otto caratteri con minuscole, maiuscole e cifre, e abilita registrazione e verifica TOTP. Se disponibile, attiva il controllo delle password compromesse e registra i limiti del provider. Il profilo full nega l’accesso se quel controllo fallisce e deve poter raggiungere `api.pwnedpasswords.com`. Imposta la durata massima delle sessioni a 8760 ore (un anno) e il timeout di inattività a 720 ore (30 giorni). Il database rifiuta le sessioni oltre questi stessi limiti, quindi un limite Auth disattivato o più lungo continua a rinnovare sessioni che poi ogni API respinge. Registra durata delle sessioni, rotazione refresh, revoca e limiti Auth: il bootstrap SQL non configura questi controlli.
 
 ## Verificare il risultato {#verify}
 

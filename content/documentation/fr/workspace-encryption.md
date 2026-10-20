@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "encryption-and-data-boundaries",
@@ -56,7 +56,7 @@
       "src": "/documentation/fr/workspace-encryption-flow.svg",
       "alt": "Schéma: Racine dédiée hors de PostgreSQL. Clés projet, utilisateur et système enveloppées. Déchiffrement autorisé sur le serveur. Restauration base + Storage + mêmes clés.",
       "caption": "Restaurer du contenu chiffré exige les données et les clés correspondantes, dont la racine conservée hors de la base.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -91,7 +91,7 @@
 
 ## Configurer le chiffrement et conserver ses clés {#workspace-encryption}
 
-Les options `--encryption` de l’installateur et du bootstrap décrites ici appartiennent à l’outillage candidat 0.11.1 identifié. L’installateur et le bootstrap publiés en v0.11.0 ne les acceptent pas. Le runtime de cette version reconnaît `MINDDY_CONTENT_ENCRYPTION_ENABLED` ; le service Compose de référence charge le fichier protégé via `env_file`. Une modification explicite du flag nécessite donc de recréer le service de l’application avec le même environnement, puis de vérifier le schéma et le comportement réel. Une clé `MINDDY_DATA_ROOT_KEY` générée ne prouve pas que le contenu de l’espace est chiffré. Utilisez un outillage et une configuration correspondants, explicitement vérifiés pour la version choisie, avant d’accueillir des utilisateurs ou de modifier une instance existante.
+Les options `--encryption` de l’installateur et du bootstrap décrites ici sont livrées avec l’outillage de cette version. L’installateur et le bootstrap de la v0.11.0 ne les acceptent pas. Le runtime de cette version reconnaît `MINDDY_CONTENT_ENCRYPTION_ENABLED` ; le service Compose de référence charge le fichier protégé via `env_file`. Une modification explicite du flag nécessite donc de recréer le service de l’application avec le même environnement, puis de vérifier le schéma et le comportement réel. Une clé `MINDDY_DATA_ROOT_KEY` générée ne prouve pas que le contenu de l’espace est chiffré. Utilisez un outillage et une configuration correspondants, explicitement vérifiés pour la version choisie, avant d’accueillir des utilisateurs ou de modifier une instance existante.
 
 Les nouvelles installations locales et serveur activent le chiffrement par défaut et génèrent une `MINDDY_DATA_ROOT_KEY` dédiée. Pour un nouveau serveur, indiquez au besoin `--encryption enabled` ou `--encryption disabled`. Les deux choix conservent le chiffrement des identifiants et produisent une racine indépendante ; l’option concerne le contenu de l’espace de travail. Pour le desktop local, préparez la configuration choisie avec la commande ci-dessous avant d’ouvrir le clone. La racine aléatoire de 32 octets est encodée en exactement 64 caractères hexadécimaux et reste hors de PostgreSQL.
 

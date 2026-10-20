@@ -21,12 +21,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680); MIN-693 project roles; MIN-718 hybrid issue search; MIN-688 live collaboration; MIN-684 page promotion; MIN-743 destructive-action confirmations",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -73,9 +73,9 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-688 live collaboration: source, convergence/authority unit tests and a rollback-only database probe; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-684 page promotion: source and focused unit-test review of the menu entries, reader gating, save-before-promote and the Numo request; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for page-menu Move to trash and unpublishing; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (en changed-text and retained-meaning self-review); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-718 added passages with catalog UI labels; agent review, not human acceptance); agent:/root (en MIN-688 rewritten saving, presence and conflict passages; agent review, not human acceptance); agent:/root (en MIN-684 promotion section with catalog UI labels; agent review, not human acceptance); agent:/root (en MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 15,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 5 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 3 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -111,12 +111,12 @@
       "src": "/documentation/en/page-create-menu.png",
       "alt": "Page creation menu offering New page and New database.",
       "caption": "Use the project page controls to choose a document or a database.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
-        264,
-        152
+        240,
+        129
       ],
       "theme": "light",
       "padding": 24
@@ -127,12 +127,12 @@
       "src": "/documentation/en/page-editor.png",
       "alt": "Demonstration page with headings, paragraphs, task checkboxes and an issue mention.",
       "caption": "Headings, task blocks and the AUR-2 mention keep the page structured. This is demonstration content.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
-        1178,
-        922
+        1154,
+        1046
       ],
       "theme": "light",
       "padding": 24
@@ -143,12 +143,12 @@
       "src": "/documentation/en/page-comments.png",
       "alt": "Page activity dialog with a demonstration edit event and an empty comment composer.",
       "caption": "Read page activity and write a comment in the composer. No comment has been submitted in this example.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
-        632,
-        625
+        608,
+        616
       ],
       "theme": "light",
       "padding": 24
@@ -159,7 +159,7 @@
       "src": "/documentation/en/page-file-states.png",
       "alt": "Demo page with an unfinished upload and a saved 67-byte file offering Download.",
       "caption": "Check the actual file state: the second attachment is available, while the first unfinished upload is not.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -175,7 +175,7 @@
       "src": "/documentation/en/page-history-preview.png",
       "alt": "Versions tab with an expanded earlier state, its author, Restore and the 30-day retention notice.",
       "caption": "Preview a saved state and compare it with the current page before restoring.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -191,9 +191,9 @@
       "src": "/documentation/en/page-publish.png",
       "alt": "Page publication dialog with Private selected and password or bearer-link alternatives.",
       "caption": "Private keeps the page within the project. Review the intended audience before changing publication.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         496,
         230
@@ -207,9 +207,9 @@
       "src": "/documentation/en/page-export.png",
       "alt": "Document export menu with Markdown (.md) and Print / PDF.",
       "caption": "Choose Markdown to download the document, or Print / PDF to open the printable view.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         211,
         128
@@ -221,9 +221,9 @@
       "id": "page-file-preview",
       "kind": "screenshot",
       "src": "/documentation/en/file-preview.png",
-      "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download and Remove.",
-      "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Remove.",
-      "revision": 14,
+      "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
+      "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -252,7 +252,7 @@ Pages hold a project’s wiki, with documents, nested pages and database entries
 
 ## Build a project wiki {#create-and-organize-pages}
 
-Open Pages in a project where you are a member. Use the + menu and choose a page for a document or a database for a structured list. Give the page a useful title and write the specification, decision or procedure it should preserve.
+Open Pages in a project as its owner or a Member; readers can open pages but cannot create them. Use the + menu and choose a page for a document or a database for a structured list. Give the page a useful title and write the specification, decision or procedure it should preserve.
 
 Create subpages for related documents and use the tree controls to move or reorder them. A page cannot become a descendant of itself. Duplicating a page creates new content rather than a live reference to the original. Review the duplicate's branch before editing or sharing it.
 
@@ -278,7 +278,7 @@ Unlike a promoted notebook task, the page is not removed: it stays in its place 
 
 ## Write a page with blocks and mentions {#page-editor}
 
-Open the page and edit its title or body as the owner or a Member. Readers can open and read pages, but cannot edit, import, duplicate, favorite or publish them, or restore a version. Use the slash-command menu and formatting controls to insert headings, paragraphs, lists, task items, code, collapsible sections and callouts. A callout can have an emoji icon and palette color; choose them to distinguish useful information rather than as the only way to communicate a warning.
+Open the page and edit its title or body as the owner or a Member. Readers can open and read pages, but cannot edit, import, duplicate, favorite or publish them, or restore a version. Use the slash-command menu and formatting controls to insert headings, text, bullet, numbered and task lists, quotes, callouts, code blocks, dividers, toggles (collapsible sections), sub-pages, images and files. A callout can have an emoji icon and palette color; choose them to distinguish useful information rather than as the only way to communicate a warning.
 
 Use mentions to link relevant issues, objectives, people or pages. Type `@` followed by an identifier, title words or a short description; a descriptive query also lists issues found [by meaning](/docs/navigation#search-by-meaning) under **Related by meaning**, after the text matches. Backlinks help readers find pages that reference the current one. A link supplies context rather than granting a reader access to another project's private object.
 
@@ -316,9 +316,9 @@ Open the page as a project member and use its attachment or upload controls. Sel
 
 Images can be inserted as image blocks, and other documents can be attached as file blocks. The server determines the stored media type from the bytes rather than trusting the filename or browser label. Upload acceptance does not guarantee that every format has an inline preview; use the file download when a preview is unavailable.
 
-In the project editor, click an image or the name of a supported file block to open the same full-window reader used by issue attachments. Markdown (`.md`), plain text (`.txt`, `.text`), CSV, PDF and supported audio or video open in dedicated containers. Use Close or Escape to return to the page. The File actions (`…`) menu offers Download; Remove is available only in an editable page and removes the block from the document. The file block also keeps its direct Download control. Unsupported formats, external file links and file blocks on published pages retain their download behavior. Published images use the reader without a removal action.
+In the project editor, click an image or the name of a supported file block to open the same full-window reader used by issue attachments. Markdown (`.md`), plain text (`.txt`, `.text`), CSV, PDF and supported audio or video open in dedicated containers. Use Close or Escape to return to the page. The File actions (`…`) menu offers Download. In an editable page, a file block also offers Rename, which changes the name shown in the page, and images and files offer Remove: it asks for confirmation, then removes the block from the document, and you can undo it in the editor. The file block also keeps its direct Download control. Unsupported formats, external file links and file blocks on published pages retain their download behavior. Published images use the reader without a removal action.
 
-![Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download and Remove.](/documentation/en/file-preview.png)
+![Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.](/documentation/en/file-preview.png)
 
 Check that the file appears in the page and open or download it. File bytes live in Storage, while the page and file metadata determine access. A successful page save alone does not prove the file bytes are available.
 

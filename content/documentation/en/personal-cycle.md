@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -37,14 +37,16 @@
       "lib/server/cycles.ts",
       "components/cycle/use-cycle-menu-actions.tsx",
       "docs/security/project-roles.md",
-      "lib/project-roles.ts"
+      "lib/project-roles.ts",
+      "components/cycle/cycle-empty-states.tsx",
+      "components/global-board.tsx"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-17"
+    "revision": 6,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "views",
@@ -61,7 +63,7 @@
       "src": "/documentation/en/reader-cycle.png",
       "alt": "A demonstration issue in the personal cycle’s backlog.",
       "caption": "Adding the issue to this cycle assigned its owner while preserving backlog status.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -80,7 +82,7 @@
 
 ## Configure and fill your cycle {#personal-cycle}
 
-Enable cycles in Account settings → Cycles, then open Cycle from personal navigation. It belongs to your account and can contain issues assigned to you in projects where you are the owner or a Member. Readers cannot be assigned, so a project you only read contributes no work. It is not a project sprint and does not belong to a team objective.
+Enable cycles in **Account settings** → **Cycles**, or with **Activate cycles** on the **Cycle** tab. Open that tab in the view bar of **All issues**, or search for Cycle in the command palette; a project board's **Cycle** tab, marked with an arrow, leads to the same personal cycle. It belongs to your account and can contain issues assigned to you in projects where you are the owner or a Member. Readers cannot be assigned, so a project you only read contributes no work. It is not a project sprint and does not belong to a team objective.
 
 Choose a duration of one or two weeks, the starting weekday, one to four upcoming cycles and light, medium or heavy intensity. These settings determine your personal period and target capacity. The automatic-capture switches control whether assigned issues enter the current cycle when they start or finish.
 
@@ -90,6 +92,6 @@ The current cycle is filled automatically once from eligible work. To add an iss
 
 ## Finish or adjust the period {#cycle-results}
 
-Update issue statuses as work progresses and inspect completed versus remaining work. At a period boundary, unfinished eligible issues from past cycles move into the current cycle automatically; their assignment is preserved. This carry-over does not mark them complete. Use the date selector to inspect past and upcoming cycles; these views are read-only, while the current cycle supports changes.
+Update issue statuses as work progresses and inspect completed versus remaining work. At a period boundary, unfinished eligible issues from past cycles move into the current cycle automatically; their assignment is preserved. This carry-over does not mark them complete. When every issue of the current cycle is closed, a **Cycle completed** banner offers **Refill cycle** to add eligible work; the cycle is not refilled automatically during the period. Use the date selector to inspect past and upcoming cycles; these views are read-only, while the current cycle supports changes.
 
 If a prerequisite is pulled into the current cycle to keep dependencies coherent, inspect why it was added before removing it. An issue that vanishes after completion may still be visible in completed cycle work or by identifier. Account cycle settings affect your planning surface, not another member’s personal cycle.

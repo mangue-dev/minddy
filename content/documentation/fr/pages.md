@@ -21,12 +21,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680); MIN-693 project roles; MIN-718 hybrid issue search; MIN-688 live collaboration; MIN-684 page promotion; MIN-743 destructive-action confirmations",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -73,9 +73,9 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-688 live collaboration: source, convergence/authority unit tests and a rollback-only database probe; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-684 page promotion: source and focused unit-test review of the menu entries, reader gating, save-before-promote and the Numo request; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for page-menu Move to trash and unpublishing; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (fr changed-text and retained-meaning self-review); agent:/root/min693_fr with agent:/root (fr MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (fr translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root/min688_fr with agent:/root (fr MIN-688 translation of the rewritten saving, presence and conflict passages; agent review, not human acceptance); agent:/root (fr translation of the MIN-684 promotion section with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 15,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 5 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 3 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -111,12 +111,12 @@
       "src": "/documentation/fr/page-create-menu.png",
       "alt": "Menu de création proposant Nouvelle page et Nouvelle base de données.",
       "caption": "Les contrôles des pages du projet permettent de choisir un document ou une base de données.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
-        302,
-        152
+        278,
+        129
       ],
       "theme": "light",
       "padding": 24
@@ -127,12 +127,12 @@
       "src": "/documentation/fr/page-editor.png",
       "alt": "Page de démonstration avec titres, paragraphes, cases de tâches et mention d’un ticket.",
       "caption": "Les titres, blocs de tâches et la mention AUR-2 structurent la page. Ce contenu est un exemple de démonstration.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
-        1178,
-        922
+        1154,
+        1046
       ],
       "theme": "light",
       "padding": 24
@@ -143,12 +143,12 @@
       "src": "/documentation/fr/page-comments.png",
       "alt": "Fenêtre d’activité de la page avec modification de démonstration et champ de commentaire vide.",
       "caption": "Lisez l’activité et rédigez un commentaire dans le champ. Aucun commentaire n’a été envoyé dans cet exemple.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
-        632,
-        625
+        608,
+        616
       ],
       "theme": "light",
       "padding": 24
@@ -159,7 +159,7 @@
       "src": "/documentation/fr/page-file-states.png",
       "alt": "Page de démonstration avec un envoi inachevé et un fichier enregistré de 67 octets proposant Télécharger.",
       "caption": "Vérifiez l’état réel du fichier : la seconde pièce jointe est disponible, contrairement au premier envoi inachevé.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -175,7 +175,7 @@
       "src": "/documentation/fr/page-history-preview.png",
       "alt": "Onglet Versions avec un état antérieur déplié, son auteur, Restaurer et l’indication de conservation pendant 30 jours.",
       "caption": "Prévisualisez un état enregistré et comparez-le à la page actuelle avant de le restaurer.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -191,9 +191,9 @@
       "src": "/documentation/fr/page-publish.png",
       "alt": "Fenêtre de publication avec Privée sélectionné et options par mot de passe ou lien.",
       "caption": "Privée conserve la page dans le projet. Vérifiez le public souhaité avant de modifier la publication.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         496,
         230
@@ -207,9 +207,9 @@
       "src": "/documentation/fr/page-export.png",
       "alt": "Menu d’export du document avec Markdown (.md) et Imprimer / PDF.",
       "caption": "Choisissez Markdown pour télécharger le document, ou Imprimer / PDF pour ouvrir la vue imprimable.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         211,
         128
@@ -221,9 +221,9 @@
       "id": "page-file-preview",
       "kind": "screenshot",
       "src": "/documentation/fr/file-preview.png",
-      "alt": "Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger et Retirer.",
-      "caption": "Le lecteur commun place Fermer sous l’aperçu. Le menu Actions du fichier propose Télécharger et, si les droits le permettent, Retirer.",
-      "revision": 14,
+      "alt": "Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger, Renommer et Retirer.",
+      "caption": "Le lecteur commun place Fermer sous l’aperçu. Le menu Actions du fichier propose Télécharger et, si les droits le permettent, Renommer et Retirer.",
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -252,7 +252,7 @@ Les pages constituent le wiki d’un projet, avec ses documents, ses sous-pages 
 
 ## Construire un wiki de projet {#create-and-organize-pages}
 
-Ouvrez les pages d’un projet dont vous êtes membre. Le menu + propose une page pour un document ou une base pour une liste structurée. Donnez un titre utile et écrivez la spécification, décision ou procédure à conserver.
+Ouvrez les pages d’un projet en tant que propriétaire ou Membre ; les lecteurs peuvent ouvrir les pages mais pas en créer. Le menu + propose une page pour un document ou une base pour une liste structurée. Donnez un titre utile et écrivez la spécification, décision ou procédure à conserver.
 
 Créez des sous-pages pour les documents associés et déplacez-les ou réordonnez-les dans l’arbre. Une page ne peut pas devenir sa propre descendante. Une duplication crée un nouveau contenu plutôt qu’une référence vivante. Examinez la branche dupliquée avant modification ou partage.
 
@@ -278,7 +278,7 @@ Contrairement à une tâche promue depuis le carnet, la page n’est pas retiré
 
 ## Écrire une page avec blocs et mentions {#page-editor}
 
-Ouvrez la page et modifiez son titre ou son corps en tant que propriétaire ou Membre. Les lecteurs peuvent ouvrir et lire les pages, mais ne peuvent ni les modifier, ni les importer, ni les dupliquer, ni les ajouter aux favoris, ni les publier, ni restaurer une version. Le menu slash et les commandes de mise en forme insèrent titres, paragraphes, listes, tâches, code, sections repliables et encadrés. Un encadré peut porter une icône emoji et une couleur de palette ; utilisez-les pour distinguer une information, sans faire de la couleur l’unique moyen de comprendre un avertissement.
+Ouvrez la page et modifiez son titre ou son corps en tant que propriétaire ou Membre. Les lecteurs peuvent ouvrir et lire les pages, mais ne peuvent ni les modifier, ni les importer, ni les dupliquer, ni les ajouter aux favoris, ni les publier, ni restaurer une version. Le menu slash et les commandes de mise en forme insèrent titres, texte, listes à puces, numérotées et de tâches, citations, encadrés, blocs de code, séparateurs, dépliants (sections repliables), sous-pages, images et fichiers. Un encadré peut porter une icône emoji et une couleur de palette ; utilisez-les pour distinguer une information, sans faire de la couleur l’unique moyen de comprendre un avertissement.
 
 Les mentions relient tickets, objectifs, personnes ou pages. Tapez `@` suivi d’un identifiant, de mots du titre ou d’une courte description ; une requête descriptive liste aussi des tickets trouvés [par le sens](/docs/navigation#search-by-meaning) sous **Liés par le sens**, après les correspondances textuelles. Les liens retour aident à retrouver les pages qui citent celle-ci. Un lien apporte du contexte, sans ouvrir les objets privés d’un autre projet.
 
@@ -316,9 +316,9 @@ Ouvrez la page comme membre et utilisez ses commandes de pièce jointe ou d’en
 
 Les images peuvent être insérées en blocs d’image et les autres documents en blocs de fichier. Le serveur détermine le type stocké à partir des octets, sans se fier au nom du fichier ou au libellé du navigateur. L’envoi réussi ne garantit pas un aperçu intégré pour tous les formats ; téléchargez le fichier si l’aperçu est indisponible.
 
-Dans l’éditeur du projet, cliquez sur une image ou sur le nom d’un bloc fichier pris en charge pour ouvrir le même lecteur sur toute la fenêtre que pour les pièces jointes des tickets. Markdown (`.md`), texte brut (`.txt`, `.text`), CSV, PDF et formats audio ou vidéo compatibles s’ouvrent dans des conteneurs dédiés. Utilisez Fermer ou Échap pour revenir à la page. Le menu Actions du fichier (`…`) propose Télécharger ; Retirer apparaît uniquement dans une page modifiable et retire le bloc du document. Le bloc fichier conserve aussi sa commande Télécharger directe. Les formats non pris en charge, les liens de fichiers externes et les blocs fichiers des pages publiées conservent leur téléchargement. Les images publiées utilisent le lecteur sans action de retrait.
+Dans l’éditeur du projet, cliquez sur une image ou sur le nom d’un bloc fichier pris en charge pour ouvrir le même lecteur sur toute la fenêtre que pour les pièces jointes des tickets. Markdown (`.md`), texte brut (`.txt`, `.text`), CSV, PDF et formats audio ou vidéo compatibles s’ouvrent dans des conteneurs dédiés. Utilisez Fermer ou Échap pour revenir à la page. Le menu Actions du fichier (`…`) propose Télécharger. Dans une page modifiable, un bloc fichier propose aussi Renommer, qui change le nom affiché dans la page, et les images comme les fichiers proposent Retirer : après confirmation, le bloc est retiré du document, et vous pouvez l’annuler dans l’éditeur. Le bloc fichier conserve aussi sa commande Télécharger directe. Les formats non pris en charge, les liens de fichiers externes et les blocs fichiers des pages publiées conservent leur téléchargement. Les images publiées utilisent le lecteur sans action de retrait.
 
-![Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger et Retirer.](/documentation/fr/file-preview.png)
+![Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger, Renommer et Retirer.](/documentation/fr/file-preview.png)
 
 Vérifiez l’apparition du fichier, puis ouvrez-le ou téléchargez-le. Les octets sont dans Storage ; page et métadonnées déterminent l’accès. Une page enregistrée ne prouve pas à elle seule que les octets sont disponibles.
 

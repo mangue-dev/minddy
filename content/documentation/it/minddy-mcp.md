@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-19",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12); 0.11.1 candidate (89ebb59a5); MIN-693 project roles; MIN-718 hybrid issue search; MIN-737 account settings reorganization",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -57,10 +57,10 @@
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun); agent:/root with agent:/root/review_it_pt (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-728 agent image access: source and unit-test review of view_image and minddy_get_image; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 account settings reorganization: source review of the AI & Numo and minddy MCP tab contents; unchanged evidence retained; no browser walkthrough, no new captures)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 it network guidance and terminology review); agent:/root/review_it_pt with agent:/root (it pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained); agent:/root/min693_it with agent:/root (it MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (it translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-19"
+    "revision": 12,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "numo",
@@ -83,9 +83,9 @@
       "src": "/documentation/it/external-minddy-mcp-workflow.png",
       "alt": "Selettore dei client MCP minddy con Claude, Codex e altri assistenti.",
       "caption": "Scegli il client per visualizzare il comando o la configurazione di installazione.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         816,
         252
@@ -100,9 +100,9 @@
       "src": "/documentation/it/external-minddy-mcp-install-workflow.png",
       "alt": "Finestra di installazione di Codex con l’endpoint minddy Cloud.",
       "caption": "Questo esempio si connette a minddy Cloud. Per un’istanza autogestita, usa l’origine della tua istanza; il comando mostrato non è stato eseguito per questa cattura.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         560,
         364
@@ -168,7 +168,7 @@ Le letture che restituiscono testo con immagini (`minddy_get_issue`, `minddy_get
 
 Per convertire un tipo, usa `operation=convert` con `propertyId`, `targetType`, `revision` e `preview=true`. Controlla `incompatibleCount`, quindi invia le stesse impostazioni con `preview=false` e il `token` restituito. Imposta `confirmLoss=true` solo dopo che l’utente ha autorizzato esplicitamente la cancellazione dei valori incompatibili.
 
-Solo il proprietario può creare, sospendere, ripianificare o eliminare le proprie routine. Leggi prima di creare per evitare duplicati. `minddy_add_resource` limita i file a 10 MB; gli strumenti delle pagine non inventano URL.
+Gli strumenti delle routine, riservati al proprietario, creano, modificano, sospendono o eliminano routine attivate da una pianificazione, da un evento o da una nuova voce di database. Leggi prima di creare per evitare duplicati. `minddy_add_resource` limita i file a 10 MB; gli strumenti delle pagine non inventano URL.
 
 ### Verificare con un esempio {#example}
 

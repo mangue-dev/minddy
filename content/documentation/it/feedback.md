@@ -20,12 +20,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-693 project roles; MIN-718 hybrid issue search; MIN-737 project settings reorganization; MIN-743 destructive-action confirmations",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -67,9 +67,9 @@
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_it_pt (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 integrations list: source review of the Objective for new feedback line and its in-place objective creation; no browser walkthrough; feedback-objective-selection predates this layout and is retained pending recapture; MIN-737: publish-a-feedback-board-workflow recaptured on 2026-10-19 in all six locales from the local candidate on the demo board — email identity, URL concealed — and inspected); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for unlinking a feedback post from its issue and a visitor deleting their own public comment; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_it_pt with agent:/root (it pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained); agent:/root (it changed-passage parity and localized-label review); agent:/root/min693_it with agent:/root (it MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (it translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it translation of the MIN-737 project-settings second-pass passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (it MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 14,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -96,9 +96,9 @@
       "src": "/documentation/it/publish-a-feedback-board-workflow.png",
       "alt": "Bacheca pubblica dei feedback attiva, con identità dei visitatori tramite codice email, l’azione Abilita SSO e URL nascosto.",
       "caption": "Il proprietario attiva la bacheca e sceglie l’identità dei visitatori. Questa bacheca dimostrativa usa la verifica email; il suo URL è nascosto.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
-      "capturedAt": "2026-10-19",
+      "capturedAt": "2026-10-20",
       "viewport": [
         816,
         566
@@ -113,11 +113,11 @@
       "src": "/documentation/it/submit-and-follow-feedback-workflow.png",
       "alt": "Modulo di feedback del visitatore con titolo, descrizione e visibilità pubblica attivata.",
       "caption": "Un visitatore identificato invia un’esigenza e ne sceglie la visibilità. L’esempio è stato realmente inviato con la revisione automatica disattivata.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
-        625,
+        624,
         394
       ],
       "theme": "light",
@@ -129,7 +129,7 @@
       "src": "/documentation/it/feedback-objective-selection.png",
       "alt": "Anteprima dei componenti di selezione dell’obiettivo per un feedback e un’integrazione, entrambi impostati su Docs.",
       "caption": "Selettori dell’obiettivo con dati dimostrativi. I nuovi feedback ereditano l’impostazione dell’integrazione.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -146,7 +146,7 @@
       "src": "/documentation/it/feedback-pages-and-views-workflow.png",
       "alt": "Guida ai feedback pubblicata e selezionata nella navigazione della bacheca, leggibile senza accesso.",
       "caption": "Pubblica una pagina, attiva le schede delle pagine e selezionala per la bacheca. Questa pagina dimostrativa è stata aperta anonimamente; il suo URL opaco mantiene `noindex`.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -178,7 +178,7 @@ Scegli se i visitatori si identificano con un codice email o tramite il SSO conf
 
 Disattivare la bacheca rende le sue pagine inaccessibili ai visitatori. L’acquisizione da server a server usa una chiave di integrazione feedback separata e può continuare senza una bacheca pubblica. La scelta di visibilità di un feedback, lo stato di revisione e lo stato di spam ne determinano anche la visibilità: attivare la bacheca da solo non pubblica ogni feedback.
 
-La revisione facoltativa di Numo riguarda il feedback inviato e dipende dalle impostazioni di progetto e istanza, dai provider e dal budget del proprietario. Se attiva, gli invii attendono la revisione prima della pubblicazione; se disattivata, non restano in attesa di una revisione che non avverrà. Controlla la coda dopo un invio dimostrativo. Numo invia risposte pubbliche solo su richiesta esplicita.
+Il proprietario attiva o disattiva la **Revisione di Numo** nelle impostazioni Feedback del progetto; non esiste un interruttore separato a livello di istanza. Con la revisione attiva, gli invii dalla bacheca pubblica e dalle integrazioni attendono la revisione prima della pubblicazione, mentre il feedback creato dal team non viene trattenuto. Ciò che viene segnalato come sensibile, come una vulnerabilità o dati personali, diventa privato e attende in **Riesame**. La revisione usa il provider IA dell’istanza e il budget IA del proprietario del progetto: quando il budget si esaurisce, il feedback resta in attesa, visibile solo al team, a meno che il proprietario non attivi **Pubblicare senza revisione quando il bilancio dell'AI si esaurisce**. Con la revisione disattivata, il feedback viene pubblicato così come è stato inviato, senza categorie automatiche, filtro degli scherzi né controllo della riservatezza. Controlla la coda dopo un invio dimostrativo. Numo invia risposte pubbliche solo su richiesta esplicita.
 
 ![Bacheca pubblica dei feedback attiva, con identità dei visitatori tramite codice email, l’azione Abilita SSO e URL nascosto.](/documentation/it/publish-a-feedback-board-workflow.png)
 
@@ -188,7 +188,7 @@ Apri l’URL pubblico della bacheca. Puoi leggere i feedback pubblici senza un a
 
 Cerca richieste esistenti prima di pubblicare. Scrivi un titolo preciso e descrivi il bisogno e il contesto. Il titolo ammette 200 caratteri e il corpo 10.000. L’opzione pubblica è selezionata per impostazione predefinita; deselezionala per inviare la richiesta privatamente al team. Prima dell’invio, controlla che il testo non contenga segreti. La moderazione facoltativa può mantenere la richiesta in attesa prima che appaia pubblicamente.
 
-Usa il microfono nel modulo di invio per dettare titolo e descrizione. Prima identificati sulla bacheca, consenti l’accesso al microfono, poi interrompi la registrazione e controlla il testo prima di scegliere Invia. La dettatura compila la bozza; non invia la richiesta. La disponibilità dipende dalla configurazione vocale dell’istanza, dal funzionamento dei provider e dal budget IA del proprietario del progetto. L’utilizzo viene addebitato al proprietario secondo le sue impostazioni dei provider, anziché all’account del visitatore.
+Usa il microfono nel modulo di invio per dettare titolo e descrizione. Prima identificati sulla bacheca, consenti l’accesso al microfono, poi interrompi la registrazione e controlla il testo prima di scegliere Invia. La dettatura compila la bozza; non invia la richiesta. La disponibilità dipende dal funzionamento dei provider di trascrizione e IA dell’istanza e dal budget IA del proprietario del progetto; non esiste un interruttore separato dell’istanza per la voce. L’utilizzo viene addebitato al proprietario secondo le sue impostazioni dei provider, anziché all’account del visitatore.
 
 Le registrazioni sulla bacheca pubblica sono limitate a 10 MiB. La trascrizione consente 20 richieste per visitatore identificato e 40 per indirizzo IP all’ora, per bacheca; l’interpretazione della bozza ha un limite separato di 40 richieste per visitatore all’ora. Questi limiti sono distinti da quelli della dettatura dell’account. Se compare un messaggio di limite raggiunto, attendi prima di riprovare; se la funzione vocale non è disponibile, scrivi la richiesta.
 
@@ -218,7 +218,7 @@ I membri possono eliminare commenti pubblici per moderarli. Solo l’autore può
 
 L’elenco mostra l’obiettivo collegato sotto l’autore e le categorie. Nelle proprietà dell’obiettivo, il numero di feedback conta le richieste esistenti e non unite, incluse quelle private visibili al team. Seleziona il numero per aprire i feedback filtrati per quell’obiettivo, con tutti gli stati.
 
-Come membro del progetto, scegli **Obiettivo** nelle proprietà del feedback o quando lo crei internamente. Scegli **Nessuna** per rimuovere il collegamento. L’obiettivo deve appartenere allo stesso progetto. L’associazione è interna, non espone obiettivi privati sulla bacheca pubblica e non contribuisce all’avanzamento dei ticket.
+Come proprietario o Membro, scegli **Obiettivo** nelle proprietà del feedback o quando lo crei internamente. Scegli **Nessuna** per rimuovere il collegamento. L’obiettivo deve appartenere allo stesso progetto. L’associazione è interna, non espone obiettivi privati sulla bacheca pubblica e non contribuisce all’avanzamento dei ticket.
 
 Il proprietario può scegliere un obiettivo facoltativo creando un’integrazione di feedback in **Impostazioni del progetto** → **Integrazioni**, oppure modificarlo in seguito nella riga **Obiettivo dei nuovi feedback** sotto un’integrazione di feedback esistente. Quel selettore può anche creare un nuovo obiettivo. I nuovi invii API ereditano l’obiettivo, anche con `analyze: false`. Cambiare l’impostazione non sposta i feedback esistenti. Se l’obiettivo è nel cestino, scegline uno attivo o rimuovi l’impostazione prima di un nuovo invio. Numo non sceglie mai un obiettivo durante la revisione dei feedback. Chiedigli esplicitamente di collegare una richiesta o rimuoverne il collegamento.
 
@@ -230,7 +230,7 @@ Un gruppo unito condivide un solo obiettivo. Modificare l’obiettivo della rich
 
 ## Unire feedback e collegarlo alla consegna {#feedback-to-issue}
 
-Come membro del progetto, apri la richiesta e scegli di unirla a una richiesta canonica esistente nello stesso progetto. Leggi prima entrambi i bisogni: parole simili non dimostrano che il risultato atteso sia lo stesso. La richiesta corrente diventa il duplicato, i voti vengono uniti per identità e il duplicato reindirizza alla richiesta canonica. Controlla l’evento di unione nell’attività; il comando di annullamento usa quell’evento. Rifiuta un suggerimento IA errato anziché accettarlo solo per svuotare la coda.
+Come proprietario o Membro, apri la richiesta e scegli di unirla a una richiesta canonica esistente nello stesso progetto. Leggi prima entrambi i bisogni: parole simili non dimostrano che il risultato atteso sia lo stesso. La richiesta corrente diventa il duplicato, i voti vengono uniti per identità e il duplicato reindirizza alla richiesta canonica. Controlla l’evento di unione nell’attività; il comando di annullamento usa quell’evento. Rifiuta un suggerimento IA errato anziché accettarlo solo per svuotare la coda.
 
 ### Creare o collegare lavoro {#work}
 

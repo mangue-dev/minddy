@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
-  "sourceRevision": 17,
+  "revision": 18,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate; multi-provider settings and persistent personal Numo defaults; MIN-721 removal of code agents, sandboxes and code-work usage; MIN-693 project roles",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -56,10 +56,10 @@
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun); agent:/root/native_hosting_terms (private preview controls and limitations source/UI-test review; prior procedures retained, no native operational run); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately); agent:/root (experimental Claude and explicit cold continuation source and fixture review; no live provider execution); agent:/root (provider routing, persistent Numo defaults and local Docker UI review; no provider inference); agent:/root (guided connection source, behavior fixtures and local visual review; no live provider authentication); agent:/root/min721_docs (MIN-721 source review inherited from en revision 16; fr translation of removal edits; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed); agent:/root/native_hosting_terms (localized private preview additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance); agent:/root (six-locale experimental and reconnect additions; agent review, not human acceptance); agent:/root (complete six-locale defaults and routing meaning review; no human acceptance); agent:/root (six-locale wizard procedure equivalence; no human acceptance); agent:/root/min721_fr (fr translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root/min693_fr with agent:/root (fr MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
-    "date": "2026-10-17"
+    "revision": 18,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "scheduled-routines"
@@ -80,7 +80,7 @@
       "src": "/documentation/fr/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Les connexions, le routage par capacité et le modèle Numo personnel sont des réglages distincts.",
       "caption": "Plusieurs fournisseurs peuvent rester connectés. Le routage choisit le fournisseur par capacité ; le défaut Numo est enregistré par compte et fournisseur.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -132,7 +132,7 @@ Une clé non confirmée ou inaccessible peut laisser les appels IA généraux co
 
 ### Modèles locaux {#models}
 
-Lorsqu’ils sont configurés, Ollama local et les endpoints compatibles OpenAI peuvent servir les conversations par le bridge desktop. Les routines s’exécutent sur le serveur et ne peuvent pas joindre un modèle installé sur votre ordinateur. Pour elles, choisissez un fournisseur joignable depuis le serveur. Retirez un fournisseur devenu inutile avec son contrôle de confirmation et vérifiez le routage obtenu avant la prochaine exécution.
+Minddy appelle les modèles d’IA depuis le serveur : il ne peut donc pas utiliser un modèle qui tourne sur votre ordinateur. **Ajouter un fournisseur** ne propose pas d’Ollama local ni d’endpoint local compatible OpenAI. Un endpoint local enregistré dans une version précédente reste affiché dans **Fournisseurs connectés**, mais il ne peut servir ni les conversations Numo, ni les routines, ni les autres fonctions. Retirez-le et assignez à la place un fournisseur joignable depuis le serveur. Retirez un fournisseur devenu inutile avec son contrôle de confirmation et vérifiez le routage obtenu avant la prochaine exécution.
 
 
 ## Comprendre forfaits Cloud et consommation IA {#plans-and-ai-usage}
@@ -147,9 +147,9 @@ L’utilisation IA incluse couvre le raisonnement et les appels d’outils de Nu
 
 Les clés personnelles compatibles font facturer les appels aux modèles par leur fournisseur plutôt que par l’utilisation IA incluse. Les familles ou usages non attribués qui passent par des appels financés par minddy restent soumis à leur allocation minddy. L’auto-hébergement comporte des coûts d’infrastructure et de fournisseurs facultatifs déterminés par l’installation ; exécuter le même cœur ne le transforme pas en abonnement Cloud.
 
-### Capacités de la version candidate {#plan-capacities}
+### Capacités des formules {#plan-capacities}
 
-Ces valeurs par défaut décrivent la version candidate 0.11.1 identifiée. Vérifiez la page de prix et le compte réels avant d’acheter ; les prix configurés au paiement et les dérogations du compte peuvent différer. Le nombre d’invités exclut le propriétaire du projet et inclut les membres, les lecteurs et les invitations en attente ; il n’y a pas de facturation par siège. Le stockage est imputé au propriétaire du projet qui reçoit les fichiers. Lorsque la propriété est transférée, ces limites, le stockage et l’IA de fond comme Smart Assign et la relecture des retours reposent sur l’offre du nouveau propriétaire.
+Ces valeurs par défaut décrivent Minddy 0.20.0. Vérifiez la page de prix et le compte réels avant d’acheter ; les prix configurés au paiement et les dérogations du compte peuvent différer. Le nombre d’invités exclut le propriétaire du projet et inclut les membres, les lecteurs et les invitations en attente ; il n’y a pas de facturation par siège. Le stockage est imputé au propriétaire du projet qui reçoit les fichiers. Lorsque la propriété est transférée, ces limites, le stockage et l’IA de fond comme Smart Assign et la relecture des retours reposent sur l’offre du nouveau propriétaire.
 
 | Plan | Projets | Tickets par projet | Invités par projet | Stockage | IA mensuelle incluse (USD) |
 | --- | --- | --- | --- | --- | --- |

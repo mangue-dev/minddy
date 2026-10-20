@@ -21,12 +21,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680); MIN-693 project roles; MIN-718 hybrid issue search; MIN-688 live collaboration; MIN-684 page promotion; MIN-743 destructive-action confirmations",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -73,9 +73,9 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-688 live collaboration: source, convergence/authority unit tests and a rollback-only database probe; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-684 page promotion: source and focused unit-test review of the menu entries, reader gating, save-before-promote and the Numo request; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for page-menu Move to trash and unpublishing; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (de changed-text and retained-meaning self-review); agent:/root/min693_de with agent:/root (de MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (de translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root/min688_de with agent:/root (de MIN-688 translation of the rewritten saving, presence and conflict passages; agent review, not human acceptance); agent:/root (de translation of the MIN-684 promotion section with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 15,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 5 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 3 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -111,12 +111,12 @@
       "src": "/documentation/de/page-create-menu.png",
       "alt": "Erstellungsmenü mit Neue Seite und Neue Datenbank.",
       "caption": "Wähle über die Seitenfunktionen des Projekts ein Dokument oder eine Datenbank.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
-        264,
-        152
+        240,
+        129
       ],
       "theme": "light",
       "padding": 24
@@ -127,12 +127,12 @@
       "src": "/documentation/de/page-editor.png",
       "alt": "Demoseite mit Überschriften, Absätzen, Aufgaben mit Kontrollkästchen und einer Ticketreferenz.",
       "caption": "Überschriften, Aufgabenblöcke und die Referenz AUR-2 gliedern die Seite. Der Inhalt dient als Demobeispiel.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
-        1178,
-        1026
+        1154,
+        1046
       ],
       "theme": "light",
       "padding": 24
@@ -143,12 +143,12 @@
       "src": "/documentation/de/page-comments.png",
       "alt": "Seitenaktivität mit einer Demoänderung und einem leeren Kommentarfeld.",
       "caption": "Lies die Seitenaktivität und verfasse einen Kommentar im Eingabefeld. In diesem Beispiel wurde keiner abgesendet.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
-        632,
-        625
+        608,
+        616
       ],
       "theme": "light",
       "padding": 24
@@ -159,7 +159,7 @@
       "src": "/documentation/de/page-file-states.png",
       "alt": "Demoseite mit einem unvollständigen Upload und einer gespeicherten Datei von 67 Byte mit Downloadfunktion.",
       "caption": "Prüfe den tatsächlichen Dateizustand: Der zweite Anhang ist verfügbar, der erste unvollständige Upload nicht.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -175,7 +175,7 @@
       "src": "/documentation/de/page-history-preview.png",
       "alt": "Versionen-Tab mit aufgeklapptem früherem Zustand, Autor, Wiederherstellen und Hinweis auf 30 Tage Aufbewahrung.",
       "caption": "Prüfe einen gespeicherten Zustand in der Vorschau und vergleiche ihn vor dem Wiederherstellen mit der aktuellen Seite.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -191,9 +191,9 @@
       "src": "/documentation/de/page-publish.png",
       "alt": "Veröffentlichungsdialog mit ausgewähltem Privat und Alternativen für Passwort oder Link.",
       "caption": "Privat hält die Seite im Projekt. Prüfe die vorgesehene Zielgruppe vor einer Änderung der Freigabe.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         496,
         230
@@ -207,11 +207,11 @@
       "src": "/documentation/de/page-export.png",
       "alt": "Exportmenü des Dokuments mit Markdown (.md) und Drucken / PDF.",
       "caption": "Wähle Markdown zum Herunterladen oder Drucken / PDF für die Druckansicht.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
-        211,
+        212,
         128
       ],
       "theme": "light",
@@ -221,9 +221,9 @@
       "id": "page-file-preview",
       "kind": "screenshot",
       "src": "/documentation/de/file-preview.png",
-      "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen und Entfernen.",
-      "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Entfernen.",
-      "revision": 14,
+      "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.",
+      "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Umbenennen und Entfernen.",
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -252,7 +252,7 @@ Seiten bilden das Wiki eines Projekts mit Dokumenten, Unterseiten und Datenbanke
 
 ## Ein Projektwiki aufbauen {#create-and-organize-pages}
 
-Öffne den Seitenbereich eines Projekts, dessen Mitglied du bist. Wähle im +-Menü eine Seite für ein Dokument oder eine Datenbank für eine strukturierte Liste. Gib der Seite einen hilfreichen Titel und schreibe die Spezifikation, Entscheidung oder Vorgehensweise, die sie bewahren soll.
+Öffne den Seitenbereich eines Projekts als Eigentümer oder Mitglied; Leser können Seiten öffnen, aber keine erstellen. Wähle im +-Menü eine Seite für ein Dokument oder eine Datenbank für eine strukturierte Liste. Gib der Seite einen hilfreichen Titel und schreibe die Spezifikation, Entscheidung oder Vorgehensweise, die sie bewahren soll.
 
 Erstelle Unterseiten für zusammengehörige Dokumente und verschiebe oder ordne sie mit den Baumfunktionen. Eine Seite darf nicht unter sich selbst eingeordnet werden. Das Duplizieren erzeugt neue Inhalte statt eines aktuellen Verweises auf das Original. Prüfe den Zweig der Kopie vor Bearbeitung oder Freigabe.
 
@@ -278,7 +278,7 @@ Anders als eine übernommene Aufgabe aus dem Aufgabenheft wird die Seite nicht e
 
 ## Eine Seite mit Blöcken und Erwähnungen schreiben {#page-editor}
 
-Öffne die Seite und bearbeite als Eigentümer oder Mitglied Titel oder Inhalt. Leser können Seiten öffnen und lesen, sie aber weder bearbeiten, importieren, duplizieren, zu Favoriten hinzufügen oder veröffentlichen noch eine Version wiederherstellen. Verwende das Slash-Befehlsmenü und die Formatierungsfunktionen für Überschriften, Absätze, Listen, Aufgaben, Code, aufklappbare Abschnitte und Hinweisblöcke. Ein Hinweisblock kann ein Emoji-Symbol und eine Palettenfarbe haben. Unterscheide damit hilfreiche Informationen, ohne eine Warnung allein durch Symbol oder Farbe auszudrücken.
+Öffne die Seite und bearbeite als Eigentümer oder Mitglied Titel oder Inhalt. Leser können Seiten öffnen und lesen, sie aber weder bearbeiten, importieren, duplizieren, zu Favoriten hinzufügen oder veröffentlichen noch eine Version wiederherstellen. Verwende das Slash-Befehlsmenü und die Formatierungsfunktionen für Überschriften, Text, Aufzählungs-, nummerierte und Aufgabenlisten, Zitate, Hinweisblöcke, Codeblöcke, Teiler, Umschalter (aufklappbare Abschnitte), Unterseiten, Bilder und Dateien. Ein Hinweisblock kann ein Emoji-Symbol und eine Palettenfarbe haben. Unterscheide damit hilfreiche Informationen, ohne eine Warnung allein durch Symbol oder Farbe auszudrücken.
 
 Verwende Erwähnungen, um passende Probleme, Ziele, Personen oder Seiten zu verknüpfen. Tippe `@` gefolgt von einer Kennung, Wörtern aus dem Titel oder einer kurzen Beschreibung; eine beschreibende Anfrage listet nach den Textübereinstimmungen auch [inhaltlich gefundene](/docs/navigation#search-by-meaning) Probleme unter **Inhaltlich verwandt** auf. Rückverweise helfen Lesern, Seiten zu finden, die auf die aktuelle Seite verweisen. Ein Link liefert Kontext, gewährt aber keinen Zugriff auf private Objekte eines anderen Projekts.
 
@@ -316,9 +316,9 @@ Ein fehlender Kommentaranker kann durch Dokumentänderungen entstehen. Lies die 
 
 Bilder lassen sich als Bildblöcke einfügen, andere Dokumente als Dateiblöcke anhängen. Der Server ermittelt den gespeicherten Medientyp aus den Dateibytes, statt dem Dateinamen oder der Browserangabe zu vertrauen. Eine akzeptierte Datei hat nicht zwingend eine Vorschau innerhalb der Seite. Lade sie herunter, wenn keine Vorschau verfügbar ist.
 
-Klicken Sie im Projekteditor auf ein Bild oder den Namen eines unterstützten Dateiblocks. Es öffnet sich derselbe fensterfüllende Betrachter wie für Ticketanhänge. Markdown (`.md`), Klartext (`.txt`, `.text`), CSV, PDF sowie unterstützte Audio- und Videoformate werden in eigenen Bereichen angezeigt. Mit Schließen oder Escape kehren Sie zur Seite zurück. Das Menü Dateiaktionen (`…`) bietet Herunterladen. Entfernen ist nur auf einer bearbeitbaren Seite verfügbar und entfernt den Block aus dem Dokument. Der Dateiblock behält außerdem seine direkte Schaltfläche Herunterladen. Nicht unterstützte Formate, externe Dateilinks und Dateiblöcke auf veröffentlichten Seiten behalten ihr Download-Verhalten. Veröffentlichte Bilder verwenden den Betrachter ohne Entfernen-Aktion.
+Klicken Sie im Projekteditor auf ein Bild oder den Namen eines unterstützten Dateiblocks. Es öffnet sich derselbe fensterfüllende Betrachter wie für Ticketanhänge. Markdown (`.md`), Klartext (`.txt`, `.text`), CSV, PDF sowie unterstützte Audio- und Videoformate werden in eigenen Bereichen angezeigt. Mit Schließen oder Escape kehren Sie zur Seite zurück. Das Menü Dateiaktionen (`…`) bietet Herunterladen. Auf einer bearbeitbaren Seite bietet ein Dateiblock außerdem Umbenennen, das den auf der Seite angezeigten Namen ändert, und Bilder wie Dateien bieten Entfernen: Nach einer Bestätigung wird der Block aus dem Dokument entfernt, und Sie können das im Editor rückgängig machen. Der Dateiblock behält außerdem seine direkte Schaltfläche Herunterladen. Nicht unterstützte Formate, externe Dateilinks und Dateiblöcke auf veröffentlichten Seiten behalten ihr Download-Verhalten. Veröffentlichte Bilder verwenden den Betrachter ohne Entfernen-Aktion.
 
-![Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen und Entfernen.](/documentation/de/file-preview.png)
+![Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.](/documentation/de/file-preview.png)
 
 Prüfe, ob die Datei auf der Seite erscheint, und öffne sie oder lade sie herunter. Die Dateidaten liegen in Storage; Seiten- und Dateimetadaten bestimmen den Zugriff. Ein erfolgreiches Speichern der Seite beweist allein nicht, dass die Dateidaten verfügbar sind.
 

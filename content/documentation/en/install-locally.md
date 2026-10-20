@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-721 removal of Numo code work",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -42,10 +42,10 @@
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun); agent:/root/min721_docs (MIN-721 source review: desktop Copy Diagnostic Report menu item removed; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 en network guidance and terminology review); agent:/root/min721_docs (en removal edits; agent review, not human acceptance)",
-    "date": "2026-10-16"
+    "revision": 7,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "workspace-encryption",
@@ -62,7 +62,7 @@
       "src": "/documentation/en/install-locally-flow.svg",
       "alt": "Diagram: Desktop app selects the clone. Loopback application: port 6463. Minimal Supabase and durable data. Quitting stops app and backend.",
       "caption": "The desktop app manages startup and shutdown of local services while preserving their stored data.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -94,12 +94,12 @@
       "src": "/documentation/en/install-locally-wizard.png",
       "alt": "Public installation wizard with the local computer profile selected.",
       "caption": "Choose the personal installation when the desktop app will manage the local services.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         944,
-        504
+        692
       ],
       "theme": "light",
       "padding": 24,
@@ -119,7 +119,7 @@ Use a dedicated clone for evaluation with Node.js 24, `pnpm` 10.28.0, Git, Supab
 ```bash
 git clone https://github.com/mangue-dev/minddy.git
 cd minddy
-git checkout v0.11.0
+git checkout v0.20.0
 corepack enable
 corepack prepare pnpm@10.28.0 --activate
 pnpm install --frozen-lockfile
@@ -130,6 +130,8 @@ pnpm install --frozen-lockfile
 
 
 ![Public installation wizard with the local computer profile selected.](/documentation/en/install-locally-wizard.png)
+
+New local installations encrypt workspace content by default. To record an explicit choice, run `pnpm bootstrap:supabase -- --minimal --app-url http://localhost:6463 --encryption enabled` (or `--encryption disabled`) in the clone before opening it in the app; later starts keep the saved choice. See [workspace encryption](/docs/workspace-encryption#workspace-encryption).
 
 ## Let the app own the local services {#launch}
 

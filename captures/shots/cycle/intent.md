@@ -70,3 +70,10 @@ because `017-cycle-recal.mjs` reassigns it to Alice; if it shows up again,
 check its assignee first.
 - **AUR-2 carries a plan badge ("2/6") and a due date** — expected, it is the
 same ticket the `palette` and `issue-plan` captures stage.
+
+## October 2026 update
+
+Since MIN-736 the board hides Done and Canceled by default. The script opens
+the board's **Status** filter, shows **Done** and hides the empty **Backlog**,
+so the four visible columns are To do, In progress, In review and Done without
+any horizontal scroll.

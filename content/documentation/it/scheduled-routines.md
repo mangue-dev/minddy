@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677); MIN-721 removal of code delegation in routines; MIN-685 sidebar context menus; MIN-693 project roles",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -40,10 +40,10 @@
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root (MIN-677 source review and single-group editor keyboard/mobile follow-up; unchanged procedures retain prior evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 7; it translation of removal edits; no operational rerun); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 8; it translation of added passages; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (it translation, label and retained-meaning self-review); agent:/root/min721_it (it translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root (it translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root/min693_it with agent:/root (it MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
-    "date": "2026-10-17"
+    "revision": 10,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [],
   "aliases": [],
@@ -57,9 +57,9 @@
       "src": "/documentation/it/scheduled-routines-workflow.png",
       "alt": "Modalità Programmato ed Evento, un gruppo di condizioni, icone dell’app e pulsanti informativi discreti.",
       "caption": "Dimostrazione locale dell’editor effettivo degli attivatori. Nessuna routine è stata salvata o eseguita.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
-      "capturedAt": "2026-10-12",
+      "capturedAt": "2026-10-20",
       "viewport": [
         788,
         910
@@ -108,6 +108,6 @@ Fai clic con il tasto destro su una routine dell’elenco per aprire la sua ulti
 
 Ogni esecuzione usa il budget IA del proprietario con un limite predefinito del 15 % del budget mensile, comprendendo ogni chiamata a Numo di quell’esecuzione. Apri la conversazione per leggere origine, risultato e domande. Rispondi nella stessa conversazione quando è necessario il tuo intervento; il budget residuo resta disponibile. Esamina i risultati salvati prima di cambiare il limite o riprovare. Quando la proprietà viene [trasferita](/docs/projects#transfer-ownership), le routine dell’ex proprietario nel progetto vengono sospese e non possono avviare nuovo lavoro; il nuovo proprietario crea le routine che devono proseguire.
 
-Le automazioni archiviate appaiono come proposte in pausa quando il proprietario apre Routine. Leggi la [guida alla transizione](/docs/automation-settings) prima di attivarle.
+Le automazioni di progetto delle versioni precedenti non vengono più eseguite e non sono convertite in routine. Leggi la [guida alla transizione](/docs/automation-settings) per ricreare un workflow come routine.
 
 Il limite si applica quando è disponibile un budget mensile incluso; una modalità illimitata con chiave personale non riceve un budget mensile artificiale.

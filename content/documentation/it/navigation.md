@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search; MIN-726 issue search order; MIN-733 always-on AI features; MIN-737 account settings reorganization; MIN-749 relation shortcut R",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -62,9 +62,9 @@
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; it translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-695 badge propagation: source and unit-test review of app-shell-chrome, app-sidebar, mobile-navigation, app-tab-strip and lib/app-tab-indicators; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-733 removal of the instance AI switches: source and unit-test review of the admin registry and every former switch reader; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 account settings reorganization: source review of the Issue indexing card, the settings section catalog, the settings filter and the new-tab palette hand-off in lib/settings-sections.ts and lib/settings-section-focus.ts; unchanged evidence retained; no browser walkthrough, no new captures); agent:/root (MIN-749 relation shortcut R: source and unit-test review of components/issue-field-shortcuts.tsx, the board card, issue panel, objective page and new-issue dialog relation pickers and lib/keyboard/shortcuts.ts; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (it changed-passage parity and label review); agent:/root (it translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (it translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it MIN-695 badge paragraph, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (it removal of the sentences describing instance AI switches; retained-meaning self-review; agent review, not human acceptance); agent:/root (it MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (it translation of MIN-749 added sentences, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 14,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -86,9 +86,9 @@
       "src": "/documentation/it/work-navigation.png",
       "alt": "Navigazione del progetto accanto alla bacheca dei ticket dimostrativi.",
       "caption": "La barra del progetto permette di aprire ticket, obiettivi, pagine e triage.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
         1488,
         1128
@@ -102,12 +102,12 @@
       "src": "/documentation/it/work-search.png",
       "alt": "Risultati della ricerca dell’identificativo di un ticket dimostrativo.",
       "caption": "La palette trova il ticket tramite identificativo insieme alle pagine del progetto; aprire un risultato conserva le sue regole di accesso.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
         788,
-        364
+        320
       ],
       "theme": "light",
       "padding": 24
@@ -128,7 +128,7 @@ La navigazione principale permette di raggiungere il lavoro personale e i tuoi p
 
 Contatori e avvisi ti seguono da un livello all’altro. Il controllo che riporta alla **Home** mostra il totale da smistare nei progetti elencati nella **Home**, compreso quello attuale, e l’avviso di Smart Assign quando a uno dei tuoi progetti mancano regole. Una riga di ritorno mostra il contatore del livello a cui riporta. All’interno di un progetto, **Triaggio** e **Feedback** mantengono i contatori di quel progetto. Le schede dell’app desktop portano lo stesso badge della loro voce nella barra laterale: l’avviso sulla **Home** e i contatori su **Invio**, **Revisione del codice** e su **Triaggio** e **Feedback** di un progetto, aggiornati anche quando la scheda è in secondo piano.
 
-I cicli personali e le viste tra progetti comprendono i progetti a cui hai accesso. Obiettivi, wiki e feedback appartengono a un singolo progetto. Controlla il progetto attivo prima di creare lavoro o cambiare impostazioni.
+I cicli personali e le viste tra progetti comprendono i progetti a cui hai accesso. Obiettivi, pagine e feedback appartengono a un singolo progetto. Controlla il progetto attivo prima di creare lavoro o cambiare impostazioni.
 
 ![Navigazione del progetto accanto alla bacheca dei ticket dimostrativi.](/documentation/it/work-navigation.png)
 
@@ -146,11 +146,9 @@ L’azione si applica alla riga su cui hai fatto clic, anche quando è aperto un
 
 ### Pannelli e navigazione mobile {#panels}
 
-Sui dispositivi mobili, una barra di caricamento in alto indica che la navigazione è in corso, anche mentre vengono completati i salvataggi della pagina in sospeso.
-
 Un ticket si apre in un pannello di dettaglio, lasciando disponibile il tabellone sottostante. Numo si apre dal pulsante flottante in un pannello di conversazione condiviso. La posta in arrivo si apre come pannello a comparsa della navigazione, con notifiche e inviti. I vecchi collegamenti alle schermate dedicate della posta in arrivo e di Numo portano ai punti di accesso attuali; non indicano schermate separate ancora presenti.
 
-Sul telefono, apri il menu laterale di navigazione per scegliere le stesse destinazioni. I pannelli usano la larghezza disponibile: chiudi il pannello attuale o torna indietro per rivedere l’elenco. Usa i pulsanti visibili quando una scorciatoia da tastiera non è disponibile.
+Sul telefono, apri il menu laterale di navigazione per scegliere le stesse destinazioni. Una barra di caricamento in alto indica che la navigazione è in corso, anche mentre vengono completati i salvataggi della pagina in sospeso. I pannelli usano la larghezza disponibile: chiudi il pannello attuale o torna indietro per rivedere l’elenco. Usa i pulsanti visibili quando una scorciatoia da tastiera non è disponibile.
 
 ### Schede desktop {#tabs}
 
@@ -158,9 +156,7 @@ L’app desktop aggiunge schede native e un selettore di server intorno all’ap
 
 ## Trovare lavoro e usare azioni da tastiera {#search-and-shortcuts}
 
-Il comando Documentazione apre il manuale pubblico nella lingua attuale.
-
-Apri la palette dei comandi dal controllo di ricerca della navigazione. Cerca un titolo distintivo o un identificativo di ticket e scegli un risultato. I risultati sono limitati al lavoro accessibile al tuo account; conoscere un identificativo non concede accesso a un altro progetto.
+Apri la palette dei comandi dal controllo di ricerca della navigazione. Cerca un titolo distintivo o un identificativo di ticket e scegli un risultato. I risultati sono limitati al lavoro accessibile al tuo account; conoscere un identificativo non concede accesso a un altro progetto. Il comando Documentazione apre il manuale pubblico nella lingua attuale.
 
 Premi Command+K su macOS o Ctrl+K su Windows/Linux per aprire la palette dei comandi; Command/Ctrl+P è una scorciatoia alternativa dell’applicazione. Fuori dal testo modificabile, ? apre la guida delle scorciatoie e C la creazione di ticket. Su una scheda di ticket sotto il puntatore o nei suoi controlli di dettaglio supportati, S apre lo stato, P la priorità, E l’impegno, A l’assegnatario, L le categorie, D la scadenza e O l’obiettivo. R aggiunge una relazione dagli stessi punti, nella pagina di un obiettivo e nel modulo di nuovo ticket: scegli il tipo di relazione, poi l’altro ticket o obiettivo. Queste azioni con un solo tasto non intercettano la scrittura in campi, aree di testo o editor di contenuti. Le sequenze di navigazione come G e poi H (Home) o G e poi I (Posta in arrivo) usano due tasti successivi. G e poi W porta a Pagine solo nel contesto di un progetto.
 

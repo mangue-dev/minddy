@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min-721 (en runner-removal edits and full retained meaning)",
-    "date": "2026-10-16"
+    "revision": 6,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "instance-configuration",
@@ -73,13 +73,14 @@ pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
 | Missing database relations | Preserve the first migration error and check disk, locks and the target URL. Rerun release bootstrap only after resolving the cause; never mark failed migrations applied by hand. |
 | Realtime failures | Check publication, JWT, the WebSocket proxy and service logs. |
 | Idle cron or 401 jobs | Verify scheduler state, canonical origin and `CRON_SECRET` privately. |
+| Version compatibility fails | Compare `MINDDY_RELEASE` with a row of `deploy/self-hosted/compatibility.json` and `MINDDY_IMAGE` with that row or the verified immutable digest. The installer copies `MINDDY_RELEASE` from the deployment template. |
 
 ## Retain evidence and retry deliberately {#recovery}
 
 Fix missing Docker/CLI prerequisites or incomplete API values and repeat the idempotent installer using the preserved environment. Correct runtime public URLs and recreate the application; rebuilding the OCI image is unnecessary. Do not delete non-empty buckets, reset database data or rotate roots to clear warnings. Optional-disabled capability reports can be expected when those providers are intentionally absent. Share release, profile, timestamps, controlled error codes and redacted diagnostics for support. Remove passwords, tokens, `Authorization` headers, cookies, private object URLs and user content.
 
 
-If a fresh image download stops with a long progress log and no registry error, the v0.11.0 installer can exceed its subprocess output buffer. In the exact installed Compose context, `compose pull --quiet` completed in the disposable test. Then rerun the same installer with `--skip-pull` to use those loaded images, preserving the environment. This workaround does not repair a registry or signature failure. If offline function compilation reports a `jose` version mismatch after a frozen install, stop: this release requests 6.2.3 while its direct frozen dependency resolves to 6.2.12. Obtain a corrected release/tooling combination before treating the standard installation as accepted; do not silently relax the dependency identity check.
+If a fresh image download stops with a long progress log and no registry error, the v0.11.0 installer can exceed its subprocess output buffer. Later installers pull quietly with a larger buffer and, if the output still exceeds it, stop with an explicit instruction. In either case, run `compose pull --quiet` in the exact installed Compose context, then rerun the same installer with `--skip-pull` to use those loaded images, preserving the environment. This workaround does not repair a registry or signature failure. If offline function compilation reports a `jose` version mismatch, stop. The v0.11.0 tooling requests 6.2.3 while its direct frozen dependency resolves to 6.2.12; obtain a corrected release/tooling combination before treating that installation as accepted. In later releases, the pin matches the frozen dependency, so a mismatch means `pnpm install --frozen-lockfile` did not complete in that checkout. Do not silently relax the dependency identity check.
 
 
 The v0.11.0 OCI runner also fails to start because `agent-runner-storage.mjs` is missing from its runtime image, so the application never becomes healthy. Later releases remove the runner and its code sandboxes. Upgrade to such a release instead of mounting runner files or weakening container isolation.

@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -37,14 +37,16 @@
       "lib/server/cycles.ts",
       "components/cycle/use-cycle-menu-actions.tsx",
       "docs/security/project-roles.md",
-      "lib/project-roles.ts"
+      "lib/project-roles.ts",
+      "components/cycle/cycle-empty-states.tsx",
+      "components/global-board.tsx"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/min693_de with agent:/root (de MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
-    "date": "2026-10-17"
+    "revision": 6,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "views",
@@ -61,7 +63,7 @@
       "src": "/documentation/de/reader-cycle.png",
       "alt": "Demo-Ticket im Backlog des persönlichen Zyklus.",
       "caption": "Das Hinzufügen hat das Ticket dem Zyklusinhaber zugewiesen und seinen Backlog-Status beibehalten.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -80,7 +82,7 @@
 
 ## Deinen Zyklus einrichten und füllen {#personal-cycle}
 
-Aktiviere Zyklen unter Kontoeinstellungen → Zyklen und öffne anschließend Zyklus in der persönlichen Navigation. Er gehört zu deinem Konto und kann Probleme enthalten, die dir in Projekten zugewiesen sind, in denen du Eigentümer oder Mitglied bist. Leser können keine Zuweisungen erhalten, daher trägt ein Projekt, das du nur liest, keine Arbeit bei. Er ist kein Projektsprint und gehört nicht zu einem Teamziel.
+Aktiviere Zyklen unter **Kontoeinstellungen** → **Zyklus** oder mit **Zyklen aktivieren** im Tab **Zyklus**. Öffne diesen Tab in der Ansichtsleiste von **Alle Probleme** oder suche in der Befehlspalette nach Zyklus; der mit einem Pfeil markierte Tab **Zyklus** eines Projektboards führt zum selben persönlichen Zyklus. Er gehört zu deinem Konto und kann Probleme enthalten, die dir in Projekten zugewiesen sind, in denen du Eigentümer oder Mitglied bist. Leser können keine Zuweisungen erhalten, daher trägt ein Projekt, das du nur liest, keine Arbeit bei. Er ist kein Projektsprint und gehört nicht zu einem Teamziel.
 
 Wähle eine Dauer von einer oder zwei Wochen, den Startwochentag, ein bis vier kommende Zyklen und eine leichte, mittlere oder hohe Intensität. Diese Einstellungen bestimmen deinen persönlichen Zeitraum und die Zielkapazität. Die Schalter für automatische Übernahme steuern, ob dir zugewiesene Probleme beim Start oder Abschluss in den aktuellen Zyklus aufgenommen werden.
 
@@ -90,6 +92,6 @@ Der aktuelle Zyklus wird einmal automatisch aus geeigneter Arbeit gefüllt. Um e
 
 ## Den Zeitraum abschließen oder anpassen {#cycle-results}
 
-Aktualisiere die Statuswerte während der Arbeit und prüfe abgeschlossene und verbleibende Aufgaben. An der Zeitgrenze werden geeignete, nicht abgeschlossene Probleme aus vergangenen Zyklen automatisch in den aktuellen übernommen. Die Zuweisung bleibt erhalten; die Übernahme schließt die Probleme nicht ab. Mit der Datumsauswahl kannst du vergangene und kommende Zyklen ansehen. Diese Ansichten sind schreibgeschützt; Änderungen sind im aktuellen Zyklus möglich.
+Aktualisiere die Statuswerte während der Arbeit und prüfe abgeschlossene und verbleibende Aufgaben. An der Zeitgrenze werden geeignete, nicht abgeschlossene Probleme aus vergangenen Zyklen automatisch in den aktuellen übernommen. Die Zuweisung bleibt erhalten; die Übernahme schließt die Probleme nicht ab. Sind alle Probleme des aktuellen Zyklus geschlossen, bietet ein Banner **Zyklus abgeschlossen** die Aktion **Nachfüllen Zyklus** an, um geeignete Arbeit hinzuzufügen; während des Zeitraums wird der Zyklus nicht automatisch nachgefüllt. Mit der Datumsauswahl kannst du vergangene und kommende Zyklen ansehen. Diese Ansichten sind schreibgeschützt; Änderungen sind im aktuellen Zyklus möglich.
 
 Wird eine Voraussetzung in den aktuellen Zyklus aufgenommen, um Abhängigkeiten konsistent zu halten, prüfe den Grund, bevor du sie entfernst. Ein nach Abschluss verschwundenes Problem kann weiterhin unter der abgeschlossenen Zyklusarbeit oder über seine Kennung auffindbar sein. Kontoeinstellungen für Zyklen ändern deine Planungsansicht, nicht den persönlichen Zyklus eines anderen Mitglieds.

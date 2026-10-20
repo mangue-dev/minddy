@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "v0.11.0",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -38,10 +38,10 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (primary installation path verified against the localized self-hosting wizard routes; technical references retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (en wizard-first installation guidance review)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "installation",
@@ -81,7 +81,7 @@ For example, a team without database operations capacity can use Cloud. An opera
 
 A supported self-hosted installation needs the application and Supabase with PostgreSQL, Auth, Storage and Realtime. PostgreSQL alone is insufficient. Use a tagged release and its compatibility matrix. Unpinned derivative Supabase stacks and self-managed GitHub Enterprise or GitLab adapters are outside the supported contract.
 
-AI, email, Git, push notifications and analytics depend on configuration. Self-hosting does not require Stripe, PostHog, a minddy-managed AI key or a Cloud account. Missing optional configuration is reported rather than replaced silently with a provider. Personal AI keys and local AI endpoints are possible choices; their availability and costs depend on the configured capability.
+AI, email, Git, push notifications and analytics depend on configuration. Self-hosting does not require Stripe, PostHog, a minddy-managed AI key or a Cloud account. Missing optional configuration is reported rather than replaced silently with a provider. Personal AI keys and, in the desktop app, local AI endpoints are possible choices; their availability and costs depend on the configured capability.
 
 Review provider permissions and data terms before enabling an integration. Git connections may use the managed forge relay when you explicitly start the integration; operator-owned provider applications and relay opt-out are also available. Core feature access is not a separate reduced self-hosted tier.
 

@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -43,10 +43,10 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-17"
+    "revision": 6,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "pages",
@@ -64,7 +64,7 @@
       "src": "/documentation/en/permissions-and-public-links-flow.svg",
       "alt": "Diagram: Account and project permission checks. Private object or explicit publication. Published set only; signed file access. Revoke link; issued file URLs expire later.",
       "caption": "Publication exposes only selected content; previously issued file links can remain valid after revocation until they expire.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -112,4 +112,4 @@ A published page or shared view uses an opaque bearer link, optionally protected
 
 ## Check sharing and revocation anonymously {#revocation}
 
-Open the result in a separate signed-out session, inspect the intended content and files and verify excluded objects remain inaccessible. Revoke the publication and test the link again. Already copied data cannot be recalled, and a previously issued signed file URL can remain valid until expiry; page file URLs use a 24-hour lifetime. User secret links remain `noindex`, separate from this indexable official documentation. Noindex is a crawler instruction, not an access control. Never paste private bearer links into public reports or documentation examples.
+Open the result in a separate signed-out session, inspect the intended content and files and verify excluded objects remain inaccessible. Revoke the publication and test the link again. Already copied data cannot be recalled, and a previously issued signed file URL can remain valid until expiry; file URLs issued for a published page last 24 hours. User secret links remain `noindex`, separate from this indexable official documentation. Noindex is a crawler instruction, not an access control. Never paste private bearer links into public reports or documentation examples.

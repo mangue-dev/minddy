@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677); MIN-717 issue-index schedule; MIN-688 page-materialization schedule",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -45,10 +45,10 @@
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun); agent:/root (MIN-717 issue-index schedule row checked against deploy/self-hosted/scheduler.mjs and vercel.json; no scheduler run)",
-    "language": "agent:/root (it translation, label and retained-meaning self-review); agent:/root/min-721 (it runner-removal edits and full retained meaning); agent:/root (it MIN-717 table row: endpoint and cron expression only, no prose change)",
-    "date": "2026-10-17"
+    "revision": 9,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "workspace-encryption",
@@ -73,7 +73,7 @@
       "src": "/documentation/it/optional-providers-flow.svg",
       "alt": "Schema: Operatore sceglie capacità opzionale. Credenziali complete e condizioni. Destinazione dati esterna esplicita. Verificare comportamento e costi.",
       "caption": "Prima di attivare un’integrazione, verifica le credenziali, le condizioni e la destinazione dei dati.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -105,7 +105,7 @@
       "src": "/documentation/it/proxy-network-and-jobs-flow.svg",
       "alt": "Schema: Proxy HTTPS pubblico. Origini app e Supabase pubbliche. Database e porte interne private. Job autenticati; fermi in manutenzione.",
       "caption": "Il proxy espone le origini pubbliche e mantiene privati i servizi interni; durante la manutenzione ferma anche i job.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -181,15 +181,14 @@ Un servizio pubblico richiede un proxy TLS e il redirect da HTTP a HTTPS. Le ori
 
 ### Fornire pianificazione autenticata {#schedules}
 
-I profili Compose di riferimento avviano lo scheduler e l’installer genera `CRON_SECRET`. Un deployment personalizzato dai sorgenti deve fornire uno scheduler HTTP equivalente. Ogni richiesta invia `Authorization: Bearer <CRON_SECRET>`; un valore vuoto o errato restituisce 401. Non registrare questo header. Gli orari del candidato elencati sotto sono in UTC. Usa le route della release installata, perché possono cambiare.
+I profili Compose di riferimento avviano lo scheduler e l’installer genera `CRON_SECRET`. Un deployment personalizzato dai sorgenti deve fornire uno scheduler HTTP equivalente. Ogni richiesta invia `Authorization: Bearer <CRON_SECRET>`; un valore vuoto o errato restituisce 401. Non registrare questo header. Gli orari elencati sotto sono in UTC e appartengono a questa release. Usa le route della release installata, perché possono cambiare.
 
 
-Lo scheduler pubblicato in v0.11.0 non include `numo-turns`. Quello del candidato è stato corretto per chiamarlo ogni minuto. La tabella descrive il candidato corretto: non presumere che questo job esista in un deployment v0.11.0 invariato.
+Rispetto allo scheduler di v0.11.0, questa release aggiunge `numo-turns`, `forge-relay-maintenance`, `page-materialization` e `issue-index` e non chiama più `/api/cron/agent-drain` né `/api/cron/automations`, rimossi insieme al lavoro sul codice di Numo e alle automazioni di progetto. Uno scheduler personalizzato copiato da v0.11.0 va aggiornato secondo questa tabella.
 
 | Endpoint | Orario (UTC) |
 | --- | --- |
 | `/api/cron/feedback-analysis` | `0 * * * *` |
-| `/api/cron/agent-drain` | `*/2 * * * *` |
 | `/api/cron/numo-turns` | `* * * * *` |
 | `/api/cron/forge-relay-deliveries` | `* * * * *` |
 | `/api/cron/forge-relay-maintenance` | `35 * * * *` |

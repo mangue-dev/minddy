@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search; MIN-726 issue search order; MIN-733 always-on AI features; MIN-737 account settings reorganization; MIN-749 relation shortcut R",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -62,9 +62,9 @@
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-695 badge propagation: source and unit-test review of app-shell-chrome, app-sidebar, mobile-navigation, app-tab-strip and lib/app-tab-indicators; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-733 removal of the instance AI switches: source and unit-test review of the admin registry and every former switch reader; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 account settings reorganization: source review of the Issue indexing card, the settings section catalog, the settings filter and the new-tab palette hand-off in lib/settings-sections.ts and lib/settings-section-focus.ts; unchanged evidence retained; no browser walkthrough, no new captures); agent:/root (MIN-749 relation shortcut R: source and unit-test review of components/issue-field-shortcuts.tsx, the board card, issue panel, objective page and new-issue dialog relation pickers and lib/keyboard/shortcuts.ts; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (en changed-passage parity and label review); agent:/root (en MIN-685 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-718 added passages with catalog UI labels; agent review, not human acceptance); agent:/root (en MIN-695 badge paragraph, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (en removal of the sentences describing instance AI switches; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-749 added sentences; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 14,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -86,9 +86,9 @@
       "src": "/documentation/en/work-navigation.png",
       "alt": "Project navigation beside the demonstration issue board.",
       "caption": "Use the project sidebar to switch between issues, objectives, pages and triage.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
         1488,
         1128
@@ -102,12 +102,12 @@
       "src": "/documentation/en/work-search.png",
       "alt": "Search results for a demonstration issue identifier.",
       "caption": "The palette finds the issue by identifier alongside project pages; opening a result preserves its access rules.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
         788,
-        364
+        320
       ],
       "theme": "light",
       "padding": 24
@@ -128,7 +128,7 @@ The main navigation gives access to personal work and your projects. Select a pr
 
 Counters and warnings follow you between levels. The control that leads back to **Home** shows the total waiting to be triaged across the projects **Home** lists, the current one included, and the Smart Assign warning when one of your projects needs rules. A back row shows the counter of the level it returns to. Inside a project, **Triage** and **Feedback** keep that project's own counts. Desktop tabs carry the same badge as their sidebar entry: the warning on **Home**, and the counts on **Inbox**, **Code review** and a project's **Triage** and **Feedback**, updated even when the tab is in the background.
 
-Personal cycles and cross-project views span projects you can access. Project objectives, wiki and feedback belong to one project. Check the active project before creating work or changing settings.
+Personal cycles and cross-project views span projects you can access. Project objectives, pages and feedback belong to one project. Check the active project before creating work or changing settings.
 
 ![Project navigation beside the demonstration issue board.](/documentation/en/work-navigation.png)
 
@@ -146,11 +146,9 @@ The action applies to the row you clicked, even when another project or item is 
 
 ### Panels and mobile navigation {#panels}
 
-On mobile, a loading bar at the top indicates that navigation is in progress, including while pending page saves finish.
-
 An issue opens in a detail panel so the underlying board remains available. Numo opens from its floating button in a shared conversation panel. Inbox opens as a navigation popover with notifications and invitations. Older dedicated Inbox and Numo links lead to the current entry points; they do not establish separate current screens.
 
-On mobile, open the navigation drawer to choose the same destinations. Panels use the available screen width, so close or return from the current panel to see the list again. Use visible buttons when a keyboard shortcut is unavailable.
+On mobile, open the navigation drawer to choose the same destinations. A loading bar at the top indicates that navigation is in progress, including while pending page saves finish. Panels use the available screen width, so close or return from the current panel to see the list again. Use visible buttons when a keyboard shortcut is unavailable.
 
 ### Desktop tabs {#tabs}
 
@@ -158,9 +156,7 @@ The desktop app adds native tabs and a server picker around the application. A t
 
 ## Find work and use keyboard actions {#search-and-shortcuts}
 
-The Documentation command opens the public manual in your current language.
-
-Open the command palette from the navigation search control. Search for a distinctive title or issue identifier and choose a result. Results are limited to work your account can access; a known identifier does not grant access to another project.
+Open the command palette from the navigation search control. Search for a distinctive title or issue identifier and choose a result. Results are limited to work your account can access; a known identifier does not grant access to another project. The Documentation command opens the public manual in your current language.
 
 Press Command+K on macOS or Ctrl+K on Windows/Linux to open the command palette; Command/Ctrl+P is an alternative application binding. Outside editable text, ? opens shortcut help and C opens issue creation. On a hovered issue card or its supported detail controls, S opens status, P priority, E effort, A assignee, L categories, D due date and O objective. R adds a relation from the same places, on an objective page and in the new-issue form: choose the relation type, then the other issue or objective. These single-key actions do not intercept typing in an input, textarea or content editor. Navigation sequences such as G then H (Home) and G then I (Inbox) use two successive keys; G then W reaches Pages only in a project context.
 

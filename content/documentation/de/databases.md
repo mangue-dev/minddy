@@ -17,12 +17,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
-  "sourceRevision": 15,
+  "revision": 16,
+  "sourceRevision": 16,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate; MIN-684 page promotion; MIN-743 destructive-action confirmations; UI/UX refinements batch: Edit options from the column header",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -53,9 +53,9 @@
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:/root (optional-time and option-control source, component and isolated SQL review; unchanged claims retain prior evidence); agent:/root (MIN-690 recapture of create-a-database-steps on next dev at 8371778c4 with a throwaway database; other figures unchanged, evidence retained); agent:/root (MIN-684 page promotion: source and focused unit-test review of the menu entries, reader gating, save-before-promote and the Numo request; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for option deletion on Save in Edit options; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (UI/UX refinements batch: source review of the Edit options entry of Select and Multi-select column header menus in components/pages/database-column-name.tsx, which opens the same options dialog as the cells; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (de changed-passage and figure parity self-review); agent:/root (de updated alt text for the column type picker; agent review, not human acceptance); agent:/root (de translation of the MIN-684 single-entry promotion passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (de translation of the Edit options from the column header changed passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 16,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 7 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -80,7 +80,7 @@
       "src": "/documentation/de/database-setup-cards.png",
       "alt": "Komponentenvorschau der Karten zur Einrichtung einer neuen Datenbank mit Numo oder zum Import einer vorhandenen Datenbank.",
       "caption": "Vorschläge für eine neue Datenbank mit Demonstrationsdaten. Wählen Sie Numo oder Import, oder schließen Sie die Karten, um manuell fortzufahren.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -97,7 +97,7 @@
       "src": "/documentation/de/database-property-types.png",
       "alt": "Auswahl des Spaltentyps mit Suchfeld sowie Text, Zahl, Auswahl, Datum, Personen und Kontrollkästchen.",
       "caption": "Wähle einen Typ, der zu den gespeicherten Werten passt.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -114,7 +114,7 @@
       "src": "/documentation/de/database-entry.png",
       "alt": "Demoeintrag mit Beschreibung, Dauer 2.5, aktiviertem Kontrollkästchen und leerer Auswahl.",
       "caption": "Öffne einen Eintrag, um den vollständigen Text zu lesen und typisierte Werte zu bearbeiten.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -130,7 +130,7 @@
       "src": "/documentation/de/database-conversion-warning.png",
       "alt": "Umwandlungswarnung: Der Wechsel von Text zu Zahl leert eine inkompatible Zelle; Abbrechen und Bestätigen sind verfügbar.",
       "caption": "Prüfe die tatsächliche Zahl inkompatibler Zellen vor der Bestätigung. Abbrechen erhält die bisherigen Werte.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -146,7 +146,7 @@
       "src": "/documentation/de/database-import-review.png",
       "alt": "Importprüfung einer lokalen CSV-Datei: zwei Eintragsseiten und zwei Eigenschaftsspalten mit der Importschaltfläche.",
       "caption": "Prüfe die eingelesenen Einträge und die Spaltenzahl vor dem Import in die leere Datenbank.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -162,7 +162,7 @@
       "src": "/documentation/de/database-options.png",
       "alt": "Komponentenvorschau von Optionen bearbeiten mit deutschen Statusoptionen, Pfeilen nach oben und unten, Papierkörben und einer Erklärung zum Löschen.",
       "caption": "Bearbeite Namen, Farben und Reihenfolge der Optionen gemeinsam. Der Papierkorb entfernt eine Option aus dem Entwurf; Speichern übernimmt die Änderungen. Mit Demonstrationsdaten.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -179,7 +179,7 @@
       "src": "/documentation/de/database-date-time.png",
       "alt": "Komponentenvorschau der Datumsauswahl mit dem ausgewählten 12. Oktober 2026, aktivierter Uhrzeit und Zeit auf 14:30.",
       "caption": "Aktiviere „Fügen Sie eine Uhrzeit hinzu“, um eine Uhrzeit einzugeben. Diese Komponentenvorschau verwendet Demonstrationsdaten und die Zeitzone des Geräts.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -204,9 +204,9 @@ Eine Datenbank verbindet eine Tabelle mit typisierten Eigenschaften und einer vo
 
 ## Eine Datenbank und ihre Spalten erstellen {#create-a-database}
 
-Der Einrichtungsbereich einer neuen Datenbank bietet zwei Karten: Numo um eine Struktur bitten oder eine vorhandene Datenbank importieren. Die Schließen-Schaltfläche hat einen Tooltip und blendet diese Vorschläge aus; manuelle Bearbeitung bleibt möglich.
+Der Einrichtungsbereich einer neuen Datenbank bietet zwei Karten: **Mit Numo erstellen**, um die Struktur vorzubereiten, und **Vorhandene Datenbank importieren**. Die Schließen-Schaltfläche mit der Beschriftung **Einrichtungshilfe ausblenden** blendet diese Vorschläge aus; manuelle Bearbeitung bleibt möglich.
 
-Öffne als Projektmitglied den Seitenbereich, verwende + und wähle eine Datenbank. Eine neue Datenbank hat den Namen ihrer Einträge und keine optionalen Spalten. Ihr Hinweis „Neue Datenbank“ bietet die Einrichtung mit Numo oder den Import einer vorhandenen Datenbank. Manuelle Einrichtung bleibt ohne KI verfügbar. Die Einrichtung mit Numo öffnet eine vorbereitete Anfrage mit dieser Datenbank als Seitenkontext, nachdem ihre Erstellung abgeschlossen ist. Prüfe und sende diese Anfrage, um die benötigte Struktur anzufordern; allein das Öffnen des Gesprächs schließt die Einrichtung nicht ab. Tatsächliche KI-Arbeit braucht einen eingerichteten Anbieter sowie verfügbares Kontingent oder einen kompatiblen persönlichen Schlüssel. Prüfe das entstandene Schema und die Einträge, bevor du dich darauf verlässt.
+Öffne als Eigentümer oder Mitglied des Projekts den Seitenbereich, verwende + und wähle eine Datenbank. Eine neue Datenbank hat den Namen ihrer Einträge und keine optionalen Spalten. Ihr Hinweis „Neue Datenbank“ bietet die Einrichtung mit Numo oder den Import einer vorhandenen Datenbank. Manuelle Einrichtung bleibt ohne KI verfügbar. **Mit Numo erstellen** öffnet eine vorbereitete Anfrage mit dieser Datenbank als Seitenkontext, nachdem ihre Erstellung abgeschlossen ist. Prüfe und sende diese Anfrage, um die benötigte Struktur anzufordern; allein das Öffnen des Gesprächs schließt die Einrichtung nicht ab. Tatsächliche KI-Arbeit braucht einen eingerichteten Anbieter sowie verfügbares Kontingent oder einen kompatiblen persönlichen Schlüssel. Prüfe das entstandene Schema und die Einträge, bevor du dich darauf verlässt.
 
 Öffne „Spalten“ und wähle „Spalte hinzufügen“ oder verwende die +-Spalte am rechten Tabellenrand. Benenne die Spalte und wähle Text, Zahl, Auswahl, Mehrfachauswahl, Erstellt am, Datum, Personen oder Kontrollkästchen. Finde den Typ über die durchsuchbare Auswahl. Speichere, füge einen Eintrag hinzu und prüfe, ob die Spalte in Tabelle und Eintragsseite erscheint.
 
@@ -280,7 +280,7 @@ Schemaänderungen durch einen Agenten verwenden die aktuelle Datenbankrevision u
 
 ## Eine Datenbank samt Eintragsinhalten importieren {#import-a-database}
 
-Erstelle eine Datenbank ohne optionale Spalten und ohne vorhandene Einträge. Wähle im Hinweisbanner der neuen Datenbank Vorhandene Datenbank importieren. Lade einen Notion-Export im Format Markdown & CSV als ZIP mit Unterseiten, eine Datenbank-CSV oder ein minddy-Datenbankarchiv hoch. Enthält das Archiv mehrere Datenbanken, wähle die gewünschte aus.
+Erstelle eine Datenbank ohne optionale Spalten und ohne vorhandene Einträge. Wähle im Hinweisbanner der neuen Datenbank **Vorhandene Datenbank importieren**. Lade einen Notion-Export im Format Markdown & CSV als ZIP mit Unterseiten, eine Datenbank-CSV oder ein minddy-Datenbankarchiv hoch. Enthält das Archiv mehrere Datenbanken, wähle die gewünschte aus.
 
 Prüfe vor dem Bestätigen die vorgeschlagenen Spaltennamen und Typen sowie die Seitenanzahl. Wenn die Importhilfe eingerichtet ist, kann Numo anhand einer kleinen Stichprobe Typen vorschlagen. Die manuelle Zuordnung bleibt verfügbar. Nicht unterstützte Quelleigenschaften werden als Text übernommen. Inkompatible Werte verhindern den Import; sie werden nicht stillschweigend gelöscht.
 

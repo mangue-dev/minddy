@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/editorial_it_pt (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "encryption-and-data-boundaries",
@@ -56,7 +56,7 @@
       "src": "/documentation/it/workspace-encryption-flow.svg",
       "alt": "Schema: Radice dedicata fuori PostgreSQL. Chiavi progetto, utente e sistema avvolte. Decifratura autorizzata sul server. Restore database + Storage + stesse chiavi.",
       "caption": "Conserva le chiavi radice fuori dal database e ripristina dati e file con le chiavi corrispondenti.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -91,7 +91,7 @@
 
 ## Configurare cifratura e conservare le chiavi {#workspace-encryption}
 
-Le opzioni `--encryption` del programma di installazione e del bootstrap descritte qui appartengono agli strumenti del candidato 0.11.1 identificato. I programmi pubblicati con v0.11.0 non le accettano.
+Le opzioni `--encryption` del programma di installazione e del bootstrap descritte qui sono incluse negli strumenti di questa release. Il programma di installazione e il bootstrap di v0.11.0 non le accettano.
 
 Il runtime di quella versione riconosce `MINDDY_CONTENT_ENCRYPTION_ENABLED`; il servizio Compose di riferimento carica il file protetto tramite `env_file`. Dopo una modifica esplicita del flag devi quindi ricreare il servizio dell’applicazione con lo stesso ambiente e verificare lo schema e il comportamento effettivo. Una chiave `MINDDY_DATA_ROOT_KEY` generata non dimostra che il contenuto dello spazio sia cifrato. Usa strumenti e configurazione corrispondenti, verificati esplicitamente per la versione scelta, prima di accogliere utenti o modificare un’istanza esistente.
 

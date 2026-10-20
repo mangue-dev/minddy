@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -33,14 +33,17 @@
       "content/knowledge/productivity.md",
       "components/inbox-popover.tsx",
       "components/inbox-content.tsx",
-      "components/settings/account-notifications-section.tsx"
+      "components/settings/account-notifications-section.tsx",
+      "components/notification-badge.tsx",
+      "components/settings/account-settings-page.tsx",
+      "lib/server/notifications.ts"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
-    "date": "2026-10-09"
+    "revision": 7,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "projects",
@@ -58,9 +61,9 @@
       "src": "/documentation/de/work-inbox.png",
       "alt": "Posteingang mit Beispiel-Erwähnungen, Zuweisungen und Kommentaren sowie gelesenen und ungelesenen Einträgen.",
       "caption": "Die Beispielaktivität zeigt Autor, Issue und Lesestatus. Alle enthält gelesene und ungelesene Benachrichtigungen.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         528,
         648
@@ -77,14 +80,20 @@
 
 ## Den Posteingang lesen {#notifications-and-inbox}
 
-Öffne den Posteingang über die Navigation. Sein Popover gruppiert Benachrichtigungen nach Datum und bietet Filter für ungelesene, alle und Erwähnungen. Wähle einen Eintrag, um das zugrunde liegende Problem oder die Seite zu prüfen, und kontrolliere den Lesestatus. Das Öffnen einer Benachrichtigung markiert sie als gelesen. Ihre Zeile bietet auch Funktionen zum Markieren als gelesen oder ungelesen; im Popover kannst du alle Benachrichtigungen als gelesen markieren. Ungelesen stellt die Aktivitätsmarkierung wieder her, macht aber die zugrunde liegende Änderung am Problem oder an der Seite nicht rückgängig. Eine Benachrichtigung verweist auf zugängliche Arbeit, ersetzt aber nicht deren aktuellen Inhalt.
+Öffne den Posteingang über sein Symbol in der oberen Leiste, auf dem Smartphone über seine Zeile in der Seitenleiste oder mit G und dann I außerhalb eines Textfelds. Eine rote Zahl am Symbol zählt ungelesene Benachrichtigungen und ausstehende Einladungen zusammen; eine installierte PWA zeigt dieselbe Zahl auf ihrem App-Symbol. Der Posteingang öffnet sich als Popover, auf dem Smartphone als Sheet, und gruppiert Benachrichtigungen unter Heute, Gestern und Früher.
 
-Ausstehende Projekteinladungen erscheinen ebenfalls im Posteingang. Nimm sie an oder lehne sie ab, nachdem du Projekt und Konto geprüft hast. Alte Posteingangslinks öffnen den aktuellen Einstiegspunkt, keine gesonderte Seite.
+Er öffnet sich mit dem Filter Ungelesen. Alle zeigt auch gelesene Benachrichtigungen, und Erwähnungen behält nur Erwähnungen in Kommentaren und Seiten. Wähle einen Eintrag, um das zugrunde liegende Problem, die Seite oder den Pull Request zu öffnen. Das Öffnen einer Benachrichtigung markiert sie als gelesen. Ihre Zeile bietet außerdem Als gelesen markieren oder Als ungelesen markieren, und Alle als gelesen markieren in der Kopfzeile des Posteingangs entfernt alle Ungelesen-Markierungen. Ungelesen stellt die Aktivitätsmarkierung wieder her, macht aber die zugrunde liegende Änderung am Problem oder an der Seite nicht rückgängig. Eine Benachrichtigung verweist auf zugängliche Arbeit, ersetzt aber nicht deren aktuellen Inhalt.
+
+Löschen in einer Zeile entfernt diese Benachrichtigung nach einer Bestätigung, und Gelesen löschen in der Kopfzeile entfernt nach einer Bestätigung alle gelesenen Benachrichtigungen. Beide Löschungen sind endgültig; ungelesene Benachrichtigungen bleiben, und das Problem, die Seite oder der Pull Request, auf die eine Benachrichtigung verweist, bleibt unberührt.
+
+Ausstehende Projekteinladungen erscheinen unter Einladungen in den Filtern Ungelesen und Alle. Nimm sie an oder lehne sie ab, nachdem du das Projekt und die einladende Person geprüft hast. Alte Posteingangslinks öffnen den aktuellen Einstiegspunkt, keine gesonderte Seite.
 
 ![Posteingang mit Beispiel-Erwähnungen, Zuweisungen und Kommentaren sowie gelesenen und ungelesenen Einträgen.](/documentation/de/work-inbox.png)
 
 ## Benachrichtigungskanäle wählen {#notification-preferences}
 
-Öffne die Benachrichtigungseinstellungen deines Kontos, um die empfangene Aktivität anzupassen. Zustellung über Browser, PWA oder Desktop benötigt außerdem eine Geräteregistrierung und die Erlaubnis des Betriebssystems. Das Abschalten eines Gerätekanals ist etwas anderes als das Ändern der Aktivitätsfilter in der Anwendung.
+Wähle Posteingangseinstellungen in der Kopfzeile des Posteingangs oder öffne Kontoeinstellungen und dort den Tab Benachrichtigungen. Unter Posteingangsbenachrichtigungen legt ein Schalter pro Kategorie (Aufgaben, Erwähnungen, Kommentare, Numo, Routinen, Pull-Anfragen, Feedback und Seiten) fest, was in deinem Posteingang landet. Das Abschalten einer Kategorie stoppt künftige Benachrichtigungen dieser Art einschließlich ihrer Push-Nachrichten; bereits erhaltene Benachrichtigungen bleiben erhalten.
+
+Der Abschnitt Push-Benachrichtigungen im selben Tab listet die Geräte, die Hinweise erhalten. Zustellung über Browser, PWA oder Desktop benötigt außerdem eine Geräteregistrierung und die Erlaubnis des Betriebssystems. Ein Gerät abzuschalten oder zu entfernen stoppt Hinweise nur auf diesem Gerät; dein Posteingang und seine Kategorien bleiben unverändert.
 
 Führt eine Benachrichtigung zu nicht verfügbarem Inhalt, prüfe geänderte Projektmitgliedschaft oder eine Löschung des Objekts. Bei fehlenden Push-Nachrichten prüfe Geräteerlaubnis und Registrierung anhand der Gerätebenachrichtigungs-Anleitung; der Posteingang bleibt hilfreich zur Prüfung der Aktivität. Versende niemals Sitzungscookies oder private Benachrichtigungsinhalte als Diagnose-Bildschirmaufnahmen.

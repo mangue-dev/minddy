@@ -45,7 +45,8 @@ async function capture({ locale, theme }) {
     // the application recreates the content. Hovering before this time loses the hover.
     await page.getByText(SECTIONS[1], { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
 
-    const launch = page.locator(".scratchpad-section-launch");
+    // Since MIN-721 the section action copies the section as a prompt.
+    const launch = page.locator(".scratchpad-section-copy");
     await launch.nth(1).waitFor({ state: "attached", timeout: 10_000 });
 
     const check = await page.evaluate(

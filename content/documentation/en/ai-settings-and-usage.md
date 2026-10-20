@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
-  "sourceRevision": 17,
+  "revision": 18,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate; multi-provider settings and persistent personal Numo defaults; MIN-721 removal of code agents, sandboxes and code-work usage; MIN-693 project roles",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -56,10 +56,10 @@
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun); agent:/root/native_hosting_terms (private preview controls and limitations source/UI-test review; prior procedures retained, no native operational run); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately); agent:/root (experimental Claude and explicit cold continuation source and fixture review; no live provider execution); agent:/root (provider routing, persistent Numo defaults and local Docker UI review; no provider inference); agent:/root (guided connection source, behavior fixtures and local visual review; no live provider authentication); agent:/root/min721_docs (MIN-721 source review: Code agent settings, native connections, sandbox region and size, code-work usage and its segment removed; usage page screenshot removed because it showed the retired segment; no provider or billing rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed); agent:/root/native_hosting_terms (localized private preview additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance); agent:/root (six-locale experimental and reconnect additions; agent review, not human acceptance); agent:/root (complete six-locale defaults and routing meaning review; no human acceptance); agent:/root (six-locale wizard procedure equivalence; no human acceptance); agent:/root/min721_docs (en removal edits and retained meaning; agent review, not human acceptance); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-17"
+    "revision": 18,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "scheduled-routines"
@@ -80,7 +80,7 @@
       "src": "/documentation/en/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Connected providers, capability routing and a personal Numo model are separate settings.",
       "caption": "Several providers can stay connected. Routing chooses the provider for each capability; the Numo default is saved per account and provider.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -132,7 +132,7 @@ An unconfirmed or unreachable key may leave supported general AI calls on manage
 
 ### Local models {#models}
 
-Local Ollama or OpenAI-compatible endpoints can serve conversations through the desktop bridge when configured. Routines run on the server and cannot reach a model on your computer. Use a server-reachable provider for them. Remove a provider with its confirmation control when no longer needed and check the resulting routing before the next run.
+Minddy calls AI models from the server, so it cannot use a model running on your computer. **Add provider** does not offer local Ollama or OpenAI-compatible endpoints. A local endpoint saved in an earlier version still appears in **Connected providers**, but it cannot serve Numo conversations, routines or other features. Remove it and assign a server-reachable provider instead. Remove a provider with its confirmation control when no longer needed and check the resulting routing before the next run.
 
 
 ## Understand Cloud plans and AI consumption {#plans-and-ai-usage}
@@ -147,9 +147,9 @@ Included AI usage covers Numo reasoning and tool calls, routines, automations, v
 
 Compatible personal keys bill model calls to their provider instead of included AI usage. Unassigned families or surfaces that use minddy-funded calls remain subject to their minddy allowance. Self-hosting has infrastructure and optional-provider costs determined by your installation; it does not become a Cloud subscription merely by running the same core.
 
-### Candidate capacity reference {#plan-capacities}
+### Plan capacity reference {#plan-capacities}
 
-These defaults describe the identified 0.11.1 candidate. Verify the live pricing page and account before purchasing; configured checkout prices and account overrides can differ. Guests exclude the project owner and include members, readers and pending invitations; there is no per-seat billing. Storage is charged to the owner of the project receiving files. When ownership is transferred, these limits, storage and background AI such as Smart Assign and feedback review use the new owner's plan.
+These defaults describe Minddy 0.20.0. Verify the live pricing page and account before purchasing; configured checkout prices and account overrides can differ. Guests exclude the project owner and include members, readers and pending invitations; there is no per-seat billing. Storage is charged to the owner of the project receiving files. When ownership is transferred, these limits, storage and background AI such as Smart Assign and feedback review use the new owner's plan.
 
 | Plan | Projects | Issues per project | Guests per project | Storage | Included monthly AI (USD) |
 | --- | --- | --- | --- | --- | --- |

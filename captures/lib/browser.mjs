@@ -21,8 +21,10 @@ const unsupportedLocales = requestedLocales?.filter(
 if (unsupportedLocales?.length) {
   throw new Error(`Unsupported capture locale(s): ${unsupportedLocales.join(", ")}`);
 }
+// CAPTURE_THEMES=light|dark runs one theme, e.g. to reset synced state between variants.
+const requestedThemes = process.env.CAPTURE_THEMES?.split(",").filter((theme) => ["light", "dark"].includes(theme));
 export const CAPTURE_VARIANTS = (requestedLocales ?? CAPTURE_LOCALES).flatMap((locale) =>
-  ["light", "dark"].map((theme) => ({ locale, theme })),
+  (requestedThemes?.length ? requestedThemes : ["light", "dark"]).map((theme) => ({ locale, theme })),
 );
 const expectedPageLocales = new WeakMap();
 const expectedPageThemes = new WeakMap();

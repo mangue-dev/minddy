@@ -17,12 +17,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
-  "sourceRevision": 15,
+  "revision": 16,
+  "sourceRevision": 16,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate; MIN-684 page promotion; MIN-743 destructive-action confirmations; UI/UX refinements batch: Edit options from the column header",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -53,9 +53,9 @@
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:/root (optional-time and option-control source, component and isolated SQL review; unchanged claims retain prior evidence); agent:/root (MIN-690 recapture of create-a-database-steps on next dev at 8371778c4 with a throwaway database; other figures unchanged, evidence retained); agent:/root (MIN-684 page promotion: source and focused unit-test review of the menu entries, reader gating, save-before-promote and the Numo request; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for option deletion on Save in Edit options; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (UI/UX refinements batch: source review of the Edit options entry of Select and Multi-select column header menus in components/pages/database-column-name.tsx, which opens the same options dialog as the cells; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (en changed-passage and figure parity self-review); agent:/root (en updated alt text for the column type picker; agent review, not human acceptance); agent:/root (en MIN-684 single-entry promotion passage with catalog UI labels; agent review, not human acceptance); agent:/root (en MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (en Edit options from the column header changed passage with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 16,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 7 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -80,7 +80,7 @@
       "src": "/documentation/en/database-setup-cards.png",
       "alt": "Component preview of the new-database cards for Numo setup and importing an existing database.",
       "caption": "New-database suggestions, shown with demonstration data. Choose Numo setup or import, or dismiss the cards to continue manually.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -97,7 +97,7 @@
       "src": "/documentation/en/database-property-types.png",
       "alt": "Database column type picker with a search field, then text, number, selections, dates, people and checkbox.",
       "caption": "Choose a column type that matches the values to store.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -114,7 +114,7 @@
       "src": "/documentation/en/database-entry.png",
       "alt": "Demonstration entry with a text description, duration 2.5, a checked checkbox and an empty selection.",
       "caption": "Open an entry to read its complete text and edit typed values.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -130,7 +130,7 @@
       "src": "/documentation/en/database-conversion-warning.png",
       "alt": "Conversion warning: changing Text to Number clears one incompatible cell, with Cancel and confirmation buttons.",
       "caption": "Review the real incompatible-cell count before confirming a type change. Cancel preserves the current values.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -146,7 +146,7 @@
       "src": "/documentation/en/database-import-review.png",
       "alt": "Import review for a local CSV: two entry pages and two property columns, with the Import database button.",
       "caption": "Review the parsed entries and column count before importing into the empty database.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -162,7 +162,7 @@
       "src": "/documentation/en/database-options.png",
       "alt": "Component preview of Edit options with localized status options, up and down buttons, trash buttons and the deletion explanation.",
       "caption": "Edit option names, colors and order together. The trash button removes an option from the draft; Save applies the changes. Shown with demonstration data.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -179,7 +179,7 @@
       "src": "/documentation/en/database-date-time.png",
       "alt": "Component preview of the date picker with October 12, 2026 selected, Add a time enabled and Time set to 14:30.",
       "caption": "Turn on Add a time to enter an hour. This component preview uses demonstration data and the device time zone.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -204,9 +204,9 @@ A database combines a table of typed properties with a full page for each entry.
 
 ## Create a database and its columns {#create-a-database}
 
-The new-database setup area offers two cards: ask Numo to prepare the structure or import an existing database. Its close control has a tooltip and dismisses these suggestions; manual editing remains available.
+The new-database setup area offers two cards: **Create with Numo** to prepare the structure, and **Import an existing database**. Its close control, labeled **Dismiss database setup**, dismisses these suggestions; manual editing remains available.
 
-As a project member, open Pages, use + and choose a database. A new database has its entry name and no optional columns. Its new-database banner offers setup with Numo or importing an existing database. Manual setup remains available without AI. Choosing setup with Numo opens a prepared request with this database as page context, after its creation has settled. Review and send that request to ask for the structure you need; merely opening the conversation does not complete the setup. Actual AI work needs a configured provider and available usage or a compatible personal key. Inspect the resulting schema and entries before relying on them.
+As the project owner or a Member, open Pages, use + and choose a database. A new database has its entry name and no optional columns. Its new-database banner offers setup with Numo or importing an existing database. Manual setup remains available without AI. Choosing **Create with Numo** opens a prepared request with this database as page context, after its creation has settled. Review and send that request to ask for the structure you need; merely opening the conversation does not complete the setup. Actual AI work needs a configured provider and available usage or a compatible personal key. Inspect the resulting schema and entries before relying on them.
 
 Open Columns and choose Add column, or use the + column at the table's right edge. Name the column and choose Text, Number, Select, Multi-select, Created at, Date, People or Checkbox. Use the searchable type picker to find it. Save, add an entry and verify that the column appears in the table and entry page.
 
@@ -280,7 +280,7 @@ Agent schema edits use the current database revision and a conversion preview to
 
 ## Import a database with its entry content {#import-a-database}
 
-Create a database with no optional columns or existing entries. From its new-database banner, choose import an existing database. Upload a Notion Markdown & CSV ZIP with subpages, a database CSV or a minddy database archive. If the archive contains several databases, select the one to import.
+Create a database with no optional columns or existing entries. From its new-database banner, choose **Import an existing database**. Upload a Notion Markdown & CSV ZIP with subpages, a database CSV or a minddy database archive. If the archive contains several databases, select the one to import.
 
 Review suggested column names and types, then the page count, before confirming. Numo can suggest types from a small sample when import assistance is configured; manual mapping remains available. Unsupported source properties stay as text. Incompatible values block import rather than being silently cleared.
 

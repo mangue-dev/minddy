@@ -125,3 +125,9 @@ ticket: its wording is translated and carries the file counter.
 - **The run is synthetic.** The identifier `demo-pr-aur-2` does not exist in
 basis: this is deliberate, it makes it impossible for an unintercepted request
   atteigne un vrai run.
+
+## October 2026 update
+
+Numo no longer writes code (MIN-721): the fixture's pull request comes from a
+teammate's branch (`tom-berger`, `tom/aur-2-palette-shortcuts`). The fixture
+also serves the comment edit history route (`/comment-edits`).

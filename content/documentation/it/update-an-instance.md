@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min-721 (it runner-removal edits and full retained meaning)",
-    "date": "2026-10-16"
+    "revision": 5,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "backups-and-restoration"
@@ -55,7 +55,7 @@
       "src": "/documentation/it/update-an-instance-flow.svg",
       "alt": "Schema: Fermare scritture e job. Sigillare backup completo precedente. Migrazioni destinazione, poi applicazione. Verificare recupero e riaprire.",
       "caption": "Segui le fasi in questo ordine. Fermare scritture e job. Sigillare backup completo precedente. Migrazioni destinazione, poi applicazione. Verificare recupero e riaprire.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -92,13 +92,15 @@
 
 Aggiorna una release pubblicata alla volta. Leggi note di release, migrazioni e matrice di compatibilità. Non combinare l’aggiornamento di minddy con una nuova versione principale di PostgreSQL o cambiamenti delle immagini Supabase. Verifica sorgenti, asset e digest della destinazione e prepara una directory separata con dipendenze bloccate. Annuncia la finestra di manutenzione e il termine per annullare l’intervento. Conferma un backup esterno utilizzabile e una prova di ripristino recente. Mantieni l’applicazione e l’ambiente attuali pronti per il recupero.
 
+Alcune migrazioni eliminano definitivamente i dati di funzionalità dismesse. L’aggiornamento da v0.11.0 a v0.20.0 rimuove i record dei domini personalizzati, le esecuzioni e le conversazioni dell’agente di codice con cronologia e connessioni, e le viste salvate della palette dei comandi (segnalibri personali; le viste delle board restano). Dopo queste migrazioni, solo il backup completo precedente all’aggiornamento può recuperarli.
+
 ![Schema: Fermare scritture e job. Sigillare backup completo precedente. Migrazioni destinazione, poi applicazione. Verificare recupero e riaprire.](/documentation/it/update-an-instance-flow.svg)
 
 ## Aggiornare il profilo full {#full}
 
-Usa il contesto Compose full dell’articolo sul backup a freddo. Ferma ingressi, scritture, worker e scheduler, poi crea una copia sigillata completa. Copia l’ambiente con permessi `0600` in `TARGET_ENV_FILE` e modifica solo `MINDDY_RELEASE`, `MINDDY_IMAGE`, `MINDDY_DEPLOY_DIR` e `MINDDY_ENV_FILE` secondo le identità verificate della destinazione. Conserva URL, credenziali, chiavi e scelte di funzionalità. Elimina `AGENT_EXECUTION_BACKEND`, `AGENT_RUNNER_URL`, `AGENT_RUNNER_SECRET` e `AGENT_CONTROL_ORIGIN` se una release precedente li ha lasciati: l’applicazione non li legge più e `--remove-orphans` rimuove il container dismesso `agent-runner`. La sequenza avvia il backend, applica le migrazioni e controlla l’applicazione mentre Caddy e scheduler rimangono fermi.
+Usa il contesto Compose full dell’articolo sul backup a freddo. Ferma ingressi, scritture, worker e scheduler, poi crea una copia sigillata completa. Copia l’ambiente con permessi `0600` in `TARGET_ENV_FILE` e modifica solo `MINDDY_RELEASE`, `MINDDY_IMAGE`, `MINDDY_DEPLOY_DIR` e `MINDDY_ENV_FILE` secondo le identità verificate della destinazione. Conserva URL, credenziali, chiavi e scelte di funzionalità. Elimina `AGENT_EXECUTION_BACKEND`, `AGENT_RUNNER_URL`, `AGENT_RUNNER_SECRET`, `AGENT_CONTROL_ORIGIN` e le variabili Vercel Sandbox `VERCEL_TOKEN`, `VERCEL_TEAM_ID` e `VERCEL_PROJECT_ID` se una release precedente li ha lasciati: l’applicazione non li legge più e `--remove-orphans` rimuove il container dismesso `agent-runner`. La sequenza avvia il backend, applica le migrazioni e controlla l’applicazione mentre Caddy e scheduler rimangono fermi.
 
-Nell’aggiornamento da v0.10.30 a v0.11.0, la versione di destinazione introduce `MINDDY_DATA_ROOT_KEY`. Aggiungi la chiave soltanto se la configurazione esistente non contiene una radice e conserva tutti i segreti già usati per cifrare le credenziali. Il comando seguente scrive una nuova radice di 32 byte direttamente nel file di destinazione protetto, senza mostrarla, e rifiuta di sostituire un valore salvato non valido. La sola radice non attiva la cifratura dei contenuti.
+Nell’aggiornamento da v0.10.30 a v0.11.0, la versione di destinazione introduce `MINDDY_DATA_ROOT_KEY`. Aggiungi la chiave soltanto se la configurazione esistente non contiene una radice e conserva tutti i segreti già usati per cifrare le credenziali. Il comando seguente scrive una nuova radice di 32 byte direttamente nel file di destinazione protetto, senza mostrarla, e rifiuta di sostituire un valore salvato non valido. Se l’origine è v0.11.0 o successiva, la radice normalmente esiste già e il comando si limita a verificarla. La sola radice non attiva la cifratura dei contenuti: un ambiente senza `MINDDY_CONTENT_ENCRYPTION_ENABLED=true` la mantiene disattivata.
 
 ```bash
 export TARGET_RELEASE_DIR=/srv/minddy/releases/vX.Y.NEXT

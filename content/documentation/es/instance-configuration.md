@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677); MIN-717 issue-index schedule; MIN-688 page-materialization schedule",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -45,10 +45,10 @@
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun); agent:/root (MIN-717 issue-index schedule row checked against deploy/self-hosted/scheduler.mjs and vercel.json; no scheduler run)",
-    "language": "agent:/root (es translation, label and retained-meaning self-review); agent:/root/min-721 (es runner-removal edits and full retained meaning); agent:/root (es MIN-717 table row: endpoint and cron expression only, no prose change)",
-    "date": "2026-10-17"
+    "revision": 9,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "workspace-encryption",
@@ -73,7 +73,7 @@
       "src": "/documentation/es/optional-providers-flow.svg",
       "alt": "Diagrama: Operador elige capacidad opcional. Credenciales completas y condiciones. Destino de datos externo explícito. Verificar conducta y controlar costes.",
       "caption": "Antes de activar una integración, compruebe adónde envía los datos y qué costes continuados genera.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -105,7 +105,7 @@
       "src": "/documentation/es/proxy-network-and-jobs-flow.svg",
       "alt": "Diagrama: Proxy HTTPS público. Orígenes públicos de la aplicación y Supabase. Base de datos y puertos internos privados. Tareas autenticadas; paradas en mantenimiento.",
       "caption": "El acceso público queda separado de los servicios internos; el trabajo programado se autentica y se detiene durante el mantenimiento.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -181,14 +181,13 @@ Un servicio público requiere un proxy inverso TLS y una redirección de HTTP a 
 
 ### Configurar programación autenticada {#schedules}
 
-Los perfiles Compose de referencia inician su planificador y el instalador genera `CRON_SECRET`. Un despliegue personalizado desde el código necesita un planificador HTTP equivalente. Cada petición envía `Authorization: Bearer <CRON_SECRET>`; si el secreto está vacío o no coincide, recibe 401. No registre ese encabezado. Los horarios siguientes corresponden al candidato y están en UTC. Utilice las rutas de la versión desplegada, porque pueden cambiar.
+Los perfiles Compose de referencia inician su planificador y el instalador genera `CRON_SECRET`. Un despliegue personalizado desde el código necesita un planificador HTTP equivalente. Cada petición envía `Authorization: Bearer <CRON_SECRET>`; si el secreto está vacío o no coincide, recibe 401. No registre ese encabezado. Los horarios siguientes están en UTC y pertenecen a esta versión. Utilice las rutas de la versión desplegada, porque pueden cambiar.
 
-El planificador publicado en v0.11.0 no incluye `numo-turns`. El candidato se ha corregido para llamarlo cada minuto. La tabla describe el candidato corregido; no dé por hecho que ese trabajo existe en una instalación v0.11.0 sin cambios.
+Respecto al planificador de v0.11.0, esta versión añade `numo-turns`, `forge-relay-maintenance`, `page-materialization` e `issue-index`, y ya no llama a `/api/cron/agent-drain` ni a `/api/cron/automations`, que se retiraron junto con el trabajo de código de Numo y las automatizaciones de proyecto. Un planificador personalizado copiado de v0.11.0 debe actualizarse según esta tabla.
 
 | Endpoint | Horario (UTC) |
 | --- | --- |
 | `/api/cron/feedback-analysis` | `0 * * * *` |
-| `/api/cron/agent-drain` | `*/2 * * * *` |
 | `/api/cron/numo-turns` | `* * * * *` |
 | `/api/cron/forge-relay-deliveries` | `* * * * *` |
 | `/api/cron/forge-relay-maintenance` | `35 * * * *` |

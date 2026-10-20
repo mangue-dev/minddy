@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min-721 (pt-BR runner-removal edits and full retained meaning)",
-    "date": "2026-10-16"
+    "revision": 5,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "backups-and-restoration"
@@ -55,7 +55,7 @@
       "src": "/documentation/pt-BR/update-an-instance-flow.svg",
       "alt": "Diagrama: Parar escritas e tarefas. Selar backup completo anterior. Migrações alvo, depois aplicação. Verificar recuperação e reabrir.",
       "caption": "Siga as etapas nesta ordem. Parar escritas e tarefas. Selar backup completo anterior. Migrações alvo, depois aplicação. Verificar recuperação e reabrir.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -92,13 +92,15 @@
 
 Atualize uma versão publicada por vez. Leia notas da versão, migrações e matriz de compatibilidade. Não combine a atualização do minddy com uma versão principal nova do PostgreSQL ou alterações nas imagens do Supabase. Verifique código, assets e digest do destino e prepare um diretório separado com dependências fixadas. Avise sobre a janela de manutenção e o prazo para cancelar a intervenção. Confirme um backup externo utilizável e um teste recente de restauração. Mantenha a aplicação e o ambiente atuais prontos para recuperação.
 
+Algumas migrações excluem definitivamente dados de recursos desativados. A atualização de v0.11.0 para v0.20.0 remove os registros de domínios personalizados, as execuções e conversas do agente de código com histórico e conexões, e as visualizações salvas da paleta de comandos (favoritos pessoais; as visualizações de quadro permanecem). Depois dessas migrações, somente o backup completo anterior à atualização pode recuperá-los.
+
 ![Diagrama: Parar escritas e tarefas. Selar backup completo anterior. Migrações alvo, depois aplicação. Verificar recuperação e reabrir.](/documentation/pt-BR/update-an-instance-flow.svg)
 
 ## Atualizar o perfil full {#full}
 
-Use o contexto Compose full do artigo sobre backup a frio. Pare entradas públicas, gravações, workers e agendador, depois crie uma cópia selada completa. Copie o ambiente com permissões `0600` para `TARGET_ENV_FILE` e altere apenas `MINDDY_RELEASE`, `MINDDY_IMAGE`, `MINDDY_DEPLOY_DIR` e `MINDDY_ENV_FILE` conforme as identidades verificadas do destino. Preserve URLs, credenciais, chaves e escolhas de recursos. Exclua `AGENT_EXECUTION_BACKEND`, `AGENT_RUNNER_URL`, `AGENT_RUNNER_SECRET` e `AGENT_CONTROL_ORIGIN` se uma release anterior os deixou: a aplicação não os lê mais, e `--remove-orphans` remove o container desativado `agent-runner`. A sequência inicia o backend, aplica migrações e verifica a aplicação enquanto Caddy e agendador continuam parados.
+Use o contexto Compose full do artigo sobre backup a frio. Pare entradas públicas, gravações, workers e agendador, depois crie uma cópia selada completa. Copie o ambiente com permissões `0600` para `TARGET_ENV_FILE` e altere apenas `MINDDY_RELEASE`, `MINDDY_IMAGE`, `MINDDY_DEPLOY_DIR` e `MINDDY_ENV_FILE` conforme as identidades verificadas do destino. Preserve URLs, credenciais, chaves e escolhas de recursos. Exclua `AGENT_EXECUTION_BACKEND`, `AGENT_RUNNER_URL`, `AGENT_RUNNER_SECRET`, `AGENT_CONTROL_ORIGIN` e as variáveis do Vercel Sandbox `VERCEL_TOKEN`, `VERCEL_TEAM_ID` e `VERCEL_PROJECT_ID` se uma release anterior os deixou: a aplicação não os lê mais, e `--remove-orphans` remove o container desativado `agent-runner`. A sequência inicia o backend, aplica migrações e verifica a aplicação enquanto Caddy e agendador continuam parados.
 
-Na atualização de v0.10.30 para v0.11.0, a versão de destino introduz `MINDDY_DATA_ROOT_KEY`. Adicione a chave somente se a configuração existente não tiver uma raiz e preserve todos os segredos já usados para criptografar credenciais. O comando abaixo grava uma nova raiz de 32 bytes diretamente no arquivo de destino protegido, sem exibi-la, e recusa a substituição de um valor salvo inválido. A raiz, por si só, não ativa a criptografia de conteúdo.
+Na atualização de v0.10.30 para v0.11.0, a versão de destino introduz `MINDDY_DATA_ROOT_KEY`. Adicione a chave somente se a configuração existente não tiver uma raiz e preserve todos os segredos já usados para criptografar credenciais. O comando abaixo grava uma nova raiz de 32 bytes diretamente no arquivo de destino protegido, sem exibi-la, e recusa a substituição de um valor salvo inválido. Quando a origem é v0.11.0 ou posterior, a raiz normalmente já existe e o comando apenas a verifica. A raiz, por si só, não ativa a criptografia de conteúdo: um ambiente sem `MINDDY_CONTENT_ENCRYPTION_ENABLED=true` a mantém desativada.
 
 ```bash
 export TARGET_RELEASE_DIR=/srv/minddy/releases/vX.Y.NEXT

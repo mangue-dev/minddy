@@ -47,3 +47,10 @@ pt-BR/dark, it/light, it/dark, es/light, es/dark
 - **The table only appears once a routine is selected.** Without the click,
   the main pane shows the “pick a routine” hint — that is the failure mode
   of a green run with an empty main.
+
+## October 2026 update
+
+The four seeded runs were code-agent runs and disappeared with the MIN-721
+schema drop. The detail now shows the instruction and the empty runs state
+(**This routine has not run yet**, **Run now**). Capture each variant alone with
+the demo tabs cleared: a second variant in the same run lands on Home.

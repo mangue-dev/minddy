@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search; MIN-726 issue search order; MIN-733 always-on AI features; MIN-737 account settings reorganization; MIN-749 relation shortcut R",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -62,9 +62,9 @@
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; de translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-695 badge propagation: source and unit-test review of app-shell-chrome, app-sidebar, mobile-navigation, app-tab-strip and lib/app-tab-indicators; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-733 removal of the instance AI switches: source and unit-test review of the admin registry and every former switch reader; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 account settings reorganization: source review of the Issue indexing card, the settings section catalog, the settings filter and the new-tab palette hand-off in lib/settings-sections.ts and lib/settings-section-focus.ts; unchanged evidence retained; no browser walkthrough, no new captures); agent:/root (MIN-749 relation shortcut R: source and unit-test review of components/issue-field-shortcuts.tsx, the board card, issue panel, objective page and new-issue dialog relation pickers and lib/keyboard/shortcuts.ts; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (de changed-passage parity and label review); agent:/root (de translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (de translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de MIN-695 badge paragraph, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (de removal of the sentences describing instance AI switches; retained-meaning self-review; agent review, not human acceptance); agent:/root (de MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (de translation of MIN-749 added sentences, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 14,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -86,9 +86,9 @@
       "src": "/documentation/de/work-navigation.png",
       "alt": "Projektnavigation neben dem Demo-Ticketboard.",
       "caption": "Über die Projektseitenleiste erreichst du Tickets, Ziele, Seiten und Triage.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
         1488,
         1128
@@ -102,12 +102,12 @@
       "src": "/documentation/de/work-search.png",
       "alt": "Suchergebnisse für die Kennung eines Demo-Tickets.",
       "caption": "Die Palette findet das Ticket über seine Kennung neben Projektseiten; beim Öffnen bleiben die Zugriffsregeln bestehen.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
         788,
-        364
+        320
       ],
       "theme": "light",
       "padding": 24
@@ -128,7 +128,7 @@ Die Hauptnavigation führt zu deiner persönlichen Arbeit und deinen Projekten. 
 
 Zähler und Warnungen begleiten dich zwischen den Ebenen. Das Element, das zur **Startseite** zurückführt, zeigt die Gesamtzahl der Elemente zur Triage in den Projekten, die die **Startseite** auflistet, einschließlich des aktuellen, sowie die Smart-Assign-Warnung, wenn einem deiner Projekte Regeln fehlen. Eine Zurück-Zeile zeigt den Zähler der Ebene, zu der sie zurückführt. Innerhalb eines Projekts behalten **Triage** und **Feedback** die Zähler dieses Projekts. Die Tabs der Desktop-App tragen dasselbe Badge wie ihr Eintrag in der Seitenleiste: die Warnung auf der **Startseite** und die Zähler auf **Posteingang**, **Code-Review** sowie **Triage** und **Feedback** eines Projekts, auch wenn der Tab im Hintergrund ist.
 
-Persönliche Zyklen und projektübergreifende Ansichten umfassen Projekte, auf die du zugreifen kannst. Ziele, Wiki und Feedback eines Projekts gehören zu einem einzelnen Projekt. Prüfe das aktive Projekt, bevor du Arbeit erstellst oder Einstellungen änderst.
+Persönliche Zyklen und projektübergreifende Ansichten umfassen Projekte, auf die du zugreifen kannst. Ziele, Seiten und Feedback eines Projekts gehören zu einem einzelnen Projekt. Prüfe das aktive Projekt, bevor du Arbeit erstellst oder Einstellungen änderst.
 
 ![Projektnavigation neben dem Demo-Ticketboard.](/documentation/de/work-navigation.png)
 
@@ -146,11 +146,9 @@ Die Aktion gilt für die Zeile, auf die du geklickt hast, auch wenn gerade ein a
 
 ### Panels und mobile Navigation {#panels}
 
-Auf Mobilgeräten zeigt eine Ladeleiste am oberen Rand die laufende Navigation an, auch während ausstehende Seitenspeicherungen abgeschlossen werden.
-
 Ein Problem öffnet sich in einem Detailpanel, damit das darunterliegende Board verfügbar bleibt. Numo öffnet über seine schwebende Schaltfläche ein gemeinsames Gesprächspanel. Der Posteingang öffnet sich als Navigations-Popover mit Benachrichtigungen und Einladungen. Ältere eigene Posteingangs- und Numo-Links führen zu den aktuellen Einstiegspunkten; sie bezeichnen keine gesonderten aktuellen Bildschirme.
 
-Öffne auf dem Smartphone die Navigationsleiste, um dieselben Ziele auszuwählen. Panels nutzen die verfügbare Bildschirmbreite. Schließe das aktuelle Panel oder gehe zurück, um wieder die Liste zu sehen. Verwende sichtbare Schaltflächen, wenn ein Tastenkürzel nicht verfügbar ist.
+Öffne auf dem Smartphone die Navigationsleiste, um dieselben Ziele auszuwählen. Eine Ladeleiste am oberen Rand zeigt die laufende Navigation an, auch während ausstehende Seitenspeicherungen abgeschlossen werden. Panels nutzen die verfügbare Bildschirmbreite. Schließe das aktuelle Panel oder gehe zurück, um wieder die Liste zu sehen. Verwende sichtbare Schaltflächen, wenn ein Tastenkürzel nicht verfügbar ist.
 
 ### Desktop-Tabs {#tabs}
 
@@ -158,9 +156,7 @@ Die Desktop-App ergänzt die Anwendung um native Tabs und eine Serverauswahl. Ei
 
 ## Arbeit finden und Tastaturaktionen verwenden {#search-and-shortcuts}
 
-Der Befehl Dokumentation öffnet das öffentliche Handbuch in Ihrer aktuellen Sprache.
-
-Öffne die Befehlspalette über die Suchfunktion der Navigation. Suche nach einem eindeutigen Titel oder einer Problemkennung und wähle ein Ergebnis. Ergebnisse sind auf Arbeit beschränkt, auf die dein Konto zugreifen kann; eine bekannte Kennung gewährt keinen Zugriff auf ein anderes Projekt.
+Öffne die Befehlspalette über die Suchfunktion der Navigation. Suche nach einem eindeutigen Titel oder einer Problemkennung und wähle ein Ergebnis. Ergebnisse sind auf Arbeit beschränkt, auf die dein Konto zugreifen kann; eine bekannte Kennung gewährt keinen Zugriff auf ein anderes Projekt. Der Befehl Dokumentation öffnet das öffentliche Handbuch in deiner aktuellen Sprache.
 
 Drücke Command+K unter macOS oder Strg+K unter Windows/Linux, um die Befehlspalette zu öffnen; Command/Strg+P ist ein alternatives Anwendungskürzel. Außerhalb bearbeitbarer Texte öffnet ? die Kürzelhilfe und C die Problemerstellung. Auf einer Problemkarte unter dem Mauszeiger oder an den unterstützten Detailfunktionen öffnet S den Status, P die Priorität, E den Aufwand, A die zuständige Person, L die Kategorien, D das Fälligkeitsdatum und O das Ziel. R fügt an denselben Stellen, auf der Seite eines Ziels und im Formular für ein neues Problem eine Beziehung hinzu: Wähle die Beziehungsart und dann das andere Problem oder Ziel. Diese Einzelbuchstaben unterbrechen keine Eingabe in einem Eingabefeld, Textbereich oder Inhaltseditor. Navigationsfolgen wie G, dann H (Startseite) und G, dann I (Posteingang) verwenden zwei nacheinander gedrückte Tasten. G, dann W führt nur innerhalb eines Projekts zu den Seiten.
 

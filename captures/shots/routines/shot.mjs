@@ -10,6 +10,7 @@
  */
 import { openPage, settle, shoot, CAPTURE, CAPTURE_VARIANTS } from "../../lib/browser.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
+import { catalog } from "../../lib/messages.mjs";
 
 const SLOT = "routines";
 const OUT = "captures/shots/routines/out";
@@ -34,14 +35,10 @@ async function capture({ locale, theme }) {
     // routine” hint. The click is what makes the shot.
     await page.getByRole("button", { name: new RegExp(ROUTINE) }).first().click();
 
-    // The runs table is the payload: 4 passages, header row aside.
-    await page.getByRole("table").waitFor({ state: "visible", timeout: 15_000 });
-    const rowCount = await page.getByRole("table").getByRole("row").count();
-    if (rowCount !== 5) {
-      throw new Error(
-        `${locale}/${theme} — la table d'exécutions affiche ${rowCount - 1} passage(s) au lieu de 4.`,
-      );
-    }
+    // The seeded runs were code-agent runs, dropped with that schema (MIN-721):
+    // the detail now shows its instruction and the empty runs state.
+    const messages = await catalog(locale);
+    await page.getByText(messages.Routines.noRunsYet, { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
 
     // Nothing must remain under the cursor: rows and list items have a hover.
     await page.mouse.move(600, 60);

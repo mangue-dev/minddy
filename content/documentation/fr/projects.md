@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-693 project roles; MIN-737 project settings reorganization; MIN-689 project creation invitations; MIN-743 destructive-action confirmations",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -62,9 +62,9 @@
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; fr translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (hide-project confirmation from the sidebar menu: source and unit-test review of components/project-context-actions.tsx; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 project settings: source review of the General identity header edited in place (icon menu, name and key fields or phone sheet, no Save button), the Categories card, the three Members cards and the Hidden projects account tab; project-settings-steps and project-members-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-refresh screens project-general and project-members) and inspected; no other browser walkthrough); agent:/root (MIN-689 project creation invitations: source and unit-test review of the wizard's optional members step, the Member role and per-address sending after creation, and the persistent notification for refused invitations; follow-up: search by name among people who joined one of the owner's projects with a verified email, never pending invitees, in the wizard and in the Members settings card renamed Invite people (components/project-members.tsx, lib/collaborator-search.ts, components/collaborator-suggestions.tsx), invited by account after a server-side recheck that refuses with collaboratorNotFound; project-members-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-refresh screen project-members) with the Invite people card and inspected (components/create-project-wizard.tsx, lib/project-draft.ts, lib/members-api.ts, lib/server/collaborators.ts, lib/server/members.ts, app/api/me/collaborators/route.ts and their tests); end-to-end walkthrough against the local candidate with throwaway accounts (wizard pick, settings pick, refusal of a pending invitee and of an unknown id); project-settings-steps retained because it does not show the members card); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for hide-project from settings and sidebar, Leave, pending-invitation cancellation and project image removal; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root (fr translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root/min693_fr with agent:/root (fr MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (fr hide-project confirmation sentence, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (fr translation of the MIN-737 project-settings second-pass passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (fr translation of the MIN-689 passages and the collaborator-search follow-up with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (fr MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 14,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -89,9 +89,9 @@
       "src": "/documentation/fr/project-general.png",
       "alt": "En-tête du projet avec l’icône et son badge de modification, le nom, la clé et les chiffres Tickets, Membres, Objectifs, Catégories et Créé en.",
       "caption": "Sélectionnez l’icône, le nom ou la clé pour les changer sur place ; la mise à la corbeille reste une action distincte, plus bas.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
-      "capturedAt": "2026-10-19",
+      "capturedAt": "2026-10-20",
       "viewport": [
         816,
         359
@@ -106,9 +106,9 @@
       "src": "/documentation/fr/project-members.png",
       "alt": "Carte « Inviter des personnes » au-dessus de la carte Membres, qui liste trois membres de démonstration avec le propriétaire identifié.",
       "caption": "Invitez par l’adresse du compte et identifiez le propriétaire avant de retirer l’accès d’un membre.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
-      "capturedAt": "2026-10-19",
+      "capturedAt": "2026-10-20",
       "viewport": [
         816,
         430
@@ -133,7 +133,7 @@ Ouvrez le projet, puis ses réglages. Le propriétaire contrôle les paramètres
 
 L’onglet **Général** s’ouvre sur l’identité du projet : son icône, son nom et sa clé, puis cinq chiffres : **Tickets**, **Membres**, **Objectifs**, **Catégories** et **Créé en**. En tant que propriétaire, vous modifiez l’icône, le nom et la clé là où ils s’affichent ; il n’y a plus de bouton Enregistrer. Sélectionnez l’icône et choisissez **Nouvelle orbe** (proposée seulement tant qu’aucune image ne couvre l’orbe), **Importer une image**, **Importer depuis un site…**, qui demande l’adresse du site et importe son icône quand vous choisissez **Importer**, ou, si une image est définie, **Retirer l’image**, qui demande d’abord une confirmation, car l’image est supprimée. Sélectionnez le nom ou la clé pour les modifier : sur ordinateur, ils deviennent un champ où Entrée ou la sortie du champ enregistre et Échap annule ; sur téléphone, une feuille s’ouvre avec **Enregistrer**. Le nom ne peut pas être vide. La clé est normalisée en majuscules et doit compter 2 à 5 lettres (A–Z) ; sinon une erreur s’affiche et la clé n’est pas enregistrée. Vérifiez les identifiants obtenus après sa modification. L’icône sert seulement à distinguer le projet dans la navigation ; elle ne modifie pas ses membres. Les membres et les lecteurs voient le même en-tête, sans ces commandes.
 
-Les autres sections gèrent catégories, collaborateurs, récurrences, Git, import, intégrations, automatisation et retours. Consultez le guide correspondant avant d’activer un fournisseur ou du travail automatique. Les préférences du compte, comme la langue de votre interface, restent distinctes de la configuration du projet.
+Les autres onglets sont **Catégories**, **Membres**, **Récurrences**, **Smart Assign**, **Retours**, **Git**, **Import** et **Intégrations**. Consultez le guide correspondant avant d’activer un fournisseur ou du travail automatique. Les préférences du compte, comme la langue de votre interface, restent distinctes de la configuration du projet.
 
 Dans **Catégories**, le propriétaire et les membres gèrent les catégories qui classent les tickets. Choisissez **Nouvelle catégorie** sur la ligne de titre de la carte : une ligne avec une pastille de couleur et un champ de nom apparaît en haut de la liste. Appuyez sur Entrée ou choisissez **Ajouter** pour créer la catégorie ; Échap referme la ligne sans la créer. Sélectionnez la pastille d’une catégorie pour choisir une autre couleur, appliquée aussitôt (sur téléphone, les couleurs s’ouvrent dans une feuille), ou sélectionnez son nom pour la renommer sur place. Le bouton de suppression demande une confirmation, puis retire la catégorie de tous les tickets.
 
@@ -152,7 +152,7 @@ Pour le retrouver, choisissez **Réafficher** dans **Projets masqués** ou dans 
 
 Un membre ou un lecteur peut choisir **Quitter** dans la zone sensible pour retirer son propre accès ; une boîte de dialogue qui nomme le projet lui demande d’abord de confirmer. Le propriétaire devra l’inviter de nouveau si nécessaire. Quitter un projet ne le supprime pas pour les autres. Le propriétaire ne peut pas quitter le projet : [transférez d’abord la propriété](#transfer-ownership) à un membre.
 
-La suppression du projet est une action du propriétaire dans la zone de danger. Lisez les conséquences et la confirmation avant de l’utiliser, notamment si le projet contient tickets, pages, fichiers ou intégrations. Si une sauvegarde ordinaire échoue, conservez vos valeurs, lisez l’erreur et actualisez le projet avant de réessayer. Ne répétez pas une action destructive dont le premier résultat est incertain.
+Retirer le projet est une action du propriétaire : dans la zone sensible, choisissez **Déplacer vers la corbeille** à côté de **Déplacer le projet vers la corbeille**. La confirmation nomme le projet et indique que ses tickets, objectifs et retours partent avec lui ; le projet reste restaurable depuis la [corbeille](/fr/documentation/trash-and-recovery) pendant 30 jours, et sa clé est libérée aussitôt. Lisez la confirmation avant de l’utiliser, notamment si le projet contient tickets, pages, fichiers ou intégrations. Si une sauvegarde ordinaire échoue, conservez vos valeurs, lisez l’erreur et actualisez le projet avant de réessayer. Ne répétez pas une action destructive dont le premier résultat est incertain.
 
 Le propriétaire peut aussi faire un clic droit sur le projet dans la barre latérale et choisir **Déplacer vers la corbeille**. La même confirmation apparaît, et seul le projet sur lequel vous avez cliqué est concerné.
 

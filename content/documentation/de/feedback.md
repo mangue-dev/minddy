@@ -20,12 +20,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-693 project roles; MIN-718 hybrid issue search; MIN-737 project settings reorganization; MIN-743 destructive-action confirmations",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -67,9 +67,9 @@
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, de wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 integrations list: source review of the Objective for new feedback line and its in-place objective creation; no browser walkthrough; feedback-objective-selection predates this layout and is retained pending recapture; MIN-737: publish-a-feedback-board-workflow recaptured on 2026-10-19 in all six locales from the local candidate on the demo board — email identity, URL concealed — and inspected); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for unlinking a feedback post from its issue and a visitor deleting their own public comment; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_de_es with agent:/root (de pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, de wording and new-control review; existing procedural evidence retained); agent:/root (de changed-passage parity and localized-label review); agent:/root/min693_de with agent:/root (de MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (de translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de translation of the MIN-737 project-settings second-pass passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (de MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 14,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -96,9 +96,9 @@
       "src": "/documentation/de/publish-a-feedback-board-workflow.png",
       "alt": "Aktiviertes öffentliches Feedback-Board mit Besucheridentität per E-Mail-Code, der Aktion SSO aktivieren und ausgeblendeter URL.",
       "caption": "Der Eigentümer aktiviert das Board und wählt die Besucheridentität. Dieses Demo-Board nutzt die E-Mail-Bestätigung; seine URL ist ausgeblendet.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
-      "capturedAt": "2026-10-19",
+      "capturedAt": "2026-10-20",
       "viewport": [
         816,
         566
@@ -113,11 +113,11 @@
       "src": "/documentation/de/submit-and-follow-feedback-workflow.png",
       "alt": "Feedback-Formular für Besucher mit Titel, Beschreibung und aktivierter öffentlicher Sichtbarkeit.",
       "caption": "Ein angemeldeter Besucher reicht einen Bedarf ein und bestimmt die Sichtbarkeit. Das Beispiel wurde tatsächlich bei deaktivierter automatischer Prüfung eingereicht.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
-        625,
+        624,
         369
       ],
       "theme": "light",
@@ -129,7 +129,7 @@
       "src": "/documentation/de/feedback-objective-selection.png",
       "alt": "Komponentenvorschau der Zielauswahl für Feedback und einer Feedback-Integration, beide auf Docs eingestellt.",
       "caption": "Zielauswahl mit Demonstrationsdaten. Neues Feedback übernimmt die Integrationsvorgabe.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -146,7 +146,7 @@
       "src": "/documentation/de/feedback-pages-and-views-workflow.png",
       "alt": "Veröffentlichter Feedback-Leitfaden als ausgewählter Board-Tab, ohne Anmeldung lesbar.",
       "caption": "Veröffentlichen Sie eine Seite, aktivieren Sie Seitentabs und wählen Sie die Seite für das Board aus. Die Demoseite wurde anonym geöffnet; ihre undurchsichtige URL behält `noindex`.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -178,7 +178,7 @@ Wählen Sie, ob Besucher sich mit einem E-Mail-Code oder über das konfigurierte
 
 Wenn Sie das Board deaktivieren, sind seine Besucherseiten nicht mehr erreichbar. Die Server-zu-Server-Erfassung verwendet einen separaten Feedback-Integrationsschlüssel und kann ohne öffentliches Board weiterlaufen. Auch die gewählte Sichtbarkeit eines Beitrags, sein Prüfstatus und sein Spamstatus bestimmen, ob er sichtbar ist. Ein aktiviertes Board veröffentlicht allein noch nicht jeden Beitrag.
 
-Die optionale Numo-Prüfung betrifft eingereichtes Feedback und hängt von Projekt- und Instanzeinstellungen, Anbietern und dem Budget des Inhabers ab. Ist sie aktiviert, warten Einreichungen vor der Veröffentlichung auf die Prüfung; andernfalls warten sie nicht auf eine Prüfung, die gar nicht stattfindet. Prüfen Sie die Warteschlange nach einer Demoeinreichung. Numo sendet öffentliche Antworten nur nach ausdrücklicher Aufforderung.
+Der Eigentümer schaltet die **Numo-Überprüfung** in den Feedback-Einstellungen des Projekts ein oder aus; einen eigenen Schalter auf Instanzebene gibt es nicht. Bei aktiver Überprüfung warten Einreichungen über das öffentliche Board und über Integrationen vor der Veröffentlichung auf die Prüfung, während vom Team erstelltes Feedback nicht zurückgehalten wird. Als sensibel Erkanntes, etwa eine Sicherheitslücke oder personenbezogene Daten, wird privat und wartet unter **Zu prüfen**. Die Überprüfung nutzt den KI-Anbieter der Instanz und das KI-Budget des Projektinhabers: Ist das Budget aufgebraucht, wartet Feedback, nur für das Team sichtbar, sofern der Eigentümer nicht **Ohne Überprüfung veröffentlichen, wenn das KI-Budget aufgebraucht ist** aktiviert. Ohne Überprüfung wird Feedback so veröffentlicht, wie es eingereicht wurde, ohne automatische Kategorien, Scherzfilter oder Datenschutzprüfung. Prüfen Sie die Warteschlange nach einer Demoeinreichung. Numo sendet öffentliche Antworten nur nach ausdrücklicher Aufforderung.
 
 ![Aktiviertes öffentliches Feedback-Board mit Besucheridentität per E-Mail-Code, der Aktion SSO aktivieren und ausgeblendeter URL.](/documentation/de/publish-a-feedback-board-workflow.png)
 
@@ -188,7 +188,7 @@ Die optionale Numo-Prüfung betrifft eingereichtes Feedback und hängt von Proje
 
 Suchen Sie vor einer Einreichung nach vorhandenen Anfragen. Schreiben Sie einen konkreten Titel und beschreiben Sie den Bedarf und seinen Kontext. Titel erlauben 200 Zeichen, der Text 10.000. Die öffentliche Option ist standardmäßig ausgewählt; deaktivieren Sie sie, um die Anfrage privat an das Team zu senden. Prüfen Sie den Text vor dem Absenden auf Geheimnisse. Eine optionale Moderation kann die Anfrage zunächst zurückhalten, bevor sie öffentlich erscheint.
 
-Verwenden Sie das Mikrofon im Einreichungsformular, um Titel und Beschreibung zu diktieren. Identifizieren Sie sich zuerst über das Board, erlauben Sie den Mikrofonzugriff und beenden Sie dann die Aufnahme. Prüfen Sie den Text, bevor Sie Senden wählen. Das Diktat füllt den Entwurf aus; es sendet die Anfrage nicht ab. Die Verfügbarkeit hängt von der Sprachkonfiguration der Instanz, funktionierenden Anbietern und dem KI-Budget des Projektinhabers ab. Der Verbrauch wird diesem Inhaber gemäß seinen Anbietereinstellungen berechnet, nicht dem Konto des Besuchers.
+Verwenden Sie das Mikrofon im Einreichungsformular, um Titel und Beschreibung zu diktieren. Identifizieren Sie sich zuerst über das Board, erlauben Sie den Mikrofonzugriff und beenden Sie dann die Aufnahme. Prüfen Sie den Text, bevor Sie Senden wählen. Das Diktat füllt den Entwurf aus; es sendet die Anfrage nicht ab. Die Verfügbarkeit hängt von funktionierenden Transkriptions- und KI-Anbietern der Instanz und dem KI-Budget des Projektinhabers ab; einen eigenen Instanzschalter für die Spracheingabe gibt es nicht. Der Verbrauch wird diesem Inhaber gemäß seinen Anbietereinstellungen berechnet, nicht dem Konto des Besuchers.
 
 Aufnahmen auf dem öffentlichen Board sind auf 10 MiB begrenzt. Die Transkription erlaubt pro Board und Stunde 20 Anfragen je identifiziertem Besucher und 40 je IP-Adresse; für die Interpretation des Entwurfs gilt eine separate Grenze von 40 Anfragen je Besucher und Stunde. Diese Grenzen sind von den Diktatgrenzen des Kontos getrennt. Warten Sie bei einer Meldung zum Anfragelimit, bevor Sie es erneut versuchen. Ist Spracheingabe nicht verfügbar, tippen Sie die Anfrage stattdessen.
 
@@ -218,7 +218,7 @@ Teammitglieder können öffentliche Kommentare zur Moderation löschen. Bearbeit
 
 Die Liste zeigt das verknüpfte Ziel unter Autor und Kategorien. In den Zieleigenschaften zählt die Feedbackzahl vorhandene, nicht zusammengeführte Anfragen, einschließlich privater Anfragen für das Team. Wählen Sie die Zahl, um Feedback für dieses Ziel mit allen Statuswerten zu öffnen.
 
-Als Projektmitglied wählen Sie **Ziel** in den Feedback-Eigenschaften oder beim internen Erfassen einer Rückmeldung. **Keine** entfernt die Verknüpfung. Das Ziel muss zum selben Projekt gehören. Diese interne Zuordnung veröffentlicht keine privaten Ziele auf dem öffentlichen Board und zählt nicht zum Ticketfortschritt.
+Als Eigentümer oder Mitglied wählen Sie **Ziel** in den Feedback-Eigenschaften oder beim internen Erfassen einer Rückmeldung. **Keine** entfernt die Verknüpfung. Das Ziel muss zum selben Projekt gehören. Diese interne Zuordnung veröffentlicht keine privaten Ziele auf dem öffentlichen Board und zählt nicht zum Ticketfortschritt.
 
 Der Projekteigentümer kann beim Erstellen einer Feedback-Integration unter **Projekteinstellungen** → **Integrationen** ein optionales Ziel wählen oder die Vorgabe später in der Zeile **Ziel für neues Feedback** unter einer bestehenden Feedback-Integration ändern. Diese Auswahl kann auch ein neues Ziel anlegen. Neue API-Rückmeldungen übernehmen das Ziel, auch bei `analyze: false`. Eine Änderung verschiebt kein bestehendes Feedback. Liegt das Ziel im Papierkorb, wählen Sie ein aktives Ziel oder entfernen Sie die Vorgabe vor der nächsten Übermittlung. Numo wählt bei der Feedback-Prüfung niemals ein Ziel. Bitten Sie Numo ausdrücklich, eine Rückmeldung mit einem Ziel zu verknüpfen oder die Zuordnung zu entfernen.
 
@@ -230,7 +230,7 @@ Eine zusammengeführte Gruppe teilt ein Ziel. Wenn du das Ziel der Hauptanfrage 
 
 ## Feedback zusammenführen und mit Umsetzung verbinden {#feedback-to-issue}
 
-Öffnen Sie als Projektmitglied die Feedback-Anfrage und wählen Sie die Zusammenführung mit einer bestehenden kanonischen Anfrage desselben Projekts. Lesen Sie zunächst beide Anliegen: Ähnliche Formulierungen beweisen noch kein gleiches Ziel. Die aktuelle Anfrage wird zum Duplikat, Stimmen werden nach Identität zusammengeführt und das Duplikat leitet zur kanonischen Anfrage weiter. Prüfen Sie das Zusammenführungsereignis in der Aktivität; die Rückgängig-Aktion verwendet dieses Ereignis. Lehnen Sie einen falschen KI-Vorschlag ab, statt ihn nur zum Leeren der Warteschlange anzunehmen.
+Öffnen Sie als Eigentümer oder Mitglied die Feedback-Anfrage und wählen Sie die Zusammenführung mit einer bestehenden kanonischen Anfrage desselben Projekts. Lesen Sie zunächst beide Anliegen: Ähnliche Formulierungen beweisen noch kein gleiches Ziel. Die aktuelle Anfrage wird zum Duplikat, Stimmen werden nach Identität zusammengeführt und das Duplikat leitet zur kanonischen Anfrage weiter. Prüfen Sie das Zusammenführungsereignis in der Aktivität; die Rückgängig-Aktion verwendet dieses Ereignis. Lehnen Sie einen falschen KI-Vorschlag ab, statt ihn nur zum Leeren der Warteschlange anzunehmen.
 
 ### Arbeit erstellen oder verknüpfen {#work}
 

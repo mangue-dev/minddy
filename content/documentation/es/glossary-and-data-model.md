@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -42,10 +42,10 @@
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/editorial_de_es (collection-caption clarity); agent:/root/min693_es with agent:/root (es MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
-    "date": "2026-10-17"
+    "revision": 5,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "permissions-and-public-links",
@@ -62,7 +62,7 @@
       "src": "/documentation/es/glossary-and-data-model-flow.svg",
       "alt": "Diagrama: Proyecto: trabajo y conocimiento compartidos. Incidencia: trabajo; objetivo: resultado. Ciclo personal: trabajo entre proyectos. Página: contexto; feedback: necesidad.",
       "caption": "Los objetos relacionan tareas, resultados y contexto duradero, mientras el ciclo personal organiza el trabajo propio entre proyectos.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -112,4 +112,4 @@ Una página conserva contexto duradero, como una especificación, decisión o pr
 
 ## Comprobar con un ejemplo {#example}
 
-Para preparar una versión, cree un objetivo, documente la decisión en una página y enlácela con las incidencias pertinentes. Cada miembro puede incluir sus incidencias en el ciclo personal. Puede vincular feedback al trabajo sin publicar la discusión privada. Una rutina inicia una nueva conversación programada con Numo que utiliza las instrucciones y el contexto guardados; no crea automáticamente una incidencia recurrente ni se activa con cada cambio. Conserve los identificadores y la propiedad de los objetos: enlazar contexto no iguala los permisos.
+Para preparar una versión, cree un objetivo, documente la decisión en una página y enlácela con las incidencias pertinentes. Cada miembro puede incluir sus incidencias en el ciclo personal. Puede vincular feedback al trabajo sin publicar la discusión privada. Una rutina inicia una nueva conversación con Numo con el contexto del proyecto según una programación o cuando un evento elegido cumple sus condiciones, por ejemplo una incidencia que entra en un estado o una nueva entrada de base de datos; no es una incidencia recurrente y no modifica el código del repositorio. Conserve los identificadores y la propiedad de los objetos: enlazar contexto no iguala los permisos.

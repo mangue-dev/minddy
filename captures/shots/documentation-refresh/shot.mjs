@@ -48,6 +48,8 @@ for (const locale of locales) {
   const writes = [], adaptations = [];
   const numo = JSON.parse(await readFile("captures/shots/documentation-refresh/numo-localized-demo-fixture.json", "utf8"));
   for (let index = 0; index < numo.original.length; index++) fixture.mapping[numo.original[index]] = numo.translations[locale][index];
+  // The demo board's default view is stored under its French name.
+  for (const name of ["Toutes", "All", "Alle", "Todos", "Tutti"]) fixture.mapping[name] = messages.Board.defaultViewName;
   const routines = JSON.parse(await readFile("captures/shots/documentation-refresh/routine-localized-capture-candidates.json", "utf8"));
   for (let index = 0; index < routines.original.length; index++) fixture.mapping[routines.original[index]] = routines.translations[locale][index];
   try {
@@ -97,13 +99,14 @@ for (const locale of locales) {
       await writeFile(output, JSON.stringify(records, null, 2) + "\n");
     }
     for (const [screen, tab, section] of settings) await capture(screen, `/settings?tab=${tab}&section=${section}`, () => page.locator(`#settings-section-${section}`).locator(".."));
+    // Account settings open on Preferences since the UI/UX refinements batch.
     // The profile header (MIN-737): avatar and name are edited in place —
     // the avatar opens a menu, the name turns into a field. Nothing is saved.
-    await capture("profile-and-preferences-workflow", "/settings", () => page.locator("#settings-section-account-profile"), async () => {
+    await capture("profile-and-preferences-workflow", "/settings?tab=profile", () => page.locator("#settings-section-account-profile"), async () => {
       await page.getByRole("button", { name: messages.Profile.changeAvatar, exact: true }).waitFor();
     }, { width: 1440, height: 1100 });
     // Personal statistics now live under the profile header (MIN-737).
-    await capture("personal-statistics-workflow", "/settings", () => page.locator("#settings-section-account-statistics"), async () => {
+    await capture("personal-statistics-workflow", "/settings?tab=profile", () => page.locator("#settings-section-account-statistics"), async () => {
       await page.getByRole("region", { name: messages.Stats.yearStory, exact: true }).first().waitFor();
     }, { width: 1440, height: 2200 });
     // Project settings (MIN-737): the identity header of General, and the
@@ -172,8 +175,9 @@ for (const locale of locales) {
       await page.getByRole("button", { name: installer.confirmDesktop, exact: true }).click();
       await page.getByRole("heading", { name: installer.routeTitle, exact: true }).waitFor();
       if (mode === "local") return;
+      // The encryption step now explains the release's default instead of asking.
       await page.getByRole("button", { name: installer.continueLabel, exact: true }).click();
-      await page.getByRole("heading", { name: installer.encryptionChoiceTitle, exact: true }).waitFor();
+      await page.getByRole("heading", { name: installer.encryptionReleaseTitle, exact: true }).waitFor();
       await page.getByRole("button", { name: installer.continueLabel, exact: true }).click();
       await page.getByRole("heading", { name: installer.migrateTitle, exact: true }).waitFor();
       await page.getByRole("button").filter({ hasText: installer.migrateNo }).click();

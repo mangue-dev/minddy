@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 27,
-  "sourceRevision": 27,
+  "revision": 28,
+  "sourceRevision": 28,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work; MIN-693 project roles; MIN-717 Smart Fill relations; MIN-718 hybrid issue search; MIN-728 one editor engine; MIN-733 always-on AI features; MIN-736 closed columns hidden by default; MIN-737 account settings reorganization; MIN-741 creation dialogs; MIN-742 resources; MIN-743 destructive-action confirmations; MIN-746 Smart Fill properties set by shortcut; MIN-749 relation shortcut R; UI/UX refinements batch: Create in project shortcut, closed issues in relation pickers",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -110,13 +110,14 @@
       "components/objective-relations-section.tsx",
       "components/issue-field-shortcuts.tsx",
       "components/creation-relations.tsx",
-      "lib/keyboard/shortcuts.ts"
+      "lib/keyboard/shortcuts.ts",
+      "lib/server/assistant/prompt.ts"
     ]
   },
   "review": {
-    "revision": 27,
-    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review: Numo implementation and verification actions removed; copy-prompt submenu and auto-start preference verified; bulk-actions screenshot removed because it showed the retired Implement with Numo action; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-717 Smart Fill relations source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-728 one editor engine: source and unit-test review of the shared editor on this surface; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-734 typed mentions: source and unit-test review of the mention format, rendering and access rules; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (Command/Ctrl+K opens the selection actions: source and unit-test review of bulk-actions-context and use-command-palette-launcher; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-733 removal of the instance AI switches: source and unit-test review of the admin registry and every former switch reader; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 default status columns: source and unit-test review of lib/view-filter.ts and the board status filter; no browser walkthrough, no new captures); agent:/root (MIN-737 account settings reorganization: source review of the Smart Fill tab and its cards in components/settings/account-smart-fill-section.tsx; unchanged evidence retained; no browser walkthrough, no new captures); agent:/root (MIN-741 creation dialogs: source and unit-test review of the Create in project control, the cleared project-scoped fields and the identifier create button with its copy menu; create-an-issue-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-product screen new-issue) and inspected; no other browser walkthrough); agent:/root (MIN-742 resources: source and unit-test review of renaming, removal confirmation, resource cards with a click and right-click menu and og:image link previews, file mentions opening the reader, and resource mentions scoped to their surface; issue-file-preview recaptured on 2026-10-19 in all six locales with captures/shots/file-preview and inspected; no other browser walkthrough); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for relation removal; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-746 Smart Fill properties set by shortcut: source and unit-test review of lib/smart-fill-fields.ts, the creation dialog and the server fill in lib/server/create-issue.ts, which only infers empty properties; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-749 relation shortcut R: source and unit-test review of components/issue-field-shortcuts.tsx, the board card, issue panel, objective page and new-issue dialog relation pickers and lib/keyboard/shortcuts.ts; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (UI/UX refinements batch: source review of the Command/Ctrl+Shift+P Create in shortcut, its caret restoration and key hint in components/creation-project-select.tsx and the create.changeProject entry in lib/keyboard/shortcuts.ts; relation pickers (board card, issue panel, objective page, creation dialogs) now also list done, canceled and duplicate issues after open ones, which the existing relation prose does not contradict, so no prose change for it; no browser walkthrough, no new captures; unchanged evidence retained; the create-an-issue-steps capture predates the Create in key hint and the new Smart Fill icon)",
-    "language": "agent:/root (en new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_docs (en removal edits; agent review, not human acceptance); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-717 added passages with catalog UI labels; agent review, not human acceptance); agent:/root (en MIN-718 added passages with catalog UI labels; agent review, not human acceptance); agent:/root (en editorial review of the MIN-728 passage); agent:/root (en added sentences, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (en removal of the sentences describing instance AI switches; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-736 added sentences with catalog status labels; agent review, not human acceptance); agent:/root (en MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-741 Create in passages and figure alt text with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-742 changed passages and figure alt text with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-746 added sentences; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-749 added sentences; retained-meaning self-review; agent review, not human acceptance); agent:/root (en Create in shortcut changed passage with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 28,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 8 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -162,9 +163,9 @@
       "src": "/documentation/en/new-issue.png",
       "alt": "Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-19 button.",
       "caption": "Describe the expected result, then choose the useful properties before creating the issue.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
-      "capturedAt": "2026-10-19",
+      "capturedAt": "2026-10-20",
       "viewport": [
         720,
         396
@@ -178,7 +179,7 @@
       "src": "/documentation/en/triage-incoming.png",
       "alt": "Incoming demonstration issue DOC-11 with its report, properties and duplicate, Decline and Accept controls.",
       "caption": "Read the incoming report before accepting it, declining it or linking a duplicate.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -194,12 +195,12 @@
       "src": "/documentation/en/issue-statuses.png",
       "alt": "Eight issue statuses in the picker, with backlog currently selected.",
       "caption": "The check marks the current status. Choose the status that reflects the work’s actual state.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         288,
-        357
+        358
       ],
       "theme": "light",
       "padding": 24
@@ -210,9 +211,9 @@
       "src": "/documentation/en/work-resources.png",
       "alt": "Add-link dialog with an example contact URL.",
       "caption": "Review the destination before adding a resource. This example link has not been submitted.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         496,
         212
@@ -226,12 +227,12 @@
       "src": "/documentation/en/work-dependencies.png",
       "alt": "Search for a blocker by issue identifier.",
       "caption": "Choose the relation direction before selecting its endpoint. The picker is shown without submitting a relation.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         368,
-        152
+        184
       ],
       "theme": "light",
       "padding": 24
@@ -242,9 +243,9 @@
       "src": "/documentation/en/work-sub-issues.png",
       "alt": "Sub-issue creation field in a demonstration parent issue.",
       "caption": "The inline field creates a child under this parent; a child keeps its own status and discussion.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
         508,
         1096
@@ -258,12 +259,12 @@
       "src": "/documentation/en/work-implementation-plan.png",
       "alt": "Demonstration plan showing two of six work tasks complete.",
       "caption": "The saved demonstration plan separates completed, active and pending steps. Its progress does not prove the fictional code task was executed.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
         508,
-        1096
+        1416
       ],
       "theme": "light",
       "padding": 24
@@ -274,12 +275,12 @@
       "src": "/documentation/en/issue-date-recurrence.png",
       "alt": "Due-date picker in recurring mode with a weekly Sunday preview and optional time.",
       "caption": "Recurring mode previews the weekly cadence. Confirm the first due date before creating the issue.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         324,
-        544
+        540
       ],
       "theme": "light",
       "padding": 24
@@ -290,9 +291,9 @@
       "src": "/documentation/en/import-issues-preview-workflow.png",
       "alt": "CSV preview with two localized demonstration rows and detected column mappings.",
       "caption": "CSV preview with two localized demonstration rows and detected column mappings. No import was submitted; optional AI planning was blocked for the capture.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         816,
         977
@@ -307,7 +308,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -338,8 +339,6 @@ An issue tracks a piece of work within a project, from its initial report to com
 
 ## Create and edit an issue {#create-an-issue}
 
-The saved-draft delete control opens a confirmation. Cancel keeps the draft; confirming removes that saved draft. The same confirmation is available when creating an objective.
-
 You need to be the owner or a Member of the destination project; readers can open issues but not create or edit them. Open the project and its new-issue control. Enter a title that names the work, then add the context, expected result and constraints in the description. The form opens on the current project; choose another one in **Create in**, at the top left of the form (next to the **New issue** title on a phone), especially when creating from a personal or cross-project view. On a computer, Command/Ctrl+Shift+P opens that menu, even while you type the title or description; once you choose a project or close the menu, the cursor returns exactly where it was. The pill shows this shortcut, which exists only when more than one project can be chosen; a phone shows no shortcut hint. Changing it clears the categories, objective and relations picked for the previous project. The create button names the identifier the issue will receive, such as `MIN-42`, and follows issues created meanwhile; its menu creates the issue and copies that identifier.
 
 For manual creation, switch Smart-fill off if its button is shown and enabled. This reveals the priority, effort, category, objective and relations controls for you to set. To set only some of these properties, keep Smart-fill on and, outside the title and description, press the property's key: P for priority, E for effort, L for categories or O for objective. Its picker opens, and the value you choose stays visible. Smart-fill only infers the properties you left empty. The switch applies to this issue; reopening the creation form restores its account preference. It is independent of Smart Assign and routines. While Smart-fill is on, it also [links the issue to related issues](#smart-fill-relations) once it is saved, so the relations picker is hidden; R still opens it. Relations you already chose stay visible above the title and are created with the issue.
@@ -348,10 +347,12 @@ Set the useful properties before confirming: status, priority, effort, assignee,
 
 Confirm creation and open the new issue. Check its identifier and project. Reopen its property pickers to change values as the task becomes clearer. The description explains the work; an implementation plan is maintained separately in the Plan tab.
 
+The saved-draft delete control opens a confirmation. Cancel keeps the draft; confirming removes that saved draft. The same confirmation is available when creating an objective.
+
 
 ![Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-19 button.](/documentation/en/new-issue.png)
 
-The description, comments and the new-issue dialog use the same editor as project pages, without the block handles. Type `/` to insert a heading, list, task, quote, **Callout**, code block, **Toggle** or divider, and `@` to mention a person, issue, objective or page. The `@` menu also lists the resources attached to what you are writing: the issue or objective for its description and plan, a comment for its own files, or a creation dialog for the files added in it. A mention of a resource attached elsewhere shows as **Unavailable**. Several people can edit the same description at once: each person's caret appears with their name and color, and changes made by Numo or a connected agent appear as they are saved. Numo, connected agents and CSV exports read the text as Markdown, which follows a few seconds after typing stops. Select text to make it bold, italic, struck through or code, or to add a link. Paste or drop an image to insert it in the description; other kinds of files belong in the issue's resources. A mention points at its target, not at its name: it follows a rename and survives editing and copy-paste into another description, comment, page or the Numo composer. A reader who cannot open the target sees an **Unavailable** mention, without its name or project.
+The description, comments and the new-issue dialog use the same editor as project pages, without the block handles. Type `/` to insert a heading, list, task, quote, **Callout**, code block, **Toggle** or divider, and `@` to mention a person, issue, objective or page. The `@` menu also lists the resources attached to what you are writing: the issue or objective for its description and plan, a comment for its own files, or a creation dialog for the files added in it. A mention of a resource attached elsewhere shows as **Unavailable**. Several people can edit the same description at once: each person's caret appears with their name and color, and changes made by Numo or a connected agent appear as they are saved. Numo, connected agents and CSV exports read the text as Markdown, which follows a few seconds after typing stops. Select text to make it bold, italic, struck through or code, or to add a link. Paste or drop an image, or choose **Image** in the `/` menu, to insert it in the description; other kinds of files belong in the issue's resources. A mention points at its target, not at its name: it follows a rename and survives editing and copy-paste into another description, comment, page or the Numo composer. A reader who cannot open the target sees an **Unavailable** mention, without its name or project.
 
 ### Check saving and visibility {#issue-save}
 
@@ -372,9 +373,9 @@ Turning a switch off also cancels the passes that have not run yet. Numo can cha
 
 ## Review incoming work in triage {#triage-incoming-work}
 
-Use the list filters to narrow incoming tickets by priority, effort, assignee, objective, categories or integration. Choices within one property are alternatives; different properties are combined. Clear the filters to show all incoming tickets again.
-
 Open the project's Triage destination. Read the incoming issue and its source context before accepting it into planned work. Check whether an existing issue already represents the request. Clarify the expected outcome, project, assignee, priority and effort as needed.
+
+Use the list filters to narrow incoming issues by priority, effort, assignee, objective, categories or integration. Choices within one property are alternatives; different properties are combined. Clear the filters to show all incoming issues again.
 
 Choose Accept and confirm to move a retained issue to backlog. Choose Decline and confirm to set it to canceled. For a duplicate, use the duplicate picker to select the retained issue; the incoming issue becomes duplicate and points to that issue. Describing the request in the picker's search also lists similar issues under **Related by meaning**, after the text matches; see [Search issues by meaning](/docs/navigation#search-by-meaning). After an item leaves triage, the next item is selected. Verify the resulting status or duplicate link in the issue itself. Moving between cards without taking one of these actions does not close the issue.
 
@@ -486,7 +487,7 @@ Do not delete a child merely to reorganize the hierarchy. Check existing parent 
 
 ## Maintain an implementation plan {#implementation-plans}
 
-Open the issue's Plan tab. Its description should already state the problem and expected result. Add the implementation steps manually, or ask Numo to inspect the linked repository before proposing a code-level plan. An AI-generated path or function is not evidence unless the repository was actually read.
+Open the issue's Plan tab. Its description should already state the problem and expected result. Add the implementation steps manually, or [copy the **Generate a plan** prompt](#copy-issue-prompt) for your own coding agent, which explores the repository itself. Numo cannot read the repository: it can sharpen the description and, when you ask, write a basic plan, but any file path or function it names is a guess. A path or function in a plan is evidence only when the repository was actually read.
 
 The plan is edited in place, like the description: click in it and type, without an edit mode or a save button. An empty plan shows a placeholder. Several members, Numo and connected agents can edit the same plan at once, each with a named caret, and a task an agent checks appears in your editor while you write elsewhere. Type `- [ ]` followed by a space at the start of a line, or choose **Task list** in the `/` menu, to add a task. Click a task's box to complete it, or open its menu for the other states.
 
@@ -537,7 +538,7 @@ Choose Actions in the floating selection bar to open the command palette. Choose
 
 When working across projects, verify membership in every affected project. Read any partial failure result: successful changes may already be saved even if another issue was rejected. Inspect the result before retrying the entire selection.
 
-Deletion affects every selected item, so confirm the set before proceeding. Clear selection after the operation when you are moving to unrelated work. If filters change as a result of your update, issues can leave the displayed view while remaining in the project. Search identifiers to verify the new state instead of recreating them.
+Deletion affects every selected item, so confirm the set before proceeding. **Move issues to trash** asks for confirmation; the issues, with their comments, files and links, can be restored from the [trash](/docs/trash-and-recovery) for 30 days. Clear selection after the operation when you are moving to unrelated work. If filters change as a result of your update, issues can leave the displayed view while remaining in the project. Search identifiers to verify the new state instead of recreating them.
 
 ## Import a CSV backlog after checking its mapping {#import-issues}
 

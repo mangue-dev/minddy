@@ -3,7 +3,7 @@
   "id": "automation-settings",
   "locale": "fr",
   "title": "Des automatisations aux routines",
-  "summary": "Vérifiez les propositions de migration en pause avant d’activer le travail Numo par événement.",
+  "summary": "Comprenez ce que sont devenues les automatisations de projet et recréez un workflow sous forme de routine contrôlée par le propriétaire.",
   "topic": "Compte et applications",
   "type": "guide",
   "audiences": [
@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677); MIN-721 removal of Numo code work",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -36,29 +36,29 @@
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 7; no operational rerun)",
-    "language": "agent:/root (fr translation, label and retained-meaning self-review); agent:/root/min721_docs (fr translation of the MIN-721 removal edit; agent review, not human acceptance)",
-    "date": "2026-10-16"
+    "revision": 8,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [],
   "aliases": [],
   "tags": [
-    "Configurer le travail automatique des tickets"
+    "Recréer une automatisation de projet en routine"
   ],
   "figures": [],
   "requiredFigures": []
 }
 ---
 
-## Vérifier le travail migré {#automation-settings}
+## Ce que sont devenues les automatisations de projet {#automation-settings}
 
-Les interrupteurs d’automatisation du projet et les préréglages, tailles d’effort et délais du compte sont remplacés par les [Routines](/docs/scheduled-routines). Ouvrez Routines avec le compte du propriétaire du projet. Les règles actives de l’archive sont proposées une seule fois comme routines en pause ; ouvrir la liste ne les active pas et ne consomme pas de budget d’exécution.
+Les interrupteurs d’automatisation du projet et les préréglages, tailles d’effort et délais du compte sont remplacés par les [Routines](/docs/scheduled-routines). Les règles d’automatisation configurées dans une version précédente ne s’exécutent plus, et Minddy ne les convertit pas en routines. Les chaînes en attente ou attendant une personne ont été arrêtées sans étape suivante. Les règles archivées restent dans le projet et dans les exports du compte.
 
-Vérifiez les instructions, le statut déclencheur, les conditions, le délai et le plafond de chaque proposition. Le workflow original reste dans les instructions pour comparaison. Vérifiez ses validations humaines et références indisponibles avant l’activation. Les propositions demandent l’avis du propriétaire aux validations humaines et limitent par défaut chaque occurrence à 15 % du budget mensuel. Elles ne poursuivent pas silencieusement l’ancienne chaîne. Les chaînes en attente ou attendant une personne s’arrêtent, sans étape suivante de chaîne. L’activité historique et les sauvegardes du compte conservent l’archive.
+Pour conserver un workflow, ouvrez Routines avec le compte du propriétaire du projet et [créez une routine](/docs/scheduled-routines#scheduled-routines) avec les instructions, le déclencheur, les conditions et le délai nécessaires.
 
 ## Distinguer les autres aides du projet {#mechanisms}
 
-Smart Fill remplit toujours la priorité, l’effort, les catégories et l’objectif manquants. Smart Assign reste un réglage du propriétaire avec des règles par membre. Smart Triage reste un moteur de règles statiques. L’auto-affectation reste une préférence distincte. Ces aides n’activent pas une proposition migrée.
+Smart Fill remplit toujours la priorité, l’effort, les catégories et l’objectif manquants. Smart Assign reste un réglage du propriétaire avec des règles par membre. Smart Triage reste un moteur de règles statiques. L’auto-affectation reste une préférence distincte. Ces aides sont distinctes des routines et ne remplacent pas une automatisation retirée.
 
-Testez manuellement une routine vérifiée, consultez sa conversation privée et son budget, puis activez-la pour écouter les futurs événements. Si un travail inattendu démarre, mettez la routine en pause et consultez l’occurrence avant de réessayer. Le [guide des routines](/docs/scheduled-routines#conditions) explique les attentes et leur invalidation.
+Testez manuellement une nouvelle routine, consultez sa conversation privée et son budget, puis activez-la pour écouter les futurs événements. Si un travail inattendu démarre, mettez la routine en pause et consultez l’occurrence avant de réessayer. Le [guide des routines](/docs/scheduled-routines#conditions) explique les attentes et leur invalidation.

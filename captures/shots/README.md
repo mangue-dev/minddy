@@ -3,6 +3,18 @@
 Each folder contains `intent.md`, its Playwright `shot.mjs`, lossless PNGs in
 `out/`, and a run history in `history.jsonl`.
 
+## October 20, 2026 refresh (0.20.0)
+
+The landing shots were recaptured on `https://preview.minddy.app` serving
+`775275a0` (`c60721f0` for `routines`, after the MIN-747 copy update), in six
+locales and both themes, then published with `publish.mjs --shots` and
+`focus-marketing.mjs`. Before the run, the demo account's accumulated synced
+tabs were deleted and its Getting started checklist dismissed (approved demo
+cleanup); clear the tabs again before each shot so earlier routes do not appear
+in the tab strip. Seeds `015` and `017` were reapplied for the Oct 12-25 cycle.
+`CAPTURE_THEMES=light|dark` runs one theme when a shot needs synced state reset
+between variants (`routines`).
+
 ## September 6, 2026 refresh
 
 All captures target `https://preview.minddy.app`, serving commit `07b1599c`.

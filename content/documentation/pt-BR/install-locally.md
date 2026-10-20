@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 6,
+  "revision": 8,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-721 removal of Numo code work",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -42,10 +42,10 @@
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun); agent:/root with agent:/root/review_it_pt (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root/min721_docs (MIN-721 source review inherited from en revision 6; pt-BR translation of removal edits; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/editorial_it_pt (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 pt-BR network guidance and terminology review); agent:/root/review_it_pt with agent:/root (pt-BR pre-merge wording, correction and retained-meaning review); agent:/root/min721_pt-BR (pt-BR translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance)",
-    "date": "2026-10-16"
+    "revision": 8,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "workspace-encryption",
@@ -62,7 +62,7 @@
       "src": "/documentation/pt-BR/install-locally-flow.svg",
       "alt": "Diagrama: Aplicativo desktop seleciona clone. Aplicação loopback: porta 6463. Supabase mínimo e dados duráveis. Sair encerra o aplicativo e o backend.",
       "caption": "O aplicativo desktop controla o início e o encerramento da instância local; os dados precisam ser preservados entre as execuções.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -94,12 +94,12 @@
       "src": "/documentation/pt-BR/install-locally-wizard.png",
       "alt": "Assistente público de instalação com o perfil deste computador selecionado.",
       "caption": "Escolha a instalação pessoal quando o aplicativo de desktop for gerenciar os serviços locais.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         944,
-        504
+        692
       ],
       "theme": "light",
       "padding": 24,
@@ -119,7 +119,7 @@ Use um clone dedicado à avaliação com Node.js 24, `pnpm` 10.28.0, Git, Supaba
 ```bash
 git clone https://github.com/mangue-dev/minddy.git
 cd minddy
-git checkout v0.11.0
+git checkout v0.20.0
 corepack enable
 corepack prepare pnpm@10.28.0 --activate
 pnpm install --frozen-lockfile
@@ -130,6 +130,8 @@ pnpm install --frozen-lockfile
 
 
 ![Assistente público de instalação com o perfil deste computador selecionado.](/documentation/pt-BR/install-locally-wizard.png)
+
+As novas instalações locais criptografam o conteúdo do espaço de trabalho por padrão. Para registrar uma escolha explícita, execute `pnpm bootstrap:supabase -- --minimal --app-url http://localhost:6463 --encryption enabled` (ou `--encryption disabled`) no clone antes de abri-lo no aplicativo; as inicializações seguintes preservam a escolha salva. Consulte a [criptografia do espaço de trabalho](/pt-br/documentacao/workspace-encryption#workspace-encryption).
 
 ## Deixar o aplicativo controlar os serviços {#launch}
 

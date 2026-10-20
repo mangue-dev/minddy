@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 13,
+  "revision": 15,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-693 project roles; MIN-737 project settings reorganization; MIN-689 project creation invitations; MIN-743 destructive-action confirmations",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -62,9 +62,9 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; de translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (hide-project confirmation from the sidebar menu: source and unit-test review of components/project-context-actions.tsx; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 project settings: source review of the General identity header edited in place (icon menu, name and key fields or phone sheet, no Save button), the Categories card, the three Members cards and the Hidden projects account tab; project-settings-steps and project-members-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-refresh screens project-general and project-members) and inspected; no other browser walkthrough); agent:/root (MIN-689 project creation invitations: source and unit-test review of the wizard's optional members step, the Member role and per-address sending after creation, and the persistent notification for refused invitations; follow-up: search by name among people who joined one of the owner's projects with a verified email, never pending invitees, in the wizard and in the Members settings card renamed Invite people (components/project-members.tsx, lib/collaborator-search.ts, components/collaborator-suggestions.tsx), invited by account after a server-side recheck that refuses with collaboratorNotFound; project-members-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-refresh screen project-members) with the Invite people card and inspected (components/create-project-wizard.tsx, lib/project-draft.ts, lib/members-api.ts, lib/server/collaborators.ts, lib/server/members.ts, app/api/me/collaborators/route.ts and their tests); end-to-end walkthrough against the local candidate with throwaway accounts (wizard pick, settings pick, refusal of a pending invitee and of an unknown id); project-settings-steps retained because it does not show the members card); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for hide-project from settings and sidebar, Leave, pending-invitation cancellation and project image removal; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/review_de_es with agent:/root (de pre-merge wording, correction and retained-meaning review); agent:/root (de translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root/min693_de with agent:/root (de MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (de hide-project confirmation sentence, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (de translation of the MIN-737 project-settings second-pass passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (de translation of the MIN-689 passages and the collaborator-search follow-up with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (de MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 15,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -89,9 +89,9 @@
       "src": "/documentation/de/project-general.png",
       "alt": "Projektkopf mit Symbol und Bearbeitungssymbol, Name, Schlüssel sowie den Kennzahlen Vorgänge, Mitglieder, Ziele, Kategorien und Erstellt.",
       "caption": "Wähle Symbol, Namen oder Schlüssel, um sie direkt zu ändern; das Verschieben in den Papierkorb bleibt eine eigene Aktion weiter unten.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-19",
+      "capturedAt": "2026-10-20",
       "viewport": [
         816,
         359
@@ -106,9 +106,9 @@
       "src": "/documentation/de/project-members.png",
       "alt": "Karte „Personen einladen“ über der Karte Mitglieder mit drei Demo-Mitgliedern, der Eigentümer ist gekennzeichnet.",
       "caption": "Lade Mitglieder über ihre Konto-E-Mail ein und prüfe den Eigentümer, bevor du einen Zugang entfernst.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-19",
+      "capturedAt": "2026-10-20",
       "viewport": [
         816,
         430
@@ -133,7 +133,7 @@ Ein Projekt verbindet Probleme, Ziele, Seiten und die Personen, die daran arbeit
 
 Der Tab **Allgemein** beginnt mit der Identität des Projekts: seinem Symbol, seinem Namen und Schlüssel und darunter fünf Kennzahlen: **Vorgänge**, **Mitglieder**, **Ziele**, **Kategorien** und **Erstellt**. Als Eigentümer änderst du Symbol, Name und Schlüssel direkt dort, wo sie angezeigt werden; eine Speichern-Schaltfläche gibt es nicht mehr. Wähle das Symbol und dann **Neue Kugel** (nur angeboten, solange kein Bild die Kugel verdeckt), **Bild hochladen**, **Von einer Website importieren…**, das nach der Adresse der Website fragt und ihr Symbol übernimmt, sobald du **Importieren** wählst, oder, wenn ein Bild gesetzt ist, **Bild entfernen**, das zuerst nachfragt, weil das Bild gelöscht wird. Wähle den Namen oder den Schlüssel, um ihn zu bearbeiten: Am Computer wird daraus ein Feld, in dem Enter oder das Verlassen des Felds speichert und Escape abbricht; auf dem Telefon öffnet sich ein Blatt mit **Speichern**. Der Name darf nicht leer sein. Der Schlüssel wird in Großbuchstaben umgewandelt und muss aus 2 bis 5 Buchstaben (A–Z) bestehen; andernfalls erscheint ein Fehler und der Schlüssel wird nicht gespeichert. Prüfe nach einer Änderung die entstandenen Kennungen. Das Symbol unterscheidet das Projekt nur in der Navigation; die Mitgliedschaft ändert es nicht. Mitglieder und Leser sehen denselben Kopfbereich ohne diese Bedienelemente.
 
-Weitere Bereiche verwalten Kategorien, Mitwirkende, wiederkehrende Probleme, Git, Import, Integrationen, Automatisierung und Feedback. Lies die jeweilige Aufgabenanleitung, bevor du einen Anbieter oder automatische Arbeit aktivierst. Kontoeinstellungen wie deine Oberflächensprache sind von der Projektkonfiguration getrennt.
+Die weiteren Tabs sind **Kategorien**, **Mitglieder**, **Wiederholungen**, **Intelligente Zuweisung**, **Feedback**, **Git**, **Importieren** und **Integrationen**. Lies die jeweilige Aufgabenanleitung, bevor du einen Anbieter oder automatische Arbeit aktivierst. Kontoeinstellungen wie deine Oberflächensprache sind von der Projektkonfiguration getrennt.
 
 Unter **Kategorien** verwalten der Eigentümer und die Mitglieder die Kategorien, mit denen Tickets eingeordnet werden. Wähle **Neue Kategorie** in der Titelzeile der Karte: Oben in der Liste erscheint eine Zeile mit einem Farbpunkt und einem Namensfeld. Drücke Enter oder wähle **Hinzufügen**, um die Kategorie anzulegen; Escape schließt die Zeile, ohne sie anzulegen. Wähle den Farbpunkt einer Kategorie, um eine andere Farbe zu wählen, die sofort gilt (auf dem Telefon öffnen sich die Farben in einem Blatt), oder wähle ihren Namen, um sie direkt umzubenennen. Die Löschschaltfläche fragt nach einer Bestätigung und entfernt die Kategorie dann aus allen Tickets.
 
@@ -152,7 +152,7 @@ Um es wieder anzuzeigen, wähle **Einblenden** unter **Ausgeblendete Projekte** 
 
 Ein Mitglied oder Leser kann in der Gefahrenzone **Verlassen** wählen und damit seinen eigenen Zugriff entfernen; zuerst fragt ein Dialog mit dem Projektnamen nach. Bitte den Eigentümer um eine erneute Einladung, wenn du später wieder Zugriff brauchst. Das Verlassen löscht das Projekt nicht für alle. Der Eigentümer kann das Projekt nicht verlassen: [Übertrage das Eigentum](#transfer-ownership) zuerst an ein Mitglied.
 
-Das Löschen eines Projekts ist eine Eigentümeraktion im Gefahrenbereich. Lies die Folgen und die Bestätigung, bevor du sie ausführst, besonders wenn das Projekt Probleme, Seiten, Dateien oder Integrationen enthält. Schlägt ein normales Speichern fehl, bewahre die gewünschten Werte auf, lies die Fehlermeldung und aktualisiere das Projekt vor einem neuen Versuch. Sende eine destruktive Aktion nicht wiederholt ab, solange ihr erstes Ergebnis unklar ist.
+Das Entfernen eines Projekts ist eine Eigentümeraktion: Wähle in der Gefahrenzone **In den Papierkorb verschieben** neben **Projekt in den Papierkorb verschieben**. Die Bestätigung nennt das Projekt und sagt, dass seine Probleme, Ziele und Feedbacks mit verschoben werden; das Projekt bleibt 30 Tage lang im [Papierkorb](/de/dokumentation/trash-and-recovery) wiederherstellbar, und sein Schlüssel wird sofort frei. Lies die Bestätigung, bevor du die Aktion ausführst, besonders wenn das Projekt Probleme, Seiten, Dateien oder Integrationen enthält. Schlägt ein normales Speichern fehl, bewahre die gewünschten Werte auf, lies die Fehlermeldung und aktualisiere das Projekt vor einem neuen Versuch. Sende eine destruktive Aktion nicht wiederholt ab, solange ihr erstes Ergebnis unklar ist.
 
 Der Eigentümer kann das Projekt auch in der Seitenleiste mit der rechten Maustaste anklicken und **In den Papierkorb verschieben** wählen. Es erscheint dieselbe Bestätigung, und nur das angeklickte Projekt ist betroffen.
 

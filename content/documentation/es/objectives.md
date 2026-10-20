@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 16,
-  "sourceRevision": 16,
+  "revision": 17,
+  "sourceRevision": 17,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-693 project roles; MIN-728 one editor engine; MIN-736 closed columns hidden by default; MIN-741 creation dialogs; MIN-742 resources; MIN-749 relation shortcut R; UI/UX refinements batch: Create in project shortcut",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -53,9 +53,9 @@
     ]
   },
   "review": {
-    "revision": 16,
-    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained); agent:/root (MIN-670 source, es wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-728 one editor engine: source and unit-test review of the shared editor on this surface; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 objective board status filter: source review of the project page and objective header; no browser walkthrough, no new captures); agent:/root (MIN-741 creation dialogs: source and unit-test review of the Create in project control, the cleared lead and relations and the Create objective button; objectives-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-product screen reader-objectives) and inspected; no other browser walkthrough); agent:/root (MIN-742 resources: source and unit-test review of resource mentions scoped to their surface; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-749 relation shortcut R: source and unit-test review of components/issue-field-shortcuts.tsx, the board card, issue panel, objective page and new-issue dialog relation pickers and lib/keyboard/shortcuts.ts; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (UI/UX refinements batch: source review of the Command/Ctrl+Shift+P Create in shortcut, its caret restoration and key hint in components/creation-project-select.tsx and the create.changeProject entry in lib/keyboard/shortcuts.ts; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (es changed-passage review against English revision 7; earlier unchanged prose reviews retained); agent:/root (MIN-670 source, es wording and new-control review; existing procedural evidence retained); agent:/root (es changed-passage parity and localized-label review); agent:/root/min693_es with agent:/root (es MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (es translation of the MIN-728 passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es MIN-736 added sentence with catalog status labels; agent review, not human acceptance); agent:/root (es MIN-741 Create in passages and figure alt text with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (es MIN-742 added sentence with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (es translation of MIN-749 added sentences, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es translation of the Create in shortcut changed passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 17,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -77,9 +77,9 @@
       "src": "/documentation/es/reader-objectives.png",
       "alt": "Diálogo de creación de objetivo sin enviar en el proyecto Aurora con un nombre de resultado de ejemplo y el botón Crear objetivo.",
       "caption": "Nombra el resultado antes de elegir responsable, fecha objetivo y estado. Este diálogo no ha creado un segundo objetivo.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
-      "capturedAt": "2026-10-19",
+      "capturedAt": "2026-10-20",
       "viewport": [
         720,
         358
@@ -100,7 +100,7 @@ Un objetivo agrupa las incidencias de un proyecto en torno a un resultado. Créa
 
 Abre el destino de objetivos del proyecto y crea un objetivo. Si lo creas desde otro lugar de la aplicación, elige su proyecto en **Crear en**, arriba a la izquierda del formulario (junto al título **Nuevo objetivo** en el teléfono); cambiar de proyecto quita el responsable y las relaciones elegidos para el anterior. En un ordenador, Command/Ctrl+Mayús+P abre ese menú incluso mientras escribes el nombre o la descripción; al elegir un proyecto o cerrar el menú, el cursor vuelve exactamente donde estaba. La píldora muestra este atajo, que solo existe cuando se puede elegir más de un proyecto; en el teléfono no se muestra ningún atajo. Nombra el resultado que quieres, añade contexto útil y define los campos disponibles de responsable, fecha objetivo, color y estado. Un objetivo pertenece a un proyecto; es distinto de un ciclo personal que abarque varios proyectos. La persona responsable se encarga del resultado; seleccionarla no transfiere la propiedad del proyecto. Solo el propietario o un Miembro puede ser responsable de un objetivo, y un responsable cuyo rol pasa a Lector deja de serlo.
 
-La descripción del objetivo y sus comentarios usan el mismo editor que las páginas del proyecto, sin los controles de bloque: escribe `/` para insertar bloques y `@` para mencionar a una persona, una incidencia, un objetivo o una página. El menú `@` también muestra los recursos adjuntos a lo que escribes: la incidencia o el objetivo para su descripción y su plan, un comentario para sus propios archivos o un diálogo de creación para los archivos añadidos en él. Una mención de un recurso adjunto en otro lugar aparece como **No disponible**. Varias personas pueden editar la descripción a la vez, con el cursor de cada una visible con su nombre y su color. Selecciona texto para darle formato o añadir un enlace, y pega o suelta una imagen para insertarla en la descripción.
+La descripción del objetivo y sus comentarios usan el mismo editor que las páginas del proyecto, sin los controles de bloque: escribe `/` para insertar bloques y `@` para mencionar a una persona, una incidencia, un objetivo o una página. El menú `@` también muestra los recursos adjuntos a lo que escribes: la incidencia o el objetivo para su descripción y su plan, un comentario para sus propios archivos o un diálogo de creación para los archivos añadidos en él. Una mención de un recurso adjunto en otro lugar aparece como **No disponible**. Varias personas pueden editar la descripción a la vez, con el cursor de cada una visible con su nombre y su color. Selecciona texto para darle formato o añadir un enlace. Pega o suelta una imagen, o elige **Imagen** en el menú `/`, para insertarla en la descripción.
 
 Abre cada incidencia relevante y elige el objetivo en sus propiedades, o utiliza los controles de incidencias del objetivo. Comprueba que el trabajo previsto aparezca bajo el objetivo. Usa su discusión y recursos para decisiones y páginas de referencia que se apliquen al resultado completo.
 

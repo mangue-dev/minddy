@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-721 removal of Numo code work",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -42,10 +42,10 @@
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun); agent:/root/min721_docs (MIN-721 source review inherited from en revision 6; de translation of removal edits; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 de network guidance and terminology review); agent:/root/min721_de (de translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance)",
-    "date": "2026-10-16"
+    "revision": 7,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "workspace-encryption",
@@ -62,7 +62,7 @@
       "src": "/documentation/de/install-locally-flow.svg",
       "alt": "Diagramm: Desktop-App wählt den Klon. Loopback-Anwendung: Port 6463. Minimales Supabase und dauerhafte Daten. Beenden stoppt App und Backend.",
       "caption": "Die Desktop-App steuert die lokalen Dienste des gewählten Klons, während ihre Daten dauerhaft gespeichert bleiben.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -94,12 +94,12 @@
       "src": "/documentation/de/install-locally-wizard.png",
       "alt": "Öffentlicher Installationsassistent mit ausgewähltem Profil für diesen Computer.",
       "caption": "Wählen Sie die persönliche Installation, wenn die Desktop-App die lokalen Dienste verwalten soll.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         944,
-        614
+        802
       ],
       "theme": "light",
       "padding": 24,
@@ -119,7 +119,7 @@ Nutzen Sie einen eigenen Klon zur Erprobung mit Node.js 24, `pnpm` 10.28.0, Git,
 ```bash
 git clone https://github.com/mangue-dev/minddy.git
 cd minddy
-git checkout v0.11.0
+git checkout v0.20.0
 corepack enable
 corepack prepare pnpm@10.28.0 --activate
 pnpm install --frozen-lockfile
@@ -130,6 +130,8 @@ pnpm install --frozen-lockfile
 
 
 ![Öffentlicher Installationsassistent mit ausgewähltem Profil für diesen Computer.](/documentation/de/install-locally-wizard.png)
+
+Neue lokale Installationen verschlüsseln Inhalte des Arbeitsbereichs standardmäßig. Um eine ausdrückliche Wahl festzuhalten, führen Sie im Klon `pnpm bootstrap:supabase -- --minimal --app-url http://localhost:6463 --encryption enabled` (oder `--encryption disabled`) aus, bevor Sie ihn in der App öffnen; spätere Starts behalten die gespeicherte Wahl bei. Siehe [Arbeitsbereichsverschlüsselung](/de/dokumentation/workspace-encryption#workspace-encryption).
 
 ## Lokale Dienste durch die App steuern {#launch}
 

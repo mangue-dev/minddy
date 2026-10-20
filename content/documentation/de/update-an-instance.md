@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min-721 (de runner-removal edits and full retained meaning)",
-    "date": "2026-10-16"
+    "revision": 5,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "backups-and-restoration"
@@ -55,7 +55,7 @@
       "src": "/documentation/de/update-an-instance-flow.svg",
       "alt": "Diagramm: Schreiben und Jobs stoppen. Vollständiges Vorupdate-Backup versiegeln. Zielmigrationen, danach Zielanwendung. Wiederherstellung prüfen und öffnen.",
       "caption": "Lesen Sie die Schritte in dieser Reihenfolge. Schreiben und Jobs stoppen. Vollständiges Vorupdate-Backup versiegeln. Zielmigrationen, danach Zielanwendung. Wiederherstellung prüfen und öffnen.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -92,14 +92,16 @@
 
 Aktualisieren Sie eine veröffentlichte Version nach der anderen. Lesen Sie Hinweise, Migrationsunterschiede und Kompatibilitätseinträge. Kombinieren Sie minddy-Update nicht mit PostgreSQL-Hauptversion oder Supabase-Imagewechsel. Prüfen Sie Zielquellcode, Release-Prüfsummen und OCI-Digest und bereiten Sie ein separates Verzeichnis mit eingefrorenen Abhängigkeiten vor. Kündigen Sie Ausfall und Abbruchfrist an. Bestätigen Sie nutzbares externes Backup und kürzlich erfolgreiche Wiederherstellung. Erhalten Sie die aktuelle Anwendung und geschützte Umgebung startfähig.
 
+Einige Migrationen löschen Daten ausgemusterter Funktionen endgültig. Das Update von v0.11.0 auf v0.20.0 entfernt die Einträge benutzerdefinierter Domains, die Läufe und Unterhaltungen des Code-Agenten samt Verlauf und Verbindungen sowie die gespeicherten Ansichten der Befehlspalette (persönliche Lesezeichen; Board-Ansichten bleiben erhalten). Nach diesen Migrationen kann nur das vollständige Backup von vor dem Update sie zurückholen.
+
 
 ![Diagramm: Schreiben und Jobs stoppen. Vollständiges Vorupdate-Backup versiegeln. Zielmigrationen, danach Zielanwendung. Wiederherstellung prüfen und öffnen.](/documentation/de/update-an-instance-flow.svg)
 
 ## Das full-Profil aktualisieren {#full}
 
-Verwenden Sie den full-Compose-Kontext des Kaltbackup-Artikels. Stoppen Sie öffentliche Zugänge, Schreibzugriffe, Worker und Scheduler und erstellen Sie den vollständigen versiegelten Satz. Kopieren Sie die Umgebung mit Modus `0600` nach `TARGET_ENV_FILE` und ändern Sie nur `MINDDY_RELEASE`, `MINDDY_IMAGE`, `MINDDY_DEPLOY_DIR` und `MINDDY_ENV_FILE` für das geprüfte Ziel. Erhalten Sie URLs, Zugangsdaten, Schlüssel und Funktionsauswahl. Löschen Sie `AGENT_EXECUTION_BACKEND`, `AGENT_RUNNER_URL`, `AGENT_RUNNER_SECRET` und `AGENT_CONTROL_ORIGIN`, falls eine frühere Release sie hinterlassen hat: Die Anwendung liest sie nicht mehr, und `--remove-orphans` entfernt den ausgemusterten Container `agent-runner`. Die folgende Sequenz im installierten Kontext startet nur Backendabhängigkeiten, migriert mit Zielcode und prüft die Anwendung bei gestopptem Caddy und Scheduler.
+Verwenden Sie den full-Compose-Kontext des Kaltbackup-Artikels. Stoppen Sie öffentliche Zugänge, Schreibzugriffe, Worker und Scheduler und erstellen Sie den vollständigen versiegelten Satz. Kopieren Sie die Umgebung mit Modus `0600` nach `TARGET_ENV_FILE` und ändern Sie nur `MINDDY_RELEASE`, `MINDDY_IMAGE`, `MINDDY_DEPLOY_DIR` und `MINDDY_ENV_FILE` für das geprüfte Ziel. Erhalten Sie URLs, Zugangsdaten, Schlüssel und Funktionsauswahl. Löschen Sie `AGENT_EXECUTION_BACKEND`, `AGENT_RUNNER_URL`, `AGENT_RUNNER_SECRET`, `AGENT_CONTROL_ORIGIN` sowie die Vercel-Sandbox-Variablen `VERCEL_TOKEN`, `VERCEL_TEAM_ID` und `VERCEL_PROJECT_ID`, falls eine frühere Release sie hinterlassen hat: Die Anwendung liest sie nicht mehr, und `--remove-orphans` entfernt den ausgemusterten Container `agent-runner`. Die folgende Sequenz im installierten Kontext startet nur Backendabhängigkeiten, migriert mit Zielcode und prüft die Anwendung bei gestopptem Caddy und Scheduler.
 
-Beim Update von v0.10.30 auf v0.11.0 führt die Zielversion `MINDDY_DATA_ROOT_KEY` ein. Ergänzen Sie den Schlüssel nur, wenn die vorhandene Konfiguration keinen Root-Schlüssel enthält, und behalten Sie alle bisherigen Geheimnisse zur Verschlüsselung von Zugangsdaten. Der folgende Befehl schreibt einen neuen Root-Schlüssel mit 32 Bytes direkt in die geschützte Zieldatei, ohne ihn anzuzeigen, und ersetzt keinen ungültigen gespeicherten Wert. Der Root-Schlüssel allein aktiviert keine Inhaltsverschlüsselung.
+Beim Update von v0.10.30 auf v0.11.0 führt die Zielversion `MINDDY_DATA_ROOT_KEY` ein. Ergänzen Sie den Schlüssel nur, wenn die vorhandene Konfiguration keinen Root-Schlüssel enthält, und behalten Sie alle bisherigen Geheimnisse zur Verschlüsselung von Zugangsdaten. Der folgende Befehl schreibt einen neuen Root-Schlüssel mit 32 Bytes direkt in die geschützte Zieldatei, ohne ihn anzuzeigen, und ersetzt keinen ungültigen gespeicherten Wert. Ist die Quelle v0.11.0 oder neuer, existiert der Root-Schlüssel normalerweise bereits, und der Befehl prüft ihn nur. Der Root-Schlüssel allein aktiviert keine Inhaltsverschlüsselung: Ohne `MINDDY_CONTENT_ENCRYPTION_ENABLED=true` bleibt sie deaktiviert.
 
 ```bash
 export TARGET_RELEASE_DIR=/srv/minddy/releases/vX.Y.NEXT

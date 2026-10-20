@@ -21,12 +21,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680); MIN-693 project roles; MIN-718 hybrid issue search; MIN-688 live collaboration; MIN-684 page promotion; MIN-743 destructive-action confirmations",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -73,9 +73,9 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-688 live collaboration: source, convergence/authority unit tests and a rollback-only database probe; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-684 page promotion: source and focused unit-test review of the menu entries, reader gating, save-before-promote and the Numo request; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for page-menu Move to trash and unpublishing; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (es changed-text and retained-meaning self-review); agent:/root/min693_es with agent:/root (es MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (es translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root/min688_es with agent:/root (es MIN-688 translation of the rewritten saving, presence and conflict passages; agent review, not human acceptance); agent:/root (es translation of the MIN-684 promotion section with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 15,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 5 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 3 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -111,12 +111,12 @@
       "src": "/documentation/es/page-create-menu.png",
       "alt": "Menú de creación con Nueva página y Nueva base de datos.",
       "caption": "Utiliza los controles de páginas del proyecto para elegir un documento o una base de datos.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
-        266,
-        152
+        243,
+        129
       ],
       "theme": "light",
       "padding": 24
@@ -127,12 +127,12 @@
       "src": "/documentation/es/page-editor.png",
       "alt": "Página de demostración con títulos, párrafos, casillas de tareas y una mención a un ticket.",
       "caption": "Los títulos, las tareas y la mención AUR-2 estructuran la página. El contenido es un ejemplo de demostración.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
-        1178,
-        948
+        1154,
+        1046
       ],
       "theme": "light",
       "padding": 24
@@ -143,12 +143,12 @@
       "src": "/documentation/es/page-comments.png",
       "alt": "Actividad de la página con una edición de demostración y el campo de comentario vacío.",
       "caption": "Consulta la actividad y escribe un comentario en el campo. En este ejemplo no se ha enviado ninguno.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
-        632,
-        625
+        608,
+        616
       ],
       "theme": "light",
       "padding": 24
@@ -159,7 +159,7 @@
       "src": "/documentation/es/page-file-states.png",
       "alt": "Página de demostración con una carga incompleta y un archivo guardado de 67 bytes que ofrece Descargar.",
       "caption": "Comprueba el estado real del archivo: el segundo adjunto está disponible y la primera carga incompleta no.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -175,7 +175,7 @@
       "src": "/documentation/es/page-history-preview.png",
       "alt": "Pestaña Versiones con un estado anterior desplegado, su autor, Restaurar y el aviso de conservación durante 30 días.",
       "caption": "Previsualiza un estado guardado y compáralo con la página actual antes de restaurarlo.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -191,9 +191,9 @@
       "src": "/documentation/es/page-publish.png",
       "alt": "Diálogo de publicación con Privado seleccionado y opciones de contraseña o enlace.",
       "caption": "Privado mantiene la página dentro del proyecto. Revisa quién debe verla antes de cambiar la publicación.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         496,
         230
@@ -207,9 +207,9 @@
       "src": "/documentation/es/page-export.png",
       "alt": "Menú de exportación del documento con Markdown (.md) e Imprimir / PDF.",
       "caption": "Elige Markdown para descargar el documento o Imprimir / PDF para abrir la vista de impresión.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         211,
         128
@@ -221,9 +221,9 @@
       "id": "page-file-preview",
       "kind": "screenshot",
       "src": "/documentation/es/file-preview.png",
-      "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar y Eliminar.",
-      "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Eliminar.",
-      "revision": 14,
+      "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.",
+      "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Cambiar nombre y Eliminar.",
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -252,7 +252,7 @@ Las páginas forman el wiki de un proyecto, con documentos, subpáginas y entrad
 
 ## Crear una wiki del proyecto {#create-and-organize-pages}
 
-Abre Páginas en un proyecto del que seas miembro. Usa el menú + y elige una página para un documento o una base de datos para una lista estructurada. Pon un título útil y escribe la especificación, decisión o procedimiento que deba conservar.
+Abre Páginas en un proyecto como propietario o como Miembro; los lectores pueden abrir las páginas, pero no crearlas. Usa el menú + y elige una página para un documento o una base de datos para una lista estructurada. Pon un título útil y escribe la especificación, decisión o procedimiento que deba conservar.
 
 Crea subpáginas para documentos relacionados y utiliza los controles del árbol para moverlas o reordenarlas. Una página no puede ser descendiente de sí misma. Duplicar una página crea contenido nuevo, no una referencia actualizada al original. Revisa la rama duplicada antes de editarla o compartirla.
 
@@ -278,7 +278,7 @@ A diferencia de una tarea del cuaderno llevada al proyecto, la página no se eli
 
 ## Escribir una página con bloques y menciones {#page-editor}
 
-Abre la página y edita su título o cuerpo como propietario o como Miembro. Los lectores pueden abrir y leer las páginas, pero no pueden editarlas, importarlas, duplicarlas, añadirlas a favoritos ni publicarlas, ni restaurar una versión. Usa el menú de comandos de barra y los controles de formato para insertar encabezados, párrafos, listas, tareas, código, secciones plegables y avisos. Un aviso puede tener un icono emoji y un color de la paleta; elígelos para distinguir información útil, no como única forma de comunicar una advertencia.
+Abre la página y edita su título o cuerpo como propietario o como Miembro. Los lectores pueden abrir y leer las páginas, pero no pueden editarlas, importarlas, duplicarlas, añadirlas a favoritos ni publicarlas, ni restaurar una versión. Usa el menú de comandos de barra y los controles de formato para insertar encabezados, texto, listas con viñetas, numeradas y de tareas, citas, avisos, bloques de código, divisores, desplegables (secciones plegables), subpáginas, imágenes y archivos. Un aviso puede tener un icono emoji y un color de la paleta; elígelos para distinguir información útil, no como única forma de comunicar una advertencia.
 
 Utiliza menciones para enlazar incidencias, objetivos, personas o páginas relevantes. Escribe `@` seguido de un identificador, palabras del título o una breve descripción; una búsqueda descriptiva también muestra incidencias encontradas [por el sentido](/docs/navigation#search-by-meaning) bajo **Relacionadas por el sentido**, después de las coincidencias de texto. Los enlaces inversos ayudan a encontrar páginas que hacen referencia a la actual. Un enlace aporta contexto, no acceso a un objeto privado de otro proyecto.
 
@@ -316,9 +316,9 @@ Abre la página como miembro del proyecto y utiliza los controles de adjuntos o 
 
 Las imágenes pueden insertarse como bloques de imagen y los demás documentos como bloques de archivo. El servidor determina el tipo de medio almacenado a partir de los bytes, sin confiar en el nombre del archivo ni en la etiqueta del navegador. Aceptar una carga no garantiza que todos los formatos tengan una vista previa en la página; descarga el archivo si no hay vista previa.
 
-En el editor del proyecto, haz clic en una imagen o en el nombre de un bloque de archivo compatible para abrir el mismo visor a toda ventana que usan los adjuntos de los tickets. Markdown (`.md`), texto sin formato (`.txt`, `.text`), CSV, PDF y los formatos de audio o vídeo compatibles se abren en contenedores específicos. Usa Cerrar o Escape para volver a la página. El menú Acciones del archivo (`…`) ofrece Descargar; Eliminar solo está disponible en páginas editables y quita el bloque del documento. El bloque de archivo conserva también su control directo Descargar. Los formatos no compatibles, los enlaces a archivos externos y los bloques de archivo de páginas publicadas conservan su comportamiento de descarga. Las imágenes publicadas usan el visor sin la acción de eliminación.
+En el editor del proyecto, haz clic en una imagen o en el nombre de un bloque de archivo compatible para abrir el mismo visor a toda ventana que usan los adjuntos de los tickets. Markdown (`.md`), texto sin formato (`.txt`, `.text`), CSV, PDF y los formatos de audio o vídeo compatibles se abren en contenedores específicos. Usa Cerrar o Escape para volver a la página. El menú Acciones del archivo (`…`) ofrece Descargar. En una página editable, un bloque de archivo ofrece también Cambiar nombre, que cambia el nombre mostrado en la página, y las imágenes y los archivos ofrecen Eliminar: pide confirmación, quita el bloque del documento y puedes deshacerlo en el editor. El bloque de archivo conserva también su control directo Descargar. Los formatos no compatibles, los enlaces a archivos externos y los bloques de archivo de páginas publicadas conservan su comportamiento de descarga. Las imágenes publicadas usan el visor sin la acción de eliminación.
 
-![Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar y Eliminar.](/documentation/es/file-preview.png)
+![Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.](/documentation/es/file-preview.png)
 
 Comprueba que aparezca en la página y ábrelo o descárgalo. Los bytes están en Storage, mientras que los metadatos de página y archivo determinan el acceso. Que la página se guarde correctamente no demuestra por sí solo que estén disponibles los bytes.
 

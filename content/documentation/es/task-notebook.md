@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-728 one editor engine; MIN-725 notebook search in the command palette; UI/UX refinements batch: task list first in the notebook / menu",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -47,9 +47,9 @@
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-728 one editor engine: source and unit-test review of the shared editor on this surface; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-725 notebook search in the command palette: source and unit-test review of lib/scratchpad-search.ts, the palette rows and the notebook focus; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (UI/UX refinements batch: source review of SCRATCHPAD_SLASH_FIRST in components/scratchpad/scratchpad-editor.tsx and the slashFirst ordering in components/editor/rich-editor.tsx; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root (es translation of the MIN-728 passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es MIN-725 added paragraph with catalog UI labels; agent review, not human acceptance); agent:/root (es translation of the slash menu order changed passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 8,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -68,9 +68,9 @@
       "src": "/documentation/es/work-task-notebook.png",
       "alt": "Tareas personales de demostración traducidas en el cuaderno.",
       "caption": "El cuaderno mantiene los pasos personales fuera de la jerarquía de incidencias del proyecto. Los estados del ejemplo no se modifican.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
         1156,
         1048
@@ -91,7 +91,9 @@ Abre el cuaderno de tareas desde los controles personales de la aplicación, o p
 
 Para volver a encontrar una tarea, abre la paleta de comandos con Command+K en macOS o Ctrl+K en Windows/Linux y escribe palabras de la tarea. Las tareas pendientes aparecen en **Cuaderno de tareas**, con su sección; las tareas completadas o canceladas y las preguntas no aparecen. Elige una para abrir el cuaderno en esa tarea. Mientras no escribas nada, la paleta no muestra las tareas del cuaderno.
 
-El cuaderno usa el mismo editor que las páginas del proyecto, con los mismos controles de bloque: pasa el cursor sobre un bloque para arrastrarlo, abrir su menú o añadir un bloque con **+**. Escribe `/` para insertar una tarea, que aparece primero, o un encabezado, una lista, una cita, un **Destacado**, un bloque de código, un **Desplegable** o un divisor, o elige **Dictar una tarea** para dictar tareas en voz alta. El cuaderno se sigue guardando en Markdown, así que Numo y los agentes conectados leen las mismas tareas y estados. Selecciona texto para darle formato o añadir un enlace, y pega o suelta una imagen para insertarla en una nota. Los demás tipos de archivo van en las páginas.
+El cuaderno usa el mismo editor que las páginas del proyecto, con los mismos controles de bloque: pasa el cursor sobre un bloque para arrastrarlo, abrir su menú o añadir un bloque con **+**. Escribe `/` para insertar una tarea, que aparece primero, o un encabezado, una lista, una cita, un **Destacado**, un bloque de código, un **Desplegable** o un divisor, o elige **Dictar una tarea** para dictar tareas en voz alta. El cuaderno se sigue guardando en Markdown, así que Numo y los agentes conectados leen las mismas tareas y estados. Selecciona texto para darle formato o añadir un enlace. Pega o suelta una imagen, o elige **Imagen** en el menú `/`, para insertarla en una nota. Los demás tipos de archivo van en las páginas.
+
+El menú **Acciones del cuaderno** (`…`) ofrece **Copiar todo como prompt**, que copia el cuaderno completo para tu propio agente de código, y **Eliminar las tareas completadas y descartadas**. La eliminación pide confirmación, borra las tareas completadas y canceladas junto con los encabezados que quedan vacíos, y conserva las tareas pendientes o en curso. Para copiar menos, usa **Copiar la sección como prompt** en un encabezado o **Copiar como prompt** en una tarea. Si **Inicia la incidencia o tarea cuando copies su prompt** está activado en **Configuración de la cuenta** → **Incidencias**, copiar también pasa a en curso las tareas pendientes copiadas.
 
 El cuaderno es privado. Utiliza una página del proyecto para la información que tus compañeros necesiten compartir. Numo puede leer o actualizar el cuaderno cuando se lo pidas, pero la pertenencia de otra persona a tu proyecto no convierte tus notas en un documento compartido.
 
@@ -99,6 +101,6 @@ El cuaderno es privado. Utiliza una página del proyecto para la información qu
 
 ## Llevar una tarea al proyecto {#promote-note}
 
-Abre el menú de la tarea y elige la acción para llevarla al proyecto cuando la nota se convierta en trabajo del proyecto. Se cierra el cuaderno y se abre Numo con una solicitud preparada que incluye la tarea y sus subtareas. Si estás consultando un proyecto, se utiliza ese proyecto; desde una pantalla global, indica el proyecto de destino en la conversación. Revisa la solicitud antes de enviarla. Necesitas tener uso de IA disponible o una clave personal compatible. Abrir esta opción todavía no crea ningún ticket. Cuando Numo confirme la creación, abre el ticket para comprobar su identificador, alcance y propiedades. Añade las condiciones de aceptación que falten para conservar el contexto necesario.
+Abre el menú de la tarea y elige **Convertir en incidencia** cuando la nota se convierta en trabajo del proyecto. Se cierra el cuaderno y se abre Numo con una solicitud preparada que incluye la tarea y sus subtareas. Si estás consultando un proyecto, se utiliza ese proyecto; desde una pantalla global, indica el proyecto de destino en la conversación. Revisa la solicitud antes de enviarla. Necesitas tener uso de IA disponible o una clave personal compatible. Abrir esta opción todavía no crea ningún ticket. Cuando Numo confirme la creación, abre el ticket para comprobar su identificador, alcance y propiedades. Añade las condiciones de aceptación que falten para conservar el contexto necesario. La solicitud preparada también pide a Numo que retire la tarea del cuaderno una vez creado el ticket, así que búscala en el ticket y no en el cuaderno.
 
 Si la creación falla o el resultado queda ambiguo tras un error de red, busca el ticket antes de volver a llevar la tarea al proyecto. Mantén intactas las demás secciones cuando pidas a Numo que modifique una tarea. Comprueba que haya cambiado la casilla prevista y no sustituido todo el cuaderno.

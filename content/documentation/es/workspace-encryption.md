@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "encryption-and-data-boundaries",
@@ -56,7 +56,7 @@
       "src": "/documentation/es/workspace-encryption-flow.svg",
       "alt": "Diagrama: Raíz dedicada fuera de PostgreSQL. Claves de proyecto, usuario y sistema envueltas. Descifrado autorizado en servidor. Restaurar base + Storage + mismas claves.",
       "caption": "Conserve las claves correspondientes a los datos de la copia para que la instancia restaurada pueda descifrar su contenido.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -91,7 +91,7 @@
 
 ## Configurar el cifrado y conservar las claves {#workspace-encryption}
 
-Las opciones `--encryption` del instalador y del bootstrap descritas aquí pertenecen a las herramientas del candidato 0.11.1 identificado. El instalador y el bootstrap publicados en v0.11.0 no las aceptan. El runtime de esa versión reconoce `MINDDY_CONTENT_ENCRYPTION_ENABLED`; el servicio Compose de referencia carga el archivo protegido mediante `env_file`. Un cambio explícito del flag exige, por tanto, recrear el servicio de la aplicación con el mismo entorno y comprobar el esquema y el comportamiento real. Una clave `MINDDY_DATA_ROOT_KEY` generada no demuestra que el contenido del espacio esté cifrado. Utilice herramientas y configuración correspondientes y verificadas explícitamente para la versión elegida antes de recibir usuarios o modificar una instancia existente.
+Las opciones `--encryption` del instalador y del bootstrap descritas aquí se incluyen en las herramientas de esta versión. El instalador y el bootstrap de v0.11.0 no las aceptan. El runtime de esa versión reconoce `MINDDY_CONTENT_ENCRYPTION_ENABLED`; el servicio Compose de referencia carga el archivo protegido mediante `env_file`. Un cambio explícito del flag exige, por tanto, recrear el servicio de la aplicación con el mismo entorno y comprobar el esquema y el comportamiento real. Una clave `MINDDY_DATA_ROOT_KEY` generada no demuestra que el contenido del espacio esté cifrado. Utilice herramientas y configuración correspondientes y verificadas explícitamente para la versión elegida antes de recibir usuarios o modificar una instancia existente.
 
 Las instalaciones locales y de servidor nuevas activan el cifrado por defecto y generan una `MINDDY_DATA_ROOT_KEY` dedicada. Para un servidor nuevo puede elegir explícitamente `--encryption enabled` o `--encryption disabled`. Ambas opciones conservan el cifrado de credenciales y generan una raíz independiente: la elección afecta al contenido. Para la instalación local de escritorio, prepare la configuración antes de abrir el clon mediante el comando siguiente. La raíz es un valor aleatorio de 32 bytes, representado por exactamente 64 caracteres hexadecimales y conservado fuera de PostgreSQL.
 

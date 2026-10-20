@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles; MIN-736 closed columns hidden by default; MIN-743 destructive-action confirmations",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -45,9 +45,9 @@
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 default status columns: source and unit-test review of lib/view-filter.ts and the board status filter; no browser walkthrough, no new captures); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for stopping view sharing; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-736 added sentences with catalog status labels; agent review, not human acceptance); agent:/root (en MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 10,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -70,9 +70,9 @@
       "src": "/documentation/en/work-view-filters.png",
       "alt": "Manual view filters and the sorting menu.",
       "caption": "Filter by issue properties or choose a sort order. The AI field is optional for these manual controls.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         288,
         393
@@ -86,9 +86,9 @@
       "src": "/documentation/en/work-share-view.png",
       "alt": "View-sharing dialog with private access selected.",
       "caption": "Private, password-protected and public access are distinct choices. This capture keeps the view private.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         496,
         230
@@ -112,7 +112,7 @@ Start from a project board or a personal cross-project issue surface. Use its fi
 
 Filter on supported properties such as status, assignee, priority, categories or objective. Sort the result to make the next action clear. In kanban, issues remain grouped by status; changing a view does not edit their status or assignment. Without a status filter of its own, a board shows only **Backlog**, **Todo**, **In progress** and **In review**. Select **Done** or **Canceled** in the **Status** filter to show those columns; a view keeps the status filter you save with it.
 
-Save the view with a name describing its purpose, then select it again from navigation and verify its filters. Edit or remove it when its purpose changes. For publication permissions and revocation, see [sharing a view](#share-a-view).
+Save the view with a name describing its purpose, then select it again in the view bar at the top of the board (a menu on a narrow screen) and verify its filters. Edit or remove it when its purpose changes. **Delete view** asks for confirmation, and a board always keeps at least one view of its own. For publication permissions and revocation, see [sharing a view](#share-a-view).
 
 ![Manual view filters and the sorting menu.](/documentation/en/work-view-filters.png)
 

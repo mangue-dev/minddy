@@ -21,12 +21,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 16,
-  "sourceRevision": 16,
+  "revision": 17,
+  "sourceRevision": 17,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-19",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12); 0.11.1 candidate (89ebb59a5); MIN-676 private hosted native worker selection; MIN-676 frozen worker identity and proactive Numo context; MIN-676 split account AI settings, restricted native access and hosted authentication requirement; MIN-676 engine-specific native model and thinking controls; persistent personal Numo default; PR #407 independent Numo Stop; MIN-721 removal of Numo code work; MIN-693 project roles; MIN-718 hybrid issue search; MIN-737 account settings reorganization",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -63,10 +63,10 @@
     ]
   },
   "review": {
-    "revision": 16,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-670 source, fr wording and new-control review; existing procedural evidence retained); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately); agent:/root (account default and conversation precedence source/UI review; prior procedures retained, no inference); agent:/root (independent Numo Stop source and focused application/PostgreSQL review; no hosted UI rehearsal); agent:/root (existing conversation, permissions, execution and MCP figures retained; no Stop cascade shown, original capture evidence retained); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; fr translation of removal edits; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-728 agent image access: source and unit-test review of view_image and minddy_get_image; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 account settings reorganization: source review of the AI & Numo tab and the mcp-clients tab alias; the MCP connection screenshots predate the move and are retained; no browser walkthrough, no new captures)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-670 source, fr wording and new-control review; existing procedural evidence retained); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance); agent:/root (six-locale default-model additions reviewed for equivalent meaning); agent:/root (six-locale Numo Stop meaning and localized controls reviewed; not human acceptance); agent:/root/min721_fr (fr translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root/min693_fr with agent:/root (fr MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (fr translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-19"
+    "revision": 17,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 3 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "code-work",
@@ -96,9 +96,9 @@
       "src": "/documentation/fr/work-with-numo-workflow.png",
       "alt": "Conversation de démonstration Numo avec contexte, demande de changement de priorité et réponse enregistrée.",
       "caption": "Fil de démonstration existant, localisé pour l’affichage. La réponse enregistrée cite AUR-11 et AUR-7 ; la capture ne prouve pas une nouvelle exécution.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         498,
         648
@@ -113,7 +113,7 @@
       "src": "/documentation/fr/numo-permissions-and-approvals-workflow.svg",
       "alt": "Matrice des permissions Numo pour les actions du projet, connexions personnelles et routines.",
       "caption": "Les accès du projet et les demandes explicites bornent les actions de Numo ; un contenu externe ne donne pas de permission.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -174,7 +174,7 @@
       "src": "/documentation/fr/numo-execution-model-flow.svg",
       "alt": "Schéma: Persister intention, message et UUID. Prendre le tour, enregistrer outils et résultats. Attendre votre réponse si une précision est requise. Relire les événements ; réconcilier les écritures.",
       "caption": "Lisez les étapes dans cet ordre. Persister intention, message et UUID. Prendre le tour, enregistrer outils et résultats. Attendre votre réponse si une précision est requise. Relire les événements ; réconcilier les écritures.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -206,9 +206,9 @@
       "src": "/documentation/fr/numo-mcp-connections-workflow.png",
       "alt": "Réglages MCP personnels, liste vide et commande Ajouter un autre serveur MCP.",
       "caption": "Les connexions de Numo sont personnelles ; les routines utilisent celles du propriétaire du projet.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         816,
         1314
@@ -223,9 +223,9 @@
       "src": "/documentation/fr/numo-mcp-connections-config-workflow.png",
       "alt": "Formulaire d’un serveur MCP personnalisé avec les réglages avancés d’authentification, de transport et d’en-têtes.",
       "caption": "Formulaire d’un serveur MCP personnalisé avec les réglages avancés d’authentification, de transport et d’en-têtes. Aucun identifiant n’a été saisi et aucun serveur n’a été contacté.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         560,
         920
@@ -256,6 +256,8 @@ Ouvrez le ticket ou le projet concerné, puis utilisez le bouton flottant Numo. 
 3. Envoyez une demande délimitée, par exemple : « Lis ce ticket et propose des critères d’acceptation. Ne change pas son statut. »
 4. Lisez la réponse et suivez les liens vers les tickets ou les sources. Pour une modification, ouvrez l’objet concerné et contrôlez le résultat.
 
+Dans une nouvelle conversation vide, quatre lignes de suggestions au-dessus du champ de saisie proposent des demandes adaptées à la page actuelle, par exemple **Résumer ce ticket** ou **Écrire un plan d’implémentation** lorsqu’un ticket est ouvert dans le panneau latéral. Choisir une ligne remplit le champ de saisie sans l’envoyer : vous pouvez d’abord modifier la demande. Les lignes disparaissent dès que le champ contient du texte et reviennent quand vous le videz. Elles apparaissent dans la mise en page de bureau, pas sur un téléphone.
+
 Numo peut aussi regarder les images d’une description de ticket ou d’objectif, d’un plan, d’un commentaire, d’une page ou de votre carnet lorsque le modèle de la conversation accepte les images. Sans cette capacité, Numo indique qu’il n’a pas pu voir l’image au lieu de la décrire.
 
 Le modèle par défaut de Numo vient de **Paramètres du compte → IA et Numo → Modèle par défaut de Numo** : le réglage de l’app ou un modèle personnel pour le fournisseur actif. Un choix explicite dans la conversation est prioritaire. Consultez [les paramètres IA et l’usage](/docs/ai-settings-and-usage#ai-keys-and-models).
@@ -264,7 +266,7 @@ Le modèle par défaut de Numo vient de **Paramètres du compte → IA et Numo �
 
 ### Continuer une conversation {#continue}
 
-La liste des conversations permet de retrouver les échanges précédents. Continuez la conversation qui contient les décisions utiles. Numo organise et suit le travail : il lit et met à jour les tickets, les plans, les pages et les autres contenus Minddy, et peut lire les pull requests liées. Quand Numo cherche des tickets, les correspondances textuelles et les identifiants exacts passent en premier ; une recherche descriptive peut ajouter des tickets du même projet trouvés par le sens, que Numo doit vérifier avant de s’y fier. Il n’écrit pas de code et ne modifie pas de dépôt. Pour faire écrire du code, copiez le prompt du ticket pour votre propre agent de code ; consultez [Travail de code et pull requests](/docs/code-work#external-coding-agents).
+La liste des conversations permet de retrouver les échanges précédents. Continuez la conversation qui contient les décisions utiles. Numo organise et suit le travail : il lit et met à jour les tickets, les plans, les pages et les autres contenus Minddy, et peut lire les pull requests liées. À votre demande, il peut aussi commenter une pull request, résoudre les conversations de revue déjà traitées et la fusionner. Quand Numo cherche des tickets, les correspondances textuelles et les identifiants exacts passent en premier ; une recherche descriptive peut ajouter des tickets du même projet trouvés par le sens, que Numo doit vérifier avant de s’y fier. Il n’écrit pas de code et ne pousse pas de commits. Pour faire écrire du code, copiez le prompt du ticket pour votre propre agent de code ; consultez [Travail de code et pull requests](/docs/code-work#external-coding-agents).
 
 Si Numo demande une précision, envoyez votre choix avant d’attendre la suite des actions qui en dépendent. Une carte de consommation ou d’erreur explique l’arrêt. Vérifiez toute écriture externe avant de demander de la répéter.
 

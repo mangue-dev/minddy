@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-728 one editor engine; MIN-725 notebook search in the command palette; UI/UX refinements batch: task list first in the notebook / menu",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -47,9 +47,9 @@
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-728 one editor engine: source and unit-test review of the shared editor on this surface; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-725 notebook search in the command palette: source and unit-test review of lib/scratchpad-search.ts, the palette rows and the notebook focus; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (UI/UX refinements batch: source review of SCRATCHPAD_SLASH_FIRST in components/scratchpad/scratchpad-editor.tsx and the slashFirst ordering in components/editor/rich-editor.tsx; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root (pt-BR translation of the MIN-728 passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (pt-BR MIN-725 added paragraph with catalog UI labels; agent review, not human acceptance); agent:/root (pt-BR translation of the slash menu order changed passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 8,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -68,9 +68,9 @@
       "src": "/documentation/pt-BR/work-task-notebook.png",
       "alt": "Tarefas pessoais de demonstração traduzidas no caderno.",
       "caption": "O caderno acompanha etapas pessoais fora da hierarquia de tickets do projeto. Os status das tarefas de exemplo permanecem iguais.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
         1156,
         1048
@@ -91,7 +91,9 @@ Abra o caderno de tarefas pelos controles pessoais do aplicativo, ou use Command
 
 Para reencontrar uma tarefa, abra a paleta de comandos com Command+K no macOS ou Ctrl+K no Windows/Linux e digite palavras da tarefa. As tarefas ainda a fazer aparecem em **Caderno de tarefas**, com a sua seção; tarefas concluídas ou canceladas e perguntas não aparecem. Escolha uma para abrir o caderno nessa tarefa. Enquanto você não digitar nada, a paleta não lista as tarefas do caderno.
 
-O caderno usa o mesmo editor das páginas do projeto, com as mesmas alças de bloco: passe o cursor sobre um bloco para arrastá-lo, abrir seu menu ou adicionar um bloco com **+**. Digite `/` para inserir uma tarefa, oferecida primeiro, ou um título, uma lista, uma citação, um **Destaque**, um bloco de código, um bloco **Alternar** ou um divisor, ou escolha **Ditar uma tarefa** para falar as tarefas em voz alta. O caderno continua salvo em Markdown, então Numo e os agentes conectados leem as mesmas tarefas e estados. Selecione um texto para formatá-lo ou adicionar um link, e cole ou solte uma imagem para inseri-la em uma nota. Os outros tipos de arquivo ficam nas páginas.
+O caderno usa o mesmo editor das páginas do projeto, com as mesmas alças de bloco: passe o cursor sobre um bloco para arrastá-lo, abrir seu menu ou adicionar um bloco com **+**. Digite `/` para inserir uma tarefa, oferecida primeiro, ou um título, uma lista, uma citação, um **Destaque**, um bloco de código, um bloco **Alternar** ou um divisor, ou escolha **Ditar uma tarefa** para falar as tarefas em voz alta. O caderno continua salvo em Markdown, então Numo e os agentes conectados leem as mesmas tarefas e estados. Selecione um texto para formatá-lo ou adicionar um link. Cole ou solte uma imagem, ou escolha **Imagem** no menu `/`, para inseri-la em uma nota. Os outros tipos de arquivo ficam nas páginas.
+
+O menu **Ações do caderno** (`…`) oferece **Copiar tudo como prompt**, que copia o caderno inteiro para o seu próprio agente de código, e **Remover tarefas concluídas e descartadas**. A remoção pede confirmação, exclui as tarefas concluídas e canceladas junto com os títulos que ficam vazios e mantém as tarefas a fazer ou em andamento. Para copiar menos, use **Copiar seção como prompt** em um título ou **Copiar como prompt** em uma tarefa. Se **Iniciar o problema ou tarefa quando eu copiar seu prompt** estiver ativado em **Configurações da conta** → **Tickets**, copiar também passa para em andamento as tarefas pendentes copiadas.
 
 O caderno é privado. Use uma página do projeto para informações que seus colegas precisam compartilhar. O Numo pode ler ou atualizar o caderno quando você pedir, mas a participação de outra pessoa no seu projeto não transforma suas anotações em um documento compartilhado.
 
@@ -99,6 +101,6 @@ O caderno é privado. Use uma página do projeto para informações que seus col
 
 ## Levar uma tarefa para o projeto {#promote-note}
 
-Abra o menu da tarefa e escolha a ação para levá-la ao projeto quando a anotação se tornar trabalho do projeto. O caderno fecha e o Numo abre com uma solicitação preparada que contém a tarefa e suas subtarefas. Se você estiver em um projeto, esse projeto será usado; em uma tela global, informe o projeto de destino na conversa. Confira a solicitação antes de enviá-la. É necessário ter uso de IA disponível ou uma chave pessoal compatível. Abrir essa opção ainda não criou um ticket. Depois que o Numo confirmar a criação, abra o ticket para verificar o identificador, o escopo e as propriedades. Acrescente as condições de aceitação que faltarem para preservar o contexto necessário.
+Abra o menu da tarefa e escolha **Promover para o problema** quando a anotação se tornar trabalho do projeto. O caderno fecha e o Numo abre com uma solicitação preparada que contém a tarefa e suas subtarefas. Se você estiver em um projeto, esse projeto será usado; em uma tela global, informe o projeto de destino na conversa. Confira a solicitação antes de enviá-la. É necessário ter uso de IA disponível ou uma chave pessoal compatível. Abrir essa opção ainda não criou um ticket. Depois que o Numo confirmar a criação, abra o ticket para verificar o identificador, o escopo e as propriedades. Acrescente as condições de aceitação que faltarem para preservar o contexto necessário. A solicitação preparada também pede ao Numo que remova a tarefa do caderno quando o ticket existir; procure-a, portanto, no ticket e não no caderno.
 
 Se a criação falhar ou o resultado ficar incerto após um erro de rede, procure o ticket antes de repetir a operação. Mantenha as outras seções intactas ao pedir que o Numo altere uma tarefa. Confira se ele mudou a caixa de seleção pretendida sem substituir o caderno inteiro.

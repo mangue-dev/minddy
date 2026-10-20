@@ -66,3 +66,8 @@ carry neither role nor test-id: we target them by their classes
 title: `hover()` without `force` expects visibility that will never arrive.
 - **The tooltip and the section background are set by JS**, on `mouseenter`,
 via the `is-visible` class. She’s the one we’re waiting for — not a deadline.
+
+## October 2026 update
+
+MIN-721 removed the hand-off to Numo. The hovered section action is now
+**Copy section as prompt** (`.scratchpad-section-copy`).

@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "v0.11.0",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -38,10 +38,10 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (primary installation path verified against the localized self-hosting wizard routes; technical references retained)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (fr wizard-first installation guidance review)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "installation",
@@ -81,7 +81,7 @@ Une équipe sans capacité d’exploitation de bases de données peut par exempl
 
 Une installation auto-hébergée prise en charge nécessite l’application et Supabase avec PostgreSQL, Auth, Storage et Realtime. PostgreSQL seul ne suffit pas. Utilisez une release étiquetée et sa matrice de compatibilité. Les variantes dérivées de Supabase sans version épinglée et les adaptateurs GitHub Enterprise ou GitLab auto-gérés sont hors du périmètre pris en charge.
 
-L’IA, les e-mails, Git, les notifications push et les statistiques d’usage dépendent de la configuration. L’auto-hébergement n’exige ni Stripe, ni PostHog, ni clé d’IA gérée par minddy, ni compte Cloud. Une configuration optionnelle manquante est signalée ; aucun fournisseur ne la remplace silencieusement. Les clés d’IA personnelles et les points d’accès d’IA locaux sont des choix possibles ; leur disponibilité et leurs coûts dépendent de la capacité configurée.
+L’IA, les e-mails, Git, les notifications push et les statistiques d’usage dépendent de la configuration. L’auto-hébergement n’exige ni Stripe, ni PostHog, ni clé d’IA gérée par minddy, ni compte Cloud. Une configuration optionnelle manquante est signalée ; aucun fournisseur ne la remplace silencieusement. Les clés d’IA personnelles et, dans l’application de bureau, les points d’accès d’IA locaux sont des choix possibles ; leur disponibilité et leurs coûts dépendent de la capacité configurée.
 
 Examinez les permissions et les conditions de traitement des données avant d’activer une intégration. Les connexions Git peuvent utiliser le relais de forge géré lorsque vous lancez explicitement l’intégration ; les applications fournisseurs détenues par l’opérateur et la désactivation du relais restent possibles. L’auto-hébergement ne constitue pas une offre réduite pour l’accès aux fonctions du cœur.
 

@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "v0.11.0",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -38,10 +38,10 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (primary installation path verified against the localized self-hosting wizard routes; technical references retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (es wizard-first installation guidance review)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "installation",
@@ -81,7 +81,7 @@ Por ejemplo, un equipo sin capacidad para gestionar bases de datos puede usar Cl
 
 Una instalación compatible necesita la aplicación y Supabase con PostgreSQL, Auth, Storage y Realtime. PostgreSQL por sí solo no basta. Usa una versión etiquetada y su matriz de compatibilidad. Las variantes derivadas de Supabase sin versión fijada y los adaptadores autogestionados de GitHub Enterprise o GitLab quedan fuera del contrato compatible.
 
-La IA, el correo, Git, las notificaciones push y la analítica dependen de la configuración. El autoalojamiento no exige Stripe, PostHog, una clave de IA gestionada por minddy ni una cuenta Cloud. La configuración opcional ausente se comunica en lugar de sustituirse silenciosamente por un proveedor. Las claves personales de IA y los puntos de acceso locales de IA son opciones posibles; su disponibilidad y coste dependen de la capacidad configurada.
+La IA, el correo, Git, las notificaciones push y la analítica dependen de la configuración. El autoalojamiento no exige Stripe, PostHog, una clave de IA gestionada por minddy ni una cuenta Cloud. La configuración opcional ausente se comunica en lugar de sustituirse silenciosamente por un proveedor. Las claves personales de IA y, en la aplicación de escritorio, los puntos de acceso locales de IA son opciones posibles; su disponibilidad y coste dependen de la capacidad configurada.
 
 Revisa los permisos y las condiciones sobre datos del proveedor antes de activar una integración. Las conexiones Git pueden usar el servicio de retransmisión de forjas gestionado cuando inicias explícitamente la integración; también puedes usar aplicaciones del proveedor propias o desactivar la retransmisión. El autoalojamiento no es una modalidad reducida de las funciones del núcleo.
 

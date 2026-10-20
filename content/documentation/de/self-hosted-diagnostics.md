@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min-721 (de runner-removal edits and full retained meaning)",
-    "date": "2026-10-16"
+    "revision": 6,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "instance-configuration",
@@ -66,14 +66,14 @@ pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
 
 ## Symptome gezielt prüfen {#symptoms}
 
-Prüfen Sie bei allgemeinen 401 nach Restore, dass JWT, Anon- und Service-Role-Schlüssel zu demselben Stack gehören. Bei Uploadfehlern oder 404 vergleichen Sie Storage-Richtlinien, Objekte, Bytes und Schlüssel. Bei fehlenden Relationen erhalten Sie den ersten Migrationsfehler, prüfen Platte, Sperren und Ziel-URL und wiederholen Bootstrap erst nach Ursachenbehebung. Markieren Sie gescheiterte Migrationen nie manuell als ausgeführt. Prüfen Sie für Realtime Publikation, JWT, WebSocket-Proxy und Logs. Prüfen Sie bei inaktiven Cronjobs oder 401 Scheduler, kanonischen Origin und `CRON_SECRET` privat.
+Prüfen Sie bei allgemeinen 401 nach Restore, dass JWT, Anon- und Service-Role-Schlüssel zu demselben Stack gehören. Bei Uploadfehlern oder 404 vergleichen Sie Storage-Richtlinien, Objekte, Bytes und Schlüssel. Bei fehlenden Relationen erhalten Sie den ersten Migrationsfehler, prüfen Platte, Sperren und Ziel-URL und wiederholen Bootstrap erst nach Ursachenbehebung. Markieren Sie gescheiterte Migrationen nie manuell als ausgeführt. Prüfen Sie für Realtime Publikation, JWT, WebSocket-Proxy und Logs. Prüfen Sie bei inaktiven Cronjobs oder 401 Scheduler, kanonischen Origin und `CRON_SECRET` privat. Schlägt die Versionskompatibilität fehl, vergleichen Sie `MINDDY_RELEASE` mit einem Eintrag in `deploy/self-hosted/compatibility.json` und `MINDDY_IMAGE` mit diesem Eintrag oder dem geprüften unveränderlichen Digest. Der Installer übernimmt `MINDDY_RELEASE` aus der Bereitstellungsvorlage.
 
 ## Wiederherstellbarkeit erhalten {#recovery}
 
 Beheben Sie fehlendes Docker/CLI oder unvollständige API-Werte und wiederholen Sie den idempotenten Installer mit erhaltener Umgebung. Korrigieren Sie öffentliche Laufzeit-URLs und erstellen Sie die App neu, ohne OCI-Neubuild. Löschen Sie keine gefüllten Buckets, Daten oder Wurzelschlüssel wegen Warnungen. Optionale deaktivierte Funktionen können beabsichtigt sein. Geben Sie Support Version, Profil, Zeiten, kontrollierte Fehlercodes und bereinigte Diagnosen. Entfernen Sie Passwörter, Tokens, `Authorization`-Header, Cookies, private Objekt-URLs und Benutzerinhalte.
 
 
-Bricht der erste Image-Download nach einem langen Fortschrittsprotokoll ohne Registry-Fehler ab, kann der Installer von v0.11.0 seinen Ausgabepuffer für Unterprozesse überschreiten. Im exakten Compose-Kontext der Installation war `compose pull --quiet` im Wegwerftest erfolgreich. Wiederholen Sie anschließend denselben Installer mit `--skip-pull`, um die geladenen Images zu verwenden und die Umgebung zu erhalten. Das behebt weder Registry- noch Signaturfehler. Meldet die Offline-Kompilierung nach einer Installation mit eingefrorenen Abhängigkeiten eine abweichende `jose`-Version, halten Sie an: Diese Release verlangt 6.2.3, ihre direkte eingefrorene Abhängigkeit ergibt jedoch 6.2.12. Besorgen Sie eine korrigierte Kombination aus Release und Werkzeugen, bevor Sie die Standardinstallation abnehmen; lockern Sie die Identitätsprüfung nicht stillschweigend.
+Bricht der erste Image-Download nach einem langen Fortschrittsprotokoll ohne Registry-Fehler ab, kann der Installer von v0.11.0 seinen Ausgabepuffer für Unterprozesse überschreiten. Spätere Installer laden leise mit einem größeren Puffer und brechen, falls die Ausgabe ihn dennoch überschreitet, mit einer ausdrücklichen Anweisung ab. Führen Sie in beiden Fällen `compose pull --quiet` im exakten Compose-Kontext der Installation aus und wiederholen Sie anschließend denselben Installer mit `--skip-pull`, um die geladenen Images zu verwenden und die Umgebung zu erhalten. Das behebt weder Registry- noch Signaturfehler. Meldet die Offline-Kompilierung eine abweichende `jose`-Version, halten Sie an. Die Werkzeuge von v0.11.0 verlangen 6.2.3, ihre direkte eingefrorene Abhängigkeit ergibt jedoch 6.2.12; besorgen Sie eine korrigierte Kombination aus Release und Werkzeugen, bevor Sie diese Installation abnehmen. In späteren Releases entspricht die Bindung der eingefrorenen Abhängigkeit, eine Abweichung bedeutet also, dass `pnpm install --frozen-lockfile` in diesem Checkout nicht abgeschlossen wurde. Lockern Sie die Identitätsprüfung nicht stillschweigend.
 
 
 Auch der OCI-Runner von v0.11.0 startet nicht, weil `agent-runner-storage.mjs` im Runtime-Image fehlt; die Anwendung wird daher nie gesund. Spätere Releases entfernen diesen Runner und seine Code-Sandboxes. Aktualisieren Sie auf eine solche Release, statt Runner-Dateien einzubinden oder die Container-Isolation zu lockern.

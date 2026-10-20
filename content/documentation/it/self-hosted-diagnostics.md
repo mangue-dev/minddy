@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min-721 (it runner-removal edits and full retained meaning)",
-    "date": "2026-10-16"
+    "revision": 6,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "instance-configuration",
@@ -66,7 +66,7 @@ pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
 
 ## Associare sintomi e controlli {#symptoms}
 
-Se dopo un ripristino ricevi molti 401, verifica che JWT, chiavi anon e service-role appartengano allo stesso stack. Per upload falliti o 404 confronta policy, record, byte e chiavi. Se mancano relazioni, conserva il primo errore di migrazione e controlla spazio, lock e URL del database; ripeti il bootstrap dopo aver corretto la causa. Non segnare manualmente come applicate migrazioni fallite. Per Realtime controlla publication, JWT, WebSocket e log. Per cron inattivo o 401 verifica in privato scheduler, origine e `CRON_SECRET`.
+Se dopo un ripristino ricevi molti 401, verifica che JWT, chiavi anon e service-role appartengano allo stesso stack. Per upload falliti o 404 confronta policy, record, byte e chiavi. Se mancano relazioni, conserva il primo errore di migrazione e controlla spazio, lock e URL del database; ripeti il bootstrap dopo aver corretto la causa. Non segnare manualmente come applicate migrazioni fallite. Per Realtime controlla publication, JWT, WebSocket e log. Per cron inattivo o 401 verifica in privato scheduler, origine e `CRON_SECRET`. Se il controllo di compatibilità della versione fallisce, confronta `MINDDY_RELEASE` con una voce di `deploy/self-hosted/compatibility.json` e `MINDDY_IMAGE` con quella voce o con il digest immutabile verificato. Il programma di installazione copia `MINDDY_RELEASE` dal modello di distribuzione.
 
 ## Preservare il recupero {#recovery}
 
@@ -74,9 +74,9 @@ Correggi Docker, CLI o valori API e ripeti l’installer idempotente mantenendo 
 
 
 
-Se il primo download si interrompe con un lungo log di avanzamento e senza errori del registro, l’installer v0.11.0 può aver superato il buffer di output del sottoprocesso. Nel contesto Compose esatto dell’installazione, `compose pull --quiet` ha funzionato nella prova usa e getta. Ripeti poi lo stesso installer con `--skip-pull` per usare le immagini locali, conservando l’ambiente. Questo non risolve errori del registro né firme non valide.
+Se il primo download si interrompe con un lungo log di avanzamento e senza errori del registro, l’installer v0.11.0 può aver superato il buffer di output del sottoprocesso. Gli installer successivi scaricano in modalità silenziosa con un buffer più ampio e, se l’output lo supera comunque, si fermano con un’istruzione esplicita. In entrambi i casi esegui `compose pull --quiet` nel contesto Compose esatto dell’installazione, poi ripeti lo stesso installer con `--skip-pull` per usare le immagini locali, conservando l’ambiente. Questo non risolve errori del registro né firme non valide.
 
-Se la compilazione offline segnala una versione `jose` diversa dopo l’installazione bloccata, fermati: la release richiede 6.2.3, mentre la dipendenza diretta bloccata risolve 6.2.12. Ottieni una combinazione corretta di release e strumenti prima di accettare l’installazione standard; non allentare silenziosamente il controllo d’identità.
+Se la compilazione offline segnala una versione `jose` diversa, fermati. Gli strumenti di v0.11.0 richiedono 6.2.3, mentre la dipendenza diretta bloccata risolve 6.2.12; ottieni una combinazione corretta di release e strumenti prima di accettare quell’installazione. Nelle release successive il riferimento fissato corrisponde alla dipendenza bloccata, quindi una differenza indica che `pnpm install --frozen-lockfile` non è terminato in quel checkout. Non allentare silenziosamente il controllo d’identità.
 
 
 Anche il runner OCI v0.11.0 non si avvia: `agent-runner-storage.mjs` manca dall’immagine runtime, quindi l’applicazione non diventa mai integra. Le release successive rimuovono questo runner e le sue sandbox di codice. Aggiorna a una di queste release invece di montare file del runner o indebolire l’isolamento dei container.

@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12); MIN-721 removal of Numo code work",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root/min721_docs (MIN-721 source review: skills still load into Numo turns and routines; delegated code work removed; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min721_docs (en removal edits; agent review, not human acceptance)",
-    "date": "2026-10-16"
+    "revision": 6,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [],
   "aliases": [],
@@ -53,7 +53,7 @@
       "src": "/documentation/en/repository-skills-workflow.png",
       "alt": "Repository skill preview with its stable name, file path and complete instructions.",
       "caption": "Preview the skill before attaching it to a message. This real demonstration skill requests `npm test` and forbids merging the pull request; previewing it does not run either action.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -74,7 +74,7 @@
 
 Numo reads `SKILL.md` files in skill subdirectories under `.agents/skills`, `.claude/skills`, `.github/skills`, `.cursor/skills`, `.codex/skills` and `.gemini/skills`, in that precedence order. The frontmatter name and description identify the skill; supporting scripts and references can sit beside it.
 
-Commit and push these files to the linked GitHub or GitLab repository. Choose the appropriate repository ref when needed. Desktop-only files are unavailable. The skill list refreshes when the conversation opens or its project changes.
+Commit and push these files to the default branch of the linked GitHub or GitLab repository; Numo reads skills from that branch. Files that exist only on your computer or on another branch are unavailable. The skill list refreshes when the conversation opens or its project changes.
 
 ## Select and inspect {#selection}
 
