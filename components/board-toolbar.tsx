@@ -37,7 +37,7 @@ import { SplitButton } from "@/components/ui/split-button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { PriorityIndicator } from "@/components/issue-indicators";
 import {
   IssueContextMenu,
@@ -1102,41 +1102,27 @@ export function BoardToolbar({
           renameTarget ? onRenameView(renameTarget, name) : Promise.resolve()
         }
       />
-      <Dialog
+      <ConfirmDeleteDialog
         open={deleteTarget !== null}
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);
         }}
-      >
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>
-              {t("deleteViewTitle", { name: deleteTarget?.name ?? "" })}
-            </DialogTitle>
-            <DialogDescription>{t("deleteViewDescription")}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
-              {tc("cancel")}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={async () => {
-                if (!deleteTarget) return;
-                const target = deleteTarget;
-                try {
-                  await onDeleteView(target);
-                  setDeleteTarget(null);
-                } catch {
-                  // The handler owns the error toast and keeps the dialog open.
-                }
-              }}
-            >
-              {tc("delete")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={t("deleteViewTitle", { name: deleteTarget?.name ?? "" })}
+        description={t("deleteViewDescription")}
+        confirmLabel={tc("delete")}
+        cancelLabel={tc("cancel")}
+        closeOnConfirm={false}
+        onConfirm={async () => {
+          if (!deleteTarget) return;
+          const target = deleteTarget;
+          try {
+            await onDeleteView(target);
+            setDeleteTarget(null);
+          } catch {
+            // The handler owns the error toast and keeps the dialog open.
+          }
+        }}
+      />
       <IssueContextMenu
         position={viewMenu ? { x: viewMenu.x, y: viewMenu.y } : null}
         onClose={() => setViewMenu(null)}

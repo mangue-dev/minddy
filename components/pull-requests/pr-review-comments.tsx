@@ -672,6 +672,7 @@ export function ReviewThreadCard({
                       size="sm"
                       className="-ml-px rounded-l-none px-2"
                       aria-label={t("conversationActions")}
+                      tooltip={t("conversationActions")}
                     >
                       <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5" />
                     </Button>

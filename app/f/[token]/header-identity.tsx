@@ -17,6 +17,7 @@ import type { PublicIdentity } from "@/lib/feedback/types";
 import { logoutAction } from "./actions";
 import { FeedbackAuthDialog } from "./feedback-auth";
 import { IdentityAvatar } from "./feedback-bits";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 /** Visitor identity in the header of the public site: “Authenticate”
  (OTP door) or the avatar alone — the actions (My feedback, disconnection)
@@ -49,15 +50,17 @@ export function HeaderIdentity({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label={identity.pseudonym}
-          className="rounded-full outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <IdentityAvatar identity={identity} className="size-7 text-xs" />
-        </button>
-      </DropdownMenuTrigger>
+      <AppTooltip label={identity.pseudonym}>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            aria-label={identity.pseudonym}
+            className="rounded-full outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <IdentityAvatar identity={identity} className="size-7 text-xs" />
+          </button>
+        </DropdownMenuTrigger>
+      </AppTooltip>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onSelect={() => router.push(`${basePath}/me`)}>
           <HugeiconsIcon icon={MessageMultiple01Icon} className="size-4" />

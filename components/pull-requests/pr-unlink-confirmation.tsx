@@ -2,9 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { useUnlinkPullRequestIssue } from "@/lib/use-unlink-pull-request-issue";
 
 type UnlinkTarget = { prId: string; issueId: string; identifier: string };
@@ -38,27 +36,20 @@ export function PrUnlinkConfirmationProvider({ children }: {
   return (
     <UnlinkContext.Provider value={value}>
       {children}
-      <Dialog open={!!target} onOpenChange={(open) => {
-        if (!open && !mutation.isPending) setTarget(null);
-      }}>
-        <DialogContent data-testid="pr-unlink-confirmation">
-          <DialogHeader>
-            <DialogTitle>{t("unlinkIssueConfirmTitle")}</DialogTitle>
-            <DialogDescription>
-              {t("unlinkIssueConfirmDescription", { identifier: target?.identifier ?? "" })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" disabled={mutation.isPending} onClick={() => setTarget(null)}>
-              {t("cancel")}
-            </Button>
-            <Button variant="destructive" disabled={mutation.isPending} onClick={() => void confirm()}>
-              {mutation.isPending ? <Spinner /> : null}
-              {t("unlinkIssue")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDeleteDialog
+        testId="pr-unlink-confirmation"
+        open={!!target}
+        onOpenChange={(open) => {
+          if (!open && !mutation.isPending) setTarget(null);
+        }}
+        title={t("unlinkIssueConfirmTitle")}
+        description={t("unlinkIssueConfirmDescription", { identifier: target?.identifier ?? "" })}
+        confirmLabel={t("unlinkIssue")}
+        cancelLabel={t("cancel")}
+        isLoading={mutation.isPending}
+        closeOnConfirm={false}
+        onConfirm={confirm}
+      />
     </UnlinkContext.Provider>
   );
 }

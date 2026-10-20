@@ -17,12 +17,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate; MIN-684 page promotion",
+    "version": "0.11.1 candidate; MIN-684 page promotion; MIN-743 destructive-action confirmations",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -55,13 +55,14 @@
       "content/documentation/reviews/database-property-types-2026-10-18.json",
       "components/pages/page-promotion-context.tsx",
       "components/pages/page-promotion-context.test.tsx",
-      "content/documentation/reviews/min-684-promote-page.md"
+      "content/documentation/reviews/min-684-promote-page.md",
+      "content/documentation/reviews/min-743-destructive-confirmations.md"
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root (optional-time and option-control source, component and isolated SQL review; unchanged claims retain prior evidence); agent:/root (MIN-690 recapture of create-a-database-steps on next dev at 8371778c4 with a throwaway database, record content/documentation/reviews/database-property-types-2026-10-18.json; other figures unchanged, evidence retained); agent:/root (MIN-684 page promotion: source and focused unit-test review of the menu entries, reader gating, save-before-promote and the Numo request; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (en changed-passage and figure parity self-review); agent:/root (en updated alt text for the column type picker; agent review, not human acceptance); agent:/root (en MIN-684 single-entry promotion passage with catalog UI labels; agent review, not human acceptance)",
+    "revision": 14,
+    "fact": "agent:/root (optional-time and option-control source, component and isolated SQL review; unchanged claims retain prior evidence); agent:/root (MIN-690 recapture of create-a-database-steps on next dev at 8371778c4 with a throwaway database, record content/documentation/reviews/database-property-types-2026-10-18.json; other figures unchanged, evidence retained); agent:/root (MIN-684 page promotion: source and focused unit-test review of the menu entries, reader gating, save-before-promote and the Numo request; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for option deletion on Save in Edit options, record content/documentation/reviews/min-743-destructive-confirmations.md; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (en changed-passage and figure parity self-review); agent:/root (en updated alt text for the column type picker; agent review, not human acceptance); agent:/root (en MIN-684 single-entry promotion passage with catalog UI labels; agent review, not human acceptance); agent:/root (en MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -86,7 +87,7 @@
       "src": "/documentation/en/database-setup-cards.png",
       "alt": "Component preview of the new-database cards for Numo setup and importing an existing database.",
       "caption": "New-database suggestions, shown with demonstration data. Choose Numo setup or import, or dismiss the cards to continue manually.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -103,7 +104,7 @@
       "src": "/documentation/en/database-property-types.png",
       "alt": "Database column type picker with a search field, then text, number, selections, dates, people and checkbox.",
       "caption": "Choose a column type that matches the values to store.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -120,7 +121,7 @@
       "src": "/documentation/en/database-entry.png",
       "alt": "Demonstration entry with a text description, duration 2.5, a checked checkbox and an empty selection.",
       "caption": "Open an entry to read its complete text and edit typed values.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -136,7 +137,7 @@
       "src": "/documentation/en/database-conversion-warning.png",
       "alt": "Conversion warning: changing Text to Number clears one incompatible cell, with Cancel and confirmation buttons.",
       "caption": "Review the real incompatible-cell count before confirming a type change. Cancel preserves the current values.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -152,7 +153,7 @@
       "src": "/documentation/en/database-import-review.png",
       "alt": "Import review for a local CSV: two entry pages and two property columns, with the Import database button.",
       "caption": "Review the parsed entries and column count before importing into the empty database.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -168,7 +169,7 @@
       "src": "/documentation/en/database-options.png",
       "alt": "Component preview of Edit options with localized status options, up and down buttons, trash buttons and the deletion explanation.",
       "caption": "Edit option names, colors and order together. The trash button removes an option from the draft; Save applies the changes. Shown with demonstration data.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -185,7 +186,7 @@
       "src": "/documentation/en/database-date-time.png",
       "alt": "Component preview of the date picker with October 12, 2026 selected, Add a time enabled and Time set to 14:30.",
       "caption": "Turn on Add a time to enter an hour. This component preview uses demonstration data and the device time zone.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -240,7 +241,7 @@ Use a Select cell for one option or Multi-select for several. Search existing op
 
 New options receive a random palette color that is not yet used in the column, whether you create them from a cell or in the options dialog. Once all ten colors are used, colors can repeat. You can still choose a color manually.
 
-In Edit options, use the up and down buttons beside a row to reorder options. Use its trash button to remove an option. Save applies names, colors, order and deletions together. Deleting an option removes it from every entry that uses it, including entries in the trash; other selected options remain. Cancel discards the draft changes.
+In Edit options, use the up and down buttons beside a row to reorder options. Use its trash button to remove an option. Save applies names, colors, order and deletions together; when you deleted options, it first lists them and asks you to confirm with **Delete and save**, because the deletion cannot be undone. Deleting an option removes it from every entry that uses it, including entries in the trash; other selected options remain. Cancel discards the draft changes.
 
 Choose a day in Date. To include a time, turn on Add a time and fill Time. The value saves as you edit, and the picker stays open. Timed values appear in your device’s time zone, including midnight. Turning off Add a time keeps the displayed day as a date without a time. Date filters match the displayed calendar day.
 

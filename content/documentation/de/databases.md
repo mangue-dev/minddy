@@ -17,12 +17,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate; MIN-684 page promotion",
+    "version": "0.11.1 candidate; MIN-684 page promotion; MIN-743 destructive-action confirmations",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -55,13 +55,14 @@
       "content/documentation/reviews/database-property-types-2026-10-18.json",
       "components/pages/page-promotion-context.tsx",
       "components/pages/page-promotion-context.test.tsx",
-      "content/documentation/reviews/min-684-promote-page.md"
+      "content/documentation/reviews/min-684-promote-page.md",
+      "content/documentation/reviews/min-743-destructive-confirmations.md"
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root (optional-time and option-control source, component and isolated SQL review; unchanged claims retain prior evidence); agent:/root (MIN-690 recapture of create-a-database-steps on next dev at 8371778c4 with a throwaway database, record content/documentation/reviews/database-property-types-2026-10-18.json; other figures unchanged, evidence retained); agent:/root (MIN-684 page promotion: source and focused unit-test review of the menu entries, reader gating, save-before-promote and the Numo request; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (de changed-passage and figure parity self-review); agent:/root (de updated alt text for the column type picker; agent review, not human acceptance); agent:/root (de translation of the MIN-684 single-entry promotion passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 14,
+    "fact": "agent:/root (optional-time and option-control source, component and isolated SQL review; unchanged claims retain prior evidence); agent:/root (MIN-690 recapture of create-a-database-steps on next dev at 8371778c4 with a throwaway database, record content/documentation/reviews/database-property-types-2026-10-18.json; other figures unchanged, evidence retained); agent:/root (MIN-684 page promotion: source and focused unit-test review of the menu entries, reader gating, save-before-promote and the Numo request; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for option deletion on Save in Edit options, record content/documentation/reviews/min-743-destructive-confirmations.md; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (de changed-passage and figure parity self-review); agent:/root (de updated alt text for the column type picker; agent review, not human acceptance); agent:/root (de translation of the MIN-684 single-entry promotion passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -86,7 +87,7 @@
       "src": "/documentation/de/database-setup-cards.png",
       "alt": "Komponentenvorschau der Karten zur Einrichtung einer neuen Datenbank mit Numo oder zum Import einer vorhandenen Datenbank.",
       "caption": "Vorschläge für eine neue Datenbank mit Demonstrationsdaten. Wählen Sie Numo oder Import, oder schließen Sie die Karten, um manuell fortzufahren.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -103,7 +104,7 @@
       "src": "/documentation/de/database-property-types.png",
       "alt": "Auswahl des Spaltentyps mit Suchfeld sowie Text, Zahl, Auswahl, Datum, Personen und Kontrollkästchen.",
       "caption": "Wähle einen Typ, der zu den gespeicherten Werten passt.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -120,7 +121,7 @@
       "src": "/documentation/de/database-entry.png",
       "alt": "Demoeintrag mit Beschreibung, Dauer 2.5, aktiviertem Kontrollkästchen und leerer Auswahl.",
       "caption": "Öffne einen Eintrag, um den vollständigen Text zu lesen und typisierte Werte zu bearbeiten.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -136,7 +137,7 @@
       "src": "/documentation/de/database-conversion-warning.png",
       "alt": "Umwandlungswarnung: Der Wechsel von Text zu Zahl leert eine inkompatible Zelle; Abbrechen und Bestätigen sind verfügbar.",
       "caption": "Prüfe die tatsächliche Zahl inkompatibler Zellen vor der Bestätigung. Abbrechen erhält die bisherigen Werte.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -152,7 +153,7 @@
       "src": "/documentation/de/database-import-review.png",
       "alt": "Importprüfung einer lokalen CSV-Datei: zwei Eintragsseiten und zwei Eigenschaftsspalten mit der Importschaltfläche.",
       "caption": "Prüfe die eingelesenen Einträge und die Spaltenzahl vor dem Import in die leere Datenbank.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -168,7 +169,7 @@
       "src": "/documentation/de/database-options.png",
       "alt": "Komponentenvorschau von Optionen bearbeiten mit deutschen Statusoptionen, Pfeilen nach oben und unten, Papierkörben und einer Erklärung zum Löschen.",
       "caption": "Bearbeite Namen, Farben und Reihenfolge der Optionen gemeinsam. Der Papierkorb entfernt eine Option aus dem Entwurf; Speichern übernimmt die Änderungen. Mit Demonstrationsdaten.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -185,7 +186,7 @@
       "src": "/documentation/de/database-date-time.png",
       "alt": "Komponentenvorschau der Datumsauswahl mit dem ausgewählten 12. Oktober 2026, aktivierter Uhrzeit und Zeit auf 14:30.",
       "caption": "Aktiviere „Fügen Sie eine Uhrzeit hinzu“, um eine Uhrzeit einzugeben. Diese Komponentenvorschau verwendet Demonstrationsdaten und die Zeitzone des Geräts.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -240,7 +241,7 @@ Verwende eine Auswahl-Zelle für eine Option oder Mehrfachauswahl für mehrere. 
 
 Neue Optionen erhalten eine zufällige Palettenfarbe, die in der Spalte noch nicht verwendet wird. Das gilt sowohl beim Erstellen in einer Zelle als auch im Optionsdialog. Sobald alle zehn Farben verwendet werden, können sie sich wiederholen. Du kannst die Farbe weiterhin selbst wählen.
 
-Verwende unter „Optionen bearbeiten“ die Pfeile nach oben und unten neben einer Zeile, um Optionen neu anzuordnen. Mit dem Papierkorb entfernst du eine Option. Speichern übernimmt Namen, Farben, Reihenfolge und Löschungen gemeinsam. Eine gelöschte Option wird aus allen Einträgen entfernt, die sie verwenden, auch aus Einträgen im Papierkorb. Andere ausgewählte Optionen bleiben erhalten. Abbrechen verwirft die Änderungen im Entwurf.
+Verwende unter „Optionen bearbeiten“ die Pfeile nach oben und unten neben einer Zeile, um Optionen neu anzuordnen. Mit dem Papierkorb entfernst du eine Option. Speichern übernimmt Namen, Farben, Reihenfolge und Löschungen gemeinsam; hast du Optionen gelöscht, listet es sie zuerst auf und fragt mit **Löschen und speichern** nach, weil sich das Löschen nicht rückgängig machen lässt. Eine gelöschte Option wird aus allen Einträgen entfernt, die sie verwenden, auch aus Einträgen im Papierkorb. Andere ausgewählte Optionen bleiben erhalten. Abbrechen verwirft die Änderungen im Entwurf.
 
 Wähle unter Datum einen Tag. Aktiviere „Fügen Sie eine Uhrzeit hinzu“ und fülle Zeit aus, um eine Uhrzeit anzugeben. Der Wert wird beim Bearbeiten gespeichert und die Auswahl bleibt geöffnet. Werte mit Uhrzeit werden in der Zeitzone deines Geräts angezeigt, auch Mitternacht. Wenn du „Fügen Sie eine Uhrzeit hinzu“ deaktivierst, bleibt der angezeigte Tag als Datum ohne Uhrzeit erhalten. Datumsfilter berücksichtigen den angezeigten Kalendertag.
 

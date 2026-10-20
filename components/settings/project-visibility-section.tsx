@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { SettingsRow } from "@/components/settings/settings-ui";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { useHiddenProjects } from "@/lib/use-hidden-projects";
@@ -20,8 +21,12 @@ import type { Project } from "@/lib/types";
  */
 export function ProjectVisibilityRow({ project }: { project: Project }) {
   const t = useTranslations("Settings");
+  const tNav = useTranslations("Nav");
+  const tc = useTranslations("Common");
   const { isHidden, setProjectHidden } = useHiddenProjects();
   const [saving, setSaving] = useState(false);
+  // Hiding asks first, like the sidebar menu; showing again is immediate.
+  const [confirmHideOpen, setConfirmHideOpen] = useState(false);
   const hidden = isHidden(project.id);
 
   const toggle = async () => {
@@ -34,6 +39,7 @@ export function ProjectVisibilityRow({ project }: { project: Project }) {
   };
 
   return (
+    <>
       <SettingsRow
         anchor={SETTINGS_SECTIONS.projectVisibility}
         label={t(hidden ? "projectHiddenLabel" : "hideProjectLabel")}
@@ -44,12 +50,22 @@ export function ProjectVisibilityRow({ project }: { project: Project }) {
             variant="outline"
             size="sm"
             disabled={saving}
-            onClick={() => void toggle()}
+            onClick={() => (hidden ? void toggle() : setConfirmHideOpen(true))}
           >
             {saving ? <Spinner /> : <HugeiconsIcon icon={hidden ? ViewIcon : ViewOffIcon} />}
             {t(hidden ? "showProject" : "hideProject")}
           </Button>
         }
       />
+      <ConfirmDeleteDialog
+        open={confirmHideOpen}
+        onOpenChange={setConfirmHideOpen}
+        title={tNav("hideProjectConfirmTitle", { name: project.name })}
+        description={tNav("hideProjectConfirmDescription")}
+        confirmLabel={tNav("hideProject")}
+        cancelLabel={tc("cancel")}
+        onConfirm={toggle}
+      />
+    </>
   );
 }

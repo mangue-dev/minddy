@@ -1,5 +1,6 @@
 "use client";
 
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, Cancel01Icon, Link02Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
@@ -79,7 +80,7 @@ export function PrLinkedIssues({ item, onOpenIssue }: {
                     <StatusIndicator status={issue.status} className="size-4 shrink-0" />
                   ) : null}
                   <span className="shrink-0 font-mono text-xs text-muted-foreground">{issueIdentifier(issue.project_key, issue.number)}</span>
-                  <span className={issue.status === "done" ? "truncate text-muted-foreground line-through" : "truncate"}>{issue.title}</span>
+                  <TruncatedText text={issue.title} className={issue.status === "done" ? "truncate text-muted-foreground line-through" : "truncate"} />
                 </button>
                 {unlinkButton(issue)}
               </div>

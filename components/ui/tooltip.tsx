@@ -5,6 +5,7 @@ import { Tooltip as TooltipPrimitive } from "radix-ui";
 import { cn } from "@/lib/utils";
 import {
   createWindowRefocusTracker,
+  isFocusNavigationKey,
   shouldOpenTooltipOnFocus,
 } from "@/lib/tooltip-focus";
 
@@ -34,9 +35,14 @@ if (typeof window !== "undefined") {
   });
   // A user gesture restores the normal focus policy. Capture the gesture so the
   // flag is cleared before the focus event produced by that same interaction.
-  const gesture = () => tracker.markGesture();
-  window.addEventListener("keydown", gesture, { capture: true });
-  window.addEventListener("pointerdown", gesture, { capture: true });
+  window.addEventListener(
+    "keydown",
+    (event) => tracker.markGesture(isFocusNavigationKey(event.key)),
+    { capture: true },
+  );
+  window.addEventListener("pointerdown", () => tracker.markGesture(), {
+    capture: true,
+  });
 }
 
 /**
@@ -61,6 +67,7 @@ function isFocusVisible(element: Element): boolean {
  */
 export function TooltipProvider({
   delayDuration = 200,
+  children,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
   return (
@@ -68,8 +75,30 @@ export function TooltipProvider({
       data-slot="tooltip-provider"
       delayDuration={delayDuration}
       {...props}
-    />
+    >
+      <TooltipScopeContext.Provider value={PROVIDED_SCOPE}>
+        {children}
+      </TooltipScopeContext.Provider>
+    </TooltipPrimitive.Provider>
   );
+}
+
+/**
+ * Where a control sits relative to tooltips. Controls that label themselves
+ * (an icon-only `Button` shows its `aria-label`) read it to know whether a
+ * tooltip can open here at all (a provider is mounted) and whether a caller
+ * already wraps them in a richer one (they sit inside a `TooltipTrigger`).
+ */
+type TooltipScope = { provided: boolean; insideTrigger: boolean };
+const TooltipScopeContext = React.createContext<TooltipScope>({
+  provided: false,
+  insideTrigger: false,
+});
+const PROVIDED_SCOPE: TooltipScope = { provided: true, insideTrigger: false };
+const TRIGGER_SCOPE: TooltipScope = { provided: true, insideTrigger: true };
+
+export function useTooltipScope(): TooltipScope {
+  return React.useContext(TooltipScopeContext);
 }
 
 export function Tooltip({
@@ -104,22 +133,25 @@ export function TooltipTrigger({
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
   return (
-    <TooltipPrimitive.Trigger
-      data-slot="tooltip-trigger"
-      onFocus={(event) => {
-        onFocus?.(event);
-        if (event.defaultPrevented) return;
-        const signal = {
-          refocusPending: tracker.consumeRefocus(),
-          focusVisible: isFocusVisible(event.currentTarget),
-        };
-        // `preventDefault` marks a React synthetic event as prevented even
-        // though focus itself is not cancelable. Radix reads that flag before
-        // opening, so the element keeps focus while the tooltip stays closed.
-        if (!shouldOpenTooltipOnFocus(signal)) event.preventDefault();
-      }}
-      {...props}
-    />
+    <TooltipScopeContext.Provider value={TRIGGER_SCOPE}>
+      <TooltipPrimitive.Trigger
+        data-slot="tooltip-trigger"
+        onFocus={(event) => {
+          onFocus?.(event);
+          if (event.defaultPrevented) return;
+          const signal = {
+            refocusPending: tracker.consumeRefocus(),
+            focusVisible: isFocusVisible(event.currentTarget),
+            navigationKey: tracker.navigating,
+          };
+          // `preventDefault` marks a React synthetic event as prevented even
+          // though focus itself is not cancelable. Radix reads that flag before
+          // opening, so the element keeps focus while the tooltip stays closed.
+          if (!shouldOpenTooltipOnFocus(signal)) event.preventDefault();
+        }}
+        {...props}
+      />
+    </TooltipScopeContext.Provider>
   );
 }
 

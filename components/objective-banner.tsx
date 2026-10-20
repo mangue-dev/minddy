@@ -117,7 +117,7 @@ export function ObjectiveBoardHeader({
 
   return (
     <AppContentHeader contentClassName="w-full gap-3 sm:gap-5">
-      <Button asChild variant="ghost" size="icon-sm">
+      <Button asChild variant="ghost" size="icon-sm" tooltip={t("backToObjective")}>
         <Link
           href={`/projects/${projectId}/objectives?open=${objective.id}`}
           aria-label={t("backToObjective")}

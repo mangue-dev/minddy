@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-19",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles; MIN-736 closed columns hidden by default",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles; MIN-736 closed columns hidden by default; MIN-743 destructive-action confirmations",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -41,14 +41,16 @@
       "lib/public-board-projection.ts",
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
-      "content/documentation/reviews/min-693-project-roles.md"
+      "content/documentation/reviews/min-693-project-roles.md",
+      "components/share-view-dialog.tsx",
+      "content/documentation/reviews/min-743-destructive-confirmations.md"
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 default status columns: source and unit-test review of lib/view-filter.ts and the board status filter; no browser walkthrough, no new captures)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min693_de with agent:/root (de MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (de MIN-736 added sentences with catalog status labels; agent review, not human acceptance)",
-    "date": "2026-10-19"
+    "revision": 9,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 default status columns: source and unit-test review of lib/view-filter.ts and the board status filter; no browser walkthrough, no new captures); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for stopping view sharing, record content/documentation/reviews/min-743-destructive-confirmations.md; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min693_de with agent:/root (de MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (de MIN-736 added sentences with catalog status labels; agent review, not human acceptance); agent:/root (de MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "navigation",
@@ -70,7 +72,7 @@
       "src": "/documentation/de/work-view-filters.png",
       "alt": "Manuelle Ansichtsfilter und Sortiermenü.",
       "caption": "Filtere nach Ticketeigenschaften oder wähle eine Reihenfolge. Für diese manuellen Bedienelemente ist das KI-Feld optional.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -86,7 +88,7 @@
       "src": "/documentation/de/work-share-view.png",
       "alt": "Freigabedialog einer Ansicht mit ausgewähltem privatem Zugriff.",
       "caption": "Privater, passwortgeschützter und öffentlicher Zugriff sind unterschiedliche Optionen. Die Ansicht bleibt hier privat.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -134,7 +136,7 @@ Geteilte Karten zeigen Titel, Beschreibungen und eingeblendete Eigenschaften, da
 
 ### Widerrufen und prüfen {#revoke-view}
 
-Kehre zu den Freigabesteuerungen der Ansicht zurück und stelle sie auf privat, um die Veröffentlichung zu widerrufen. Öffne den alten Link erneut anonym und prüfe, ob der Zugriff verweigert wird. Der Widerruf kann gespeicherte Kopien oder Screenshots der Besucher nicht zurückholen.
+Kehre zu den Freigabesteuerungen der Ansicht zurück, stelle sie auf privat und bestätige mit **Freigabe beenden**, um die Veröffentlichung zu widerrufen. Erneutes Teilen erzeugt einen neuen Link. Öffne den alten Link erneut anonym und prüfe, ob der Zugriff verweigert wird. Der Widerruf kann gespeicherte Kopien oder Screenshots der Besucher nicht zurückholen.
 
 Geheime Ansichtslinks verwenden den Veröffentlichungsweg für private Links und bleiben `noindex`. Diese Indexierungsregel begrenzt die Auffindbarkeit durch Suchmaschinen, ersetzt aber kein Passwort. Halte den Link bei sensiblen Inhalten privat und verwende gegebenenfalls Passwortschutz. Verwechsle die geteilte Ansicht eines Benutzers nicht mit der indexierten offiziellen Dokumentation.
 

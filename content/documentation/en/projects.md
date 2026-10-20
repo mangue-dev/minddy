@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 12,
+  "revision": 13,
+  "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-19",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-693 project roles; MIN-737 project settings reorganization; MIN-689 project creation invitations",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-693 project roles; MIN-737 project settings reorganization; MIN-689 project creation invitations; MIN-743 destructive-action confirmations",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -64,14 +64,16 @@
       "lib/collaborator-search.ts",
       "components/collaborator-suggestions.tsx",
       "app/api/me/collaborators/route.ts",
-      "content/documentation/reviews/min-689-project-invitations.md"
+      "content/documentation/reviews/min-689-project-invitations.md",
+      "components/ui/confirm-delete-dialog.tsx",
+      "content/documentation/reviews/min-743-destructive-confirmations.md"
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-685 sidebar context menu source and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (hide-project confirmation from the sidebar menu: source and unit-test review of components/project-context-actions.tsx; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 project settings: source review of the General identity header edited in place (icon menu, name and key fields or phone sheet, no Save button), the Categories card, the three Members cards and the Hidden projects account tab; project-settings-steps and project-members-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-refresh screens project-general and project-members) and inspected; no other browser walkthrough); agent:/root (MIN-689 project creation invitations: source and unit-test review of the wizard's optional members step, the Member role and per-address sending after creation, and the persistent notification for refused invitations; follow-up: search by name among people who joined one of the owner's projects with a verified email, never pending invitees, in the wizard and in the Members settings card renamed Invite people (components/project-members.tsx, lib/collaborator-search.ts, components/collaborator-suggestions.tsx), invited by account after a server-side recheck that refuses with collaboratorNotFound; project-members-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-refresh screen project-members) with the Invite people card and inspected (components/create-project-wizard.tsx, lib/project-draft.ts, lib/members-api.ts, lib/server/collaborators.ts, lib/server/members.ts, app/api/me/collaborators/route.ts and their tests); end-to-end walkthrough against the local candidate with throwaway accounts (wizard pick, settings pick, refusal of a pending invitee and of an unknown id); project-settings-steps retained because it does not show the members card)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (en MIN-685 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en hide-project confirmation sentence, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-737 project-settings second-pass passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-689 added passages and the collaborator-search follow-up with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-19"
+    "revision": 13,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-685 sidebar context menu source and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (hide-project confirmation from the sidebar menu: source and unit-test review of components/project-context-actions.tsx; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 project settings: source review of the General identity header edited in place (icon menu, name and key fields or phone sheet, no Save button), the Categories card, the three Members cards and the Hidden projects account tab; project-settings-steps and project-members-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-refresh screens project-general and project-members) and inspected; no other browser walkthrough); agent:/root (MIN-689 project creation invitations: source and unit-test review of the wizard's optional members step, the Member role and per-address sending after creation, and the persistent notification for refused invitations; follow-up: search by name among people who joined one of the owner's projects with a verified email, never pending invitees, in the wizard and in the Members settings card renamed Invite people (components/project-members.tsx, lib/collaborator-search.ts, components/collaborator-suggestions.tsx), invited by account after a server-side recheck that refuses with collaboratorNotFound; project-members-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-refresh screen project-members) with the Invite people card and inspected (components/create-project-wizard.tsx, lib/project-draft.ts, lib/members-api.ts, lib/server/collaborators.ts, lib/server/members.ts, app/api/me/collaborators/route.ts and their tests); end-to-end walkthrough against the local candidate with throwaway accounts (wizard pick, settings pick, refusal of a pending invitee and of an unknown id); project-settings-steps retained because it does not show the members card); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for hide-project from settings and sidebar, Leave, pending-invitation cancellation and project image removal, record content/documentation/reviews/min-743-destructive-confirmations.md; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (en MIN-685 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en hide-project confirmation sentence, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-737 project-settings second-pass passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-689 added passages and the collaborator-search follow-up with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "issues",
@@ -95,7 +97,7 @@
       "src": "/documentation/en/project-general.png",
       "alt": "Project header with the icon and its edit badge, the name, the key and the Issues, Members, Objectives, Categories and Created figures.",
       "caption": "Select the icon, the name or the key to change it in place; moving the project to trash stays a separate action below.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -112,7 +114,7 @@
       "src": "/documentation/en/project-members.png",
       "alt": "Invite people card above the Members card, which lists three demonstration members with the owner identified.",
       "caption": "Invite by account email and check who owns the project before removing another member’s access.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -137,7 +139,7 @@ A project brings together issues, objectives, pages and the people who work on t
 
 Open the project, then its settings. Project ownership controls administrative settings. Members and readers can inspect the general section, hide the project for themselves and leave it, but do not gain the owner's editing controls.
 
-The **General** tab opens with the project's identity: its icon, its name and key, then five figures: **Issues**, **Members**, **Objectives**, **Categories** and **Created**. As owner, you change the icon, name and key where they are shown; there is no Save button. Select the icon and choose **New orb** (offered only while no image covers the orb), **Upload an image**, **Import from a website…**, which asks for the website address and imports its icon when you choose **Import**, or, when an image is set, **Remove the image**. Select the name or the key to edit it: on a computer it becomes a field, where Enter or leaving the field saves and Escape cancels; on a phone it opens a sheet with **Save**. The name cannot be empty. The key is normalized to uppercase and must have 2 to 5 letters (A–Z); otherwise an error appears and the key is not saved. Review the resulting identifiers after changing it. The icon only distinguishes the project in navigation; it does not change membership. Members and readers see the same header without these controls.
+The **General** tab opens with the project's identity: its icon, its name and key, then five figures: **Issues**, **Members**, **Objectives**, **Categories** and **Created**. As owner, you change the icon, name and key where they are shown; there is no Save button. Select the icon and choose **New orb** (offered only while no image covers the orb), **Upload an image**, **Import from a website…**, which asks for the website address and imports its icon when you choose **Import**, or, when an image is set, **Remove the image**, which asks first because the image is deleted. Select the name or the key to edit it: on a computer it becomes a field, where Enter or leaving the field saves and Escape cancels; on a phone it opens a sheet with **Save**. The name cannot be empty. The key is normalized to uppercase and must have 2 to 5 letters (A–Z); otherwise an error appears and the key is not saved. Review the resulting identifiers after changing it. The icon only distinguishes the project in navigation; it does not change membership. Members and readers see the same header without these controls.
 
 Other sections manage categories, collaborators, recurring issues, Git, import, integrations, automation and feedback. Follow the corresponding task guide before enabling a provider or automatic work. Account preferences such as your interface language are separate from project configuration.
 
@@ -148,7 +150,7 @@ In **Categories**, the owner and members manage the categories used to label iss
 
 ### Hide a project for yourself {#hide-project}
 
-Hide a project you no longer follow day to day to keep it out of your sidebar and home without leaving it. In the project's general settings, choose **Hide** in the **Danger zone**, or right-click the project in the sidebar and choose **Hide project**, then confirm. The menu asks first because the project leaves your navigation; the settings button hides it at once. Everyone in the project can hide it, including the owner and readers.
+Hide a project you no longer follow day to day to keep it out of your sidebar and home without leaving it. In the project's general settings, choose **Hide** in the **Danger zone**, or right-click the project in the sidebar and choose **Hide project**, then confirm. Both ask first, in a dialog that names the project, because it leaves your navigation; showing it again needs no confirmation. Everyone in the project can hide it, including the owner and readers.
 
 Hiding changes only your own navigation. The preference is saved on your account, so it follows you after signing in again and on your other devices. You keep your access and can still open and edit the project from a direct link or from the **Hidden projects** tab of **Account settings**. Other members still see the project, and its routines, integrations and notifications keep running. Opening a hidden project does not bring it back to your sidebar.
 
@@ -156,7 +158,7 @@ To bring it back, choose **Show** in **Hidden projects** or in the project's gen
 
 ### Leaving and deleting {#project-removal}
 
-A member or reader can use the leave action to remove their own access. Ask the owner to invite you again if you later need the project. Leaving is not deleting the project for everyone. The owner cannot leave: [transfer ownership](#transfer-ownership) to a member first.
+A member or reader can choose **Leave** in the danger zone to remove their own access; a dialog that names the project asks them to confirm first. Ask the owner to invite you again if you later need the project. Leaving is not deleting the project for everyone. The owner cannot leave: [transfer ownership](#transfer-ownership) to a member first.
 
 Project deletion is an owner action in the danger zone. Read the consequences and confirmation before using it, especially when the project contains issues, pages, files or integrations. If a normal save fails, keep your intended values, read the error and refresh the project before retrying; avoid repeatedly submitting a destructive action because its first result is uncertain.
 
@@ -187,7 +189,7 @@ Nothing is sent before you choose **Finish**: the project is created first, then
 
 Readers count toward the plan's guests-per-project limit like members, and so do pending invitations. There is no per-seat billing.
 
-Review the member list before removing someone. The owner row has no removal action; only a [transfer](#transfer-ownership) changes the owner. The owner can cancel a pending invitation before it is accepted; pending state does not disclose whether that address already has an account. Removal stops their membership access; it does not recall exports, screenshots or copies already received. Personal Git, AI and MCP credentials remain account-owned and do not transfer merely because project ownership changes.
+Review the member list before removing someone. The owner row has no removal action; only a [transfer](#transfer-ownership) changes the owner. The owner can cancel a pending invitation before it is accepted, after confirming in a dialog that names the invited address; the link in their email then stops working, and they can be invited again later. Pending state does not disclose whether that address already has an account. Removal stops their membership access; it does not recall exports, screenshots or copies already received. Personal Git, AI and MCP credentials remain account-owned and do not transfer merely because project ownership changes.
 
 ### Change a member's role {#change-role}
 

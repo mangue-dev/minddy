@@ -17,12 +17,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate; MIN-684 page promotion",
+    "version": "0.11.1 candidate; MIN-684 page promotion; MIN-743 destructive-action confirmations",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -55,13 +55,14 @@
       "content/documentation/reviews/database-property-types-2026-10-18.json",
       "components/pages/page-promotion-context.tsx",
       "components/pages/page-promotion-context.test.tsx",
-      "content/documentation/reviews/min-684-promote-page.md"
+      "content/documentation/reviews/min-684-promote-page.md",
+      "content/documentation/reviews/min-743-destructive-confirmations.md"
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root (optional-time and option-control source, component and isolated SQL review; unchanged claims retain prior evidence); agent:/root (MIN-690 recapture of create-a-database-steps on next dev at 8371778c4 with a throwaway database, record content/documentation/reviews/database-property-types-2026-10-18.json; other figures unchanged, evidence retained); agent:/root (MIN-684 page promotion: source and focused unit-test review of the menu entries, reader gating, save-before-promote and the Numo request; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (fr changed-passage and figure parity self-review); agent:/root (fr updated alt text for the column type picker; agent review, not human acceptance); agent:/root (fr translation of the MIN-684 single-entry promotion passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 14,
+    "fact": "agent:/root (optional-time and option-control source, component and isolated SQL review; unchanged claims retain prior evidence); agent:/root (MIN-690 recapture of create-a-database-steps on next dev at 8371778c4 with a throwaway database, record content/documentation/reviews/database-property-types-2026-10-18.json; other figures unchanged, evidence retained); agent:/root (MIN-684 page promotion: source and focused unit-test review of the menu entries, reader gating, save-before-promote and the Numo request; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for option deletion on Save in Edit options, record content/documentation/reviews/min-743-destructive-confirmations.md; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (fr changed-passage and figure parity self-review); agent:/root (fr updated alt text for the column type picker; agent review, not human acceptance); agent:/root (fr translation of the MIN-684 single-entry promotion passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -86,7 +87,7 @@
       "src": "/documentation/fr/database-setup-cards.png",
       "alt": "Aperçu du composant proposant la création d’une base avec Numo ou l’import d’une base existante.",
       "caption": "Suggestions pour une nouvelle base, présentées avec des données de démonstration. Choisissez Numo ou l’import, ou masquez les cartes pour continuer manuellement.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -103,7 +104,7 @@
       "src": "/documentation/fr/database-property-types.png",
       "alt": "Sélecteur de type de colonne avec un champ de recherche : texte, nombre, sélections, dates, personnes et case à cocher.",
       "caption": "Choisissez un type adapté aux valeurs à conserver.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -120,7 +121,7 @@
       "src": "/documentation/fr/database-entry.png",
       "alt": "Entrée de démonstration avec description, durée 2.5, case cochée et sélection vide.",
       "caption": "Ouvrez une entrée pour lire son texte complet et modifier les valeurs typées.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -136,7 +137,7 @@
       "src": "/documentation/fr/database-conversion-warning.png",
       "alt": "Avertissement de conversion : passer de Texte à Nombre efface une cellule incompatible, avec boutons Annuler et confirmation.",
       "caption": "Vérifiez le nombre réel de cellules incompatibles avant de confirmer. Annuler conserve les valeurs actuelles.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -152,7 +153,7 @@
       "src": "/documentation/fr/database-import-review.png",
       "alt": "Vérification d’un CSV local : deux pages d’entrées et deux colonnes, avec le bouton Importer la base.",
       "caption": "Vérifiez les entrées analysées et le nombre de colonnes avant l’import dans la base vide.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -168,7 +169,7 @@
       "src": "/documentation/fr/database-options.png",
       "alt": "Aperçu du composant Modifier les options avec des statuts en français, des flèches vers le haut et le bas, des corbeilles et l’explication de la suppression.",
       "caption": "Modifiez ensemble les noms, les couleurs et l’ordre des options. La corbeille retire une option des modifications en cours ; Enregistrer applique les changements. Données de démonstration.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -185,7 +186,7 @@
       "src": "/documentation/fr/database-date-time.png",
       "alt": "Aperçu du sélecteur de date avec le 12 octobre 2026 sélectionné, Préciser l’heure activé et Heure réglée sur 14:30.",
       "caption": "Activez Préciser l’heure pour saisir une heure. Cet aperçu du composant utilise des données de démonstration et le fuseau horaire de l’appareil.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -240,7 +241,7 @@ Le champ Sélection permet de choisir une option ; Sélection multiple permet d�
 
 Les nouvelles options reçoivent une couleur aléatoire de la palette qui n’est pas encore utilisée dans la colonne, qu’elles soient créées depuis une cellule ou dans le dialogue d’options. Lorsque les dix couleurs sont utilisées, elles peuvent se répéter. Vous pouvez toujours choisir la couleur manuellement.
 
-Dans Modifier les options, utilisez les flèches vers le haut et le bas d’une ligne pour réordonner les options. Utilisez sa corbeille pour supprimer une option. Enregistrer applique ensemble les noms, les couleurs, l’ordre et les suppressions. Une option supprimée est retirée de toutes les entrées qui l’utilisent, y compris celles dans la corbeille ; les autres options sélectionnées sont conservées. Annuler abandonne les modifications en cours.
+Dans Modifier les options, utilisez les flèches vers le haut et le bas d’une ligne pour réordonner les options. Utilisez sa corbeille pour supprimer une option. Enregistrer applique ensemble les noms, les couleurs, l’ordre et les suppressions ; si vous avez supprimé des options, il les liste d’abord et demande de confirmer avec **Supprimer et enregistrer**, car la suppression est irréversible. Une option supprimée est retirée de toutes les entrées qui l’utilisent, y compris celles dans la corbeille ; les autres options sélectionnées sont conservées. Annuler abandonne les modifications en cours.
 
 Choisissez un jour dans Date. Pour ajouter une heure, activez Préciser l’heure et remplissez Heure. La valeur s’enregistre pendant la modification et le sélecteur reste ouvert. Les valeurs avec heure s’affichent dans le fuseau horaire de votre appareil, y compris minuit. Désactiver Préciser l’heure conserve le jour affiché comme date sans heure. Les filtres de date correspondent au jour affiché.
 

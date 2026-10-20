@@ -1,5 +1,6 @@
 "use client";
 
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { CollectionFilterMenu } from "@/components/collection-filter-items";
 import { matchesCollectionFilters } from "@/lib/collection-filters";
 import { useCollectionFilters } from "@/lib/use-collection-filters";
@@ -902,7 +903,7 @@ function TriageRow({
           <span className="text-xs text-muted-foreground">{createdLabel}</span>
         </span>
       </div>
-      <span className="line-clamp-2 text-sm font-medium">{issue.title}</span>
+      <TruncatedText text={issue.title} className="line-clamp-2 text-sm font-medium" />
     </button>
   );
 }

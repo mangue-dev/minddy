@@ -21,12 +21,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680); MIN-693 project roles; MIN-718 hybrid issue search; MIN-688 live collaboration; MIN-684 page promotion",
+    "version": "0.11.1 candidate (MIN-680); MIN-693 project roles; MIN-718 hybrid issue search; MIN-688 live collaboration; MIN-684 page promotion; MIN-743 destructive-action confirmations",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -75,13 +75,14 @@
       "components/pages/page-promotion-context.tsx",
       "components/pages/page-promotion-context.test.tsx",
       "components/pages/page-database-view.tsx",
-      "content/documentation/reviews/min-684-promote-page.md"
+      "content/documentation/reviews/min-684-promote-page.md",
+      "content/documentation/reviews/min-743-destructive-confirmations.md"
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-688 live collaboration: source, convergence/authority unit tests and a rollback-only database probe; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-684 page promotion: source and focused unit-test review of the menu entries, reader gating, save-before-promote and the Numo request; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (en changed-text and retained-meaning self-review); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-718 added passages with catalog UI labels; agent review, not human acceptance); agent:/root (en MIN-688 rewritten saving, presence and conflict passages; agent review, not human acceptance); agent:/root (en MIN-684 promotion section with catalog UI labels; agent review, not human acceptance)",
+    "revision": 14,
+    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-688 live collaboration: source, convergence/authority unit tests and a rollback-only database probe; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-684 page promotion: source and focused unit-test review of the menu entries, reader gating, save-before-promote and the Numo request; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for page-menu Move to trash and unpublishing, record content/documentation/reviews/min-743-destructive-confirmations.md; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (en changed-text and retained-meaning self-review); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-718 added passages with catalog UI labels; agent review, not human acceptance); agent:/root (en MIN-688 rewritten saving, presence and conflict passages; agent review, not human acceptance); agent:/root (en MIN-684 promotion section with catalog UI labels; agent review, not human acceptance); agent:/root (en MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -117,7 +118,7 @@
       "src": "/documentation/en/page-create-menu.png",
       "alt": "Page creation menu offering New page and New database.",
       "caption": "Use the project page controls to choose a document or a database.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -133,7 +134,7 @@
       "src": "/documentation/en/page-editor.png",
       "alt": "Demonstration page with headings, paragraphs, task checkboxes and an issue mention.",
       "caption": "Headings, task blocks and the AUR-2 mention keep the page structured. This is demonstration content.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -149,7 +150,7 @@
       "src": "/documentation/en/page-comments.png",
       "alt": "Page activity dialog with a demonstration edit event and an empty comment composer.",
       "caption": "Read page activity and write a comment in the composer. No comment has been submitted in this example.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -165,7 +166,7 @@
       "src": "/documentation/en/page-file-states.png",
       "alt": "Demo page with an unfinished upload and a saved 67-byte file offering Download.",
       "caption": "Check the actual file state: the second attachment is available, while the first unfinished upload is not.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -181,7 +182,7 @@
       "src": "/documentation/en/page-history-preview.png",
       "alt": "Versions tab with an expanded earlier state, its author, Restore and the 30-day retention notice.",
       "caption": "Preview a saved state and compare it with the current page before restoring.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -197,7 +198,7 @@
       "src": "/documentation/en/page-publish.png",
       "alt": "Page publication dialog with Private selected and password or bearer-link alternatives.",
       "caption": "Private keeps the page within the project. Review the intended audience before changing publication.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -213,7 +214,7 @@
       "src": "/documentation/en/page-export.png",
       "alt": "Document export menu with Markdown (.md) and Print / PDF.",
       "caption": "Choose Markdown to download the document, or Print / PDF to open the printable view.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -229,7 +230,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Remove.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -266,7 +267,7 @@ Create subpages for related documents and use the tree controls to move or reord
 
 Favorite a page to surface it at the top of the project's page tree. These favorites are shared within the project, unlike a private notebook note. Link a page to an issue when the current document is task context; the resource's title follows page renaming.
 
-Deletion sends supported page work to trash. Check the selected branch before deleting and use recovery rather than recreating a lost page when its content should be retained. Entries with stored database values can be reordered within their database but cannot be moved outside it. If a move is rejected, inspect the hierarchy and entry type instead of forcing it through repeated attempts.
+Deletion sends supported page work to trash. From a page menu, **Move to trash** first asks for confirmation, naming the page and how many sub-pages go with it; they stay restorable from the trash for 30 days. Check the selected branch before deleting and use recovery rather than recreating a lost page when its content should be retained. Entries with stored database values can be reordered within their database but cannot be moved outside it. If a move is rejected, inspect the hierarchy and entry type instead of forcing it through repeated attempts.
 
 
 ![Page creation menu offering New page and New database.](/documentation/en/page-create-menu.png)
@@ -365,7 +366,7 @@ Open the link in a separate browser session without your account. Test the passw
 
 ### Revoke and check {#revoke-page}
 
-Return to publication controls and choose private. After successful revocation, open the old link anonymously and check that access is denied. Copies or screenshots already received cannot be recalled. File download URLs already delivered by a published page are signed for up to 24 hours. Revocation prevents new page visits but those previously issued file URLs can remain valid until they expire.
+Return to publication controls, choose private and confirm with **Unpublish**: the old link stops working, and publishing again creates a new link. After successful revocation, open the old link anonymously and check that access is denied. Copies or screenshots already received cannot be recalled. File download URLs already delivered by a published page are signed for up to 24 hours. Revocation prevents new page visits but those previously issued file URLs can remain valid until they expire.
 
 User page links remain `noindex` and are separate from the indexed official manual. Noindex is a discovery policy, not an access password. If a child or file is unexpectedly readable, revoke first, inspect the published branch and retest before forwarding a corrected link. Files belonging to unpublished pages do not gain access merely through an internal reference.
 

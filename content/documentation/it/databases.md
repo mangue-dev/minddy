@@ -17,12 +17,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate; MIN-684 page promotion",
+    "version": "0.11.1 candidate; MIN-684 page promotion; MIN-743 destructive-action confirmations",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -55,13 +55,14 @@
       "content/documentation/reviews/database-property-types-2026-10-18.json",
       "components/pages/page-promotion-context.tsx",
       "components/pages/page-promotion-context.test.tsx",
-      "content/documentation/reviews/min-684-promote-page.md"
+      "content/documentation/reviews/min-684-promote-page.md",
+      "content/documentation/reviews/min-743-destructive-confirmations.md"
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root (optional-time and option-control source, component and isolated SQL review; unchanged claims retain prior evidence); agent:/root (MIN-690 recapture of create-a-database-steps on next dev at 8371778c4 with a throwaway database, record content/documentation/reviews/database-property-types-2026-10-18.json; other figures unchanged, evidence retained); agent:/root (MIN-684 page promotion: source and focused unit-test review of the menu entries, reader gating, save-before-promote and the Numo request; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (it changed-passage and figure parity self-review); agent:/root (it updated alt text for the column type picker; agent review, not human acceptance); agent:/root (it translation of the MIN-684 single-entry promotion passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 14,
+    "fact": "agent:/root (optional-time and option-control source, component and isolated SQL review; unchanged claims retain prior evidence); agent:/root (MIN-690 recapture of create-a-database-steps on next dev at 8371778c4 with a throwaway database, record content/documentation/reviews/database-property-types-2026-10-18.json; other figures unchanged, evidence retained); agent:/root (MIN-684 page promotion: source and focused unit-test review of the menu entries, reader gating, save-before-promote and the Numo request; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for option deletion on Save in Edit options, record content/documentation/reviews/min-743-destructive-confirmations.md; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (it changed-passage and figure parity self-review); agent:/root (it updated alt text for the column type picker; agent review, not human acceptance); agent:/root (it translation of the MIN-684 single-entry promotion passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -86,7 +87,7 @@
       "src": "/documentation/it/database-setup-cards.png",
       "alt": "Anteprima del componente con le schede per configurare una nuova banca dati con Numo o importarne una esistente.",
       "caption": "Suggerimenti per una nuova banca dati con dati dimostrativi. Scegli Numo o l’importazione, oppure chiudi le schede per continuare manualmente.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -103,7 +104,7 @@
       "src": "/documentation/it/database-property-types.png",
       "alt": "Selettore del tipo di colonna con un campo di ricerca, testo, numero, selezioni, date, persone e casella di controllo.",
       "caption": "Scegli un tipo adatto ai valori da conservare.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -120,7 +121,7 @@
       "src": "/documentation/it/database-entry.png",
       "alt": "Voce dimostrativa con descrizione, durata 2.5, casella selezionata e selezione vuota.",
       "caption": "Apri una voce per leggere il testo completo e modificare i valori in base al tipo.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -136,7 +137,7 @@
       "src": "/documentation/it/database-conversion-warning.png",
       "alt": "Avviso di conversione: il passaggio da Testo a Numero svuota una cella incompatibile, con pulsanti per annullare o confermare.",
       "caption": "Controlla il numero effettivo di celle incompatibili prima di confermare. Annulla conserva i valori attuali.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -152,7 +153,7 @@
       "src": "/documentation/it/database-import-review.png",
       "alt": "Verifica di un CSV locale: due pagine di voci e due colonne, con il pulsante Importa database.",
       "caption": "Controlla le voci analizzate e il numero di colonne prima di importare nel database vuoto.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -168,7 +169,7 @@
       "src": "/documentation/it/database-options.png",
       "alt": "Anteprima del componente Modifica opzioni con stati in italiano, frecce verso l’alto e il basso, cestini e la spiegazione dell’eliminazione.",
       "caption": "Modifica insieme nomi, colori e ordine delle opzioni. Il cestino rimuove un’opzione dalla bozza; Salva applica le modifiche. Sono mostrati dati dimostrativi.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -185,7 +186,7 @@
       "src": "/documentation/it/database-date-time.png",
       "alt": "Anteprima del selettore di data con il 12 ottobre 2026 selezionato, Aggiungere un’ora attivo e Tempo impostato su 14:30.",
       "caption": "Attiva Aggiungere un’ora per inserire un’ora. Questa anteprima del componente usa dati dimostrativi e il fuso orario del dispositivo.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -240,7 +241,7 @@ Usa una cella Selezione per un’opzione o Selezione multipla per diverse opzion
 
 Le nuove opzioni ricevono un colore casuale della tavolozza che non è ancora usato nella colonna, sia quando le crei da una cella sia nella finestra delle opzioni. Una volta usati tutti e dieci i colori, possono ripetersi. Puoi comunque scegliere un colore manualmente.
 
-In «Modifica opzioni», usa le frecce verso l’alto e il basso accanto a una riga per riordinare le opzioni. Usa il cestino della riga per eliminare un’opzione. Salva applica insieme nomi, colori, ordine ed eliminazioni. Un’opzione eliminata viene rimossa da tutte le voci che la usano, comprese quelle nel cestino; le altre opzioni selezionate vengono mantenute. Annulla scarta le modifiche della bozza.
+In «Modifica opzioni», usa le frecce verso l’alto e il basso accanto a una riga per riordinare le opzioni. Usa il cestino della riga per eliminare un’opzione. Salva applica insieme nomi, colori, ordine ed eliminazioni; se hai eliminato delle opzioni, prima le elenca e chiede di confermare con **Elimina e salva**, perché l’eliminazione non si può annullare. Un’opzione eliminata viene rimossa da tutte le voci che la usano, comprese quelle nel cestino; le altre opzioni selezionate vengono mantenute. Annulla scarta le modifiche della bozza.
 
 Scegli un giorno in Data. Per includere un’ora, attiva Aggiungere un’ora e compila Tempo. Il valore viene salvato durante la modifica e il selettore rimane aperto. I valori con un’ora vengono visualizzati nel fuso orario del dispositivo, compresa la mezzanotte. Disattivando Aggiungere un’ora, il giorno visualizzato viene mantenuto come data senza ora. I filtri di data corrispondono al giorno visualizzato.
 

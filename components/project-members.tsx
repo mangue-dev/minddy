@@ -30,6 +30,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { usePlanGates } from "@/lib/use-billing-query";
@@ -194,6 +195,7 @@ export function ProjectMembers({
   // Removing a member is irreversible on the server side (the `project_members` line
   // is deleted): we go through an explicit confirmation.
   const [removeTarget, setRemoveTarget] = useState<Member | null>(null);
+  const [cancelInvitationTarget, setCancelInvitationTarget] = useState<{ id: string; email: string } | null>(null);
   // Demotion unassigns the person's open issues, so it is confirmed too.
   const [demoteTarget, setDemoteTarget] = useState<Member | null>(null);
   const [transferTarget, setTransferTarget] = useState<Member | null>(null);
@@ -491,7 +493,7 @@ export function ProjectMembers({
                           size="icon-sm"
                           aria-label={t("cancelInvitationAria")}
                           disabled={busy}
-                          onClick={() => withBusy(inv.id, () => cancelInvitation(inv.id))}
+                          onClick={() => setCancelInvitationTarget({ id: inv.id, email: inv.invited_email })}
                         >
                           <HugeiconsIcon icon={Cancel01Icon} />
                         </Button>
@@ -516,41 +518,45 @@ export function ProjectMembers({
         </SettingsGroup>
       )}
 
-      <Dialog
+      <ConfirmDeleteDialog
         open={removeTarget !== null}
         onOpenChange={(open) => {
           if (!open) setRemoveTarget(null);
         }}
-      >
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>
-              {t("removeMemberTitle", {
-                name: removeTarget ? displayName(removeTarget) : "",
-              })}
-            </DialogTitle>
-            <DialogDescription>{t("removeMemberDescription")}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRemoveTarget(null)}>
-              {tc("cancel")}
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={isBusy(removeTarget?.user_id)}
-              onClick={async () => {
-                if (!removeTarget) return;
-                const userId = removeTarget.user_id;
-                const ok = await withBusy(userId, () => removeMember(userId));
-                if (ok) setRemoveTarget(null);
-              }}
-            >
-              {isBusy(removeTarget?.user_id) ? <Spinner /> : null}
-              {t("remove")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={t("removeMemberTitle", {
+          name: removeTarget ? displayName(removeTarget) : "",
+        })}
+        description={t("removeMemberDescription")}
+        confirmLabel={t("remove")}
+        cancelLabel={tc("cancel")}
+        isLoading={isBusy(removeTarget?.user_id)}
+        closeOnConfirm={false}
+        onConfirm={async () => {
+          if (!removeTarget) return;
+          const userId = removeTarget.user_id;
+          const ok = await withBusy(userId, () => removeMember(userId));
+          if (ok) setRemoveTarget(null);
+        }}
+      />
+
+      <ConfirmDeleteDialog
+        open={cancelInvitationTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setCancelInvitationTarget(null);
+        }}
+        title={t("cancelInvitationTitle", { email: cancelInvitationTarget?.email ?? "" })}
+        description={t("cancelInvitationDescription")}
+        confirmLabel={t("cancelInvitationConfirm")}
+        cancelLabel={t("keepInvitation")}
+        isLoading={isBusy(cancelInvitationTarget?.id)}
+        closeOnConfirm={false}
+        onConfirm={async () => {
+          if (!cancelInvitationTarget) return;
+          const id = cancelInvitationTarget.id;
+          const ok = await withBusy(id, () => cancelInvitation(id));
+          if (ok) setCancelInvitationTarget(null);
+        }}
+      />
 
       <Dialog
         open={demoteTarget !== null}

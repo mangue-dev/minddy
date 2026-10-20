@@ -5,6 +5,7 @@ import { InformationCircleIcon } from "@hugeicons/core-free-icons";
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 /**
  * The little ⓘ that opens the detailed explanation — it OUTs the prose of the settings.
@@ -21,12 +22,14 @@ export function HelpHint({ children, label }: { children: ReactNode; label?: str
   const t = useTranslations("Settings");
   return (
     <Popover>
-      <PopoverTrigger
-        aria-label={label ?? t("feedbackLearnMore")}
-        className="inline-flex size-4 shrink-0 items-center justify-center rounded-full text-muted-foreground/60 outline-hidden transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <HugeiconsIcon icon={InformationCircleIcon} className="size-3.5" />
-      </PopoverTrigger>
+      <AppTooltip label={label ?? t("feedbackLearnMore")}>
+        <PopoverTrigger
+          aria-label={label ?? t("feedbackLearnMore")}
+          className="inline-flex size-4 shrink-0 items-center justify-center rounded-full text-muted-foreground/60 outline-hidden transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <HugeiconsIcon icon={InformationCircleIcon} className="size-3.5" />
+        </PopoverTrigger>
+      </AppTooltip>
       <PopoverContent
         align="start"
         className="max-w-xs text-xs leading-relaxed text-muted-foreground"

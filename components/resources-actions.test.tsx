@@ -9,7 +9,10 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ResourcePills } from "./resources";
 
 vi.mock("./resource-type-icon", () => ({ ResourceTypeIcon: () => <svg /> }));
-vi.mock("./ui/app-tooltip", () => ({ AppTooltip: ({ children }: { children: ReactNode }) => children }));
+vi.mock("./ui/app-tooltip", () => ({
+  AppTooltip: ({ children }: { children: ReactNode }) => children,
+  SelfLabelTooltip: ({ children }: { children: ReactNode }) => children,
+}));
 vi.mock("./file-viewer", () => ({ FileViewer: () => null }));
 vi.mock("./app-link", () => ({ default: ({ children, ...props }: { children: ReactNode }) => <a {...props}>{children}</a> }));
 

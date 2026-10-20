@@ -20,12 +20,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 12,
+  "revision": 13,
+  "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-19",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-693 project roles; MIN-718 hybrid issue search; MIN-737 project settings reorganization",
+    "version": "0.11.1 development (UI refinements); MIN-693 project roles; MIN-718 hybrid issue search; MIN-737 project settings reorganization; MIN-743 destructive-action confirmations",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -72,14 +72,16 @@
       "content/documentation/reviews/min-693-project-roles.md",
       "content/documentation/reviews/min-718-hybrid-issue-search.md",
       "components/project-integrations.tsx",
-      "content/documentation/reviews/min-737-settings-reorganization.md"
+      "content/documentation/reviews/min-737-settings-reorganization.md",
+      "app/f/[token]/public-comments.tsx",
+      "content/documentation/reviews/min-743-destructive-confirmations.md"
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_it_pt (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, pt-BR wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 integrations list: source review of the Objective for new feedback line and its in-place objective creation; no browser walkthrough; feedback-objective-selection predates this layout and is retained pending recapture; MIN-737: publish-a-feedback-board-workflow recaptured on 2026-10-19 in all six locales from the local candidate on the demo board — email identity, URL concealed — and inspected)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_it_pt with agent:/root (pt-BR pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, pt-BR wording and new-control review; existing procedural evidence retained); agent:/root (pt-BR changed-passage parity and localized-label review); agent:/root/min693_pt-BR with agent:/root (pt-BR MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (pt-BR translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (pt-BR translation of the MIN-737 project-settings second-pass passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-19"
+    "revision": 13,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_it_pt (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, pt-BR wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 integrations list: source review of the Objective for new feedback line and its in-place objective creation; no browser walkthrough; feedback-objective-selection predates this layout and is retained pending recapture; MIN-737: publish-a-feedback-board-workflow recaptured on 2026-10-19 in all six locales from the local candidate on the demo board — email identity, URL concealed — and inspected); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for unlinking a feedback post from its issue and a visitor deleting their own public comment, record content/documentation/reviews/min-743-destructive-confirmations.md; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_it_pt with agent:/root (pt-BR pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, pt-BR wording and new-control review; existing procedural evidence retained); agent:/root (pt-BR changed-passage parity and localized-label review); agent:/root/min693_pt-BR with agent:/root (pt-BR MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (pt-BR translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (pt-BR translation of the MIN-737 project-settings second-pass passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (pt-BR MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "api-and-webhooks"
@@ -105,7 +107,7 @@
       "src": "/documentation/pt-BR/publish-a-feedback-board-workflow.png",
       "alt": "Mural público de feedback ativado, com identidade dos visitantes por código de e-mail, a ação Ativar SSO e URL oculta.",
       "caption": "O proprietário ativa o mural e escolhe a identidade dos visitantes. Este mural de demonstração usa a verificação por e-mail; sua URL está oculta.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -122,7 +124,7 @@
       "src": "/documentation/pt-BR/submit-and-follow-feedback-workflow.png",
       "alt": "Formulário de feedback do visitante com título, descrição e visibilidade pública ativada.",
       "caption": "Um visitante identificado envia uma necessidade e escolhe sua visibilidade. O exemplo foi realmente enviado com a revisão automática desativada.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -138,7 +140,7 @@
       "src": "/documentation/pt-BR/feedback-objective-selection.png",
       "alt": "Prévia dos componentes de seleção de objetivo para um feedback e uma integração, ambos definidos como Docs.",
       "caption": "Seletores de objetivo com dados de demonstração. Novos feedbacks herdam a configuração da integração.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -155,7 +157,7 @@
       "src": "/documentation/pt-BR/feedback-pages-and-views-workflow.png",
       "alt": "Guia de feedback publicado e selecionado na navegação do mural, legível sem entrar na conta.",
       "caption": "Publique uma página, ative as guias de páginas e selecione-a para o mural. Esta página de demonstração foi aberta anonimamente; seu URL opaco mantém `noindex`.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -203,7 +205,7 @@ As gravações no mural público são limitadas a 10 MiB. A transcrição permit
 
 ### Votar, comentar e acompanhar {#follow}
 
-Vote em uma solicitação existente em vez de duplicá-la. Cada identidade tem um voto por feedback. Para comentar, é necessário identificar-se e os comentários públicos precisam estar habilitados; um comentário público aceita 5.000 caracteres. Você pode remover seu próprio comentário, e a equipe pode moderar comentários públicos.
+Vote em uma solicitação existente em vez de duplicá-la. Cada identidade tem um voto por feedback. Para comentar, é necessário identificar-se e os comentários públicos precisam estar habilitados; um comentário público aceita 5.000 caracteres. Você pode remover definitivamente seu próprio comentário depois de confirmar, e a equipe pode moderar comentários públicos.
 
 Abra Meus comentários para encontrar suas solicitações e votos, conforme o que sua identidade atual pode acessar. Leia ali, ou na solicitação, o status público e as respostas da equipe. Notas internas da equipe não são respostas públicas. Se o SSO tiver expirado, volte por um novo link do produto; mudar de navegador ou identidade pode alterar a lista pessoal.
 
@@ -243,7 +245,7 @@ Como membro do projeto, abra a solicitação e escolha uni-la a uma solicitaçã
 
 ### Criar ou vincular trabalho {#work}
 
-Transforme a solicitação em uma nova tarefa quando o trabalho ainda não estiver registrado. Confira os campos de criação antes de confirmar; sem campos fornecidos, a promoção cria por padrão trabalho no `backlog`. Se já existir uma tarefa, use a ação de vincular. **Link para um problema existente** busca entre as tarefas do projeto, exceto as canceladas e duplicadas. Descrever a necessidade também lista tarefas encontradas [pelo sentido](/docs/navigation#search-by-meaning) em **Relacionados pelo sentido**, depois das correspondências de texto, o que ajuda quando a solicitação não usa as palavras da tarefa. Um feedback já vinculado não pode ser promovido novamente. Desvincular mantém o último status público e encerra a relação com a tarefa.
+Transforme a solicitação em uma nova tarefa quando o trabalho ainda não estiver registrado. Confira os campos de criação antes de confirmar; sem campos fornecidos, a promoção cria por padrão trabalho no `backlog`. Se já existir uma tarefa, use a ação de vincular. **Link para um problema existente** busca entre as tarefas do projeto, exceto as canceladas e duplicadas. Descrever a necessidade também lista tarefas encontradas [pelo sentido](/docs/navigation#search-by-meaning) em **Relacionados pelo sentido**, depois das correspondências de texto, o que ajuda quando a solicitação não usa as palavras da tarefa. Um feedback já vinculado não pode ser promovido novamente. Desvincular pede confirmação antes; depois mantém o último status público e encerra a relação com a tarefa.
 
 O status vinculado acompanha a tarefa: `triage`/`backlog`/`duplicate` → `open`; `todo` → `planned`; `in_progress`/`in_review` → `in_progress`; `done` → `shipped`; `canceled` → `declined`. Devolver o trabalho ao `backlog` também reabre o status do feedback. Depois de alterar um estado, confira a tarefa vinculada e a solicitação sem sessão.
 

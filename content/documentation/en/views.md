@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-19",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles; MIN-736 closed columns hidden by default",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles; MIN-736 closed columns hidden by default; MIN-743 destructive-action confirmations",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -41,14 +41,16 @@
       "lib/public-board-projection.ts",
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
-      "content/documentation/reviews/min-693-project-roles.md"
+      "content/documentation/reviews/min-693-project-roles.md",
+      "components/share-view-dialog.tsx",
+      "content/documentation/reviews/min-743-destructive-confirmations.md"
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 default status columns: source and unit-test review of lib/view-filter.ts and the board status filter; no browser walkthrough, no new captures)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-736 added sentences with catalog status labels; agent review, not human acceptance)",
-    "date": "2026-10-19"
+    "revision": 9,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 default status columns: source and unit-test review of lib/view-filter.ts and the board status filter; no browser walkthrough, no new captures); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for stopping view sharing, record content/documentation/reviews/min-743-destructive-confirmations.md; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-736 added sentences with catalog status labels; agent review, not human acceptance); agent:/root (en MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "navigation",
@@ -70,7 +72,7 @@
       "src": "/documentation/en/work-view-filters.png",
       "alt": "Manual view filters and the sorting menu.",
       "caption": "Filter by issue properties or choose a sort order. The AI field is optional for these manual controls.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -86,7 +88,7 @@
       "src": "/documentation/en/work-share-view.png",
       "alt": "View-sharing dialog with private access selected.",
       "caption": "Private, password-protected and public access are distinct choices. This capture keeps the view private.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -134,7 +136,7 @@ Shared cards expose their titles, descriptions and displayed properties, includi
 
 ### Revoke and verify {#revoke-view}
 
-Return to the view's share controls and make it private to revoke publication. Open the old link anonymously again to check that access is denied. Revocation cannot recall copies or screenshots a visitor already saved.
+Return to the view's share controls and make it private to revoke publication, then confirm with **Stop sharing**. Sharing again creates a new link. Open the old link anonymously again to check that access is denied. Revocation cannot recall copies or screenshots a visitor already saved.
 
 Secret view links use the private-link publication path and remain `noindex`. That indexing policy limits search-engine discovery but is not a password. Keep the link private if its contents are sensitive, and use password protection when appropriate. Do not confuse a user's shared view with the indexed official documentation.
 

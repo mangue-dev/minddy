@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { JSONContent } from "@tiptap/core";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { Kbd } from "@/components/ui/kbd";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +18,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { removeSettledTasks } from "@/lib/scratchpad";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { resolvePromptCopyAutoStart } from "@/lib/prompt-copy-auto-start";
@@ -90,6 +93,7 @@ function SavedAgo({ updatedAt }: { updatedAt: string | null }) {
 
 function ScratchpadBody() {
   const t = useTranslations("Scratchpad");
+  const tCommon = useTranslations("Common");
   const { isOpen, setOpen, focusTaskIndex, clearFocusTask } = useScratchpad();
   const { user } = useAuth();
   // The notebook spans projects, so its mention picker uses the same global
@@ -124,6 +128,14 @@ function ScratchpadBody() {
   // agent feed) so it's clear the notes continue past the top/bottom.
   const { ref: fadeRef, scrollProps } = useScrollFade<HTMLDivElement>();
 
+  // Counted on the live notebook first, so the confirmation says how many
+  // tasks go (MIN-743); nothing to remove needs no dialog.
+  const [settledToRemove, setSettledToRemove] = useState(0);
+  const requestRemoveSettled = () => {
+    const count = removeSettledTasks(liveMarkdown()).removed;
+    if (count > 0) setSettledToRemove(count);
+    else toast(t("noSettled"));
+  };
   const removeSettled = () => {
     const removed = removeSettledRef.current?.() ?? 0;
     if (removed > 0) toast.success(t("removedSettled"));
@@ -210,7 +222,7 @@ function ScratchpadBody() {
                 {t("copyAll")}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onSelect={removeSettled}>
+              <DropdownMenuItem variant="destructive" onSelect={requestRemoveSettled}>
                 <HugeiconsIcon icon={Delete02Icon} className="size-4" />
                 {t("removeSettled")}
               </DropdownMenuItem>
@@ -230,7 +242,10 @@ function ScratchpadBody() {
               <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{t("close")}</TooltipContent>
+          <TooltipContent className="flex items-center gap-1.5">
+            {t("close")}
+            <Kbd size="sm">Esc</Kbd>
+          </TooltipContent>
         </Tooltip>
       </div>
 
@@ -270,6 +285,17 @@ function ScratchpadBody() {
           )}
         </div>
       </div>
+      <ConfirmDeleteDialog
+        open={settledToRemove > 0}
+        onOpenChange={(open) => {
+          if (!open) setSettledToRemove(0);
+        }}
+        title={t("removeSettledTitle", { count: settledToRemove })}
+        description={t("removeSettledDescription")}
+        confirmLabel={t("removeSettledConfirm")}
+        cancelLabel={tCommon("cancel")}
+        onConfirm={removeSettled}
+      />
     </>
   );
 }

@@ -348,6 +348,7 @@ export function PlanSection() {
           <AlertDialogFooter>
             <AlertDialogCancel>{t("cancelConfirmKeep")}</AlertDialogCancel>
             <AlertDialogAction
+              variant="destructive"
               onClick={(event) => {
                 event.preventDefault();
                 void setCancel(true);

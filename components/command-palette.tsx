@@ -1042,17 +1042,8 @@ export function CommandPalette({
         icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />,
         keywords: ["supprimer", "delete", "remove"],
         filterCategory: "bulk",
-        execute: () => {
-          if (
-            typeof window !== "undefined" &&
-            window.confirm(tBulk("deleteConfirm", { count }))
-          ) {
-            onDelete();
-          } else {
-            // Cancellation: keep the pallet open on the bulk list.
-            return false;
-          }
-        },
+        // Opens the selection's confirmation dialog; nothing is trashed yet.
+        execute: () => onDelete(),
       });
     }
 

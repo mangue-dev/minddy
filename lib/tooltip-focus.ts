@@ -11,7 +11,7 @@
  * “won't fix”: the focus comes from the browser, not from them) — the solution is
  * caller's side, here.
  *
- * Two rules, and that's it:
+ * Three rules, and that's it:
  *
  * 1. **Returning focus does not count.** A `focus` that just happens
  * after the window has regained control is not a gesture: it is the
@@ -22,6 +22,13 @@
  * navigate using the keyboard? ". A focus placed by a click, or by code which
  * returns control to a trigger by closing a popover, is not visible —
  * and a tooltip that opens there does not respond to any request.
+ *
+ * 3. **Only a key that moves focus opens on focus** (MIN-724). Tab, the
+ * arrows, Home and End move focus from one control to the next; Enter, Space
+ * or a shortcut that opens a dialog does not, and the focus that dialog then
+ * places on its first control (often a close button) is code, even though
+ * the browser marks it `:focus-visible` after a key press. A tooltip opening
+ * there covers the title and swallows the first Escape.
  *
  * What it DOES NOT change: hovering, and keyboard tabulation. A real
  * `Tab` is preceded by a `keydown`, which closes the flag (see the follower
@@ -34,14 +41,32 @@ export type TooltipFocusSignal = {
   refocusPending: boolean;
   /** The element carries `:focus-visible` (keyboard navigation). */
   focusVisible: boolean;
+  /** The last gesture was a key that moves focus (Tab, arrows, Home, End). */
+  navigationKey: boolean;
 };
+
+const NAVIGATION_KEYS = new Set([
+  "Tab",
+  "ArrowUp",
+  "ArrowDown",
+  "ArrowLeft",
+  "ArrowRight",
+  "Home",
+  "End",
+]);
+
+/** Whether a `keydown` with this `key` moves focus between controls. */
+export function isFocusNavigationKey(key: string): boolean {
+  return NAVIGATION_KEYS.has(key);
+}
 
 /** The decision, alone, without DOM: should we open the tooltip on this `focus`? */
 export function shouldOpenTooltipOnFocus({
   refocusPending,
   focusVisible,
+  navigationKey,
 }: TooltipFocusSignal): boolean {
-  return focusVisible && !refocusPending;
+  return focusVisible && !refocusPending && navigationKey;
 }
 
 /**
@@ -49,25 +74,31 @@ export function shouldOpenTooltipOnFocus({
  *
  * `markRefocus()` on the `focus` of the window (or a `visibilitychange` which
  * returns visible), `markGesture()` on the first `keydown` / `pointerdown`:
- * a gesture proves that the user is controlling, and returns the focus according to its direction
- * usual. `consumeRefocus()` reads AND closes the flag — the storage of the
- * navigateur ne concerne qu'un seul `focus`.
+ * a gesture proves that the user is in control again, and focus follows its
+ * usual rules. `consumeRefocus()` reads AND clears the flag: the browser's
+ * restoration concerns a single `focus`. `navigating` remembers whether that
+ * gesture was a focus-moving key.
  */
 export type WindowRefocusTracker = {
   markRefocus: () => void;
-  markGesture: () => void;
+  /** `navigation`: the gesture is a key that moves focus. */
+  markGesture: (navigation?: boolean) => void;
   consumeRefocus: () => boolean;
   readonly refocusPending: boolean;
+  /** The latest gesture was a focus-moving key. */
+  readonly navigating: boolean;
 };
 
 export function createWindowRefocusTracker(): WindowRefocusTracker {
   let pending = false;
+  let navigating = false;
   return {
     markRefocus: () => {
       pending = true;
     },
-    markGesture: () => {
+    markGesture: (navigation = false) => {
       pending = false;
+      navigating = navigation;
     },
     consumeRefocus: () => {
       const was = pending;
@@ -76,6 +107,9 @@ export function createWindowRefocusTracker(): WindowRefocusTracker {
     },
     get refocusPending() {
       return pending;
+    },
+    get navigating() {
+      return navigating;
     },
   };
 }

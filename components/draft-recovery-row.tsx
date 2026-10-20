@@ -1,5 +1,6 @@
 "use client";
 
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { Cancel01Icon, Clock01Icon as FileClock } from "@hugeicons/core-free-icons";
@@ -62,9 +63,9 @@ export function DraftRecoveryRow({
           <button
             type="button"
             onClick={() => onRecover(d.id)}
-            className="max-w-[13rem] truncate py-0.5 text-foreground outline-none"
+            className="max-w-[13rem] min-w-0 py-0.5 text-foreground outline-none"
           >
-            {d.title.trim() || t("untitled")}
+            <TruncatedText text={d.title.trim() || t("untitled")} />
           </button>
           <Tooltip>
             <TooltipTrigger asChild>

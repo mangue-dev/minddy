@@ -35,6 +35,8 @@ export interface ConfirmDeleteDialogProps {
   onConfirm: () => void | Promise<void>
   isLoading?: boolean
   closeOnConfirm?: boolean
+  /** Forwarded to the dialog content as `data-testid`. */
+  testId?: string
 }
 
 export function ConfirmDeleteDialog({
@@ -47,6 +49,7 @@ export function ConfirmDeleteDialog({
   onConfirm,
   isLoading: isLoadingProp,
   closeOnConfirm = true,
+  testId,
 }: ConfirmDeleteDialogProps) {
   const [isPending, setIsPending] = React.useState(false)
   const isLoading = isLoadingProp ?? isPending
@@ -64,7 +67,7 @@ export function ConfirmDeleteDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+      <AlertDialogContent data-testid={testId}>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           {description && (

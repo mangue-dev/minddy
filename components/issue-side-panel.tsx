@@ -901,6 +901,7 @@ export function IssueSidePanel({
                   variant="ghost"
                   size="icon-sm"
                   aria-label={tCommon("close")}
+                  shortcut={["Esc"]}
                   className="rounded-full text-muted-foreground hover:text-foreground"
                 >
                   <HugeiconsIcon icon={Cancel01Icon} />
@@ -1293,7 +1294,7 @@ export function IssueSidePanel({
       <ConfirmDeleteDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
-        title={t("deleteDialogTitle")}
+        title={t("deleteDialogTitle", { title: issue.title })}
         description={t("deleteDialogDescription", { days: TRASH_RETENTION_DAYS })}
         confirmLabel={tCommon("moveToTrash")}
         cancelLabel={tCommon("cancel")}

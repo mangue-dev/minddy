@@ -119,6 +119,10 @@ is no UI barrel. The former `mangue-ui` package is no longer a dependency, and
 `lib/ui-components-ownership.test.ts` fails if it returns. The persisted theme
 key `mangue-ui-theme` is kept for existing preferences.
 
+[DESIGN.md](DESIGN.md) holds the interface rules every UI change follows,
+starting with the rule that destructive actions always ask for confirmation
+through `ConfirmDeleteDialog`.
+
 ## Internationalization: catalog and call-site contract
 
 Visible interface copy uses `next-intl`. The supported locales are `en`, `fr`,

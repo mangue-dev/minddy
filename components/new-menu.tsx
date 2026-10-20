@@ -131,7 +131,9 @@ export function NewMenu({
             {!collapsed ? <span className="truncate">{issueAction.label}</span> : null}
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="top">
+        {/* Collapsed, the button has no visible text: the tooltip names it. */}
+        <TooltipContent side="top" className="flex items-center gap-1.5">
+          {collapsed ? issueAction.label : null}
           <Kbd size="sm">{issueAction.shortcut}</Kbd>
         </TooltipContent>
       </Tooltip>

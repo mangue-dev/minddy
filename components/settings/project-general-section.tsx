@@ -7,6 +7,7 @@ import { useAppRouter } from "@/lib/use-app-router";
 import {useTranslations} from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { toast } from "sonner";
 import {useAuth} from "@/lib/auth-context";
 import {useProjects} from "@/lib/projects-context";
@@ -42,6 +43,7 @@ export function ProjectGeneralSection({
   const { updateProject, refetch } = useProjects();
 
   const [leaving, setLeaving] = useState(false);
+  const [confirmLeaveOpen, setConfirmLeaveOpen] = useState(false);
 
   // Name and key save on their own, where they are shown (MIN-737).
   const saveName = async (next: string) => {
@@ -98,7 +100,7 @@ export function ProjectGeneralSection({
                 variant="outline"
                 size="sm"
                 disabled={leaving}
-                onClick={() => void handleLeave()}
+                onClick={() => setConfirmLeaveOpen(true)}
               >
                 {leaving ? <Spinner /> : <HugeiconsIcon icon={LogOutIcon} />}
                 {t("leave")}
@@ -106,6 +108,16 @@ export function ProjectGeneralSection({
             }
           />
         </SettingsGroup>
+        <ConfirmDeleteDialog
+          open={confirmLeaveOpen}
+          onOpenChange={setConfirmLeaveOpen}
+          title={t("leaveProjectTitle", { name: project.name })}
+          description={t("leaveProjectDescription")}
+          confirmLabel={t("leave")}
+          cancelLabel={tc("cancel")}
+          onConfirm={handleLeave}
+          isLoading={leaving}
+        />
       </>
     );
   }

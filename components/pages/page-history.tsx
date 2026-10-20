@@ -195,6 +195,7 @@ export function PageHistorySheet({
                 variant="ghost"
                 size="icon-sm"
                 aria-label={tCommon("close")}
+                shortcut={["Esc"]}
                 className="rounded-full text-muted-foreground hover:text-foreground"
               >
                 <HugeiconsIcon icon={Cancel01Icon} />

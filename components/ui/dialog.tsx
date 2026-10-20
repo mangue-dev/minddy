@@ -1,17 +1,18 @@
 "use client"
 
 import * as React from "react"
+import { useTranslations } from "next-intl"
 import { Dialog as DialogPrimitive } from "radix-ui"
 import { Drawer } from "vaul"
 
 import { cn } from "@/lib/utils"
 import { useMediaQuery } from "@/lib/use-media-query"
 import { Button } from "./button"
+import { CloseButton } from "./close-button"
 import { COARSE_INSET_HIT_AREA } from "./touch-target"
 import { Sheet, SheetClose, SheetDescription, SheetTitle, SheetTrigger } from "./sheet"
 import { MobileSheetContent } from "./mobile-sheet"
 import { useMobileLayout } from "@/lib/use-mobile-layout"
-import { XIcon } from "lucide-react"
 
 /**
  * Minddy's dialog. Two layers live in this one file:
@@ -180,15 +181,9 @@ function ModalDialogContent({
         {children}
         {showCloseButton && (
           <DialogPrimitive.Close data-slot="dialog-close" asChild>
-            <Button
-              variant="ghost"
+            <CloseButton
               className={`absolute top-4 right-4 z-10 size-7 rounded-full ${COARSE_INSET_HIT_AREA} bg-control text-muted-foreground hover:bg-control-hover hover:text-foreground`}
-              size="icon-sm"
-            >
-              <XIcon
-              />
-              <span className="sr-only">Close</span>
-            </Button>
+            />
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Content>
@@ -226,10 +221,20 @@ function DialogFooter({
       {children}
       {showCloseButton && (
         <ModalDialogClose asChild>
-          <Button variant="outline">Close</Button>
+          <FooterCloseButton />
         </ModalDialogClose>
       )}
     </div>
+  )
+}
+
+/** The footer's optional "Close", localized like the corner cross. */
+function FooterCloseButton(props: React.ComponentProps<typeof Button>) {
+  const t = useTranslations("Common")
+  return (
+    <Button variant="outline" {...props}>
+      {t("close")}
+    </Button>
   )
 }
 

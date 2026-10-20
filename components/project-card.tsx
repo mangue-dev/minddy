@@ -25,6 +25,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 /** One quick stat: icon then value, with a tooltip explaining what it is. */
 function Stat({
@@ -107,17 +108,19 @@ export function ProjectCard({ project }: { project: Project }) {
         </div>
 
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              aria-label={t("projectOptions")}
-              onClick={(e) => e.stopPropagation()}
-              onPointerDown={(e) => e.stopPropagation()}
-              className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            >
-              <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
-            </button>
-          </DropdownMenuTrigger>
+          <AppTooltip label={t("projectOptions")}>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label={t("projectOptions")}
+                onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+                className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
+              </button>
+            </DropdownMenuTrigger>
+          </AppTooltip>
           <DropdownMenuContent
             align="end"
             onClick={(e) => e.stopPropagation()}

@@ -4,6 +4,7 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import en from "@/messages/en.json";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import type { Collaborator, Invitation, Member } from "@/lib/types";
 
 const mocks = vi.hoisted(() => ({
@@ -64,7 +65,8 @@ beforeEach(async () => {
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
-  await act(() => root.render(<ProjectMembers projectId="p" enabled />));
+  // Help hints carry a tooltip, which needs the app's root provider.
+  await act(() => root.render(<TooltipProvider><ProjectMembers projectId="p" enabled /></TooltipProvider>));
 });
 
 afterEach(async () => {

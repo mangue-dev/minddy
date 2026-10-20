@@ -18,7 +18,7 @@
  * The six public pages (and the 404, which renders the same chrome) only need
  * of these four namespaces. Everything else — authenticated app, screens
  * connection, feedback boards, shared views — receive the full catalog
- * depuis son propre segment, via `components/full-catalog-messages.tsx`.
+ * from their own segment, via `components/full-catalog-messages.tsx`.
  *
  * ## The root layout does not choose according to the route
  *
@@ -30,7 +30,7 @@
  *
  * ## Maintained by testing, not by hand
  *
- * `public-client-messages.test.ts` part de `app/layout.tsx`, de `not-found.tsx`
+ * `public-client-messages.test.ts` starts from `app/layout.tsx`, `not-found.tsx`
  * and `(marketing)` / `(legal)` layouts, follows the imports, and checks that everything
  * `useTranslations("X")` found in an accessible CLIENT component has its
  * `X` in the list below. Add a client component to the public site that
@@ -39,7 +39,7 @@
  * complet montent bien leur provider.
  */
 
-/** Namespaces servis aux composants clients des six pages publiques. */
+/** Namespaces served to the client components of the public pages. */
 export const PUBLIC_CLIENT_NAMESPACES = [
   // The cookies banner, mounted by the root layout therefore present everywhere.
   "CookieBanner",
@@ -47,11 +47,15 @@ export const PUBLIC_CLIENT_NAMESPACES = [
   "Landing",
   // The footer language selector.
   "Language",
-  // Plan and quota titles, shared with the plan settings
-  // facturation de l'app (`components/marketing/pricing-plans.tsx`).
+  // Plan and quota titles, shared with the app's billing plan settings
+  // (`components/marketing/pricing-plans.tsx`).
   "Billing",
   // The root error boundary must remain translated even when a child layout fails.
   "ServerUnavailable",
+  // Shared labels of the UI primitives, such as the localized "Close" of the
+  // dialog, sheet and side-panel crosses (`components/ui/close-button.tsx`).
+  // About 1 KB raw.
+  "Common",
 ] as const;
 
 /**

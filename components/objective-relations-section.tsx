@@ -10,6 +10,7 @@
 // Adding is the same two steps in ONE popover as on a ticket: pick the type,
 // then the target among the project's open issues and other objectives.
 
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, Link02Icon } from "@hugeicons/core-free-icons";
 import { useAppRouter } from "@/lib/use-app-router";
@@ -17,6 +18,7 @@ import { useMemo, useState } from "react";
 import { RelationObjectiveLabel } from "@/components/relation-objective-label";
 import { SemanticIssueGroup } from "@/components/semantic-issue-group";
 import { useTranslations } from "next-intl";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Button } from "@/components/ui/button";
 import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -56,6 +58,8 @@ export function ObjectiveRelationsSection({
   const router = useAppRouter();
   const t = useTranslations("Relations");
   const tCommon = useTranslations("Common");
+  // Removing a relation names its other end and asks first (MIN-743).
+  const [removeTarget, setRemoveTarget] = useState<{ id: string; name: string } | null>(null);
   // Project readers (MIN-693): the relations are listed, never changed.
   const { canWrite } = useProjectCapabilities(projectId);
   const { relations, addRelation, removeRelation } =
@@ -305,15 +309,14 @@ export function ObjectiveRelationsSection({
                                 {issueIdentifier(projectKey, otherIssue.number)}
                               </span>
                             )}
-                            <span
+                            <TruncatedText
+                              text={otherIssue?.title ?? ""}
                               className={cn(
-                                "min-w-0 flex-1 truncate text-sm",
+                                "flex-1 truncate text-sm",
                                 otherIssue?.status === "done" &&
                                   "text-muted-foreground line-through",
                               )}
-                            >
-                              {otherIssue?.title}
-                            </span>
+                            />
                           </>
                         )}
                         {r.resolved && (
@@ -329,9 +332,14 @@ export function ObjectiveRelationsSection({
                         aria-label={tCommon("remove")}
                         className="size-6 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/relrow:opacity-100 focus-visible:opacity-100"
                         onClick={() =>
-                          void Promise.resolve(removeRelation(r.id)).catch(
-                            (err) => toast.error((err as Error).message),
-                          )
+                          setRemoveTarget({
+                            id: r.id,
+                            name: isObjective
+                              ? (otherObjective?.name ?? "")
+                              : otherIssue
+                                ? `${issueIdentifier(projectKey, otherIssue.number)} ${otherIssue.title}`
+                                : "",
+                          })
                         }
                       >
                         <HugeiconsIcon icon={Cancel01Icon} />
@@ -359,6 +367,7 @@ export function ObjectiveRelationsSection({
     (r) => r.relation === "blocked_by" && !r.resolved,
   );
   return (
+    <>
     <Popover open={boardOpen} onOpenChange={setBoardOpen}>
       <PopoverTrigger asChild>
         <button
@@ -411,5 +420,22 @@ export function ObjectiveRelationsSection({
         </div>
       </PopoverContent>
     </Popover>
+      <ConfirmDeleteDialog
+        open={removeTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setRemoveTarget(null);
+        }}
+        title={t("removeTitle", { name: removeTarget?.name ?? "" })}
+        description={t("removeDescription")}
+        confirmLabel={tCommon("remove")}
+        cancelLabel={tCommon("cancel")}
+        onConfirm={() => {
+          if (!removeTarget) return;
+          void Promise.resolve(removeRelation(removeTarget.id)).catch(
+            (err) => toast.error((err as Error).message),
+          );
+        }}
+      />
+    </>
   );
 }
