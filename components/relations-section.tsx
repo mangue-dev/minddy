@@ -37,7 +37,7 @@ import { Button } from "@/components/ui/button";
 import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { isClosedStatus, issueIdentifier } from "@/lib/issue-constants";
+import { issueIdentifier } from "@/lib/issue-constants";
 import { issueTierKeyword, orderIssuesForSearch } from "@/lib/issue-search-order";
 import { RELATION_PRIORITY, RELATION_TYPES } from "@/lib/relation-constants";
 import {
@@ -143,7 +143,7 @@ export function RelationsSection({
     return orderIssuesForSearch(
       allIssues.filter(
         (i) =>
-          i.id !== issue.id && !linked.has(i.id) && !isClosedStatus(i.status),
+          i.id !== issue.id && !linked.has(i.id),
       ),
       (i) => i.status,
     );
@@ -194,6 +194,7 @@ export function RelationsSection({
           searchValue={query}
           onSearchValueChange={setQuery}
           searchPlaceholder={step ? t("searchTarget") : undefined}
+          focusKey={step}
           // Wider than the default w-60: in step 2 we choose a ticket
           // by its title, and 240px cut it by a third. Stay in the panel.
           contentClassName="w-80"

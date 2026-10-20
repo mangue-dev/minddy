@@ -67,7 +67,7 @@ function roleLabel(t: MembersT, role: ProjectRole): string {
  */
 const ROLE_TRIGGER_CLASS = {
   badge:
-    "w-auto gap-1 rounded-full px-2 py-1.5 text-xs md:text-xs font-medium leading-none data-[size=sm]:h-7 data-[size=sm]:md:h-7 data-[size=sm]:rounded-full [&_svg]:size-3.5",
+    "w-auto gap-1 rounded-full px-2 py-1.5 text-xs md:text-xs font-medium leading-tight data-[size=sm]:h-7 data-[size=sm]:md:h-7 data-[size=sm]:rounded-full [&_svg]:size-3.5",
   field:
     "w-auto gap-1.5 rounded-full px-3 font-medium data-[size=default]:h-9 data-[size=default]:md:h-9",
 } as const;

@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { PROPERTY_ICONS } from "./database-property-icons";
+import { DatabaseOptionsDialog } from "./database-property-dialogs";
 import type { PageSummary } from "@/lib/pages-api";
 import type { DatabaseProperty } from "@/lib/page-databases";
 import { usePageDatabase } from "@/lib/use-page-database";
@@ -39,6 +40,8 @@ export function DatabaseColumnName({
   const name = property?.name ?? database.database_title_name ?? t("name");
   const [editing, setEditing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const hasOptions = property?.type === "select" || property?.type === "multi_select";
   const suppressClick = useRef(false);
   useEffect(() => {
     if (dragging) { suppressClick.current = true; setMenuOpen(false); }
@@ -105,6 +108,7 @@ export function DatabaseColumnName({
       </form>
     );
   return (
+    <>
     <DropdownMenu
       open={menuOpen}
       onOpenChange={(open) => {
@@ -171,7 +175,24 @@ export function DatabaseColumnName({
             {t("editColumn")}
           </DropdownMenuItem>
         )}
+        {/* A select column's choices, without going through the column
+            dialog: the same editor as the cells' "Edit options". */}
+        {property && hasOptions && (
+          <DropdownMenuItem onSelect={() => setOptionsOpen(true)}>
+            <AppIcon icon={PROPERTY_ICONS[property.type]} className="size-4" />
+            {t("editOptions")}
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
+    {property && optionsOpen && (
+      <DatabaseOptionsDialog
+        projectId={projectId}
+        database={database}
+        property={property}
+        onClose={() => setOptionsOpen(false)}
+      />
+    )}
+    </>
   );
 }

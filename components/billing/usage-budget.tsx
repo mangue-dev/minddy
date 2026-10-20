@@ -78,6 +78,17 @@ export function UsageBudgetSummary({ compact = false }: { compact?: boolean }) {
       : planId === "go"
         ? CARD_TONES.butter
         : CARD_TONES.sky;
+  const planBadge = (
+    <Badge variant="secondary" className={cn("shrink-0", tone)}>
+      {t(
+        planId === "pro"
+          ? "planPro"
+          : planId === "go"
+            ? "planGo"
+            : "planFree",
+      )}
+    </Badge>
+  );
   return (
     <div
       className={cn(
@@ -87,20 +98,16 @@ export function UsageBudgetSummary({ compact = false }: { compact?: boolean }) {
       )}
     >
       <div className="min-w-0 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-sm text-muted-foreground">
-            {t("budgetTitle")}
-          </span>
-          <Badge variant="secondary" className={cn("shrink-0", tone)}>
-            {t(
-              planId === "pro"
-                ? "planPro"
-                : planId === "go"
-                  ? "planGo"
-                  : "planFree",
-            )}
-          </Badge>
-        </div>
+        {/* The popover needs no title: its trigger already says what it shows,
+            and the plan sits next to the figure instead. */}
+        {!compact && (
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm text-muted-foreground">
+              {t("budgetTitle")}
+            </span>
+            {planBadge}
+          </div>
+        )}
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
           {usageLoading ? (
             <Skeleton className={compact ? "h-8 w-20" : "h-11 w-28"} />
@@ -122,6 +129,7 @@ export function UsageBudgetSummary({ compact = false }: { compact?: boolean }) {
           <span className="text-sm text-muted-foreground">
             {t("budgetRemaining")}
           </span>
+          {compact && <span className="ml-auto self-center">{planBadge}</span>}
         </div>
         {usageLoading ? (
           <Skeleton className="h-2 w-full" />

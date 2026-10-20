@@ -18,12 +18,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 12,
+  "revision": 13,
+  "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-19",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677); MIN-737 account settings reorganization",
+    "version": "0.11.1 candidate (MIN-677); MIN-737 account settings reorganization; UI/UX refinements batch: account settings open on Preferences",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -70,14 +70,18 @@
       "components/settings/account-desktop-section.tsx",
       "components/settings/account-issues-section.tsx",
       "content/documentation/reviews/min-737-settings-reorganization.md",
-      "components/settings/account-hidden-projects-section.tsx"
+      "components/settings/account-hidden-projects-section.tsx",
+      "lib/settings-sections.ts",
+      "components/app-sidebar.tsx",
+      "components/mobile-account.tsx",
+      "lib/keyboard/shortcuts.ts"
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:/root (theme palette, high-contrast and transparency controls: source and test review; the preferences capture predates these rows and is retained); agent:/root (MIN-737 account settings reorganization: source review of the tab order, the in-place profile editing, the Preferences, Issues and AI & Numo contents and the Privacy & data tab; profile-and-preferences-workflow recaptured on 2026-10-19 in all six locales from the local candidate showing the profile header edited in place (avatar menu, name field or mobile sheet; the Edit profile dialog was removed the same day), and inspected; no other browser walkthrough); agent:/root (MIN-737 second pass: Hidden projects moved from Preferences to its own account tab; source review of components/settings/account-settings-page.tsx; no new captures)",
-    "language": "agent:/root (en source and it translation self-review of the changed paragraph); agent:/root (it MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (it translation of the MIN-737 second-pass Hidden projects sentence with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-19"
+    "revision": 13,
+    "fact": "agent:/root (theme palette, high-contrast and transparency controls: source and test review; the preferences capture predates these rows and is retained); agent:/root (MIN-737 account settings reorganization: source review of the tab order, the in-place profile editing, the Preferences, Issues and AI & Numo contents and the Privacy & data tab; profile-and-preferences-workflow recaptured on 2026-10-19 in all six locales from the local candidate showing the profile header edited in place (avatar menu, name field or mobile sheet; the Edit profile dialog was removed the same day), and inspected; no other browser walkthrough); agent:/root (MIN-737 second pass: Hidden projects moved from Preferences to its own account tab; source review of components/settings/account-settings-page.tsx; no new captures); agent:/root (UI/UX refinements batch, account settings opening tab: source review of ACCOUNT_SETTINGS_DEFAULT_TAB in lib/settings-sections.ts, the account menu entries in components/app-sidebar.tsx, the mobile menu in components/mobile-account.tsx and the Command/Ctrl+comma binding in lib/keyboard/shortcuts.ts; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (en source and it translation self-review of the changed paragraph); agent:/root (it MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (it translation of the MIN-737 second-pass Hidden projects sentence with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (it translation of the account settings opening tab changed passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "choose-an-instance",
@@ -109,7 +113,7 @@
       "src": "/documentation/it/account-security-workflow.png",
       "alt": "Scheda di autenticazione a due fattori con pulsante di attivazione.",
       "caption": "Inizia qui, poi verifica l’autenticatore e conserva privatamente i codici di recupero.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -126,7 +130,7 @@
       "src": "/documentation/it/profile-and-preferences-workflow.png",
       "alt": "Intestazione del profilo con l’avatar e il suo badge di modifica, il nome e l’email di sola lettura.",
       "caption": "Seleziona l’avatar per generarne o caricarne uno, oppure il nome per cambiarlo; l’indirizzo email resta di sola lettura.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -143,7 +147,7 @@
       "src": "/documentation/it/profile-and-preferences-preferences-workflow.png",
       "alt": "Selettore della lingua, controlli del tema chiaro, scuro e di sistema, selettori di palette delle modalità chiara e scura e interruttore della trasparenza.",
       "caption": "La lingua dell’account e quella del sito pubblico si impostano separatamente.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -160,7 +164,7 @@
       "src": "/documentation/it/privacy-and-account-deletion-workflow.png",
       "alt": "Anteprima di eliminazione con progetti posseduti, ticket e membri che perderanno l’accesso.",
       "caption": "Leggi l’anteprima ed esporta i dati da conservare prima di aprire la conferma.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -239,7 +243,7 @@ Se non hai né il secondo fattore né un codice di recupero, contatta l’operat
 
 ## Modificare profilo e preferenze {#profile-and-preferences}
 
-Apri le impostazioni dal menu dell’account oppure scegli il tuo profilo in cima a quel menu. La scheda **Profilo** si apre per prima. Mostra avatar, nome ed email, seguiti dalle tue [statistiche personali](/docs/personal-statistics). Seleziona l’avatar e scegli **Nuovo avatar di Lorelei** o **Carica immagine**; la modifica si applica non appena riesce. Seleziona il tuo nome per cambiarlo: sul computer diventa un campo che Invio o un clic altrove salvano ed Esc annulla; sul telefono apre un pannello con **Nome utente** e **Salva**. Il nome non può essere vuoto. L’email è di sola lettura. Attendi il risultato e verifica l’avatar in un commento o elenco membri; rimane lo stesso tra progetti e conversazioni. Se un file viene rifiutato, segui il messaggio di validazione invece di caricarlo ripetutamente.
+Scegli **Impostazioni account** dal menu dell’account, dal menu mobile o dalla palette dei comandi, oppure premi Command+virgola su macOS (Ctrl+virgola su Windows/Linux): le impostazioni dell’account si aprono sulla scheda **Preferenze**. Per aprire direttamente la scheda **Profilo**, scegli il tuo nome in cima al menu dell’account; puoi anche selezionare **Profilo** tra le schede delle impostazioni. Mostra avatar, nome ed email, seguiti dalle tue [statistiche personali](/docs/personal-statistics). Seleziona l’avatar e scegli **Nuovo avatar di Lorelei** o **Carica immagine**; la modifica si applica non appena riesce. Seleziona il tuo nome per cambiarlo: sul computer diventa un campo che Invio o un clic altrove salvano ed Esc annulla; sul telefono apre un pannello con **Nome utente** e **Salva**. Il nome non può essere vuoto. L’email è di sola lettura. Attendi il risultato e verifica l’avatar in un commento o elenco membri; rimane lo stesso tra progetti e conversazioni. Se un file viene rifiutato, segui il messaggio di validazione invece di caricarlo ripetutamente.
 
 L’immagine sorgente non deve superare 10 MiB. Il server verifica byte leggibili, applica orientamento e ritaglia al centro come avatar WebP di 256 × 256.
 

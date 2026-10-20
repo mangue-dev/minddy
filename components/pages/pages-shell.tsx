@@ -5,7 +5,7 @@ import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 // The persistent page tree and document surfaces for the project.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, Cancel01Icon, ExpandIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Cancel01Icon, ExpandIcon, File02Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAppNavigation } from "@/lib/use-app-router";
@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { SidePanel, SidePanelContent, SidePanelTitle } from "@/components/ui/side-panel";
 import { CollectionSidebar, type SidebarBrowseTarget } from "@/components/secondary-sidebar";
 import { PageTree } from "@/components/pages/page-tree";
+import { EmptyScene } from "@/components/empty-scene";
 import { PageCreateMenu } from "@/components/pages/page-create-menu";
 import { markDatabaseSetup } from "@/lib/page-database-setup";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
@@ -199,17 +200,9 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
     [trashPage, activePageId, base, t]
   );
 
-  // A project WITHOUT ANY pages has no tree to show, and a bar
-  // secondary empty is not a neutral state: it is a piece of furniture which takes a
-  // quarter of the screen to say that it contains nothing, next to a panel which
-  // already says it. The bar therefore only appears on the first page — and the screen
-  // home tab (app/(app)/projects/[id]/pages/page.tsx) then occupies
-  // full width, with its single button.
-  //
-  // During LOADING, we keep the bar (and its skeletons): remove it
-  // to put it back a fraction of a second later would skip the setting
-  // page each time you arrive in the tab, on almost all projects.
-  const bare = !loading && pages.length === 0;
+  // A project WITHOUT ANY pages keeps its column, like every collection: its
+  // search and its “+” stay where they will be, and a compact scene offers the
+  // first page next to the home pane that says the same.
 
   const sidebar = (
       <CollectionSidebar browse={browse}
@@ -237,13 +230,18 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
             ))}
           </div>
         ) : pages.length === 0 ? (
-          // Reachable only for the duration of a loading which has just finished
-          // empty, before `bare` removes the bar: the filter can
-          // also empty the TREE without emptying the project, and it is `PageTree` which
-          // dit.
-          <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-            {t("sidebarEmpty")}
-          </p>
+          // No page in the project at all. A filter that empties the tree
+          // without emptying the project is `PageTree`'s to say.
+          <EmptyScene size="compact" icon={File02Icon} title={t("sidebarEmpty")} className="py-10">
+            {canWrite ? (
+              <PageCreateMenu onCreate={(database) => void create(null, database)} trigger={
+                <Button size="sm">
+                  <HugeiconsIcon icon={Add01Icon} />
+                  {t("newPage")}
+                </Button>
+              } />
+            ) : null}
+          </EmptyScene>
         ) : (
           <PageTree
             projectId={projectId}
@@ -271,7 +269,7 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
     {/* One promotion registry: the tree may promote a page open beside it. */}
     <PagePromotionProvider>
     <div className="flex h-full min-h-0">
-      {bare ? null : sidebar}
+      {sidebar}
 
       <div
         className="flex min-h-0 min-w-0 flex-1 flex-col"

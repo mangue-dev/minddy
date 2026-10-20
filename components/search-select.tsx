@@ -152,6 +152,7 @@ type ShellProps = {
   contentClassName?: string;
   /** Stop pointer/click from bubbling to a draggable/clickable ancestor (cards). */
   stopPropagation?: boolean;
+  onCloseAutoFocus?: (event: Event) => void;
 };
 
 /** Open state + search text, shared by the two variants. The search is only

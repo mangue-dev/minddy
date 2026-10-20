@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-19",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-737 account settings reorganization",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-737 account settings reorganization; UI/UX refinements batch: account settings open on Preferences",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -40,14 +40,17 @@
       "lib/server/stats.ts",
       "supabase/migrations/20270107070000_history_encryption.sql",
       "supabase/migrations/20270107720000_project_content_encryption.sql",
-      "supabase/migrations/20270109200067_stats_distinct_year.sql"
+      "supabase/migrations/20270109200067_stats_distinct_year.sql",
+      "lib/settings-sections.ts",
+      "components/app-sidebar.tsx",
+      "app/(app)/statistics/page.tsx"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (12-month headline deduplication: get_user_stats migration 20270109200067, lib/stats-derive.ts and a production read of one account (685 events, 603 distinct issues); no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 account settings reorganization: text revised from source review of components/settings/account-settings-page.tsx and components/stats/profile-statistics.tsx; figure personal-statistics-steps recaptured on 2026-10-19 in all six locales from the local candidate (now personal-statistics-workflow.png, demo history mirrored into the statistics ledger by captures/world/seed/018-statistiques.mjs) and inspected; the grid crops to the most recent weeks that fit; no other browser walkthrough)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root (fr headline deduplication sentence and retained-meaning self-review; agent review, not human acceptance); agent:/root (fr MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-19"
+    "revision": 7,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (12-month headline deduplication: get_user_stats migration 20270109200067, lib/stats-derive.ts and a production read of one account (685 events, 603 distinct issues); no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 account settings reorganization: text revised from source review of components/settings/account-settings-page.tsx and components/stats/profile-statistics.tsx; figure personal-statistics-steps recaptured on 2026-10-19 in all six locales from the local candidate (now personal-statistics-workflow.png, demo history mirrored into the statistics ledger by captures/world/seed/018-statistiques.mjs) and inspected; the grid crops to the most recent weeks that fit; no other browser walkthrough); agent:/root (UI/UX refinements batch, account settings opening tab: source review of ACCOUNT_SETTINGS_DEFAULT_TAB in lib/settings-sections.ts, the profile entry in components/app-sidebar.tsx and the /statistics redirect to the Profile tab; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root (fr headline deduplication sentence and retained-meaning self-review; agent review, not human acceptance); agent:/root (fr MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (fr translation of the account settings opening tab changed passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "personal-cycle",
@@ -65,7 +68,7 @@
       "src": "/documentation/fr/personal-statistics-workflow.png",
       "alt": "Statistiques du profil : bandeau de chiffres, grille d’activité sur 12 mois, répartitions par projet et par catégorie, rythme de travail.",
       "caption": "Historique réel du compte de démonstration : six tickets terminés dans deux projets, trente tickets créés, aucune tâche du carnet cochée.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -85,7 +88,7 @@
 
 ## Ouvrir et lire les statistiques {#personal-statistics}
 
-Vos statistiques se trouvent dans l’onglet **Profil** des paramètres du compte. Choisissez votre profil en haut du menu du compte, ou ouvrez les paramètres du compte : **Profil** est le premier onglet. Les statistiques apparaissent sous votre avatar, votre nom et votre adresse email. L’ancienne adresse `/statistics` ouvre désormais cet onglet.
+Vos statistiques se trouvent dans l’onglet **Profil** des paramètres du compte. Choisissez votre nom en haut du menu du compte pour l’ouvrir directement. **Paramètres du compte** s’ouvre sur **Préférences** ; de là, sélectionnez **Profil**, le premier onglet. Les statistiques apparaissent sous votre avatar, votre nom et votre adresse email. L’ancienne adresse `/statistics` ouvre désormais cet onglet.
 
 Une bande de six chiffres vient d’abord : **Terminés**, **Tâches cochées**, **Créés**, **Projets**, **Plus longue série** et **Série en cours**. Elle remplace l’ancienne section des totaux historiques. En dessous, lisez le chiffre des 12 mois et la grille d’activité, puis **Où est passé votre travail ?**, avec les répartitions par projet, catégorie et objectif, et **Rythme de travail**, avec **Charge actuelle**, **Tickets par cycle**, **Écart à l'échéance** et **Répartition par effort**. **Tickets par cycle**, **Écart à l'échéance** et **Répartition par effort** n’apparaissent que lorsqu’ils ont des données. L’onglet affiche ses périodes prévues ; il n’a pas de filtre de dates pour choisir un autre intervalle. Cet écran résume votre travail ; il n’établit pas un classement des performances d’un autre membre.
 

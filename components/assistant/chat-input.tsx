@@ -67,6 +67,7 @@ import {
   findActiveMentionQuery,
 } from "@/lib/mention-menu";
 import { useSemanticMentions } from "@/lib/use-semantic-mentions";
+import { useScrollFade } from "@/lib/use-scroll-fade";
 import { assistantDraftHtml } from "@/lib/assistant-composer-draft";
 import {
   findActiveComposerMenuQuery,
@@ -376,6 +377,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const tPicker = useTranslations("Picker");
     const effectivePlaceholder = placeholder ?? t("inputPlaceholder");
     const editorRef = useRef<HTMLDivElement>(null);
+    // A long message scrolls inside the field: its hidden lines fade at the
+    // edge they are behind, like every other scroller of the app.
+    const { ref: textScrollRef, scrollProps: textScrollProps } = useScrollFade<HTMLDivElement>("y", "1.25rem");
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [addMenuOpen, setAddMenuOpen] = useState(false);
     const [addMenuQuery, setAddMenuQuery] = useState("");
@@ -1502,7 +1506,11 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               <ScrollableContextRow items={standaloneAttachmentItems} />
             </div>
           )}
-          <div className="relative max-h-[180px] min-h-[52px] overflow-y-auto px-4 pb-1 pt-3">
+          <div
+            ref={textScrollRef}
+            {...textScrollProps}
+            className="relative max-h-[180px] min-h-[52px] overflow-y-auto px-4 pb-1 pt-3"
+          >
             <div
               ref={editorRef}
               contentEditable={!disabled}

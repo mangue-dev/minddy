@@ -2,6 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { GitPullRequestDraftIcon, GitPullRequestIcon } from "@hugeicons/core-free-icons";
+import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { Spinner } from "@/components/ui/spinner";
@@ -27,6 +28,26 @@ export function linkablePullRequests(
 export function useLinkablePullRequests(projectId: string | null) {
   const { pullRequests, loading } = useAllPullRequestsQuery("open");
   return { pullRequests: linkablePullRequests(pullRequests, projectId), loading };
+}
+
+/**
+ * Reports whether `projectId` has a pull request an issue can join; null while
+ * the list loads. Mounted only while a menu is open, so the cards of a board do
+ * not each subscribe to the pull request list.
+ */
+export function LinkablePullRequestsProbe({
+  projectId,
+  onChange,
+}: {
+  projectId: string;
+  onChange: (hasLinkable: boolean | null) => void;
+}) {
+  const { pullRequests, loading } = useLinkablePullRequests(projectId);
+  const hasLinkable = loading ? null : pullRequests.length > 0;
+  useEffect(() => {
+    onChange(hasLinkable);
+  }, [hasLinkable, onChange]);
+  return null;
 }
 
 /** Searchable picker, at the pointer, of the pull requests an issue can join. */

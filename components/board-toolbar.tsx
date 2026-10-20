@@ -226,6 +226,13 @@ function FiltersPopover({
   const t = useTranslations("Board");
   const tc = useTranslations("Common");
   const tf = useTranslations("Field");
+  const myAvatarSource = useMyAvatarSource();
+  // "Assigned to me" shows the viewer's own face, like the "My issues" tab.
+  const myAvatar = myAvatarSource ? (
+    <UserAvatar seed={myAvatarSource} className="size-4 shrink-0 rounded-full" aria-hidden />
+  ) : (
+    <HugeiconsIcon icon={UserCircleIcon} className="size-4 shrink-0 text-muted-foreground" />
+  );
   const tSort = useTranslations("Sort");
   const tp = useTranslations("Priority");
 
@@ -344,7 +351,7 @@ function FiltersPopover({
                   aria-disabled
                 >
                   <span className="flex min-w-0 flex-1 items-center gap-2">
-                    <HugeiconsIcon icon={UserCircleIcon} className="size-4 shrink-0 text-muted-foreground" />
+                    {myAvatar}
                     {tf("assignedToMe")}
                   </span>
                   <HugeiconsIcon icon={LockIcon} className="size-3.5 shrink-0 text-muted-foreground" />
@@ -360,7 +367,7 @@ function FiltersPopover({
                   setFilters({ ...f, assignee: toggle(f.assignee, ME_ASSIGNEE) })
                 }
               >
-                <HugeiconsIcon icon={UserCircleIcon} className="size-4 shrink-0 text-muted-foreground" />
+                {myAvatar}
                 {tf("assignedToMe")}
               </MenuToggleRow>
               <MenuToggleRow

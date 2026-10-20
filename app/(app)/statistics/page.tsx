@@ -10,5 +10,5 @@ export function generateMetadata(): Promise<Metadata> {
 // Personal statistics moved into the profile (MIN-737). Links, bookmarks and
 // restored tabs still land on them.
 export default function StatisticsPage() {
-  redirect("/settings");
+  redirect("/settings?tab=profile");
 }

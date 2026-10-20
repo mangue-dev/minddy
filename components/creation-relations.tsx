@@ -12,7 +12,7 @@ import { RelationIcon, StatusIndicator } from "@/components/issue-indicators";
 import { RelationObjectiveLabel } from "@/components/relation-objective-label";
 import { SemanticIssueGroup } from "@/components/semantic-issue-group";
 import { AppTooltip } from "@/components/ui/app-tooltip";
-import { isClosedStatus, issueIdentifier } from "@/lib/issue-constants";
+import { issueIdentifier } from "@/lib/issue-constants";
 import { issueTierKeyword, orderIssuesForSearch } from "@/lib/issue-search-order";
 import { RELATION_TYPES } from "@/lib/relation-constants";
 import { useIssuesQuery } from "@/lib/use-issues-query";
@@ -92,7 +92,7 @@ export function CreationRelationsCompact({
   // Work under way first, triage last (MIN-726).
   const issueCandidates = orderIssuesForSearch(
     issues.filter(
-      (i) => i.project_id === projectId && !isClosedStatus(i.status) && !linked(i.id, "issue"),
+      (i) => i.project_id === projectId && !linked(i.id, "issue"),
     ),
     (i) => i.status,
   );
@@ -124,6 +124,7 @@ export function CreationRelationsCompact({
       searchValue={query}
       onSearchValueChange={setQuery}
       searchPlaceholder={step ? t("searchTarget") : undefined}
+      focusKey={step}
       contentClassName="w-80"
       modal
       hideEmpty={step !== null && loading}

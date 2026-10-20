@@ -761,7 +761,12 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
             title={projects.length === 0 ? t("emptyNoProject") : repoCount === 0 ? t("emptyNoRepo") : !anyPr ? t("emptyNone") : query.trim() ? tCommon("noFilterMatch") : t("emptySections")}
             className="py-10"
           >
-            {query.trim() || !anyPr ? null : (
+            {projects.length === 0 ? (
+              <Button size="sm" onClick={openCreateProject}>
+                <HugeiconsIcon icon={Add01Icon} />
+                {tProjects("firstProject")}
+              </Button>
+            ) : query.trim() || !anyPr ? null : (
               <Button
                 variant="outline"
                 size="sm"
@@ -839,25 +844,30 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
     );
   }
 
+  // Nothing to list yet: the column stays, with its search and filters and a
+  // compact scene, next to the pane that says where pull requests come from.
   if (!loading && !projectsLoading && (projects.length === 0 || repoCount === 0 || !anyPr)) {
     return (
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
-        <div className="mx-auto max-w-5xl">
-          {projects.length === 0 ? (
-            <EmptyScene icon={GitPullRequestIcon} title={t("emptyNoProject")}>
-              <Button onClick={openCreateProject}>
-                <HugeiconsIcon icon={Add01Icon} />
-                {tProjects("firstProject")}
-              </Button>
-            </EmptyScene>
-          ) : (
-            /* Without a linked deposit, there is no button to offer: the deposit is linked
-               in the settings OF ONE project, and we don't know which one. */
-            <EmptyScene
-              icon={GitPullRequestIcon}
-              title={repoCount === 0 ? t("emptyNoRepo") : t("emptyNone")}
-            />
-          )}
+      <div className="flex h-full min-h-0">
+        {sidebar}
+        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-6 py-8">
+          <div className="mx-auto max-w-5xl">
+            {projects.length === 0 ? (
+              <EmptyScene icon={GitPullRequestIcon} title={t("emptyNoProject")}>
+                <Button onClick={openCreateProject}>
+                  <HugeiconsIcon icon={Add01Icon} />
+                  {tProjects("firstProject")}
+                </Button>
+              </EmptyScene>
+            ) : (
+              /* Without a linked deposit, there is no button to offer: the deposit is linked
+                 in the settings OF ONE project, and we don't know which one. */
+              <EmptyScene
+                icon={GitPullRequestIcon}
+                title={repoCount === 0 ? t("emptyNoRepo") : t("emptyNone")}
+              />
+            )}
+          </div>
         </div>
       </div>
     );

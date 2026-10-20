@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { AppIcon } from "@/components/icon";
 import { CommandIcon as Command, FileTextIcon as FileText, LayersIcon as Layers, MessageMultiple01Icon as MessagesSquare, NotebookPenIcon as NotebookPen, Target01Icon as Target } from "@hugeicons/core-free-icons";
-import { SmartFillIcon } from "@/components/smart-icons";
+import { SMART_FILL_ICON } from "@/components/feature-icons";
 import { ScreenshotSlot } from "./screenshot-slot";
 import { FeatureDisclosure } from "./feature-disclosure";
 import { CARD_TONES } from "./card-tones";
@@ -24,7 +24,7 @@ export async function SectionWorkspace() {
       points: (["write", "database", "link", "agents", "publish"] as const).map(key => ({ title: t(`pages_${key}_title`), body: t(`pages_${key}_body`) })),
     },
     {
-      id: "smart", icon: SmartFillIcon, title: t("smartTitle"), description: t("smartSubtitle"),
+      id: "smart", icon: SMART_FILL_ICON, title: t("smartTitle"), description: t("smartSubtitle"),
       screenshot: null, tone: CARD_TONES.mint, span: "",
       points: (["Fill", "Assign", "Triage"] as const).map(key => ({ title: t(`feature_smart${key}_title`), body: t(`feature_smart${key}_body`) })),
     },

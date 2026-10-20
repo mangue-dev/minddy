@@ -270,6 +270,9 @@ export function ObjectiveDialog({
   /** The editor document of `form.description`, as last committed (MIN-728);
       cleared whenever the description is replaced from outside the editor. */
   const descriptionDocument = useRef<JSONContent | null>(null);
+  // The document of a recovered draft, opened as stored so its pills keep
+  // their colors; null for a new description.
+  const [draftDocument, setDraftDocument] = useState<JSONContent | null>(null);
   // Images of the description still being sent (MIN-728).
   const [imagesUploading, setImagesUploading] = useState(false);
   // Editing an existing objective opens its stored document, so a save does
@@ -320,6 +323,7 @@ export function ObjectiveDialog({
   useEffect(() => {
     if (!open) return;
     descriptionDocument.current = null;
+    setDraftDocument(null);
     setForm(
       objective
         ? {
@@ -340,6 +344,7 @@ export function ObjectiveDialog({
 
   const closeAndReset = () => {
     descriptionDocument.current = null;
+    setDraftDocument(null);
     setSelectedProjectId(projectId);
     setForm(EMPTY);
     setRelations([]);
@@ -374,6 +379,7 @@ export function ObjectiveDialog({
       color: form.color,
       resources: uploads.inputs,
       relations,
+      description_doc: form.description.trim() ? descriptionDocument.current : null,
     });
   };
 
@@ -428,7 +434,8 @@ export function ObjectiveDialog({
   const recoverDraft = (id: string) => {
     const draft = drafts.find(id);
     if (!draft) return;
-    descriptionDocument.current = null;
+    descriptionDocument.current = draft.description_doc ?? null;
+    setDraftDocument(draft.description_doc ?? null);
     setForm({
       name: draft.name,
       description: draft.description,
@@ -519,6 +526,7 @@ export function ObjectiveDialog({
     }));
     if (patch.description !== undefined) {
       descriptionDocument.current = null;
+      setDraftDocument(null);
       setEditorKey((k) => k + 1); // remount the editor with the new content
       editorNonEmptyRef.current = patch.description.trim() !== "";
     }
@@ -647,7 +655,7 @@ export function ObjectiveDialog({
                 value={form.description}
                 uploadScope={activeProjectId ? `projects/${activeProjectId}` : null}
                 onUploadingChange={setImagesUploading}
-                document={objective ? storedDocument : null}
+                document={objective ? storedDocument : draftDocument}
                 onCommit={(description, content) => {
                   descriptionDocument.current = content;
                   setForm((f) => ({ ...f, description }));

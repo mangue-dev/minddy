@@ -133,6 +133,12 @@ export const CHEATSHEET: CheatsheetSection[] = [
         keys: [["mod", "⇧", "D"]],
       },
       { id: "create.objective", labelKey: "createObjective", keys: [["O"]] },
+      // Inside the creation dialog: a combo, so it works while writing.
+      {
+        id: "create.changeProject",
+        labelKey: "createChangeProject",
+        keys: [["mod", "⇧", "P"]],
+      },
     ],
   },
   {

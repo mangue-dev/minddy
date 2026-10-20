@@ -7,7 +7,7 @@ import { SelfLabelTooltip } from "./app-tooltip"
 import { COARSE_BUTTON_HIT_AREA, COARSE_BUTTON_INSET_HIT_AREA, COARSE_BUTTON_PRESS, COARSE_BUTTON_TOUCH_ACTION } from "./touch-target"
 
 const buttonVariants = cva(
-  `${COARSE_BUTTON_TOUCH_ACTION} ${COARSE_BUTTON_HIT_AREA} ${COARSE_BUTTON_PRESS} group/button inline-flex shrink-0 items-center justify-center rounded-full in-data-[slot=button-group]:rounded-lg bg-clip-padding text-sm font-medium leading-none whitespace-nowrap transition-all outline-none select-none focus-visible:outline-none focus-visible:ring-0 disabled:pointer-events-none disabled:bg-control! disabled:text-muted-foreground! disabled:ring-0 aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
+  `${COARSE_BUTTON_TOUCH_ACTION} ${COARSE_BUTTON_HIT_AREA} ${COARSE_BUTTON_PRESS} group/button inline-flex shrink-0 items-center justify-center rounded-full in-data-[slot=button-group]:rounded-lg bg-clip-padding text-sm font-medium leading-tight whitespace-nowrap transition-all outline-none select-none focus-visible:outline-none focus-visible:ring-0 disabled:pointer-events-none disabled:bg-control! disabled:text-muted-foreground! disabled:ring-0 aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
   {
     variants: {
       variant: {

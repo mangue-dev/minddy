@@ -94,7 +94,7 @@ describe("issue panel relation plumbing", () => {
 
 
 describe("sidebar menu relation targets", () => {
-  it("excludes self, closed work, and direct same-type links while retaining inherited links", () => {
+  it("excludes self, closed objectives, and direct same-type links while keeping closed issues and inherited links", () => {
     const issue = { id: "self", project_id: "project" };
     const candidate = (id: string, status = "todo", project_id = "project") => ({ id, status, project_id });
     const rows = [
@@ -112,7 +112,7 @@ describe("sidebar menu relation targets", () => {
         candidate("done", "done"), candidate("canceled", "canceled"), candidate("foreign", "planned", "other-project")],
     };
     const candidates = evaluate<Array<{ id: string }>>(initializer("components/issue-side-panel.tsx", "relationCandidates"), scope);
-    expect(candidates.map((target) => target.id)).toEqual(["inherited", "other-type"]);
+    expect(candidates.map((target) => target.id)).toEqual(["inherited", "other-type", "done", "canceled", "duplicate"]);
     const objectives = evaluate<Array<{ id: string }>>(initializer("components/issue-side-panel.tsx", "relationObjectiveCandidates"), scope);
     expect(objectives.map((target) => target.id)).toEqual(["available"]);
   });

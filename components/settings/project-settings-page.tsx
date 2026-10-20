@@ -26,7 +26,7 @@ import type { SidebarBrowseTarget } from "@/components/secondary-sidebar";
 import { SettingsShell, type SettingsTab } from "@/components/settings-shell";
 import { SettingsPageSkeleton } from "@/components/route-skeletons";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
-import { SmartAssignIcon } from "@/components/smart-icons";
+import { SMART_ASSIGN_ICON } from "@/components/feature-icons";
 
 export default function ProjectSettingsPage({ browse, projectId }: { browse?: SidebarBrowseTarget; projectId?: string } = {}) {
   const t = useTranslations("Settings");
@@ -121,7 +121,7 @@ export default function ProjectSettingsPage({ browse, projectId }: { browse?: Si
     {
       value: "smart-assign",
       label: t("smartAssignTab"),
-      icon: SmartAssignIcon,
+      icon: SMART_ASSIGN_ICON,
       indicator: smartAssignIncomplete
         ? t("smartAssignIncompleteTab")
         : undefined,

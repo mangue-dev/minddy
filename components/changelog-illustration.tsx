@@ -12,7 +12,7 @@ import Claude from "@lobehub/icons/es/Claude/components/Mono";
 import Gemini from "@lobehub/icons/es/Gemini/components/Mono";
 import OpenAI from "@lobehub/icons/es/OpenAI/components/Mono";
 import { NumoFace } from "@/components/numo-face";
-import { SmartFillIcon, SmartAssignIcon } from "@/components/smart-icons";
+import { SMART_ASSIGN_ICON, SMART_FILL_ICON } from "@/components/feature-icons";
 import { Github, Gitlab } from "@/components/git/provider-icons";
 import type { ChangelogIllustration as Illustration, ChangelogIllustrationName } from "@/lib/changelog-types";
 import styles from "./changelog-illustrations.module.css";
@@ -27,8 +27,8 @@ const ICONS = {
 
 function ProductIcon({ name, className }: { name: ChangelogIllustrationName; className?: string }) {
   if (name === "assistant") return <NumoFace className={className} />;
-  if (name === "smart-fill") return <SmartFillIcon className={className} />;
-  if (name === "smart-assign") return <SmartAssignIcon className={className} />;
+  if (name === "smart-fill") return <HugeiconsIcon icon={SMART_FILL_ICON} className={className} strokeWidth={1.5} />;
+  if (name === "smart-assign") return <HugeiconsIcon icon={SMART_ASSIGN_ICON} className={className} strokeWidth={1.5} />;
   return <HugeiconsIcon icon={ICONS[name]} className={className} strokeWidth={1.5} />;
 }
 
@@ -42,7 +42,7 @@ function Surface({ children, className }: { children: ReactNode; className?: str
 
 function Board({ triage = false }: { triage?: boolean }) {
   return <Surface className={styles.board}>
-    {triage && <div className={styles.toolbar}><SmartAssignIcon className="h-5 w-5" /><Lines short /><HugeiconsIcon icon={CheckIcon} className="size-4 text-emerald-600 dark:text-emerald-400" /></div>}
+    {triage && <div className={styles.toolbar}><HugeiconsIcon icon={SMART_ASSIGN_ICON} className="size-5" /><Lines short /><HugeiconsIcon icon={CheckIcon} className="size-4 text-emerald-600 dark:text-emerald-400" /></div>}
     <div className={styles.columns}>
       {[2, 2, 1].map((count, column) => <div key={column} className={styles.column}>
         <div className={styles.columnHeading}><span className={cn(styles.status, styles[`status${column}`])} /><span className={styles.headingLine} /><HugeiconsIcon icon={Add01Icon} className="size-3" /></div>

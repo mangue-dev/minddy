@@ -17,12 +17,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate; MIN-684 page promotion; MIN-743 destructive-action confirmations",
+    "version": "0.11.1 candidate; MIN-684 page promotion; MIN-743 destructive-action confirmations; UI/UX refinements batch: Edit options from the column header",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -60,9 +60,9 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root (optional-time and option-control source, component and isolated SQL review; unchanged claims retain prior evidence); agent:/root (MIN-690 recapture of create-a-database-steps on next dev at 8371778c4 with a throwaway database, record content/documentation/reviews/database-property-types-2026-10-18.json; other figures unchanged, evidence retained); agent:/root (MIN-684 page promotion: source and focused unit-test review of the menu entries, reader gating, save-before-promote and the Numo request; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for option deletion on Save in Edit options, record content/documentation/reviews/min-743-destructive-confirmations.md; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (it changed-passage and figure parity self-review); agent:/root (it updated alt text for the column type picker; agent review, not human acceptance); agent:/root (it translation of the MIN-684 single-entry promotion passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 15,
+    "fact": "agent:/root (optional-time and option-control source, component and isolated SQL review; unchanged claims retain prior evidence); agent:/root (MIN-690 recapture of create-a-database-steps on next dev at 8371778c4 with a throwaway database, record content/documentation/reviews/database-property-types-2026-10-18.json; other figures unchanged, evidence retained); agent:/root (MIN-684 page promotion: source and focused unit-test review of the menu entries, reader gating, save-before-promote and the Numo request; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for option deletion on Save in Edit options, record content/documentation/reviews/min-743-destructive-confirmations.md; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (UI/UX refinements batch: source review of the Edit options entry of Select and Multi-select column header menus in components/pages/database-column-name.tsx, which opens the same options dialog as the cells; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (it changed-passage and figure parity self-review); agent:/root (it updated alt text for the column type picker; agent review, not human acceptance); agent:/root (it translation of the MIN-684 single-entry promotion passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (it translation of the Edit options from the column header changed passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -87,7 +87,7 @@
       "src": "/documentation/it/database-setup-cards.png",
       "alt": "Anteprima del componente con le schede per configurare una nuova banca dati con Numo o importarne una esistente.",
       "caption": "Suggerimenti per una nuova banca dati con dati dimostrativi. Scegli Numo o l’importazione, oppure chiudi le schede per continuare manualmente.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -104,7 +104,7 @@
       "src": "/documentation/it/database-property-types.png",
       "alt": "Selettore del tipo di colonna con un campo di ricerca, testo, numero, selezioni, date, persone e casella di controllo.",
       "caption": "Scegli un tipo adatto ai valori da conservare.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -121,7 +121,7 @@
       "src": "/documentation/it/database-entry.png",
       "alt": "Voce dimostrativa con descrizione, durata 2.5, casella selezionata e selezione vuota.",
       "caption": "Apri una voce per leggere il testo completo e modificare i valori in base al tipo.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -137,7 +137,7 @@
       "src": "/documentation/it/database-conversion-warning.png",
       "alt": "Avviso di conversione: il passaggio da Testo a Numero svuota una cella incompatibile, con pulsanti per annullare o confermare.",
       "caption": "Controlla il numero effettivo di celle incompatibili prima di confermare. Annulla conserva i valori attuali.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -153,7 +153,7 @@
       "src": "/documentation/it/database-import-review.png",
       "alt": "Verifica di un CSV locale: due pagine di voci e due colonne, con il pulsante Importa database.",
       "caption": "Controlla le voci analizzate e il numero di colonne prima di importare nel database vuoto.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -169,7 +169,7 @@
       "src": "/documentation/it/database-options.png",
       "alt": "Anteprima del componente Modifica opzioni con stati in italiano, frecce verso l’alto e il basso, cestini e la spiegazione dell’eliminazione.",
       "caption": "Modifica insieme nomi, colori e ordine delle opzioni. Il cestino rimuove un’opzione dalla bozza; Salva applica le modifiche. Sono mostrati dati dimostrativi.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -186,7 +186,7 @@
       "src": "/documentation/it/database-date-time.png",
       "alt": "Anteprima del selettore di data con il 12 ottobre 2026 selezionato, Aggiungere un’ora attivo e Tempo impostato su 14:30.",
       "caption": "Attiva Aggiungere un’ora per inserire un’ora. Questa anteprima del componente usa dati dimostrativi e il fuso orario del dispositivo.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -237,7 +237,7 @@ Nell’editor delle opzioni, aggiungi un’opzione sotto le righe esistenti, anc
 
 Fai clic su una cella della tabella o sulla proprietà sopra il corpo di una voce. Enter salva, Escape annulla e Shift+Enter inserisce una riga di testo. Uscire dall’editor salva. Un numero non valido mantiene l’editor aperto finché non viene corretto; un salvataggio non riuscito ripristina il valore e segnala un errore.
 
-Usa una cella Selezione per un’opzione o Selezione multipla per diverse opzioni. Cerca quelle esistenti o creane una dal menu. Apri «Modifica opzioni» per rinominare o cambiare colori, poi salva tutto insieme o annulla. Data, Persone e Casella di controllo usano i controlli corrispondenti; Data di creazione resta in sola lettura.
+Usa una cella Selezione per un’opzione o Selezione multipla per diverse opzioni. Cerca quelle esistenti o creane una dal menu. Apri «Modifica opzioni» da una cella, o dal menu dell’intestazione di una colonna Selezione o Selezione multipla (fai clic sul nome della colonna), per rinominare o cambiare colori, poi salva tutto insieme o annulla. Data, Persone e Casella di controllo usano i controlli corrispondenti; Data di creazione resta in sola lettura.
 
 Le nuove opzioni ricevono un colore casuale della tavolozza che non è ancora usato nella colonna, sia quando le crei da una cella sia nella finestra delle opzioni. Una volta usati tutti e dieci i colori, possono ripetersi. Puoi comunque scegliere un colore manualmente.
 

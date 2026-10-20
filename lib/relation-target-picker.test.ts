@@ -138,14 +138,14 @@ describe("card relation target picker", () => {
     expectTypeOf<Parameters<GlobalColumnAdd>[4]>().toEqualTypeOf<RelationKinds | undefined>();
   });
 
-  it.each(types)("filters project-only open candidates for %s without excluding other relation types", (type) => {
+  it.each(types)("filters project-only candidates, closed issues included, for %s without excluding other relation types", (type) => {
     const linked = (relation: IssueRelationType): ChipRelation[] => [
       { id: "issue-link", otherId: other.id, relation, otherType: "issue", resolved: false },
       { id: "objective-link", otherId: objective.id, relation, otherType: "objective", resolved: false },
     ];
-    expect(candidates(type).issues.map((item) => item.id)).toEqual([other.id]);
+    expect(candidates(type).issues.map((item) => item.id)).toEqual([other.id, "closed"]);
     expect(candidates(type).objectives.map((item) => item.id)).toEqual([objective.id, "active"]);
-    expect(candidates(type, linked(type)).issues).toEqual([]);
+    expect(candidates(type, linked(type)).issues.map((item) => item.id)).toEqual(["closed"]);
     expect(candidates(type, linked(type)).objectives.map((item) => item.id)).toEqual(["active"]);
     for (const otherType of types.filter((value) => value !== type)) {
       expect(candidates(type, linked(otherType))).toEqual(candidates(type));

@@ -90,7 +90,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useIssueTimeline } from "@/lib/use-issue-timeline";
 import { useIssueDictation } from "@/lib/use-issue-dictation";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
-import { isClosedStatus, issueIdentifier } from "@/lib/issue-constants";
+import { issueIdentifier } from "@/lib/issue-constants";
 import { DocumentTitle } from "@/components/document-title";
 import { IntegrationIndicator } from "@/components/integration-indicator";
 import { RemoteIssueIndicator } from "@/components/remote-issue-indicator";
@@ -769,15 +769,16 @@ export function IssueSidePanel({
     return () => window.removeEventListener("blur", commitOnWindowBlur);
   }, []);
 
-  // Match the card's relation targets: exclude self, closed work, and direct
-  // links of the selected type; inherited objective links remain eligible.
+  // Match the card's relation targets: exclude self and direct links of the
+  // selected type; closed tickets stay eligible (sorted last), and inherited
+  // objective links remain eligible.
   const relationCandidates = useMemo(() => {
     if (!issue || !relationType) return [];
     const linked = new Set(resolvedRelations
       .filter((r) => !r.inheritedObjectiveId && r.relation === relationType && r.otherType !== "objective")
       .map((r) => r.otherId));
     return allIssues.filter((target) => target.project_id === issue.project_id &&
-      target.id !== issue.id && !linked.has(target.id) && !isClosedStatus(target.status));
+      target.id !== issue.id && !linked.has(target.id));
   }, [issue, relationType, resolvedRelations, allIssues]);
   const relationObjectiveCandidates = useMemo(() => {
     if (!issue || !relationType) return [];
