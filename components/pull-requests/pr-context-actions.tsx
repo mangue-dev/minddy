@@ -32,7 +32,7 @@ import {
 } from "@/lib/agent-api";
 import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { prReviewCommentsQueryOptions } from "@/lib/pr-activity-query";
-import { buildPullRequestFixPrompt } from "@/lib/pr-fix-prompt";
+import { buildPullRequestFixPrompt, buildPullRequestNumoFixPrompt } from "@/lib/pr-fix-prompt";
 import {
   prStateTransitionActions,
   type EditablePrState,
@@ -196,11 +196,17 @@ export function usePrContextActions({
             base: data?.pr?.base ?? null,
             head: data?.pr?.head ?? pr.head_branch,
           };
+          const fixExtras = {
+            unresolvedThreads: threads,
+            branchOutOfDate: !!data?.readiness?.blockers.some((blocker) => blocker.kind === "branch"),
+          };
+          // The copied prompt asks a coding agent for the fix; Numo gets its
+          // own prompt, since it never writes code (MIN-721).
           const prompt = ready
-            ? buildPullRequestFixPrompt(context, data?.checks ?? null, {
-                unresolvedThreads: threads,
-                branchOutOfDate: !!data?.readiness?.blockers.some((blocker) => blocker.kind === "branch"),
-              })
+            ? buildPullRequestFixPrompt(context, data?.checks ?? null, fixExtras)
+            : "";
+          const numoPrompt = ready
+            ? buildPullRequestNumoFixPrompt(context, data?.checks ?? null, fixExtras)
             : "";
           actions.push({
             id: "pr-fix-copy",
@@ -228,7 +234,7 @@ export function usePrContextActions({
                 source: "pull_request",
                 action: "fix",
                 projectId,
-                prompt,
+                prompt: numoPrompt,
                 pageContext: {
                   projectId: projectId ?? undefined,
                   pullRequestId: pr.prId,

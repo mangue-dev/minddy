@@ -159,6 +159,10 @@ function ByokCapabilityAssignments({ keys, capabilities }: { keys: AiKey[]; capa
   );
 }
 
+type OfferedSurfaceDefinition = (typeof AI_SURFACE_DEFINITIONS)[number] & {
+  id: Exclude<AiSurface, "agent">;
+};
+
 function capabilitiesForSurface(
   surface: (typeof AI_SURFACE_DEFINITIONS)[number],
 ): ModelCatalogCapability[] {
@@ -178,8 +182,9 @@ function ByokSurfacePreferences({
   const tAgent = useTranslations("Agent");
   const tAdmin = useTranslations("Admin");
   const queryClient = useQueryClient();
+  // The retired code-agent surface stays in stored keys but is never offered.
   const visibleSurfaces = AI_SURFACE_DEFINITIONS.filter(
-    (surface) =>
+    (surface): surface is OfferedSurfaceDefinition =>
       surface.id !== "agent" && !isLocalAgentProvider(key.provider),
   )
     .map((surface) => ({

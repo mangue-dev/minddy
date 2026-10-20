@@ -11,7 +11,7 @@ import {
 } from "./screenshot-slots";
 
 const FOCUSED_SLOTS: ReadonlySet<ScreenshotSlotId> = new Set([
-  "pagesEditor", "feedbackBoard", "featurePalette", "workflowAgent", "workflowPr", "numoPanel",
+  "pagesEditor", "feedbackBoard", "featurePalette", "workflowPr", "numoPanel",
 ]);
 
 /** Localized product photography with optional focused assets for feature cards. */

@@ -35,7 +35,6 @@ export function planFeatureLabels(plan: BillingPlan, t: PlanFeatureTranslator): 
       ? t("featureUnlimitedMembers")
       : t("featureMaxMembers", { n: plan.maxMembersPerProject }),
     t("featureModelsUpTo", { n: plan.maxModelMultiplier }),
-    ...(plan.allowAgents ? [t("featureAgents")] : []),
     // Every current plan offers provider keys for compatible AI features.
     ...(plan.allowAgents ? [t("featureByok")] : []),
   ];

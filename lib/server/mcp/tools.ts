@@ -408,7 +408,7 @@ function mcpRoutine(routine: Routine) {
     enabled: routine.enabled,
     next_run_at: routine.next_run_at,
     last_run_at: routine.last_run_at,
-    // CODE of the last missed passage ('quota', 'noRepo'…): to translate next
+    // CODE of the last missed passage ('quota', 'launchFailed'…): to translate next
     // client, never to display as is.
     last_error: routine.last_error,
   };
@@ -426,11 +426,6 @@ function routineFailure(r: { errorKey: string }): ToolResult {
       return fail("not_found", "Project not found or not accessible.");
     case "routineNotFound":
       return fail("not_found", "No routine with that id in this project.");
-    case "noRepo":
-      return fail(
-        "invalid_params",
-        "This project has no linked repository, so a routine would have nothing to clone. Link one first.",
-      );
     case "promptRequired":
       return fail(
         "invalid_params",

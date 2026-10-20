@@ -373,8 +373,6 @@ function routineErrorMessage(r: { errorKey: string }): string {
       return "Project not found or not accessible.";
     case "routineNotFound":
       return "No routine with that id. Call list_routines.";
-    case "noRepo":
-      return "This project has no linked repository, so a routine would have nothing to clone. Link one in the project's Git settings first.";
     case "promptRequired":
       return "prompt is required: it IS the instruction the agent gets at every run.";
     case "unknownTimezone":

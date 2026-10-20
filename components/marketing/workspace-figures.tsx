@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, AiAutoRotateIcon, ArrowRight01Icon, ArrowUpDownIcon, Calendar01Icon, DatabaseIcon, File02Icon, FilterIcon, GitPullRequestIcon, Search01Icon, Settings02Icon, Target01Icon, TaskDone01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, AiAutoRotateIcon, ArrowRight01Icon, ArrowUpDownIcon, Calendar01Icon, CodeSimpleIcon, DatabaseIcon, File02Icon, FilterIcon, GitPullRequestIcon, Search01Icon, Settings02Icon, Target01Icon, TaskDone01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { getFormatter, getTranslations } from "next-intl/server";
 import type { CSSProperties, ReactNode } from "react";
 import { PriorityIndicator, StatusIndicator, EffortIndicator, ObjectiveStatusIndicator } from "@/components/issue-indicators";
@@ -12,7 +12,6 @@ import { ProjectOrb } from "@/components/project-orb";
 import { DEFAULT_CATEGORIES, type DefaultCategoryKey } from "@/lib/default-categories";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 import type { IssueEffort, IssuePriority, IssueStatus } from "@/lib/issue-constants";
-import { NumoFace } from "@/components/numo-face";
 import { NotebookFigure } from "./notebook-figure";
 
 /** One ticket of the illustrated board: every field a real card renders. */
@@ -372,12 +371,13 @@ export async function ScratchpadFigure() {
   return <NotebookFigure title={t("heroLoopIssueTitle")} tasks={(["repro", "signature", "retry"] as const).map(key => t(`heroLoopTask_${key}`))} />;
 }
 
-/** Readable execution steps using the product's task status indicators. */
+/** The plan your own coding agent works through, with the product's task
+    status indicators: Numo no longer runs code (MIN-721). */
 export async function AgentWorkFigure() {
   const t = await getTranslations("Landing");
   return (
     <div className="rounded-xl border border-border bg-background p-5 text-foreground shadow-sm">
-      <div className="mb-4 flex items-center gap-2 border-b border-border pb-4 text-sm font-medium"><NumoFace className="h-4 w-5" />{t("heroLoopStepRun")}</div>
+      <div className="mb-4 flex items-center gap-2 border-b border-border pb-4 text-sm font-medium"><HugeiconsIcon icon={CodeSimpleIcon} className="size-4" strokeWidth={1.5} aria-hidden />{t("heroLoopStepRun")}</div>
       <p className="mb-4 text-sm font-medium">{t("heroLoopIssueTitle")}</p>
       <ul className="space-y-4">
         {(["repro", "signature", "retry"] as const).map(key => <li key={key} className="flex items-start gap-3 text-sm"><StatusIndicator status="done" /><span>{t(`heroLoopTask_${key}`)}</span></li>)}

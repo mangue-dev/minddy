@@ -26,8 +26,9 @@ const NUMO_TOOLS = [
   { key: "notes", icon: StickyNote02Icon },
 ] as const;
 
-/** Read left to right: Numo opens the section, works the repository, you review,
-    and external agents and apps plug into the same conversation through MCP. */
+/** Read left to right: Numo opens the section, your own coding agent takes the
+    issue, you review and merge its pull request, and external agents and apps
+    plug in through MCP. */
 export async function SectionAgents() {
   const t = await getTranslations("Landing");
   return (
@@ -56,7 +57,7 @@ export async function SectionAgents() {
             </div>
           </FeatureDisclosure>
           <FeatureDisclosure id="workflow" title={t("workflow_run_title")} className={`min-h-[460px] ${CARD_TONES.lavender}`}
-            details={<div className="space-y-5"><p>{t("workflow_write_body")}</p><p>{t("workflow_run_body")}</p><p>{t("workflowSubtitle")}</p><ScreenshotSlot id="workflowAgent" expandable focused sizes="(min-width: 1024px) 310px, 100vw" /></div>}>
+            details={<div className="space-y-5"><p>{t("workflow_write_body")}</p><p>{t("workflow_run_body")}</p><p>{t("workflowSubtitle")}</p></div>}>
             <div className="flex h-full flex-col px-6 pt-6 pb-20 sm:px-8 sm:pt-8">
               <HugeiconsIcon icon={BotIcon} className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
               <h3 className="text-2xl font-medium tracking-tight">{t("workflow_run_title")}</h3>

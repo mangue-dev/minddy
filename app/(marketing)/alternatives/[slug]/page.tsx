@@ -20,7 +20,7 @@ import { AppIcon } from "@/components/icon";
 import { MINDDY_REPOSITORY_URL } from "@/lib/brand-constants";
 
 const FEATURES = {
-  agents: { icon: BotIcon, tone: CARD_TONES.lavender, screenshot: "workflowAgent" },
+  agents: { icon: BotIcon, tone: CARD_TONES.lavender, screenshot: "workflowPr" },
   pages: { icon: File02Icon, tone: CARD_TONES.sky, screenshot: "pagesEditor" },
   numo: { icon: BotIcon, tone: CARD_TONES.butter },
   routines: { icon: BubbleChatDelayIcon, tone: CARD_TONES.peach },
