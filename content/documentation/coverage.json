@@ -828,13 +828,13 @@
   {
     "workflow": "A05",
     "article": "automation-settings",
-    "outcome": "Review archived automation proposals and configure owner-controlled routines",
+    "outcome": "Understand retired project automations and configure owner-controlled routines",
     "audiences": [
       "owner"
     ],
     "type": "guide",
-    "source": "`lib/server/legacy-routine-proposals.ts`; `components/routines/routine-detail.tsx`; K/settings-and-data",
-    "gaps": "Paused proposals, filters, delay, checkpoints, spending cap and retained archive",
+    "source": "`components/routines/routine-detail.tsx`; K/settings-and-data",
+    "gaps": "Retired automations, routine triggers, filters and spending cap",
     "illustration": "Transition explained in text; trigger controls illustrated in N06",
     "requiresFigures": false,
     "section": "automation-settings"
