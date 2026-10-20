@@ -26,7 +26,7 @@ Read these repository references before delegating:
   Markdown, search and index contract shared with HTML and Numo.
 
 Identify the target release or candidate commit, editions and installation
-profiles. Inspect article `compatibility.evidence` and prior review records;
+profiles. Inspect article `compatibility.evidence` and its `review` field;
 compare relevant source changes since the last verified revision. Check actual
 UI labels in `messages/` and implementations in `app/`, `components/`, `lib/`,
 `scripts/`, `supabase/` and `desktop/` as applicable. Distinguish candidate
@@ -81,9 +81,10 @@ and reader articles in their locale using the actual translated UI labels.
 Increment changed locale revisions, set `sourceRevision` to the corrected
 English revision, and reconcile figure revisions under the article contract.
 Update compatibility and dates only for verification actually performed.
-Record sanitized evidence under `content/documentation/reviews/`, including
-reviewer identity, method, article revision, actual date and limitations. Keep
-private records out of public article bodies and exports. Agent reviews must
+Record the reviewer identity, article revision and actual date in the `review`
+field, in one short entry. Report the method, evidence and limitations in the
+pull request description; never commit review records, audit reports or
+evidence files. Keep private evidence out of public article bodies and exports. Agent reviews must
 be identified as agent reviews, never as human acceptance.
 
 If essential facts remain unresolved, leave the affected article set in draft

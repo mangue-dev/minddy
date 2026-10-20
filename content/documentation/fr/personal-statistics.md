@@ -34,7 +34,6 @@
       "components/settings/account-profile-section.tsx",
       "components/settings/account-settings-page.tsx",
       "components/stats/effort-durations.tsx",
-      "content/documentation/reviews/min-737-settings-reorganization.md",
       "content/knowledge/productivity.md",
       "lib/stats-derive.ts",
       "lib/server/stats.ts",

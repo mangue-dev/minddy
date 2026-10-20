@@ -9,7 +9,7 @@ import { chromium } from "playwright";
 
 const root = process.cwd();
 const output = resolve(root, "output/documentation-cleanup-preview");
-const screenshots = resolve(root, "docs/screenshots/pr-documentation-cleanup");
+const screenshots = resolve(output, "screenshots");
 await mkdir(output, { recursive: true });
 await mkdir(screenshots, { recursive: true });
 const sources = ["components/documentation/documentation-table.tsx", "components/documentation/documentation-diagram.tsx", "components/marketing/card-tones.ts", "components/marketing/feature-table-styles.ts"];

@@ -72,7 +72,7 @@ inventory.
 ## Current corrective checkpoint: review of `2ddcbbd4e`
 
 The current code and evidence are recorded in the
-[29 September corrective report](review-2026-09-29.md) and
+[closure matrix](closure-matrix.md) and
 [local client copy inventory](local-client-copies.md). They supersede remaining
 code and test-count claims in dated checkpoints below. Those sections are
 historical evidence, not cumulative production-closure assertions.

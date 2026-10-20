@@ -1,9 +1,8 @@
 # Official documentation
 
-This directory owns the versioned public manual for MIN-664. Only its explicit
-`en`, `fr`, `de`, `es`, `it`, and `pt-BR` article directories are loadable.
-`docs/`, review records, plans, audits and internal assistant instructions never
-become public through recursive discovery.
+This directory owns the versioned public manual. Only its explicit `en`, `fr`,
+`de`, `es`, `it`, and `pt-BR` article directories are loadable. `docs/` and
+internal assistant instructions never become public through recursive discovery.
 
 ## Article contract
 
@@ -11,8 +10,6 @@ Organize the entire manual into feature guides, including self-hosted operations
 and technical subjects. Use a recognizable localized feature title, a useful
 scope paragraph, and a hierarchical contents list with task headings and nested
 checks/reference/recovery. Retain the complete task instructions and conditions.
-The [feature-guide migration](../../docs/plans/min-664-feature-guides.md) explains
-the change from the initial narrow task articles and the 42-guide catalog.
 
 Use a stable ASCII article ID as the filename in every locale. Explicit locale
 roots translate the URL; article IDs remain stable across languages. Every
@@ -26,9 +23,10 @@ Frontmatter is a JSON object between `---` lines. Required fields are `id`,
 `visibility`, `status`, `revision`, `sourceRevision`, `owner`, `updatedAt`,
 `compatibility`, `review`, `related`, `aliases`, `tags`, `figures` and
 `requiredFigures`. Types are defined in `lib/documentation.ts`. Compatibility
-identifies edition, release/profile and private factual evidence paths. Review
-records identify the actual factual and language reviewer and date at the
-article revision. Never invent approval or update dates on each build.
+identifies edition, release/profile and the tracked source, test or reference
+files that support the article (`evidence`). The `review` field identifies the
+actual factual and language reviewer and date at the article revision, in one
+short entry per review. Never invent approval or update dates on each build.
 
 Drafts and internal articles stay out of public HTML, search, sitemap and Numo. All six
 variants must be published, current and reviewed before any one variant becomes
@@ -43,9 +41,8 @@ flag has no effect in production. Preview checks do not establish published
 coverage. Cross-language links use document navigation to refresh the root
 translation provider while preserving semantic section IDs.
 
-`coverage.json` mirrors the 90 original matrix rows and the two PR-review
-additions for voice dictation and issue CSV export (92 outcomes). Each row names the article
-and stable section containing its outcome. The checker rejects ledger drift.
+`coverage.json` is the workflow ledger (92 outcomes). Each row names the article
+and stable section containing its outcome. The checker rejects repeated rows.
 It also reports pending release coverage even when draft validation passes.
 Do not treat a passing draft check as completion of the ticket.
 
@@ -53,9 +50,10 @@ Do not treat a passing draft check as completion of the ticket.
 
 1. Read `docs/documentation-editorial-guide.md` and the workflow brief in the
    coverage ledger. Inspect the exact control, permission and released behavior.
-2. Write the complete English task, explanation or reference. Record its
-   evidence and unresolved facts in `reviews/`; unresolved essential facts keep
-   the article in draft. Keep private evidence out of the article itself.
+2. Write the complete English task, explanation or reference. List its source
+   files in `compatibility.evidence` and its unresolved facts in the pull
+   request description; unresolved essential facts keep the article in draft.
+   Keep private evidence out of the article itself.
 3. Translate the full meaning in all five other locales, including conditions,
    recovery steps, meaningful examples, alt text and captions. Preserve commands
    and identifiers. Increment `revision` when the locale changes and record the
@@ -64,9 +62,11 @@ Do not treat a passing draft check as completion of the ticket.
    Inspect every required locale image, including visible conversations and
    data. Publish approved images under `public/documentation/<locale>/`.
 5. Record factual and language review with reviewer identity, revision and
-   date. The owner authorized agent language review on 2026-10-08 and offered
-   personal French review. Label agent reviews explicitly; they are not human
-   reader acceptance. Keep actual reader/operational evidence separately.
+   date in the `review` field. The owner authorized agent language review on
+   2026-10-08 and offered personal French review. Label agent reviews
+   explicitly; they are not human reader acceptance. Report reader and
+   operational evidence in the pull request description; never commit review
+   records, capture logs or evidence files.
 6. Run `npm run check:documentation`, `npm run check:knowledge`,
    `npm run check:owned-english` and relevant tests. Use
    `npm run check:documentation:release` before calling the manual complete.
@@ -105,8 +105,7 @@ rides in a single prompt. Existing model, disablement and cost guards remain.
 Review documentation impact for every code change. Documentation edits are
 required only when documented behavior, controls, configuration or contributor
 workflows change. Small fixes, refactors, formatting and test-only PRs that
-leave documentation accurate need no documentation edit, new illustration or
-article review record. Complete affected public guides, technical references
+leave documentation accurate need no documentation edit or new illustration. Complete affected public guides, technical references
 and internal instructions in the same PR. Add documentation for new
 capabilities, correct changed behavior, and remove retired procedures, claims
 and illustrations.
@@ -114,8 +113,8 @@ Reconcile related links, navigation, aliases, coverage mappings and glossary
 entries when their meaning changes; preserve valid legacy URLs. Do not postpone
 required documentation to another task or release.
 
-When documentation changes, PRs list affected workflow, article and figure IDs,
-evidence and checks. For a PR with no documentation impact, a brief note
+When documentation changes, the PR description lists affected workflow,
+article and figure IDs, evidence and checks. For a PR with no documentation impact, a brief note
 suffices; article IDs and release-wide checks are unnecessary. Avoid cosmetic
 edits. Update English facts and full `fr`, `de`, `es`,
 `it`, and `pt-BR` translations together, including localized labels, examples,

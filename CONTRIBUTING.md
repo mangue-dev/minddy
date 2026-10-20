@@ -64,9 +64,14 @@ Maintainer releases use `pnpm deploy`; the release process is documented in
    in the same pull request, including all public locales and illustrations.
 3. Run `pnpm lint`, `pnpm typecheck`, and the smallest relevant tests in an
    environment without secrets.
-4. Explain the motivation, changes, checks, risks, and licenses for new
+4. Keep working material out of the tree: no per-change plans, audits,
+   reports, evidence files, one-off scripts, pull request screenshots or debug
+   images. Put them in the pull request description instead (see
+   [Repository hygiene](AGENTS.md#repository-hygiene-what-a-pull-request-may-add));
+   `pnpm check:public-repo` rejects the known locations.
+5. Explain the motivation, changes, checks, risks, and licenses for new
    dependencies or assets.
-5. Sign off every commit with `git commit -s`.
+6. Sign off every commit with `git commit -s`.
 
 Maintainers review external contributions before executing them. At least one
 code-owner approval is required, and authors do not approve their own pull
@@ -126,15 +131,15 @@ merged changes should reach production.
 Review documentation impact for every code change. Documentation edits are
 required only when documented behavior, controls, configuration or contributor
 workflows change. Small fixes, refactors, formatting and test-only PRs that
-leave documentation accurate need no documentation edit, new illustration or
-article review record. Document added features, correct changed behavior and
+leave documentation accurate need no documentation edit or new illustration. Document added features, correct changed behavior and
 remove retired instructions and visuals before
 the pull request is ready. Follow the
 [maintenance contract](content/documentation/README.md#release-maintenance) and
 [editorial guide](docs/documentation-editorial-guide.md). Keep all six public
 languages, localized examples, captions, alternative text, screenshots and
 responsive diagrams current together; internal instructions remain English.
-List affected article, workflow and figure IDs when documentation changes.
+List affected article, workflow and figure IDs in the pull request description
+when documentation changes.
 A brief note suffices for a PR with no documentation impact; it needs no
 article IDs or release-wide checks.
 

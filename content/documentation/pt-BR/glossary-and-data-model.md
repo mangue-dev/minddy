@@ -37,12 +37,8 @@
       "content/knowledge/productivity.md",
       "content/knowledge/pages.md",
       "content/knowledge/feedback.md",
-      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
-      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
-      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md",
       "docs/security/project-roles.md",
-      "lib/project-roles.ts",
-      "content/documentation/reviews/min-693-project-roles.md"
+      "lib/project-roles.ts"
     ]
   },
   "review": {

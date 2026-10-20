@@ -34,8 +34,7 @@
     "evidence": [
       "docs/self-hosting-operations.md",
       "docs/self-hosting-logical-operations.md",
-      "content/knowledge/self-hosting-operations.md",
-      "content/documentation/reviews/premerge-second-operations-2026-10-10.md"
+      "content/knowledge/self-hosting-operations.md"
     ]
   },
   "review": {

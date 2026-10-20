@@ -154,8 +154,7 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   // instance — Smart Fill, Smart Assign and the feedback review all read it,
   // nothing selects a model per project, user or use case. A decision model
   // answers typed questions over a structured state on OpenRouter's decisions
-  // endpoint (docs/plans/min-561-jev-prerequisites.md for the access path,
-  // docs/plans/min-694-decision-model-selection.md for the verified models).
+  // endpoint.
   // The picker lists only models publishing the `decisions` output modality,
   // and the save probes the candidate before writing it. The `jev_*` key
   // names are historical, kept so existing rows carry over; Jev stays the

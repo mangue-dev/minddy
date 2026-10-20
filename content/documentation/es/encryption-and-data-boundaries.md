@@ -36,12 +36,7 @@
       "docs/self-hosting.md",
       "lib/server/encryption/data-policy.json",
       "lib/server/encryption.ts",
-      "docs/editions.md",
-      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
-      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
-      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md",
-      "content/documentation/reviews/premerge-de-es-2026-10-10.md",
-      "content/documentation/reviews/premerge-light-review-2026-10-10.md"
+      "docs/editions.md"
     ]
   },
   "review": {

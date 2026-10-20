@@ -32,9 +32,7 @@
     ],
     "evidence": [
       "content/knowledge/repository-skills.md",
-      "components/assistant/skill-preview-dialog.tsx",
-      "content/documentation/reviews/repository-skill-capture-candidates.json",
-      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
+      "components/assistant/skill-preview-dialog.tsx"
     ]
   },
   "review": {

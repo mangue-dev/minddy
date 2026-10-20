@@ -34,10 +34,7 @@
       "docs/self-hosting-operations.md",
       "docs/self-hosting-logical-operations.md",
       "lib/server/page-files.ts",
-      "lib/server/page-publication.ts",
-      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
-      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
-      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
+      "lib/server/page-publication.ts"
     ]
   },
   "review": {

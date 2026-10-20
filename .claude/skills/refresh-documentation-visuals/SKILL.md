@@ -17,7 +17,7 @@ Follow `AGENTS.md`, including Git workflow and local resource limits. Read the
 rules and the [article contract](../../../content/documentation/README.md).
 Inspect the relevant `figures`, `requiredFigures`, captions and preceding
 instructions in `content/documentation/{en,fr,de,es,it,pt-BR}/`. Trace each
-asset to its capture intent/script and review record. Identify the current
+asset to its capture intent and script. Identify the current
 release or candidate commit and the runtime that will actually be photographed.
 
 For each figure, record its reader purpose and choose:
@@ -58,7 +58,7 @@ Reuse `captures/shots/documentation-*/intent.md` and `shot.mjs` when suitable;
 read the chosen script before running it. Some older scripts default to every
 locale/screen, open a browser per screen or catch failures and continue. Set
 explicit filters and run one screen per invocation in those cases, then inspect
-the review record before continuing. For example, on an already running local
+the run record under `output/documentation-captures/` before continuing. For example, on an already running local
 candidate compatible with `documentation-product`:
 
 ```bash
@@ -119,10 +119,11 @@ revision, actual `capturedAt`, display viewport, theme, padding, device scale
 and review result. Follow article `revision`/`sourceRevision` and review rules
 when changing metadata. Keep unchanged captures' dates and provenance intact.
 
-Save sanitized evidence in `content/documentation/reviews/`: source commit and
-working-tree state, runtime/version, route, control, locale, capture date,
-dimensions, density, demo adaptations, blocked/permitted writes, inspection
-result, reviewer and limitations. Set `reviewed` only after inspecting the
+Capture scripts write their run records to the ignored
+`output/documentation-captures/` directory; never commit them. Summarize in the
+pull request description the source commit and working-tree state,
+runtime/version, routes, locales, demo adaptations, blocked/permitted writes,
+inspection result, reviewer and limitations. Set `reviewed` only after inspecting the
 image. Record failed or interrupted captures as such, not as approved assets.
 
 After capture workers close, review representative article layouts on desktop

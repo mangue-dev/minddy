@@ -35,11 +35,7 @@
     "evidence": [
       "docs/editions.md",
       "docs/self-hosting-distribution.md",
-      "lib/server/capabilities.ts",
-      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
-      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
-      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md",
-      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
+      "lib/server/capabilities.ts"
     ]
   },
   "review": {

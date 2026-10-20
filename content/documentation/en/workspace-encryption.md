@@ -32,10 +32,7 @@
     "evidence": [
       "docs/self-hosting.md",
       "scripts/self-hosting-encryption.mjs",
-      "lib/server/encryption/data-policy.json",
-      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
-      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
-      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
+      "lib/server/encryption/data-policy.json"
     ]
   },
   "review": {

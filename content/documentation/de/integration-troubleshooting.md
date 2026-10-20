@@ -39,8 +39,7 @@
       "lib/server/mcp-http.ts",
       "lib/server/mcp-client.ts",
       "lib/server/safe-fetch.ts",
-      "app/api/mcp/route.ts",
-      "content/documentation/reviews/second-pass-ai-integrations-2026-10-10.md"
+      "app/api/mcp/route.ts"
     ]
   },
   "review": {

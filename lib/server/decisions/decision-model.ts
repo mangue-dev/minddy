@@ -22,8 +22,7 @@ import { clamp01, type DecisionAnswers, type DecisionSpec } from "@/lib/server/d
  * encrypted `app_config` rows carry over) through OpenRouter's dedicated
  * decisions endpoint. Jev (`typesafe/jev-1.13`) stays the default; any model
  * OpenRouter publishes with the `decisions` output modality AND that passes
- * the compatibility check on save (`probeDecisionModel`) can replace it. See
- * docs/plans/min-694-decision-model-selection.md for the verified models.
+ * the compatibility check on save (`probeDecisionModel`) can replace it.
  *
  * The endpoint is NOT chat/completions: the body is the System One
  * `{ state, model, questions }` and the URL is the origin of the resolved

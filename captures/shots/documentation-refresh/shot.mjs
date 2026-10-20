@@ -6,7 +6,7 @@ import { settleDocumentationPage, captureDocumentationControl } from "../../lib/
 import { catalog } from "../../lib/messages.mjs";
 
 if (!["localhost", "127.0.0.1", "www.minddy.app"].includes(new URL(CAPTURE.baseUrl).hostname)) throw new Error("Documentation refresh requires the local candidate or the canonical hosted application.");
-const output = "content/documentation/reviews/visual-refresh-captures-2026-10-09.json";
+const output = "output/documentation-captures/visual-refresh-captures-2026-10-09.json";
 let records = JSON.parse(await readFile(output, "utf8").catch(error => { if (error.code === "ENOENT") return "[]"; throw error; }));
 const commit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
 const requested = process.env.DOC_CAPTURE_SCREENS?.split(",").filter(Boolean);
@@ -46,9 +46,9 @@ for (const locale of locales) {
   const messages = await catalog(locale);
   const fixture = JSON.parse(await readFile(new URL(`../documentation-work/${locale}/fixture.json`, import.meta.url), "utf8"));
   const writes = [], adaptations = [];
-  const numo = JSON.parse(await readFile("content/documentation/reviews/numo-localized-demo-fixture.json", "utf8"));
+  const numo = JSON.parse(await readFile("captures/shots/documentation-refresh/numo-localized-demo-fixture.json", "utf8"));
   for (let index = 0; index < numo.original.length; index++) fixture.mapping[numo.original[index]] = numo.translations[locale][index];
-  const routines = JSON.parse(await readFile("content/documentation/reviews/routine-localized-capture-candidates.json", "utf8"));
+  const routines = JSON.parse(await readFile("captures/shots/documentation-refresh/routine-localized-capture-candidates.json", "utf8"));
   for (let index = 0; index < routines.original.length; index++) fixture.mapping[routines.original[index]] = routines.translations[locale][index];
   try {
     await context.route("**/api/**", async route => {
@@ -89,10 +89,11 @@ for (const locale of locales) {
         console.log(`${locale}/${screen}: captured at ${dimensions.deviceScaleFactor}x in light mode`);
       } catch (error) {
         records.push({ locale, screen, error: error.message.split("\n")[0] });
+        await mkdir("output/documentation-captures", { recursive: true });
         await writeFile(output, JSON.stringify(records, null, 2) + "\n");
         throw error;
       }
-      await mkdir("content/documentation/reviews", { recursive: true });
+      await mkdir("output/documentation-captures", { recursive: true });
       await writeFile(output, JSON.stringify(records, null, 2) + "\n");
     }
     for (const [screen, tab, section] of settings) await capture(screen, `/settings?tab=${tab}&section=${section}`, () => page.locator(`#settings-section-${section}`).locator(".."));

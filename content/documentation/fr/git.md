@@ -37,10 +37,7 @@
       "components/settings/account-git-connections-section.tsx",
       "components/settings/project-git-section.tsx",
       "docs/managed-forge-relay-plan.md",
-      "content/documentation/reviews/remaining-account-capture-candidates.json",
-      "docs/github-issue-sync.md",
-      "content/documentation/reviews/forge-controls-capture-candidates.json",
-      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
+      "docs/github-issue-sync.md"
     ]
   },
   "review": {

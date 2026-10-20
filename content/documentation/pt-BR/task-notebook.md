@@ -41,7 +41,6 @@
       "components/editor/rich-editor.tsx",
       "components/editor/document-editor.tsx",
       "components/editor/comment-editor.tsx",
-      "content/documentation/reviews/min-728-one-editor-engine.md",
       "components/scratchpad/scratchpad-editor.tsx",
       "lib/scratchpad-search.ts",
       "components/command-palette.tsx"

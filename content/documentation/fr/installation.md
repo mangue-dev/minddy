@@ -39,10 +39,6 @@
       "scripts/self-hosting-install.mjs",
       "deploy/self-hosted/compose.full.yml",
       "deploy/self-hosted/compose.managed.yml",
-      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
-      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
-      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
-      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md",
       "app/api/mcp/route.ts",
       "lib/site.ts",
       "lib/server/app-origin.ts",
@@ -50,8 +46,7 @@
       "app/api/oauth/register/route.ts",
       "lib/server/oauth/metadata.ts",
       "components/documentation/documentation-navigation.tsx",
-      "components/documentation/documentation-article.tsx",
-      "content/documentation/reviews/premerge-second-operations-2026-10-10.md"
+      "components/documentation/documentation-article.tsx"
     ]
   },
   "review": {

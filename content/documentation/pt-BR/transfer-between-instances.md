@@ -33,11 +33,7 @@
       "content/knowledge/settings-and-data.md",
       "components/settings/account-data-section.tsx",
       "lib/server/account-import.ts",
-      "content/documentation/reviews/remaining-account-capture-candidates.json",
-      "content/documentation/reviews/account-transfer-execution.json",
-      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
-      "components/settings/account-settings-page.tsx",
-      "content/documentation/reviews/min-737-settings-reorganization.md"
+      "components/settings/account-settings-page.tsx"
     ]
   },
   "review": {

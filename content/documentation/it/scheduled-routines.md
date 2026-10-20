@@ -33,17 +33,10 @@
       "content/knowledge/productivity.md",
       "components/routines/create-routine-wizard.tsx",
       "components/routines/routine-detail.tsx",
-      "content/documentation/reviews/routine-localized-capture-candidates.json",
-      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
-      "content/documentation/reviews/min-677-routines.md",
-      "content/documentation/reviews/min-677-editor-captures.json",
-      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md",
       "components/routines/routines-panel.tsx",
       "components/routines/use-routine-actions.tsx",
-      "content/documentation/reviews/min-685-sidebar-context-actions.md",
       "docs/security/project-roles.md",
-      "lib/project-roles.ts",
-      "content/documentation/reviews/min-693-project-roles.md"
+      "lib/project-roles.ts"
     ]
   },
   "review": {

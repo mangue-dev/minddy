@@ -42,14 +42,9 @@
       "lib/feedback/sso-jwt.ts",
       "app/f/[token]/sso/route.ts",
       "lib/server/feedback/posts.ts",
-      "content/documentation/reviews/premerge-de-es-2026-10-10.md",
-      "content/documentation/reviews/premerge-light-review-2026-10-10.md",
-      "content/documentation/reviews/min-670-feedback-objectives.md",
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
-      "content/documentation/reviews/min-693-project-roles.md",
-      "components/project-integrations.tsx",
-      "content/documentation/reviews/min-737-settings-reorganization.md"
+      "components/project-integrations.tsx"
     ]
   },
   "review": {

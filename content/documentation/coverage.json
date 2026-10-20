@@ -164,7 +164,7 @@
       "member"
     ],
     "type": "guide",
-    "source": "K/core-tracker; `components/issue-side-panel.tsx`; `components/issue-indicators.tsx`; `captures/shots/relations/intent.md`",
+    "source": "K/core-tracker; `components/issue-side-panel.tsx`; `components/issue-indicators.tsx`",
     "gaps": "Direction, inherited blockers, resolved states, cross-project visibility, unlinking and duplicate semantics",
     "illustration": "New relations in all locales; existing relation shots are candidates only",
     "requiresFigures": true,

@@ -53,7 +53,8 @@ try {
     }
   }
   const date = new Date().toISOString().slice(0, 10);
-  await fs.writeFile(`content/documentation/reviews/illustration-framing-${date}.json`, JSON.stringify({ date, method: 'Browser capture with transparent margins. Existing screenshot UI pixels are preserved exactly; original capture dates and prose remain unchanged.', records }, null, 2) + '\n');
+  await fs.mkdir("output/documentation-captures", { recursive: true });
+  await fs.writeFile(`output/documentation-captures/illustration-framing-${date}.json`, JSON.stringify({ date, method: 'Browser capture with transparent margins. Existing screenshot UI pixels are preserved exactly; original capture dates and prose remain unchanged.', records }, null, 2) + '\n');
   console.log(`Framed ${records.length} screenshots without changing their UI pixels.`);
 } finally {
   await browser.close();
