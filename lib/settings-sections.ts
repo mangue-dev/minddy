@@ -2,7 +2,7 @@ import type { AppIcon } from "@/components/icon";
 import { useMemo } from "react";
 import { AppWindowIcon as AppWindow, AiAutoRotateIcon as CycleIcon, Analytics01Icon, BlurIcon, ChartLineData01Icon, Copy01Icon, LaptopIcon, Link01Icon, Moon02Icon, PlayIcon, SearchList01Icon, Sun01Icon, UserCheck01Icon, BellRingIcon as BellRing, CalendarClockIcon, CodeSimpleIcon as Code2, Download, GitBranchIcon as GitBranch, ImportIcon, InboxIcon as Inbox, Keyboard, KeyRoundIcon as KeyRound, Languages, ListPlus, LockIcon, LogOut, MessageMultiple01Icon as MessagesSquare, Palette, PlugIcon as Plug, RepeatIcon as Repeat, Settings02Icon as Settings2, ShieldOff, Sparkles, TagsIcon as Tags, TicketIcon as Ticket, Trash2, TriangleAlertIcon, Upload04Icon as Upload, ViewOffIcon, UserGroupIcon as Users, UserIcon as User } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
-import { SmartAssignIcon, SmartFillIcon } from "@/components/smart-icons";
+import { SMART_ASSIGN_ICON, SMART_FILL_ICON } from "@/components/feature-icons";
 
 /**
  * The catalog of settings sections — the table that the ⌘K palette reads and
@@ -19,8 +19,10 @@ import { SmartAssignIcon, SmartFillIcon } from "@/components/smart-icons";
  * in ⌘K and wouldn't take you anywhere.
  */
 
-/** The default open tab for each screen (the one that `?tab=` can omit). */
-export const ACCOUNT_SETTINGS_DEFAULT_TAB = "profile";
+/** The default open tab for each screen (the one that `?tab=` can omit).
+ * "Account settings" opens on the preferences; the profile has its own entry
+ * (`?tab=profile`) under the user's name. */
+export const ACCOUNT_SETTINGS_DEFAULT_TAB = "preferences";
 export const PROJECT_SETTINGS_DEFAULT_TAB = "general";
 
 /** `/settings` tabs — keys are `?tab=` values. */
@@ -41,7 +43,7 @@ export type AccountSettingsTab =
 /**
  * Former `/settings?tab=` values and the tab that now holds their cards
  * (MIN-737). Shared links, bookmarks and restored app tabs keep landing on
- * the right content instead of falling back to the profile.
+ * the right content instead of falling back to the default tab.
  */
 export const ACCOUNT_SETTINGS_TAB_ALIASES: Readonly<Record<string, AccountSettingsTab>> = {
   "mcp-clients": "agent",
@@ -436,7 +438,7 @@ export function useSettingsSections(): SettingsSection[] {
       account({
         id: SETTINGS_SECTIONS.accountSmartFill,
         tab: "smart-fill",
-        icon: SmartFillIcon,
+        icon: SMART_FILL_ICON,
         title: tAccount("smartFillTitle"),
         keywords: [
           "smart fill", "smart-fill", "smartfill", "remplissage", "remplir",
@@ -714,7 +716,7 @@ export function useSettingsSections(): SettingsSection[] {
       project({
         id: SETTINGS_SECTIONS.projectSmartAssign,
         tab: "smart-assign",
-        icon: SmartAssignIcon,
+        icon: SMART_ASSIGN_ICON,
         title: tSettings("smartAssignTab"),
         keywords: [
           "smart assign", "assignation", "assignment", "assigné", "assigne",

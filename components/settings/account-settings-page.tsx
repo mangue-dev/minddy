@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { AiAutoRotateIcon as CycleIcon, BotIcon as Bot, GitBranchIcon as GitBranch, InboxIcon as Inbox, LockIcon, PlugIcon as Plug, ShieldCheckIcon as ShieldCheck, SlidersHorizontalIcon as SlidersHorizontal, TicketIcon as Ticket, UserIcon as User, ViewOffIcon } from "@hugeicons/core-free-icons";
-import { SmartFillIcon } from "@/components/smart-icons";
+import { SMART_FILL_ICON } from "@/components/feature-icons";
 import { useAuth } from "@/lib/auth-context";
 import { useMfaStatusQuery } from "@/lib/use-mfa-status";
 import type { SidebarBrowseTarget } from "@/components/secondary-sidebar";
@@ -94,7 +94,7 @@ export default function AccountSettingsPage({ browse }: { browse?: SidebarBrowse
     {
       value: "smart-fill",
       label: t("smartFillTab"),
-      icon: SmartFillIcon,
+      icon: SMART_FILL_ICON,
       content: <AccountSmartFillSection />,
     },
     {

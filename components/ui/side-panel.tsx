@@ -257,7 +257,7 @@ function SidePanelTitle({
   return (
     <Title
       data-slot="side-panel-title"
-      className={cn("text-base leading-none font-medium", className)}
+      className={cn("text-base leading-tight font-medium", className)}
       {...props}
     />
   )

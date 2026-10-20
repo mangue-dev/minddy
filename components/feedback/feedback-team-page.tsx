@@ -963,7 +963,15 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
               }
               className="py-10"
             >
-              {query.trim() || posts.length === 0 ? null : (
+              {posts.length === 0 ? (
+                // Nothing collected yet: the first gesture, as in the pane.
+                canWrite ? (
+                  <Button size="sm" onClick={() => setCreateOpen(true)}>
+                    <HugeiconsIcon icon={Add01Icon} />
+                    {t("newFeedback")}
+                  </Button>
+                ) : null
+              ) : query.trim() ? null : (
                 <Button
                   variant="outline"
                   size="sm"

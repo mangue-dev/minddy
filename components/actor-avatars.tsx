@@ -3,7 +3,7 @@ import { WorkflowCircle01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { NumoFace } from "@/components/numo-face";
 import { McpAgentLogo } from "@/components/mcp-agent-logo";
-import { SmartAssignIcon, SmartFillIcon } from "@/components/smart-icons";
+import { SMART_ASSIGN_ICON, SMART_FILL_ICON } from "@/components/feature-icons";
 
 /**
  * Portraits of actors WHO ARE NOT PEOPLE: Numo, an agent
@@ -94,7 +94,7 @@ export function SmartFillAvatar({
 }) {
   return (
     <span aria-hidden className={disc(className)}>
-      <SmartFillIcon className={cn("size-3", iconClassName)} />
+      <HugeiconsIcon icon={SMART_FILL_ICON} className={cn("size-3", iconClassName)} />
     </span>
   );
 }
@@ -110,7 +110,7 @@ export function SmartAssignAvatar({
 }) {
   return (
     <span aria-hidden className={disc(className)}>
-      <SmartAssignIcon className={cn("size-3", iconClassName)} />
+      <HugeiconsIcon icon={SMART_ASSIGN_ICON} className={cn("size-3", iconClassName)} />
     </span>
   );
 }

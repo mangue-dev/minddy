@@ -10,6 +10,7 @@
 //
 // Server-safe by guard: every accessor short-circuits when `window` is absent.
 
+import type { JSONContent } from "@tiptap/core";
 import type {
   IssueStatus,
   IssuePriority,
@@ -32,6 +33,10 @@ interface DraftBase {
   updatedAt: number;
   /** Absent from drafts saved before creation supported relations. */
   relations?: PendingRelationInput[];
+  /** The description's editor document: its mention pills keep their figure
+      (portrait, color, emoji), which the Markdown does not carry. Absent from
+      drafts saved before it, which reopen from `description` alone. */
+  description_doc?: JSONContent | null;
 }
 
 export interface IssueDraft extends DraftBase {

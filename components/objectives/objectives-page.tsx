@@ -478,9 +478,9 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
     />
   ) : null;
 
-  // No objective at all (not “nothing in this filter”): both panes have no
-  // nothing left to show, and the screen must say where to start rather than
-  // to display an empty column next to a "select a goal".
+  // No objective at all (not “nothing in this filter”): the column stays,
+  // with its search and its “+”, and carries a compact scene with the first
+  // gesture; the pane says where to start rather than "select a goal".
   const sidebar = (
       <CollectionSidebar browse={browse}
         title={t("title")}
@@ -528,12 +528,11 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
             ))}
           </div>
         ) : listed.length === 0 ? (
-          /* A page without ANY objective is discussed above: here, it is
- necessarily a filter which emptied the column. Which is not a
- detail — "nothing matches" is fixed by deleting three letters,
- "no goals completed" asks to reopen the status menu, hence
- the button, which has nothing to offer as long as it is the input that
- is restricting. */
+          /* No objective at all: the scene offers the first one. Otherwise a
+ filter emptied the column. Which is not a detail — "nothing matches"
+ is fixed by deleting three letters, "no goals completed" asks to
+ reopen the status menu, hence the button, which has nothing to offer
+ as long as it is the input that is restricting. */
           <EmptyScene
             size="compact"
             icon={Target01Icon}
@@ -544,7 +543,14 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
             }
             className="py-10"
           >
-            {query.trim() || state === "all" ? null : (
+            {objectives.length === 0 ? (
+              canWrite ? (
+                <Button size="sm" onClick={() => setDialogOpen(true)}>
+                  <HugeiconsIcon icon={Add01Icon} />
+                  {t("newObjective")}
+                </Button>
+              ) : null
+            ) : query.trim() || state === "all" ? null : (
               <Button variant="outline" size="sm" onClick={() => setState("all")}>
                 {t("emptyShowAll")}
               </Button>
@@ -576,8 +582,9 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
 
   if (!loading && objectives.length === 0) {
     return (
-      <>
-        <div className="flex h-full flex-col">
+      <div className="flex h-full min-h-0">
+        {sidebar}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
             <div className="mx-auto max-w-5xl">
               {/* Same form as the empty board (MIN-173): a scene, a sentence,
@@ -615,7 +622,7 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
           </div>
         </div>
         {createDialog}
-      </>
+      </div>
     );
   }
 

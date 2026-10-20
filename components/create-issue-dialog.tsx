@@ -204,6 +204,9 @@ export function CreateIssueDialog({
   /** The editor document of `description`, as last committed (MIN-728);
       cleared whenever the description is replaced from outside the editor. */
   const descriptionDocument = useRef<JSONContent | null>(null);
+  // The document of a recovered draft, opened as stored so its pills keep
+  // their colors; null for a new description.
+  const [draftDocument, setDraftDocument] = useState<JSONContent | null>(null);
   // Images of the description still being sent (MIN-728).
   const [imagesUploading, setImagesUploading] = useState(false);
   const [fields, setFields] = useState(DEFAULTS);
@@ -380,6 +383,7 @@ export function CreateIssueDialog({
     if (initialDescription) {
       setDescription(initialDescription);
       descriptionDocument.current = null;
+      setDraftDocument(null);
       editorNonEmptyRef.current = true;
       setEditorKey((k) => k + 1); // remount the editor with the seeded content
     }
@@ -441,6 +445,7 @@ export function CreateIssueDialog({
     setTitle("");
     setDescription("");
     descriptionDocument.current = null;
+    setDraftDocument(null);
     setEditorKey((k) => k + 1);
     uploads.clear();
     setRelations([]);
@@ -491,6 +496,7 @@ export function CreateIssueDialog({
       category_ids: categoryIds,
       resources: uploads.inputs,
       relations,
+      description_doc: description.trim() ? descriptionDocument.current : null,
     });
   };
 
@@ -552,7 +558,8 @@ export function CreateIssueDialog({
     track("issue_draft_recovered", {});
     setTitle(draft.title);
     setDescription(draft.description);
-    descriptionDocument.current = null;
+    descriptionDocument.current = draft.description_doc ?? null;
+    setDraftDocument(draft.description_doc ?? null);
     setEditorKey((k) => k + 1); // remount the editor with the draft's content
     editorNonEmptyRef.current = draft.description.trim() !== "";
     setFields({
@@ -693,6 +700,7 @@ export function CreateIssueDialog({
     if (typeof patch.description === "string") {
       setDescription(patch.description);
       descriptionDocument.current = null;
+      setDraftDocument(null);
       setEditorKey((k) => k + 1); // remount the editor with the new content
     }
     setFields((f) => ({
@@ -838,6 +846,7 @@ export function CreateIssueDialog({
                 mentions={mentions}
                 key={editorKey}
                 value={description}
+                document={draftDocument}
                 uploadScope={`projects/${activeProjectId}`}
                 onUploadingChange={setImagesUploading}
                 onCommit={(markdown, content) => {

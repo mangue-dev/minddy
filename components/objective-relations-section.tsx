@@ -24,7 +24,7 @@ import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { isClosedStatus, issueIdentifier } from "@/lib/issue-constants";
+import { issueIdentifier } from "@/lib/issue-constants";
 import { issueTierKeyword, orderIssuesForSearch } from "@/lib/issue-search-order";
 import {
   RELATION_PRIORITY,
@@ -123,7 +123,7 @@ export function ObjectiveRelationsSection({
   );
   const issueCandidates = useMemo(
     // Work under way first, triage last (MIN-726).
-    () => orderIssuesForSearch(issues.filter((i) => !linked.has(i.id) && !isClosedStatus(i.status)), (i) => i.status),
+    () => orderIssuesForSearch(issues.filter((i) => !linked.has(i.id)), (i) => i.status),
     [issues, linked],
   );
   const objectiveCandidates = useMemo(
@@ -172,6 +172,7 @@ export function ObjectiveRelationsSection({
           searchValue={query}
           onSearchValueChange={setQuery}
           searchPlaceholder={step ? t("searchTarget") : undefined}
+          focusKey={step}
           contentClassName="w-80"
           trigger={
             <button

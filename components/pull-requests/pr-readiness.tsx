@@ -110,6 +110,52 @@ function mergeMethodKey(method: MergeMethod): MessageKey<"PullRequests"> {
       : "mergeMethodMerge";
 }
 
+/**
+ * The color family of a readiness state. A merged pull request is done, not
+ * failing: it takes the merged purple of its state badge, never the
+ * destructive red of a blocker.
+ */
+type ReadinessTone = "ready" | "pending" | "merged" | "blocked";
+
+function readinessTone(state: PullRequestReadinessState | null): ReadinessTone {
+  if (state === null) return "pending";
+  if (state === "ready") return "ready";
+  if (state === "merged") return "merged";
+  if (state === "review_requested" || state === "checks_running" || state === "status_unavailable") {
+    return "pending";
+  }
+  return "blocked";
+}
+
+const TONE_TEXT: Record<ReadinessTone, string> = {
+  ready: "text-emerald-700 dark:text-emerald-400",
+  pending: "text-amber-700 dark:text-amber-400",
+  merged: "text-violet-700 dark:text-violet-400",
+  blocked: "text-destructive",
+};
+
+const TONE_BADGE: Record<ReadinessTone, string> = {
+  ready: "bg-emerald-600/10 text-emerald-700 dark:text-emerald-400",
+  pending: "bg-amber-600/10 text-amber-700 dark:text-amber-400",
+  merged: "bg-violet-600/10 text-violet-700 dark:bg-violet-500/15 dark:text-violet-400",
+  blocked: "bg-destructive/10 text-destructive",
+};
+
+const TONE_TRIGGER: Record<ReadinessTone, string> = {
+  ready:
+    "!border-emerald-600/30 bg-emerald-600/10 text-emerald-700 hover:bg-emerald-600/15 focus-visible:bg-emerald-600/15 data-[state=open]:bg-emerald-600/15 data-[state=open]:text-emerald-700 dark:!border-emerald-400/30 dark:text-emerald-400 dark:data-[state=open]:text-emerald-400",
+  pending:
+    "!border-amber-600/30 bg-amber-600/10 text-amber-700 hover:bg-amber-600/15 focus-visible:bg-amber-600/15 data-[state=open]:bg-amber-600/15 data-[state=open]:text-amber-700 dark:!border-amber-400/30 dark:text-amber-400 dark:data-[state=open]:text-amber-400",
+  merged:
+    "!border-violet-600/30 bg-violet-600/10 text-violet-700 hover:bg-violet-600/15 focus-visible:bg-violet-600/15 data-[state=open]:bg-violet-600/15 data-[state=open]:text-violet-700 dark:!border-violet-400/30 dark:text-violet-400 dark:data-[state=open]:text-violet-400",
+  blocked:
+    "!border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/15 focus-visible:bg-destructive/15 data-[state=open]:bg-destructive/15 data-[state=open]:text-destructive",
+};
+
+function toneIcon(tone: ReadinessTone) {
+  return tone === "ready" || tone === "merged" ? CheckIcon : tone === "pending" ? Clock01Icon : AlertCircleIcon;
+}
+
 function blockerMessageKey(
   blocker: ReadinessBlocker,
 ): MessageKey<"PullRequests"> {
@@ -153,33 +199,13 @@ export function PrReadinessBadge({
       </Badge>
     );
   }
-  const ready = readiness.state === "ready";
-  const pending =
-    readiness.state === "review_requested" ||
-    readiness.state === "checks_running" ||
-    readiness.state === "status_unavailable";
+  const tone = readinessTone(readiness.state);
   return (
     <Badge
       variant="secondary"
-      className={cn(
-        "shrink-0 gap-1.5",
-        className,
-        ready &&
-          "bg-emerald-600/10 text-emerald-700 dark:text-emerald-400",
-        pending &&
-          "bg-amber-600/10 text-amber-700 dark:text-amber-400",
-        !ready &&
-          !pending &&
-          "bg-destructive/10 text-destructive",
-      )}
+      className={cn("shrink-0 gap-1.5", className, TONE_BADGE[tone])}
     >
-      {ready ? (
-        <HugeiconsIcon icon={CheckIcon} className="size-3" />
-      ) : pending ? (
-        <HugeiconsIcon icon={Clock01Icon} className="size-3" />
-      ) : (
-        <HugeiconsIcon icon={AlertCircleIcon} className="size-3" />
-      )}
+      <HugeiconsIcon icon={toneIcon(tone)} className="size-3" />
       {t(STATE_KEYS[readiness.state])}
     </Badge>
   );
@@ -200,24 +226,15 @@ export function PrReadinessIcon({
     : readiness
     ? t(STATE_KEYS[readiness.state])
     : t("readinessLoading");
-  const ready = readiness?.state === "ready";
-  const pending =
-    !unavailable &&
-    (!readiness ||
-      readiness.state === "review_requested" ||
-      readiness.state === "checks_running" ||
-      readiness.state === "status_unavailable");
-  const Icon = unavailable ? AlertCircleIcon : ready ? CheckIcon : pending ? Clock01Icon : AlertCircleIcon;
+  const tone = unavailable ? "blocked" : readinessTone(readiness?.state ?? null);
+  const Icon = toneIcon(tone);
   return (
     <AppTooltip label={label}>
       <span
         aria-label={label}
         className={cn(
           "flex size-4 shrink-0 items-center justify-center",
-          unavailable && "text-destructive",
-          ready && "text-emerald-700 dark:text-emerald-400",
-          pending && "text-amber-700 dark:text-amber-400",
-          !ready && !pending && "text-destructive",
+          TONE_TEXT[tone],
           className,
         )}
       >
@@ -235,19 +252,12 @@ export function PrReadinessMenuItem({ readiness, unavailable = false, disabled, 
   onSelect: () => void;
 }) {
   const t = useTranslations("PullRequests");
-  const ready = readiness?.state === "ready";
   const failed = !readiness && unavailable;
-  const pending = readiness ? readiness.state === "review_requested" ||
-    readiness.state === "checks_running" || readiness.state === "status_unavailable" : !failed;
+  const tone = failed ? "blocked" : readinessTone(readiness?.state ?? null);
   return (
     <DropdownMenuItem data-testid="pr-readiness-menu" className="app-desktop:hidden"
       disabled={disabled} onSelect={onSelect} aria-haspopup="dialog">
-      <AppIcon icon={ready ? CheckIcon : pending ? Clock01Icon : AlertCircleIcon}
-        className={cn(
-          ready && "text-emerald-700 dark:text-emerald-400",
-          pending && "text-amber-700 dark:text-amber-400",
-          !ready && !pending && "text-destructive",
-        )} />
+      <AppIcon icon={toneIcon(tone)} className={TONE_TEXT[tone]} />
       {t(readiness ? STATE_KEYS[readiness.state] : failed ? "readinessUnavailable" : "readinessLoading")}
       <AppIcon icon={ArrowRight01Icon} className="ml-auto" />
     </DropdownMenuItem>
@@ -313,18 +323,23 @@ export function PrReadinessControl({
   const otherMethods = readiness.methods.filter(
     (method) => method !== preferredMethod,
   );
-  const ready = readiness.state === "ready";
-  const pending =
-    readiness.state === "review_requested" ||
-    readiness.state === "checks_running" ||
-    readiness.state === "status_unavailable";
-  const statusIcon = ready ? (
-    <HugeiconsIcon icon={CheckIcon} className="size-3.5" />
-  ) : pending ? (
-    <HugeiconsIcon icon={Clock01Icon} className="size-3.5" />
-  ) : (
-    <HugeiconsIcon icon={AlertCircleIcon} className="size-3.5" />
-  );
+  const tone = readinessTone(readiness.state);
+  const settled = readiness.state === "merged" || readiness.state === "closed";
+  // The trigger says what is happening to the merge, not only what stands
+  // before it: a merge in flight, then an auto-merge waiting at the forge —
+  // ready or not, the forge merges it on its own. The color stays the state's.
+  const autoMergeActive = mergeFlowActive && !settled;
+  const triggerLabel = merging && !settled
+    ? t("readinessMerging")
+    : autoMergeActive
+      ? t("readinessAutoMergeActive")
+      : t(STATE_KEYS[readiness.state]);
+  const statusIcon = merging && !settled
+    ? <Spinner className="size-3.5" />
+    : <HugeiconsIcon icon={toneIcon(tone)} className="size-3.5" />;
+  // The checkbox stays while an auto-merge is registered, so it can be turned
+  // off once the pull request is ready too.
+  const showAutoMerge = canMerge && autoMergeAllowed !== false && (!readiness.mergeAllowed || mergeFlowActive);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -335,21 +350,12 @@ export function PrReadinessControl({
           data-testid="pr-readiness-control"
           size="sm"
           variant="outline"
-          className={cn(
-            "shrink-0 gap-1.5",
-            triggerClassName,
-            ready &&
-              "!border-emerald-600/30 bg-emerald-600/10 text-emerald-700 hover:bg-emerald-600/15 focus-visible:bg-emerald-600/15 data-[state=open]:bg-emerald-600/15 data-[state=open]:text-emerald-700 dark:!border-emerald-400/30 dark:text-emerald-400 dark:data-[state=open]:text-emerald-400",
-            pending &&
-              "!border-amber-600/30 bg-amber-600/10 text-amber-700 hover:bg-amber-600/15 focus-visible:bg-amber-600/15 data-[state=open]:bg-amber-600/15 data-[state=open]:text-amber-700 dark:!border-amber-400/30 dark:text-amber-400 dark:data-[state=open]:text-amber-400",
-            !ready &&
-              !pending &&
-              "!border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/15 focus-visible:bg-destructive/15 data-[state=open]:bg-destructive/15 data-[state=open]:text-destructive",
-          )}
-          aria-label={t(STATE_KEYS[readiness.state])}
+          className={cn("shrink-0 gap-1.5", triggerClassName, TONE_TRIGGER[tone])}
+          aria-label={triggerLabel}
+          aria-busy={merging && !settled ? true : undefined}
         >
           {statusIcon}
-          {t(STATE_KEYS[readiness.state])}
+          {triggerLabel}
           <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5" />
         </Button>
       </PopoverTrigger>}
@@ -482,13 +488,10 @@ export function PrReadinessControl({
         <div
           className={cn(
             "flex items-center justify-between gap-3 px-3.5 py-3",
-            canMerge &&
-              autoMergeAllowed !== false &&
-              !readiness.mergeAllowed &&
-              "border-t border-border",
+            showAutoMerge && "border-t border-border",
           )}
         >
-          {canMerge && autoMergeAllowed !== false && !readiness.mergeAllowed ? (
+          {showAutoMerge ? (
             <label
               data-testid="pr-auto-merge-toggle"
               className="flex min-w-0 flex-1 items-center gap-2.5"

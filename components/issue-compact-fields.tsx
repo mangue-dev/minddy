@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { useId } from "react";
 import { DateTimePicker } from "@/components/date-time-picker";
-import { SmartFillIcon } from "@/components/smart-icons";
+import { SMART_FILL_ICON } from "@/components/feature-icons";
 import {
   SearchSelect,
   SearchMultiSelect,
@@ -413,7 +413,7 @@ export function SmartFillCompact({
   const id = useId();
   if (fullWidth) return <div className="creation-smart-fill">
     <label htmlFor={id} className="flex min-w-0 flex-1 items-center gap-2 text-sm">
-      <SmartFillIcon className="size-4 shrink-0" />{t("smartFillChip")}
+      <HugeiconsIcon icon={SMART_FILL_ICON} className="size-4 shrink-0" />{t("smartFillChip")}
     </label>
     <Switch id={id} checked={value} onCheckedChange={onChange} />
   </div>;
@@ -431,7 +431,7 @@ export function SmartFillCompact({
               : "text-muted-foreground",
           )}
         >
-          <SmartFillIcon className="size-4 shrink-0" />
+          <HugeiconsIcon icon={SMART_FILL_ICON} className="size-4 shrink-0" />
           <span>{t("smartFillChip")}</span>
         </button>
       </TooltipTrigger>

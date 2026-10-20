@@ -303,6 +303,9 @@ export interface RichEditorProps {
   /** Surface actions appended to the “/” menu after the blocks. Their
    identity must stay stable, like every option read at build time. */
   slashActions?: PageSlashItem[];
+  /** Block ids the surface leads its “/” menu with, in this order; the
+   others keep the catalog order. Read at build time. */
+  slashFirst?: readonly string[];
   /** Surface extensions mounted after the engine's (the notebook's section copy,
    a composer's send shortcut). Stable identity, read at build time. */
   extensions?: Extensions;
@@ -347,6 +350,7 @@ export function RichEditor({
   editable = true,
   placeholder,
   slashActions,
+  slashFirst,
   extensions: surfaceExtensions,
   nodeExtensions,
   autoFocus = false,
@@ -364,13 +368,22 @@ export function RichEditor({
   const [uploadKinds] = useState<"all" | "images" | "none">(() =>
     !uploads ? "none" : uploads.imagesOnly ? "images" : "all");
   const slashItems = useMemo(
-    () => [
-      // A prompt has no block to insert: its "/" offers the surface's actions
-      // (repository skills) alone.
-      ...(blocks === "prompt" ? [] : pageSlashItems(t, { set: blocks, uploads: uploadKinds })),
-      ...(slashActions ?? []),
-    ],
-    [t, blocks, uploadKinds, slashActions]
+    () => {
+      const items = [
+        // A prompt has no block to insert: its "/" offers the surface's actions
+        // (repository skills) alone.
+        ...(blocks === "prompt" ? [] : pageSlashItems(t, { set: blocks, uploads: uploadKinds })),
+        ...(slashActions ?? []),
+      ];
+      if (!slashFirst?.length) return items;
+      const lead = (key: string) => {
+        const index = slashFirst.indexOf(key);
+        return index === -1 ? slashFirst.length : index;
+      };
+      // A stable sort keeps the catalog order among the other entries.
+      return items.sort((a, b) => lead(a.key) - lead(b.key));
+    },
+    [t, blocks, uploadKinds, slashActions, slashFirst]
   );
 
   // Read at each "/": the plugin is built once, and a surface's actions can

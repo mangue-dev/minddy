@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-19",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-737 account settings reorganization",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-737 account settings reorganization; UI/UX refinements batch: account settings open on Preferences",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -40,14 +40,17 @@
       "lib/server/stats.ts",
       "supabase/migrations/20270107070000_history_encryption.sql",
       "supabase/migrations/20270107720000_project_content_encryption.sql",
-      "supabase/migrations/20270109200067_stats_distinct_year.sql"
+      "supabase/migrations/20270109200067_stats_distinct_year.sql",
+      "lib/settings-sections.ts",
+      "components/app-sidebar.tsx",
+      "app/(app)/statistics/page.tsx"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (12-month headline deduplication: get_user_stats migration 20270109200067, lib/stats-derive.ts and a production read of one account (685 events, 603 distinct issues); no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 account settings reorganization: text revised from source review of components/settings/account-settings-page.tsx and components/stats/profile-statistics.tsx; figure personal-statistics-steps recaptured on 2026-10-19 in all six locales from the local candidate (now personal-statistics-workflow.png, demo history mirrored into the statistics ledger by captures/world/seed/018-statistiques.mjs) and inspected; the grid crops to the most recent weeks that fit; no other browser walkthrough)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (en headline deduplication sentence and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-19"
+    "revision": 7,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (12-month headline deduplication: get_user_stats migration 20270109200067, lib/stats-derive.ts and a production read of one account (685 events, 603 distinct issues); no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 account settings reorganization: text revised from source review of components/settings/account-settings-page.tsx and components/stats/profile-statistics.tsx; figure personal-statistics-steps recaptured on 2026-10-19 in all six locales from the local candidate (now personal-statistics-workflow.png, demo history mirrored into the statistics ledger by captures/world/seed/018-statistiques.mjs) and inspected; the grid crops to the most recent weeks that fit; no other browser walkthrough); agent:/root (UI/UX refinements batch, account settings opening tab: source review of ACCOUNT_SETTINGS_DEFAULT_TAB in lib/settings-sections.ts, the profile entry in components/app-sidebar.tsx and the /statistics redirect to the Profile tab; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (en headline deduplication sentence and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (en account settings opening tab changed passage with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "personal-cycle",
@@ -65,7 +68,7 @@
       "src": "/documentation/en/personal-statistics-workflow.png",
       "alt": "Profile statistics with the figure strip, the 12-month activity grid, the breakdowns by project and category, and the work rhythm.",
       "caption": "The demonstration account's real history: six completed issues in two projects, thirty created issues, no notebook task checked off.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -85,7 +88,7 @@
 
 ## Open and read the statistics {#personal-statistics}
 
-Your statistics are in the **Profile** tab of account settings. Choose your profile at the top of the account menu, or open account settings: **Profile** is the first tab. The statistics appear under your avatar, name and email. The former `/statistics` address now opens this tab.
+Your statistics are in the **Profile** tab of account settings. Choose your name at the top of the account menu to open it directly. **Account settings** opens on **Preferences**; from there, select **Profile**, the first tab. The statistics appear under your avatar, name and email. The former `/statistics` address now opens this tab.
 
 A strip of six figures comes first: **Completed**, **Tasks checked off**, **Created**, **Projects**, **Longest streak** and **Current streak**. It replaces the former all-time totals section. Below it, read the 12-month headline and activity grid, then **Where your work went**, with breakdowns by project, category and objective, and **Work rhythm**, with **Current workload**, **Issues per cycle**, **Due-date gap** and **Breakdown by effort**. **Issues per cycle**, **Due-date gap** and **Breakdown by effort** appear only when they have data. The tab shows its configured periods; it has no date-range filter to select another interval. The surface summarizes your work rather than establishing another member's performance ranking.
 

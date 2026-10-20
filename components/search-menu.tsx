@@ -65,6 +65,10 @@ export type SearchMenuProps = {
  * (relations: type then ticket) and must start from an empty field. */
   searchValue?: string;
   onSearchValueChange?: (value: string) => void;
+  /** The current step of a multi-step menu. When it changes, the search field
+   *  takes the focus back: choosing an option with the pointer leaves it on
+   *  the popover, and the next step is searched by typing. */
+  focusKey?: string | null;
   /** Disable cmdk ranking when the caller already filters and orders items. */
   shouldFilter?: boolean;
   emptyText?: string;
@@ -82,6 +86,9 @@ export type SearchMenuProps = {
   stopPropagation?: boolean;
   /** Rich boards keep closed popovers unmounted while retaining their trigger. */
   deferTrigger?: boolean;
+  /** Where the focus goes once the menu closes; `preventDefault` keeps it off
+   *  the trigger (a menu opened by a shortcut while typing returns to the text). */
+  onCloseAutoFocus?: (event: Event) => void;
   /** cmdk groups/items (each caller wraps its options in a CommandGroup). */
   children: React.ReactNode;
 };
@@ -97,6 +104,7 @@ export function SearchMenu({
   searchPlaceholder,
   searchValue,
   onSearchValueChange,
+  focusKey,
   shouldFilter,
   emptyText,
   hideEmpty,
@@ -105,6 +113,7 @@ export function SearchMenu({
   container,
   stopPropagation,
   deferTrigger,
+  onCloseAutoFocus,
   children,
 }: SearchMenuProps) {
   const t = useTranslations("Picker");
@@ -113,6 +122,13 @@ export function SearchMenu({
   const stop = stopPropagation
     ? (e: React.SyntheticEvent) => e.stopPropagation()
     : undefined;
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
+  const lastFocusKey = React.useRef(focusKey);
+  React.useEffect(() => {
+    if (lastFocusKey.current === focusKey) return;
+    lastFocusKey.current = focusKey;
+    if (open) inputRef.current?.focus({ preventScroll: true });
+  }, [focusKey, open]);
 
   const content = (
     <ResponsivePopoverContent
@@ -122,14 +138,15 @@ export function SearchMenu({
       className={cn("w-60 overflow-hidden rounded-xl p-0", contentClassName)}
       onClick={stop}
       onPointerDown={stop}
-      onCloseAutoFocus={deferTrigger ? (event) => {
+      onCloseAutoFocus={onCloseAutoFocus ?? (deferTrigger ? (event) => {
         event.preventDefault();
         triggerNode.current?.focus();
-      } : undefined}
+      } : undefined)}
     >
       <Command shouldFilter={shouldFilter} filter={searchMenuFilter}>
         <DropdownSearchRow>
           <CommandPrimitive.Input
+            ref={inputRef}
             placeholder={searchPlaceholder ?? t("search")}
             className={searchInputClass}
             {...(searchValue !== undefined

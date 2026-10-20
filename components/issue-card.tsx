@@ -28,7 +28,6 @@ import {
   ALL_STATUSES,
   PRIORITIES,
   EFFORTS,
-  isClosedStatus,
   issueIdentifier,
   type IssueStatus,
   type IssuePriority,
@@ -45,7 +44,7 @@ import {
 } from "@/components/issue-indicators";
 import { RelationChips, type ChipRelation } from "@/components/relation-chips";
 import { RelationTargetPicker } from "@/components/relation-target-picker";
-import { PrLinkTargetPicker } from "@/components/pull-requests/pr-link-target-picker";
+import { LinkablePullRequestsProbe, PrLinkTargetPicker } from "@/components/pull-requests/pr-link-target-picker";
 import { useLinkIssuesToPullRequest } from "@/lib/use-link-issues-to-pull-request";
 import type { RelationKinds } from "@/lib/use-issue-relations-query";
 import { useIssuePr, useIssuePrReadiness } from "@/components/issue-pr-context";
@@ -1068,6 +1067,9 @@ const IssueCardContent = memo(function IssueCardContent({
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
   // Relation being added (type chosen) → opens the target picker.
   const [linkPrOpen, setLinkPrOpen] = useState(false);
+  // Whether the project has an open pull request to link to; read only while
+  // the menu is open, null until known.
+  const [hasLinkablePr, setHasLinkablePr] = useState<boolean | null>(null);
   const linkIssuesToPullRequest = useLinkIssuesToPullRequest();
   const [relationType, setRelationType] = useState<IssueRelationType | null>(
     null,
@@ -1092,7 +1094,7 @@ const IssueCardContent = memo(function IssueCardContent({
     return candidateIssues.filter(
       (i) =>
         i.project_id === issue.project_id &&
-        i.id !== issue.id && !linked.has(i.id) && !isClosedStatus(i.status),
+        i.id !== issue.id && !linked.has(i.id),
     );
   }, [getCandidateIssues, relationType, relations, issue.id, issue.project_id]);
   const relationObjectiveCandidates = useMemo(() => {
@@ -1322,7 +1324,7 @@ const IssueCardContent = memo(function IssueCardContent({
       onOpenField: openFieldAtPointer,
       extraActions: canWrite ? buildMenuActions?.(issue) : undefined,
       onDelete: onDelete ? () => setConfirmDelete(true) : undefined,
-      onLinkPullRequest: canWrite ? () => setLinkPrOpen(true) : undefined,
+      onLinkPullRequest: canWrite && hasLinkablePr ? () => setLinkPrOpen(true) : undefined,
       readOnly: !canWrite,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1338,6 +1340,7 @@ const IssueCardContent = memo(function IssueCardContent({
     buildMenuActions,
     onDelete,
     canWrite,
+    hasLinkablePr,
   ]);
   lastMenuActions.current = menuActions;
 
@@ -1419,6 +1422,9 @@ const IssueCardContent = memo(function IssueCardContent({
         onClose={() => setMenuPosition(null)}
         actions={menuActions}
       />
+      {menuPosition && canWrite ? (
+        <LinkablePullRequestsProbe projectId={issue.project_id} onChange={setHasLinkablePr} />
+      ) : null}
       <PrLinkTargetPicker
         position={linkPrOpen ? pointerRef.current : null}
         projectId={issue.project_id}

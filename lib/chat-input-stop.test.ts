@@ -35,6 +35,13 @@ let container: HTMLDivElement;
 beforeEach(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   vi.stubGlobal("fetch", h.fetch);
+  // The message field fades its overflowing edges, measured by a
+  // ResizeObserver; jsdom has none.
+  vi.stubGlobal("ResizeObserver", class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  });
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);

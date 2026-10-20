@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { NextIntlClientProvider } from "next-intl";
 import { describe, expect, it, vi } from "vitest";
 import messages from "@/messages/en.json";
-import { PrReadinessBadge } from "./pr-readiness";
+import { PrReadinessBadge, PrReadinessControl } from "./pr-readiness";
 import type { PullRequestReadiness } from "@/lib/pr-readiness";
 
 // The full design system pulls in emoji data that Node cannot import without attributes.
@@ -29,5 +29,37 @@ describe("PrReadinessBadge", () => {
     const html = render(<PrReadinessBadge readiness={draft} unavailable />);
     expect(html).toContain(messages.PullRequests.readinessDraft);
     expect(html).not.toContain(messages.PullRequests.readinessLoading);
+  });
+});
+
+describe("PrReadinessControl trigger", () => {
+  const readiness = (state: string) =>
+    ({ state, blockers: [], passed: [], mergeAllowed: state === "ready", methods: ["squash"], preferredMethod: "squash" }) as unknown as PullRequestReadiness;
+  const control = (state: string, overrides: { merging?: boolean; mergeFlowActive?: boolean } = {}) => render(
+    <PrReadinessControl readiness={readiness(state)} providerName="GitHub" canAct={() => false} acting={null}
+      onAction={() => {}} canMerge merging={overrides.merging ?? false} onMerge={() => {}}
+      mergeFlowActive={overrides.mergeFlowActive ?? false} autoMergeAllowed autoMerging={false} onToggleAutoMerge={() => {}} />,
+  );
+
+  it("says a merge is in flight instead of the state it started from", () => {
+    const html = control("ready", { merging: true });
+    expect(html).toContain(messages.PullRequests.readinessMerging);
+    expect(html).not.toContain(messages.PullRequests.readinessReady);
+  });
+
+  it("names a registered auto-merge, even once the pull request is ready, in the state's color", () => {
+    const blocked = control("checks_failing", { mergeFlowActive: true });
+    expect(blocked).toContain(messages.PullRequests.readinessAutoMergeActive);
+    expect(blocked).toContain("text-destructive");
+    const ready = control("ready", { mergeFlowActive: true });
+    expect(ready).toContain(messages.PullRequests.readinessAutoMergeActive);
+    expect(ready).toContain("text-emerald-700");
+  });
+
+  it("paints a merged pull request in the merged purple, not as an error", () => {
+    const html = control("merged", { mergeFlowActive: true });
+    expect(html).toContain(messages.PullRequests.readinessMerged);
+    expect(html).toContain("text-violet-700");
+    expect(html).not.toContain("text-destructive");
   });
 });

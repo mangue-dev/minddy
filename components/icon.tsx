@@ -8,9 +8,8 @@ import type { ComponentType, CSSProperties, Ref, SVGProps } from "react";
  *
  * - `IconSvgElement` — Hugeicons icon DATA (`@hugeicons/core-free-icons`),
  *   rendered through `HugeiconsIcon`.
- * - `IconComponent` — a React SVG component (Lucide icons, the bespoke
- *   design-supplied icons in `components/smart-icons.tsx`, the Numo face…),
- *   rendered directly.
+ * - `IconComponent` — a React SVG component (Lucide icons, the Numo
+ *   face…), rendered directly.
  */
 export type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
 export type AppIcon = IconSvgElement | IconComponent;

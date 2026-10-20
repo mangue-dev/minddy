@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-19",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-737 account settings reorganization",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-737 account settings reorganization; UI/UX refinements batch: account settings open on Preferences",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -40,14 +40,17 @@
       "lib/server/stats.ts",
       "supabase/migrations/20270107070000_history_encryption.sql",
       "supabase/migrations/20270107720000_project_content_encryption.sql",
-      "supabase/migrations/20270109200067_stats_distinct_year.sql"
+      "supabase/migrations/20270109200067_stats_distinct_year.sql",
+      "lib/settings-sections.ts",
+      "components/app-sidebar.tsx",
+      "app/(app)/statistics/page.tsx"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (12-month headline deduplication: get_user_stats migration 20270109200067, lib/stats-derive.ts and a production read of one account (685 events, 603 distinct issues); no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 account settings reorganization: text revised from source review of components/settings/account-settings-page.tsx and components/stats/profile-statistics.tsx; figure personal-statistics-steps recaptured on 2026-10-19 in all six locales from the local candidate (now personal-statistics-workflow.png, demo history mirrored into the statistics ledger by captures/world/seed/018-statistiques.mjs) and inspected; the grid crops to the most recent weeks that fit; no other browser walkthrough)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (it headline deduplication sentence and retained-meaning self-review; agent review, not human acceptance); agent:/root (it MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-19"
+    "revision": 7,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (12-month headline deduplication: get_user_stats migration 20270109200067, lib/stats-derive.ts and a production read of one account (685 events, 603 distinct issues); no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 account settings reorganization: text revised from source review of components/settings/account-settings-page.tsx and components/stats/profile-statistics.tsx; figure personal-statistics-steps recaptured on 2026-10-19 in all six locales from the local candidate (now personal-statistics-workflow.png, demo history mirrored into the statistics ledger by captures/world/seed/018-statistiques.mjs) and inspected; the grid crops to the most recent weeks that fit; no other browser walkthrough); agent:/root (UI/UX refinements batch, account settings opening tab: source review of ACCOUNT_SETTINGS_DEFAULT_TAB in lib/settings-sections.ts, the profile entry in components/app-sidebar.tsx and the /statistics redirect to the Profile tab; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (it headline deduplication sentence and retained-meaning self-review; agent review, not human acceptance); agent:/root (it MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (it translation of the account settings opening tab changed passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "personal-cycle",
@@ -65,7 +68,7 @@
       "src": "/documentation/it/personal-statistics-workflow.png",
       "alt": "Statistiche del profilo con la striscia di cifre, la griglia di attività di 12 mesi, le ripartizioni per progetto e categoria e il ritmo di lavoro.",
       "caption": "Storico reale dell’account dimostrativo: sei ticket completati in due progetti, trenta ticket creati, nessuna attività del taccuino spuntata.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -85,7 +88,7 @@
 
 ## Aprire e leggere le statistiche {#personal-statistics}
 
-Le tue statistiche si trovano nella scheda **Profilo** delle impostazioni dell’account. Scegli il tuo profilo in cima al menu dell’account oppure apri le impostazioni dell’account: **Profilo** è la prima scheda. Le statistiche compaiono sotto l’avatar, il nome e l’email. Il vecchio indirizzo `/statistics` apre ora questa scheda.
+Le tue statistiche si trovano nella scheda **Profilo** delle impostazioni dell’account. Scegli il tuo nome in cima al menu dell’account per aprirla direttamente. **Impostazioni account** si apre su **Preferenze**; da lì, seleziona **Profilo**, la prima scheda. Le statistiche compaiono sotto l’avatar, il nome e l’email. Il vecchio indirizzo `/statistics` apre ora questa scheda.
 
 Per prima viene una fascia di sei valori: **Completato**, **Attività controllate**, **Creato**, **Progetti**, **Serie più lunga** e **Serie attuale**. Sostituisce la vecchia sezione dei totali complessivi. Sotto trovi il numero dei 12 mesi e la griglia delle attività, poi **Dove è andato il tuo lavoro**, con le suddivisioni per progetto, categoria e obiettivo, e **Ritmo di lavoro**, con **Carico corrente**, **Ticket per ciclo**, **Divario tra i dazi** (lo scarto dalla scadenza) e **Ripartizione per sforzo**. **Ticket per ciclo**, **Divario tra i dazi** e **Ripartizione per sforzo** compaiono solo quando hanno dati. La scheda mostra i periodi configurati; non offre un filtro delle date per scegliere un altro intervallo. Riepiloga il tuo lavoro senza creare una classifica del rendimento degli altri membri.
 

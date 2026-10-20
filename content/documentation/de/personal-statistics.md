@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-19",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-737 account settings reorganization",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-737 account settings reorganization; UI/UX refinements batch: account settings open on Preferences",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -40,14 +40,17 @@
       "lib/server/stats.ts",
       "supabase/migrations/20270107070000_history_encryption.sql",
       "supabase/migrations/20270107720000_project_content_encryption.sql",
-      "supabase/migrations/20270109200067_stats_distinct_year.sql"
+      "supabase/migrations/20270109200067_stats_distinct_year.sql",
+      "lib/settings-sections.ts",
+      "components/app-sidebar.tsx",
+      "app/(app)/statistics/page.tsx"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (12-month headline deduplication: get_user_stats migration 20270109200067, lib/stats-derive.ts and a production read of one account (685 events, 603 distinct issues); no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 account settings reorganization: text revised from source review of components/settings/account-settings-page.tsx and components/stats/profile-statistics.tsx; figure personal-statistics-steps recaptured on 2026-10-19 in all six locales from the local candidate (now personal-statistics-workflow.png, demo history mirrored into the statistics ledger by captures/world/seed/018-statistiques.mjs) and inspected; the grid crops to the most recent weeks that fit; no other browser walkthrough)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root (de headline deduplication sentence and retained-meaning self-review; agent review, not human acceptance); agent:/root (de MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-19"
+    "revision": 7,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (12-month headline deduplication: get_user_stats migration 20270109200067, lib/stats-derive.ts and a production read of one account (685 events, 603 distinct issues); no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 account settings reorganization: text revised from source review of components/settings/account-settings-page.tsx and components/stats/profile-statistics.tsx; figure personal-statistics-steps recaptured on 2026-10-19 in all six locales from the local candidate (now personal-statistics-workflow.png, demo history mirrored into the statistics ledger by captures/world/seed/018-statistiques.mjs) and inspected; the grid crops to the most recent weeks that fit; no other browser walkthrough); agent:/root (UI/UX refinements batch, account settings opening tab: source review of ACCOUNT_SETTINGS_DEFAULT_TAB in lib/settings-sections.ts, the profile entry in components/app-sidebar.tsx and the /statistics redirect to the Profile tab; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root (de headline deduplication sentence and retained-meaning self-review; agent review, not human acceptance); agent:/root (de MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (de translation of the account settings opening tab changed passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "personal-cycle",
@@ -65,7 +68,7 @@
       "src": "/documentation/de/personal-statistics-workflow.png",
       "alt": "Profilstatistik mit Kennzahlenleiste, Aktivitätsraster über 12 Monate, Aufschlüsselung nach Projekt und Kategorie sowie Arbeitsrhythmus.",
       "caption": "Echter Verlauf des Demokontos: sechs abgeschlossene Vorgänge in zwei Projekten, dreißig erstellte Vorgänge, keine abgehakte Notizbuchaufgabe.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -85,7 +88,7 @@
 
 ## Statistik öffnen und lesen {#personal-statistics}
 
-Deine Statistik steht im Tab **Profil** der Kontoeinstellungen. Wähle dein Profil oben im Kontomenü oder öffne die Kontoeinstellungen: **Profil** ist der erste Tab. Die Statistik erscheint unter deinem Avatar, deinem Namen und deiner E-Mail-Adresse. Die frühere Adresse `/statistics` öffnet jetzt diesen Tab.
+Deine Statistik steht im Tab **Profil** der Kontoeinstellungen. Wähle deinen Namen oben im Kontomenü, um ihn direkt zu öffnen. **Kontoeinstellungen** öffnet sich im Tab **Einstellungen**; wähle dort **Profil**, den ersten Tab. Die Statistik erscheint unter deinem Avatar, deinem Namen und deiner E-Mail-Adresse. Die frühere Adresse `/statistics` öffnet jetzt diesen Tab.
 
 Zuerst kommt eine Leiste mit sechs Kennzahlen: **Abgeschlossen**, **Aufgaben abgehakt**, **Erstellt**, **Projekte**, **Längste Serie** und **Aktuelle Serie**. Sie ersetzt den früheren Abschnitt mit den Gesamtwerten. Darunter liest du die Kennzahl der 12 Monate und das Aktivitätsraster, dann **Wohin Ihre Arbeit ging** mit den Aufschlüsselungen nach Projekt, Kategorie und Ziel sowie **Arbeitsrhythmus** mit **Aktuelle Arbeitslast**, **Probleme pro Zyklus**, **Abstand zum Fälligkeitsdatum** und **Aufschlüsselung nach Aufwand**. **Probleme pro Zyklus**, **Abstand zum Fälligkeitsdatum** und **Aufschlüsselung nach Aufwand** erscheinen nur, wenn Daten vorliegen. Der Tab zeigt festgelegte Zeiträume. Sie bietet keinen Datumsfilter für einen anderen Zeitraum. Die Auswertung fasst deine Arbeit zusammen und ist keine Rangliste für die Leistung anderer Mitglieder.
 

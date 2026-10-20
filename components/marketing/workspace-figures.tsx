@@ -6,7 +6,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { PriorityIndicator, StatusIndicator, EffortIndicator, ObjectiveStatusIndicator } from "@/components/issue-indicators";
 import { MentionChip } from "@/components/mention-chip";
 import { ProgressRing } from "@/components/progress-ring";
-import { SmartAssignIcon, SmartFillIcon } from "@/components/smart-icons";
+import { SMART_ASSIGN_ICON, SMART_FILL_ICON } from "@/components/feature-icons";
 import { UserAvatar } from "@/components/user-avatar";
 import { ProjectOrb } from "@/components/project-orb";
 import { DEFAULT_CATEGORIES, type DefaultCategoryKey } from "@/lib/default-categories";
@@ -425,14 +425,14 @@ export async function SmartFigure() {
       <ul className="mt-4 space-y-3">
         <li className="flex items-center gap-3">
           <span className="flex h-6 shrink-0 items-center gap-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 text-xs font-medium">
-            <SmartFillIcon className="h-3 w-6 shrink-0" />
+            <HugeiconsIcon icon={SMART_FILL_ICON} className="size-3.5 shrink-0" />
             {tIssueUI("smartFillChip")}
           </span>
           <span className="min-w-0 text-sm text-muted-foreground">{t("smartFigureFilled")}</span>
         </li>
         <li className="flex items-center gap-3">
           <span className="flex h-6 shrink-0 items-center gap-1 rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-400 px-2 text-xs font-medium">
-            <SmartAssignIcon className="size-3.5 shrink-0" />
+            <HugeiconsIcon icon={SMART_ASSIGN_ICON} className="size-3.5 shrink-0" />
             {t("feature_smartAssign_title")}
           </span>
           <span className="min-w-0 text-sm text-muted-foreground">

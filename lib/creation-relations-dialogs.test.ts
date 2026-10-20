@@ -13,6 +13,7 @@ const fixture = vi.hoisted(() => ({
   issues: [] as Issue[], objectives: [] as Objective[],
   drafts: [] as (IssueDraft | ObjectiveDraft)[], save: vi.fn(), remove: vi.fn(),
   mobile: false, smartFill: true, smartFillCreated: true, smartFillRelations: true, queryProjects: [] as (string | null)[],
+  editorDocuments: [] as unknown[],
 }));
 vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => fixture.mobile }));
 vi.mock("next-intl", () => ({ useTranslations: (namespace: string) =>
@@ -133,7 +134,10 @@ vi.mock("@/components/auto-textarea", () => ({ AutoTextarea: "textarea" }));
 vi.mock("@/lib/use-rich-document", () => ({
   useRichDocument: () => ({ document: null, remember: () => {} }),
 }));
-vi.mock("@/components/editor/document-editor-lazy", () => ({ LazyDocumentEditor: ({ className }: { className: string }) => React.createElement("div", { className }, React.createElement("div", { contentEditable: true, suppressContentEditableWarning: true, tabIndex: 0 }, "")), useIdleDocumentEditorPreload: vi.fn() }));
+vi.mock("@/components/editor/document-editor-lazy", () => ({ LazyDocumentEditor: ({ className, document }: { className: string; document?: unknown }) => {
+  fixture.editorDocuments.push(document ?? null);
+  return React.createElement("div", { className }, React.createElement("div", { contentEditable: true, suppressContentEditableWarning: true, tabIndex: 0 }, ""));
+}, useIdleDocumentEditorPreload: vi.fn() }));
 vi.mock("@/components/resources", () => ({ AddResourceButton: () => null, ResourcePills: () => null, ComposerResourcePills: () => null, DropOverlay: () => null, pasteFileHandler: () => undefined, useFileDrop: () => ({ handlers: {} }) }));
 vi.mock("@/components/issue-compact-fields", () => ({
   AssigneeCompact: () => null, CategoriesCompact: () => null, DueDateCompact: () => null,
@@ -186,7 +190,7 @@ beforeEach(() => {
   fixture.issues = [issue, { ...issue, id: "closed", title: "Closed issue", status: "done" }, { ...issue, id: "foreign", project_id: "other", title: "Foreign issue" }];
   fixture.objectives = [objective, { ...objective, id: "closed-goal", name: "Closed objective", status: "done" }, { ...objective, id: "foreign-goal", name: "Foreign objective", project_id: "other" }];
   fixture.mobile = false;
-  fixture.drafts = []; fixture.smartFill = true; fixture.smartFillCreated = true; fixture.smartFillRelations = true; fixture.queryProjects = [];
+  fixture.drafts = []; fixture.editorDocuments = []; fixture.smartFill = true; fixture.smartFillCreated = true; fixture.smartFillRelations = true; fixture.queryProjects = [];
   fixture.save.mockImplementation(async (draft) => { fixture.drafts = [draft]; });
   fixture.remove.mockImplementation(async (id) => { fixture.drafts = fixture.drafts.filter((draft) => draft.id !== id); return true; });
   host = document.createElement("div"); document.body.append(host); root = createRoot(host);
@@ -208,7 +212,8 @@ async function typeTitle(value: string) {
 async function addRelation(type: PendingRelationInput["type"], target: "issue" | "objective") {
   await click(en.Relations.addRelationAria);
   await click(en.Relations[type]);
-  expect(document.body.textContent).not.toContain("Closed issue");
+  // A closed issue stays linkable (listed last); a closed objective does not.
+  expect(document.body.textContent).toContain("Closed issue");
   expect(document.body.textContent).not.toContain("Foreign issue");
   expect(document.body.textContent).not.toContain("Closed objective");
   expect(document.body.textContent).not.toContain("Foreign objective");
@@ -407,6 +412,19 @@ describe("creation relation controls", () => {
     await click("Discard draft");
     await dialog.reopen();
     expect(host.querySelector(`[aria-label="${en.Relations.related}: Target objective"]`)).toBeNull();
+  });
+
+  it.each(["issue", "objective"] as const)("reopens a %s draft's description from its stored document", async (kind) => {
+    // The Markdown drops a pill's figure (portrait, color); the document keeps it.
+    const doc = { type: "doc", content: [{ type: "paragraph", content: [{ type: "mention", attrs: { mentionType: "objective", mentionId: objective.id, mentionLabel: "Target objective", color: "#ff0066" } }] }] };
+    const base = { id: "draft", projectId: project.id, updatedAt: Date.now(), description: `[@Target objective](mention:objective/${objective.id})`, description_doc: doc, relations: [] };
+    fixture.drafts = [kind === "issue"
+      ? { ...base, title: "Draft", status: "todo", priority: "none", effort: null, assignee_id: null, objective_id: null, due_date: null, category_ids: [], resources: [] } as IssueDraft
+      : { ...base, name: "Draft", status: "planned", lead_user_id: null, target_date: null, color: null } as ObjectiveDraft];
+    await mountDialog(kind);
+    expect(fixture.editorDocuments.at(-1)).toBeNull();
+    await click("Recover draft");
+    expect(fixture.editorDocuments.at(-1)).toEqual(doc);
   });
 
   it("filters duplicate selections by direction and does not fetch candidates while closed", async () => {
