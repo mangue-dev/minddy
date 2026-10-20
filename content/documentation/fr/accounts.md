@@ -18,12 +18,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677); MIN-737 account settings reorganization; UI/UX refinements batch: account settings open on Preferences",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -71,9 +71,9 @@
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root (theme palette, high-contrast and transparency controls: source and test review; the preferences capture predates these rows and is retained); agent:/root (MIN-737 account settings reorganization: source review of the tab order, the in-place profile editing, the Preferences, Issues and AI & Numo contents and the Privacy & data tab; profile-and-preferences-workflow recaptured on 2026-10-19 in all six locales from the local candidate showing the profile header edited in place (avatar menu, name field or mobile sheet; the Edit profile dialog was removed the same day), and inspected; no other browser walkthrough); agent:/root (MIN-737 second pass: Hidden projects moved from Preferences to its own account tab; source review of components/settings/account-settings-page.tsx; no new captures); agent:/root (UI/UX refinements batch, account settings opening tab: source review of ACCOUNT_SETTINGS_DEFAULT_TAB in lib/settings-sections.ts, the account menu entries in components/app-sidebar.tsx, the mobile menu in components/mobile-account.tsx and the Command/Ctrl+comma binding in lib/keyboard/shortcuts.ts; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (en source and fr translation self-review of the changed paragraph); agent:/root (fr MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (fr translation of the MIN-737 second-pass Hidden projects sentence with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (fr translation of the account settings opening tab changed passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 14,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -106,9 +106,9 @@
       "src": "/documentation/fr/account-security-workflow.png",
       "alt": "Carte de double authentification avec le bouton Activer.",
       "caption": "Commencez ici, puis vérifiez l’authentificateur et conservez les codes de récupération à l’abri.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         816,
         227
@@ -123,9 +123,9 @@
       "src": "/documentation/fr/profile-and-preferences-workflow.png",
       "alt": "En-tête du profil avec l’avatar et son badge de modification, le nom et l’adresse email en lecture seule.",
       "caption": "Sélectionnez l’avatar pour en générer ou en importer un, ou le nom pour le changer ; l’adresse email reste en lecture seule.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
-      "capturedAt": "2026-10-19",
+      "capturedAt": "2026-10-20",
       "viewport": [
         816,
         256
@@ -140,9 +140,9 @@
       "src": "/documentation/fr/profile-and-preferences-preferences-workflow.png",
       "alt": "Sélecteur de langue, commandes des thèmes clair, sombre et système, sélecteurs de palette des modes clair et sombre et interrupteur de transparence.",
       "caption": "La langue du compte et celle du site public se règlent séparément.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
-      "capturedAt": "2026-10-18",
+      "capturedAt": "2026-10-20",
       "viewport": [
         816,
         421
@@ -157,9 +157,9 @@
       "src": "/documentation/fr/privacy-and-account-deletion-workflow.png",
       "alt": "Aperçu de suppression listant les projets possédés, les tickets et les membres privés d’accès.",
       "caption": "Lisez l’aperçu et exportez les données à conserver avant d’ouvrir la confirmation de suppression.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         816,
         231

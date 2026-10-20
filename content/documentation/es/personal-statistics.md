@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-737 account settings reorganization; UI/UX refinements batch: account settings open on Preferences",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -42,13 +42,14 @@
       "supabase/migrations/20270109200067_stats_distinct_year.sql",
       "lib/settings-sections.ts",
       "components/app-sidebar.tsx",
-      "app/(app)/statistics/page.tsx"
+      "app/(app)/statistics/page.tsx",
+      "components/stats/stats-hero.tsx"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (12-month headline deduplication: get_user_stats migration 20270109200067, lib/stats-derive.ts and a production read of one account (685 events, 603 distinct issues); no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 account settings reorganization: text revised from source review of components/settings/account-settings-page.tsx and components/stats/profile-statistics.tsx; figure personal-statistics-steps recaptured on 2026-10-19 in all six locales from the local candidate (now personal-statistics-workflow.png, demo history mirrored into the statistics ledger by captures/world/seed/018-statistiques.mjs) and inspected; the grid crops to the most recent weeks that fit; no other browser walkthrough); agent:/root (UI/UX refinements batch, account settings opening tab: source review of ACCOUNT_SETTINGS_DEFAULT_TAB in lib/settings-sections.ts, the profile entry in components/app-sidebar.tsx and the /statistics redirect to the Profile tab; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root (es headline deduplication sentence and retained-meaning self-review; agent review, not human acceptance); agent:/root (es MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (es translation of the account settings opening tab changed passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 8,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -67,9 +68,9 @@
       "src": "/documentation/es/personal-statistics-workflow.png",
       "alt": "Estadísticas del perfil con la franja de cifras, la cuadrícula de actividad de 12 meses, los desgloses por proyecto y categoría y el ritmo de trabajo.",
       "caption": "Historial real de la cuenta de demostración: seis incidencias completadas en dos proyectos, treinta incidencias creadas y ninguna tarea del cuaderno marcada.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
-      "capturedAt": "2026-10-19",
+      "capturedAt": "2026-10-20",
       "viewport": [
         816,
         999

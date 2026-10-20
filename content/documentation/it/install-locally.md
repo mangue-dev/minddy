@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-721 removal of Numo code work",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -42,10 +42,10 @@
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun); agent:/root/min721_docs (MIN-721 source review inherited from en revision 6; it translation of removal edits; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/editorial_it_pt (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 it network guidance and terminology review); agent:/root/min721_it (it translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance)",
-    "date": "2026-10-16"
+    "revision": 7,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "workspace-encryption",
@@ -62,7 +62,7 @@
       "src": "/documentation/it/install-locally-flow.svg",
       "alt": "Schema: App desktop seleziona il clone. Applicazione loopback: porta 6463. Supabase minimo e dati duraturi. Uscire ferma app e backend.",
       "caption": "L’app desktop controlla avvio e arresto dell’istanza locale; i dati devono restare conservati tra un avvio e l’altro.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -94,12 +94,12 @@
       "src": "/documentation/it/install-locally-wizard.png",
       "alt": "Assistente pubblico di installazione con il profilo per questo computer selezionato.",
       "caption": "Scegli l’installazione personale quando l’applicazione desktop deve gestire i servizi locali.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         944,
-        504
+        692
       ],
       "theme": "light",
       "padding": 24,

@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
-  "sourceRevision": 17,
+  "revision": 18,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate; MIN-721 removal of Numo code work (copied prompts and MCP for external agents, pull request review and merge retained); MIN-685 sidebar context menus; MIN-693 project roles; MIN-718 hybrid issue search; MIN-737 account settings reorganization; MIN-686 shared reader for pull request images; UI/UX refinements batch: Link to a pull request offered only with a linkable pull request",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -52,9 +52,9 @@
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:/root/min721_docs (MIN-721 source review: Numo code work, sandboxes, native code agents and AI pull request review removed; copied prompts, MCP, pull request review, Merge with Numo and read-only @numo mention verified in source; no operational rerun, no new capture); agent:/root (MIN-685 sidebar context menu source and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (board pull request linking and card merge readiness: source and unit-test review of use-issue-menu-actions, pr-link-target-picker, bulk-pull-request-links and issue-pr-context; no browser walkthrough with a live pull request, no new captures; unchanged evidence retained); agent:/root (bulk link rule, unlink from all pull requests and optimistic links: source and unit-test review of bulk-pull-request-links and use-link-issues-to-pull-request; no browser walkthrough with live pull requests; unchanged evidence retained); agent:/root (MIN-737 account settings reorganization: source review of the Starting an issue card in components/settings/account-issues-section.tsx; unchanged evidence retained; no browser walkthrough, no new captures); agent:/root (MIN-686 pull request images: source and unit-test review of MarkdownImage and PrImageDiff opening the shared reader, Close and Escape dismissal; no browser walkthrough with a live pull request, no new captures; unchanged evidence retained); agent:/root (UI/UX refinements batch: source review of LinkablePullRequestsProbe in components/pull-requests/pr-link-target-picker.tsx (open pull requests, drafts included) and the gated board-card menu entry in components/issue-card.tsx; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/min721_docs (en rewrite and retained-meaning review; agent review, not human acceptance); agent:/root (en MIN-685 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-718 added passages with catalog UI labels; agent review, not human acceptance); agent:/root (en board pull request linking paragraph, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (en added sentences, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-686 added sentence with catalog UI labels; agent review, not human acceptance); agent:/root (en Link to a pull request entry changed passage with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 18,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -78,7 +78,7 @@
       "src": "/documentation/en/review-pull-requests-workflow.png",
       "alt": "Changes tab of the open demonstration PR, with the greeting function diff and an unavailable GitHub authorization notice.",
       "caption": "Demonstration PR that remains open and unmerged. Its diff trims the name and uses World for an empty value. This instance cannot request user GitHub authorization; the readiness label does not grant merge permission or prove successful provider CI.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

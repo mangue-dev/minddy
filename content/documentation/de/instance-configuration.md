@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677); MIN-717 issue-index schedule; MIN-688 page-materialization schedule",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -45,10 +45,10 @@
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun); agent:/root (MIN-717 issue-index schedule row checked against deploy/self-hosted/scheduler.mjs and vercel.json; no scheduler run)",
-    "language": "agent:/root (de translation, label and retained-meaning self-review); agent:/root/min-721 (de runner-removal edits and full retained meaning); agent:/root (de MIN-717 table row: endpoint and cron expression only, no prose change)",
-    "date": "2026-10-17"
+    "revision": 9,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "workspace-encryption",
@@ -73,7 +73,7 @@
       "src": "/documentation/de/optional-providers-flow.svg",
       "alt": "Diagramm: Betreiber wählt optionale Funktion. Vollständige Zugangsdaten und Bedingungen. Ausdrückliches externes Datenziel. Verhalten prüfen und Kosten beobachten.",
       "caption": "Prüfen Sie vor der Aktivierung einer Integration, wohin sie Daten sendet und welche laufenden Kosten sie verursacht.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -105,7 +105,7 @@
       "src": "/documentation/de/proxy-network-and-jobs-flow.svg",
       "alt": "Diagramm: Öffentlicher HTTPS-Proxy. App und öffentlicher Supabase-Origin. Private Datenbank- und interne Ports. Authentifizierte Jobs; Wartungsstopp.",
       "caption": "Öffentlicher Zugriff und interne Dienste bleiben getrennt; geplante Arbeit wird authentifiziert und während der Wartung gestoppt.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

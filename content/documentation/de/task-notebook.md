@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-728 one editor engine; MIN-725 notebook search in the command palette; UI/UX refinements batch: task list first in the notebook / menu",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -47,9 +47,9 @@
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-728 one editor engine: source and unit-test review of the shared editor on this surface; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-725 notebook search in the command palette: source and unit-test review of lib/scratchpad-search.ts, the palette rows and the notebook focus; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (UI/UX refinements batch: source review of SCRATCHPAD_SLASH_FIRST in components/scratchpad/scratchpad-editor.tsx and the slashFirst ordering in components/editor/rich-editor.tsx; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root (de translation of the MIN-728 passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de MIN-725 added paragraph with catalog UI labels; agent review, not human acceptance); agent:/root (de translation of the slash menu order changed passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 8,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -68,9 +68,9 @@
       "src": "/documentation/de/work-task-notebook.png",
       "alt": "Übersetzte persönliche Demo-Aufgaben im Notizbuch.",
       "caption": "Das Notizbuch hält persönliche Schritte außerhalb der Tickethierarchie des Projekts fest. Die Zustände der Beispielaufgaben bleiben unverändert.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
         1156,
         1048

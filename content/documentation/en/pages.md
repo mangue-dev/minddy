@@ -21,12 +21,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680); MIN-693 project roles; MIN-718 hybrid issue search; MIN-688 live collaboration; MIN-684 page promotion; MIN-743 destructive-action confirmations",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -73,9 +73,9 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-688 live collaboration: source, convergence/authority unit tests and a rollback-only database probe; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-684 page promotion: source and focused unit-test review of the menu entries, reader gating, save-before-promote and the Numo request; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for page-menu Move to trash and unpublishing; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (en changed-text and retained-meaning self-review); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-718 added passages with catalog UI labels; agent review, not human acceptance); agent:/root (en MIN-688 rewritten saving, presence and conflict passages; agent review, not human acceptance); agent:/root (en MIN-684 promotion section with catalog UI labels; agent review, not human acceptance); agent:/root (en MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 15,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 5 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 3 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -111,12 +111,12 @@
       "src": "/documentation/en/page-create-menu.png",
       "alt": "Page creation menu offering New page and New database.",
       "caption": "Use the project page controls to choose a document or a database.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
-        264,
-        152
+        240,
+        129
       ],
       "theme": "light",
       "padding": 24
@@ -127,12 +127,12 @@
       "src": "/documentation/en/page-editor.png",
       "alt": "Demonstration page with headings, paragraphs, task checkboxes and an issue mention.",
       "caption": "Headings, task blocks and the AUR-2 mention keep the page structured. This is demonstration content.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
-        1178,
-        922
+        1154,
+        1046
       ],
       "theme": "light",
       "padding": 24
@@ -143,12 +143,12 @@
       "src": "/documentation/en/page-comments.png",
       "alt": "Page activity dialog with a demonstration edit event and an empty comment composer.",
       "caption": "Read page activity and write a comment in the composer. No comment has been submitted in this example.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
-        632,
-        625
+        608,
+        616
       ],
       "theme": "light",
       "padding": 24
@@ -159,7 +159,7 @@
       "src": "/documentation/en/page-file-states.png",
       "alt": "Demo page with an unfinished upload and a saved 67-byte file offering Download.",
       "caption": "Check the actual file state: the second attachment is available, while the first unfinished upload is not.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -175,7 +175,7 @@
       "src": "/documentation/en/page-history-preview.png",
       "alt": "Versions tab with an expanded earlier state, its author, Restore and the 30-day retention notice.",
       "caption": "Preview a saved state and compare it with the current page before restoring.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -191,9 +191,9 @@
       "src": "/documentation/en/page-publish.png",
       "alt": "Page publication dialog with Private selected and password or bearer-link alternatives.",
       "caption": "Private keeps the page within the project. Review the intended audience before changing publication.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         496,
         230
@@ -207,9 +207,9 @@
       "src": "/documentation/en/page-export.png",
       "alt": "Document export menu with Markdown (.md) and Print / PDF.",
       "caption": "Choose Markdown to download the document, or Print / PDF to open the printable view.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         211,
         128
@@ -223,7 +223,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [

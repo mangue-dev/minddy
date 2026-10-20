@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677); MIN-721 removal of Numo code work",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence); agent:/root/min721_docs (MIN-721 source review: running code work removed from the migration note; deleted agent evidence paths dropped; no operational rerun)",
-    "language": "agent:/root (en translation, label and retained-meaning self-review); agent:/root/min721_docs (en removal edit; agent review, not human acceptance)",
-    "date": "2026-10-16"
+    "revision": 8,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [],
   "aliases": [],

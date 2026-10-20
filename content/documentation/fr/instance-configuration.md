@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677); MIN-717 issue-index schedule; MIN-688 page-materialization schedule",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -45,10 +45,10 @@
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun); agent:/root (MIN-717 issue-index schedule row checked against deploy/self-hosted/scheduler.mjs and vercel.json; no scheduler run)",
-    "language": "agent:/root (fr translation, label and retained-meaning self-review); agent:/root/min-721 (fr runner-removal edits and full retained meaning); agent:/root (fr MIN-717 table row: endpoint and cron expression only, no prose change)",
-    "date": "2026-10-17"
+    "revision": 9,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "workspace-encryption",
@@ -73,7 +73,7 @@
       "src": "/documentation/fr/optional-providers-flow.svg",
       "alt": "Schéma: L’opérateur choisit une capacité optionnelle. Identifiants complets et conditions fournisseur. Destination externe explicitement choisie. Vérifier le comportement et suivre les coûts.",
       "caption": "Activer un service optionnel ajoute ses propres identifiants, destinations de données et coûts d’utilisation.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -105,7 +105,7 @@
       "src": "/documentation/fr/proxy-network-and-jobs-flow.svg",
       "alt": "Schéma: Proxy HTTPS public. Origines application et Supabase public. Base et ports internes privés. Jobs authentifiés, arrêtés en maintenance.",
       "caption": "L’accès public utilise HTTPS, tandis que les services internes restent privés et les tâches planifiées sont arrêtées pendant la maintenance.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

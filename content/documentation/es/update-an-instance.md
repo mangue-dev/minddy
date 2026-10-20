@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min-721 (es runner-removal edits and full retained meaning)",
-    "date": "2026-10-16"
+    "revision": 5,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "backups-and-restoration"
@@ -55,7 +55,7 @@
       "src": "/documentation/es/update-an-instance-flow.svg",
       "alt": "Diagrama: Parar escrituras y tareas. Sellar copia completa anterior. Migraciones destino, luego aplicación. Verificar recuperación y reabrir.",
       "caption": "Siga las etapas en este orden. Parar escrituras y tareas. Sellar copia completa anterior. Migraciones destino, luego aplicación. Verificar recuperación y reabrir.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

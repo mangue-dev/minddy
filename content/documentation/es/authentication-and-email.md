@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -37,10 +37,10 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 4,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "instance-administration",
@@ -57,7 +57,7 @@
       "src": "/documentation/es/authentication-and-email-flow.svg",
       "alt": "Diagrama: Origen Auth y redirecciones configurados. SMTP propio y plantillas versionadas. Confirmación e inicio de sesión. Pruebas TOTP, recuperación y contraseña antigua.",
       "caption": "Siga las etapas en este orden. Origen Auth y redirecciones configurados. SMTP propio y plantillas versionadas. Confirmación e inicio de sesión. Pruebas TOTP, recuperación y contraseña antigua.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

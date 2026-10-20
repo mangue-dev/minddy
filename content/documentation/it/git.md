@@ -17,12 +17,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12); MIN-721 removal of Numo code work",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -41,10 +41,10 @@
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/min721_docs (MIN-721 source review inherited from en revision 4; it translation of removal edits; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/min721_it (it translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance)",
-    "date": "2026-10-16"
+    "revision": 5,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "api-and-webhooks"
@@ -65,7 +65,7 @@
       "src": "/documentation/it/git-connection-flow.svg",
       "alt": "Il collegamento dell’account personale e quello del repository al progetto sono due passaggi distinti.",
       "caption": "Autorizza prima l’account, poi collega un repository come proprietario del progetto.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -98,7 +98,7 @@
       "src": "/documentation/it/forge-issue-sync-mapping.svg",
       "alt": "Flusso di sincronizzazione GitHub con configurazione, controllo eventi, importazione e stati.",
       "caption": "Gli eventi GitHub preservano le modifiche recenti ed evitano consegne duplicate. Le corrispondenze GitLab richiedono una verifica separata.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -136,7 +136,7 @@
       "src": "/documentation/it/forge-issue-sync-workflow.png",
       "alt": "Repository dimostrativo GitHub collegato, con la sincronizzazione delle issue disattivata.",
       "caption": "Il repository dimostrativo è collegato a GitHub. La sincronizzazione delle issue è ancora disattivata: controlla l’ambito e il backlog esistente prima di attivarla. Questa schermata non dimostra un’importazione sincronizzata.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

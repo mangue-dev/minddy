@@ -21,12 +21,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680); MIN-693 project roles; MIN-718 hybrid issue search; MIN-688 live collaboration; MIN-684 page promotion; MIN-743 destructive-action confirmations",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -73,9 +73,9 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-688 live collaboration: source, convergence/authority unit tests and a rollback-only database probe; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-684 page promotion: source and focused unit-test review of the menu entries, reader gating, save-before-promote and the Numo request; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for page-menu Move to trash and unpublishing; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (es changed-text and retained-meaning self-review); agent:/root/min693_es with agent:/root (es MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (es translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root/min688_es with agent:/root (es MIN-688 translation of the rewritten saving, presence and conflict passages; agent review, not human acceptance); agent:/root (es translation of the MIN-684 promotion section with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 15,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 5 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 3 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -111,12 +111,12 @@
       "src": "/documentation/es/page-create-menu.png",
       "alt": "Menú de creación con Nueva página y Nueva base de datos.",
       "caption": "Utiliza los controles de páginas del proyecto para elegir un documento o una base de datos.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
-        266,
-        152
+        243,
+        129
       ],
       "theme": "light",
       "padding": 24
@@ -127,12 +127,12 @@
       "src": "/documentation/es/page-editor.png",
       "alt": "Página de demostración con títulos, párrafos, casillas de tareas y una mención a un ticket.",
       "caption": "Los títulos, las tareas y la mención AUR-2 estructuran la página. El contenido es un ejemplo de demostración.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
-        1178,
-        948
+        1154,
+        1046
       ],
       "theme": "light",
       "padding": 24
@@ -143,12 +143,12 @@
       "src": "/documentation/es/page-comments.png",
       "alt": "Actividad de la página con una edición de demostración y el campo de comentario vacío.",
       "caption": "Consulta la actividad y escribe un comentario en el campo. En este ejemplo no se ha enviado ninguno.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
-        632,
-        625
+        608,
+        616
       ],
       "theme": "light",
       "padding": 24
@@ -159,7 +159,7 @@
       "src": "/documentation/es/page-file-states.png",
       "alt": "Página de demostración con una carga incompleta y un archivo guardado de 67 bytes que ofrece Descargar.",
       "caption": "Comprueba el estado real del archivo: el segundo adjunto está disponible y la primera carga incompleta no.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -175,7 +175,7 @@
       "src": "/documentation/es/page-history-preview.png",
       "alt": "Pestaña Versiones con un estado anterior desplegado, su autor, Restaurar y el aviso de conservación durante 30 días.",
       "caption": "Previsualiza un estado guardado y compáralo con la página actual antes de restaurarlo.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -191,9 +191,9 @@
       "src": "/documentation/es/page-publish.png",
       "alt": "Diálogo de publicación con Privado seleccionado y opciones de contraseña o enlace.",
       "caption": "Privado mantiene la página dentro del proyecto. Revisa quién debe verla antes de cambiar la publicación.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         496,
         230
@@ -207,9 +207,9 @@
       "src": "/documentation/es/page-export.png",
       "alt": "Menú de exportación del documento con Markdown (.md) e Imprimir / PDF.",
       "caption": "Elige Markdown para descargar el documento o Imprimir / PDF para abrir la vista de impresión.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         211,
         128
@@ -223,7 +223,7 @@
       "src": "/documentation/es/file-preview.png",
       "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.",
       "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Cambiar nombre y Eliminar.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [

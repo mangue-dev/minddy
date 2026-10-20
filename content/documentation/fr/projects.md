@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-693 project roles; MIN-737 project settings reorganization; MIN-689 project creation invitations; MIN-743 destructive-action confirmations",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -62,9 +62,9 @@
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; fr translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (hide-project confirmation from the sidebar menu: source and unit-test review of components/project-context-actions.tsx; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 project settings: source review of the General identity header edited in place (icon menu, name and key fields or phone sheet, no Save button), the Categories card, the three Members cards and the Hidden projects account tab; project-settings-steps and project-members-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-refresh screens project-general and project-members) and inspected; no other browser walkthrough); agent:/root (MIN-689 project creation invitations: source and unit-test review of the wizard's optional members step, the Member role and per-address sending after creation, and the persistent notification for refused invitations; follow-up: search by name among people who joined one of the owner's projects with a verified email, never pending invitees, in the wizard and in the Members settings card renamed Invite people (components/project-members.tsx, lib/collaborator-search.ts, components/collaborator-suggestions.tsx), invited by account after a server-side recheck that refuses with collaboratorNotFound; project-members-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-refresh screen project-members) with the Invite people card and inspected (components/create-project-wizard.tsx, lib/project-draft.ts, lib/members-api.ts, lib/server/collaborators.ts, lib/server/members.ts, app/api/me/collaborators/route.ts and their tests); end-to-end walkthrough against the local candidate with throwaway accounts (wizard pick, settings pick, refusal of a pending invitee and of an unknown id); project-settings-steps retained because it does not show the members card); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for hide-project from settings and sidebar, Leave, pending-invitation cancellation and project image removal; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root (fr translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root/min693_fr with agent:/root (fr MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (fr hide-project confirmation sentence, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (fr translation of the MIN-737 project-settings second-pass passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (fr translation of the MIN-689 passages and the collaborator-search follow-up with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (fr MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 14,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -89,9 +89,9 @@
       "src": "/documentation/fr/project-general.png",
       "alt": "En-tête du projet avec l’icône et son badge de modification, le nom, la clé et les chiffres Tickets, Membres, Objectifs, Catégories et Créé en.",
       "caption": "Sélectionnez l’icône, le nom ou la clé pour les changer sur place ; la mise à la corbeille reste une action distincte, plus bas.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
-      "capturedAt": "2026-10-19",
+      "capturedAt": "2026-10-20",
       "viewport": [
         816,
         359
@@ -106,9 +106,9 @@
       "src": "/documentation/fr/project-members.png",
       "alt": "Carte « Inviter des personnes » au-dessus de la carte Membres, qui liste trois membres de démonstration avec le propriétaire identifié.",
       "caption": "Invitez par l’adresse du compte et identifiez le propriétaire avant de retirer l’accès d’un membre.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
-      "capturedAt": "2026-10-19",
+      "capturedAt": "2026-10-20",
       "viewport": [
         816,
         430

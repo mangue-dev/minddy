@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-19",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12); 0.11.1 candidate (89ebb59a5); MIN-693 project roles; MIN-718 hybrid issue search; MIN-737 account settings reorganization",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -57,10 +57,10 @@
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun); agent:/root with agent:/root/review_en_fr (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, fr wording and new-control review; existing procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-728 agent image access: source and unit-test review of view_image and minddy_get_image; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 account settings reorganization: source review of the AI & Numo and minddy MCP tab contents; unchanged evidence retained; no browser walkthrough, no new captures)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 fr network guidance and terminology review); agent:/root/review_en_fr with agent:/root (fr pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, fr wording and new-control review; existing procedural evidence retained); agent:/root/min693_fr with agent:/root (fr MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (fr translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-19"
+    "revision": 12,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "numo",
@@ -81,9 +81,9 @@
       "src": "/documentation/fr/external-minddy-mcp-workflow.png",
       "alt": "Choix du client MCP minddy : Claude, Codex et autres assistants.",
       "caption": "Choisissez votre client pour afficher sa commande ou sa configuration d’installation.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         816,
         252
@@ -98,9 +98,9 @@
       "src": "/documentation/fr/external-minddy-mcp-install-workflow.png",
       "alt": "Dialogue d’installation de Codex affichant le point d’accès de minddy Cloud.",
       "caption": "Cet exemple se connecte à minddy Cloud. Pour l’auto-hébergement, utilisez l’origine de votre instance ; la commande affichée n’a pas été exécutée pour cette capture.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         560,
         380

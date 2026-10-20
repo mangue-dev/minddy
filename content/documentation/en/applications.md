@@ -18,12 +18,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 12,
+  "revision": 13,
+  "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-19",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-683 bounded saved-cache delta; prior evidence retained); MIN-721 removal of Numo code work; MIN-737 account settings reorganization",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -65,10 +65,10 @@
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-651 recovery/cache delta; isolated macOS Electron forced-crash probe; prior procedural evidence retained); agent:/root (MIN-651 live-memory and native stall/hang recovery delta; isolated automated probes; prior procedural evidence retained); agent:/root (MIN-682 configured-server transport fallback; regression-tested hook; prior unrelated procedural and visual evidence retained); agent:/root/preparation (MIN-683 whole-query cache fallback; source, regression and compiled excluded-probe review; prior unrelated evidence retained); agent:/root/min721_docs (MIN-721 source review: code worker, agent streams and desktop diagnostic report removed; desktop settings screenshot removed because it showed the retired Diagnostic report row; no operational rerun); agent:/root (MIN-737 account settings reorganization: source review of the Desktop app card in components/settings/account-desktop-section.tsx and the Notifications tab name; unchanged evidence retained; no browser walkthrough, no new captures)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-651 recovery/cache additions and localized figure text); agent:/root (stall recovery and memory-retention additions); agent:/root (native notification fallback conditions and six-locale retained-meaning review); agent:/root/preparation (six-locale cache-paragraph idiom and retained-meaning review; agent review, not human reader acceptance); agent:/root/min721_docs (en removal edits; agent review, not human acceptance); agent:/root (en MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-19"
+    "revision": 13,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; 3 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "issues"
@@ -93,9 +93,9 @@
       "src": "/documentation/en/web-and-mobile-workflow.png",
       "alt": "Mobile issue panel with localized title, description, properties and comment composer.",
       "caption": "On a narrow screen, issue details occupy a responsive panel. Use the close button to return to the project; Numo remains reachable through its floating button.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         438,
         1032
@@ -110,9 +110,9 @@
       "src": "/documentation/en/install-the-pwa-workflow.png",
       "alt": "minddy’s illustrated Safari installation guide: Share, Add to Home Screen and confirm.",
       "caption": "The public guide illustrates the three Safari steps and keeping Open as Web App enabled. These are instructional illustrations rendered by minddy, not screenshots of a completed iOS installation.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         1488,
         713
@@ -127,9 +127,9 @@
       "src": "/documentation/en/devices-and-notifications-workflow.png",
       "alt": "Push settings showing browser permission blocked and no registered device.",
       "caption": "This browser blocks notifications. Restore site permission before trying to register this device.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         816,
         196
@@ -144,7 +144,7 @@
       "src": "/documentation/en/devices-and-notifications-registered.png",
       "alt": "An active browser push device registered to the account, with its actual last-send date.",
       "caption": "The account has an active registered browser device. The list shows its registration and last-send dates. Browser permission and operating-system settings still determine whether a banner appears.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -160,7 +160,7 @@
       "src": "/documentation/en/desktop-renderer-recovery.png",
       "alt": "Local recovery page after a forced renderer crash, with Reload window and Check server settings controls.",
       "caption": "Recovery page in the macOS development app with an isolated profile and demonstration server. The native shell uses English labels in every language.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [

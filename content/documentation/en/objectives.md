@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 16,
-  "sourceRevision": 16,
+  "revision": 17,
+  "sourceRevision": 17,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-693 project roles; MIN-728 one editor engine; MIN-736 closed columns hidden by default; MIN-741 creation dialogs; MIN-742 resources; MIN-749 relation shortcut R; UI/UX refinements batch: Create in project shortcut",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -53,9 +53,9 @@
     ]
   },
   "review": {
-    "revision": 16,
-    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-728 one editor engine: source and unit-test review of the shared editor on this surface; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 objective board status filter: source review of the project page and objective header; no browser walkthrough, no new captures); agent:/root (MIN-741 creation dialogs: source and unit-test review of the Create in project control, the cleared lead and relations and the Create objective button; objectives-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-product screen reader-objectives) and inspected; no other browser walkthrough); agent:/root (MIN-742 resources: source and unit-test review of resource mentions scoped to their surface; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-749 relation shortcut R: source and unit-test review of components/issue-field-shortcuts.tsx, the board card, issue panel, objective page and new-issue dialog relation pickers and lib/keyboard/shortcuts.ts; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (UI/UX refinements batch: source review of the Command/Ctrl+Shift+P Create in shortcut, its caret restoration and key hint in components/creation-project-select.tsx and the create.changeProject entry in lib/keyboard/shortcuts.ts; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (en changed-passage review against English revision 7; earlier unchanged prose reviews retained); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained); agent:/root (en changed-passage parity and localized-label review); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en editorial review of the MIN-728 passage); agent:/root (en MIN-736 added sentence with catalog status labels; agent review, not human acceptance); agent:/root (en MIN-741 Create in passages and figure alt text with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-742 added sentence with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-749 added sentences; retained-meaning self-review; agent review, not human acceptance); agent:/root (en Create in shortcut changed passage with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 17,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -77,9 +77,9 @@
       "src": "/documentation/en/reader-objectives.png",
       "alt": "Unsubmitted objective-creation dialog in the Aurora project with a demonstration result name and the Create objective button.",
       "caption": "Name the result before choosing the lead, target date and status. This dialog has not created a second objective.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
-      "capturedAt": "2026-10-19",
+      "capturedAt": "2026-10-20",
       "viewport": [
         720,
         358

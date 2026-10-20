@@ -18,12 +18,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 12,
+  "revision": 13,
+  "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-19",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-683 bounded saved-cache delta; prior evidence retained); MIN-721 removal of Numo code work; MIN-737 account settings reorganization",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -65,10 +65,10 @@
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-651 recovery/cache delta; isolated macOS Electron forced-crash probe; prior procedural evidence retained); agent:/root (MIN-651 live-memory and native stall/hang recovery delta; isolated automated probes; prior procedural evidence retained); agent:/root (MIN-682 configured-server transport fallback; regression-tested hook; prior unrelated procedural and visual evidence retained); agent:/root/preparation (MIN-683 whole-query cache fallback; source, regression and compiled excluded-probe review; prior unrelated evidence retained); agent:/root/min721_docs (MIN-721 source review inherited from en revision 11; es translation of removal edits; no operational rerun); agent:/root (MIN-737 account settings reorganization: source review of the Desktop app card in components/settings/account-desktop-section.tsx and the Notifications tab name; unchanged evidence retained; no browser walkthrough, no new captures)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-651 recovery/cache additions and localized figure text); agent:/root (stall recovery and memory-retention additions); agent:/root (native notification fallback conditions and six-locale retained-meaning review); agent:/root/preparation (six-locale cache-paragraph idiom and retained-meaning review; agent review, not human reader acceptance); agent:/root/min721_es (es translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root (es MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-19"
+    "revision": 13,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; 3 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "issues"
@@ -93,12 +93,12 @@
       "src": "/documentation/es/web-and-mobile-workflow.png",
       "alt": "Panel móvil de una incidencia con título, descripción, propiedades y campo de comentario.",
       "caption": "En una pantalla estrecha, los detalles de la incidencia ocupan un panel adaptable. Use el botón de cierre para volver al proyecto; Numo sigue disponible mediante su botón flotante.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         438,
-        968
+        1032
       ],
       "theme": "light",
       "padding": 24,
@@ -110,9 +110,9 @@
       "src": "/documentation/es/install-the-pwa-workflow.png",
       "alt": "Guía ilustrada de instalación en Safari de minddy: Compartir, Añadir a pantalla de inicio y confirmar.",
       "caption": "La guía pública ilustra los tres pasos de Safari y la opción Abrir como app web que debe permanecer activada. Son ilustraciones didácticas mostradas por minddy, no capturas de una instalación de iOS realizada.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         1488,
         736
@@ -127,9 +127,9 @@
       "src": "/documentation/es/devices-and-notifications-workflow.png",
       "alt": "Ajustes push con permiso bloqueado en el navegador y ningún dispositivo registrado.",
       "caption": "Este navegador bloquea las notificaciones. Restablezca el permiso del sitio antes de registrar este dispositivo.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         816,
         196
@@ -144,7 +144,7 @@
       "src": "/documentation/es/devices-and-notifications-registered.png",
       "alt": "Dispositivo de navegador registrado y activo en la cuenta, con la fecha real del último envío.",
       "caption": "La cuenta tiene un dispositivo de navegador registrado y activo. La lista muestra las fechas de registro y del último envío. La aparición de una notificación sigue dependiendo del permiso del navegador y de los ajustes del sistema operativo.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -160,7 +160,7 @@
       "src": "/documentation/es/desktop-renderer-recovery.png",
       "alt": "Página local de recuperación tras un fallo forzado del proceso de renderizado, con los controles Reload window y Check server settings.",
       "caption": "Página de recuperación en la aplicación de desarrollo para macOS, con un perfil aislado y un servidor de demostración. La interfaz nativa utiliza etiquetas en inglés en todos los idiomas.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [

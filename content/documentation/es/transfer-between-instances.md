@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-19",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12); MIN-737 account settings reorganization",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -37,10 +37,10 @@
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-737 account settings reorganization: source review of the Privacy & data tab name; the retained screenshots predate the rename; no browser walkthrough, no new captures)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root (es MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-19"
+    "revision": 7,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [],
   "aliases": [],
@@ -54,9 +54,9 @@
       "src": "/documentation/es/transfer-between-instances-workflow.png",
       "alt": "Ajustes de transferencia con botón para importar un archivo.",
       "caption": "Elige el JSON intacto exportado de la cuenta de origen; revisa el resultado antes de cerrar.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         816,
         148
@@ -71,9 +71,9 @@
       "src": "/documentation/es/transfer-between-instances-export-workflow.png",
       "alt": "Control de exportación de la cuenta.",
       "caption": "Control de exportación de la cuenta. El archivo excluye claves y tokens; la captura muestra el botón antes de descargarlo.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         816,
         148

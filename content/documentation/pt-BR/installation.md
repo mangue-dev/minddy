@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -50,10 +50,10 @@
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun); agent:/root (installation article labeled as supporting reference; primary wizard entry points verified; existing figures and procedural evidence retained); agent:/root/second_operations (managed runner blocker and key-volume recovery source review; existing helper evidence retained; no operational rerun); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/editorial_it_pt (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 pt-BR network guidance and terminology review); agent:/root (pt-BR installation-reference title review); agent:/root/second_operations (pt-BR added installation and recovery safeguards, full retained meaning); agent:/root/min-721 (pt-BR runner-removal edits and full retained meaning)",
-    "date": "2026-10-16"
+    "revision": 9,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "authentication-and-email",
@@ -78,7 +78,7 @@
       "src": "/documentation/pt-BR/self-hosted-compatibility-flow.svg",
       "alt": "Diagrama: Tag de código anotada. Arquivos e SHA256SUMS. Assinatura e digest OCI oficiais. Perfil de compatibilidade escolhido.",
       "caption": "Siga as etapas nesta ordem. Tag de código anotada. Arquivos e `SHA256SUMS`. Assinatura e digest OCI oficiais. Perfil de compatibilidade escolhido.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -110,7 +110,7 @@
       "src": "/documentation/pt-BR/install-a-server-flow.svg",
       "alt": "Diagrama: Release verificada e ambiente protegido. Instalador: perfil full de referência. Supabase oficial, app, agendador. Verificação de conta, arquivos e recuperação.",
       "caption": "Siga as etapas nesta ordem. Release verificada e ambiente protegido. Instalador: perfil full de referência. Supabase oficial, app, agendador. Verificação de conta, arquivos e recuperação.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -142,12 +142,12 @@
       "src": "/documentation/pt-BR/install-a-server-wizard.png",
       "alt": "Assistente público de instalação com Supabase no mesmo servidor selecionado.",
       "caption": "O perfil full mantém a aplicação e o Supabase no seu servidor. Neste exemplo, o acesso pela rede privada fica restrito à rede local.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         944,
-        1051
+        1090
       ],
       "theme": "light",
       "padding": 24,
@@ -159,7 +159,7 @@
       "src": "/documentation/pt-BR/managed-or-source-installation-flow.svg",
       "alt": "Diagrama: Seu projeto Supabase gerenciado. PostgreSQL, Auth, Storage, Realtime. Perfil OCI OU aplicação de tag. Tarefas e backup conforme perfil.",
       "caption": "A escolha entre imagem OCI e compilação pelo código-fonte muda a gestão da aplicação, enquanto o provedor gerencia o backend.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

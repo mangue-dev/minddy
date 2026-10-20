@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -50,10 +50,10 @@
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun); agent:/root (installation article labeled as supporting reference; primary wizard entry points verified; existing figures and procedural evidence retained); agent:/root/second_operations (managed runner blocker and key-volume recovery source review; existing helper evidence retained; no operational rerun); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/editorial_de_es (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 de network guidance and terminology review); agent:/root (de installation-reference title review); agent:/root/second_operations (de added installation and recovery safeguards, full retained meaning); agent:/root/min-721 (de runner-removal edits and full retained meaning)",
-    "date": "2026-10-16"
+    "revision": 9,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "authentication-and-email",
@@ -78,7 +78,7 @@
       "src": "/documentation/de/self-hosted-compatibility-flow.svg",
       "alt": "Diagramm: Annotierter Quelltag. Dateien und SHA256SUMS. Offizielle OCI-Signatur und Digest. Gewähltes Kompatibilitätsprofil.",
       "caption": "Lesen Sie die Schritte in dieser Reihenfolge. Annotierter Quelltag. Dateien und `SHA256SUMS`. Offizielle OCI-Signatur und Digest. Gewähltes Kompatibilitätsprofil.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -110,7 +110,7 @@
       "src": "/documentation/de/install-a-server-flow.svg",
       "alt": "Diagramm: Geprüfte Release und geschützte Umgebung. Installer: full-Referenzprofil. Offizielles Supabase, App, Scheduler. Konto-, Datei- und Wiederherstellungsprüfung.",
       "caption": "Lesen Sie die Schritte in dieser Reihenfolge. Geprüfte Release und geschützte Umgebung. Installer: full-Referenzprofil. Offizielles Supabase, App, Scheduler. Konto-, Datei- und Wiederherstellungsprüfung.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -142,12 +142,12 @@
       "src": "/documentation/de/install-a-server-wizard.png",
       "alt": "Öffentlicher Installationsassistent mit ausgewähltem Supabase auf demselben Server.",
       "caption": "Das Profil full betreibt Anwendung und Supabase auf Ihrem Server. In diesem Beispiel bleibt der private Netzwerkzugang auf das LAN beschränkt.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         944,
-        1051
+        1090
       ],
       "theme": "light",
       "padding": 24,
@@ -159,7 +159,7 @@
       "src": "/documentation/de/managed-or-source-installation-flow.svg",
       "alt": "Diagramm: Ihr verwaltetes Supabase-Projekt. PostgreSQL, Auth, Storage, Realtime. OCI-Profil ODER Anwendung aus Quelltag. Jobs und Sicherung passend zum Profil.",
       "caption": "Anwendung und Backend müssen zum gewählten Profil passen, einschließlich Zeitplänen und Sicherungsverfahren.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

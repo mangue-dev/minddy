@@ -20,12 +20,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-693 project roles; MIN-718 hybrid issue search; MIN-737 project settings reorganization; MIN-743 destructive-action confirmations",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -67,9 +67,9 @@
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_en_fr (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 integrations list: source review of the Objective for new feedback line and its in-place objective creation; no browser walkthrough; feedback-objective-selection predates this layout and is retained pending recapture; MIN-737: publish-a-feedback-board-workflow recaptured on 2026-10-19 in all six locales from the local candidate on the demo board — email identity, URL concealed — and inspected); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for unlinking a feedback post from its issue and a visitor deleting their own public comment; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_en_fr with agent:/root (en pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained); agent:/root (en changed-passage parity and localized-label review); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-718 added passages with catalog UI labels; agent review, not human acceptance); agent:/root (en MIN-737 project-settings second-pass passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 14,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -96,9 +96,9 @@
       "src": "/documentation/en/publish-a-feedback-board-workflow.png",
       "alt": "Enabled public feedback board with email-code visitor identity, the Enable SSO action and its URL concealed.",
       "caption": "The owner enables the board and chooses visitor identity. This demo board uses email verification; its URL is concealed.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
-      "capturedAt": "2026-10-19",
+      "capturedAt": "2026-10-20",
       "viewport": [
         816,
         566
@@ -113,11 +113,11 @@
       "src": "/documentation/en/submit-and-follow-feedback-workflow.png",
       "alt": "Visitor feedback form with a title, description and public visibility enabled.",
       "caption": "A signed-in visitor submits a need and chooses whether it appears publicly. The example was actually submitted with automatic review disabled.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
-        625,
+        624,
         369
       ],
       "theme": "light",
@@ -129,7 +129,7 @@
       "src": "/documentation/en/feedback-objective-selection.png",
       "alt": "Component preview of the feedback objective selector and a feedback integration default, both set to Docs.",
       "caption": "Objective selectors with demonstration data. New feedback inherits the integration default.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -146,7 +146,7 @@
       "src": "/documentation/en/feedback-pages-and-views-workflow.png",
       "alt": "Published feedback guide selected in the board navigation and readable without sign-in.",
       "caption": "Publish a page, enable page tabs and select it for the board. This demonstration page was opened anonymously; the opaque URL keeps `noindex`.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

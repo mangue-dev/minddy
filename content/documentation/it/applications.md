@@ -18,12 +18,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 12,
+  "revision": 13,
+  "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-19",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-683 bounded saved-cache delta; prior evidence retained); MIN-721 removal of Numo code work; MIN-737 account settings reorganization",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -65,10 +65,10 @@
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-651 recovery/cache delta; isolated macOS Electron forced-crash probe; prior procedural evidence retained); agent:/root (MIN-651 live-memory and native stall/hang recovery delta; isolated automated probes; prior procedural evidence retained); agent:/root (MIN-682 configured-server transport fallback; regression-tested hook; prior unrelated procedural and visual evidence retained); agent:/root/preparation (MIN-683 whole-query cache fallback; source, regression and compiled excluded-probe review; prior unrelated evidence retained); agent:/root/min721_docs (MIN-721 source review inherited from en revision 11; it translation of removal edits; no operational rerun); agent:/root (MIN-737 account settings reorganization: source review of the Desktop app card in components/settings/account-desktop-section.tsx and the Notifications tab name; unchanged evidence retained; no browser walkthrough, no new captures)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-651 recovery/cache additions and localized figure text); agent:/root (stall recovery and memory-retention additions); agent:/root (native notification fallback conditions and six-locale retained-meaning review); agent:/root/preparation (six-locale cache-paragraph idiom and retained-meaning review; agent review, not human reader acceptance); agent:/root/min721_it (it translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root (it MIN-737 changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-19"
+    "revision": 13,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; 3 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "issues"
@@ -93,12 +93,12 @@
       "src": "/documentation/it/web-and-mobile-workflow.png",
       "alt": "Pannello mobile di un ticket con titolo, descrizione, proprietà e campo per i commenti.",
       "caption": "Su uno schermo stretto, i dettagli della issue occupano un pannello adattabile. Usa il pulsante di chiusura per tornare al progetto; Numo resta accessibile dal pulsante mobile.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         438,
-        968
+        1032
       ],
       "theme": "light",
       "padding": 24,
@@ -110,12 +110,12 @@
       "src": "/documentation/it/install-the-pwa-workflow.png",
       "alt": "Guida illustrata di minddy per l’installazione da Safari: Condividi, aggiungi alla schermata Home e conferma.",
       "caption": "La guida pubblica illustra i tre passaggi di Safari e l’opzione Apri come app web da mantenere attiva. Sono illustrazioni didattiche mostrate da minddy, non schermate di un’installazione iOS completata.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         1488,
-        736
+        759
       ],
       "theme": "light",
       "padding": 24,
@@ -127,9 +127,9 @@
       "src": "/documentation/it/devices-and-notifications-workflow.png",
       "alt": "Impostazioni push con permesso bloccato nel browser e nessun dispositivo registrato.",
       "caption": "Questo browser blocca le notifiche. Ripristina il permesso del sito prima di registrare il dispositivo.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         816,
         196
@@ -144,7 +144,7 @@
       "src": "/documentation/it/devices-and-notifications-registered.png",
       "alt": "Dispositivo browser registrato e attivo sull’account, con la data effettiva dell’ultimo invio.",
       "caption": "L’account ha un dispositivo browser registrato e attivo. L’elenco mostra la data di registrazione e quella dell’ultimo invio. La comparsa di un avviso dipende comunque dal permesso del browser e dalle impostazioni del sistema operativo.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -160,7 +160,7 @@
       "src": "/documentation/it/desktop-renderer-recovery.png",
       "alt": "Pagina locale di ripristino dopo un arresto forzato del processo di rendering, con i controlli Reload window e Check server settings.",
       "caption": "Pagina di ripristino nell’app di sviluppo per macOS, con un profilo isolato e un server dimostrativo. L’interfaccia nativa usa etichette in inglese in tutte le lingue.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [

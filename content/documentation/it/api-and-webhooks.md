@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-19",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12); MIN-693 project roles; MIN-737 project settings reorganization",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -48,10 +48,10 @@
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 integrations list: source review of components/project-integrations.tsx for New integration, the list details and badges, the ⋯ menu with Configure the webhook… and Revoke, the Webhook delivery line and the Objective for new feedback line; no browser walkthrough; the two diagrams remain accurate)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained); agent:/root/min693_it with agent:/root (it MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (it translation of the MIN-737 project-settings second-pass passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-19"
+    "revision": 9,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "integration-troubleshooting",
@@ -73,7 +73,7 @@
       "src": "/documentation/it/integration-api-and-webhooks-flow.svg",
       "alt": "Schema: Server conserva chiave integrazione. POST ticket o feedback con tipo corretto. Proprietario sceglie destinazione webhook. Ricevente verifica HMAC grezzo e UUID.",
       "caption": "Segui le fasi in questo ordine. Server conserva chiave integrazione. `POST` ticket o feedback con tipo corretto. Proprietario sceglie destinazione webhook. Ricevente verifica HMAC grezzo e UUID.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -105,7 +105,7 @@
       "src": "/documentation/it/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Sequenze distinte di acquisizione backend e SSO browser con segreti diversi.",
       "caption": "La chiave di acquisizione autentica le chiamate server. Il segreto SSO della bacheca firma un token visitatore breve e monouso.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

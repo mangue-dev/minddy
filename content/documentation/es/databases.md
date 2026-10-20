@@ -17,12 +17,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
-  "sourceRevision": 15,
+  "revision": 16,
+  "sourceRevision": 16,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate; MIN-684 page promotion; MIN-743 destructive-action confirmations; UI/UX refinements batch: Edit options from the column header",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -53,9 +53,9 @@
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:/root (optional-time and option-control source, component and isolated SQL review; unchanged claims retain prior evidence); agent:/root (MIN-690 recapture of create-a-database-steps on next dev at 8371778c4 with a throwaway database; other figures unchanged, evidence retained); agent:/root (MIN-684 page promotion: source and focused unit-test review of the menu entries, reader gating, save-before-promote and the Numo request; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for option deletion on Save in Edit options; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (UI/UX refinements batch: source review of the Edit options entry of Select and Multi-select column header menus in components/pages/database-column-name.tsx, which opens the same options dialog as the cells; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (es changed-passage and figure parity self-review); agent:/root (es updated alt text for the column type picker; agent review, not human acceptance); agent:/root (es translation of the MIN-684 single-entry promotion passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (es translation of the Edit options from the column header changed passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 16,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 7 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -80,7 +80,7 @@
       "src": "/documentation/es/database-setup-cards.png",
       "alt": "Vista previa del componente con tarjetas para configurar una nueva base de datos con Numo o importar una existente.",
       "caption": "Sugerencias para una nueva base con datos de demostración. Elige Numo o la importación, o cierra las tarjetas para continuar manualmente.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -97,7 +97,7 @@
       "src": "/documentation/es/database-property-types.png",
       "alt": "Selector de tipo de columna con un campo de búsqueda, texto, número, selecciones, fechas, personas y casilla de verificación.",
       "caption": "Elige un tipo que corresponda a los valores que deseas guardar.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -114,7 +114,7 @@
       "src": "/documentation/es/database-entry.png",
       "alt": "Entrada de demostración con descripción, duración 2.5, casilla marcada y selección vacía.",
       "caption": "Abre una entrada para leer el texto completo y editar los valores según su tipo.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -130,7 +130,7 @@
       "src": "/documentation/es/database-conversion-warning.png",
       "alt": "Advertencia de conversión: cambiar de Texto a Número borra una celda incompatible, con botones para cancelar o confirmar.",
       "caption": "Revisa el número real de celdas incompatibles antes de confirmar. Cancelar conserva los valores actuales.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -146,7 +146,7 @@
       "src": "/documentation/es/database-import-review.png",
       "alt": "Revisión de un CSV local: dos páginas de entradas y dos columnas, con el botón Importar base de datos.",
       "caption": "Revisa las entradas analizadas y el número de columnas antes de importar a la base vacía.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -162,7 +162,7 @@
       "src": "/documentation/es/database-options.png",
       "alt": "Vista previa del componente Editar opciones con estados en español, flechas hacia arriba y abajo, papeleras y la explicación de la eliminación.",
       "caption": "Edita juntos los nombres, colores y orden de las opciones. La papelera retira una opción del borrador; Guardar aplica los cambios. Se muestran datos de demostración.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -179,7 +179,7 @@
       "src": "/documentation/es/database-date-time.png",
       "alt": "Vista previa del selector de fecha con el 12 de octubre de 2026 seleccionado, Añade una hora activado y Hora en 14:30.",
       "caption": "Activa Añade una hora para introducir una hora. Esta vista previa del componente usa datos de demostración y la zona horaria del dispositivo.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [

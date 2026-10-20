@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -32,14 +32,16 @@
     ],
     "evidence": [
       "app/(app)/trash/page.tsx",
-      "content/knowledge/productivity.md"
+      "content/knowledge/productivity.md",
+      "lib/server/trash.ts",
+      "components/app-sidebar.tsx"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "pages",
@@ -57,7 +59,7 @@
       "src": "/documentation/en/reader-trash.png",
       "alt": "Recoverable demonstration issue with thirty days remaining in trash.",
       "caption": "Use the row’s actions to restore the issue. Emptying trash is a separate permanent operation.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

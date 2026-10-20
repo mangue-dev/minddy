@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677); MIN-717 issue-index schedule; MIN-688 page-materialization schedule",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -45,10 +45,10 @@
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun); agent:/root (MIN-717 issue-index schedule row checked against deploy/self-hosted/scheduler.mjs and vercel.json; no scheduler run)",
-    "language": "agent:/root (en translation, label and retained-meaning self-review); agent:/root/min-721 (en runner-removal edits and full retained meaning); agent:/root (en MIN-717 table row: endpoint and cron expression only, no prose change)",
-    "date": "2026-10-17"
+    "revision": 9,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "workspace-encryption",
@@ -73,7 +73,7 @@
       "src": "/documentation/en/optional-providers-flow.svg",
       "alt": "Diagram: Operator selects an optional capability. Complete credentials and provider conditions. Explicit outbound provider data path. Verify behavior and monitor usage costs.",
       "caption": "Enabling an optional service adds its own credentials, data destination and usage costs.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -105,7 +105,7 @@
       "src": "/documentation/en/proxy-network-and-jobs-flow.svg",
       "alt": "Diagram: Public HTTPS reverse proxy. Application and public Supabase origins. Private database and internal ports. Authenticated scheduler; stopped in maintenance.",
       "caption": "Public access uses HTTPS while internal services stay private and scheduled jobs pause during maintenance.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

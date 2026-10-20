@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -33,14 +33,17 @@
       "content/knowledge/productivity.md",
       "components/inbox-popover.tsx",
       "components/inbox-content.tsx",
-      "components/settings/account-notifications-section.tsx"
+      "components/settings/account-notifications-section.tsx",
+      "components/notification-badge.tsx",
+      "components/settings/account-settings-page.tsx",
+      "lib/server/notifications.ts"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
-    "date": "2026-10-09"
+    "revision": 7,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "projects",
@@ -58,9 +61,9 @@
       "src": "/documentation/es/work-inbox.png",
       "alt": "Bandeja de entrada con menciones, asignaciones y comentarios de demostración, leídos y no leídos.",
       "caption": "La actividad de ejemplo muestra el autor, el ticket y el estado de lectura. Todos incluye notificaciones leídas y no leídas.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-20",
       "viewport": [
         528,
         648

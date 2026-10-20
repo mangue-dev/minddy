@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-728 one editor engine; MIN-725 notebook search in the command palette; UI/UX refinements batch: task list first in the notebook / menu",
+    "version": "0.20.0 (MIN-747 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -47,9 +47,9 @@
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-728 one editor engine: source and unit-test review of the shared editor on this surface; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-725 notebook search in the command palette: source and unit-test review of lib/scratchpad-search.ts, the palette rows and the notebook focus; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (UI/UX refinements batch: source review of SCRATCHPAD_SLASH_FIRST in components/scratchpad/scratchpad-editor.tsx and the slashFirst ordering in components/editor/rich-editor.tsx; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (en editorial review of the MIN-728 passage); agent:/root (en MIN-725 added paragraph with catalog UI labels; agent review, not human acceptance); agent:/root (en slash menu order changed passage with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 8,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -68,9 +68,9 @@
       "src": "/documentation/en/work-task-notebook.png",
       "alt": "Localized demonstration tasks in the personal notebook.",
       "caption": "The notebook keeps personal steps outside the project issue hierarchy. The sample task states remain unchanged.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-20",
       "viewport": [
         1156,
         1048
