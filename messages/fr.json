@@ -551,22 +551,331 @@
       "last30": "30 derniers jours",
       "older": "Plus ancien"
     },
-    "starter": {
-      "s1": {
-        "title": "Explorer et comprendre mon travail",
-        "prompt": "Donne-moi un aperçu de ce sur quoi je travaille en ce moment."
+    "startersLabel": "Suggestions",
+    "starters": {
+      "general": {
+        "s1": {
+          "title": "Explorer et comprendre mon travail",
+          "prompt": "Donne-moi un aperçu de ce sur quoi je travaille en ce moment."
+        },
+        "s2": {
+          "title": "Créer quelque chose",
+          "prompt": "Guide-moi pour créer un ticket adapté à mon besoin."
+        },
+        "s3": {
+          "title": "Organiser mon travail",
+          "prompt": "Aide-moi à organiser mes tâches et mes priorités."
+        },
+        "s4": {
+          "title": "Obtenir de l’aide sur une tâche",
+          "prompt": "J’ai besoin d’aide pour avancer sur une tâche."
+        }
       },
-      "s2": {
-        "title": "Créer quelque chose",
-        "prompt": "Guide-moi pour créer un ticket adapté à mon besoin."
+      "home": {
+        "s1": {
+          "title": "Choisir ma priorité du jour",
+          "prompt": "Sur quoi devrais-je me concentrer aujourd’hui ? Regarde mes tickets assignés, leurs échéances et leurs priorités."
+        },
+        "s2": {
+          "title": "Rattraper les changements récents",
+          "prompt": "Résume ce qui a changé dans mes projets depuis hier."
+        },
+        "s3": {
+          "title": "Trouver ce qui est en retard",
+          "prompt": "Lesquels de mes tickets sont en retard ou à rendre cette semaine ?"
+        },
+        "s4": {
+          "title": "Noter un nouveau ticket",
+          "prompt": "Aide-moi à créer un ticket pour ce que je dois faire."
+        }
       },
-      "s3": {
-        "title": "Organiser mon travail",
-        "prompt": "Aide-moi à organiser mes tâches et mes priorités."
+      "inbox": {
+        "s1": {
+          "title": "Résumer mon inbox",
+          "prompt": "Résume mes notifications non lues."
+        },
+        "s2": {
+          "title": "Voir ce qui demande mon attention",
+          "prompt": "Quels éléments de mon inbox demandent d’abord une action de ma part ?"
+        },
+        "s3": {
+          "title": "Retrouver ce qu’on m’a demandé",
+          "prompt": "Où ai-je été mentionné récemment, et que m’a-t-on demandé ?"
+        },
+        "s4": {
+          "title": "Transformer une notification en ticket",
+          "prompt": "Aide-moi à créer un ticket à partir d’une notification de mon inbox."
+        }
       },
-      "s4": {
-        "title": "Obtenir de l’aide sur une tâche",
-        "prompt": "J’ai besoin d’aide pour avancer sur une tâche."
+      "all": {
+        "s1": {
+          "title": "Passer en revue mes tickets ouverts",
+          "prompt": "Donne-moi un aperçu de mes tickets ouverts dans tous mes projets."
+        },
+        "s2": {
+          "title": "Prioriser mon backlog",
+          "prompt": "Aide-moi à prioriser mon backlog : qu’est-ce qui doit monter ou descendre ?"
+        },
+        "s3": {
+          "title": "Trouver les tickets oubliés",
+          "prompt": "Lesquels de mes tickets n’ont pas bougé depuis longtemps et devraient être mis à jour ou fermés ?"
+        },
+        "s4": {
+          "title": "Préparer mon prochain cycle",
+          "prompt": "Aide-moi à choisir les tickets de mon prochain cycle."
+        }
+      },
+      "board": {
+        "s1": {
+          "title": "Résumer ce projet",
+          "prompt": "Fais le point sur ce projet : avancement, blocages et prochaines étapes."
+        },
+        "s2": {
+          "title": "Créer un ticket",
+          "prompt": "Aide-moi à créer un ticket dans ce projet."
+        },
+        "s3": {
+          "title": "Trouver ce qui bloque",
+          "prompt": "Quels tickets de ce projet sont bloqués ou à l’arrêt ?"
+        },
+        "s4": {
+          "title": "Découper un gros ticket",
+          "prompt": "Aide-moi à découper un gros ticket de ce projet en tickets plus petits."
+        }
+      },
+      "triage": {
+        "s1": {
+          "title": "Trier les nouveaux tickets",
+          "prompt": "Aide-moi à trier les nouveaux tickets : propose une priorité, un effort et une catégorie pour chacun."
+        },
+        "s2": {
+          "title": "Repérer les doublons",
+          "prompt": "Y a-t-il des doublons parmi les tickets en attente de tri ?"
+        },
+        "s3": {
+          "title": "Trouver ce qui est urgent",
+          "prompt": "Quels tickets en attente de tri semblent urgents, et pourquoi ?"
+        },
+        "s4": {
+          "title": "Rattacher à des objectifs",
+          "prompt": "Propose un objectif pour chaque ticket en attente de tri."
+        }
+      },
+      "objectives": {
+        "s1": {
+          "title": "Suivre l’avancement des objectifs",
+          "prompt": "Résume l’avancement de chaque objectif de ce projet."
+        },
+        "s2": {
+          "title": "Rédiger un nouvel objectif",
+          "prompt": "Aide-moi à définir un nouvel objectif et les tickets qu’il demande."
+        },
+        "s3": {
+          "title": "Trouver les objectifs à risque",
+          "prompt": "Quels objectifs risquent de prendre du retard, et pourquoi ?"
+        },
+        "s4": {
+          "title": "Regrouper les tickets isolés",
+          "prompt": "Propose des objectifs pour les tickets qui n’en ont pas encore."
+        }
+      },
+      "pages": {
+        "s1": {
+          "title": "Trouver une page",
+          "prompt": "Aide-moi à retrouver une page de ce projet."
+        },
+        "s2": {
+          "title": "Écrire une nouvelle page",
+          "prompt": "Aide-moi à écrire une nouvelle page pour ce projet."
+        },
+        "s3": {
+          "title": "Résumer les pages",
+          "prompt": "Donne-moi un aperçu des pages de ce projet."
+        },
+        "s4": {
+          "title": "Réorganiser les pages",
+          "prompt": "Propose une structure plus claire pour les pages de ce projet."
+        }
+      },
+      "page": {
+        "s1": {
+          "title": "Résumer cette page",
+          "prompt": "Résume cette page en quelques points."
+        },
+        "s2": {
+          "title": "Améliorer le texte",
+          "prompt": "Améliore la rédaction de cette page sans en changer le sens."
+        },
+        "s3": {
+          "title": "En tirer des tickets",
+          "prompt": "Crée des tickets à partir des actions listées dans cette page."
+        },
+        "s4": {
+          "title": "Continuer la rédaction",
+          "prompt": "Continue d’écrire cette page là où elle s’arrête."
+        }
+      },
+      "feedback": {
+        "s1": {
+          "title": "Résumer les retours",
+          "prompt": "Résume les grands thèmes des retours de ce projet."
+        },
+        "s2": {
+          "title": "Trouver les idées les plus demandées",
+          "prompt": "Quels retours sont les plus demandés en ce moment ?"
+        },
+        "s3": {
+          "title": "Répondre à un retour",
+          "prompt": "Aide-moi à rédiger une réponse à un retour."
+        },
+        "s4": {
+          "title": "Transformer les retours en tickets",
+          "prompt": "Transforme les retours les plus votés en tickets."
+        }
+      },
+      "projectSettings": {
+        "s1": {
+          "title": "Comprendre ces paramètres",
+          "prompt": "Explique à quoi sert chaque paramètre de ce projet."
+        },
+        "s2": {
+          "title": "Mettre en place des catégories",
+          "prompt": "Propose des catégories pour les tickets de ce projet."
+        },
+        "s3": {
+          "title": "Connecter un dépôt",
+          "prompt": "Comment connecter un dépôt Git à ce projet ?"
+        },
+        "s4": {
+          "title": "Inviter mon équipe",
+          "prompt": "Comment inviter des membres dans ce projet ?"
+        }
+      },
+      "issue": {
+        "s1": {
+          "title": "Résumer ce ticket",
+          "prompt": "Résume ce ticket et sa discussion."
+        },
+        "s2": {
+          "title": "Écrire un plan d’implémentation",
+          "prompt": "Écris un plan d’implémentation pour ce ticket."
+        },
+        "s3": {
+          "title": "Découper en sous-tickets",
+          "prompt": "Découpe ce ticket en sous-tickets plus petits."
+        },
+        "s4": {
+          "title": "Clarifier la description",
+          "prompt": "Réécris la description de ce ticket pour la rendre plus claire."
+        }
+      },
+      "routines": {
+        "s1": {
+          "title": "Créer une routine",
+          "prompt": "Aide-moi à créer une routine pour un travail récurrent."
+        },
+        "s2": {
+          "title": "Passer en revue mes routines",
+          "prompt": "Résume ce que fait chacune de mes routines et quand elle tourne."
+        },
+        "s3": {
+          "title": "Trouver des idées de routines",
+          "prompt": "Propose des routines qui pourraient me faire gagner du temps."
+        },
+        "s4": {
+          "title": "Ajuster une routine",
+          "prompt": "Aide-moi à ajuster une routine qui ne fait pas ce que je veux."
+        }
+      },
+      "pullRequests": {
+        "s1": {
+          "title": "Relire une pull request",
+          "prompt": "Relis cette pull request et signale les risques."
+        },
+        "s2": {
+          "title": "Résumer les changements",
+          "prompt": "Résume ce que change cette pull request."
+        },
+        "s3": {
+          "title": "Répondre aux commentaires",
+          "prompt": "Aide-moi à répondre aux commentaires de relecture de cette pull request."
+        },
+        "s4": {
+          "title": "Vérifier si elle peut être mergée",
+          "prompt": "Cette pull request est-elle prête à être mergée ? Liste ce qu’il reste à faire."
+        }
+      },
+      "statistics": {
+        "s1": {
+          "title": "Comprendre mes statistiques",
+          "prompt": "Explique ce que mes statistiques disent de mon travail."
+        },
+        "s2": {
+          "title": "Repérer des tendances",
+          "prompt": "Quelles tendances vois-tu dans mon activité récente ?"
+        },
+        "s3": {
+          "title": "Comparer avec le mois dernier",
+          "prompt": "Comment ce mois-ci se compare-t-il au mois dernier ?"
+        },
+        "s4": {
+          "title": "Trouver ce qui me ralentit",
+          "prompt": "Où mon travail ralentit-il le plus ?"
+        }
+      },
+      "settings": {
+        "s1": {
+          "title": "Comprendre ces paramètres",
+          "prompt": "Explique les paramètres disponibles pour mon compte."
+        },
+        "s2": {
+          "title": "Régler mes notifications",
+          "prompt": "Aide-moi à choisir les notifications que je devrais recevoir."
+        },
+        "s3": {
+          "title": "Connecter mon compte Git",
+          "prompt": "Comment connecter mon compte GitHub ou GitLab ?"
+        },
+        "s4": {
+          "title": "Utiliser Minddy depuis mon éditeur",
+          "prompt": "Comment connecter Minddy à mon agent de code avec MCP ?"
+        }
+      },
+      "billing": {
+        "s1": {
+          "title": "Comprendre mon offre",
+          "prompt": "Explique ce que comprend mon offre actuelle."
+        },
+        "s2": {
+          "title": "Suivre mon usage",
+          "prompt": "Combien d’usage IA me reste-t-il, et quand est-il remis à zéro ?"
+        },
+        "s3": {
+          "title": "Comparer les offres",
+          "prompt": "Compare les offres disponibles pour moi."
+        },
+        "s4": {
+          "title": "Gérer mon abonnement",
+          "prompt": "Comment modifier ou résilier mon abonnement ?"
+        }
+      },
+      "trash": {
+        "s1": {
+          "title": "Voir ce qu’il y a dans la corbeille",
+          "prompt": "Résume ce qui se trouve dans la corbeille."
+        },
+        "s2": {
+          "title": "Restaurer un élément",
+          "prompt": "Aide-moi à retrouver et restaurer un élément supprimé."
+        },
+        "s3": {
+          "title": "Retrouver un ticket supprimé",
+          "prompt": "Aide-moi à retrouver un ticket que j’ai supprimé."
+        },
+        "s4": {
+          "title": "Savoir combien de temps ils restent",
+          "prompt": "Combien de temps les éléments supprimés restent-ils dans la corbeille ?"
+        }
       }
     },
     "contextIssue": "Ticket en contexte",

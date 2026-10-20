@@ -551,22 +551,331 @@
       "last30": "Últimos 30 días",
       "older": "Anteriores"
     },
-    "starter": {
-      "s1": {
-        "title": "Explorar y comprender mi trabajo",
-        "prompt": "Dame una visión general de lo que estoy haciendo ahora mismo."
+    "startersLabel": "Sugerencias",
+    "starters": {
+      "general": {
+        "s1": {
+          "title": "Explorar y comprender mi trabajo",
+          "prompt": "Dame una visión general de lo que estoy haciendo ahora mismo."
+        },
+        "s2": {
+          "title": "Crear algo nuevo",
+          "prompt": "Ayúdame a crear una incidencia para lo que necesito hacer."
+        },
+        "s3": {
+          "title": "Organizar mi trabajo",
+          "prompt": "Ayúdame a organizar mis tareas y prioridades."
+        },
+        "s4": {
+          "title": "Obtener ayuda con una tarea",
+          "prompt": "Necesito ayuda para avanzar en una tarea."
+        }
       },
-      "s2": {
-        "title": "Crear algo nuevo",
-        "prompt": "Ayúdame a crear una incidencia para lo que necesito hacer."
+      "home": {
+        "s1": {
+          "title": "Elegir en qué centrarme hoy",
+          "prompt": "¿En qué debería centrarme hoy? Revisa mis incidencias asignadas, sus fechas límite y sus prioridades."
+        },
+        "s2": {
+          "title": "Ponerme al día",
+          "prompt": "Resume lo que ha cambiado en mis proyectos desde ayer."
+        },
+        "s3": {
+          "title": "Encontrar lo atrasado",
+          "prompt": "¿Cuáles de mis incidencias están atrasadas o vencen esta semana?"
+        },
+        "s4": {
+          "title": "Anotar una nueva incidencia",
+          "prompt": "Ayúdame a crear una incidencia para lo que necesito hacer."
+        }
       },
-      "s3": {
-        "title": "Organizar mi trabajo",
-        "prompt": "Ayúdame a organizar mis tareas y prioridades."
+      "inbox": {
+        "s1": {
+          "title": "Resumir mi bandeja de entrada",
+          "prompt": "Resume mis notificaciones sin leer."
+        },
+        "s2": {
+          "title": "Ver qué requiere mi atención",
+          "prompt": "¿Qué elementos de mi bandeja de entrada requieren primero una acción mía?"
+        },
+        "s3": {
+          "title": "Encontrar lo que me pidieron",
+          "prompt": "¿Dónde me mencionaron recientemente y qué me pidieron?"
+        },
+        "s4": {
+          "title": "Convertir una notificación en incidencia",
+          "prompt": "Ayúdame a crear una incidencia a partir de una notificación de mi bandeja de entrada."
+        }
       },
-      "s4": {
-        "title": "Obtener ayuda con una tarea",
-        "prompt": "Necesito ayuda para avanzar en una tarea."
+      "all": {
+        "s1": {
+          "title": "Revisar mis incidencias abiertas",
+          "prompt": "Dame una visión general de mis incidencias abiertas en todos mis proyectos."
+        },
+        "s2": {
+          "title": "Priorizar mi backlog",
+          "prompt": "Ayúdame a priorizar mi backlog: ¿qué debería subir o bajar?"
+        },
+        "s3": {
+          "title": "Encontrar incidencias estancadas",
+          "prompt": "¿Cuáles de mis incidencias llevan tiempo sin moverse y deberían actualizarse o cerrarse?"
+        },
+        "s4": {
+          "title": "Planificar mi próximo ciclo",
+          "prompt": "Ayúdame a elegir las incidencias de mi próximo ciclo."
+        }
+      },
+      "board": {
+        "s1": {
+          "title": "Resumir este proyecto",
+          "prompt": "Resume en qué punto está este proyecto: avance, bloqueos y próximos pasos."
+        },
+        "s2": {
+          "title": "Crear una incidencia",
+          "prompt": "Ayúdame a crear una incidencia en este proyecto."
+        },
+        "s3": {
+          "title": "Encontrar el trabajo bloqueado",
+          "prompt": "¿Qué incidencias de este proyecto están bloqueadas o paradas?"
+        },
+        "s4": {
+          "title": "Dividir una incidencia grande",
+          "prompt": "Ayúdame a dividir una incidencia grande de este proyecto en otras más pequeñas."
+        }
+      },
+      "triage": {
+        "s1": {
+          "title": "Clasificar las nuevas incidencias",
+          "prompt": "Ayúdame a clasificar las nuevas incidencias: propón una prioridad, un esfuerzo y una categoría para cada una."
+        },
+        "s2": {
+          "title": "Detectar duplicados",
+          "prompt": "¿Hay duplicados entre las incidencias pendientes de clasificar?"
+        },
+        "s3": {
+          "title": "Encontrar lo urgente",
+          "prompt": "¿Qué incidencias pendientes de clasificar parecen urgentes y por qué?"
+        },
+        "s4": {
+          "title": "Asignar objetivos",
+          "prompt": "Propón un objetivo para cada incidencia pendiente de clasificar."
+        }
+      },
+      "objectives": {
+        "s1": {
+          "title": "Revisar el avance de los objetivos",
+          "prompt": "Resume el avance de cada objetivo de este proyecto."
+        },
+        "s2": {
+          "title": "Redactar un nuevo objetivo",
+          "prompt": "Ayúdame a definir un nuevo objetivo y las incidencias que necesita."
+        },
+        "s3": {
+          "title": "Encontrar objetivos en riesgo",
+          "prompt": "¿Qué objetivos corren el riesgo de retrasarse y por qué?"
+        },
+        "s4": {
+          "title": "Agrupar incidencias sueltas",
+          "prompt": "Propón objetivos para las incidencias que todavía no pertenecen a ninguno."
+        }
+      },
+      "pages": {
+        "s1": {
+          "title": "Encontrar una página",
+          "prompt": "Ayúdame a encontrar una página de este proyecto."
+        },
+        "s2": {
+          "title": "Escribir una nueva página",
+          "prompt": "Ayúdame a escribir una nueva página para este proyecto."
+        },
+        "s3": {
+          "title": "Resumir las páginas",
+          "prompt": "Dame una visión general de las páginas de este proyecto."
+        },
+        "s4": {
+          "title": "Reorganizar las páginas",
+          "prompt": "Propón una estructura más clara para las páginas de este proyecto."
+        }
+      },
+      "page": {
+        "s1": {
+          "title": "Resumir esta página",
+          "prompt": "Resume esta página en unos pocos puntos."
+        },
+        "s2": {
+          "title": "Mejorar la redacción",
+          "prompt": "Mejora la redacción de esta página sin cambiar su sentido."
+        },
+        "s3": {
+          "title": "Convertirla en incidencias",
+          "prompt": "Crea incidencias a partir de las acciones de esta página."
+        },
+        "s4": {
+          "title": "Seguir escribiendo",
+          "prompt": "Sigue escribiendo esta página desde donde termina."
+        }
+      },
+      "feedback": {
+        "s1": {
+          "title": "Resumir las sugerencias",
+          "prompt": "Resume los temas principales de las sugerencias de este proyecto."
+        },
+        "s2": {
+          "title": "Encontrar las ideas más pedidas",
+          "prompt": "¿Qué sugerencias son las más pedidas ahora mismo?"
+        },
+        "s3": {
+          "title": "Responder a una sugerencia",
+          "prompt": "Ayúdame a redactar una respuesta a una sugerencia."
+        },
+        "s4": {
+          "title": "Convertir sugerencias en incidencias",
+          "prompt": "Convierte las sugerencias más votadas en incidencias."
+        }
+      },
+      "projectSettings": {
+        "s1": {
+          "title": "Entender esta configuración",
+          "prompt": "Explica para qué sirve cada ajuste de este proyecto."
+        },
+        "s2": {
+          "title": "Configurar categorías",
+          "prompt": "Propón categorías para las incidencias de este proyecto."
+        },
+        "s3": {
+          "title": "Conectar un repositorio",
+          "prompt": "¿Cómo conecto un repositorio Git a este proyecto?"
+        },
+        "s4": {
+          "title": "Invitar a mi equipo",
+          "prompt": "¿Cómo invito a miembros a este proyecto?"
+        }
+      },
+      "issue": {
+        "s1": {
+          "title": "Resumir esta incidencia",
+          "prompt": "Resume esta incidencia y su conversación."
+        },
+        "s2": {
+          "title": "Escribir un plan de implementación",
+          "prompt": "Escribe un plan de implementación para esta incidencia."
+        },
+        "s3": {
+          "title": "Dividir en subincidencias",
+          "prompt": "Divide esta incidencia en subincidencias más pequeñas."
+        },
+        "s4": {
+          "title": "Aclarar la descripción",
+          "prompt": "Reescribe la descripción de esta incidencia para que sea más clara."
+        }
+      },
+      "routines": {
+        "s1": {
+          "title": "Crear una rutina",
+          "prompt": "Ayúdame a crear una rutina para un trabajo recurrente."
+        },
+        "s2": {
+          "title": "Revisar mis rutinas",
+          "prompt": "Resume qué hace cada una de mis rutinas y cuándo se ejecuta."
+        },
+        "s3": {
+          "title": "Proponer rutinas",
+          "prompt": "Propón rutinas que podrían ahorrarme tiempo."
+        },
+        "s4": {
+          "title": "Ajustar una rutina",
+          "prompt": "Ayúdame a ajustar una rutina que no hace lo que quiero."
+        }
+      },
+      "pullRequests": {
+        "s1": {
+          "title": "Revisar una pull request",
+          "prompt": "Revisa esta pull request y señala los riesgos."
+        },
+        "s2": {
+          "title": "Resumir los cambios",
+          "prompt": "Resume lo que cambia esta pull request."
+        },
+        "s3": {
+          "title": "Responder a los comentarios",
+          "prompt": "Ayúdame a responder a los comentarios de revisión de esta pull request."
+        },
+        "s4": {
+          "title": "Comprobar si se puede fusionar",
+          "prompt": "¿Está esta pull request lista para fusionarse? Enumera lo que falta."
+        }
+      },
+      "statistics": {
+        "s1": {
+          "title": "Entender mis estadísticas",
+          "prompt": "Explica lo que dicen mis estadísticas sobre mi trabajo."
+        },
+        "s2": {
+          "title": "Detectar tendencias",
+          "prompt": "¿Qué tendencias ves en mi actividad reciente?"
+        },
+        "s3": {
+          "title": "Comparar con el mes pasado",
+          "prompt": "¿Cómo se compara este mes con el mes pasado?"
+        },
+        "s4": {
+          "title": "Encontrar lo que me frena",
+          "prompt": "¿Dónde se ralentiza más mi trabajo?"
+        }
+      },
+      "settings": {
+        "s1": {
+          "title": "Entender esta configuración",
+          "prompt": "Explica los ajustes disponibles para mi cuenta."
+        },
+        "s2": {
+          "title": "Ajustar mis notificaciones",
+          "prompt": "Ayúdame a elegir qué notificaciones debería recibir."
+        },
+        "s3": {
+          "title": "Conectar mi cuenta de Git",
+          "prompt": "¿Cómo conecto mi cuenta de GitHub o GitLab?"
+        },
+        "s4": {
+          "title": "Usar Minddy desde mi editor",
+          "prompt": "¿Cómo conecto Minddy a mi agente de código con MCP?"
+        }
+      },
+      "billing": {
+        "s1": {
+          "title": "Entender mi plan",
+          "prompt": "Explica lo que incluye mi plan actual."
+        },
+        "s2": {
+          "title": "Entender mi uso",
+          "prompt": "¿Cuánto uso de IA me queda y cuándo se restablece?"
+        },
+        "s3": {
+          "title": "Comparar planes",
+          "prompt": "Compara los planes disponibles para mí."
+        },
+        "s4": {
+          "title": "Gestionar mi suscripción",
+          "prompt": "¿Cómo cambio o cancelo mi suscripción?"
+        }
+      },
+      "trash": {
+        "s1": {
+          "title": "Ver qué hay en la papelera",
+          "prompt": "Resume lo que hay ahora mismo en la papelera."
+        },
+        "s2": {
+          "title": "Restaurar un elemento",
+          "prompt": "Ayúdame a encontrar y restaurar un elemento eliminado."
+        },
+        "s3": {
+          "title": "Encontrar una incidencia eliminada",
+          "prompt": "Ayúdame a encontrar una incidencia que eliminé."
+        },
+        "s4": {
+          "title": "Saber cuánto tiempo se conservan",
+          "prompt": "¿Cuánto tiempo permanecen los elementos eliminados en la papelera?"
+        }
       }
     },
     "contextIssue": "Incidencia en contexto",

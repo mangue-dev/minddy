@@ -4,7 +4,9 @@ import { useMobileLayout } from "@/lib/use-mobile-layout";
 
 import { ResponsivePopover, ResponsivePopoverContent, ResponsivePopoverTrigger } from "@/components/ui/responsive-popover";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, BulbIcon, Cancel01Icon, Clock01Icon, CollapseIcon, ExpandIcon, Search01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Cancel01Icon, Clock01Icon, CollapseIcon, ExpandIcon } from "@hugeicons/core-free-icons";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { usePathname } from "next/navigation";
 import {
   useCallback,
   useEffect,
@@ -81,29 +83,7 @@ import { ReasoningBlock } from "@/components/agent/reasoning-block";
 import { assistantMessageReasoning } from "@/lib/assistant-reasoning";
 import { SidebarFilterField } from "@/components/sidebar-filter-field";
 import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
-
-const STARTERS = [
-  {
-    key: "s1",
-    icon: Search01Icon,
-    iconClassName: "text-blue-600 dark:text-blue-400",
-  },
-  {
-    key: "s2",
-    icon: Add01Icon,
-    iconClassName: "text-violet-600 dark:text-violet-400",
-  },
-  {
-    key: "s3",
-    icon: TaskEdit01Icon,
-    iconClassName: "text-emerald-600 dark:text-emerald-400",
-  },
-  {
-    key: "s4",
-    icon: BulbIcon,
-    iconClassName: "text-rose-600 dark:text-rose-400",
-  },
-] as const;
+import { assistantStarterPage, assistantStarters } from "@/lib/assistant-starters";
 
 export type AssistantDisplayMode = "compact" | "expanded";
 
@@ -393,6 +373,14 @@ export const AssistantShell = forwardRef<
   const isGeneratingServer = state.status === "generating_server";
   const isBusy = isStreaming || isGeneratingServer;
   const hasMessages = state.messages.length > 0 || isBusy;
+  // The suggestions follow the page under the composer and step aside as soon
+  // as the user starts writing their own message.
+  const pathname = usePathname();
+  const starterPage = assistantStarterPage(pathname, pageContext);
+  const starters = useMemo(() => assistantStarters(starterPage), [starterPage]);
+  const [composerEmpty, setComposerEmpty] = useState(true);
+  const reducedMotion = useReducedMotion();
+  const showStarters = !hasMessages && !mobile && composerEmpty && !embeddedConversationId;
 
   // Question ask_user ACTIVE: the last visible message is a message
   // assistant carrying a tool-call ask_user and Numo is at rest (he is waiting for the
@@ -1026,7 +1014,7 @@ export const AssistantShell = forwardRef<
                 <ConversationScrollButton />
               </Conversation>
             ) : (
-              /* Empty state — a centered set of useful first actions. */
+              /* Empty state — only the error, the suggestions sit above the composer. */
               <div className="flex flex-1 items-center justify-center px-4">
                 <div className="flex w-full max-w-2xl flex-col gap-4">
                   {state.error ? (
@@ -1037,28 +1025,6 @@ export const AssistantShell = forwardRef<
                       {state.error}
                     </div>
                   ) : null}
-                  {!mobile && <div className="hidden grid-cols-1 gap-3 app-desktop:grid app-desktop:grid-cols-2">
-                    {STARTERS.map(({ key, icon: Icon, iconClassName }) => {
-                      const title = t(`starter.${key}.title` as const);
-                      const prompt = t(`starter.${key}.prompt` as const);
-                      return (
-                        <Button
-                          key={key}
-                          className="h-auto min-h-32 w-full flex-col items-start justify-between gap-8 rounded-xl px-5 py-5 text-left whitespace-normal"
-                          onClick={() => chatInputRef.current?.fill(prompt)}
-                          type="button"
-                          variant="outline"
-                        >
-                          <AppIcon
-                            icon={Icon}
-                            className={cn("size-5 shrink-0", iconClassName)}
-                            aria-hidden
-                          />
-                          <span className="text-sm leading-5">{title}</span>
-                        </Button>
-                      );
-                    })}
-                  </div>}
                 </div>
               </div>
             )}
@@ -1073,6 +1039,46 @@ export const AssistantShell = forwardRef<
                 "sticky bottom-0 pb-4",
               )}
             >
+              {/* "wait" keeps the leaving rows in flow until their exit ends.
+              "popLayout" would pull them out of flow: this bottom-anchored
+              container then shrinks at once and the rows land behind the
+              composer instead of fading where they stood. */}
+              <AnimatePresence initial={false} mode="wait">
+                {showStarters && (
+                  <motion.div
+                    key={starterPage}
+                    role="list"
+                    aria-label={t("startersLabel")}
+                    className="mb-2 hidden flex-col divide-y divide-border/70 app-desktop:flex"
+                    initial={reducedMotion ? { opacity: 0 } : { opacity: 0, filter: "blur(6px)", y: 6 }}
+                    animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
+                    exit={reducedMotion ? { opacity: 0 } : { opacity: 0, filter: "blur(6px)", y: 6 }}
+                    transition={reducedMotion ? { duration: 0 } : { duration: 0.2, ease: "easeOut" }}
+                  >
+                    {starters.map(({ key, icon, iconClassName }) => {
+                      const title = t(`starters.${starterPage}.${key}.title` as const);
+                      const prompt = t(`starters.${starterPage}.${key}.prompt` as const);
+                      return (
+                        <div key={key} role="listitem" className="py-0.5">
+                          <Button
+                            className="h-auto w-full justify-start gap-3 rounded-lg px-3 py-2 text-left font-normal whitespace-normal text-muted-foreground hover:text-foreground"
+                            onClick={() => chatInputRef.current?.fill(prompt)}
+                            type="button"
+                            variant="ghost"
+                          >
+                            <AppIcon
+                              icon={icon}
+                              className={cn("size-4 shrink-0", iconClassName)}
+                              aria-hidden
+                            />
+                            <span className="text-sm leading-5">{title}</span>
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
               {/* Active question: the card takes the PLACE of the composer. THE
  ChatInput remains MOUNTED (hidden in CSS) — its draft and its
  focus scope survive, it reappears intact after the response. */}
@@ -1092,6 +1098,7 @@ export const AssistantShell = forwardRef<
                   // (MIN-167); the shell's concentric 16px gutter replaces it.
                   className="px-0 py-0 pb-0"
                   onSend={handleSend}
+                  onEmptyChange={setComposerEmpty}
                   onAbort={abort}
                   isStreaming={isBusy}
                   sendWhileStreaming={isGeneratingServer}

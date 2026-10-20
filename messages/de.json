@@ -551,22 +551,331 @@
       "last30": "Letzte 30 Tage",
       "older": "Älter"
     },
-    "starter": {
-      "s1": {
-        "title": "Meine Arbeit erkunden und verstehen",
-        "prompt": "Verschaffe mir einen Überblick über meine aktuelle Arbeit."
+    "startersLabel": "Vorschläge",
+    "starters": {
+      "general": {
+        "s1": {
+          "title": "Meine Arbeit erkunden und verstehen",
+          "prompt": "Verschaffe mir einen Überblick über meine aktuelle Arbeit."
+        },
+        "s2": {
+          "title": "Etwas Neues erstellen",
+          "prompt": "Hilf mir, ein passendes Problem für mein Vorhaben zu erstellen."
+        },
+        "s3": {
+          "title": "Meine Arbeit organisieren",
+          "prompt": "Hilf mir, meine Aufgaben und Prioritäten zu organisieren."
+        },
+        "s4": {
+          "title": "Hilfe bei einer Aufgabe erhalten",
+          "prompt": "Ich brauche Hilfe, um bei einer Aufgabe weiterzukommen."
+        }
       },
-      "s2": {
-        "title": "Etwas Neues erstellen",
-        "prompt": "Hilf mir, ein passendes Problem für mein Vorhaben zu erstellen."
+      "home": {
+        "s1": {
+          "title": "Den Fokus für heute wählen",
+          "prompt": "Worauf sollte ich mich heute konzentrieren? Sieh dir meine zugewiesenen Probleme, Fälligkeiten und Prioritäten an."
+        },
+        "s2": {
+          "title": "Letzte Änderungen nachholen",
+          "prompt": "Fasse zusammen, was sich seit gestern in meinen Projekten geändert hat."
+        },
+        "s3": {
+          "title": "Überfälliges finden",
+          "prompt": "Welche meiner Probleme sind überfällig oder diese Woche fällig?"
+        },
+        "s4": {
+          "title": "Ein neues Problem erfassen",
+          "prompt": "Hilf mir, ein Problem für das zu erstellen, was ich erledigen muss."
+        }
       },
-      "s3": {
-        "title": "Meine Arbeit organisieren",
-        "prompt": "Hilf mir, meine Aufgaben und Prioritäten zu organisieren."
+      "inbox": {
+        "s1": {
+          "title": "Meinen Posteingang zusammenfassen",
+          "prompt": "Fasse meine ungelesenen Benachrichtigungen zusammen."
+        },
+        "s2": {
+          "title": "Sehen, was meine Aufmerksamkeit braucht",
+          "prompt": "Welche Einträge in meinem Posteingang erfordern zuerst eine Aktion von mir?"
+        },
+        "s3": {
+          "title": "Finden, worum ich gebeten wurde",
+          "prompt": "Wo wurde ich kürzlich erwähnt, und worum wurde ich gebeten?"
+        },
+        "s4": {
+          "title": "Eine Benachrichtigung in ein Problem umwandeln",
+          "prompt": "Hilf mir, aus einer Benachrichtigung in meinem Posteingang ein Problem zu erstellen."
+        }
       },
-      "s4": {
-        "title": "Hilfe bei einer Aufgabe erhalten",
-        "prompt": "Ich brauche Hilfe, um bei einer Aufgabe weiterzukommen."
+      "all": {
+        "s1": {
+          "title": "Meine offenen Probleme prüfen",
+          "prompt": "Gib mir einen Überblick über meine offenen Probleme in allen Projekten."
+        },
+        "s2": {
+          "title": "Meinen Backlog priorisieren",
+          "prompt": "Hilf mir, meinen Backlog zu priorisieren: Was sollte nach oben oder unten?"
+        },
+        "s3": {
+          "title": "Liegengebliebenes finden",
+          "prompt": "Welche meiner Probleme haben sich lange nicht bewegt und sollten aktualisiert oder geschlossen werden?"
+        },
+        "s4": {
+          "title": "Meinen nächsten Zyklus planen",
+          "prompt": "Hilf mir, die Probleme für meinen nächsten Zyklus auszuwählen."
+        }
+      },
+      "board": {
+        "s1": {
+          "title": "Dieses Projekt zusammenfassen",
+          "prompt": "Fasse den Stand dieses Projekts zusammen: Fortschritt, Blocker und nächste Schritte."
+        },
+        "s2": {
+          "title": "Ein Problem erstellen",
+          "prompt": "Hilf mir, in diesem Projekt ein Problem zu erstellen."
+        },
+        "s3": {
+          "title": "Blockierte Arbeit finden",
+          "prompt": "Welche Probleme in diesem Projekt sind blockiert oder stecken fest?"
+        },
+        "s4": {
+          "title": "Ein großes Problem aufteilen",
+          "prompt": "Hilf mir, ein großes Problem in diesem Projekt in kleinere aufzuteilen."
+        }
+      },
+      "triage": {
+        "s1": {
+          "title": "Neue Probleme sichten",
+          "prompt": "Hilf mir, die neuen Probleme zu sichten: Schlage für jedes eine Priorität, einen Aufwand und eine Kategorie vor."
+        },
+        "s2": {
+          "title": "Duplikate erkennen",
+          "prompt": "Gibt es Duplikate unter den Problemen, die auf die Triage warten?"
+        },
+        "s3": {
+          "title": "Dringendes finden",
+          "prompt": "Welche Probleme in der Triage wirken dringend, und warum?"
+        },
+        "s4": {
+          "title": "Ziele zuordnen",
+          "prompt": "Schlage für jedes Problem in der Triage ein Ziel vor."
+        }
+      },
+      "objectives": {
+        "s1": {
+          "title": "Fortschritt der Ziele prüfen",
+          "prompt": "Fasse den Fortschritt jedes Ziels in diesem Projekt zusammen."
+        },
+        "s2": {
+          "title": "Ein neues Ziel entwerfen",
+          "prompt": "Hilf mir, ein neues Ziel und die dafür nötigen Probleme festzulegen."
+        },
+        "s3": {
+          "title": "Gefährdete Ziele finden",
+          "prompt": "Welche Ziele drohen sich zu verzögern, und warum?"
+        },
+        "s4": {
+          "title": "Lose Probleme gruppieren",
+          "prompt": "Schlage Ziele für die Probleme vor, die noch keinem zugeordnet sind."
+        }
+      },
+      "pages": {
+        "s1": {
+          "title": "Eine Seite finden",
+          "prompt": "Hilf mir, eine Seite in diesem Projekt zu finden."
+        },
+        "s2": {
+          "title": "Eine neue Seite schreiben",
+          "prompt": "Hilf mir, eine neue Seite für dieses Projekt zu schreiben."
+        },
+        "s3": {
+          "title": "Die Seiten zusammenfassen",
+          "prompt": "Gib mir einen Überblick über die Seiten dieses Projekts."
+        },
+        "s4": {
+          "title": "Die Seiten neu ordnen",
+          "prompt": "Schlage eine klarere Struktur für die Seiten dieses Projekts vor."
+        }
+      },
+      "page": {
+        "s1": {
+          "title": "Diese Seite zusammenfassen",
+          "prompt": "Fasse diese Seite in wenigen Stichpunkten zusammen."
+        },
+        "s2": {
+          "title": "Den Text verbessern",
+          "prompt": "Verbessere den Text dieser Seite, ohne seine Bedeutung zu ändern."
+        },
+        "s3": {
+          "title": "Probleme daraus erstellen",
+          "prompt": "Erstelle Probleme aus den Aufgaben auf dieser Seite."
+        },
+        "s4": {
+          "title": "Weiterschreiben",
+          "prompt": "Schreibe diese Seite dort weiter, wo sie aufhört."
+        }
+      },
+      "feedback": {
+        "s1": {
+          "title": "Das Feedback zusammenfassen",
+          "prompt": "Fasse die wichtigsten Themen im Feedback dieses Projekts zusammen."
+        },
+        "s2": {
+          "title": "Die gefragtesten Ideen finden",
+          "prompt": "Welche Feedback-Beiträge sind gerade am gefragtesten?"
+        },
+        "s3": {
+          "title": "Auf Feedback antworten",
+          "prompt": "Hilf mir, eine Antwort auf einen Feedback-Beitrag zu schreiben."
+        },
+        "s4": {
+          "title": "Feedback in Probleme umwandeln",
+          "prompt": "Wandle die Feedback-Beiträge mit den meisten Stimmen in Probleme um."
+        }
+      },
+      "projectSettings": {
+        "s1": {
+          "title": "Diese Einstellungen verstehen",
+          "prompt": "Erkläre, wofür jede Einstellung dieses Projekts da ist."
+        },
+        "s2": {
+          "title": "Kategorien einrichten",
+          "prompt": "Schlage Kategorien für die Probleme dieses Projekts vor."
+        },
+        "s3": {
+          "title": "Ein Repository verbinden",
+          "prompt": "Wie verbinde ich ein Git-Repository mit diesem Projekt?"
+        },
+        "s4": {
+          "title": "Mein Team einladen",
+          "prompt": "Wie lade ich Mitglieder in dieses Projekt ein?"
+        }
+      },
+      "issue": {
+        "s1": {
+          "title": "Dieses Problem zusammenfassen",
+          "prompt": "Fasse dieses Problem und seine Diskussion zusammen."
+        },
+        "s2": {
+          "title": "Einen Umsetzungsplan schreiben",
+          "prompt": "Schreibe einen Umsetzungsplan für dieses Problem."
+        },
+        "s3": {
+          "title": "In Unterprobleme aufteilen",
+          "prompt": "Teile dieses Problem in kleinere Unterprobleme auf."
+        },
+        "s4": {
+          "title": "Die Beschreibung klären",
+          "prompt": "Formuliere die Beschreibung dieses Problems klarer."
+        }
+      },
+      "routines": {
+        "s1": {
+          "title": "Eine Routine erstellen",
+          "prompt": "Hilf mir, eine Routine für wiederkehrende Arbeit zu erstellen."
+        },
+        "s2": {
+          "title": "Meine Routinen prüfen",
+          "prompt": "Fasse zusammen, was jede meiner Routinen tut und wann sie läuft."
+        },
+        "s3": {
+          "title": "Routinen vorschlagen",
+          "prompt": "Schlage Routinen vor, die mir Zeit sparen könnten."
+        },
+        "s4": {
+          "title": "Eine Routine anpassen",
+          "prompt": "Hilf mir, eine Routine anzupassen, die nicht tut, was ich möchte."
+        }
+      },
+      "pullRequests": {
+        "s1": {
+          "title": "Einen Pull Request prüfen",
+          "prompt": "Prüfe diesen Pull Request und weise auf die Risiken hin."
+        },
+        "s2": {
+          "title": "Die Änderungen zusammenfassen",
+          "prompt": "Fasse zusammen, was dieser Pull Request ändert."
+        },
+        "s3": {
+          "title": "Auf Review-Kommentare antworten",
+          "prompt": "Hilf mir, auf die Review-Kommentare zu diesem Pull Request zu antworten."
+        },
+        "s4": {
+          "title": "Merge-Bereitschaft prüfen",
+          "prompt": "Ist dieser Pull Request bereit zum Mergen? Liste auf, was noch fehlt."
+        }
+      },
+      "statistics": {
+        "s1": {
+          "title": "Meine Statistiken verstehen",
+          "prompt": "Erkläre, was meine Statistiken über meine Arbeit aussagen."
+        },
+        "s2": {
+          "title": "Trends erkennen",
+          "prompt": "Welche Trends siehst du in meiner letzten Aktivität?"
+        },
+        "s3": {
+          "title": "Mit dem Vormonat vergleichen",
+          "prompt": "Wie schneidet dieser Monat im Vergleich zum Vormonat ab?"
+        },
+        "s4": {
+          "title": "Bremsen finden",
+          "prompt": "Wo verlangsamt sich meine Arbeit am meisten?"
+        }
+      },
+      "settings": {
+        "s1": {
+          "title": "Diese Einstellungen verstehen",
+          "prompt": "Erkläre die verfügbaren Einstellungen für mein Konto."
+        },
+        "s2": {
+          "title": "Meine Benachrichtigungen anpassen",
+          "prompt": "Hilf mir zu entscheiden, welche Benachrichtigungen ich erhalten sollte."
+        },
+        "s3": {
+          "title": "Mein Git-Konto verbinden",
+          "prompt": "Wie verbinde ich mein GitHub- oder GitLab-Konto?"
+        },
+        "s4": {
+          "title": "Minddy aus meinem Editor nutzen",
+          "prompt": "Wie verbinde ich Minddy über MCP mit meinem Coding-Agenten?"
+        }
+      },
+      "billing": {
+        "s1": {
+          "title": "Meinen Tarif verstehen",
+          "prompt": "Erkläre, was mein aktueller Tarif umfasst."
+        },
+        "s2": {
+          "title": "Meine Nutzung verstehen",
+          "prompt": "Wie viel KI-Nutzung habe ich noch, und wann wird sie zurückgesetzt?"
+        },
+        "s3": {
+          "title": "Tarife vergleichen",
+          "prompt": "Vergleiche die verfügbaren Tarife für mich."
+        },
+        "s4": {
+          "title": "Mein Abonnement verwalten",
+          "prompt": "Wie ändere oder kündige ich mein Abonnement?"
+        }
+      },
+      "trash": {
+        "s1": {
+          "title": "Den Papierkorb ansehen",
+          "prompt": "Fasse zusammen, was gerade im Papierkorb liegt."
+        },
+        "s2": {
+          "title": "Ein Element wiederherstellen",
+          "prompt": "Hilf mir, ein gelöschtes Element zu finden und wiederherzustellen."
+        },
+        "s3": {
+          "title": "Ein gelöschtes Problem finden",
+          "prompt": "Hilf mir, ein Problem zu finden, das ich gelöscht habe."
+        },
+        "s4": {
+          "title": "Aufbewahrungsdauer erfahren",
+          "prompt": "Wie lange bleiben gelöschte Elemente im Papierkorb?"
+        }
       }
     },
     "contextIssue": "Problem im Kontext",

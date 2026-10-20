@@ -297,6 +297,8 @@ export interface ChatInputProps {
   /** In-memory HTML snapshot used to move one draft between Numo surfaces. */
   draftHtml?: string;
   onDraftHtmlChange?: (html: string) => void;
+  /** Reports whether the composer holds no text, e.g. to hide suggestions. */
+  onEmptyChange?: (empty: boolean) => void;
   /** Focus a restored draft at its end, ready to continue writing. */
   restoreCaretAtEnd?: boolean;
   /** Shared upload queue paired with the retained Numo draft. */
@@ -356,6 +358,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       initialValue,
       draftHtml,
       onDraftHtmlChange,
+      onEmptyChange,
       restoreCaretAtEnd = false,
       attachmentUploads,
       leadingControls,
@@ -380,6 +383,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       null,
     );
     const [isEmpty, setIsEmpty] = useState(true);
+    useEffect(() => {
+      onEmptyChange?.(isEmpty);
+    }, [isEmpty, onEmptyChange]);
     const { user } = useAuth();
     const userId = user?.id;
     const localUploads = useAttachmentUploads(() => `chat/${userId}`, { max: 5 });
