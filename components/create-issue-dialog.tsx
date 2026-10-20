@@ -59,6 +59,8 @@ import {
 } from "@/components/issue-compact-fields";
 import {
   KEY_FOR_FIELD,
+  RELATION_SHORTCUT_HINT,
+  RELATION_SHORTCUT_KEY,
   SHORTCUT_KEYS,
   type ShortcutField,
 } from "@/components/issue-field-shortcuts";
@@ -215,7 +217,8 @@ export function CreateIssueDialog({
   const [createMore, setCreateMore] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   // Which field picker a keyboard shortcut (S/P/E/A/L/D/O) has opened, if any.
-  const [openPicker, setOpenPicker] = useState<ShortcutField | null>(null);
+  // A field picker, or the relations picker that R opens (MIN-749).
+  const [openPicker, setOpenPicker] = useState<ShortcutField | "relation" | null>(null);
   // Id of the draft currently loaded in the form (MIN-41): set when a draft is
   // recovered, so re-closing updates it in place rather than spawning a copy,
   // and a successful create removes exactly the draft it came from.
@@ -402,7 +405,7 @@ export function CreateIssueDialog({
 
   // Field shortcuts: while the dialog is open, S/P/E/A/L/D/O open the matching
   // picker (anchored on its trigger in the options row), reusing the board-card
-  // mapping. Guarded like the dictation shortcut — no modifiers, no key-repeat,
+  // mapping, and R the relations picker. Guarded like the dictation shortcut — no modifiers, no key-repeat,
   // and never while typing in the title / description (the keys type normally
   // there; blur the field first to reach the shortcuts). `v` (dictation) and
   // `c` (quick-create) are handled elsewhere and absent from SHORTCUT_KEYS.
@@ -424,7 +427,8 @@ export function CreateIssueDialog({
       // portalized (the pickers themselves) are outside the content of the dialog, but
       // their search field is an INPUT — already discarded just above.
       if (contentRef.current && el && !contentRef.current.contains(el)) return;
-      const field = SHORTCUT_KEYS[eventKey(e)];
+      const key = eventKey(e);
+      const field = key === RELATION_SHORTCUT_KEY ? "relation" : SHORTCUT_KEYS[key];
       if (!field) return;
       e.preventDefault();
       setOpenPicker(field);
@@ -948,9 +952,9 @@ export function CreateIssueDialog({
                 )}
                 {/* Smart Fill also links related issues after the save (MIN-717):
                     the picker leaves with the other inferred fields, unless the
-                    account turned relation linking off. Relations already
+                    account turned relation linking off or R opened it. Relations already
                     chosen stay visible as pills above the title. */}
-                {!(smartFill && smartFillLinksRelations) && (
+                {(!(smartFill && smartFillLinksRelations) || openPicker === "relation") && (
                   <CreationProperty mobile={mobile} label={tRelations("relations")}>
                     <CreationRelationsCompact
                       projectId={activeProjectId}
@@ -959,6 +963,9 @@ export function CreateIssueDialog({
                       value={relations}
                       onChange={setRelations}
                       disabled={submitting}
+                      open={openPicker === "relation"}
+                      onOpenChange={(o) => setOpenPicker(o ? "relation" : null)}
+                      shortcutHint={RELATION_SHORTCUT_HINT}
                     />
                   </CreationProperty>
                 )}

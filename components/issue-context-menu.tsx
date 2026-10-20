@@ -106,9 +106,15 @@ function ActionNode({
   if (action.children && action.children.length > 0) {
     return (
       <DropdownMenuSub>
-        <DropdownMenuSubTrigger>
+        {/* A shortcut pushes the chevron right instead of sharing the space. */}
+        <DropdownMenuSubTrigger className="[&>[data-slot=dropdown-menu-shortcut]+svg]:ml-0">
           {action.icon}
           <span className="truncate">{action.label}</span>
+          {action.shortcut && (
+            <DropdownMenuShortcut>
+              <Kbd size="sm">{action.shortcut}</Kbd>
+            </DropdownMenuShortcut>
+          )}
         </DropdownMenuSubTrigger>
         <DropdownMenuSubContent>
           {action.children.map((child) => (

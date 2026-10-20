@@ -34,7 +34,7 @@ vi.mock("@/components/pull-requests/pr-unlink-confirmation", () => ({
 }));
 vi.mock("@/components/numo-icon", () => ({ NumoIcon: () => null }));
 vi.mock("@/components/issue-indicators", () => ({ RelationIcon: () => null }));
-vi.mock("@/components/issue-field-shortcuts", () => ({ KEY_FOR_FIELD: { objective: "O", dueDate: "D" } }));
+vi.mock("@/components/issue-field-shortcuts", () => ({ KEY_FOR_FIELD: { objective: "O", dueDate: "D" }, RELATION_SHORTCUT_HINT: "R" }));
 
 function build(overrides: Partial<IssueMenuOptions> = {}, navigate?: (href: string) => void) {
   const options: IssueMenuOptions = {

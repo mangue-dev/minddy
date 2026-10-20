@@ -46,6 +46,7 @@ import {
 } from "@/lib/feedback/types";
 import { RelationIcon, StatusIndicator } from "@/components/issue-indicators";
 import { PropertyRow, TRIGGER } from "@/components/issue-property-fields";
+import { RELATION_SHORTCUT_HINT } from "@/components/issue-field-shortcuts";
 import { SearchMenu } from "@/components/search-menu";
 import type { ChipRelation } from "@/components/relation-chips";
 import type {
@@ -65,6 +66,8 @@ export function RelationsSection({
   onAddRelation,
   onRemoveRelation,
   readOnly = false,
+  addOpen,
+  onAddOpenChange,
 }: {
   issue: Issue;
   /** This issue's relations, resolved (with otherNumber) and priority-sorted. */
@@ -86,13 +89,21 @@ export function RelationsSection({
   onRemoveRelation: (relationId: string) => void;
   /** Project readers: relations are listed without add or remove controls. */
   readOnly?: boolean;
+  /** Controlled add popover, so the panel's R shortcut can open it (MIN-749). */
+  addOpen?: boolean;
+  onAddOpenChange?: (open: boolean) => void;
 }) {
   const t = useTranslations("Relations");
   const tCommon = useTranslations("Common");
   // Removing a relation names its other end and asks first (MIN-743).
   const [removeTarget, setRemoveTarget] = useState<{ id: string; name: string } | null>(null);
   const router = useAppRouter();
-  const [open, setOpen] = useState(false);
+  const [ownOpen, setOwnOpen] = useState(false);
+  const open = addOpen ?? ownOpen;
+  const setOpen = (next: boolean) => {
+    setOwnOpen(next);
+    onAddOpenChange?.(next);
+  };
 
   // Loaded HERE rather than passed as prop: the panel opens on a ticket at the
   // times, and moving these zeros down to three lines from the page would require
@@ -179,6 +190,7 @@ export function RelationsSection({
           }}
           align="end"
           tooltip={t("addRelationAria")}
+          shortcutHint={RELATION_SHORTCUT_HINT}
           searchValue={query}
           onSearchValueChange={setQuery}
           searchPlaceholder={step ? t("searchTarget") : undefined}

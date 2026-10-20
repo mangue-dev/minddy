@@ -65,7 +65,7 @@ export const HOME_TIPS: HomeTip[] = [
   tip("shareView"),
   tip("recurring"),
   tip("subIssues"),
-  tip("relations"),
+  tip("relations", "card.relation"),
   tip("plan"),
   tip("smartFill"),
   tip("smartAssign"),

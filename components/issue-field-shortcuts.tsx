@@ -8,6 +8,9 @@
 //   S status · P priority · E effort · A assignee · L labels/categories
 //   D due date · O objective
 //
+// R (MIN-749) adds a relation: it is not a field, so each surface maps it to
+// its own relation menu through `actions` (see `RELATION_SHORTCUT_KEY`).
+//
 // `useIssueFieldShortcuts` owns the hover gate + pointer tracking + open state;
 // `IssueShortcutMenu` renders the picker for the active field.
 //
@@ -20,6 +23,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { TriangleIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { CommandGroup, CommandItem } from "@/components/ui/command";
+import { RELATION_TYPES } from "@/lib/relation-constants";
 import { useChordPrefixForEvents } from "@/lib/keyboard/keyboard-context";
 import { useHoverKeys } from "@/lib/keyboard/hover-keys";
 import { selectionKeysActive } from "@/lib/keyboard/selection-keys";
@@ -34,6 +38,7 @@ import { Dot } from "@/components/issue-property-fields";
 import {
   StatusIndicator,
   PriorityIndicator,
+  RelationIcon,
 } from "@/components/issue-indicators";
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";
@@ -49,6 +54,7 @@ import {
 import type {
   Category,
   Issue,
+  IssueRelationType,
   IssueUpdateInput,
   Member,
   Objective,
@@ -84,6 +90,13 @@ export const KEY_FOR_FIELD = Object.fromEntries(
   Object.entries(SHORTCUT_KEYS).map(([key, field]) => [field, key.toUpperCase()]),
 ) as Record<ShortcutField, string>;
 
+/** Adds a relation (MIN-749): opens the relation-type choice, then its target.
+ *  Not a `ShortcutField` — a relation is not a value of the issue — so every
+ *  surface wires it to its own relation menu. */
+export const RELATION_SHORTCUT_KEY = "r";
+/** The `<kbd>` badge shown next to the relation buttons' tooltips. */
+export const RELATION_SHORTCUT_HINT = RELATION_SHORTCUT_KEY.toUpperCase();
+
 export interface ShortcutMenuState {
   field: ShortcutField;
   /** Viewport coordinates to anchor the picker at. */
@@ -98,7 +111,8 @@ export interface ShortcutMenuState {
  *
  * @param enabled Extra gate on top of hover (e.g. the panel being open).
  * @param actions Extra key → callback shortcuts that fire the callback directly
- *   instead of opening a picker. Keys are lowercased, optionally prefixed with
+ *   instead of opening a picker. The callback receives the last pointer
+ *   position over the region, to anchor a menu at the cursor. Keys are lowercased, optionally prefixed with
  *   `shift+` (e.g. `"shift+p"` to copy the prompt). Field shortcuts (S/P/E/…)
  *   only ever fire without Shift, so a Shift combo never collides with them.
  * @param disabledKeys Field-shortcut keys to leave alone here (lowercased), so
@@ -108,7 +122,7 @@ export interface ShortcutMenuState {
  */
 export function useIssueFieldShortcuts(
   enabled = true,
-  actions?: Record<string, () => void>,
+  actions?: Record<string, (position: { x: number; y: number } | null) => void>,
   disabledKeys?: string[]
 ) {
   const posRef = React.useRef<{ x: number; y: number } | null>(null);
@@ -146,7 +160,7 @@ export function useIssueFieldShortcuts(
       // the combo — e.g. Shift+P copies here without touching the P picker.
       e.preventDefault();
       e.stopImmediatePropagation();
-      action();
+      action(posRef.current);
       return;
     }
     // Field pickers are unmodified single keys only.
@@ -433,6 +447,44 @@ export function IssueShortcutMenu({
           }}
         />
       )}
+    </CommandAnchor>
+  );
+}
+
+/**
+ * The relation-type step of R on a hovered card (MIN-749), at the cursor. The
+ * card then opens `RelationTargetPicker` at the same point for the target —
+ * the same two overlays as its right-click Relations entry.
+ */
+export function RelationTypePicker({
+  position,
+  onClose,
+  onSelect,
+}: {
+  position: { x: number; y: number } | null;
+  onClose: () => void;
+  onSelect: (type: IssueRelationType) => void;
+}) {
+  const t = useTranslations("Relations");
+  if (!position) return null;
+  return (
+    <CommandAnchor position={position} onClose={onClose}>
+      <CommandGroup heading={t("relations")}>
+        {RELATION_TYPES.map((type) => (
+          <CommandItem
+            key={type}
+            value={type}
+            keywords={[t(`action_${type}`)]}
+            onSelect={() => {
+              onClose();
+              onSelect(type);
+            }}
+          >
+            <RelationIcon relation={type} className="size-4" />
+            <span className="truncate">{t(type)}</span>
+          </CommandItem>
+        ))}
+      </CommandGroup>
     </CommandAnchor>
   );
 }

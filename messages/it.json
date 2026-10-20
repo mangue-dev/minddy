@@ -2291,6 +2291,7 @@
       "labels": "Cambia categorie",
       "dueDate": "Modifica della data di scadenza",
       "objective": "Obiettivo di cambiamento",
+      "relation": "Aggiungi una relazione",
       "askNumo": "Chieda a Numo (carta o selezione)",
       "copyPrompt": "Copia come prompt",
       "selectionCopyPrompt": "Copia il prompt combinato della selezione",

@@ -83,6 +83,8 @@ import {
 import {
   IssueShortcutMenu,
   KEY_FOR_FIELD,
+  RELATION_SHORTCUT_KEY,
+  RelationTypePicker,
   useIssueFieldShortcuts,
   type ShortcutField,
 } from "@/components/issue-field-shortcuts";
@@ -1070,6 +1072,8 @@ const IssueCardContent = memo(function IssueCardContent({
   const [relationType, setRelationType] = useState<IssueRelationType | null>(
     null,
   );
+  // R on the hovered card (MIN-749): where its relation-type menu opens.
+  const [relationTypeAt, setRelationTypeAt] = useState<{ x: number; y: number } | null>(null);
   // Confirmation before trash (the “Move to trash” entry).
   const [confirmDelete, setConfirmDelete] = useState(false);
   // “Custom”: the free-form prompt dialog that copies the external prompt.
@@ -1240,16 +1244,20 @@ const IssueCardContent = memo(function IssueCardContent({
   });
 
   // Keyboard shortcuts on hover: S/P/E/A/L/D/O open the picker on cursor,
-  // Space opens the ticket (like a click), Shift+P copies the prompt.
+  // Space opens the ticket (like a click), Shift+P copies the prompt, R adds a
+  // relation (type at the cursor, then the target picker at the same point).
   // The “Custom” dialog suspends them: it covers the card, and a key
   // hit in there should not open a picker on the ticket below.
   const { containerProps, menuState, openField, closeMenu } =
     useIssueFieldShortcuts(!dragging && !customPromptOpen && canWrite, {
       " ": openIssue,
       "shift+p": () => void copyPrompt(),
+      ...(onAddRelation
+        ? { [RELATION_SHORTCUT_KEY]: (at: { x: number; y: number } | null) => at && setRelationTypeAt(at) }
+        : {}),
     });
   const { ref: shortcutsRef, ...hoverProps } = containerProps;
-  const interactionOpen = !!(menuPosition || relationType || linkPrOpen || confirmDelete || customPromptOpen || menuState || uploads.pending.length);
+  const interactionOpen = !!(menuPosition || relationTypeAt || relationType || linkPrOpen || confirmDelete || customPromptOpen || menuState || uploads.pending.length);
   useLayoutEffect(() => {
     onInteractionChange?.(issue.id, interactionOpen);
     // Activity disconnects effects while retaining dialog state and its owner.
@@ -1419,6 +1427,14 @@ const IssueCardContent = memo(function IssueCardContent({
           void linkIssuesToPullRequest([issue.id], {
             prId: target.prId, prNumber: target.pr_number, state: target.pr_state,
           });
+        }}
+      />
+      <RelationTypePicker
+        position={relationTypeAt}
+        onClose={() => setRelationTypeAt(null)}
+        onSelect={(type) => {
+          pointerRef.current = relationTypeAt;
+          setRelationType(type);
         }}
       />
       <RelationTargetPicker

@@ -147,6 +147,10 @@ export const CHEATSHEET: CheatsheetSection[] = [
       { id: "card.labels", labelKey: "labels", keys: [["L"]] },
       { id: "card.dueDate", labelKey: "dueDate", keys: [["D"]] },
       { id: "card.objective", labelKey: "objective", keys: [["O"]] },
+      // Not a field: R opens the relation-type choice, then its target — on a
+      // card, in the panel, on an objective page and in the new-issue dialog
+      // (MIN-749). G then R stays Pull requests.
+      { id: "card.relation", labelKey: "relation", keys: [["R"]] },
       // The shortcut that ALSO accepts multiple selection: when the pill is
       // up, “@” speaks of checked tickets (MIN-105) — like ⇧P below.
       { id: "card.askNumo", labelKey: "askNumo", keys: [["@"]] },
