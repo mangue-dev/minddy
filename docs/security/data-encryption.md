@@ -36,7 +36,7 @@ names are intentionally public to members of their projects.
 Auth imports now accept only the explicit public-name and bounded product
 preference allowlist. Arbitrary imported metadata remains forbidden; existing
 Auth metadata and endpoint backups need a separate cleanup inventory. Current
-code/proof state is in the [29 September report](encryption/review-2026-09-29.md).
+code/proof state is in the [closure matrix](encryption/closure-matrix.md).
 
 ## Historical foundation checkpoint
 

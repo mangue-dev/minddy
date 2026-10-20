@@ -37,8 +37,7 @@
       "lib/server/cycles.ts",
       "components/cycle/use-cycle-menu-actions.tsx",
       "docs/security/project-roles.md",
-      "lib/project-roles.ts",
-      "content/documentation/reviews/min-693-project-roles.md"
+      "lib/project-roles.ts"
     ]
   },
   "review": {

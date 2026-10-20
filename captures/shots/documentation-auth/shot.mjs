@@ -32,6 +32,6 @@ for (const locale of CAPTURE_LOCALES) {
     }
   } finally { await browser.close(); }
 }
-await mkdir("content/documentation/reviews", { recursive: true });
-await writeFile("content/documentation/reviews/authentication-captures-2026-10-08.json", JSON.stringify(evidence, null, 2) + "\n");
+await mkdir("output/documentation-captures", { recursive: true });
+await writeFile("output/documentation-captures/authentication-captures-2026-10-08.json", JSON.stringify(evidence, null, 2) + "\n");
 console.log(`Captured ${evidence.length} anonymous controls; visual review remains required.`);

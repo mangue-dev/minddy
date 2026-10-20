@@ -38,9 +38,7 @@
       "lib/project-key.ts",
       "components/create-issue-dialog.tsx",
       "components/issue-compact-fields.tsx",
-      "lib/smart-fill.ts",
-      "content/documentation/reviews/second-pass-workflows-2026-10-10.md",
-      "content/documentation/reviews/min-689-project-invitations.md"
+      "lib/smart-fill.ts"
     ]
   },
   "review": {

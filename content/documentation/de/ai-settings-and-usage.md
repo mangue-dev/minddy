@@ -34,14 +34,12 @@
     "evidence": [
       "content/knowledge/plans-and-billing.md",
       "components/settings/account-ai-keys-section.tsx",
-      "content/documentation/reviews/remaining-account-capture-candidates.json",
       "lib/server/agent/model.ts",
       "lib/server/ai-runtime.ts",
       "lib/server/usage.ts",
       "app/(app)/billing/page.tsx",
       "app/(marketing)/pricing/page.tsx",
       "lib/billing-plans.ts",
-      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
       "components/ai-elements/dictate-button.tsx",
       "app/api/transcribe/route.ts",
       "lib/use-issue-dictation.ts",
@@ -51,21 +49,10 @@
       "components/issue-timeline.tsx",
       "components/assistant/chat-input.tsx",
       "components/routines/routine-prompt-field.tsx",
-      "content/documentation/reviews/pr397-review-fixes-2026-10-09.md",
-      "content/documentation/reviews/min-676-private-native-preview-2026-10-10.md",
-      "content/documentation/reviews/min-676-native-worker-selection-2026-10-10.md",
-      "content/documentation/reviews/min-676-native-identity-2026-10-10.md",
-      "content/documentation/reviews/min-676-account-ai-organization-2026-10-10.md",
-      "content/documentation/reviews/min-676-model-controls-2026-10-10.md",
-      "content/documentation/reviews/min-676-review-fixes-2026-10-11.md",
-      "content/documentation/reviews/min-676-provider-numo-defaults-2026-10-11.md",
-      "content/documentation/reviews/min-676-native-login-wizard-2026-10-11.md",
       "lib/ai-surfaces.ts",
       "components/billing/usage-segment-ui.tsx",
-      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md",
       "docs/security/project-roles.md",
-      "lib/project-roles.ts",
-      "content/documentation/reviews/min-693-project-roles.md"
+      "lib/project-roles.ts"
     ]
   },
   "review": {

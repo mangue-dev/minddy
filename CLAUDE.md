@@ -84,8 +84,8 @@ make the exception obvious from its surrounding code or fixture path.
 - Documentation edits are required only when the change affects documented
   behavior, controls, configuration or contributor workflows. A small fix,
   refactor, formatting change or test-only PR that leaves documentation accurate
-  needs no documentation edit, new illustration or article review record. An
-  accurate manual may need no prose edit, but it always needs an impact review.
+  needs no documentation edit or new illustration. An accurate manual may need
+  no prose edit, but it always needs an impact review.
 - Follow the [documentation maintenance contract](content/documentation/README.md#release-maintenance)
   and [editorial guide](docs/documentation-editorial-guide.md), including their
   writing, technical inline-code, factual review, illustration and capture rules.
@@ -95,16 +95,61 @@ make the exception obvious from its surrounding code or fixture path.
   documentation remains English.
 - Every release that changes the desktop version requires a documentation
   review against the release delta and intended version before freezing the
-  candidate. Update affected articles, illustrations, compatibility and actual
-  review evidence; a version bump or changelog entry alone is insufficient.
+  candidate. Update affected articles, illustrations, compatibility and the
+  frontmatter `review` field; a version bump or changelog entry alone is
+  insufficient.
 - Run `npm run check:documentation`, `npm run check:knowledge`,
   `npm run check:owned-english` and `git diff --check` for documentation
   changes, and require `npm run check:documentation:release` before
-  publication. Record affected article/workflow/figure IDs and checks when
-  documentation changes. For a PR with no documentation impact, a brief note is
-  sufficient; do not require article IDs or release-wide checks. Avoid cosmetic
-  edits or invented review dates. Unresolved documentation gaps caused by the
-  change block completion.
+  publication. List affected article/workflow/figure IDs and checks in the pull
+  request description, not in a committed file. For a PR with no documentation
+  impact, a brief note in the description is sufficient; do not require article
+  IDs or release-wide checks. Avoid cosmetic edits or invented review dates.
+  Unresolved documentation gaps caused by the change block completion.
+
+## Repository hygiene: what a pull request may add
+
+The repository holds the product, the tooling it runs again, and durable project
+documentation. The working material of a change (its plan, investigation,
+evidence and screenshots) belongs in the pull request description or the Minddy
+issue, never in the tree. Before opening or updating a pull request, read
+`git diff --stat origin/main...` and remove every file of the kinds below.
+
+- **Documentation.** Add a file under `docs/` only for durable, general
+  knowledge: architecture, a cross-cutting contract, operations, security or a
+  contributor workflow. A fix, a feature or a refactor does not add a Markdown
+  file of its own; a standalone document is justified only when the change
+  reshapes Minddy deeply (a new subsystem or trust boundary), and it is then
+  written as a reference, not as a ticket report. Feature behavior goes into the
+  public manual or an existing reference. Never commit per-ticket plans,
+  audits, investigation notes, validation, performance or review reports,
+  evidence JSON, checklists or launch drafts.
+- **Scripts.** Commit only scripts the project runs again: package scripts, CI,
+  release, tests and capture tooling. Delete one-off probes, benchmarks,
+  backfills, measurement harnesses and debugging scripts before the pull
+  request, or keep them outside the repository.
+- **Images.** Committed images are product assets (`public/`, `app/`,
+  `desktop/build/`), manual figures under `public/documentation/<locale>/`, and
+  capture masters `captures/shots/<name>/out/<locale>-<theme>.png`, which
+  `captures/lib/publish.mjs` and `captures/focus-marketing.mjs` read. Pull request
+  screenshots, before/after comparisons, debug captures and test output are
+  never part of the tree. To show screenshots in a pull request description,
+  save them under the ignored `output/` directory, commit them with
+  `git add -f`, remove them in the next commit and push both commits together;
+  link each image through the first commit's SHA
+  (`https://github.com/mangue-dev/minddy/blob/<sha>/<path>?raw=true`). Squash
+  merging keeps them out of `main`, and the pull request keeps that commit
+  reachable. Never rewrite that commit away while the description links it.
+- **Generated output.** Playwright results, capture run records, benchmarks and
+  other run output go under the ignored `output/` directory.
+
+`npm run check:public-repo` (also run in CI) rejects the known working-material
+locations: `output/`,
+`docs/{audits,plans,validation,performance,reviews,screenshots}/`, images
+anywhere under `docs/`, `content/documentation/reviews/`, `scripts/performance/`,
+deepsec scan output under `.deepsec/data/` and capture outputs that are not
+masters. Passing it does
+not make another report, script or image acceptable.
 
 ## UI components
 
@@ -246,9 +291,7 @@ must be reported separately from the default suite's skipped cases.
 `test:tooling` discovers deterministic Node tests under `scripts` and
 `captures/lib`; `*.integration.test.mjs` suites keep their explicit prerequisites
 and commands. CI runs two complete Vitest shards alongside validation and keeps
-the required `Tests & typecheck` gate dependent on both. See the
-[MIN-617 review](docs/validation/min-617-test-suite-review.md) for the inventory,
-cleanup decisions, timings, and database coverage limits.
+the required `Tests & typecheck` gate dependent on both.
 
 ## Encryption boundaries and operational gates
 
@@ -265,7 +308,7 @@ npm run check:encryption-schema
 ```
 
 Read [the encryption inventory](docs/security/encryption/README.md) and
-[the latest corrective review](docs/security/encryption/review-2026-09-29.md)
+[the closure matrix](docs/security/encryption/closure-matrix.md)
 for source/copy coverage, writer fences, authenticated backfill proofs,
 historical-key requirements, sandbox cleanup, and local-client copies.
 
@@ -342,7 +385,9 @@ apply them to another project.
 - For UI changes, include screenshots of the work in the pull request
   description whenever feasible. Keep these images up to date as the pull
   request evolves. Prefer light mode by default; include both light and dark
-  mode screenshots when relevant, but covering both modes is optional.
+  mode screenshots when relevant, but covering both modes is optional. The
+  images stay out of the tree; see
+  [Repository hygiene](#repository-hygiene-what-a-pull-request-may-add).
 - Every commit must carry the DCO sign-off (see below).
 
 ## DCO sign-offs

@@ -32,11 +32,7 @@
     "evidence": [
       "components/settings/smart-assign-section.tsx",
       "content/knowledge/settings-and-data.md",
-      "content/documentation/reviews/remaining-account-capture-candidates.json",
-      "lib/server/usage.ts",
-      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
-      "content/documentation/reviews/min-677-routines.md",
-      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
+      "lib/server/usage.ts"
     ]
   },
   "review": {

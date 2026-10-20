@@ -61,6 +61,24 @@ const privateSurfacePaths = [
   /^scripts\/(?:backfill-feedback-team-language|check-background-jobs|create-agent-snapshot|drop-avatars-bucket|extract-apns-secret|indexnow|seed-inbox)\./,
 ];
 
+// Working material of a change: per-ticket plans, audits, validation and
+// performance reports, review records, pull request screenshots and one-off
+// scripts. It belongs in the pull request description (AGENTS.md, "Repository
+// hygiene"). Only the index is checked, because history keeps removed copies,
+// and `--staged` skips the rule so screenshots can be committed and removed
+// again on a pull request branch, as AGENTS.md describes.
+const workArtifactPaths = [
+  /^output\//,
+  /^docs\/(?:audits|plans|validation|performance|reviews|screenshots)\//,
+  /^docs\/.*\.(?:avif|gif|jpe?g|png|webp)$/i,
+  /^content\/documentation\/reviews\//,
+  /^scripts\/performance\//,
+  // deepsec scan output, which .deepsec/.gitignore already excludes.
+  /^\.deepsec\/data\/[^/]+\/(?:debug|files|reports|revalidation|runs|setup)\//,
+  // Capture masters read by captures/lib/publish.mjs and focus-marketing.mjs.
+  /^captures\/shots\/[^/]+\/out\/(?!(?:en|fr|de|es|it|pt-BR)-(?:light|dark)\.png$)/,
+];
+
 const forbiddenContent = [
   {
     label: "private key",
@@ -289,6 +307,10 @@ const failures = [];
 for (const path of paths) {
   if ([...historicalForbiddenPaths, ...privateSurfacePaths].some((pattern) => pattern.test(path))) {
     failures.push(`${path}: internal path is forbidden`);
+    continue;
+  }
+  if (!staged && workArtifactPaths.some((pattern) => pattern.test(path))) {
+    failures.push(`${path}: working material belongs in the pull request description`);
     continue;
   }
 

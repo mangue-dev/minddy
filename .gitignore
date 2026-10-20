@@ -41,7 +41,19 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .playwright-cli/
-/output/playwright/
+
+# Working material of a change stays out of the tree (AGENTS.md, "Repository
+# hygiene"); scripts/check-public-repo.mjs also rejects these paths in CI.
+# Run output, including capture records and screenshots, goes to /output/.
+/output/
+/docs/audits/
+/docs/plans/
+/docs/validation/
+/docs/performance/
+/docs/reviews/
+/docs/screenshots/
+/content/documentation/reviews/
+/scripts/performance/
 
 # env files
 .env*

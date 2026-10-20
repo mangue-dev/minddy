@@ -172,6 +172,7 @@ try {
     await mkdir(`public/documentation/${record.locale}`,{recursive:true});
     await sharp(resolve(out,`${record.locale}.png`)).extend({left:48,top:48,right:48,bottom:48,background:{r:0,g:0,b:0,alpha:0}}).withIccProfile("srgb").png().toFile(`public/documentation/${record.locale}/scheduled-routines-workflow.png`);
   }
-  await writeFile("content/documentation/reviews/min-677-editor-captures.json",JSON.stringify({date:new Date().toISOString(),method:"Actual RoutineTriggerFields React component with application primary theme tokens, local query-cache demonstrations only, external requests blocked, no business writes, native 2x pixels.",...checks},null,2)+"\n");
+  await mkdir("output/documentation-captures", { recursive: true });
+  await writeFile("output/documentation-captures/min-677-editor-captures.json",JSON.stringify({date:new Date().toISOString(),method:"Actual RoutineTriggerFields React component with application primary theme tokens, local query-cache demonstrations only, external requests blocked, no business writes, native 2x pixels.",...checks},null,2)+"\n");
   console.log(JSON.stringify(checks));
 } finally { await invoke(["close"]); server.close(); }

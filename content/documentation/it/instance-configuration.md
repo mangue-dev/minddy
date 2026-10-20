@@ -41,13 +41,7 @@
       "vercel.json",
       "deploy/self-hosted/compose.full.yml",
       "deploy/self-hosted/scheduler.mjs",
-      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
-      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
-      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md",
-      "content/documentation/reviews/documentation-error-feedback-2026-10-10.md",
-      "content/documentation/reviews/min-677-routines.md",
-      "app/api/cron/issue-index/route.ts",
-      "content/documentation/reviews/min-717-smart-fill-relations.md"
+      "app/api/cron/issue-index/route.ts"
     ]
   },
   "review": {

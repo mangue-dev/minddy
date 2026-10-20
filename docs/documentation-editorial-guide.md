@@ -17,7 +17,8 @@ English; published locale articles use the reader's language.
 Before drafting, record the audience, question or outcome, covered workflow IDs,
 applicable edition and release, evidence to check, and needed illustrations.
 Identify what the reader already knows and any prerequisites they need. These
-notes belong in the review record; the article should lead with its subject.
+notes belong in the pull request description, not in a committed file; the
+article should lead with its subject.
 
 Choose a recognizable feature or subject as the article title, such as
 "Issues", "Pages", "Instance configuration", or "Backups and restoration".
@@ -72,8 +73,9 @@ to examine; neither proves that a proposed workflow works in the released UI.
 For an operational procedure, run the complete procedure on the stated release
 and installation profile and record the result.
 
-Keep a review record linking claims to sources or procedural evidence. Identify
-the reviewer, article revision, compatibility, and real review date. Essential
+Link claims to sources through `compatibility.evidence`, and report procedural
+evidence in the pull request description. Identify the reviewer, article
+revision, compatibility, and real review date in the `review` field. Essential
 public information belongs in the article; internal audits and private evidence
 stay outside the published corpus.
 
@@ -154,7 +156,7 @@ Keep stable section IDs and descriptive cross-links. Each procedure should make
 sense when retrieved on its own; replace ambiguous references such as "do the
 same thing above" with the action or a precise section link. Article metadata
 must identify the verified version, editions, profiles, audiences, and update
-date. Internal evidence paths and review records stay out of public exports.
+date. Internal evidence paths and review metadata stay out of public exports.
 
 The generated `llms.txt` index lists only the reviewed publication set, and the
 Markdown index reuses the documentation search. See

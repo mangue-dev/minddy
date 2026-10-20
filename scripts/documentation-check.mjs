@@ -44,9 +44,7 @@ function markdownTargets(content) {
   return targets;
 }
 const knownWorkflows = new Set(coverage.map(row => row.workflow));
-const matrix = fs.readFileSync(path.join(root, "docs/plans/min-664-coverage.md"), "utf8");
-const matrixRows = [...matrix.matchAll(/^\| ([A-Z]\d{2}) `([^`]+)` \|/gm)].map(match => `${match[1]}:${match[2]}`);
-if (JSON.stringify(matrixRows.sort()) !== JSON.stringify(coverage.map(row => `${row.workflow}:${row.article}`).sort())) fail("Coverage ledger differs from the approved matrix.");
+if (new Set(coverage.map(row => `${row.workflow}:${row.article}:${row.section}`)).size !== coverage.length) fail("Coverage ledger repeats a row.");
 
 for (const locale of documentationLocales) {
   const directory = path.join(corpusRoot, locale);

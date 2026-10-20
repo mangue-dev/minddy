@@ -11,8 +11,6 @@ afterEach(() => { while (directories.length) rmSync(directories.pop(), { recursi
 function fixture(transform = article => article, content = "## Start {#start}\n\nRead the complete task.\n") {
   const root = mkdtempSync(path.join(tmpdir(), "minddy-documentation-check-"));
   directories.push(root);
-  mkdirSync(path.join(root, "docs/plans"), { recursive: true });
-  writeFileSync(path.join(root, "docs/plans/min-664-coverage.md"), "| S01 `guide` | Task |\n");
   writeFileSync(path.join(root, "source.txt"), "Verified test fixture.\n");
   mkdirSync(path.join(root, "content/documentation"), { recursive: true });
   writeFileSync(path.join(root, "content/documentation/coverage.json"), JSON.stringify([{ workflow: "S01", article: "guide", section: "start", requiresFigures: false }]));
@@ -34,6 +32,12 @@ test("a coherent release set passes and a draft check does not imply release acc
   const drafts = fixture(article => ({ ...article, status: "draft", review: { revision: 1, fact: null, language: null, date: null } }));
   assert.equal(check(drafts, false).status, 0);
   assert.notEqual(check(drafts).status, 0);
+});
+test("the coverage ledger cannot repeat a row", () => {
+  const root = fixture();
+  const row = { workflow: "S01", article: "guide", section: "start", requiresFigures: false };
+  writeFileSync(path.join(root, "content/documentation/coverage.json"), JSON.stringify([row, row]));
+  assert.match(check(root).output, /repeats a row/);
 });
 test("reference-style links and anchors are checked with the Markdown parser", () => {
   const root = fixture(undefined, "## Start {#start}\n\nRead [the task][task].\n\n[task]: /docs/guide#missing\n");

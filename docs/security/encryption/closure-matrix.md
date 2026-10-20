@@ -2,8 +2,8 @@
 
 ## Current review of `2ddcbbd4e`
 
-The [corrective report](review-2026-09-29.md) supersedes historical checkpoint
-counts and remaining-code claims below. No passing row certifies production
+This review supersedes historical checkpoint counts and remaining-code claims
+below. No passing row certifies production
 ciphertext or retained-copy deletion. Agent rows other than routine
 instructions describe tables that MIN-721 dropped; they remain as historical
 evidence.

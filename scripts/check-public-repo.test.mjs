@@ -58,6 +58,46 @@ test("staged check allows the public security probe but rejects cloud-only scrip
   }
 });
 
+test("tracked working material fails the index check but not history or a staged commit", () => {
+  const root = mkdtempSync(join(tmpdir(), "minddy-public-repository-test-"));
+  const files = {
+    "docs/architecture/overview.md": "# Durable reference\n",
+    "public/documentation/en/issues-workflow.png": "figure",
+    "captures/shots/hero-board/out/pt-BR-dark.png": "master",
+    "docs/validation/min-1-report.md": "# Ticket report\n",
+    "docs/security/diagram.png": "debug",
+    "content/documentation/reviews/min-1.json": "{}\n",
+    "scripts/performance/measure.mjs": "// One-off benchmark.\n",
+    "captures/shots/hero-board/out/min-1-before-light.png": "screenshot",
+    "output/pr/board-light.png": "screenshot",
+    ".deepsec/data/minddy/revalidation/run/invocation-000.json": "{}\n",
+  };
+  const rejected = Object.keys(files).slice(3);
+  try {
+    git(root, ["init", "--initial-branch=main"]);
+    for (const [path, content] of Object.entries(files)) {
+      mkdirSync(join(root, dirname(path)), { recursive: true });
+      writeFileSync(join(root, path), content);
+    }
+    git(root, ["add", "."]);
+    const staged = runStagedCheck(root);
+    assert.equal(staged.status, 0, staged.stderr);
+
+    commit(root, "pull request screenshots and reports");
+    const tracked = spawnSync(process.execPath, [script], { cwd: root, encoding: "utf8", timeout: 30_000 });
+    assert.equal(tracked.status, 1);
+    for (const path of rejected) assert.match(tracked.stderr, new RegExp(`${path.replaceAll(".", "\\.")}: working material`));
+    for (const path of Object.keys(files).slice(0, 3)) assert.doesNotMatch(tracked.stderr, new RegExp(path.replaceAll(".", "\\.")));
+
+    git(root, ["rm", "-q", ...rejected]);
+    commit(root, "remove working material");
+    const cleaned = spawnSync(process.execPath, [script], { cwd: root, encoding: "utf8", timeout: 30_000 });
+    assert.equal(cleaned.status, 0, cleaned.stderr);
+  } finally {
+    rmSync(root, { force: true, recursive: true });
+  }
+});
+
 test("remote check scans pull-request refs unavailable from the ordinary fetch", () => {
   const root = mkdtempSync(join(tmpdir(), "minddy-public-repository-test-"));
   const source = join(root, "source");

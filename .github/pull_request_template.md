@@ -28,5 +28,6 @@ Closes #
 - [ ] Affected documentation workflow/article/figure IDs are listed; all six locales and required illustrations match the source revision.
 - [ ] Factual, language and operational review evidence identifies the actual reviewer, version and installation profile. Agent review is distinguished from human review.
 - [ ] All six message catalogs are up to date where needed.
+- [ ] No per-change plan, audit, report, evidence file, one-off script, screenshot or debug image is committed; this description carries them instead.
 - [ ] No keys, customer data, private configuration, or unpatched vulnerability information are included.
 - [ ] Any added dependencies or resources have a documented origin, requirement, and compatible license.

@@ -10414,40 +10414,5 @@
     "resource": "projects",
     "line": 199,
     "storage": false
-  },
-  {
-    "file": "scripts/performance/seed.mjs",
-    "operation": "from",
-    "resource": "project_git_links",
-    "line": 84,
-    "storage": false
-  },
-  {
-    "file": "scripts/performance/seed.mjs",
-    "operation": "from",
-    "resource": null,
-    "line": 115,
-    "storage": false
-  },
-  {
-    "file": "scripts/performance/seed.mjs",
-    "operation": "from",
-    "resource": null,
-    "line": 121,
-    "storage": false
-  },
-  {
-    "file": "scripts/performance/seed.mjs",
-    "operation": "from",
-    "resource": "billing_accounts",
-    "line": 128,
-    "storage": false
-  },
-  {
-    "file": "scripts/performance/seed.mjs",
-    "operation": "from",
-    "resource": "pull_request_syncs",
-    "line": 132,
-    "storage": false
   }
 ]

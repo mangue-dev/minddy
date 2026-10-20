@@ -33,19 +33,12 @@
       "docs/self-hosting.md",
       "scripts/self-hosting-local.mjs",
       "content/knowledge/self-hosting.md",
-      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
-      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
-      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
-      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md",
       "app/api/mcp/route.ts",
       "lib/site.ts",
       "lib/server/app-origin.ts",
       "lib/server/oauth/issuer.ts",
       "app/api/oauth/register/route.ts",
-      "lib/server/oauth/metadata.ts",
-      "content/documentation/reviews/premerge-it-pt-BR-2026-10-10.md",
-      "content/documentation/reviews/premerge-light-review-2026-10-10.md",
-      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
+      "lib/server/oauth/metadata.ts"
     ]
   },
   "review": {

@@ -11,7 +11,7 @@ const origin = new URL(CAPTURE.baseUrl);
 if (!['localhost', '127.0.0.1'].includes(origin.hostname)) throw new Error('Product documentation captures require a local candidate instance.');
 const sourceCommit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
 const captureDate = new Date().toISOString().slice(0, 10);
-const recordPath = `content/documentation/reviews/product-captures-${process.env.CAPTURE_LOCALES ?? 'all'}-${captureDate}.json`;
+const recordPath = `output/documentation-captures/product-captures-${process.env.CAPTURE_LOCALES ?? 'all'}-${captureDate}.json`;
 let evidence = [];
 try { evidence = JSON.parse(await readFile(recordPath, 'utf8')); }
 catch (error) { if (error.code !== 'ENOENT') throw error; }
@@ -70,7 +70,7 @@ async function captureControl(locale, screen, path, action, anchor, target = 'ma
  } catch (error) {
   recordCapture({ locale, screen, route: path, error: error.message, submitted: false, reviewed: false });
   console.error(`${locale}/${screen}: ${error.message.split('\n')[0]}`);
- } finally { await browser.close(); await mkdir('content/documentation/reviews', { recursive: true }); await writeFile(recordPath, JSON.stringify(evidence, null, 2)+'\n'); }
+ } finally { await browser.close(); await mkdir('output/documentation-captures', { recursive: true }); await writeFile(recordPath, JSON.stringify(evidence, null, 2)+'\n'); }
 }
 const base = `/projects/${project}`;
 const pagePath = `${base}/pages/${doc}`;
@@ -122,6 +122,6 @@ for (const locale of (process.env.CAPTURE_LOCALES?.split(',') ?? CAPTURE_LOCALES
  await run(locale, 'page-publish', pagePath, async(p,m)=>{await p.locator('main').getByRole('button',{name:m.Pages.pageOptions,exact:true}).click();await p.getByText(m.Pages.publish,{exact:true}).last().click();await p.getByRole('dialog').waitFor();}, readyPage, p=>p.getByRole('dialog'));
  await run(locale, 'keyboard-shortcuts', base, async(p,_m)=>{await p.keyboard.press('?');await p.getByRole('dialog').waitFor();}, readyBoard, p=>p.getByRole('dialog'));
 }
-await mkdir('content/documentation/reviews', { recursive: true });
+await mkdir('output/documentation-captures', { recursive: true });
 await writeFile(recordPath, JSON.stringify(evidence, null, 2)+'\n');
 console.log(`${evidence.filter(r=>r.src).length} captures; ${evidence.filter(r=>r.error).length} gaps; record ${recordPath}`);
