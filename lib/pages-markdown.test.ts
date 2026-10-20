@@ -21,6 +21,7 @@ import { PAGE_BLOCKS } from "@/components/pages/blocks";
 import {
   bodyFromMarkdown,
   bodyToMarkdown,
+  documentForEditor,
   markdownToPage,
   pageToMarkdown,
 } from "@/lib/pages-markdown";
@@ -443,6 +444,56 @@ describe("l'adresse d'un fichier de page entrant avec une ORIGINE", () => {
     walk(nodes);
     return out;
   }
+});
+
+describe("empty paragraphs (MIN-745)", () => {
+  const text = (value: string) => ({ type: "paragraph", content: [{ type: "text", text: value }] });
+  const empty = { type: "paragraph" };
+  const doc = (...content: object[]) => ({ type: "doc", content });
+  const shape = (body: { content?: JsonNode[] }) =>
+    (body.content ?? []).map((node) => (node.content?.length ? node.type : "empty"));
+
+  it("keeps a blank line between two paragraphs through the projection", () => {
+    const markdown = bodyToMarkdown(doc(text("a"), empty, text("b")), "document");
+    expect(markdown).toBe("a\n\n\u00a0\n\nb");
+    expect(shape(bodyFromMarkdown(markdown, "document"))).toEqual(["paragraph", "empty", "paragraph"]);
+  });
+
+  it("keeps several blank lines, one marker each", () => {
+    const markdown = bodyToMarkdown(doc(text("a"), empty, empty, text("b")), "document");
+    expect(markdown).toBe("a\n\n\u00a0\n\n\u00a0\n\nb");
+    expect(roundTrip(markdown)).toBe(markdown);
+  });
+
+  it("writes nothing for the editor's leading and trailing room", () => {
+    expect(bodyToMarkdown(doc(empty, text("a"), empty, empty), "document")).toBe("a");
+    expect(bodyToMarkdown(doc(empty, empty, empty), "document")).toBe("");
+  });
+
+  it("leaves an empty list item and an empty quote without a spacer", () => {
+    const item = (...content: object[]) => ({ type: "listItem", content });
+    const list = { type: "bulletList", content: [item(text("a")), item(empty), item(text("b"))] };
+    const quote = { type: "blockquote", content: [empty] };
+    const markdown = bodyToMarkdown(doc(list, quote, text("c")), "document");
+    expect(markdown).not.toContain("\u00a0");
+  });
+
+  it("reads an agent's `&nbsp;` line as a blank line", () => {
+    expect(shape(bodyFromMarkdown("a\n\n&nbsp;\n\nb", "document"))).toEqual(["paragraph", "empty", "paragraph"]);
+  });
+
+  it("opens a stored document saved before the marker existed", () => {
+    // The JSON kept the blank line; the Markdown stored next to it could not.
+    const stored = doc(text("a"), empty, text("b"));
+    const opened = documentForEditor("a\n\nb", stored) as { content?: JsonNode[] };
+    expect(shape(opened)).toEqual(["paragraph", "empty", "paragraph"]);
+  });
+
+  it("follows the Markdown when an agent removed the blank line since", () => {
+    const stored = doc(text("a"), empty, text("b"));
+    const opened = documentForEditor("a\n\nc", stored) as { content?: JsonNode[] };
+    expect(opened).not.toBe(stored);
+  });
 });
 
 /* ── File tools ─────────────────────── ─────────────────────── */
