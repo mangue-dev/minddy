@@ -77,15 +77,17 @@ function ProjectSwitcher({ project }: { project: Project }) {
         <span className="max-w-[140px] truncate text-sm font-medium">{project.name}</span>
       </Link>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            type="button"
-            aria-label={t("switchProject")}
-            className="flex h-full items-center self-stretch border-l border-border px-1.5 text-muted-foreground transition-colors hover:bg-accent/50"
-          >
-            <HugeiconsIcon icon={ArrowUpDownIcon} className="size-3.5" />
-          </button>
-        </DropdownMenuTrigger>
+        <AppTooltip label={t("switchProject")}>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label={t("switchProject")}
+              className="flex h-full items-center self-stretch border-l border-border px-1.5 text-muted-foreground transition-colors hover:bg-accent/50"
+            >
+              <HugeiconsIcon icon={ArrowUpDownIcon} className="size-3.5" />
+            </button>
+          </DropdownMenuTrigger>
+        </AppTooltip>
         <DropdownMenuContent align="start" className="w-56">
           {projects.map((p) => (
             <DropdownMenuItem key={p.id} onSelect={() => router.push(`/projects/${p.id}`)}>

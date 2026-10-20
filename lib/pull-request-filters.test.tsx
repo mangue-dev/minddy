@@ -60,7 +60,10 @@ vi.mock("@/components/project-orb", () => ({ ProjectOrb: () => null }));
 vi.mock("@/components/pull-requests/pr-readiness", () => ({ PrReadinessIcon: () => null }));
 vi.mock("@/components/pull-requests/pr-state-badge", () => ({ PrStateBadge: () => null }));
 vi.mock("@/components/pull-requests/pr-loading-skeleton", () => ({ PrDetailSkeleton: () => null, PrListSkeleton: () => null }));
-vi.mock("@/components/ui/app-tooltip", () => ({ AppTooltip: ({ children }: { children: ReactNode }) => children }));
+vi.mock("@/components/ui/app-tooltip", () => ({
+  AppTooltip: ({ children }: { children: ReactNode }) => children,
+  SelfLabelTooltip: ({ children }: { children: ReactNode }) => children,
+}));
 vi.mock("@/components/secondary-sidebar", () => ({
   CollectionSidebar: ({ actions, children }: { actions: ReactNode; children: ReactNode }) => <aside>{actions}{children}</aside>,
 }));

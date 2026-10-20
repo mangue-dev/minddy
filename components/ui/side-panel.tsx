@@ -3,11 +3,10 @@
 import * as React from "react"
 import { Dialog as DialogPrimitive } from "radix-ui"
 import { Drawer } from "vaul"
-import { XIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { useMediaQuery } from "@/lib/use-media-query"
-import { Button } from "./button"
+import { CloseButton } from "./close-button"
 import { Sheet } from "./sheet"
 import { MobileSheetContent, MobileSheetScrollArea } from "./mobile-sheet"
 import { useMobileLayout } from "@/lib/use-mobile-layout"
@@ -219,14 +218,7 @@ function SidePanelHeader({
       <div className="flex min-w-0 flex-col gap-1">{children}</div>
       {showCloseButton && (
         <SidePanelClose asChild>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="-mr-1.5 -mt-1 shrink-0 rounded-full text-muted-foreground hover:text-foreground"
-          >
-            <XIcon />
-            <span className="sr-only">Close</span>
-          </Button>
+          <CloseButton className="-mr-1.5 -mt-1 shrink-0 rounded-full text-muted-foreground hover:text-foreground" />
         </SidePanelClose>
       )}
     </div>

@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-19",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles; MIN-736 closed columns hidden by default",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles; MIN-736 closed columns hidden by default; MIN-743 destructive-action confirmations",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -41,14 +41,16 @@
       "lib/public-board-projection.ts",
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
-      "content/documentation/reviews/min-693-project-roles.md"
+      "content/documentation/reviews/min-693-project-roles.md",
+      "components/share-view-dialog.tsx",
+      "content/documentation/reviews/min-743-destructive-confirmations.md"
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 default status columns: source and unit-test review of lib/view-filter.ts and the board status filter; no browser walkthrough, no new captures)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min693_it with agent:/root (it MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (it MIN-736 added sentences with catalog status labels; agent review, not human acceptance)",
-    "date": "2026-10-19"
+    "revision": 9,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-736 default status columns: source and unit-test review of lib/view-filter.ts and the board status filter; no browser walkthrough, no new captures); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for stopping view sharing, record content/documentation/reviews/min-743-destructive-confirmations.md; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min693_it with agent:/root (it MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (it MIN-736 added sentences with catalog status labels; agent review, not human acceptance); agent:/root (it MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "navigation",
@@ -70,7 +72,7 @@
       "src": "/documentation/it/work-view-filters.png",
       "alt": "Filtri manuali di una vista e menu di ordinamento.",
       "caption": "Filtra per proprietà dei ticket o scegli un ordine. Il campo IA è facoltativo per questi comandi manuali.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -86,7 +88,7 @@
       "src": "/documentation/it/work-share-view.png",
       "alt": "Finestra di condivisione di una vista con accesso privato selezionato.",
       "caption": "Accesso privato, protetto da password e pubblico sono scelte distinte. In questa schermata la vista rimane privata.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -134,7 +136,7 @@ Le schede condivise espongono titoli, descrizioni e proprietà visualizzate, com
 
 ### Revocare e verificare {#revoke-view}
 
-Torna ai controlli di condivisione e rendi la vista privata per revocarne la pubblicazione. Apri di nuovo il vecchio link senza autenticarti e controlla che l’accesso sia negato. La revoca non recupera copie o screenshot già salvati dal visitatore.
+Torna ai controlli di condivisione e rendi la vista privata per revocarne la pubblicazione, poi conferma con **Interrompi condivisione**. Condividendo di nuovo si crea un nuovo link. Apri di nuovo il vecchio link senza autenticarti e controlla che l’accesso sia negato. La revoca non recupera copie o screenshot già salvati dal visitatore.
 
 I link segreti delle viste usano il percorso di pubblicazione dei link privati e mantengono `noindex`. Questa regola limita la ricerca tramite motori di ricerca, ma non è una password. Mantieni privato il link se contiene informazioni sensibili e usa la protezione con password quando opportuno. Non confondere una vista condivisa dell’utente con la documentazione ufficiale indicizzata.
 

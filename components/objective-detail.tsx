@@ -68,7 +68,7 @@ import {
   OBJECTIVE_STATUS_MAP,
   type ObjectiveStatus,
 } from "@/lib/objective-constants";
-import { CATEGORY_COLORS } from "@/lib/category-colors";
+import { CATEGORY_COLORS, CATEGORY_COLOR_NAMES } from "@/lib/category-colors";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import type {
   Issue,
@@ -77,6 +77,7 @@ import type {
   ObjectiveDraftPatch,
   ObjectiveUpdateInput,
 } from "@/lib/types";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 // Bare (borderless) value-style trigger — matches the issue panel's property rows.
 const TRIGGER =
@@ -126,6 +127,7 @@ function ObjectiveColorValue({
   onChange: (v: string | null) => void;
 }) {
   const t = useTranslations("Objectives");
+  const tColors = useTranslations("Categories.colors");
   const tCommon = useTranslations("Common");
   const [open, setOpen] = useState(false);
   const pick = (c: string | null) => {
@@ -150,31 +152,34 @@ function ObjectiveColorValue({
       </PopoverTrigger>
       <PopoverContent align="end" className="w-auto p-2">
         <div className="flex flex-wrap items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => pick(null)}
-            aria-label={t("noColor")}
-            className={cn(
-              "flex size-6 items-center justify-center rounded-full border border-border text-[10px] text-muted-foreground",
-              value === null && "ring-2 ring-ring ring-offset-2 ring-offset-background"
-            )}
-          >
-            ∅
-          </button>
-          {CATEGORY_COLORS.map((c) => (
+          <AppTooltip label={t("noColor")}>
             <button
-              key={c}
               type="button"
-              onClick={() => pick(c)}
-              aria-label={t("colorAria", { color: c })}
+              onClick={() => pick(null)}
+              aria-label={t("noColor")}
               className={cn(
-                "flex size-6 items-center justify-center rounded-full ring-offset-2 ring-offset-background",
-                value === c && "ring-2 ring-ring"
+                "flex size-6 items-center justify-center rounded-full border border-border text-[10px] text-muted-foreground",
+                value === null && "ring-2 ring-ring ring-offset-2 ring-offset-background"
               )}
-              style={{ backgroundColor: c }}
             >
-              {value === c && <HugeiconsIcon icon={CheckIcon} className="size-3.5 text-white" />}
+              ∅
             </button>
+          </AppTooltip>
+          {CATEGORY_COLORS.map((c) => (
+            <AppTooltip label={t("colorAria", { color: tColors(CATEGORY_COLOR_NAMES[c]) })} key={c}>
+              <button
+                type="button"
+                onClick={() => pick(c)}
+                aria-label={t("colorAria", { color: tColors(CATEGORY_COLOR_NAMES[c]) })}
+                className={cn(
+                  "flex size-6 items-center justify-center rounded-full ring-offset-2 ring-offset-background",
+                  value === c && "ring-2 ring-ring"
+                )}
+                style={{ backgroundColor: c }}
+              >
+                {value === c && <HugeiconsIcon icon={CheckIcon} className="size-3.5 text-white" />}
+              </button>
+            </AppTooltip>
           ))}
         </div>
       </PopoverContent>

@@ -85,6 +85,7 @@ import {
 } from "@/components/ui/tooltip";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type { Project } from "@/lib/types";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 /** Expanded width the sidebar keeps on every level — the old secondary
  * column's width (MIN-546): the sidebar never resizes anymore. */
@@ -854,7 +855,9 @@ function ChangelogButton({
   return (
     <>
       <DropdownMenu open={menuOpen} onOpenChange={handleMenuOpenChange}>
-        <DropdownMenuTrigger asChild>{control}</DropdownMenuTrigger>
+        <AppTooltip label={t("whatsNew")}>
+          <DropdownMenuTrigger asChild>{control}</DropdownMenuTrigger>
+        </AppTooltip>
         <DropdownMenuContent
           align="start"
           side="top"

@@ -32,6 +32,7 @@ import {useAdminCapabilities} from "@/lib/use-admin-capabilities";
 import {giftSectionVisible} from "@/lib/admin-tabs";
 import {ADMIN_SECTIONS, adminSectionAnchor} from "@/lib/admin-sections";
 import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 /** Account support: exact lookup, then billing and quota actions on demand. */
 
@@ -738,10 +739,14 @@ export function AdminUsersDashboard() {
             <Input id="admin-support-email" type="email" required maxLength={254} autoComplete="off"
               value={search} onChange={(e) => changeSearch(e.target.value)}
               placeholder={t("users.searchPlaceholder")} className="pr-8 pl-8" aria-describedby="admin-support-purpose" />
-            {search ? <button type="button" onClick={() => changeSearch("")} aria-label={t("users.clearSearch")}
-              className="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-              <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
-            </button> : null}
+            {search ? (
+              <AppTooltip label={t("users.clearSearch")}>
+                <button type="button" onClick={() => changeSearch("")} aria-label={t("users.clearSearch")}
+                  className="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
+                </button>
+              </AppTooltip>
+            ) : null}
           </div>
           <Button type="submit" size="sm" disabled={loading || !search.trim()}>
             {loading ? <Spinner /> : null}{t("users.findAccount")}

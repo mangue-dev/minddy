@@ -23,7 +23,10 @@ vi.mock("@/lib/runtime-config-provider", () => ({ useRuntimeConfig: () => ({ app
 vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => false, useMobileViewport: () => {} }));
 vi.mock("@/components/agent-beam", () => ({ AgentBeam: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
 vi.mock("@/components/numo-icon", () => ({ NumoIcon: () => null }));
-vi.mock("@/components/ui/app-tooltip", () => ({ AppTooltip: ({ children }: { children: React.ReactNode }) => children }));
+vi.mock("@/components/ui/app-tooltip", () => ({
+  AppTooltip: ({ children }: { children: React.ReactNode }) => children,
+  SelfLabelTooltip: ({ children }: { children: React.ReactNode }) => children,
+}));
 vi.mock("@/components/scroll-fade-edges", () => ({ ScrollFadeEdges: () => null }));
 vi.mock("@/lib/use-scroll-fade", () => ({ useScrollFade: () => ({ ref: undefined, scrollProps: {}, edges: {} }) }));
 

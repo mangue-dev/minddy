@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { FormDialog } from "@/components/form-dialog";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { ProjectOrb } from "@/components/project-orb";
 import { useProjectIconActions } from "@/components/project-icon-picker";
 import { InlineEditField } from "@/components/settings/inline-edit-field";
@@ -29,6 +30,7 @@ import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
 import { issuesQueryFn } from "@/lib/issues-api";
 import type { Project } from "@/lib/types";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 /**
  * The identity of a project at the top of its General settings (MIN-737),
@@ -68,6 +70,7 @@ export function ProjectIdentityHeader({
 
   const fileRef = useRef<HTMLInputElement>(null);
   const [siteOpen, setSiteOpen] = useState(false);
+  const [confirmRemoveIconOpen, setConfirmRemoveIconOpen] = useState(false);
   const [siteUrl, setSiteUrl] = useState("");
   const icon = useProjectIconActions({ projectId: project.id, onChanged: () => {} });
 
@@ -100,25 +103,27 @@ export function ProjectIdentityHeader({
               }}
             />
             <DropdownMenu>
-              <DropdownMenuTrigger
-                disabled={icon.busy}
-                aria-label={t("changeProjectIcon")}
-                className="group relative rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              >
-                {orb}
-                {/* The badge says the icon can be changed, on touch screens
-                    too where there is no hover. */}
-                <span
-                  aria-hidden
-                  className="absolute -right-1 -bottom-1 flex size-7 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-xs transition-colors group-hover:text-foreground"
+              <AppTooltip label={t("changeProjectIcon")}>
+                <DropdownMenuTrigger
+                  disabled={icon.busy}
+                  aria-label={t("changeProjectIcon")}
+                  className="group relative rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
-                  {icon.busy ? (
-                    <Spinner className="size-3.5" />
-                  ) : (
-                    <HugeiconsIcon icon={PencilEdit02Icon} className="size-3.5" />
-                  )}
-                </span>
-              </DropdownMenuTrigger>
+                  {orb}
+                  {/* The badge says the icon can be changed, on touch screens
+                      too where there is no hover. */}
+                  <span
+                    aria-hidden
+                    className="absolute -right-1 -bottom-1 flex size-7 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-xs transition-colors group-hover:text-foreground"
+                  >
+                    {icon.busy ? (
+                      <Spinner className="size-3.5" />
+                    ) : (
+                      <HugeiconsIcon icon={PencilEdit02Icon} className="size-3.5" />
+                    )}
+                  </span>
+                </DropdownMenuTrigger>
+              </AppTooltip>
               <DropdownMenuContent align="center">
                 {/* A new orb only shows while no image covers it. */}
                 {!project.icon_url && (
@@ -140,7 +145,7 @@ export function ProjectIdentityHeader({
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       variant="destructive"
-                      onSelect={() => void icon.handleRemove()}
+                      onSelect={() => setConfirmRemoveIconOpen(true)}
                     >
                       <HugeiconsIcon icon={Delete02Icon} />
                       {t("removeProjectIcon")}
@@ -228,6 +233,15 @@ export function ProjectIdentityHeader({
           />
         </Field>
       </FormDialog>
+      <ConfirmDeleteDialog
+        open={confirmRemoveIconOpen}
+        onOpenChange={setConfirmRemoveIconOpen}
+        title={t("removeProjectIconTitle", { name: project.name })}
+        description={t("removeProjectIconDescription")}
+        confirmLabel={t("removeProjectIcon")}
+        cancelLabel={tCommon("cancel")}
+        onConfirm={icon.handleRemove}
+      />
     </SettingsBlock>
   );
 }

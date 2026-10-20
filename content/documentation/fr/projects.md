@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 12,
+  "revision": 13,
+  "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-19",
+  "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-693 project roles; MIN-737 project settings reorganization; MIN-689 project creation invitations",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-693 project roles; MIN-737 project settings reorganization; MIN-689 project creation invitations; MIN-743 destructive-action confirmations",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -64,14 +64,16 @@
       "lib/collaborator-search.ts",
       "components/collaborator-suggestions.tsx",
       "app/api/me/collaborators/route.ts",
-      "content/documentation/reviews/min-689-project-invitations.md"
+      "content/documentation/reviews/min-689-project-invitations.md",
+      "components/ui/confirm-delete-dialog.tsx",
+      "content/documentation/reviews/min-743-destructive-confirmations.md"
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; fr translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (hide-project confirmation from the sidebar menu: source and unit-test review of components/project-context-actions.tsx; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 project settings: source review of the General identity header edited in place (icon menu, name and key fields or phone sheet, no Save button), the Categories card, the three Members cards and the Hidden projects account tab; project-settings-steps and project-members-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-refresh screens project-general and project-members) and inspected; no other browser walkthrough); agent:/root (MIN-689 project creation invitations: source and unit-test review of the wizard's optional members step, the Member role and per-address sending after creation, and the persistent notification for refused invitations; follow-up: search by name among people who joined one of the owner's projects with a verified email, never pending invitees, in the wizard and in the Members settings card renamed Invite people (components/project-members.tsx, lib/collaborator-search.ts, components/collaborator-suggestions.tsx), invited by account after a server-side recheck that refuses with collaboratorNotFound; project-members-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-refresh screen project-members) with the Invite people card and inspected (components/create-project-wizard.tsx, lib/project-draft.ts, lib/members-api.ts, lib/server/collaborators.ts, lib/server/members.ts, app/api/me/collaborators/route.ts and their tests); end-to-end walkthrough against the local candidate with throwaway accounts (wizard pick, settings pick, refusal of a pending invitee and of an unknown id); project-settings-steps retained because it does not show the members card)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root (fr translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root/min693_fr with agent:/root (fr MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (fr hide-project confirmation sentence, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (fr translation of the MIN-737 project-settings second-pass passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (fr translation of the MIN-689 passages and the collaborator-search follow-up with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-19"
+    "revision": 13,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; fr translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (hide-project confirmation from the sidebar menu: source and unit-test review of components/project-context-actions.tsx; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-737 project settings: source review of the General identity header edited in place (icon menu, name and key fields or phone sheet, no Save button), the Categories card, the three Members cards and the Hidden projects account tab; project-settings-steps and project-members-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-refresh screens project-general and project-members) and inspected; no other browser walkthrough); agent:/root (MIN-689 project creation invitations: source and unit-test review of the wizard's optional members step, the Member role and per-address sending after creation, and the persistent notification for refused invitations; follow-up: search by name among people who joined one of the owner's projects with a verified email, never pending invitees, in the wizard and in the Members settings card renamed Invite people (components/project-members.tsx, lib/collaborator-search.ts, components/collaborator-suggestions.tsx), invited by account after a server-side recheck that refuses with collaboratorNotFound; project-members-steps recaptured on 2026-10-19 in all six locales from the local candidate (documentation-refresh screen project-members) with the Invite people card and inspected (components/create-project-wizard.tsx, lib/project-draft.ts, lib/members-api.ts, lib/server/collaborators.ts, lib/server/members.ts, app/api/me/collaborators/route.ts and their tests); end-to-end walkthrough against the local candidate with throwaway accounts (wizard pick, settings pick, refusal of a pending invitee and of an unknown id); project-settings-steps retained because it does not show the members card); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for hide-project from settings and sidebar, Leave, pending-invitation cancellation and project image removal, record content/documentation/reviews/min-743-destructive-confirmations.md; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root (fr translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root/min693_fr with agent:/root (fr MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (fr hide-project confirmation sentence, catalog UI labels and retained-meaning self-review; agent review, not human acceptance); agent:/root (fr translation of the MIN-737 project-settings second-pass passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (fr translation of the MIN-689 passages and the collaborator-search follow-up with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (fr MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-20"
   },
   "related": [
     "issues",
@@ -95,7 +97,7 @@
       "src": "/documentation/fr/project-general.png",
       "alt": "En-tête du projet avec l’icône et son badge de modification, le nom, la clé et les chiffres Tickets, Membres, Objectifs, Catégories et Créé en.",
       "caption": "Sélectionnez l’icône, le nom ou la clé pour les changer sur place ; la mise à la corbeille reste une action distincte, plus bas.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -112,7 +114,7 @@
       "src": "/documentation/fr/project-members.png",
       "alt": "Carte « Inviter des personnes » au-dessus de la carte Membres, qui liste trois membres de démonstration avec le propriétaire identifié.",
       "caption": "Invitez par l’adresse du compte et identifiez le propriétaire avant de retirer l’accès d’un membre.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -137,7 +139,7 @@ Un projet rassemble les tickets, les objectifs, les pages et les personnes qui y
 
 Ouvrez le projet, puis ses réglages. Le propriétaire contrôle les paramètres administratifs. Les membres et les lecteurs peuvent consulter la section générale, masquer le projet pour eux-mêmes et le quitter, mais ne disposent pas des commandes de modification du propriétaire.
 
-L’onglet **Général** s’ouvre sur l’identité du projet : son icône, son nom et sa clé, puis cinq chiffres : **Tickets**, **Membres**, **Objectifs**, **Catégories** et **Créé en**. En tant que propriétaire, vous modifiez l’icône, le nom et la clé là où ils s’affichent ; il n’y a plus de bouton Enregistrer. Sélectionnez l’icône et choisissez **Nouvelle orbe** (proposée seulement tant qu’aucune image ne couvre l’orbe), **Importer une image**, **Importer depuis un site…**, qui demande l’adresse du site et importe son icône quand vous choisissez **Importer**, ou, si une image est définie, **Retirer l’image**. Sélectionnez le nom ou la clé pour les modifier : sur ordinateur, ils deviennent un champ où Entrée ou la sortie du champ enregistre et Échap annule ; sur téléphone, une feuille s’ouvre avec **Enregistrer**. Le nom ne peut pas être vide. La clé est normalisée en majuscules et doit compter 2 à 5 lettres (A–Z) ; sinon une erreur s’affiche et la clé n’est pas enregistrée. Vérifiez les identifiants obtenus après sa modification. L’icône sert seulement à distinguer le projet dans la navigation ; elle ne modifie pas ses membres. Les membres et les lecteurs voient le même en-tête, sans ces commandes.
+L’onglet **Général** s’ouvre sur l’identité du projet : son icône, son nom et sa clé, puis cinq chiffres : **Tickets**, **Membres**, **Objectifs**, **Catégories** et **Créé en**. En tant que propriétaire, vous modifiez l’icône, le nom et la clé là où ils s’affichent ; il n’y a plus de bouton Enregistrer. Sélectionnez l’icône et choisissez **Nouvelle orbe** (proposée seulement tant qu’aucune image ne couvre l’orbe), **Importer une image**, **Importer depuis un site…**, qui demande l’adresse du site et importe son icône quand vous choisissez **Importer**, ou, si une image est définie, **Retirer l’image**, qui demande d’abord une confirmation, car l’image est supprimée. Sélectionnez le nom ou la clé pour les modifier : sur ordinateur, ils deviennent un champ où Entrée ou la sortie du champ enregistre et Échap annule ; sur téléphone, une feuille s’ouvre avec **Enregistrer**. Le nom ne peut pas être vide. La clé est normalisée en majuscules et doit compter 2 à 5 lettres (A–Z) ; sinon une erreur s’affiche et la clé n’est pas enregistrée. Vérifiez les identifiants obtenus après sa modification. L’icône sert seulement à distinguer le projet dans la navigation ; elle ne modifie pas ses membres. Les membres et les lecteurs voient le même en-tête, sans ces commandes.
 
 Les autres sections gèrent catégories, collaborateurs, récurrences, Git, import, intégrations, automatisation et retours. Consultez le guide correspondant avant d’activer un fournisseur ou du travail automatique. Les préférences du compte, comme la langue de votre interface, restent distinctes de la configuration du projet.
 
@@ -148,7 +150,7 @@ Dans **Catégories**, le propriétaire et les membres gèrent les catégories qu
 
 ### Masquer un projet pour vous {#hide-project}
 
-Masquez un projet que vous ne suivez plus au quotidien pour le retirer de votre barre latérale et de votre accueil sans le quitter. Dans les réglages généraux du projet, choisissez **Masquer** dans la **Zone sensible**, ou faites un clic droit sur le projet dans la barre latérale et choisissez **Masquer le projet**, puis confirmez. Le menu demande une confirmation, car le projet quitte votre navigation ; le bouton des réglages le masque immédiatement. Toute personne du projet peut le masquer, y compris le propriétaire et les lecteurs.
+Masquez un projet que vous ne suivez plus au quotidien pour le retirer de votre barre latérale et de votre accueil sans le quitter. Dans les réglages généraux du projet, choisissez **Masquer** dans la **Zone sensible**, ou faites un clic droit sur le projet dans la barre latérale et choisissez **Masquer le projet**, puis confirmez. Dans les deux cas, une boîte de dialogue qui nomme le projet demande une confirmation, car il quitte votre navigation ; le réafficher ne demande aucune confirmation. Toute personne du projet peut le masquer, y compris le propriétaire et les lecteurs.
 
 Le masquage ne modifie que votre propre navigation. La préférence est enregistrée sur votre compte : vous la retrouvez après une reconnexion et sur vos autres appareils. Vous conservez votre accès et pouvez toujours ouvrir et modifier le projet depuis un lien direct ou depuis l’onglet **Projets masqués** des **Paramètres du compte**. Les autres membres voient toujours le projet, et ses routines, intégrations et notifications continuent de fonctionner. Ouvrir un projet masqué ne le réaffiche pas dans votre barre latérale.
 
@@ -156,7 +158,7 @@ Pour le retrouver, choisissez **Réafficher** dans **Projets masqués** ou dans 
 
 ### Quitter ou supprimer {#project-removal}
 
-Un membre ou un lecteur peut quitter le projet pour retirer son propre accès. Le propriétaire devra l’inviter de nouveau si nécessaire. Quitter un projet ne le supprime pas pour les autres. Le propriétaire ne peut pas quitter le projet : [transférez d’abord la propriété](#transfer-ownership) à un membre.
+Un membre ou un lecteur peut choisir **Quitter** dans la zone sensible pour retirer son propre accès ; une boîte de dialogue qui nomme le projet lui demande d’abord de confirmer. Le propriétaire devra l’inviter de nouveau si nécessaire. Quitter un projet ne le supprime pas pour les autres. Le propriétaire ne peut pas quitter le projet : [transférez d’abord la propriété](#transfer-ownership) à un membre.
 
 La suppression du projet est une action du propriétaire dans la zone de danger. Lisez les conséquences et la confirmation avant de l’utiliser, notamment si le projet contient tickets, pages, fichiers ou intégrations. Si une sauvegarde ordinaire échoue, conservez vos valeurs, lisez l’erreur et actualisez le projet avant de réessayer. Ne répétez pas une action destructive dont le premier résultat est incertain.
 
@@ -187,7 +189,7 @@ Rien n’est envoyé avant que vous choisissiez **Terminer** : le projet est d�
 
 Les lecteurs comptent comme les membres dans la limite d’invités par projet de l’offre, tout comme les invitations en attente. Il n’y a pas de facturation par siège.
 
-Examinez la liste avant de retirer un membre. La ligne du propriétaire ne propose pas de retrait ; seul un [transfert](#transfer-ownership) change le propriétaire. Le propriétaire peut annuler une invitation en attente avant son acceptation ; cet état ne révèle pas si l’adresse possède déjà un compte. Le retrait arrête l’accès lié à l’adhésion ; il ne rappelle pas les exports, captures ou copies déjà reçus. Les identifiants Git, IA et MCP restent personnels et ne sont pas transférés par un simple changement de propriétaire.
+Examinez la liste avant de retirer un membre. La ligne du propriétaire ne propose pas de retrait ; seul un [transfert](#transfer-ownership) change le propriétaire. Le propriétaire peut annuler une invitation en attente avant son acceptation, après confirmation dans une boîte de dialogue qui nomme l’adresse invitée ; le lien reçu par e-mail cesse alors de fonctionner, et la personne pourra être invitée à nouveau plus tard. L’état en attente ne révèle pas si l’adresse possède déjà un compte. Le retrait arrête l’accès lié à l’adhésion ; il ne rappelle pas les exports, captures ou copies déjà reçus. Les identifiants Git, IA et MCP restent personnels et ne sont pas transférés par un simple changement de propriétaire.
 
 ### Changer le rôle d’un membre {#change-role}
 

@@ -10,6 +10,8 @@ import { PagePublishDialog } from "@/components/pages/page-publish-dialog";
 import { PageAgentCopyDialog } from "@/components/pages/page-agent-copy-dialog";
 import { usePromotePage } from "@/components/pages/page-promotion-context";
 import { NumoIcon } from "@/components/numo-icon";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import { downloadPageExportApi } from "@/lib/pages-api";
 import { descendantIds } from "@/lib/pages";
 import { buildPageAgentPrompt } from "@/lib/page-agent-prompt";
@@ -63,6 +65,7 @@ export function usePageDocumentMenu({
 } {
   const t = useTranslations("Pages");
   const tDatabase = useTranslations("PageDatabase");
+  const tCommon = useTranslations("Common");
   // “⌘⇧L” on a Mac, “Ctrl+Shift+L” elsewhere — and the Windows form on
   // rendered server, otherwise the hydration would scream lag. ⇧ is not
   // decorative: ⌘L bare is taken by the browser address bar and
@@ -84,6 +87,9 @@ export function usePageDocumentMenu({
   // page after closing lets the dialog play its output instead of
   // disappear suddenly.
   const [agentCopyOpen, setAgentCopyOpen] = useState(false);
+  // "Move to trash" from any page menu (tree row, right-click, page header)
+  // only names its target here; `onTrash` runs once confirmed (MIN-743).
+  const [trashTarget, setTrashTarget] = useState<PageMenuTarget | null>(null);
 
   const countOf = useCallback(
     (pageId: string) => descendantIds(pages, pageId).length,
@@ -266,7 +272,7 @@ export function usePageDocumentMenu({
           icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />,
           variant: "destructive",
           separatorBefore: true,
-          onSelect: () => onTrash(page),
+          onSelect: () => setTrashTarget(page),
         },
       ];
     },
@@ -279,7 +285,6 @@ export function usePageDocumentMenu({
       modShortcut,
       onCreateChild,
       onToggleFavorite,
-      onTrash,
       t,
       tDatabase,
       pages,
@@ -308,9 +313,28 @@ export function usePageDocumentMenu({
             onSubmit={(instructions) => void submitAgentCopy(instructions)}
           />
         ) : null}
+        <ConfirmDeleteDialog
+          open={trashTarget !== null}
+          onOpenChange={(open) => {
+            if (!open) setTrashTarget(null);
+          }}
+          title={t("trashPageTitle", { title: trashTarget?.title.trim() || t("untitled") })}
+          description={t("trashPageBody", {
+            count: trashTarget ? countOf(trashTarget.id) : 0,
+            days: TRASH_RETENTION_DAYS,
+          })}
+          confirmLabel={tCommon("moveToTrash")}
+          cancelLabel={tCommon("cancel")}
+          onConfirm={() => {
+            if (trashTarget) onTrash(trashTarget);
+          }}
+        />
       </>
     ),
     [
+      trashTarget,
+      onTrash,
+      tCommon,
       target,
       projectId,
       countOf,

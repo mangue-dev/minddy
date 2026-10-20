@@ -543,6 +543,7 @@ export function PrReadinessControl({
                           className="rounded-l-none border-l border-primary-foreground/20 px-2"
                           disabled={!readiness.mergeAllowed || !canMerge || !authorityReady || merging}
                           aria-label={t("mergeMethodMenu")}
+                          tooltip={t("mergeMethodMenu")}
                         >
                           <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5" />
                         </Button>

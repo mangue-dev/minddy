@@ -23,6 +23,7 @@ vi.mock("@/components/ui/tooltip", () => ({
   Tooltip: ({ children }: { children: ReactNode }) => children,
   TooltipTrigger: ({ children }: { children: ReactNode }) => children,
   TooltipContent: () => null,
+  useTooltipScope: () => ({ provided: false, insideTrigger: false }),
 }));
 vi.mock("@/components/search-menu", () => ({
   SearchMenu: ({ open, position, searchPlaceholder, children }: { open: boolean; position: { x: number; y: number } | null; searchPlaceholder: string; children: ReactNode }) =>

@@ -241,9 +241,9 @@
   --spacing-app-max-h: 1100px;
   --breakpoint-3xl: 2200px;
 
-  /* Mobile-adaptation threshold: the app UI is wide and starts breaking below
-     1200px. `desktop:` = >=1200px (wide UI), `max-desktop:` = <1200px (mobile
-     adaptations). Canonical breakpoint for all mobile work. */
+  /* Default only: app/globals.css redefines `desktop` as 1024px and adds
+     `wide` at 1200px. App chrome follows the `app-mobile:` / `app-desktop:`
+     variants (lib/app-layout.ts), not these width breakpoints; see DESIGN.md. */
   --breakpoint-desktop: 1200px;
 }
 

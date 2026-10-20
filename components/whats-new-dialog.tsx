@@ -35,9 +35,10 @@ export function WhatsNewDialog({
           {t("metaDescription")}
         </DialogDescription>
 
-        {/* No tooltip on this cross, unlike the notebook: it receives
- the initial focus of the dialog, so the tooltip would open by itself
- over the title — and would swallow the first Esc. */}
+        {/* This cross receives the dialog's initial focus. Its tooltip
+            stays closed then: only a focus-moving key opens a tooltip on
+            focus (lib/tooltip-focus.ts), so it can't cover the title or
+            swallow the first Esc. */}
         <div data-mobile-sheet-close-wrapper className="absolute top-3.5 right-3.5 z-30">
           <Button
             variant="ghost"

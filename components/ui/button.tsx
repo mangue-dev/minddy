@@ -3,6 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { Slot } from "radix-ui"
 
 import { cn } from "@/lib/utils"
+import { SelfLabelTooltip } from "./app-tooltip"
 import { COARSE_BUTTON_HIT_AREA, COARSE_BUTTON_INSET_HIT_AREA, COARSE_BUTTON_PRESS, COARSE_BUTTON_TOUCH_ACTION } from "./touch-target"
 
 const buttonVariants = cva(
@@ -38,19 +39,32 @@ const buttonVariants = cva(
   }
 )
 
+const ICON_SIZES = new Set(["icon", "icon-sm", "icon-lg"])
+
+/**
+ * An icon-only button labels itself (MIN-724): with an icon size, its
+ * `aria-label` doubles as its tooltip, so the action is named on hover and
+ * focus without each caller wrapping it. `tooltip` replaces that text (or,
+ * `false`, opts out where the surrounding UI already names the action);
+ * `shortcut` adds the keys of the equivalent keyboard shortcut.
+ */
 function Button({
   className,
   variant = "default",
   size = "default",
   asChild = false,
+  tooltip,
+  shortcut,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
+    tooltip?: React.ReactNode | false
+    shortcut?: readonly string[]
   }) {
   const Comp = asChild ? Slot.Root : "button"
 
-  return (
+  const button = (
     <Comp
       data-slot="button"
       data-variant={variant}
@@ -58,6 +72,16 @@ function Button({
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />
+  )
+  const label =
+    tooltip === false
+      ? null
+      : (tooltip ?? (ICON_SIZES.has(size ?? "") ? props["aria-label"] : null))
+  if (label === null || label === undefined || label === "") return button
+  return (
+    <SelfLabelTooltip label={label} shortcut={shortcut}>
+      {button}
+    </SelfLabelTooltip>
   )
 }
 

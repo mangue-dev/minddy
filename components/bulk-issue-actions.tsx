@@ -2,9 +2,11 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, CommandIcon } from "@hugeicons/core-free-icons";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import { Kbd } from "@/components/ui/kbd";
 import { NumoIcon } from "@/components/numo-icon";
 import {
@@ -66,6 +68,14 @@ export function BulkIssueActions({
   surface?: string;
 }) {
   const t = useTranslations("BulkActions");
+  const tCommon = useTranslations("Common");
+  // The palette's "Move to trash" row only opens this dialog: the selection
+  // reaches the trash once the user confirms it here (MIN-743).
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const requestDelete = onDelete ? () => setConfirmDeleteOpen(true) : undefined;
+  // Same for unlinking the selection from all its pull requests.
+  const tPr = useTranslations("PullRequests");
+  const [pendingUnlink, setPendingUnlink] = useState<{ count: number; run: () => void } | null>(null);
   const { requestBulkActions, registerSelectionActions } = useBulkActions();
 
   // Cross-project boards flatten every project's members, so the same person can
@@ -112,7 +122,11 @@ export function BulkIssueActions({
       partial: links.partial,
       onLink: (pr) => void linkIssuesToPullRequest(links.targets(pr.prId), pr),
       unlinkCount: links.unlinkable.length,
-      onUnlinkAll: () => void unlinkIssuesFromPullRequests(links.unlinkable),
+      onUnlinkAll: () =>
+        setPendingUnlink({
+          count: links.unlinkable.length,
+          run: () => void unlinkIssuesFromPullRequests(links.unlinkable),
+        }),
     };
   };
 
@@ -123,7 +137,7 @@ export function BulkIssueActions({
       surface,
       members: uniqueMembers,
       onUpdate,
-      onDelete,
+      onDelete: requestDelete,
       onAskNumo,
       onCopyPrompt,
       cycle,
@@ -189,6 +203,28 @@ export function BulkIssueActions({
       >
         <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
       </Button>
+      {onDelete && (
+        <ConfirmDeleteDialog
+          open={confirmDeleteOpen}
+          onOpenChange={setConfirmDeleteOpen}
+          title={t("deleteConfirm", { count })}
+          description={t("deleteConfirmDescription", { days: TRASH_RETENTION_DAYS })}
+          confirmLabel={tCommon("moveToTrash")}
+          cancelLabel={tCommon("cancel")}
+          onConfirm={onDelete}
+        />
+      )}
+      <ConfirmDeleteDialog
+        open={pendingUnlink !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingUnlink(null);
+        }}
+        title={tPr("unlinkFromPullRequestsTitle", { count: pendingUnlink?.count ?? 0 })}
+        description={tPr("unlinkFromPullRequestsDescription")}
+        confirmLabel={tPr("unlinkIssue")}
+        cancelLabel={tCommon("cancel")}
+        onConfirm={() => pendingUnlink?.run()}
+      />
     </div>
   );
 }

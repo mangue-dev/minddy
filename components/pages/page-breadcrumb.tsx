@@ -33,6 +33,7 @@ import {
 import { cn } from "@/lib/utils";
 import { foldPath } from "@/lib/pages";
 import { isPlainNavigationClick } from "@/components/editor-node-link";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 export interface BreadcrumbPage {
   id: string;
@@ -118,15 +119,17 @@ export function PageBreadcrumb({
         <>
           <Separator />
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                aria-label={t("breadcrumbMore", { count: hidden.length })}
-                className="shrink-0 rounded px-1 leading-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-              >
-                …
-              </button>
-            </DropdownMenuTrigger>
+            <AppTooltip label={t("breadcrumbMore", { count: hidden.length })}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={t("breadcrumbMore", { count: hidden.length })}
+                  className="shrink-0 rounded px-1 leading-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                >
+                  …
+                </button>
+              </DropdownMenuTrigger>
+            </AppTooltip>
             {/* The levels folded in the order of the path, from the root to
  here: this is the one we have in mind going up. */}
             <DropdownMenuContent align="start" className="w-56">

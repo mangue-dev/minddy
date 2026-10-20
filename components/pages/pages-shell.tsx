@@ -301,7 +301,7 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
         <div className="flex shrink-0 items-center gap-2 px-4 pt-3">
           <SidePanelTitle className="sr-only">{validPreview?.title || tDatabase("newEntry")}</SidePanelTitle><div className="flex-1" />
           <Button variant="ghost" size="sm" onClick={() => void leavePreview(true)}><HugeiconsIcon icon={ExpandIcon} className="size-3.5" />{tDatabase("extend")}</Button>
-          <Button variant="ghost" size="icon-sm" aria-label={tCommon("close")} onClick={() => void leavePreview()}><HugeiconsIcon icon={Cancel01Icon} className="size-4" /></Button>
+          <Button variant="ghost" size="icon-sm" aria-label={tCommon("close")} shortcut={["Esc"]} onClick={() => void leavePreview()}><HugeiconsIcon icon={Cancel01Icon} className="size-4" /></Button>
         </div>
         {validPreview && <PageView panel key={validPreview.id} projectId={projectId} pageId={validPreview.id} onNavigate={openPage} onNavigationReady={registerPreviewFlush} />}
       </SidePanelContent>

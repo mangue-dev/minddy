@@ -22,6 +22,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { AppShell } from "@/components/app-shell";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
   AppIcon,
   dataIcon,
@@ -273,6 +274,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const tBilling = useTranslations("Billing");
   const tProjects = useTranslations("Projects");
   const tPages = useTranslations("Pages");
+  const tCommon = useTranslations("Common");
   const { agentsAllowed, projectLimitReached } = usePlanGates();
   const pathname = usePathname();
   // The stable session: activation re-renders only the tab panel below.
@@ -378,6 +380,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // montage SURVIVES closing for the duration of the exit animation.
   const [exportMounted, setExportMounted] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [draftToDelete, setDraftToDelete] = useState<{ id: string; name: string } | null>(null);
   const openExport = useCallback(() => {
     setExportMounted(true);
     setExportOpen(true);
@@ -1266,11 +1269,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                   label: tProjects("draftDelete"),
                   icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />,
                   variant: "destructive",
-                  onSelect: () => {
-                    void deleteProjectDraft(d.id).catch((err: Error) =>
-                      toast.error(err.message),
-                    );
-                  },
+                  onSelect: () => setDraftToDelete({ id: d.id, name: d.name }),
                 },
               ],
             }),
@@ -1286,7 +1285,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [pathname, inboxCount, openPrCount, projects, listedProjects, projectDrafts, openProjectDraft, deleteProjectDraft, triageCounts, openCreateProject, openCreateIssue, agentsAllowed, projectLimitReached, smartAssignBadge, projectContext.projectActions, user?.id, t, tProjects]
+    [pathname, inboxCount, openPrCount, projects, listedProjects, projectDrafts, openProjectDraft, triageCounts, openCreateProject, openCreateIssue, agentsAllowed, projectLimitReached, smartAssignBadge, projectContext.projectActions, user?.id, t, tProjects]
   );
 
   const sections = useMemo<AppNavSection[]>(() => {
@@ -1598,6 +1597,22 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         />
       )}
       {projectContext.dialog}
+      <ConfirmDeleteDialog
+        open={draftToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setDraftToDelete(null);
+        }}
+        title={tProjects("draftDeleteTitle", { name: draftToDelete?.name ?? "" })}
+        description={tProjects("draftDeleteDescription")}
+        confirmLabel={tProjects("draftDelete")}
+        cancelLabel={tCommon("cancel")}
+        onConfirm={async () => {
+          if (!draftToDelete) return;
+          await deleteProjectDraft(draftToDelete.id).catch((err: Error) =>
+            toast.error(err.message),
+          );
+        }}
+      />
     </AppShell>
     </div>
     </ProjectContextActionsProvider>

@@ -1,5 +1,6 @@
 "use client";
 
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { prefetchDescriptionSnapshot } from "@/lib/description-collaboration";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AiAutoRotateIcon, HierarchySquare01Icon, GitMergeIcon, GitPullRequestDraftIcon, GitPullRequestIcon, RepeatIcon, TaskDone01Icon, TriangleIcon, UserIcon } from "@hugeicons/core-free-icons";
@@ -859,9 +860,10 @@ export const IssueCardBody = memo(function IssueCardBody({
 
       {/* Title + description (tight spacing between them, and to the row above) */}
       <div className="-mt-1 flex flex-col gap-0.5">
-        <p className="line-clamp-2 text-sm font-semibold leading-snug">
-          {issue.title}
-        </p>
+        <TruncatedText
+          text={issue.title}
+          className="line-clamp-2 text-sm font-semibold leading-snug"
+        />
         {description.length > 0 && (
           <p className="line-clamp-3 text-xs leading-relaxed text-muted-foreground">
             <PlainPreview parts={description} />
@@ -1445,7 +1447,7 @@ const IssueCardContent = memo(function IssueCardContent({
         <ConfirmDeleteDialog
           open={confirmDelete}
           onOpenChange={setConfirmDelete}
-          title={t("deleteDialogTitle")}
+          title={t("deleteDialogTitle", { title: issue.title })}
           description={t("deleteDialogDescription", {
             days: TRASH_RETENTION_DAYS,
           })}

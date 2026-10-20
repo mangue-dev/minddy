@@ -1,5 +1,6 @@
 "use client";
 
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -255,9 +256,10 @@ function PrRow({
           ) : null}
         </span>
       </div>
-      <span className="line-clamp-2 text-sm font-medium">
-        {pr.title ?? pr.issue?.title ?? identifier}
-      </span>
+      <TruncatedText
+        text={pr.title ?? pr.issue?.title ?? identifier}
+        className="line-clamp-2 text-sm font-medium"
+      />
       <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
         {/* THE AUTHOR, as the forge reports it. */}
         <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate">

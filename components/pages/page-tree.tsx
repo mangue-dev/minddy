@@ -50,6 +50,7 @@ import {
 } from "@/components/pages/page-document-actions";
 import { useNavigationContextActions } from "@/components/navigation-context-actions";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 /** Ligne d'arbre : 28 px de haut, 16 px de retrait par niveau. */
 const INDENT = 16;
@@ -433,22 +434,24 @@ function PageRow({
           width of the column, at all levels. */}
       <div style={{ width: depth * INDENT }} className="shrink-0" />
 
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={hasChildren ? open : undefined}
-        aria-label={t("toggleChildren")}
-        tabIndex={hasChildren ? 0 : -1}
-        className={cn(
-          "flex size-5 shrink-0 items-center justify-center rounded outline-none",
-          !hasChildren && "invisible"
-        )}
-      >
-        <HugeiconsIcon icon={ArrowRight01Icon} className={cn(
-                              "size-3 text-muted-foreground transition-transform",
-                              open && "rotate-90"
-                            )} />
-      </button>
+      <AppTooltip label={t("toggleChildren")}>
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={hasChildren ? open : undefined}
+          aria-label={t("toggleChildren")}
+          tabIndex={hasChildren ? 0 : -1}
+          className={cn(
+            "flex size-5 shrink-0 items-center justify-center rounded outline-none",
+            !hasChildren && "invisible"
+          )}
+        >
+          <HugeiconsIcon icon={ArrowRight01Icon} className={cn(
+                                "size-3 text-muted-foreground transition-transform",
+                                open && "rotate-90"
+                              )} />
+        </button>
+      </AppTooltip>
 
       <Link
         href={href}

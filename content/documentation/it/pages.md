@@ -21,12 +21,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-20",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680); MIN-693 project roles; MIN-718 hybrid issue search; MIN-688 live collaboration; MIN-684 page promotion",
+    "version": "0.11.1 candidate (MIN-680); MIN-693 project roles; MIN-718 hybrid issue search; MIN-688 live collaboration; MIN-684 page promotion; MIN-743 destructive-action confirmations",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -75,13 +75,14 @@
       "components/pages/page-promotion-context.tsx",
       "components/pages/page-promotion-context.test.tsx",
       "components/pages/page-database-view.tsx",
-      "content/documentation/reviews/min-684-promote-page.md"
+      "content/documentation/reviews/min-684-promote-page.md",
+      "content/documentation/reviews/min-743-destructive-confirmations.md"
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-688 live collaboration: source, convergence/authority unit tests and a rollback-only database probe; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-684 page promotion: source and focused unit-test review of the menu entries, reader gating, save-before-promote and the Numo request; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (it changed-text and retained-meaning self-review); agent:/root/min693_it with agent:/root (it MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (it translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root/min688_it with agent:/root (it MIN-688 translation of the rewritten saving, presence and conflict passages; agent review, not human acceptance); agent:/root (it translation of the MIN-684 promotion section with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 14,
+    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-688 live collaboration: source, convergence/authority unit tests and a rollback-only database probe; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-684 page promotion: source and focused unit-test review of the menu entries, reader gating, save-before-promote and the Numo request; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-743 destructive-action confirmations: source review of the confirmation dialogs for page-menu Move to trash and unpublishing, record content/documentation/reviews/min-743-destructive-confirmations.md; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (it changed-text and retained-meaning self-review); agent:/root/min693_it with agent:/root (it MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (it translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root/min688_it with agent:/root (it MIN-688 translation of the rewritten saving, presence and conflict passages; agent review, not human acceptance); agent:/root (it translation of the MIN-684 promotion section with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it MIN-743 confirmation clauses with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-20"
   },
   "related": [
@@ -119,7 +120,7 @@
       "src": "/documentation/it/page-create-menu.png",
       "alt": "Menu di creazione con Nuova pagina e Nuovo database.",
       "caption": "Usa i controlli delle pagine del progetto per scegliere un documento o un database.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -135,7 +136,7 @@
       "src": "/documentation/it/page-editor.png",
       "alt": "Pagina dimostrativa con titoli, paragrafi, caselle delle attività e una menzione a un ticket.",
       "caption": "Titoli, blocchi di attività e la menzione AUR-2 organizzano la pagina. Il contenuto è un esempio dimostrativo.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -151,7 +152,7 @@
       "src": "/documentation/it/page-comments.png",
       "alt": "Attività della pagina con una modifica dimostrativa e campo del commento vuoto.",
       "caption": "Leggi l’attività e scrivi un commento nel campo. In questo esempio non è stato inviato alcun commento.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -167,7 +168,7 @@
       "src": "/documentation/it/page-file-states.png",
       "alt": "Pagina dimostrativa con un caricamento incompleto e un file salvato di 67 byte con il comando Scarica.",
       "caption": "Controlla lo stato effettivo del file: il secondo allegato è disponibile, il primo caricamento incompleto no.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -183,7 +184,7 @@
       "src": "/documentation/it/page-history-preview.png",
       "alt": "Scheda Versioni con uno stato precedente espanso, autore, Ripristina e avviso di conservazione per 30 giorni.",
       "caption": "Esamina l’anteprima di uno stato salvato e confrontalo con la pagina attuale prima di ripristinarlo.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -199,7 +200,7 @@
       "src": "/documentation/it/page-publish.png",
       "alt": "Finestra di pubblicazione con Privato selezionato e opzioni con password o link.",
       "caption": "Privato mantiene la pagina nel progetto. Controlla chi deve leggerla prima di cambiare la pubblicazione.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -215,7 +216,7 @@
       "src": "/documentation/it/page-export.png",
       "alt": "Menu di esportazione del documento con Markdown (.md) e Stampa / PDF.",
       "caption": "Scegli Markdown per scaricare il documento oppure Stampa / PDF per aprire la vista di stampa.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -231,7 +232,7 @@
       "src": "/documentation/it/file-preview.png",
       "alt": "Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica e Rimuovi.",
       "caption": "Il visualizzatore condiviso colloca Chiudi sotto l’anteprima. Il menu Azioni del file offre Scarica e, con i permessi necessari, Rimuovi.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -268,7 +269,7 @@ Crea sottopagine per documenti correlati e usa i controlli dell’albero per spo
 
 Segna una pagina come preferita per mostrarla in cima all’albero del progetto. Questi preferiti sono condivisi nel progetto, diversamente da una nota privata del taccuino. Collega una pagina a un ticket quando il documento attuale è il contesto dell’attività; il titolo della risorsa segue le rinominazioni della pagina.
 
-L’eliminazione sposta nel cestino le pagine per cui è previsto il recupero. Controlla il ramo selezionato prima di eliminare e usa il recupero invece di ricreare una pagina persa quando il contenuto va conservato. Le voci con valori di database memorizzati si possono riordinare nel proprio database, ma non spostare fuori. Se uno spostamento viene rifiutato, esamina gerarchia e tipo di voce invece di forzarlo con tentativi ripetuti.
+L’eliminazione sposta nel cestino le pagine per cui è previsto il recupero. Da un menu di pagina, lo spostamento nel cestino chiede prima conferma, indicando la pagina e quante sottopagine la seguono; restano ripristinabili dal cestino per 30 giorni. Controlla il ramo selezionato prima di eliminare e usa il recupero invece di ricreare una pagina persa quando il contenuto va conservato. Le voci con valori di database memorizzati si possono riordinare nel proprio database, ma non spostare fuori. Se uno spostamento viene rifiutato, esamina gerarchia e tipo di voce invece di forzarlo con tentativi ripetuti.
 
 
 ![Menu di creazione con Nuova pagina e Nuovo database.](/documentation/it/page-create-menu.png)
@@ -367,7 +368,7 @@ Apri il collegamento in una sessione separata del browser senza il tuo account. 
 
 ### Revocare e controllare {#revoke-page}
 
-Torna ai controlli di pubblicazione e scegli privato. Dopo la revoca riuscita, apri il vecchio collegamento in modo anonimo e verifica che l’accesso sia negato. Copie o schermate già ricevute non possono essere ritirate. Gli URL di download dei file già forniti da una pagina pubblicata vengono firmati per un massimo di 24 ore. La revoca impedisce nuove visite alla pagina, ma quegli URL già emessi possono restare validi fino alla scadenza.
+Torna ai controlli di pubblicazione, scegli privato e conferma con **Annulla pubblicazione**: il vecchio collegamento smette di funzionare e pubblicando di nuovo si crea un nuovo collegamento. Dopo la revoca riuscita, apri il vecchio collegamento in modo anonimo e verifica che l’accesso sia negato. Copie o schermate già ricevute non possono essere ritirate. Gli URL di download dei file già forniti da una pagina pubblicata vengono firmati per un massimo di 24 ore. La revoca impedisce nuove visite alla pagina, ma quegli URL già emessi possono restare validi fino alla scadenza.
 
 I collegamenti delle pagine degli utenti restano `noindex` e sono separati dal manuale ufficiale indicizzato. Noindex è una politica di scoperta, non una password. Se un discendente o file è leggibile inaspettatamente, revoca prima, controlla il ramo pubblicato e riprova prima di inoltrare un collegamento corretto. I file di pagine non pubblicate non ottengono accesso tramite un riferimento interno.
 

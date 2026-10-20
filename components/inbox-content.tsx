@@ -1,11 +1,13 @@
 "use client";
 
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AtIcon, Delete02Icon, GitMergeIcon, GitPullRequestIcon, InboxIcon, Mail01Icon, MailOpen01Icon, Megaphone01Icon, Message01Icon, Settings01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState, type ReactNode } from "react";
 import Link from "@/components/app-link";
 import { useAppRouter } from "@/lib/use-app-router";
 import { useFormatter, useNow, useTranslations } from "next-intl";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -196,6 +198,7 @@ export default function InboxContent({ onNavigate }: { onNavigate: () => void })
   } = useInvitationResponder();
   const [filter, setFilter] = useState<InboxFilter>("unread");
   const [clearReadOpen, setClearReadOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   const titleOf = (notification: MyNotification): string =>
     notificationTitle(notification, labels);
@@ -477,16 +480,15 @@ export default function InboxContent({ onNavigate }: { onNavigate: () => void })
                                       #{notification.pull_request_number}
                                     </span>
                                   )}
-                                <span
+                                <TruncatedText
+                                  text={titleOf(notification)}
                                   className={cn(
                                     "truncate text-sm",
                                     unread
                                       ? "font-medium text-foreground"
                                       : "text-muted-foreground",
                                   )}
-                                >
-                                  {titleOf(notification)}
-                                </span>
+                                />
                               </span>
                               <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                                 {sentenceOf(notification)}
@@ -536,7 +538,7 @@ export default function InboxContent({ onNavigate }: { onNavigate: () => void })
                               <IconButton
                                 size="sm"
                                 aria-label={t("delete")}
-                                onClick={() => act(remove([notification.id]))}
+                                onClick={() => setDeleteTargetId(notification.id)}
                               >
                                 <HugeiconsIcon icon={Delete02Icon} className="size-4" />
                               </IconButton>
@@ -551,6 +553,19 @@ export default function InboxContent({ onNavigate }: { onNavigate: () => void })
             )}
           </div>
         </div>
+      <ConfirmDeleteDialog
+        open={deleteTargetId !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTargetId(null);
+        }}
+        title={t("deleteConfirmTitle")}
+        description={t("deleteConfirmDescription")}
+        confirmLabel={t("delete")}
+        cancelLabel={tCommon("cancel")}
+        onConfirm={() => {
+          if (deleteTargetId) act(remove([deleteTargetId]));
+        }}
+      />
       <AlertDialog open={clearReadOpen} onOpenChange={setClearReadOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

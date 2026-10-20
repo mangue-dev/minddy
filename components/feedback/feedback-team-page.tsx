@@ -1,5 +1,6 @@
 "use client";
 
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { semanticExtras } from "@/lib/issue-semantic-query";
@@ -1245,6 +1246,7 @@ function FeedbackDetail({
   const [linkOpen, setLinkOpen] = useState(false);
   const [promoteOpen, setPromoteOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [unlinkOpen, setUnlinkOpen] = useState(false);
   /**
    * Refusing and rejecting require confirmation: these are the two gestures
    * who say no to someone, and the only team screen where they care about
@@ -1732,10 +1734,13 @@ function FeedbackDetail({
                 <span className="w-14 shrink-0 font-mono text-xs text-muted-foreground">
                   {issueIdentifier(projectKey, post.issue.number)}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-sm">
-                  {issues.find((i) => i.id === post.issue!.id)?.title ??
-                    issueIdentifier(projectKey, post.issue.number)}
-                </span>
+                <TruncatedText
+                  text={
+                    issues.find((i) => i.id === post.issue!.id)?.title ??
+                    issueIdentifier(projectKey, post.issue.number)
+                  }
+                  className="flex-1 truncate text-sm"
+                />
               </button>
               {!readOnly && (
               <Button
@@ -1743,13 +1748,7 @@ function FeedbackDetail({
                 size="icon-sm"
                 aria-label={t("unlinkIssue")}
                 className="size-6 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/linked:opacity-100 focus-visible:opacity-100"
-                onClick={() =>
-                  void api(`/api/projects/${projectId}/feedback/${postId}/link`, {
-                    method: "DELETE",
-                  })
-                    .then(refreshDetail)
-                    .catch((e: Error) => toast.error(e.message || t("errorGeneric")))
-                }
+                onClick={() => setUnlinkOpen(true)}
               >
                 <HugeiconsIcon icon={Cancel01Icon} />
               </Button>
@@ -2015,6 +2014,25 @@ function FeedbackDetail({
           setDeleteOpen(false);
           onChanged();
         }}
+      />
+      <ConfirmDeleteDialog
+        open={unlinkOpen && !!post.issue}
+        onOpenChange={setUnlinkOpen}
+        title={t("unlinkIssueTitle", {
+          identifier: post.issue ? issueIdentifier(projectKey, post.issue.number) : "",
+        })}
+        description={t("unlinkIssueDescription")}
+        confirmLabel={t("unlinkIssue")}
+        cancelLabel={tCommon("cancel")}
+        onConfirm={() =>
+          api(`/api/projects/${projectId}/feedback/${postId}/link`, {
+            method: "DELETE",
+          })
+            .then(refreshDetail)
+            .catch((e: Error) => {
+              toast.error(e.message || t("errorGeneric"));
+            })
+        }
       />
     </div>
   );

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { View, ViewShareLevel } from "@/lib/types";
 import {
@@ -45,6 +46,8 @@ export function ShareViewDialog({
 
   const [level, setLevel] = useState<ViewShareLevel>("private");
   const [password, setPassword] = useState("");
+  // Turning a live link off kills it for whoever has it: ask first (MIN-743).
+  const [confirmRevoke, setConfirmRevoke] = useState(false);
 
   // Re-sync the local selection when the dialog opens or the share resolves.
   useEffect(() => {
@@ -76,7 +79,7 @@ export function ShareViewDialog({
   const changeLevel = (next: ViewShareLevel) => {
     if (update.isPending || revoke.isPending) return;
     if (next === "private" && share) {
-      revoke.mutate();
+      setConfirmRevoke(true);
       return;
     }
     setLevel(next);
@@ -201,6 +204,15 @@ export function ShareViewDialog({
           )}
         </DialogContent>
       </Dialog>
+      <ConfirmDeleteDialog
+        open={confirmRevoke}
+        onOpenChange={setConfirmRevoke}
+        title={t("stopSharingTitle", { name: view?.name ?? "" })}
+        description={t("stopSharingDescription")}
+        confirmLabel={t("stopSharingConfirm")}
+        cancelLabel={tc("cancel")}
+        onConfirm={() => revoke.mutateAsync().catch(() => undefined)}
+      />
     </>
   );
 }

@@ -21,6 +21,7 @@ import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
 import {InlineEditField} from "@/components/settings/inline-edit-field";
 import {UserAvatar} from "@/components/user-avatar";
 import {ProfileStatistics} from "@/components/stats/profile-statistics";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 /** Read a string key off the user's auth metadata. */
 function metaString(meta: Record<string, unknown>, key: string): string {
@@ -112,25 +113,27 @@ export function AccountProfileSection() {
           }}
         />
         <DropdownMenu>
-          <DropdownMenuTrigger
-            disabled={avatarBusy}
-            aria-label={t("changeAvatar")}
-            className="group relative rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          >
-            <UserAvatar seed={avatarSource} className="size-24 ring-1 ring-border" />
-            {/* The badge says the picture can be changed, on touch screens too
-                where there is no hover. */}
-            <span
-              aria-hidden
-              className="absolute right-0 bottom-0 flex size-7 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-xs transition-colors group-hover:text-foreground"
+          <AppTooltip label={t("changeAvatar")}>
+            <DropdownMenuTrigger
+              disabled={avatarBusy}
+              aria-label={t("changeAvatar")}
+              className="group relative rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
-              {avatarBusy ? (
-                <Spinner className="size-3.5" />
-              ) : (
-                <HugeiconsIcon icon={PencilEdit02Icon} className="size-3.5" />
-              )}
-            </span>
-          </DropdownMenuTrigger>
+              <UserAvatar seed={avatarSource} className="size-24 ring-1 ring-border" />
+              {/* The badge says the picture can be changed, on touch screens too
+                  where there is no hover. */}
+              <span
+                aria-hidden
+                className="absolute right-0 bottom-0 flex size-7 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-xs transition-colors group-hover:text-foreground"
+              >
+                {avatarBusy ? (
+                  <Spinner className="size-3.5" />
+                ) : (
+                  <HugeiconsIcon icon={PencilEdit02Icon} className="size-3.5" />
+                )}
+              </span>
+            </DropdownMenuTrigger>
+          </AppTooltip>
           <DropdownMenuContent align="center">
             <DropdownMenuItem onSelect={reroll}>
               <HugeiconsIcon icon={ShuffleIcon} />

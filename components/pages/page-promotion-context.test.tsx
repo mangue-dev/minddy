@@ -32,6 +32,13 @@ vi.mock("@/components/pages/page-agent-copy-dialog", () => ({ PageAgentCopyDialo
 vi.mock("@/components/numo-icon", () => ({ NumoIcon: () => null }));
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+// The trash confirmation is a real alert dialog, which reads the layout.
+window.matchMedia ??= ((query: string) => ({
+  matches: false,
+  media: query,
+  addEventListener: () => {},
+  removeEventListener: () => {},
+})) as unknown as typeof window.matchMedia;
 let root: Root | undefined;
 
 beforeEach(() => {
@@ -182,16 +189,54 @@ describe("usePromotePage", () => {
 
 describe("page document menu", () => {
   let actionsFor: ((page: { id: string; title: string; favorite: boolean }) => ContextMenuAction[]) | undefined;
+  const onTrash = vi.fn();
   function Menu() {
-    actionsFor = usePageDocumentMenu({
+    const menu = usePageDocumentMenu({
       projectId: "project-1",
-      pages: [{ id: "page-b", parent_id: null }],
+      pages: [
+        { id: "page-b", parent_id: null },
+        { id: "page-c", parent_id: "page-b" },
+      ],
       onCreateChild: vi.fn(),
       onToggleFavorite: vi.fn(),
-      onTrash: vi.fn(),
-    }).actionsFor;
-    return null;
+      onTrash,
+    });
+    actionsFor = menu.actionsFor;
+    return menu.dialogs;
   }
+
+  it("asks before moving a page to the trash, naming it and its sub-pages", async () => {
+    onTrash.mockReset();
+    await render(createElement(Menu));
+    const page = { id: "page-b", title: "Roadmap", favorite: false };
+    const trash = actionsFor!(page).find((candidate) => candidate.id === "trash");
+
+    await act(async () => { trash!.onSelect?.(); });
+
+    expect(onTrash).not.toHaveBeenCalled();
+    const dialog = document.querySelector('[role="alertdialog"]')!;
+    expect(dialog.textContent).toContain('trashPageTitle:{"title":"Roadmap"}');
+    expect(dialog.textContent).toContain('trashPageBody:{"count":1,"days":30}');
+
+    const confirm = [...dialog.querySelectorAll("button")].find((button) => button.textContent === "moveToTrash");
+    await act(async () => { confirm!.click(); });
+
+    expect(onTrash).toHaveBeenCalledWith(page);
+  });
+
+  it("leaves the page alone when the confirmation is cancelled", async () => {
+    onTrash.mockReset();
+    await render(createElement(Menu));
+    const trash = actionsFor!({ id: "page-b", title: "Roadmap", favorite: false })
+      .find((candidate) => candidate.id === "trash");
+
+    await act(async () => { trash!.onSelect?.(); });
+    const cancel = [...document.querySelectorAll('[role="alertdialog"] button')].find((button) => button.textContent === "cancel");
+    await act(async () => { (cancel as HTMLButtonElement).click(); });
+
+    expect(onTrash).not.toHaveBeenCalled();
+    expect(document.querySelector('[role="alertdialog"]')).toBeNull();
+  });
 
   it("promotes the page the menu was opened on", async () => {
     await render(createElement(Menu));

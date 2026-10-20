@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { isTypingTarget } from "@/lib/keyboard/keyboard-context";
 import { eventKey } from "@/lib/keyboard/event-key";
 import { moveSidebarFilterResultFocus } from "@/lib/keyboard/sidebar-filter-navigation";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 /**
  * The filter field in the title line of a secondary sidebar.
@@ -108,17 +109,19 @@ export function SidebarFilterField({
         }}
       />
       {value ? (
-        <button
-          type="button"
-          onClick={() => {
-            onChange("");
-            ref.current?.focus();
-          }}
-          aria-label={clearLabel}
-          className="-mr-1 flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
-        >
-          <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
-        </button>
+        <AppTooltip label={clearLabel}>
+          <button
+            type="button"
+            onClick={() => {
+              onChange("");
+              ref.current?.focus();
+            }}
+            aria-label={clearLabel}
+            className="-mr-1 flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+          >
+            <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
+          </button>
+        </AppTooltip>
       ) : null}
     </div>
   );

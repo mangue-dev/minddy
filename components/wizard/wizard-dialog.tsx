@@ -172,8 +172,7 @@ export function WizardDialog<Id extends string>({
         <div data-mobile-sheet-close-wrapper className="absolute top-4 right-4 z-30">
           <Button
             variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0"
+            size="icon-sm"
             onClick={() => onOpenChange(false)}
             data-mobile-sheet-close
             aria-label={tCommon("close")}

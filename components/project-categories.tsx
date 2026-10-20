@@ -25,6 +25,7 @@ import {
   DEFAULT_CATEGORY_COLOR,
 } from "@/lib/category-colors";
 import type { Category } from "@/lib/types";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 function Swatches({
   value,
@@ -38,17 +39,18 @@ function Swatches({
   return (
     <div className="flex flex-wrap gap-1.5">
       {CATEGORY_COLORS.map((c) => (
-        <button
-          key={c}
-          type="button"
-          onClick={() => onChange(c)}
-          aria-label={t("colorSwatchAria", { color: tColors(CATEGORY_COLOR_NAMES[c]) })}
-          className={cn(
-            "size-5 rounded-full ring-offset-2 ring-offset-background transition-shadow",
-            value === c && "ring-2 ring-ring"
-          )}
-          style={{ backgroundColor: c }}
-        />
+        <AppTooltip label={t("colorSwatchAria", { color: tColors(CATEGORY_COLOR_NAMES[c]) })} key={c}>
+          <button
+            type="button"
+            onClick={() => onChange(c)}
+            aria-label={t("colorSwatchAria", { color: tColors(CATEGORY_COLOR_NAMES[c]) })}
+            className={cn(
+              "size-5 rounded-full ring-offset-2 ring-offset-background transition-shadow",
+              value === c && "ring-2 ring-ring"
+            )}
+            style={{ backgroundColor: c }}
+          />
+        </AppTooltip>
       ))}
     </div>
   );
@@ -69,19 +71,21 @@ function ColorButton({
   const [open, setOpen] = useState(false);
   return (
     <ResponsivePopover open={open} onOpenChange={setOpen}>
-      <ResponsivePopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label={label}
-          className="flex size-8 shrink-0 items-center justify-center rounded-full outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <span
-            aria-hidden
-            className="size-3.5 rounded-full ring-1 ring-black/5 dark:ring-white/10"
-            style={{ backgroundColor: value }}
-          />
-        </button>
-      </ResponsivePopoverTrigger>
+      <AppTooltip label={label}>
+        <ResponsivePopoverTrigger asChild>
+          <button
+            type="button"
+            aria-label={label}
+            className="flex size-8 shrink-0 items-center justify-center rounded-full outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <span
+              aria-hidden
+              className="size-3.5 rounded-full ring-1 ring-black/5 dark:ring-white/10"
+              style={{ backgroundColor: value }}
+            />
+          </button>
+        </ResponsivePopoverTrigger>
+      </AppTooltip>
       <ResponsivePopoverContent align="start" className="w-auto p-3" mobileTitle={t("colorLabel")}>
         <Swatches
           value={value}

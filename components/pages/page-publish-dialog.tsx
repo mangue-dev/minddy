@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   deletePageShareApi,
@@ -66,6 +67,8 @@ export function PagePublishDialog({
 
   const [level, setLevel] = useState<ViewShareLevel>("private");
   const [password, setPassword] = useState("");
+  // Turning a live link off kills it for whoever has it: ask first (MIN-743).
+  const [confirmRevoke, setConfirmRevoke] = useState(false);
 
   // Re-synchronized on opening, and when the response arrives.
   useEffect(() => {
@@ -100,7 +103,7 @@ export function PagePublishDialog({
   const changeLevel = (next: ViewShareLevel) => {
     if (update.isPending || revoke.isPending) return;
     if (next === "private" && share) {
-      revoke.mutate();
+      setConfirmRevoke(true);
       return;
     }
     setLevel(next);
@@ -135,6 +138,7 @@ export function PagePublishDialog({
         : t("hintPublic");
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -250,6 +254,16 @@ export function PagePublishDialog({
         )}
       </DialogContent>
     </Dialog>
+      <ConfirmDeleteDialog
+        open={confirmRevoke}
+        onOpenChange={setConfirmRevoke}
+        title={t("unpublishTitle", { name: title })}
+        description={t("unpublishDescription")}
+        confirmLabel={t("unpublishConfirm")}
+        cancelLabel={tc("cancel")}
+        onConfirm={() => revoke.mutateAsync().catch(() => undefined)}
+      />
+    </>
   );
 }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
@@ -36,7 +37,7 @@ export function IssueFamilyBoardHeader({
     <AppContentHeader contentClassName="gap-3">
       {/* Same affordance as the objective board's header: a chevron back to
           the unscoped page (here, the full board with its view restored). */}
-      <Button asChild variant="ghost" size="icon-sm">
+      <Button asChild variant="ghost" size="icon-sm" tooltip={t("backToBoard")}>
         <Link href={exitHref} aria-label={t("backToBoard")}>
           <HugeiconsIcon icon={ArrowLeft01Icon} />
         </Link>
@@ -46,7 +47,7 @@ export function IssueFamilyBoardHeader({
           <span className="shrink-0 text-xs font-medium text-muted-foreground">
             {issueIdentifier(projectKey, parent.number)}
           </span>
-          <span className="truncate font-medium">{parent.title}</span>
+          <TruncatedText text={parent.title} className="truncate font-medium" />
         </div>
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <ProgressRing

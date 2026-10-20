@@ -125,9 +125,12 @@ it("closes a mobile view picker before opening its creation form", async () => {
 
 it("retains automatic input focus in desktop dialogs", async () => {
   viewport.mobile = false;
-  await act(() => root.render(<Dialog open><DialogContent aria-describedby={undefined}>
-    <DialogTitle>Rename view</DialogTitle><input aria-label="View name" autoFocus={allowInputAutoFocus()} />
-  </DialogContent></Dialog>));
+  // The dialog's default close cross is labeled from the catalog.
+  await act(() => root.render(<NextIntlClientProvider locale="en" messages={{ Common: { close: "Close" } }}>
+    <Dialog open><DialogContent aria-describedby={undefined}>
+      <DialogTitle>Rename view</DialogTitle><input aria-label="View name" autoFocus={allowInputAutoFocus()} />
+    </DialogContent></Dialog>
+  </NextIntlClientProvider>));
   expect(document.querySelector('[data-mobile-dialog]')).toBeNull();
   expect(document.activeElement).toBe(document.querySelector('input[aria-label="View name"]'));
 });

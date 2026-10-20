@@ -53,6 +53,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { KbdSequence } from "./ui/kbd";
 import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
 import type { MessageKey } from "@/lib/i18n-keys";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 const routeLabels: Record<string, MessageKey<"Nav">> = {
   home: "home", all: "allIssues", inbox: "inbox", routines: "routines",
@@ -329,12 +330,14 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
       </div>
       {hidden.length > 0 ? (
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button type="button" aria-label={t("moreTabs")}
-              className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-ring">
-              <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" aria-hidden />
-            </button>
-          </DropdownMenuTrigger>
+          <AppTooltip label={t("moreTabs")}>
+            <DropdownMenuTrigger asChild>
+              <button type="button" aria-label={t("moreTabs")}
+                className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-ring">
+                <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" aria-hidden />
+              </button>
+            </DropdownMenuTrigger>
+          </AppTooltip>
           <DropdownMenuContent align="end" className="max-h-80 overflow-y-auto">
             <DropdownMenuItem disabled={busy || loading || loadError} onPointerEnter={onNewTabWarm} onFocus={onNewTabWarm}
               onSelect={() => onNewTab()}>

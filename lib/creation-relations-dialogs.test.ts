@@ -15,8 +15,9 @@ const fixture = vi.hoisted(() => ({
   mobile: false, smartFill: true, smartFillCreated: true, smartFillRelations: true, queryProjects: [] as (string | null)[],
 }));
 vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => fixture.mobile }));
-vi.mock("next-intl", () => ({ useTranslations: (namespace: keyof typeof en) =>
-  (key: string, values?: Record<string, string>) => ((en[namespace] as Record<string, string>)[key] ?? key)
+vi.mock("next-intl", () => ({ useTranslations: (namespace: string) =>
+  (key: string, values?: Record<string, string>) => ((namespace.split(".").reduce<unknown>(
+    (messages, part) => (messages as Record<string, unknown>)[part], en) as Record<string, string>)[key] ?? key)
     .replace(/\{(\w+)\}/g, (match, name: string) => values?.[name] ?? match),
 }));
 vi.mock("@hugeicons/react", () => ({ HugeiconsIcon: () => null }));

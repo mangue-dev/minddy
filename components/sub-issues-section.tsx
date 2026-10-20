@@ -1,5 +1,6 @@
 "use client";
 
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
@@ -95,15 +96,14 @@ export function SubIssuesSection({
                 <span className="min-w-14 shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
                   {issueIdentifier(projectKey, child.number)}
                 </span>
-                <span
+                <TruncatedText
+                  text={child.title}
                   className={cn(
-                    "min-w-0 flex-1 truncate text-sm",
+                    "flex-1 truncate text-sm",
                     isClosedStatus(child.status) &&
                       "text-muted-foreground line-through"
                   )}
-                >
-                  {child.title}
-                </span>
+                />
               </button>
             );
           })}

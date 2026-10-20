@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { cn } from "@/lib/utils";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
@@ -67,8 +68,11 @@ export function PublicComments({
   onNeedAuth: (run: () => void) => void;
 }) {
   const t = useTranslations("PublicFeedback");
+  const tCommon = useTranslations("Common");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  /** The comment awaiting confirmation: deleting one is permanent. */
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   /** The thread whose response zone is open (id of its root). */
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
 
@@ -138,7 +142,7 @@ export function PublicComments({
                 // A root that has been answered can no longer be deleted: the
                 // deletion takes away the thread, including the team's response.
                 onDelete={
-                  pending || replies.length > 0 ? undefined : () => remove(root.id)
+                  pending || replies.length > 0 ? undefined : () => setDeleteTarget(root.id)
                 }
                 onReply={
                   allowComments ? () => setReplyingTo(replyingTo === root.id ? null : root.id) : undefined
@@ -155,7 +159,7 @@ export function PublicComments({
                       <PublicCommentRow
                         comment={reply}
                         project={project}
-                        onDelete={pending ? undefined : () => remove(reply.id)}
+                        onDelete={pending ? undefined : () => setDeleteTarget(reply.id)}
                       />
                     </li>
                   ))}
@@ -196,6 +200,19 @@ export function PublicComments({
           {t("commentsClosed")}
         </p>
       )}
+      <ConfirmDeleteDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title={t("commentDeleteTitle")}
+        description={t("commentDeleteDescription")}
+        confirmLabel={t("commentDeleteConfirm")}
+        cancelLabel={tCommon("cancel")}
+        onConfirm={() => {
+          if (deleteTarget) remove(deleteTarget);
+        }}
+      />
     </section>
   );
 }

@@ -47,6 +47,7 @@ export function EmojiPicker({
           <Button
             variant="ghost"
             aria-label={t("changeIcon")}
+            tooltip={t("changeIcon")}
             className={cn("size-12 shrink-0 p-0 text-4xl leading-none", className)}
           >
             {value}

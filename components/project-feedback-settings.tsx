@@ -330,6 +330,7 @@ function SsoRow({
   const tc = useTranslations("Common");
   const [reveal, setReveal] = useState(false);
   const [confirmRotate, setConfirmRotate] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   const envLine = isOwner && board.sso_secret ? ssoEnvLine(board.sso_secret) : null;
 
@@ -371,7 +372,7 @@ function SsoRow({
           </DropdownMenuItem>
           <DropdownMenuItem
             variant="destructive"
-            onSelect={() => void onPost("clear_sso")}
+            onSelect={() => setConfirmClear(true)}
           >
             <HugeiconsIcon icon={Cancel01Icon} />
             {t("feedbackSsoClear")}
@@ -434,6 +435,17 @@ function SsoRow({
             cancelLabel={tc("cancel")}
             onConfirm={async () => {
               await onPost("rotate_sso");
+            }}
+          />
+          <ConfirmDeleteDialog
+            open={confirmClear}
+            onOpenChange={setConfirmClear}
+            title={t("feedbackSsoClearConfirmTitle")}
+            description={t("feedbackSsoClearConfirmDesc")}
+            confirmLabel={t("feedbackSsoClear")}
+            cancelLabel={tc("cancel")}
+            onConfirm={async () => {
+              await onPost("clear_sso");
             }}
           />
         </div>

@@ -115,6 +115,9 @@ describe("project removal navigation", () => {
   it("replaces the departed project's tab even when Home is already open", async () => {
     await act(() => root.render(createElement(ProjectGeneralSection, { project, isOwner: false, onRequestDelete: vi.fn() })));
     await act(async () => { container.querySelector("button")!.click(); });
+    // Leave only asks; the removal runs once the confirmation is accepted.
+    expect(state.removeMember).not.toHaveBeenCalled();
+    await act(async () => { await state.confirmDelete!(); });
     expect(state.removeMember).toHaveBeenCalledExactlyOnceWith(project.id, "owner");
     expect(state.refetch).toHaveBeenCalledOnce();
     expectProjectDestinationReplaced();

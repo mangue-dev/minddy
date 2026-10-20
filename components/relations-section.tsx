@@ -13,6 +13,7 @@
 // the menu chains two overlays instead, which it can afford — there's no Dialog
 // around a card.)
 
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { SemanticIssueGroup } from "@/components/semantic-issue-group";
 import {
   Tooltip,
@@ -31,6 +32,7 @@ import { useAppRouter } from "@/lib/use-app-router";
 import { useQuery } from "@tanstack/react-query";
 import { RelationObjectiveLabel } from "@/components/relation-objective-label";
 import { useTranslations } from "next-intl";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Button } from "@/components/ui/button";
 import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
@@ -87,6 +89,8 @@ export function RelationsSection({
 }) {
   const t = useTranslations("Relations");
   const tCommon = useTranslations("Common");
+  // Removing a relation names its other end and asks first (MIN-743).
+  const [removeTarget, setRemoveTarget] = useState<{ id: string; name: string } | null>(null);
   const router = useAppRouter();
   const [open, setOpen] = useState(false);
 
@@ -352,17 +356,14 @@ export function RelationsSection({
                               </span>
                             )}
                             <span className="min-w-0 flex-1">
-                              <span
+                              <TruncatedText
+                                text={(isObjective ? r.otherName : (other?.title ?? id)) ?? ""}
                                 className={cn(
-                                  "block truncate text-sm",
+                                  "truncate text-sm",
                                   other?.status === "done" &&
                                     "text-muted-foreground line-through",
                                 )}
-                              >
-                                {isObjective
-                                  ? r.otherName
-                                  : (other?.title ?? id)}
-                              </span>
+                              />
                               {r.inheritedObjectiveName && (
                                 <span className="block truncate text-xs text-muted-foreground">
                                   {t("viaObjective", {
@@ -414,9 +415,12 @@ export function RelationsSection({
                           aria-label={tCommon("remove")}
                           className="size-6 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/relrow:opacity-100 focus-visible:opacity-100"
                           onClick={() =>
-                            void Promise.resolve(onRemoveRelation(r.id)).catch(
-                              (err) => toast.error((err as Error).message),
-                            )
+                            setRemoveTarget({
+                              id: r.id,
+                              name: isObjective
+                                ? (r.otherName ?? "")
+                                : [id, other?.title].filter(Boolean).join(" "),
+                            })
                           }
                         >
                           <HugeiconsIcon icon={Cancel01Icon} />
@@ -489,6 +493,22 @@ export function RelationsSection({
           </div>
         </div>
       )}
+      <ConfirmDeleteDialog
+        open={removeTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setRemoveTarget(null);
+        }}
+        title={t("removeTitle", { name: removeTarget?.name ?? "" })}
+        description={t("removeDescription")}
+        confirmLabel={tCommon("remove")}
+        cancelLabel={tCommon("cancel")}
+        onConfirm={() => {
+          if (!removeTarget) return;
+          void Promise.resolve(onRemoveRelation(removeTarget.id)).catch(
+            (err) => toast.error((err as Error).message),
+          );
+        }}
+      />
     </>
   );
 }

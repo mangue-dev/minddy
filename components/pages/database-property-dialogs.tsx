@@ -9,7 +9,7 @@ import { arrayMove } from "@dnd-kit/sortable";
 import { createUuid } from "@/lib/create-uuid";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -24,8 +24,9 @@ import {
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { FormDialog } from "@/components/form-dialog";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { SearchSelect, PICKER_FIELD_TRIGGER } from "@/components/search-select";
-import { CATEGORY_COLORS, pickFreeCategoryColor } from "@/lib/category-colors";
+import { CATEGORY_COLORS, CATEGORY_COLOR_NAMES, pickFreeCategoryColor } from "@/lib/category-colors";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { usePageDatabase } from "@/lib/use-page-database";
 import {
@@ -38,6 +39,7 @@ import {
 import type { PageSummary } from "@/lib/pages-api";
 import type { DatabaseConversionPreview } from "@/lib/page-database-conversion";
 import { PROPERTY_ICONS } from "./database-property-icons";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 /** Mount once per edit so incoming revisions cannot replace an unsaved draft. */
 export function DatabaseOptionsDialog({
@@ -53,6 +55,8 @@ export function DatabaseOptionsDialog({
 }) {
   const t = useTranslations("PageDatabase");
   const tObjectives = useTranslations("Objectives");
+  const tColors = useTranslations("Categories.colors");
+  const locale = useLocale();
   const { saveSchema, pending } = usePageDatabase(projectId);
   const [base] = useState(database);
   const [options, setOptions] = useState(property.options ?? []);
@@ -64,7 +68,17 @@ export function DatabaseOptionsDialog({
   const close = () => {
     if (!pending) onClose();
   };
+  // Saving strips deleted options from every entry, permanently: name them
+  // and ask before the save goes through (MIN-743).
+  const [confirmRemoved, setConfirmRemoved] = useState<string[] | null>(null);
+  const save = () => {
+    void saveSchema(base, (base.database_schema ?? []).map((p) =>
+      p.id === property.id ? { ...p, options: options.map((option) => ({ ...option, name: option.name.trim() })) } : p));
+    onClose();
+  };
+  const listFormat = new Intl.ListFormat(locale, { style: "long", type: "conjunction" });
   return (
+    <>
     <FormDialog
       open
       onOpenChange={(next) => {
@@ -79,9 +93,12 @@ export function DatabaseOptionsDialog({
       submitting={pending}
       submitDisabled={!dirty || duplicate || names.some((name) => !name)}
       onSubmit={() => {
-        void saveSchema(base, (base.database_schema ?? []).map((p) =>
-          p.id === property.id ? { ...p, options: options.map((option) => ({ ...option, name: option.name.trim() })) } : p));
-        onClose();
+        const kept = new Set(options.map((option) => option.id));
+        const removed = (property.options ?? [])
+          .filter((option) => !kept.has(option.id))
+          .map((option) => `“${option.name}”`);
+        if (removed.length > 0) setConfirmRemoved(removed);
+        else save();
       }}
     >
       <div className="max-h-[min(50dvh,400px)] space-y-2 overflow-y-auto px-0.5 py-1">
@@ -110,51 +127,54 @@ export function DatabaseOptionsDialog({
               open={palette === option.id}
               onOpenChange={(open) => setPalette(open ? option.id : null)}
             >
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  disabled={pending}
-                  aria-label={
-                    tObjectives("colorFieldLabel") + ": " + option.name
-                  }
-                  className="flex h-9 w-12 shrink-0 items-center justify-center gap-1.5 rounded-md hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring"
-                >
-                  <span
-                    className="size-3 rounded-full"
-                    style={{ backgroundColor: option.color }}
-                  />
-                  <HugeiconsIcon icon={ArrowDown01Icon} className="size-3 text-muted-foreground" />
-                </button>
-              </PopoverTrigger>
+              <AppTooltip label={tObjectives("colorFieldLabel") + ": " + option.name}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    disabled={pending}
+                    aria-label={
+                      tObjectives("colorFieldLabel") + ": " + option.name
+                    }
+                    className="flex h-9 w-12 shrink-0 items-center justify-center gap-1.5 rounded-md hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring"
+                  >
+                    <span
+                      className="size-3 rounded-full"
+                      style={{ backgroundColor: option.color }}
+                    />
+                    <HugeiconsIcon icon={ArrowDown01Icon} className="size-3 text-muted-foreground" />
+                  </button>
+                </PopoverTrigger>
+              </AppTooltip>
               <PopoverContent
                 align="end"
                 className="grid w-auto grid-cols-5 gap-1 rounded-xl p-2"
               >
                 {CATEGORY_COLORS.map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    aria-label={tObjectives("colorAria", { color })}
-                    aria-pressed={color === option.color}
-                    className="flex size-7 items-center justify-center rounded-sm hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring"
-                    onClick={() => {
-                      setOptions((rows) =>
-                        rows.map((row, i) =>
-                          i === index ? { ...row, color } : row,
-                        ),
-                      );
-                      setPalette(null);
-                    }}
-                  >
-                    <span
-                      className="flex size-4 items-center justify-center rounded-full"
-                      style={{ backgroundColor: color }}
+                  <AppTooltip label={tObjectives("colorAria", { color: tColors(CATEGORY_COLOR_NAMES[color]) })} key={color}>
+                    <button
+                      type="button"
+                      aria-label={tObjectives("colorAria", { color: tColors(CATEGORY_COLOR_NAMES[color]) })}
+                      aria-pressed={color === option.color}
+                      className="flex size-7 items-center justify-center rounded-sm hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring"
+                      onClick={() => {
+                        setOptions((rows) =>
+                          rows.map((row, i) =>
+                            i === index ? { ...row, color } : row,
+                          ),
+                        );
+                        setPalette(null);
+                      }}
                     >
-                      {color === option.color && (
-                        <HugeiconsIcon icon={CheckIcon} className="size-3 text-white" />
-                      )}
-                    </span>
-                  </button>
+                      <span
+                        className="flex size-4 items-center justify-center rounded-full"
+                        style={{ backgroundColor: color }}
+                      >
+                        {color === option.color && (
+                          <HugeiconsIcon icon={CheckIcon} className="size-3 text-white" />
+                        )}
+                      </span>
+                    </button>
+                  </AppTooltip>
                 ))}
               </PopoverContent>
             </Popover>
@@ -202,6 +222,23 @@ export function DatabaseOptionsDialog({
         </p>
       )}
     </FormDialog>
+    <ConfirmDeleteDialog
+      open={confirmRemoved !== null}
+      onOpenChange={(open) => {
+        if (!open) setConfirmRemoved(null);
+      }}
+      title={t("deleteOptionsTitle", {
+        count: confirmRemoved?.length ?? 0,
+        property: property.name,
+      })}
+      description={t("deleteOptionsDescription", {
+        names: listFormat.format(confirmRemoved ?? []),
+      })}
+      confirmLabel={t("deleteOptionsConfirm")}
+      cancelLabel={t("cancel")}
+      onConfirm={save}
+    />
+    </>
   );
 }
 
