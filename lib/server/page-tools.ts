@@ -182,6 +182,14 @@ export interface PageRead extends PageTreeEntry {
  */
   last_edited_by: string;
   last_edited_kind: PageWriteKind;
+  /**
+   * Whether the page IS a database (MIN-738), stated rather than inferred.
+   *
+   * A database without columns yet carries an empty `database_schema` and
+   * revision 0: an agent reading that empty array as "not a database" created
+   * a second database next to the one the user had open.
+   */
+  is_database: boolean;
   /** The body ALONE, in markdown (the title and icon are above). */
   markdown: string;
   /** The body writing counter — to be ironed to write without overwriting. */
@@ -344,6 +352,7 @@ export async function readPageForAgent({
       ...entry(page),
       last_edited_by: await lastWriterName(page),
       last_edited_kind: page.updated_kind ?? "human",
+      is_database: page.database_schema != null,
       markdown,
       version: page.version,
       subpages,

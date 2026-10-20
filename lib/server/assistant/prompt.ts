@@ -578,6 +578,7 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
     lines.push(
       `- Open wiki page: "${ctx.pageTitle?.trim() || "(untitled)"}" (page id: ${ctx.pageId}).`,
       `When the user says "cette page", "this page", "ce document", "cette doc" — or gives an instruction with no explicit target while on it ("résume", "transforme ça en tickets", "corrige ce paragraphe", "ajoute une section") — they mean the page above. Read it with get_page on that exact id, do not search for it. Write with append_to_page / edit_page_text rather than update_page: the user may be typing in that very document, and a full rewrite would overwrite them.`,
+      `When they ask for a database, a table or a tracker while on it ("crée cette base", "fais-en une base pour suivre…"), read it with get_page first. If is_database is true — even with an empty database_schema and database_revision 0 — this page IS the database: add the properties to it with update_page_database and create no other page. If it is a document, ask before creating a new database page.`,
     );
   } else if (ctx.routineId) {
     lines.push(

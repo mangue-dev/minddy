@@ -689,7 +689,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_page",
       description:
-        "ONE page in full: title, icon, body in MARKDOWN, version, and its direct subpages. Database pages also return database_schema (property and option ids/names/colors), database_revision, database_title_name, and entry property_values/created_at in subpages. Read a database entry separately for its body. Use update_page_database for properties, never markdown tables. This is what you read before writing: copy passages from here verbatim for edit_page_text, and keep the version to replace the body safely with update_page. A '[[page:<id>]]' line is a LINK to a subpage, never its content — read that page too if you need it.",
+        "ONE page in full: title, icon, body in MARKDOWN, version, and its direct subpages. is_database says whether the page IS a database: true even when database_schema is an empty array and database_revision is 0 — that is a database with no properties yet, to fill with update_page_database, never to recreate with create_page. Database pages also return database_schema (property and option ids/names/colors), database_revision, database_title_name, and entry property_values/created_at in subpages. Read a database entry separately for its body. Use update_page_database for properties, never markdown tables. This is what you read before writing: copy passages from here verbatim for edit_page_text, and keep the version to replace the body safely with update_page. A '[[page:<id>]]' line is a LINK to a subpage, never its content — read that page too if you need it.",
       parameters: {
         type: "object",
         properties: {
@@ -711,7 +711,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           database: {
             type: "boolean",
             description:
-              "Create a database instead of a document. Then add properties with update_page_database. Create entries with parent_page_id set to this database id; an empty markdown body is valid for databases and entries.",
+              "Create a database instead of a document. Then add properties with update_page_database. Never create one to stand in for a database that already exists: when the user asks for a database while on a page, read it with get_page first — if is_database is true (even with an empty schema), add the properties to THAT page; if it is a document, ask before creating a new page. Create entries with parent_page_id set to this database id; an empty markdown body is valid for databases and entries.",
           },
           title: {
             type: "string",
