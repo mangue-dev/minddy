@@ -32,7 +32,8 @@ function Editor({initial}){const [value,setValue]=useState(initial);window.readR
 createRoot(document.getElementById("root")).render(<App/>);`;
 const bundle = await build({ stdin: { contents: entry, resolveDir: root, loader: "tsx" }, bundle: true, platform: "browser", format: "iife", jsx: "automatic", write: false, define: { "process.env.NODE_ENV": '"production"', "process.env": '{}' } });
 const sources = ["components/routines/routine-trigger-fields.tsx", "components/ui", "components/settings/help-hint.tsx", "components/issue-indicators.tsx", "components/user-avatar.tsx"];
-const applicationStyles = await readFile("app/globals.css", "utf8");
+// Design tokens live in app/tokens.css since MIN-739.
+const applicationStyles = (await readFile("app/globals.css", "utf8")) + (await readFile("app/tokens.css", "utf8"));
 const primaryTokens = applicationStyles.match(/(?::root|\.dark)\s*\{[^{}]*--primary:[^{}]*\}/g);
 if (!primaryTokens?.length) throw new Error("Application primary theme tokens are missing");
 const css = await postcss([tailwind({ base: root })]).process(`@import "tailwindcss" source(none); @import "${resolve("app/tokens.css")}"; ${sources.map(source => `@source "${resolve(source)}";`).join("\n")} ${primaryTokens.join("\n")} body{font-family:system-ui,sans-serif;background:var(--background);color:var(--foreground);padding:24px}main{max-width:740px;margin:auto;border:1px solid var(--border);border-radius:12px;padding:24px;background:var(--background)}input,select{min-width:0}`, { from: resolve(out, "preview.css") });

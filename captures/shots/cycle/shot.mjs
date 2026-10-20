@@ -47,6 +47,19 @@ async function capture({ locale, theme }) {
     await page.locator("main").getByText("%", { exact: false }).first()
       .waitFor({ state: "visible", timeout: 15_000 });
 
+    // Since MIN-736 the board hides Done and Canceled by default. Show Done
+    // (the proof of progress) and hide the empty Backlog through the board's
+    // own Status filter, both read from the catalog.
+    const labels = await catalog(locale);
+    await page.locator("main").getByRole("button", { name: labels.Field.status, exact: true }).click();
+    const statusMenu = page.getByRole("menu", { name: labels.Field.status, exact: true });
+    await statusMenu.getByRole("menuitem", { name: labels.Status.done, exact: true }).click();
+    await statusMenu.getByRole("menuitem", { name: labels.Status.backlog, exact: true }).click();
+    await page.keyboard.press("Escape");
+    await page.locator("main h2").filter({ hasText: labels.Status.done }).first()
+      .waitFor({ state: "visible", timeout: 15_000 });
+    await page.mouse.move(8, 8);
+
     // Offset by one column step, in the horizontally scrolling container.
     const scrolled = await page.evaluate((pitch) => {
       const el = [...document.querySelectorAll("main *")]
@@ -56,7 +69,9 @@ async function capture({ locale, theme }) {
       return { applied: el.scrollLeft, max: el.scrollWidth - el.clientWidth };
     }, COLUMN_PITCH);
 
-    if (!scrolled || scrolled.applied !== COLUMN_PITCH) {
+    // Since MIN-736 the board hides Done and Canceled by default, so it may
+    // no longer overflow: nothing to shift then.
+    if (scrolled && scrolled.applied !== COLUMN_PITCH) {
       throw new Error(
         `${locale}/${theme} — défilement impossible (${JSON.stringify(scrolled)}). ` +
           `La colonne vide serait au premier plan.`,

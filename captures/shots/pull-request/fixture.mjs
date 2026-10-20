@@ -31,12 +31,14 @@ export const RUN_ID = "demo-pr-aur-2";
 export const PR_ID = "demo-pr-aur-2-row";
 
 export const PR_NUMBER = 128;
-export const BRANCH = "numo/aur-2-palette-shortcuts";
+export const BRANCH = "tom/aur-2-palette-shortcuts";
 const REPO = "aurora-labs/aurora";
 const PR_URL = `https://github.com/${REPO}/pull/${PR_NUMBER}`;
 
 const OPENED_AT = "2026-07-14T16:42:00.000Z";
 const NUMO = { login: "numo-agent", avatar_url: null };
+// Since MIN-721 Numo writes no code: the PR comes from a teammate's own coding agent.
+const TOM = { login: "tom-berger", avatar_url: null };
 const CAMILLE = { login: "camille-roy", avatar_url: null };
 const REVIEW_BOT = { login: "review-helper[bot]", avatar_url: null };
 
@@ -225,9 +227,7 @@ const DESCRIPTION = `Shortcuts are declared next to the action they trigger, not
 - the row renders the hint at its right edge
 - the provider binds the listener once and ignores events coming from inputs, textareas and contenteditable
 
-Two-key sequences (\`g\` then \`n\`) reset after 900 ms. Tests cover the registry and the listener.
-
-🤖 Généré par l'agent numo`;
+Two-key sequences (\`g\` then \`n\`) reset after 900 ms. Tests cover the registry and the listener.`;
 
 const HEAD_SHA = "6b1f4c9e2d0a7385c41ff20b9e3d5a6714c8be92";
 
@@ -249,7 +249,7 @@ export const PR = {
   mergeable: true,
   mergeableState: "clean",
   mergeabilityReason: "clean",
-  user: NUMO,
+  user: TOM,
   createdAt: OPENED_AT,
 };
 
@@ -281,22 +281,22 @@ export const COMMITS = [
     sha: "4c21ea08d7b3f95106ad8e2fb47c0d9351768abc",
     message:
       "Declare shortcuts on the action itself\n\nThe registry already owns every action, so the hint travels with it.",
-    author: NUMO,
-    authorName: "numo",
-    authorEmail: "numo@minddy.app",
+    author: TOM,
+    authorName: "Tom Berger",
+    authorEmail: "tom@example.test",
     authoredAt: "2026-07-14T16:38:00.000Z",
   },
   {
     sha: HEAD_SHA,
     message: "Ignore contenteditable in the global listener",
-    author: NUMO,
-    authorName: "numo",
-    authorEmail: "numo@minddy.app",
+    author: TOM,
+    authorName: "Tom Berger",
+    authorEmail: "tom@example.test",
     authoredAt: "2026-07-14T17:18:00.000Z",
   },
 ];
 
-/** The thread: a human proofreading, the agent's response. */
+/** The thread: a human proofreading, the author's response. */
 export const COMMENTS = [
   {
     id: 9001,
@@ -308,7 +308,7 @@ export const COMMENTS = [
   {
     id: 9002,
     body: "Good catch — `isContentEditable` is now the first check of the handler, before the ⌘K branch. Pushed to the same branch.\n\n<details><summary>Implementation note</summary>The guard also covers nested editor nodes.</details>",
-    user: NUMO,
+    user: TOM,
     created_at: "2026-07-14T17:19:00.000Z",
     html_url: `${PR_URL}#issuecomment-9002`,
   },
@@ -349,7 +349,7 @@ export const TIMELINE = [
   {
     id: `commit:${COMMITS[0].sha}`,
     kind: "committed",
-    actor: NUMO,
+    actor: TOM,
     createdAt: COMMITS[0].authoredAt,
     sha: COMMITS[0].sha,
     commitCount: 1,
@@ -368,7 +368,7 @@ export const TIMELINE = [
   {
     id: `commit:${COMMITS[1].sha}`,
     kind: "committed",
-    actor: NUMO,
+    actor: TOM,
     createdAt: COMMITS[1].authoredAt,
     sha: COMMITS[1].sha,
     commitCount: 1,
@@ -401,7 +401,7 @@ export const LIST_ITEM = {
   pr_state: "open",
   provider: "github",
   title: PR.title,
-  author: NUMO,
+  author: TOM,
   head_branch: BRANCH,
   model: "anthropic/claude-sonnet-4.5",
   created_at: OPENED_AT,

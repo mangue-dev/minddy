@@ -132,6 +132,11 @@ export async function serveFixture(page) {
     (r) => json(r, { commits: COMMITS, truncated: false }),
   );
   await on(
+    (p) => under("/comment-edits").test(p),
+    // Edit history of one comment: the demo comments were never edited.
+    (r) => json(r, { edits: [] }),
+  );
+  await on(
     (p) => under("/review-comments").test(p),
     (r) => {
       if (r.request().method() === "PATCH") {
