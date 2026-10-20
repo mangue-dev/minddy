@@ -59,6 +59,7 @@ import {
   BLOCK_ID_TYPES,
 } from "@/components/pages/blocks";
 import { normalizeNotionCalloutPaste } from "@/components/pages/blocks/callout";
+import { SPACER_LINE, stripScratchpadSpacers } from "@/lib/scratchpad";
 
 // The live collaboration operations travel in this same bundle (MIN-688): the
 // server applies steps with the schema this module already builds, without a
@@ -378,7 +379,13 @@ export function documentForEditor(
 ): JSONContent | string {
   if (!stored || stored.type !== "doc") return markdown;
   try {
-    if (bodyToMarkdown(stored, profile).trim() === markdown.trim()) return stored;
+    const projected = bodyToMarkdown(stored, profile).trim();
+    if (projected === markdown.trim()) return stored;
+    // Saved before empty paragraphs had a Markdown form (MIN-745): the
+    // document kept the blank lines the Markdown beside it could not say.
+    if (!markdown.includes(SPACER_LINE) && stripScratchpadSpacers(projected).trim() === markdown.trim()) {
+      return stored;
+    }
     return reconcileBodyBlocks(stored, bodyFromMarkdown(markdown, profile), profile);
   } catch {
     // A document this schema cannot read (written by a later version, or

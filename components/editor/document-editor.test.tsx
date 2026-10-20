@@ -166,3 +166,22 @@ it("survives a retained tab hidden and shown again", async () => {
     errors.mockRestore();
   }
 });
+
+it("reports and keeps a blank line left between two paragraphs (MIN-745)", async () => {
+  const onChange = vi.fn();
+  const api = await mount({ value: "First\n\nSecond", onChange });
+  const editor = api().editor()!;
+
+  // Enter at the end of “First”: an empty paragraph between the two.
+  await act(async () => {
+    editor.chain().setTextSelection(1 + "First".length).splitBlock().run();
+    await settle();
+  });
+  // The change is reported, so the surfaces that save on a Markdown
+  // difference save it, and the Markdown reads back the same document.
+  expect(onChange).toHaveBeenLastCalledWith("First\n\n \n\nSecond", expect.anything());
+
+  const reopened = await mount({ value: api().getMarkdown() });
+  expect(reopened().editor()!.getJSON().content?.map((node) => node.content?.length ?? 0))
+    .toEqual([1, 0, 1]);
+});
