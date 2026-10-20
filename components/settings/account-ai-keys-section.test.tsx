@@ -85,7 +85,8 @@ it("shows only the general AI routing, with no code-agent settings (MIN-721)", a
   const general = host.querySelector('[aria-labelledby="minddy-ai-title"]')!;
   expect(general.textContent).toContain("General API credentials");
   expect(general.textContent).toContain("Numo conversations and comments");
-  expect(general.textContent).not.toContain(messages.Account.byokSurface_agent);
+  expect(host.textContent).not.toContain("Numo code work");
+  expect(host.textContent).not.toContain("byokSurface_agent");
   expect(host.querySelector('[data-model-scope="code"]')).toBeNull();
   expect(host.textContent).not.toContain("Sandbox");
 });

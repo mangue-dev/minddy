@@ -74,7 +74,7 @@ export interface Routine {
   enabled: boolean;
   next_run_at: string | null;
   last_run_at: string | null;
-  /** CODE of the last missed passage (`quota`, `noRepo`…), translated by the UI. */
+  /** CODE of the last missed passage (`quota`, `launchFailed`…), translated by the UI. */
   last_error: string | null;
   created_at: string;
   updated_at: string;

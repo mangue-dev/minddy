@@ -90,7 +90,6 @@ export type RoutineErrorKey =
   | "ownerOnly"
   | "routineNotFound"
   | "promptRequired"
-  | "noRepo"
   | "invalidTrigger"
   | "invalidSchedule"
   | "unknownTimezone"
