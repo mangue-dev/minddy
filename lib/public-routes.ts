@@ -254,7 +254,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/terminos",
     },
     namespace: "Terms",
-    lastModified: "2026-08-05",
+    lastModified: "2026-10-20",
     priority: 0.3,
   },
   {
@@ -268,7 +268,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/privacidad",
     },
     namespace: "Privacy",
-    lastModified: "2026-10-05",
+    lastModified: "2026-10-20",
     priority: 0.3,
   },
   {
