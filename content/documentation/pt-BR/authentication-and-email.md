@@ -93,7 +93,7 @@
 
 ## Configurar e-mails de conta, MFA e recuperação {#authentication-and-email}
 
-Os emails de conta dependem do Supabase e do GoTrue. Resend para notificações da aplicação não configura confirmação nem recuperação de senha. No perfil full, mantenha o overlay minddy em cada comando Compose. Defina `SITE_URL`, `API_EXTERNAL_URL`, `SUPABASE_PUBLIC_URL` e `ADDITIONAL_REDIRECT_URLS` para as origens da sua instância. Configure `SMTP_ADMIN_EMAIL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` e `SMTP_SENDER_NAME` com os valores do seu provedor. Mantenha a confirmação de email ativa e reinicie Auth no contexto instalado.
+Os emails de conta dependem do Supabase e do GoTrue. Resend para notificações da aplicação não configura confirmação nem recuperação de senha. No perfil full, mantenha o overlay minddy em cada comando Compose. Defina `SITE_URL`, `API_EXTERNAL_URL`, `SUPABASE_PUBLIC_URL` e `ADDITIONAL_REDIRECT_URLS` para as origens da sua instância. Configure `SMTP_ADMIN_EMAIL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` e `SMTP_SENDER_NAME` com os valores do seu provedor. O overlay também define os limites de sessão: `GOTRUE_SESSIONS_TIMEBOX` é `8760h` (um ano) e `GOTRUE_SESSIONS_INACTIVITY_TIMEOUT` é `720h` (30 dias). Mantenha a confirmação de email ativa e reinicie Auth no contexto instalado.
 
 
 Antes de usar `compose` abaixo, defina a função do perfil full instalado a partir do [contexto Compose de referência](/pt-br/documentacao/backups-and-restoration#context).
@@ -107,7 +107,7 @@ compose up -d --wait auth
 
 ## Configurar Supabase gerenciado {#managed}
 
-Na seção Authentication do projeto gerenciado, defina Site URL e o redirect exato `<app-origin>/auth/callback`. Configure SMTP e os dois templates de email versionados. A confirmação usa `token_hash` e `type=signup`. Exija senhas com pelo menos oito caracteres, letras minúsculas, maiúsculas e números, e habilite cadastro e verificação TOTP. Ative o controle de senhas comprometidas quando disponível e registre os limites do provedor. O perfil full nega acesso se esse controle falha e precisa alcançar `api.pwnedpasswords.com`. Registre duração das sessões, rotação de refresh, revogação e limites Auth: o bootstrap SQL não configura esses controles.
+Na seção Authentication do projeto gerenciado, defina Site URL e o redirect exato `<app-origin>/auth/callback`. Configure SMTP e os dois templates de email versionados. A confirmação usa `token_hash` e `type=signup`. Exija senhas com pelo menos oito caracteres, letras minúsculas, maiúsculas e números, e habilite cadastro e verificação TOTP. Ative o controle de senhas comprometidas quando disponível e registre os limites do provedor. O perfil full nega acesso se esse controle falha e precisa alcançar `api.pwnedpasswords.com`. Defina a duração máxima das sessões em 8760 horas (um ano) e o tempo limite de inatividade em 720 horas (30 dias). O banco de dados recusa sessões além desses mesmos limites, então um limite de Auth desativado ou mais longo continua renovando sessões que depois todas as APIs rejeitam. Registre duração das sessões, rotação de refresh, revogação e limites Auth: o bootstrap SQL não configura esses controles.
 
 ## Verificar o resultado {#verify}
 

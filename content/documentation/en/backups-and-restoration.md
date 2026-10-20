@@ -190,7 +190,7 @@ For Supabase managed by a provider, record the project, database version, backup
 
 ### Block writes and export SQL {#outage}
 
-Close the application, workers, scheduler and public Supabase API. Direct PostgREST and Storage writes remain possible if you stop only the web app. Set `SUPABASE_DB_URL` privately and `BACKUP_DIR` to a new encrypted destination. Run the SQL exports below with the selected release tooling. Confirm every SQL file is non-empty and `data.sql` includes `COPY` sections for `auth.users`, `storage.objects` and application tables. The regular schema dump omits migration history, so its two separate exports are mandatory. Preserve managed Storage and Realtime policies.
+Close the application, workers, scheduler and public Supabase API. Direct PostgREST and Storage writes remain possible if you stop only the web app. Set `SUPABASE_DB_URL` privately, `FROM_TAG` to the release tag currently installed and `BACKUP_DIR` to a new encrypted destination. Run the SQL exports below with the selected release tooling. Confirm every SQL file is non-empty and `data.sql` includes `COPY` sections for `auth.users`, `storage.objects` and application tables. The regular schema dump omits migration history, so its two separate exports are mandatory. Preserve managed Storage and Realtime policies.
 
 ```bash
 set -euo pipefail

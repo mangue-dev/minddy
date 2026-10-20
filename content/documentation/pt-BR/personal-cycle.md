@@ -80,7 +80,7 @@
 
 ## Configurar e preencher seu ciclo {#personal-cycle}
 
-Ative os ciclos em Configurações da conta → Ciclos e abra Ciclo na navegação pessoal. Ele pertence à sua conta e pode conter tarefas atribuídas a você em projetos dos quais você é o proprietário ou um Membro. Os leitores não podem ser atribuídos, então um projeto que você apenas lê não contribui com trabalho. Não é uma sprint de projeto nem pertence a um objetivo da equipe.
+Ative os ciclos em **Configurações da conta** → **Ciclos**, ou com **Ativar ciclos** na aba **Ciclo**. Abra essa aba na barra de visualizações de **Todos os problemas**, ou pesquise Ciclo na paleta de comandos; a aba **Ciclo** de um quadro de projeto, marcada com uma seta, leva ao mesmo ciclo pessoal. Ele pertence à sua conta e pode conter tarefas atribuídas a você em projetos dos quais você é o proprietário ou um Membro. Os leitores não podem ser atribuídos, então um projeto que você apenas lê não contribui com trabalho. Não é uma sprint de projeto nem pertence a um objetivo da equipe.
 
 Escolha a duração de uma ou duas semanas, o dia de início, de um a quatro ciclos futuros e a intensidade leve, média ou alta. Essas configurações definem seu período pessoal e a capacidade desejada. Os controles de captura automática determinam se tarefas atribuídas entram no ciclo atual quando são iniciadas ou concluídas.
 
@@ -90,6 +90,6 @@ O ciclo atual é preenchido automaticamente uma vez com trabalho elegível. Para
 
 ## Concluir ou ajustar o período {#cycle-results}
 
-Atualize os estados durante o trabalho e confira o que foi concluído e o que falta. Na mudança de período, tarefas elegíveis não concluídas de ciclos anteriores passam automaticamente para o ciclo atual, preservando o responsável. Essa transferência não as marca como concluídas. Use o seletor de datas para consultar ciclos anteriores e futuros. Essas visualizações são somente leitura; o ciclo atual permite alterações.
+Atualize os estados durante o trabalho e confira o que foi concluído e o que falta. Na mudança de período, tarefas elegíveis não concluídas de ciclos anteriores passam automaticamente para o ciclo atual, preservando o responsável. Essa transferência não as marca como concluídas. Quando todas as tarefas do ciclo atual estão fechadas, um aviso **Ciclo concluído** oferece **Ciclo de recarga** para adicionar trabalho elegível; o ciclo não é recarregado automaticamente durante o período. Use o seletor de datas para consultar ciclos anteriores e futuros. Essas visualizações são somente leitura; o ciclo atual permite alterações.
 
 Se um pré-requisito entrar no ciclo atual para manter as dependências coerentes, confira o motivo antes de removê-lo. Uma tarefa que desaparece após a conclusão pode continuar no trabalho concluído do ciclo ou ser encontrada pelo identificador. As configurações de ciclos da conta afetam sua área de planejamento, não o ciclo pessoal de outro membro.

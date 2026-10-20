@@ -92,7 +92,7 @@
 
 ## Kontomails, MFA und Wiederherstellung konfigurieren {#authentication-and-email}
 
-Auth-E-Mails gehören zu Supabase/GoTrue. Resend-Anwendungsbenachrichtigungen konfigurieren weder Bestätigung noch Passwortwiederherstellung. Behalten Sie bei full das minddy-Overlay in jedem Compose-Aufruf. Setzen Sie `SITE_URL`, `API_EXTERNAL_URL`, `SUPABASE_PUBLIC_URL` und `ADDITIONAL_REDIRECT_URLS` auf Ihre Origins. Konfigurieren Sie `SMTP_ADMIN_EMAIL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` und `SMTP_SENDER_NAME` mit Ihrem Anbieter. Lassen Sie Bestätigung eingeschaltet und starten Sie Auth im installierten Compose-Kontext neu.
+Auth-E-Mails gehören zu Supabase/GoTrue. Resend-Anwendungsbenachrichtigungen konfigurieren weder Bestätigung noch Passwortwiederherstellung. Behalten Sie bei full das minddy-Overlay in jedem Compose-Aufruf. Setzen Sie `SITE_URL`, `API_EXTERNAL_URL`, `SUPABASE_PUBLIC_URL` und `ADDITIONAL_REDIRECT_URLS` auf Ihre Origins. Konfigurieren Sie `SMTP_ADMIN_EMAIL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` und `SMTP_SENDER_NAME` mit Ihrem Anbieter. Das Overlay setzt auch die Sitzungsgrenzen: `GOTRUE_SESSIONS_TIMEBOX` ist `8760h` (ein Jahr) und `GOTRUE_SESSIONS_INACTIVITY_TIMEOUT` ist `720h` (30 Tage). Lassen Sie Bestätigung eingeschaltet und starten Sie Auth im installierten Compose-Kontext neu.
 
 
 Definieren Sie vor den folgenden `compose`-Befehlen die Funktion für das installierte full-Profil aus [dem Referenzkontext für Compose](/de/dokumentation/backups-and-restoration#context).
@@ -106,7 +106,7 @@ compose up -d --wait auth
 
 ## Managed Supabase konfigurieren {#managed}
 
-Setzen Sie in Authentication Ihres eigenen Projekts Site URL und genau `<app-origin>/auth/callback` als Weiterleitung. Konfigurieren Sie eigenes SMTP und beide versionierten Bestätigungs-/Wiederherstellungsvorlagen. Bestätigung verwendet `token_hash` und `type=signup`. Verlangen Sie mindestens acht Zeichen mit Kleinbuchstaben, Großbuchstaben und Ziffern und aktivieren Sie TOTP-Einrichtung und -Prüfung. Aktivieren Sie kompromittierte Passwortprüfung, soweit unterstützt, und dokumentieren Sie Anbietergrenzen. Das full-Overlay verweigert bei Prüfungsfehlern den Zugriff und benötigt ausgehenden Zugang zu `api.pwnedpasswords.com`. Erfassen Sie Sitzungsdauer, Refresh-Token-Rotation, Widerruf und Auth-Ratenlimits; SQL-Bootstrap setzt diese Plattformwerte nicht.
+Setzen Sie in Authentication Ihres eigenen Projekts Site URL und genau `<app-origin>/auth/callback` als Weiterleitung. Konfigurieren Sie eigenes SMTP und beide versionierten Bestätigungs-/Wiederherstellungsvorlagen. Bestätigung verwendet `token_hash` und `type=signup`. Verlangen Sie mindestens acht Zeichen mit Kleinbuchstaben, Großbuchstaben und Ziffern und aktivieren Sie TOTP-Einrichtung und -Prüfung. Aktivieren Sie kompromittierte Passwortprüfung, soweit unterstützt, und dokumentieren Sie Anbietergrenzen. Das full-Overlay verweigert bei Prüfungsfehlern den Zugriff und benötigt ausgehenden Zugang zu `api.pwnedpasswords.com`. Setzen Sie die maximale Sitzungsdauer auf 8760 Stunden (ein Jahr) und das Inaktivitäts-Timeout auf 720 Stunden (30 Tage). Die Datenbank weist Sitzungen jenseits genau dieser Grenzen ab; eine deaktivierte oder längere Auth-Grenze erneuert daher weiter Sitzungen, die anschließend jede API ablehnt. Erfassen Sie Sitzungsdauer, Refresh-Token-Rotation, Widerruf und Auth-Ratenlimits; SQL-Bootstrap setzt diese Plattformwerte nicht.
 
 ## Ergebnis überprüfen {#verify}
 

@@ -223,8 +223,8 @@
       "id": "page-file-preview",
       "kind": "screenshot",
       "src": "/documentation/it/file-preview.png",
-      "alt": "Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica e Rimuovi.",
-      "caption": "Il visualizzatore condiviso colloca Chiudi sotto l’anteprima. Il menu Azioni del file offre Scarica e, con i permessi necessari, Rimuovi.",
+      "alt": "Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica, Rinomina e Rimuovi.",
+      "caption": "Il visualizzatore condiviso colloca Chiudi sotto l’anteprima. Il menu Azioni del file offre Scarica e, con i permessi necessari, Rinomina e Rimuovi.",
       "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-12",
@@ -254,7 +254,7 @@ Le pagine formano la wiki del progetto, con documenti, sottopagine, file e discu
 
 ## Costruire un wiki di progetto {#create-and-organize-pages}
 
-Apri Pagine in un progetto di cui sei membro. Usa il menu + e scegli una pagina per un documento o un database per un elenco strutturato. Dai alla pagina un titolo utile e scrivi la specifica, decisione o procedura che deve conservare.
+Apri Pagine in un progetto come proprietario o come Membro; i lettori possono aprire le pagine ma non crearne. Usa il menu + e scegli una pagina per un documento o un database per un elenco strutturato. Dai alla pagina un titolo utile e scrivi la specifica, decisione o procedura che deve conservare.
 
 Crea sottopagine per documenti correlati e usa i controlli dell’albero per spostarle o riordinarle. Una pagina non può diventare discendente di sé stessa. Duplicare una pagina crea nuovi contenuti, non un riferimento aggiornato all’originale. Controlla il ramo duplicato prima di modificarlo o condividerlo.
 
@@ -280,7 +280,7 @@ A differenza di un’attività del taccuino portata nel progetto, la pagina non 
 
 ## Scrivere una pagina con blocchi e menzioni {#page-editor}
 
-Apri la pagina e modifica titolo o corpo come proprietario o come Membro. I lettori possono aprire e leggere le pagine, ma non possono modificarle, importarle, duplicarle, aggiungerle ai preferiti o pubblicarle, né ripristinarne una versione. Usa il menu dei comandi con barra e i controlli di formattazione per inserire titoli, paragrafi, elenchi, attività, codice, sezioni espandibili e riquadri informativi. Un riquadro può avere un’icona emoji e un colore della palette; sceglili per distinguere informazioni utili, non come unico modo di comunicare un avviso.
+Apri la pagina e modifica titolo o corpo come proprietario o come Membro. I lettori possono aprire e leggere le pagine, ma non possono modificarle, importarle, duplicarle, aggiungerle ai preferiti o pubblicarle, né ripristinarne una versione. Usa il menu dei comandi con barra e i controlli di formattazione per inserire titoli, testo, elenchi puntati, numerati e di attività, citazioni, riquadri informativi, blocchi di codice, divisori, sezioni espandibili, sottopagine, immagini e file. Un riquadro può avere un’icona emoji e un colore della palette; sceglili per distinguere informazioni utili, non come unico modo di comunicare un avviso.
 
 Usa le menzioni per collegare ticket, obiettivi, persone o pagine pertinenti. Digita `@` seguito da un identificativo, da parole del titolo o da una breve descrizione; una ricerca descrittiva mostra anche ticket trovati [per significato](/docs/navigation#search-by-meaning) sotto **Correlati per significato**, dopo le corrispondenze testuali. I rimandi inversi aiutano i lettori a trovare pagine che citano quella attuale. Un collegamento fornisce contesto, non accesso a un oggetto privato di un altro progetto.
 
@@ -318,9 +318,9 @@ Apri la pagina come membro del progetto e usa i controlli di allegato o caricame
 
 Le immagini possono essere inserite come blocchi immagine e gli altri documenti allegati come blocchi file. Il server determina il tipo di contenuto salvato dai byte, senza fidarsi del nome del file o dell’etichetta del browser. L’accettazione del caricamento non garantisce un’anteprima nella pagina per ogni formato; scarica il file quando l’anteprima non è disponibile.
 
-Nell’editor del progetto, fai clic su un’immagine o sul nome di un blocco file supportato per aprire lo stesso visualizzatore a tutta finestra usato dagli allegati dei ticket. Markdown (`.md`), testo semplice (`.txt`, `.text`), CSV, PDF e formati audio o video supportati si aprono in contenitori dedicati. Usa Chiudi o Escape per tornare alla pagina. Il menu Azioni del file (`…`) offre Scarica; Rimuovi è disponibile solo nelle pagine modificabili e rimuove il blocco dal documento. Il blocco file mantiene anche il comando diretto Scarica. I formati non supportati, i collegamenti a file esterni e i blocchi file nelle pagine pubblicate mantengono il comportamento di download. Le immagini pubblicate usano il visualizzatore senza l’azione di rimozione.
+Nell’editor del progetto, fai clic su un’immagine o sul nome di un blocco file supportato per aprire lo stesso visualizzatore a tutta finestra usato dagli allegati dei ticket. Markdown (`.md`), testo semplice (`.txt`, `.text`), CSV, PDF e formati audio o video supportati si aprono in contenitori dedicati. Usa Chiudi o Escape per tornare alla pagina. Il menu Azioni del file (`…`) offre Scarica. In una pagina modificabile, un blocco file offre anche Rinomina, che cambia il nome mostrato nella pagina, e immagini e file offrono Rimuovi: chiede conferma, rimuove il blocco dal documento e puoi annullarlo nell’editor. Il blocco file mantiene anche il comando diretto Scarica. I formati non supportati, i collegamenti a file esterni e i blocchi file nelle pagine pubblicate mantengono il comportamento di download. Le immagini pubblicate usano il visualizzatore senza l’azione di rimozione.
 
-![Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica e Rimuovi.](/documentation/it/file-preview.png)
+![Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica, Rinomina e Rimuovi.](/documentation/it/file-preview.png)
 
 Verifica che il file compaia nella pagina e aprilo o scaricalo. I dati del file risiedono in Storage, mentre i metadati di pagina e file ne determinano l’accesso. Un salvataggio riuscito della pagina non dimostra da solo che i dati del file siano disponibili.
 

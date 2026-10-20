@@ -128,7 +128,7 @@ A navegação principal dá acesso ao seu trabalho pessoal e aos seus projetos. 
 
 Contadores e alertas acompanham você entre os níveis. O controle que volta para a **Página inicial** mostra o total para triagem nos projetos listados na **Página inicial**, incluindo o atual, e o alerta do Smart Assign quando um dos seus projetos não tem regras. Uma linha de retorno mostra o contador do nível para onde ela volta. Dentro de um projeto, **Triagem** e **Feedback** mantêm os contadores desse projeto. As abas do app para desktop exibem o mesmo selo da entrada correspondente na barra lateral: o alerta na **Página inicial** e os contadores em **Caixa de entrada**, **Revisão de código** e em **Triagem** e **Feedback** de um projeto, atualizados mesmo quando a aba está em segundo plano.
 
-Os ciclos pessoais e as visualizações entre projetos abrangem os projetos aos quais você tem acesso. Objetivos, wiki e feedback de um projeto pertencem a um único projeto. Confira o projeto ativo antes de criar trabalho ou alterar configurações.
+Os ciclos pessoais e as visualizações entre projetos abrangem os projetos aos quais você tem acesso. Objetivos, páginas e feedback de um projeto pertencem a um único projeto. Confira o projeto ativo antes de criar trabalho ou alterar configurações.
 
 ![Navegação do projeto ao lado do quadro de tickets de demonstração.](/documentation/pt-BR/work-navigation.png)
 
@@ -146,11 +146,9 @@ A ação se aplica à linha em que você clicou, mesmo quando outro projeto ou i
 
 ### Painéis e navegação no celular {#panels}
 
-No celular, uma barra de carregamento na parte superior indica que a navegação está em andamento, inclusive enquanto os salvamentos pendentes da página são concluídos.
-
 Um problema abre em um painel de detalhes para manter o quadro disponível ao fundo. O Numo abre pelo botão flutuante em um painel de conversa compartilhado. A caixa de entrada abre como um painel popover da navegação com notificações e convites. Os antigos links para telas da caixa de entrada e do Numo levam aos pontos de acesso atuais; essas telas separadas não existem mais.
 
-No celular, abra o menu lateral de navegação para escolher os mesmos destinos. Os painéis usam a largura disponível, então feche ou volte do painel atual para ver a lista novamente. Use os botões visíveis quando um atalho de teclado não estiver disponível.
+No celular, abra o menu lateral de navegação para escolher os mesmos destinos. Uma barra de carregamento na parte superior indica que a navegação está em andamento, inclusive enquanto os salvamentos pendentes da página são concluídos. Os painéis usam a largura disponível, então feche ou volte do painel atual para ver a lista novamente. Use os botões visíveis quando um atalho de teclado não estiver disponível.
 
 ### Abas do desktop {#tabs}
 
@@ -158,9 +156,7 @@ O aplicativo desktop acrescenta abas nativas e um seletor de servidor ao redor d
 
 ## Encontrar trabalho e usar ações de teclado {#search-and-shortcuts}
 
-O comando Documentação abre o manual público no seu idioma atual.
-
-Abra a paleta de comandos pelo controle de pesquisa da navegação. Pesquise um título distintivo ou um identificador de problema e escolha um resultado. Os resultados se limitam ao trabalho que sua conta pode acessar; saber um identificador não concede acesso a outro projeto.
+Abra a paleta de comandos pelo controle de pesquisa da navegação. Pesquise um título distintivo ou um identificador de problema e escolha um resultado. Os resultados se limitam ao trabalho que sua conta pode acessar; saber um identificador não concede acesso a outro projeto. O comando Documentação abre o manual público no seu idioma atual.
 
 Pressione Command+K no macOS ou Ctrl+K no Windows/Linux para abrir a paleta de comandos; Command/Ctrl+P é um atalho alternativo do aplicativo. Fora de texto editável, ? abre a ajuda de atalhos e C abre a criação de problemas. Em um cartão de problema sob o ponteiro ou nos controles de detalhe compatíveis, S abre o estado, P a prioridade, E o esforço, A o responsável, L as categorias, D o prazo e O o objetivo. R adiciona uma relação nos mesmos lugares, na página de um objetivo e no formulário de novo problema: escolha o tipo de relação e depois o outro problema ou objetivo. Essas ações de uma tecla não interceptam a digitação em campos, áreas de texto ou editores de conteúdo. Sequências de navegação como G e depois H (Início) ou G e depois I (Caixa de entrada) usam duas teclas sucessivas. G e depois W leva a Páginas apenas no contexto de um projeto.
 

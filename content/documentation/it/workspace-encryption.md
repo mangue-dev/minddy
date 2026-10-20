@@ -91,7 +91,7 @@
 
 ## Configurare cifratura e conservare le chiavi {#workspace-encryption}
 
-Le opzioni `--encryption` del programma di installazione e del bootstrap descritte qui appartengono agli strumenti del candidato 0.11.1 identificato. I programmi pubblicati con v0.11.0 non le accettano.
+Le opzioni `--encryption` del programma di installazione e del bootstrap descritte qui sono incluse negli strumenti di questa release. Il programma di installazione e il bootstrap di v0.11.0 non le accettano.
 
 Il runtime di quella versione riconosce `MINDDY_CONTENT_ENCRYPTION_ENABLED`; il servizio Compose di riferimento carica il file protetto tramite `env_file`. Dopo una modifica esplicita del flag devi quindi ricreare il servizio dell’applicazione con lo stesso ambiente e verificare lo schema e il comportamento effettivo. Una chiave `MINDDY_DATA_ROOT_KEY` generata non dimostra che il contenuto dello spazio sia cifrato. Usa strumenti e configurazione corrispondenti, verificati esplicitamente per la versione scelta, prima di accogliere utenti o modificare un’istanza esistente.
 

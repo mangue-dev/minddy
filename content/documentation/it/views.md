@@ -112,7 +112,7 @@ Parti dal tabellone di un progetto o da un elenco personale di ticket tra proget
 
 Filtra per proprietà supportate, come stato, assegnatario, priorità, categorie o obiettivo. Ordina il risultato per rendere chiara la prossima azione. Nel kanban, i ticket restano raggruppati per stato; cambiare una vista non ne modifica stato o assegnazione. Senza un proprio filtro di stato, un tabellone mostra solo **Backlog**, **Da fare**, **In corso** e **In revisione**. Seleziona **Fatto** o **Annullata** nel filtro **Stato** per mostrare queste colonne; una vista conserva il filtro di stato salvato con essa.
 
-Salva la vista con un nome che ne descriva lo scopo, selezionala di nuovo dalla navigazione e verifica i filtri. Modifica o rimuovi la vista salvata quando cambia il suo scopo. Condividere una vista è un’operazione di pubblicazione separata con proprie regole di permessi e revoca.
+Salva la vista con un nome che ne descriva lo scopo, selezionala di nuovo nella barra delle viste in cima al tabellone (un menu su uno schermo stretto) e verifica i filtri. Modifica o rimuovi la vista salvata quando cambia il suo scopo. **Cancella vista** chiede una conferma, e un tabellone conserva sempre almeno una vista propria. Condividere una vista è un’operazione di pubblicazione separata con proprie regole di permessi e revoca.
 
 ![Filtri manuali di una vista e menu di ordinamento.](/documentation/it/work-view-filters.png)
 

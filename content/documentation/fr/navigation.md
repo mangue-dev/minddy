@@ -128,7 +128,7 @@ La navigation principale donne accès au travail personnel et aux projets. Séle
 
 Les compteurs et les alertes vous suivent d’un niveau à l’autre. Le contrôle qui ramène à l’**Accueil** affiche le total à trier dans les projets que liste l’**Accueil**, projet courant compris, ainsi que l’alerte Smart Assign quand l’un de vos projets manque de règles. Une ligne de retour affiche le compteur du niveau vers lequel elle remonte. Dans un projet, **Triage** et **Retours** gardent les compteurs propres à ce projet. Les onglets de l’app de bureau portent le même badge que leur entrée de la barre latérale : l’alerte sur l’**Accueil**, et les compteurs sur **Inbox**, **Code review**, ainsi que **Triage** et **Retours** d’un projet, mis à jour même quand l’onglet est en arrière-plan.
 
-Les cycles personnels et les vues transversales couvrent les projets accessibles à votre compte. Les objectifs, le wiki et les retours appartiennent à un projet précis. Vérifiez le projet actif avant de créer du travail ou de modifier ses réglages.
+Les cycles personnels et les vues transversales couvrent les projets accessibles à votre compte. Les objectifs, les pages et les retours appartiennent à un projet précis. Vérifiez le projet actif avant de créer du travail ou de modifier ses réglages.
 
 ![Navigation du projet à côté du tableau de tickets de démonstration.](/documentation/fr/work-navigation.png)
 
@@ -146,11 +146,9 @@ L’action s’applique à la ligne sur laquelle vous avez cliqué, même lorsqu
 
 ### Panneaux et navigation mobile {#panels}
 
-Sur mobile, une barre de chargement en haut indique qu’un changement de page est en cours, y compris pendant la fin des enregistrements en attente.
-
 Un ticket s’ouvre dans un panneau de détail qui laisse le tableau sous-jacent disponible. Le bouton flottant Numo ouvre le panneau commun de conversations. La boîte de réception est un volet de navigation avec notifications et invitations. Les anciens liens vers des pages dédiées Numo ou Inbox renvoient vers les accès actuels ; ils n’indiquent pas des écrans distincts.
 
-Sur mobile, ouvrez le tiroir de navigation pour atteindre les mêmes destinations. Les panneaux utilisent la largeur disponible ; fermez le panneau ou revenez en arrière pour retrouver la liste. Utilisez les boutons visibles lorsqu’aucun raccourci clavier n’est disponible.
+Sur mobile, ouvrez le tiroir de navigation pour atteindre les mêmes destinations. Une barre de chargement en haut indique qu’un changement de page est en cours, y compris pendant la fin des enregistrements en attente. Les panneaux utilisent la largeur disponible ; fermez le panneau ou revenez en arrière pour retrouver la liste. Utilisez les boutons visibles lorsqu’aucun raccourci clavier n’est disponible.
 
 ### Onglets desktop {#tabs}
 
@@ -158,9 +156,7 @@ L’application desktop ajoute des onglets natifs et un sélecteur de serveur. U
 
 ## Retrouver le travail et agir au clavier {#search-and-shortcuts}
 
-La commande Documentation ouvre le manuel public dans votre langue actuelle.
-
-Ouvrez la palette de commandes depuis la recherche de navigation. Cherchez un titre distinctif ou un identifiant de ticket, puis choisissez un résultat. La recherche couvre le travail accessible au compte ; connaître un identifiant n’ouvre pas un autre projet.
+Ouvrez la palette de commandes depuis la recherche de navigation. Cherchez un titre distinctif ou un identifiant de ticket, puis choisissez un résultat. La recherche couvre le travail accessible au compte ; connaître un identifiant n’ouvre pas un autre projet. La commande Documentation ouvre le manuel public dans votre langue actuelle.
 
 Utilisez Commande+K sur macOS ou Ctrl+K sur Windows/Linux pour ouvrir la palette ; Commande/Ctrl+P constitue une autre combinaison de l’application. Hors d’un champ de texte, ? ouvre l’aide des raccourcis et C la création de ticket. Sur une carte survolée ou les commandes de détail compatibles, S ouvre l’état, P la priorité, E l’effort, A le responsable, L les catégories, D l’échéance et O l’objectif. R ajoute une relation depuis les mêmes endroits, sur la page d’un objectif et dans le formulaire de nouveau ticket : choisissez le type de relation, puis l’autre ticket ou objectif. Ces touches seules n’interceptent pas la saisie dans un champ, une zone de texte ou un éditeur. Les séquences G puis H (Accueil) et G puis I (Boîte de réception) utilisent deux touches successives ; G puis W ouvre les pages uniquement dans le contexte d’un projet.
 

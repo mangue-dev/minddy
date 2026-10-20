@@ -183,15 +183,14 @@ Une installation publique exige un proxy TLS et une redirection HTTP vers HTTPS.
 
 ### Fournir une planification authentifiée {#schedules}
 
-Les profils Compose de référence démarrent leur planificateur et génèrent `CRON_SECRET`. Un déploiement personnalisé depuis les sources doit fournir un planificateur HTTP équivalent. Chaque requête envoie `Authorization: Bearer <CRON_SECRET>` ; une valeur vide ou incorrecte retourne 401. Ne journalisez pas cet en-tête. Les horaires candidats ci-dessous sont en UTC. Utilisez l’ensemble de la version déployée : les routes peuvent évoluer avec l’application.
+Les profils Compose de référence démarrent leur planificateur et génèrent `CRON_SECRET`. Un déploiement personnalisé depuis les sources doit fournir un planificateur HTTP équivalent. Chaque requête envoie `Authorization: Bearer <CRON_SECRET>` ; une valeur vide ou incorrecte retourne 401. Ne journalisez pas cet en-tête. Les horaires ci-dessous sont en UTC et appartiennent à cette version. Utilisez l’ensemble de la version déployée : les routes peuvent évoluer avec l’application.
 
 
-Le scheduler publié en v0.11.0 n’inclut pas `numo-turns`. Le scheduler candidat a été corrigé pour l’appeler chaque minute. Le tableau décrit ce planning candidat corrigé ; ne supposez pas que ce job existe dans un déploiement v0.11.0 intact.
+Par rapport au scheduler de la v0.11.0, cette version ajoute `numo-turns`, `forge-relay-maintenance`, `page-materialization` et `issue-index`, et n’appelle plus `/api/cron/agent-drain` ni `/api/cron/automations`, retirés avec le travail de code de Numo et les automatisations de projet. Un scheduler personnalisé copié depuis la v0.11.0 doit être mis à jour selon ce tableau.
 
 | Endpoint | Horaire (UTC) |
 | --- | --- |
 | `/api/cron/feedback-analysis` | `0 * * * *` |
-| `/api/cron/agent-drain` | `*/2 * * * *` |
 | `/api/cron/numo-turns` | `* * * * *` |
 | `/api/cron/forge-relay-deliveries` | `* * * * *` |
 | `/api/cron/forge-relay-maintenance` | `35 * * * *` |

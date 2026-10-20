@@ -80,7 +80,7 @@
 
 ## Configurer et remplir votre cycle {#personal-cycle}
 
-Activez les cycles dans Réglages du compte → Cycles, puis ouvrez Cycle depuis la navigation personnelle. Il appartient à votre compte et peut contenir des tickets qui vous sont assignés dans les projets dont vous êtes propriétaire ou Membre. Un lecteur ne peut pas recevoir d’assignation : un projet que vous ne faites que lire n’apporte donc aucun travail. Ce n’est pas un sprint de projet et il n’appartient pas à un objectif d’équipe.
+Activez les cycles dans **Paramètres du compte** → **Cycles**, ou avec **Activer les cycles** dans l’onglet **Cycle**. Ouvrez cet onglet dans la barre des vues de **Tous les tickets**, ou cherchez Cycle dans la palette de commandes ; l’onglet **Cycle** d’un tableau de projet, marqué d’une flèche, mène au même cycle personnel. Il appartient à votre compte et peut contenir des tickets qui vous sont assignés dans les projets dont vous êtes propriétaire ou Membre. Un lecteur ne peut pas recevoir d’assignation : un projet que vous ne faites que lire n’apporte donc aucun travail. Ce n’est pas un sprint de projet et il n’appartient pas à un objectif d’équipe.
 
 Choisissez une durée d’une ou deux semaines, le jour de début, un à quatre cycles à venir et une intensité légère, moyenne ou élevée. Ces réglages définissent votre période personnelle et sa capacité cible. Les options de capture automatique déterminent si les tickets qui vous sont attribués entrent dans le cycle courant lorsqu’ils démarrent ou se terminent.
 
@@ -90,6 +90,6 @@ Le cycle courant est rempli automatiquement une fois à partir du travail éligi
 
 ## Terminer ou ajuster la période {#cycle-results}
 
-Mettez à jour les états des tickets et comparez le travail terminé au travail restant. Au changement de période, les tickets éligibles non terminés des anciens cycles passent automatiquement dans le cycle courant, en gardant leur responsable. Ce report ne les marque pas comme terminés. Le sélecteur de dates permet de consulter les cycles passés et à venir : ces vues sont en lecture seule, tandis que le cycle courant permet les modifications.
+Mettez à jour les états des tickets et comparez le travail terminé au travail restant. Au changement de période, les tickets éligibles non terminés des anciens cycles passent automatiquement dans le cycle courant, en gardant leur responsable. Ce report ne les marque pas comme terminés. Quand tous les tickets du cycle courant sont clos, un bandeau **Cycle complété** propose **Remplir le cycle** pour ajouter du travail éligible ; le cycle n’est pas rempli automatiquement en cours de période. Le sélecteur de dates permet de consulter les cycles passés et à venir : ces vues sont en lecture seule, tandis que le cycle courant permet les modifications.
 
 Si un prérequis est ajouté au cycle courant pour garder des dépendances cohérentes, examinez la raison avant de le retirer. Un ticket disparu après sa clôture peut rester visible dans le travail terminé ou par son identifiant. Les réglages de votre cycle concernent votre planification, pas le cycle personnel d’un autre membre.

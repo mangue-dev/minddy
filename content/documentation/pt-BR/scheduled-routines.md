@@ -108,6 +108,6 @@ Clique com o botão direito em uma rotina da lista para abrir a última execuç�
 
 Cada execução usa o orçamento de IA do proprietário com limite padrão de 15 % do orçamento mensal, incluindo todas as chamadas ao Numo dessa execução. Abra a conversa para ver origem, resultado e perguntas. Quando sua resposta for necessária, responda nessa conversa; o orçamento restante é mantido. Consulte os resultados salvos antes de mudar o limite ou tentar novamente. Quando a propriedade é [transferida](/docs/projects#transfer-ownership), as rotinas do antigo proprietário no projeto são pausadas e não podem iniciar novo trabalho; o novo proprietário cria as rotinas que devem continuar.
 
-As automações arquivadas aparecem como propostas pausadas quando o proprietário abre Rotinas. Leia o [guia de transição](/docs/automation-settings) antes de ativá-las.
+As automações de projeto de versões anteriores não são mais executadas e não são convertidas em rotinas. Leia o [guia de transição](/docs/automation-settings) para recriar um fluxo como rotina.
 
 O limite vale quando há orçamento mensal incluído; o modo sem limite com chave pessoal não recebe um orçamento mensal artificial.

@@ -132,7 +132,7 @@ Ein unbestätigter oder nicht erreichbarer Schlüssel kann unterstützte allgeme
 
 ### Lokale Modelle {#models}
 
-Lokales Ollama und OpenAI-kompatible Endpunkte können bei entsprechender Konfiguration Konversationen über die Desktop-Brücke bedienen. Routinen laufen auf dem Server und können kein Modell auf Ihrem Computer erreichen. Verwenden Sie für sie einen vom Server erreichbaren Anbieter. Entfernen Sie einen nicht mehr benötigten Anbieter über seine Bestätigung und prüfen Sie vor dem nächsten Lauf die neue Zuordnung.
+Minddy ruft KI-Modelle vom Server aus auf und kann daher kein Modell nutzen, das auf Ihrem Computer läuft. **Anbieter hinzufügen** bietet weder lokales Ollama noch lokale OpenAI-kompatible Endpunkte an. Ein in einer früheren Version gespeicherter lokaler Endpunkt erscheint weiterhin unter **Verbundene Anbieter**, kann aber weder Numo-Konversationen noch Routinen oder andere Funktionen bedienen. Entfernen Sie ihn und weisen Sie stattdessen einen vom Server erreichbaren Anbieter zu. Entfernen Sie einen nicht mehr benötigten Anbieter über seine Bestätigung und prüfen Sie vor dem nächsten Lauf die neue Zuordnung.
 
 
 ## Cloud-Tarife und KI-Verbrauch verstehen {#plans-and-ai-usage}
@@ -147,9 +147,9 @@ Das enthaltene KI-Kontingent umfasst Numos Reasoning und Werkzeugaufrufe, Routin
 
 Kompatible persönliche Schlüssel lassen Modellaufrufe beim Anbieter abrechnen, statt das enthaltene KI-Kontingent zu verbrauchen. Nicht zugeordnete Familien oder Bereiche, deren Aufrufe minddy finanziert, bleiben an ihr minddy-Kontingent gebunden. Self-Hosting hat von der Installation abhängige Infrastruktur- und optionale Anbieterkosten. Derselbe Anwendungskern macht daraus kein Cloud-Abonnement.
 
-### Kapazität der Kandidatenversion {#plan-capacities}
+### Kapazitäten der Tarife {#plan-capacities}
 
-Diese Standardwerte beschreiben den identifizierten Kandidaten 0.11.1. Prüfen Sie vor einem Kauf die tatsächliche Preisseite und Ihr Konto. Konfigurierte Zahlungspreise und Kontoausnahmen können abweichen. Die Gästezahl schließt den Projekteigentümer aus und umfasst Mitglieder, Leser und ausstehende Einladungen; eine Abrechnung pro Platz gibt es nicht. Speicher wird dem Eigentümer des Projekts angerechnet, das die Dateien erhält. Wird das Eigentum übertragen, richten sich diese Limits, der Speicher und Hintergrund-KI wie Smart Assign und die Feedback-Prüfung nach dem Tarif des neuen Eigentümers.
+Diese Standardwerte beschreiben Minddy 0.20.0. Prüfen Sie vor einem Kauf die tatsächliche Preisseite und Ihr Konto. Konfigurierte Zahlungspreise und Kontoausnahmen können abweichen. Die Gästezahl schließt den Projekteigentümer aus und umfasst Mitglieder, Leser und ausstehende Einladungen; eine Abrechnung pro Platz gibt es nicht. Speicher wird dem Eigentümer des Projekts angerechnet, das die Dateien erhält. Wird das Eigentum übertragen, richten sich diese Limits, der Speicher und Hintergrund-KI wie Smart Assign und die Feedback-Prüfung nach dem Tarif des neuen Eigentümers.
 
 | Tarif | Projekte | Tickets pro Projekt | Gäste pro Projekt | Speicher | Enthaltene monatliche KI (USD) |
 | --- | --- | --- | --- | --- | --- |

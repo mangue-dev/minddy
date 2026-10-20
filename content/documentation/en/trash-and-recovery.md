@@ -78,7 +78,7 @@
 
 Open Trash from the account menu. It contains recoverable deleted work, including supported issues, objectives, feedback, routines, projects and pages. Check the item type, deletion time and remaining retention shown in the interface before choosing restore.
 
-Restore the required parent or container first when the item depends on one. For example, restore a deleted database before an entry deleted separately from it. Reopen the restored destination and inspect its content and properties. Deleted items remain recoverable for 30 days before retention removes them permanently. Only the project owner can restore or permanently remove a project or routine. Project members can restore or remove the other supported project objects while they retain access.
+Restore the required parent or container first when the item depends on one. For example, restore a deleted database before an entry deleted separately from it. Reopen the restored destination and inspect its content and properties. Deleted items remain recoverable for 30 days before retention removes them permanently. Only the project owner can restore or permanently remove a project or routine. The owner and Members can restore or remove the other supported project objects while they retain access. A Reader cannot change a project, so items from a project you only read do not appear in your trash.
 
 ![Recoverable demonstration issue with thirty days remaining in trash.](/documentation/en/reader-trash.png)
 

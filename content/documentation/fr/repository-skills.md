@@ -74,7 +74,7 @@
 
 Numo lit les fichiers `SKILL.md` dans les sous-dossiers de `.agents/skills`, `.claude/skills`, `.github/skills`, `.cursor/skills`, `.codex/skills` et `.gemini/skills`, dans cet ordre de priorité. Le nom et la description du frontmatter identifient le skill ; scripts et références peuvent rester à côté.
 
-Commitez et poussez ces fichiers dans le dépôt GitHub ou GitLab lié. Choisissez la référence du dépôt appropriée si nécessaire. Les fichiers uniquement locaux sont indisponibles. La liste s’actualise à l’ouverture de la conversation ou au changement de projet.
+Commitez et poussez ces fichiers sur la branche par défaut du dépôt GitHub ou GitLab lié : Numo lit les skills depuis cette branche. Les fichiers présents uniquement sur votre ordinateur ou sur une autre branche sont indisponibles. La liste s’actualise à l’ouverture de la conversation ou au changement de projet.
 
 ## Sélectionner et examiner {#selection}
 

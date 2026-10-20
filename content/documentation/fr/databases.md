@@ -204,9 +204,9 @@ Une base de données associe un tableau de propriétés typées à une page comp
 
 ## Créer une base et ses colonnes {#create-a-database}
 
-La zone de configuration d’une nouvelle base propose deux cartes : demander à Numo de préparer la structure ou importer une base existante. Son bouton de fermeture comporte une infobulle et masque ces suggestions ; la modification manuelle reste disponible.
+La zone de configuration d’une nouvelle base propose deux cartes : **Créer avec Numo** pour préparer la structure, et **Importer une base existante**. Son bouton de fermeture, intitulé **Masquer l’aide à la création**, masque ces suggestions ; la modification manuelle reste disponible.
 
-Comme membre, ouvrez les pages, utilisez + et choisissez une base de données. Elle commence avec le nom des entrées, sans colonne optionnelle. Sa bannière propose une création avec Numo ou l’import d’une base existante. La configuration manuelle reste disponible sans IA. Choisir la création avec Numo ouvre une demande préparée avec cette base comme contexte de page, après confirmation de sa création. Relisez et envoyez la demande pour décrire la structure souhaitée ; ouvrir la conversation ne termine pas la configuration. Le travail IA nécessite un fournisseur configuré et un budget disponible ou une clé personnelle compatible. Inspectez le schéma et les entrées obtenus avant de vous y fier.
+Comme propriétaire ou Membre du projet, ouvrez les pages, utilisez + et choisissez une base de données. Elle commence avec le nom des entrées, sans colonne optionnelle. Sa bannière propose une création avec Numo ou l’import d’une base existante. La configuration manuelle reste disponible sans IA. Choisir **Créer avec Numo** ouvre une demande préparée avec cette base comme contexte de page, après confirmation de sa création. Relisez et envoyez la demande pour décrire la structure souhaitée ; ouvrir la conversation ne termine pas la configuration. Le travail IA nécessite un fournisseur configuré et un budget disponible ou une clé personnelle compatible. Inspectez le schéma et les entrées obtenus avant de vous y fier.
 
 Ouvrez Colonnes et ajoutez une colonne, ou utilisez + à droite du tableau. Nommez-la et choisissez Texte, Nombre, Sélection, Sélection multiple, Date de création, Date, Personnes ou Case à cocher. Utilisez la recherche du sélecteur pour retrouver un type. Enregistrez, ajoutez une entrée et vérifiez la colonne dans la liste et la page d’entrée.
 
@@ -280,7 +280,7 @@ Les agents modifient le schéma avec la révision courante et un jeton de prévi
 
 ## Importer une base et le contenu de ses entrées {#import-a-database}
 
-Créez une base sans colonnes optionnelles ni entrées. Depuis sa bannière, choisissez l’import d’une base existante. Envoyez un ZIP Notion Markdown & CSV avec sous-pages, un CSV de base ou une archive minddy. Si l’archive contient plusieurs bases, choisissez celle à importer.
+Créez une base sans colonnes optionnelles ni entrées. Depuis sa bannière, choisissez **Importer une base existante**. Envoyez un ZIP Notion Markdown & CSV avec sous-pages, un CSV de base ou une archive minddy. Si l’archive contient plusieurs bases, choisissez celle à importer.
 
 Vérifiez noms et types suggérés, puis le nombre de pages avant confirmation. Numo peut proposer les types à partir d’un petit échantillon si l’assistance est configurée ; la correspondance manuelle reste disponible. Une propriété source non prise en charge reste du texte. Les valeurs incompatibles bloquent l’import au lieu d’être effacées silencieusement.
 

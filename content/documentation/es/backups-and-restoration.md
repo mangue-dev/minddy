@@ -194,7 +194,7 @@ Los bloques siguientes con `SUPABASE_COMPOSE_DIR`, `docker compose`, `supabase.e
 
 ### Bloquear escrituras y exportar SQL {#outage}
 
-Cierre la aplicación, los workers, el planificador y la API pública de Supabase. Detener solo el servidor web deja abiertas las escrituras de PostgREST y Storage. Defina `SUPABASE_DB_URL` de forma privada y elija una `BACKUP_DIR` nueva y cifrada. Exporte SQL con las herramientas de la versión instalada. Compruebe que todos los archivos SQL tienen contenido y que `data.sql` incluye las instrucciones `COPY` para `auth.users`, `storage.objects` y las tablas de la aplicación. La exportación habitual omite el historial de migraciones, por lo que sus dos exportaciones separadas son obligatorias. Conserve también las políticas gestionadas de Storage y Realtime.
+Cierre la aplicación, los workers, el planificador y la API pública de Supabase. Detener solo el servidor web deja abiertas las escrituras de PostgREST y Storage. Defina `SUPABASE_DB_URL` de forma privada, `FROM_TAG` con la etiqueta de la versión instalada actualmente y elija una `BACKUP_DIR` nueva y cifrada. Exporte SQL con las herramientas de la versión instalada. Compruebe que todos los archivos SQL tienen contenido y que `data.sql` incluye las instrucciones `COPY` para `auth.users`, `storage.objects` y las tablas de la aplicación. La exportación habitual omite el historial de migraciones, por lo que sus dos exportaciones separadas son obligatorias. Conserve también las políticas gestionadas de Storage y Realtime.
 
 ```bash
 set -euo pipefail

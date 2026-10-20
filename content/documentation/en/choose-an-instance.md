@@ -81,7 +81,7 @@ For example, a team without database operations capacity can use Cloud. An opera
 
 A supported self-hosted installation needs the application and Supabase with PostgreSQL, Auth, Storage and Realtime. PostgreSQL alone is insufficient. Use a tagged release and its compatibility matrix. Unpinned derivative Supabase stacks and self-managed GitHub Enterprise or GitLab adapters are outside the supported contract.
 
-AI, email, Git, push notifications and analytics depend on configuration. Self-hosting does not require Stripe, PostHog, a minddy-managed AI key or a Cloud account. Missing optional configuration is reported rather than replaced silently with a provider. Personal AI keys and local AI endpoints are possible choices; their availability and costs depend on the configured capability.
+AI, email, Git, push notifications and analytics depend on configuration. Self-hosting does not require Stripe, PostHog, a minddy-managed AI key or a Cloud account. Missing optional configuration is reported rather than replaced silently with a provider. Personal AI keys and, in the desktop app, local AI endpoints are possible choices; their availability and costs depend on the configured capability.
 
 Review provider permissions and data terms before enabling an integration. Git connections may use the managed forge relay when you explicitly start the integration; operator-owned provider applications and relay opt-out are also available. Core feature access is not a separate reduced self-hosted tier.
 

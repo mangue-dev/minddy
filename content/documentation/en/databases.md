@@ -204,9 +204,9 @@ A database combines a table of typed properties with a full page for each entry.
 
 ## Create a database and its columns {#create-a-database}
 
-The new-database setup area offers two cards: ask Numo to prepare the structure or import an existing database. Its close control has a tooltip and dismisses these suggestions; manual editing remains available.
+The new-database setup area offers two cards: **Create with Numo** to prepare the structure, and **Import an existing database**. Its close control, labeled **Dismiss database setup**, dismisses these suggestions; manual editing remains available.
 
-As a project member, open Pages, use + and choose a database. A new database has its entry name and no optional columns. Its new-database banner offers setup with Numo or importing an existing database. Manual setup remains available without AI. Choosing setup with Numo opens a prepared request with this database as page context, after its creation has settled. Review and send that request to ask for the structure you need; merely opening the conversation does not complete the setup. Actual AI work needs a configured provider and available usage or a compatible personal key. Inspect the resulting schema and entries before relying on them.
+As the project owner or a Member, open Pages, use + and choose a database. A new database has its entry name and no optional columns. Its new-database banner offers setup with Numo or importing an existing database. Manual setup remains available without AI. Choosing **Create with Numo** opens a prepared request with this database as page context, after its creation has settled. Review and send that request to ask for the structure you need; merely opening the conversation does not complete the setup. Actual AI work needs a configured provider and available usage or a compatible personal key. Inspect the resulting schema and entries before relying on them.
 
 Open Columns and choose Add column, or use the + column at the table's right edge. Name the column and choose Text, Number, Select, Multi-select, Created at, Date, People or Checkbox. Use the searchable type picker to find it. Save, add an entry and verify that the column appears in the table and entry page.
 
@@ -280,7 +280,7 @@ Agent schema edits use the current database revision and a conversion preview to
 
 ## Import a database with its entry content {#import-a-database}
 
-Create a database with no optional columns or existing entries. From its new-database banner, choose import an existing database. Upload a Notion Markdown & CSV ZIP with subpages, a database CSV or a minddy database archive. If the archive contains several databases, select the one to import.
+Create a database with no optional columns or existing entries. From its new-database banner, choose **Import an existing database**. Upload a Notion Markdown & CSV ZIP with subpages, a database CSV or a minddy database archive. If the archive contains several databases, select the one to import.
 
 Review suggested column names and types, then the page count, before confirming. Numo can suggest types from a small sample when import assistance is configured; manual mapping remains available. Unsupported source properties stay as text. Incompatible values block import rather than being silently cleared.
 

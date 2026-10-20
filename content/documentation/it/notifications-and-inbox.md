@@ -77,14 +77,20 @@
 
 ## Leggere la posta in arrivo {#notifications-and-inbox}
 
-Apri la posta in arrivo dalla navigazione. È un pannello a comparsa che raggruppa le notifiche per data e offre filtri per non lette, tutte e menzioni. Seleziona un elemento per esaminare il ticket o la pagina sottostante e controlla lo stato di lettura. Aprire una notifica la contrassegna come letta. Puoi anche segnarla come letta o non letta dalla sua riga, oppure segnare tutte le notifiche come lette dal pannello. Segnarla come non letta cambia solo l’indicatore: non annulla la modifica al ticket o alla pagina. Apri il contenuto collegato per consultarne lo stato attuale.
+Apri la posta in arrivo con la sua icona nella barra superiore, dalla sua riga nella barra laterale su telefono oppure premendo G e poi I fuori da un campo di testo. Un contatore rosso sull’icona somma le notifiche non lette e gli inviti in attesa; una PWA installata mostra lo stesso numero sull’icona dell’app. La posta in arrivo si apre in un pannello a comparsa, o in un foglio su telefono, e raggruppa le notifiche sotto Oggi, Ieri e Prima.
 
-Gli inviti ai progetti in attesa compaiono anche qui. Accetta o rifiuta dopo aver controllato progetto e account. I vecchi collegamenti alla posta in arrivo aprono il punto di accesso attuale, non una pagina separata.
+Si apre sul filtro Non letto. Tutti mostra anche le notifiche lette, e Menzioni mantiene solo le menzioni nei commenti e nelle pagine. Seleziona un elemento per aprire il ticket, la pagina o la pull request sottostante. Aprire una notifica la contrassegna come letta. La sua riga offre anche Segna come leggi o Segna come non letto, e Marca tutto come letto, nell’intestazione della posta in arrivo, rimuove tutti gli indicatori di non letto. Segnarla come non letta cambia solo l’indicatore: non annulla la modifica al ticket o alla pagina. Apri il contenuto collegato per consultarne lo stato attuale.
+
+Cancella, su una riga, elimina quella notifica dopo una conferma, e Cancella lettura, nell’intestazione, elimina tutte le notifiche lette dopo una conferma. Entrambe le eliminazioni sono definitive; le notifiche non lette restano, e il ticket, la pagina o la pull request a cui punta una notifica non vengono toccati.
+
+Gli inviti ai progetti in attesa compaiono sotto Inviti nei filtri Non letto e Tutti. Accetta o rifiuta dopo aver controllato il progetto e chi ti invita. I vecchi collegamenti alla posta in arrivo aprono il punto di accesso attuale, non una pagina separata.
 
 ![Posta in arrivo con menzioni, assegnazioni e commenti dimostrativi, letti e non letti.](/documentation/it/work-inbox.png)
 
 ## Scegliere i canali di notifica {#notification-preferences}
 
-Apri le preferenze di notifica dell’account per regolare quali attività ricevi. La consegna tramite browser, PWA o desktop richiede anche registrazione del dispositivo e permesso del sistema operativo. Disabilitare un canale del dispositivo è diverso dal cambiare i filtri di attività nell’applicazione.
+Scegli Impostazioni inbox nell’intestazione della posta in arrivo, oppure apri Impostazioni account e la scheda Notifiche. In Notifiche di posta, un interruttore per categoria (Assegnazione, Menzioni, Osservazioni, Numo, Routine, Pulisci le richieste, Feedback e Pagine) decide cosa arriva nella tua posta in arrivo. Disattivare una categoria interrompe le future notifiche di quel tipo, inclusi i relativi avvisi push; non rimuove le notifiche già ricevute.
+
+La sezione Notifiche push della stessa scheda elenca i dispositivi che ricevono avvisi. La consegna tramite browser, PWA o desktop richiede anche registrazione del dispositivo e permesso del sistema operativo. Disattivare o rimuovere un dispositivo interrompe gli avvisi solo su quel dispositivo; la posta in arrivo e le sue categorie non cambiano.
 
 Se una notifica porta a contenuti non disponibili, verifica se l’appartenenza al progetto è cambiata o l’oggetto è stato eliminato. Se mancano notifiche push, controlla permesso e registrazione nella [sezione sulle notifiche del dispositivo](/it/documentazione/applications#devices-and-notifications); la posta in arrivo resta utile per consultare l’attività. Non inviare mai cookie di sessione o contenuti privati di notifiche in schermate diagnostiche.

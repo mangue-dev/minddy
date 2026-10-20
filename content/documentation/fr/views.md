@@ -112,7 +112,7 @@ Partez du tableau d’un projet ou d’une surface personnelle transversale. Uti
 
 Filtrez selon les propriétés disponibles, comme état, responsable, priorité, catégories ou objectif. Classez les résultats pour clarifier la prochaine action. En kanban, les tickets restent regroupés par état ; modifier la vue ne modifie ni leurs états ni leurs affectations. Sans filtre d’état qui lui soit propre, un tableau n’affiche que **Backlog**, **À faire**, **En cours** et **En revue**. Sélectionnez **Terminé** ou **Annulé** dans le filtre **Statut** pour afficher ces colonnes ; une vue conserve le filtre d’état enregistré avec elle.
 
-Enregistrez la vue avec un nom qui décrit son usage, sélectionnez-la de nouveau dans la navigation et vérifiez ses filtres. Modifiez-la ou supprimez-la lorsque son usage change. Pour les permissions de publication et la révocation, consultez le [partage d’une vue](#share-a-view).
+Enregistrez la vue avec un nom qui décrit son usage, sélectionnez-la de nouveau dans la barre des vues en haut du tableau (un menu sur un écran étroit) et vérifiez ses filtres. Modifiez-la ou supprimez-la lorsque son usage change. **Supprimer la vue** demande une confirmation, et un tableau garde toujours au moins une vue qui lui est propre. Pour les permissions de publication et la révocation, consultez le [partage d’une vue](#share-a-view).
 
 ![Filtres manuels d’une vue et menu de classement.](/documentation/fr/work-view-filters.png)
 

@@ -78,7 +78,7 @@
 
 Ouvrez la corbeille depuis le menu du compte. Elle contient le travail supprimé récupérable : tickets, objectifs, retours, routines, projets et pages pris en charge. Vérifiez type, date et délai restant affichés avant de restaurer.
 
-Restaurez d’abord le parent ou conteneur nécessaire. Par exemple, restaurez la base de données avant une entrée supprimée séparément. Ouvrez ensuite la destination et inspectez contenu et propriétés. Les objets supprimés restent récupérables pendant 30 jours, avant leur suppression définitive par la rétention. Seul le propriétaire peut restaurer ou supprimer définitivement un projet ou une routine. Les membres peuvent agir sur les autres objets pris en charge du projet tant qu’ils y ont accès.
+Restaurez d’abord le parent ou conteneur nécessaire. Par exemple, restaurez la base de données avant une entrée supprimée séparément. Ouvrez ensuite la destination et inspectez contenu et propriétés. Les objets supprimés restent récupérables pendant 30 jours, avant leur suppression définitive par la rétention. Seul le propriétaire peut restaurer ou supprimer définitivement un projet ou une routine. Le propriétaire et les Membres peuvent restaurer ou supprimer les autres objets pris en charge du projet tant qu’ils y ont accès. Un Lecteur ne peut pas modifier un projet : les éléments d’un projet que vous ne faites que lire n’apparaissent donc pas dans votre corbeille.
 
 ![Ticket de démonstration récupérable avec trente jours restants dans la corbeille.](/documentation/fr/reader-trash.png)
 

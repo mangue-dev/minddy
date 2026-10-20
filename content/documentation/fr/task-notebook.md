@@ -91,7 +91,9 @@ Ouvrez le carnet depuis les commandes personnelles, ou utilisez Commande+Maj+K s
 
 Pour retrouver une tâche, ouvrez la palette de commandes avec Commande+K sur macOS ou Ctrl+K sur Windows/Linux et tapez des mots de la tâche. Les tâches restant à faire apparaissent sous **Carnet de tâches**, avec leur section ; les tâches terminées ou annulées et les questions n’y figurent pas. Choisissez-en une pour ouvrir le carnet sur cette tâche. Tant que vous n’avez rien tapé, la palette ne liste pas les tâches du carnet.
 
-Le carnet utilise le même éditeur que les pages du projet, avec les mêmes poignées de bloc : survolez un bloc pour le déplacer, ouvrir son menu ou ajouter un bloc avec **+**. Tapez `/` pour insérer une tâche, proposée en premier, ou un titre, une liste, une citation, un **Encadré**, un bloc de code, un **Dépliant** ou un séparateur, ou choisissez **Dicter une tâche** pour énoncer vos tâches à voix haute. Le carnet reste enregistré en Markdown : Numo et les agents connectés lisent les mêmes tâches et les mêmes états. Sélectionnez du texte pour le mettre en forme ou ajouter un lien, et collez ou déposez une image pour l’insérer dans une note. Les autres types de fichiers vont dans les pages.
+Le carnet utilise le même éditeur que les pages du projet, avec les mêmes poignées de bloc : survolez un bloc pour le déplacer, ouvrir son menu ou ajouter un bloc avec **+**. Tapez `/` pour insérer une tâche, proposée en premier, ou un titre, une liste, une citation, un **Encadré**, un bloc de code, un **Dépliant** ou un séparateur, ou choisissez **Dicter une tâche** pour énoncer vos tâches à voix haute. Le carnet reste enregistré en Markdown : Numo et les agents connectés lisent les mêmes tâches et les mêmes états. Sélectionnez du texte pour le mettre en forme ou ajouter un lien. Collez ou déposez une image, ou choisissez **Image** dans le menu `/`, pour l’insérer dans une note. Les autres types de fichiers vont dans les pages.
+
+Le menu **Actions du carnet** (`…`) propose **Tout copier en prompt**, qui copie tout le carnet pour votre propre agent de code, et **Retirer les tâches terminées et annulées**. Le retrait demande une confirmation, supprime les tâches terminées et annulées avec les titres qu’elles laissent vides, et conserve les tâches à faire ou en cours. Pour copier moins, utilisez la commande **Copier la section en prompt** d’un titre ou **Copier en prompt** d’une tâche. Si **Démarrer le ticket ou la tâche quand je copie son prompt** est activé dans **Paramètres du compte** → **Tickets**, la copie passe aussi en cours les tâches en attente copiées.
 
 Le carnet est privé, contrairement au wiki d’un projet. Choisissez une page pour les informations à partager avec des collègues. Numo peut lire ou modifier le carnet à votre demande ; l’adhésion d’un autre membre au projet n’en fait pas un document partagé.
 
@@ -101,9 +103,9 @@ Le carnet est privé, contrairement au wiki d’un projet. Choisissez une page p
 
 La promotion utilise Numo et nécessite un budget IA disponible ou une clé personnelle compatible.
 
-1. Ouvrez le menu de la tâche et choisissez sa promotion. Le carnet se ferme et Numo s’ouvre avec une demande préparée contenant la tâche et ses sous-tâches.
+1. Ouvrez le menu de la tâche et choisissez **Promouvoir en ticket**. Le carnet se ferme et Numo s’ouvre avec une demande préparée contenant la tâche et ses sous-tâches.
 2. Vérifiez le projet de destination. Le projet courant est utilisé si vous en consultez un ; depuis un écran global, précisez-le dans la conversation.
 3. Relisez et envoyez la demande. Ouvrir la conversation seul ne crée pas de ticket.
-4. Après que Numo a annoncé la création, ouvrez le ticket et vérifiez son identifiant, son périmètre et ses propriétés. Vérifiez que le contexte de la tâche a été conservé et ajoutez les conditions de réalisation manquantes.
+4. Après que Numo a annoncé la création, ouvrez le ticket et vérifiez son identifiant, son périmètre et ses propriétés. Vérifiez que le contexte de la tâche a été conservé et ajoutez les conditions de réalisation manquantes. La demande préparée invite aussi Numo à retirer la tâche du carnet une fois le ticket créé : cherchez-la donc dans le ticket plutôt que dans le carnet.
 
 Après un échec ou un résultat réseau incertain, cherchez le ticket avant une nouvelle promotion. Gardez les autres sections intactes lorsque vous demandez une modification à Numo et vérifiez qu’il a modifié la bonne case plutôt que remplacé tout le carnet.

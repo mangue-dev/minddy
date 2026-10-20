@@ -81,7 +81,7 @@ Ein Team ohne Kapazität für den Datenbankbetrieb kann beispielsweise Cloud nut
 
 Eine unterstützte Installation benötigt die Anwendung sowie Supabase mit PostgreSQL, Auth, Storage und Realtime. PostgreSQL allein reicht nicht aus. Verwende ein Release-Tag und dessen Kompatibilitätsmatrix. Nicht fest versionierte Supabase-Abwandlungen sowie selbst verwaltete GitHub-Enterprise- oder GitLab-Adapter liegen außerhalb des unterstützten Vertrags.
 
-KI, E-Mail, Git, Push-Benachrichtigungen und Nutzungsanalyse hängen von der Konfiguration ab. Selbsthosting erfordert weder Stripe noch PostHog, einen von minddy verwalteten KI-Schlüssel oder ein Cloud-Konto. Fehlende optionale Konfiguration wird gemeldet und nicht stillschweigend durch einen Anbieter ersetzt. Eigene KI-Schlüssel und lokale KI-Endpunkte sind mögliche Optionen; Verfügbarkeit und Kosten hängen von der eingerichteten Funktion ab.
+KI, E-Mail, Git, Push-Benachrichtigungen und Nutzungsanalyse hängen von der Konfiguration ab. Selbsthosting erfordert weder Stripe noch PostHog, einen von minddy verwalteten KI-Schlüssel oder ein Cloud-Konto. Fehlende optionale Konfiguration wird gemeldet und nicht stillschweigend durch einen Anbieter ersetzt. Eigene KI-Schlüssel und, in der Desktop-App, lokale KI-Endpunkte sind mögliche Optionen; Verfügbarkeit und Kosten hängen von der eingerichteten Funktion ab.
 
 Prüfe vor dem Aktivieren einer Integration die Berechtigungen und Datenbedingungen des Anbieters. Git-Verbindungen können den verwalteten Forge-Relay nutzen, wenn du die Integration ausdrücklich startest; eigene Anbieteranwendungen und das Abschalten des Relays sind ebenfalls möglich. Selbsthosting ist keine abgespeckte Stufe für Kernfunktionen.
 

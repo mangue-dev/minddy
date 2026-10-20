@@ -111,4 +111,4 @@ Uma página publicada ou visualização compartilhada usa um link opaco, que pod
 
 ## Testar compartilhamento e revogação {#revocation}
 
-Abra o link em uma sessão separada sem login e confira conteúdo, arquivos e exclusões. Revogue-o e repita o teste. Cópias já baixadas não podem ser recolhidas; as URLs assinadas dos arquivos continuam válidas até expirar, por 24 horas nas páginas. Os links secretos mantêm `noindex`, enquanto o centro de documentação pode ser indexado. `noindex` orienta os rastreadores e não controla acesso. Não inclua links privados em relatórios ou exemplos públicos.
+Abra o link em uma sessão separada sem login e confira conteúdo, arquivos e exclusões. Revogue-o e repita o teste. Cópias já baixadas não podem ser recolhidas; as URLs assinadas dos arquivos continuam válidas até expirar, e as URLs de arquivos emitidas para uma página publicada duram 24 horas. Os links secretos mantêm `noindex`, enquanto o centro de documentação pode ser indexado. `noindex` orienta os rastreadores e não controla acesso. Não inclua links privados em relatórios ou exemplos públicos.

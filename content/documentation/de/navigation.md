@@ -128,7 +128,7 @@ Die Hauptnavigation führt zu deiner persönlichen Arbeit und deinen Projekten. 
 
 Zähler und Warnungen begleiten dich zwischen den Ebenen. Das Element, das zur **Startseite** zurückführt, zeigt die Gesamtzahl der Elemente zur Triage in den Projekten, die die **Startseite** auflistet, einschließlich des aktuellen, sowie die Smart-Assign-Warnung, wenn einem deiner Projekte Regeln fehlen. Eine Zurück-Zeile zeigt den Zähler der Ebene, zu der sie zurückführt. Innerhalb eines Projekts behalten **Triage** und **Feedback** die Zähler dieses Projekts. Die Tabs der Desktop-App tragen dasselbe Badge wie ihr Eintrag in der Seitenleiste: die Warnung auf der **Startseite** und die Zähler auf **Posteingang**, **Code-Review** sowie **Triage** und **Feedback** eines Projekts, auch wenn der Tab im Hintergrund ist.
 
-Persönliche Zyklen und projektübergreifende Ansichten umfassen Projekte, auf die du zugreifen kannst. Ziele, Wiki und Feedback eines Projekts gehören zu einem einzelnen Projekt. Prüfe das aktive Projekt, bevor du Arbeit erstellst oder Einstellungen änderst.
+Persönliche Zyklen und projektübergreifende Ansichten umfassen Projekte, auf die du zugreifen kannst. Ziele, Seiten und Feedback eines Projekts gehören zu einem einzelnen Projekt. Prüfe das aktive Projekt, bevor du Arbeit erstellst oder Einstellungen änderst.
 
 ![Projektnavigation neben dem Demo-Ticketboard.](/documentation/de/work-navigation.png)
 
@@ -146,11 +146,9 @@ Die Aktion gilt für die Zeile, auf die du geklickt hast, auch wenn gerade ein a
 
 ### Panels und mobile Navigation {#panels}
 
-Auf Mobilgeräten zeigt eine Ladeleiste am oberen Rand die laufende Navigation an, auch während ausstehende Seitenspeicherungen abgeschlossen werden.
-
 Ein Problem öffnet sich in einem Detailpanel, damit das darunterliegende Board verfügbar bleibt. Numo öffnet über seine schwebende Schaltfläche ein gemeinsames Gesprächspanel. Der Posteingang öffnet sich als Navigations-Popover mit Benachrichtigungen und Einladungen. Ältere eigene Posteingangs- und Numo-Links führen zu den aktuellen Einstiegspunkten; sie bezeichnen keine gesonderten aktuellen Bildschirme.
 
-Öffne auf dem Smartphone die Navigationsleiste, um dieselben Ziele auszuwählen. Panels nutzen die verfügbare Bildschirmbreite. Schließe das aktuelle Panel oder gehe zurück, um wieder die Liste zu sehen. Verwende sichtbare Schaltflächen, wenn ein Tastenkürzel nicht verfügbar ist.
+Öffne auf dem Smartphone die Navigationsleiste, um dieselben Ziele auszuwählen. Eine Ladeleiste am oberen Rand zeigt die laufende Navigation an, auch während ausstehende Seitenspeicherungen abgeschlossen werden. Panels nutzen die verfügbare Bildschirmbreite. Schließe das aktuelle Panel oder gehe zurück, um wieder die Liste zu sehen. Verwende sichtbare Schaltflächen, wenn ein Tastenkürzel nicht verfügbar ist.
 
 ### Desktop-Tabs {#tabs}
 
@@ -158,9 +156,7 @@ Die Desktop-App ergänzt die Anwendung um native Tabs und eine Serverauswahl. Ei
 
 ## Arbeit finden und Tastaturaktionen verwenden {#search-and-shortcuts}
 
-Der Befehl Dokumentation öffnet das öffentliche Handbuch in Ihrer aktuellen Sprache.
-
-Öffne die Befehlspalette über die Suchfunktion der Navigation. Suche nach einem eindeutigen Titel oder einer Problemkennung und wähle ein Ergebnis. Ergebnisse sind auf Arbeit beschränkt, auf die dein Konto zugreifen kann; eine bekannte Kennung gewährt keinen Zugriff auf ein anderes Projekt.
+Öffne die Befehlspalette über die Suchfunktion der Navigation. Suche nach einem eindeutigen Titel oder einer Problemkennung und wähle ein Ergebnis. Ergebnisse sind auf Arbeit beschränkt, auf die dein Konto zugreifen kann; eine bekannte Kennung gewährt keinen Zugriff auf ein anderes Projekt. Der Befehl Dokumentation öffnet das öffentliche Handbuch in deiner aktuellen Sprache.
 
 Drücke Command+K unter macOS oder Strg+K unter Windows/Linux, um die Befehlspalette zu öffnen; Command/Strg+P ist ein alternatives Anwendungskürzel. Außerhalb bearbeitbarer Texte öffnet ? die Kürzelhilfe und C die Problemerstellung. Auf einer Problemkarte unter dem Mauszeiger oder an den unterstützten Detailfunktionen öffnet S den Status, P die Priorität, E den Aufwand, A die zuständige Person, L die Kategorien, D das Fälligkeitsdatum und O das Ziel. R fügt an denselben Stellen, auf der Seite eines Ziels und im Formular für ein neues Problem eine Beziehung hinzu: Wähle die Beziehungsart und dann das andere Problem oder Ziel. Diese Einzelbuchstaben unterbrechen keine Eingabe in einem Eingabefeld, Textbereich oder Inhaltseditor. Navigationsfolgen wie G, dann H (Startseite) und G, dann I (Posteingang) verwenden zwei nacheinander gedrückte Tasten. G, dann W führt nur innerhalb eines Projekts zu den Seiten.
 

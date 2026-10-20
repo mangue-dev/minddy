@@ -74,7 +74,7 @@
 
 Numo legge `SKILL.md` nelle sottocartelle di `.agents/skills`, `.claude/skills`, `.github/skills`, `.cursor/skills`, `.codex/skills` e `.gemini/skills`, in questo ordine di priorità. Nome e descrizione nel frontmatter identificano la skill; script e riferimenti possono essere accanto.
 
-Esegui commit e push nel repository GitHub o GitLab collegato. Scegli il riferimento corretto quando necessario. I file solo locali non sono disponibili. L’elenco si aggiorna quando apri la conversazione o cambi progetto.
+Esegui commit e push sul branch predefinito del repository GitHub o GitLab collegato; Numo legge le skill da quel branch. I file presenti solo sul tuo computer o su un altro branch non sono disponibili. L’elenco si aggiorna quando apri la conversazione o cambi progetto.
 
 ## Selezionare e controllare {#selection}
 

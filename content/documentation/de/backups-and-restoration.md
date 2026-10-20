@@ -190,7 +190,7 @@ Erfassen Sie bei providerverwaltetem Supabase Projekt, Datenbankversion, Backup-
 
 ### Schreiben sperren und SQL exportieren {#outage}
 
-Schließen Sie Anwendung, Worker, Scheduler und öffentliche Supabase-API. Stoppen allein der Anwendung lässt direkte PostgREST-/Storage-Schreibzugriffe zu. Setzen Sie `SUPABASE_DB_URL` privat und `BACKUP_DIR` auf ein neues verschlüsseltes Ziel. Exportieren Sie SQL mit Werkzeugen der gewählten Version. Alle SQL-Dateien müssen Inhalt haben; `data.sql` muss `COPY`-Abschnitte für `auth.users`, `storage.objects` und Anwendungstabellen enthalten. Der normale Schemaexport lässt Migrationshistorie aus, deshalb sind beide separaten Exporte zwingend. Erhalten Sie verwaltete Storage-/Realtime-Richtlinien.
+Schließen Sie Anwendung, Worker, Scheduler und öffentliche Supabase-API. Stoppen allein der Anwendung lässt direkte PostgREST-/Storage-Schreibzugriffe zu. Setzen Sie `SUPABASE_DB_URL` privat, `FROM_TAG` auf das Tag der aktuell installierten Release und `BACKUP_DIR` auf ein neues verschlüsseltes Ziel. Exportieren Sie SQL mit Werkzeugen der gewählten Version. Alle SQL-Dateien müssen Inhalt haben; `data.sql` muss `COPY`-Abschnitte für `auth.users`, `storage.objects` und Anwendungstabellen enthalten. Der normale Schemaexport lässt Migrationshistorie aus, deshalb sind beide separaten Exporte zwingend. Erhalten Sie verwaltete Storage-/Realtime-Richtlinien.
 
 ```bash
 set -euo pipefail

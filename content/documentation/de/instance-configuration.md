@@ -183,15 +183,14 @@ Unterstützt werden GitHub.com und GitLab.com, nicht Enterprise Server oder selb
 
 ### Authentifizierte Zeitpläne bereitstellen {#schedules}
 
-Referenz-Compose startet den Scheduler und erzeugt `CRON_SECRET`. Eigene Quellcodebereitstellungen brauchen einen gleichwertigen HTTP-Scheduler. Jede Anfrage sendet `Authorization: Bearer <CRON_SECRET>`; ein leeres oder falsches Geheimnis ergibt 401. Protokollieren Sie den Header nicht. Die folgenden Kandidatenzeitpläne verwenden UTC. Verwenden Sie den Satz der installierten Version, denn Pfade können sich ändern.
+Referenz-Compose startet den Scheduler und erzeugt `CRON_SECRET`. Eigene Quellcodebereitstellungen brauchen einen gleichwertigen HTTP-Scheduler. Jede Anfrage sendet `Authorization: Bearer <CRON_SECRET>`; ein leeres oder falsches Geheimnis ergibt 401. Protokollieren Sie den Header nicht. Die folgenden Zeitpläne verwenden UTC und gehören zu dieser Version. Verwenden Sie den Satz der installierten Version, denn Pfade können sich ändern.
 
 
-Der veröffentlichte Scheduler von v0.11.0 enthält `numo-turns` nicht. Im Kandidaten wurde der Scheduler um einen Aufruf pro Minute ergänzt. Die Tabelle beschreibt den korrigierten Kandidaten; nehmen Sie diesen Job bei einer unveränderten Installation von v0.11.0 nicht an.
+Gegenüber dem Scheduler von v0.11.0 fügt diese Version `numo-turns`, `forge-relay-maintenance`, `page-materialization` und `issue-index` hinzu und ruft `/api/cron/agent-drain` und `/api/cron/automations` nicht mehr auf; beide wurden mit Numos Codearbeit und den Projektautomatisierungen entfernt. Ein aus v0.11.0 kopierter eigener Scheduler muss an diese Tabelle angepasst werden.
 
 | Endpunkt | Zeitplan (UTC) |
 | --- | --- |
 | `/api/cron/feedback-analysis` | `0 * * * *` |
-| `/api/cron/agent-drain` | `*/2 * * * *` |
 | `/api/cron/numo-turns` | `* * * * *` |
 | `/api/cron/forge-relay-deliveries` | `* * * * *` |
 | `/api/cron/forge-relay-maintenance` | `35 * * * *` |

@@ -66,7 +66,7 @@ pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
 
 ## Associare sintomi e controlli {#symptoms}
 
-Se dopo un ripristino ricevi molti 401, verifica che JWT, chiavi anon e service-role appartengano allo stesso stack. Per upload falliti o 404 confronta policy, record, byte e chiavi. Se mancano relazioni, conserva il primo errore di migrazione e controlla spazio, lock e URL del database; ripeti il bootstrap dopo aver corretto la causa. Non segnare manualmente come applicate migrazioni fallite. Per Realtime controlla publication, JWT, WebSocket e log. Per cron inattivo o 401 verifica in privato scheduler, origine e `CRON_SECRET`.
+Se dopo un ripristino ricevi molti 401, verifica che JWT, chiavi anon e service-role appartengano allo stesso stack. Per upload falliti o 404 confronta policy, record, byte e chiavi. Se mancano relazioni, conserva il primo errore di migrazione e controlla spazio, lock e URL del database; ripeti il bootstrap dopo aver corretto la causa. Non segnare manualmente come applicate migrazioni fallite. Per Realtime controlla publication, JWT, WebSocket e log. Per cron inattivo o 401 verifica in privato scheduler, origine e `CRON_SECRET`. Se il controllo di compatibilità della versione fallisce, confronta `MINDDY_RELEASE` con una voce di `deploy/self-hosted/compatibility.json` e `MINDDY_IMAGE` con quella voce o con il digest immutabile verificato. Il programma di installazione copia `MINDDY_RELEASE` dal modello di distribuzione.
 
 ## Preservare il recupero {#recovery}
 
@@ -74,9 +74,9 @@ Correggi Docker, CLI o valori API e ripeti l’installer idempotente mantenendo 
 
 
 
-Se il primo download si interrompe con un lungo log di avanzamento e senza errori del registro, l’installer v0.11.0 può aver superato il buffer di output del sottoprocesso. Nel contesto Compose esatto dell’installazione, `compose pull --quiet` ha funzionato nella prova usa e getta. Ripeti poi lo stesso installer con `--skip-pull` per usare le immagini locali, conservando l’ambiente. Questo non risolve errori del registro né firme non valide.
+Se il primo download si interrompe con un lungo log di avanzamento e senza errori del registro, l’installer v0.11.0 può aver superato il buffer di output del sottoprocesso. Gli installer successivi scaricano in modalità silenziosa con un buffer più ampio e, se l’output lo supera comunque, si fermano con un’istruzione esplicita. In entrambi i casi esegui `compose pull --quiet` nel contesto Compose esatto dell’installazione, poi ripeti lo stesso installer con `--skip-pull` per usare le immagini locali, conservando l’ambiente. Questo non risolve errori del registro né firme non valide.
 
-Se la compilazione offline segnala una versione `jose` diversa dopo l’installazione bloccata, fermati: la release richiede 6.2.3, mentre la dipendenza diretta bloccata risolve 6.2.12. Ottieni una combinazione corretta di release e strumenti prima di accettare l’installazione standard; non allentare silenziosamente il controllo d’identità.
+Se la compilazione offline segnala una versione `jose` diversa, fermati. Gli strumenti di v0.11.0 richiedono 6.2.3, mentre la dipendenza diretta bloccata risolve 6.2.12; ottieni una combinazione corretta di release e strumenti prima di accettare quell’installazione. Nelle release successive il riferimento fissato corrisponde alla dipendenza bloccata, quindi una differenza indica che `pnpm install --frozen-lockfile` non è terminato in quel checkout. Non allentare silenziosamente il controllo d’identità.
 
 
 Anche il runner OCI v0.11.0 non si avvia: `agent-runner-storage.mjs` manca dall’immagine runtime, quindi l’applicazione non diventa mai integra. Le release successive rimuovono questo runner e le sue sandbox di codice. Aggiorna a una di queste release invece di montare file del runner o indebolire l’isolamento dei container.

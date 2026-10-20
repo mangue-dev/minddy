@@ -110,7 +110,7 @@ Amministrare l’istanza è diverso da possedere un progetto. `ADMIN_EMAILS` ele
 
 ## Usare i controlli disponibili {#panels}
 
-La console comprende Panoramica, Utenti, Modelli e, quando disponibile, Finanze. Finanze è nascosto senza OpenRouter gestito; l’assegnazione di un piano dipende dalla fatturazione abilitata o da un override già presente. Aprire la console non aggiunge la fatturazione Cloud a un’istanza self-hosted senza provider commerciali. Controlla modelli, valori predefiniti, utenti e quote nella release installata prima di modificare. I cambiamenti interessano tutta l’istanza: verificali con un account demo.
+La console comprende Panoramica, Utenti, Modelli e, quando disponibile, Finanze. Finanze è nascosto senza OpenRouter gestito; l’assegnazione di un piano dipende dalla fatturazione abilitata o da un override già presente. Aprire la console non aggiunge la fatturazione Cloud a un’istanza self-hosted senza provider commerciali. **Utenti** trova un account solo tramite il suo indirizzo email esatto; aprilo per vedere lo stato di conferma dell’email, consultare o azzerare il budget di utilizzo dell’AI, regalare un piano alla condizione indicata sopra o contrassegnarlo come account interno, che lo esclude da tutte le statistiche. Il pannello non mostra l’attività dell’account né i suoi contenuti personali; apri un account solo per un’attività di supporto o di fatturazione. Controlla modelli, valori predefiniti, utenti e quote nella release installata prima di modificare. I cambiamenti interessano tutta l’istanza: verificali con un account demo.
 
 ## Scegliere il modello di decisione IA {#decision-model}
 

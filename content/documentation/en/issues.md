@@ -338,8 +338,6 @@ An issue tracks a piece of work within a project, from its initial report to com
 
 ## Create and edit an issue {#create-an-issue}
 
-The saved-draft delete control opens a confirmation. Cancel keeps the draft; confirming removes that saved draft. The same confirmation is available when creating an objective.
-
 You need to be the owner or a Member of the destination project; readers can open issues but not create or edit them. Open the project and its new-issue control. Enter a title that names the work, then add the context, expected result and constraints in the description. The form opens on the current project; choose another one in **Create in**, at the top left of the form (next to the **New issue** title on a phone), especially when creating from a personal or cross-project view. On a computer, Command/Ctrl+Shift+P opens that menu, even while you type the title or description; once you choose a project or close the menu, the cursor returns exactly where it was. The pill shows this shortcut, which exists only when more than one project can be chosen; a phone shows no shortcut hint. Changing it clears the categories, objective and relations picked for the previous project. The create button names the identifier the issue will receive, such as `MIN-42`, and follows issues created meanwhile; its menu creates the issue and copies that identifier.
 
 For manual creation, switch Smart-fill off if its button is shown and enabled. This reveals the priority, effort, category, objective and relations controls for you to set. To set only some of these properties, keep Smart-fill on and, outside the title and description, press the property's key: P for priority, E for effort, L for categories or O for objective. Its picker opens, and the value you choose stays visible. Smart-fill only infers the properties you left empty. The switch applies to this issue; reopening the creation form restores its account preference. It is independent of Smart Assign and routines. While Smart-fill is on, it also [links the issue to related issues](#smart-fill-relations) once it is saved, so the relations picker is hidden; R still opens it. Relations you already chose stay visible above the title and are created with the issue.
@@ -348,10 +346,12 @@ Set the useful properties before confirming: status, priority, effort, assignee,
 
 Confirm creation and open the new issue. Check its identifier and project. Reopen its property pickers to change values as the task becomes clearer. The description explains the work; an implementation plan is maintained separately in the Plan tab.
 
+The saved-draft delete control opens a confirmation. Cancel keeps the draft; confirming removes that saved draft. The same confirmation is available when creating an objective.
+
 
 ![Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-19 button.](/documentation/en/new-issue.png)
 
-The description, comments and the new-issue dialog use the same editor as project pages, without the block handles. Type `/` to insert a heading, list, task, quote, **Callout**, code block, **Toggle** or divider, and `@` to mention a person, issue, objective or page. The `@` menu also lists the resources attached to what you are writing: the issue or objective for its description and plan, a comment for its own files, or a creation dialog for the files added in it. A mention of a resource attached elsewhere shows as **Unavailable**. Several people can edit the same description at once: each person's caret appears with their name and color, and changes made by Numo or a connected agent appear as they are saved. Numo, connected agents and CSV exports read the text as Markdown, which follows a few seconds after typing stops. Select text to make it bold, italic, struck through or code, or to add a link. Paste or drop an image to insert it in the description; other kinds of files belong in the issue's resources. A mention points at its target, not at its name: it follows a rename and survives editing and copy-paste into another description, comment, page or the Numo composer. A reader who cannot open the target sees an **Unavailable** mention, without its name or project.
+The description, comments and the new-issue dialog use the same editor as project pages, without the block handles. Type `/` to insert a heading, list, task, quote, **Callout**, code block, **Toggle** or divider, and `@` to mention a person, issue, objective or page. The `@` menu also lists the resources attached to what you are writing: the issue or objective for its description and plan, a comment for its own files, or a creation dialog for the files added in it. A mention of a resource attached elsewhere shows as **Unavailable**. Several people can edit the same description at once: each person's caret appears with their name and color, and changes made by Numo or a connected agent appear as they are saved. Numo, connected agents and CSV exports read the text as Markdown, which follows a few seconds after typing stops. Select text to make it bold, italic, struck through or code, or to add a link. Paste or drop an image, or choose **Image** in the `/` menu, to insert it in the description; other kinds of files belong in the issue's resources. A mention points at its target, not at its name: it follows a rename and survives editing and copy-paste into another description, comment, page or the Numo composer. A reader who cannot open the target sees an **Unavailable** mention, without its name or project.
 
 ### Check saving and visibility {#issue-save}
 
@@ -372,9 +372,9 @@ Turning a switch off also cancels the passes that have not run yet. Numo can cha
 
 ## Review incoming work in triage {#triage-incoming-work}
 
-Use the list filters to narrow incoming tickets by priority, effort, assignee, objective, categories or integration. Choices within one property are alternatives; different properties are combined. Clear the filters to show all incoming tickets again.
-
 Open the project's Triage destination. Read the incoming issue and its source context before accepting it into planned work. Check whether an existing issue already represents the request. Clarify the expected outcome, project, assignee, priority and effort as needed.
+
+Use the list filters to narrow incoming issues by priority, effort, assignee, objective, categories or integration. Choices within one property are alternatives; different properties are combined. Clear the filters to show all incoming issues again.
 
 Choose Accept and confirm to move a retained issue to backlog. Choose Decline and confirm to set it to canceled. For a duplicate, use the duplicate picker to select the retained issue; the incoming issue becomes duplicate and points to that issue. Describing the request in the picker's search also lists similar issues under **Related by meaning**, after the text matches; see [Search issues by meaning](/docs/navigation#search-by-meaning). After an item leaves triage, the next item is selected. Verify the resulting status or duplicate link in the issue itself. Moving between cards without taking one of these actions does not close the issue.
 
@@ -486,7 +486,7 @@ Do not delete a child merely to reorganize the hierarchy. Check existing parent 
 
 ## Maintain an implementation plan {#implementation-plans}
 
-Open the issue's Plan tab. Its description should already state the problem and expected result. Add the implementation steps manually, or ask Numo to inspect the linked repository before proposing a code-level plan. An AI-generated path or function is not evidence unless the repository was actually read.
+Open the issue's Plan tab. Its description should already state the problem and expected result. Add the implementation steps manually, or [copy the **Generate a plan** prompt](#copy-issue-prompt) for your own coding agent, which explores the repository itself. Numo cannot read the repository: it can sharpen the description and, when you ask, write a basic plan, but any file path or function it names is a guess. A path or function in a plan is evidence only when the repository was actually read.
 
 The plan is edited in place, like the description: click in it and type, without an edit mode or a save button. An empty plan shows a placeholder. Several members, Numo and connected agents can edit the same plan at once, each with a named caret, and a task an agent checks appears in your editor while you write elsewhere. Type `- [ ]` followed by a space at the start of a line, or choose **Task list** in the `/` menu, to add a task. Click a task's box to complete it, or open its menu for the other states.
 
@@ -537,7 +537,7 @@ Choose Actions in the floating selection bar to open the command palette. Choose
 
 When working across projects, verify membership in every affected project. Read any partial failure result: successful changes may already be saved even if another issue was rejected. Inspect the result before retrying the entire selection.
 
-Deletion affects every selected item, so confirm the set before proceeding. Clear selection after the operation when you are moving to unrelated work. If filters change as a result of your update, issues can leave the displayed view while remaining in the project. Search identifiers to verify the new state instead of recreating them.
+Deletion affects every selected item, so confirm the set before proceeding. **Move issues to trash** asks for confirmation; the issues, with their comments, files and links, can be restored from the [trash](/docs/trash-and-recovery) for 30 days. Clear selection after the operation when you are moving to unrelated work. If filters change as a result of your update, issues can leave the displayed view while remaining in the project. Search identifiers to verify the new state instead of recreating them.
 
 ## Import a CSV backlog after checking its mapping {#import-issues}
 

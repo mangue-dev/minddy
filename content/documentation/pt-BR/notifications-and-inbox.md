@@ -77,14 +77,20 @@
 
 ## Ler a caixa de entrada {#notifications-and-inbox}
 
-Abra a caixa de entrada pela navegação. Ela é um popover que agrupa notificações por data e oferece filtros de não lidas, todas e menções. Selecione um item para inspecionar o problema ou a página correspondente e confira o estado de leitura. Abrir uma notificação marca-a como lida. Você também pode marcá-la como lida ou não lida pela linha, ou marcar todas como lidas no painel. Marcar como não lida muda apenas o indicador: não desfaz a alteração no problema ou na página. Abra o conteúdo vinculado para consultar seu estado atual.
+Abra a caixa de entrada pelo ícone na barra superior, pela linha dela na barra lateral no celular ou pressionando G e depois I fora de um campo de texto. Um contador vermelho no ícone soma as notificações não lidas e os convites pendentes; um PWA instalado mostra o mesmo número no ícone do aplicativo. A caixa de entrada abre em um popover, ou em uma folha no celular, e agrupa as notificações em Hoje, Ontem e Anteriormente.
 
-Convites pendentes para projetos também aparecem na caixa de entrada. Aceite ou recuse depois de conferir projeto e conta. Links antigos abrem o ponto de acesso atual, não uma página separada.
+Ela abre no filtro Não lidos. Todos mostra também as notificações lidas, e Menções mantém apenas as menções em comentários e páginas. Selecione um item para abrir o problema, a página ou o pull request correspondente. Abrir uma notificação marca-a como lida. A linha também oferece Marcar como lido ou Marcar como não lido, e Marcar tudo como lido, no cabeçalho da caixa de entrada, remove todos os indicadores de não lido. Marcar como não lida muda apenas o indicador: não desfaz a alteração no problema ou na página. Abra o conteúdo vinculado para consultar seu estado atual.
+
+Excluir, em uma linha, remove essa notificação após uma confirmação, e Excluir leitura, no cabeçalho, remove todas as notificações lidas após uma confirmação. As duas exclusões são definitivas; as notificações não lidas permanecem, e o problema, a página ou o pull request para o qual uma notificação aponta não é afetado.
+
+Convites pendentes para projetos aparecem em Convites nos filtros Não lidos e Todos. Aceite ou recuse depois de conferir o projeto e quem convidou você. Links antigos abrem o ponto de acesso atual, não uma página separada.
 
 ![Caixa de entrada com menções, atribuições e comentários de demonstração, lidos e não lidos.](/documentation/pt-BR/work-inbox.png)
 
 ## Escolher canais de notificação {#notification-preferences}
 
-Abra as preferências de notificação da conta para ajustar a atividade recebida. A entrega pelo navegador, PWA ou desktop também exige registro do dispositivo e permissão do sistema operacional. Desabilitar um canal do dispositivo é diferente de mudar os filtros de atividade dentro da aplicação.
+Escolha Configurações da caixa de entrada no cabeçalho da caixa de entrada, ou abra Configurações da conta e a aba Notificações. Em Notificações na caixa de entrada, um interruptor por categoria (Tarefas, Menções, Comentários, Numo, Rotinas, Solicitações pull, Feedback e Páginas) decide o que chega à sua caixa de entrada. Desativar uma categoria interrompe as próximas notificações desse tipo, incluindo os alertas push; isso não remove as notificações já recebidas.
+
+A seção Notificações push na mesma aba lista os dispositivos que recebem alertas. A entrega pelo navegador, PWA ou desktop também exige registro do dispositivo e permissão do sistema operacional. Desativar ou remover um dispositivo interrompe os alertas apenas nesse dispositivo; sua caixa de entrada e suas categorias não mudam.
 
 Se uma notificação levar a conteúdo indisponível, verifique se a participação no projeto mudou ou se o objeto foi excluído. Se notificações push não chegarem, confira permissão e registro na [seção sobre notificações do dispositivo](/pt-br/documentacao/applications#devices-and-notifications); a caixa de entrada continua útil para consultar a atividade. Nunca envie cookies de sessão ou conteúdo privado de notificações em capturas de tela para diagnóstico.

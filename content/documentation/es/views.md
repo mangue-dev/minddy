@@ -112,7 +112,7 @@ Empieza desde un tablero de proyecto o una superficie personal de incidencias en
 
 Filtra por propiedades admitidas, como estado, responsable, prioridad, categorías u objetivo. Ordena el resultado para que la siguiente acción sea clara. En kanban, las incidencias siguen agrupadas por estado; cambiar una vista no modifica su estado ni asignación. Sin un filtro de estado propio, un tablero muestra solo **Registro**, **Pendiente**, **En curso** y **En examen**. Selecciona **Hecho** o **Cancelado** en el filtro **Estado** para mostrar esas columnas; una vista conserva el filtro de estado que guardes con ella.
 
-Guarda la vista con un nombre que describa su propósito, selecciónala de nuevo desde la navegación y verifica sus filtros. Edítala o retírala cuando cambie su propósito. Compartir una vista es una publicación aparte con sus propias reglas de permisos y revocación.
+Guarda la vista con un nombre que describa su propósito, selecciónala de nuevo en la barra de vistas de la parte superior del tablero (un menú en una pantalla estrecha) y verifica sus filtros. Edítala o retírala cuando cambie su propósito. **Borrar vista** pide confirmación, y un tablero conserva siempre al menos una vista propia. Compartir una vista es una publicación aparte con sus propias reglas de permisos y revocación.
 
 ![Filtros manuales de una vista y menú de ordenación.](/documentation/es/work-view-filters.png)
 

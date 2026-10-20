@@ -74,7 +74,7 @@
 
 Numo reads `SKILL.md` files in skill subdirectories under `.agents/skills`, `.claude/skills`, `.github/skills`, `.cursor/skills`, `.codex/skills` and `.gemini/skills`, in that precedence order. The frontmatter name and description identify the skill; supporting scripts and references can sit beside it.
 
-Commit and push these files to the linked GitHub or GitLab repository. Choose the appropriate repository ref when needed. Desktop-only files are unavailable. The skill list refreshes when the conversation opens or its project changes.
+Commit and push these files to the default branch of the linked GitHub or GitLab repository; Numo reads skills from that branch. Files that exist only on your computer or on another branch are unavailable. The skill list refreshes when the conversation opens or its project changes.
 
 ## Select and inspect {#selection}
 

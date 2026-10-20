@@ -181,15 +181,14 @@ Um serviço público exige proxy TLS e redirect de HTTP para HTTPS. As origens m
 
 ### Fornecer agendamento autenticado {#schedules}
 
-Os perfis Compose de referência iniciam o agendador, e o instalador gera `CRON_SECRET`. Uma implantação personalizada a partir do código precisa fornecer um agendador HTTP equivalente. Cada requisição envia `Authorization: Bearer <CRON_SECRET>`; um valor vazio ou errado retorna 401. Não registre esse cabeçalho. Os horários do candidato listados abaixo estão em UTC. Use as rotas da versão instalada, pois elas podem mudar.
+Os perfis Compose de referência iniciam o agendador, e o instalador gera `CRON_SECRET`. Uma implantação personalizada a partir do código precisa fornecer um agendador HTTP equivalente. Cada requisição envia `Authorization: Bearer <CRON_SECRET>`; um valor vazio ou errado retorna 401. Não registre esse cabeçalho. Os horários listados abaixo estão em UTC e pertencem a esta versão. Use as rotas da versão instalada, pois elas podem mudar.
 
 
-O agendador publicado em v0.11.0 não inclui `numo-turns`. O candidato foi corrigido para chamá-lo a cada minuto. A tabela descreve o candidato corrigido; não presuma que esse job exista em uma implantação v0.11.0 intacta.
+Em relação ao agendador da v0.11.0, esta versão acrescenta `numo-turns`, `forge-relay-maintenance`, `page-materialization` e `issue-index` e não chama mais `/api/cron/agent-drain` nem `/api/cron/automations`, removidos junto com o trabalho de código do Numo e as automações de projeto. Um agendador personalizado copiado da v0.11.0 precisa ser atualizado conforme esta tabela.
 
 | Endpoint | Horário (UTC) |
 | --- | --- |
 | `/api/cron/feedback-analysis` | `0 * * * *` |
-| `/api/cron/agent-drain` | `*/2 * * * *` |
 | `/api/cron/numo-turns` | `* * * * *` |
 | `/api/cron/forge-relay-deliveries` | `* * * * *` |
 | `/api/cron/forge-relay-maintenance` | `35 * * * *` |

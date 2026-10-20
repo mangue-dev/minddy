@@ -108,6 +108,6 @@ Haz clic derecho en una rutina de la lista para abrir su última ejecución sin 
 
 Cada ejecución usa el presupuesto de IA del propietario con un límite predeterminado del 15 % del presupuesto mensual, incluidas todas las llamadas a Numo de esa ejecución. Abre su conversación para ver el origen, el resultado y las preguntas. Si necesitas responder, hazlo en esa conversación; se conserva el presupuesto restante. Revisa los resultados guardados antes de cambiar el límite o volver a intentarlo. Cuando se [transfiere la propiedad](/docs/projects#transfer-ownership), las rutinas del propietario anterior en el proyecto se pausan y no pueden iniciar nuevo trabajo; el nuevo propietario crea las rutinas que deban continuar.
 
-Las automatizaciones archivadas aparecen como propuestas pausadas cuando su propietario abre Rutinas. Lee la [guía de transición](/docs/automation-settings) antes de activarlas.
+Las automatizaciones de proyecto de versiones anteriores ya no se ejecutan y no se convierten en rutinas. Lee la [guía de transición](/docs/automation-settings) para recrear un flujo como rutina.
 
 El límite se aplica cuando hay presupuesto mensual incluido; el modo sin límite con clave personal no recibe un presupuesto mensual artificial.

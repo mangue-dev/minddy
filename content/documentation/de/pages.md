@@ -221,8 +221,8 @@
       "id": "page-file-preview",
       "kind": "screenshot",
       "src": "/documentation/de/file-preview.png",
-      "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen und Entfernen.",
-      "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Entfernen.",
+      "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.",
+      "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Umbenennen und Entfernen.",
       "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-12",
@@ -252,7 +252,7 @@ Seiten bilden das Wiki eines Projekts mit Dokumenten, Unterseiten und Datenbanke
 
 ## Ein Projektwiki aufbauen {#create-and-organize-pages}
 
-Öffne den Seitenbereich eines Projekts, dessen Mitglied du bist. Wähle im +-Menü eine Seite für ein Dokument oder eine Datenbank für eine strukturierte Liste. Gib der Seite einen hilfreichen Titel und schreibe die Spezifikation, Entscheidung oder Vorgehensweise, die sie bewahren soll.
+Öffne den Seitenbereich eines Projekts als Eigentümer oder Mitglied; Leser können Seiten öffnen, aber keine erstellen. Wähle im +-Menü eine Seite für ein Dokument oder eine Datenbank für eine strukturierte Liste. Gib der Seite einen hilfreichen Titel und schreibe die Spezifikation, Entscheidung oder Vorgehensweise, die sie bewahren soll.
 
 Erstelle Unterseiten für zusammengehörige Dokumente und verschiebe oder ordne sie mit den Baumfunktionen. Eine Seite darf nicht unter sich selbst eingeordnet werden. Das Duplizieren erzeugt neue Inhalte statt eines aktuellen Verweises auf das Original. Prüfe den Zweig der Kopie vor Bearbeitung oder Freigabe.
 
@@ -278,7 +278,7 @@ Anders als eine übernommene Aufgabe aus dem Aufgabenheft wird die Seite nicht e
 
 ## Eine Seite mit Blöcken und Erwähnungen schreiben {#page-editor}
 
-Öffne die Seite und bearbeite als Eigentümer oder Mitglied Titel oder Inhalt. Leser können Seiten öffnen und lesen, sie aber weder bearbeiten, importieren, duplizieren, zu Favoriten hinzufügen oder veröffentlichen noch eine Version wiederherstellen. Verwende das Slash-Befehlsmenü und die Formatierungsfunktionen für Überschriften, Absätze, Listen, Aufgaben, Code, aufklappbare Abschnitte und Hinweisblöcke. Ein Hinweisblock kann ein Emoji-Symbol und eine Palettenfarbe haben. Unterscheide damit hilfreiche Informationen, ohne eine Warnung allein durch Symbol oder Farbe auszudrücken.
+Öffne die Seite und bearbeite als Eigentümer oder Mitglied Titel oder Inhalt. Leser können Seiten öffnen und lesen, sie aber weder bearbeiten, importieren, duplizieren, zu Favoriten hinzufügen oder veröffentlichen noch eine Version wiederherstellen. Verwende das Slash-Befehlsmenü und die Formatierungsfunktionen für Überschriften, Text, Aufzählungs-, nummerierte und Aufgabenlisten, Zitate, Hinweisblöcke, Codeblöcke, Teiler, Umschalter (aufklappbare Abschnitte), Unterseiten, Bilder und Dateien. Ein Hinweisblock kann ein Emoji-Symbol und eine Palettenfarbe haben. Unterscheide damit hilfreiche Informationen, ohne eine Warnung allein durch Symbol oder Farbe auszudrücken.
 
 Verwende Erwähnungen, um passende Probleme, Ziele, Personen oder Seiten zu verknüpfen. Tippe `@` gefolgt von einer Kennung, Wörtern aus dem Titel oder einer kurzen Beschreibung; eine beschreibende Anfrage listet nach den Textübereinstimmungen auch [inhaltlich gefundene](/docs/navigation#search-by-meaning) Probleme unter **Inhaltlich verwandt** auf. Rückverweise helfen Lesern, Seiten zu finden, die auf die aktuelle Seite verweisen. Ein Link liefert Kontext, gewährt aber keinen Zugriff auf private Objekte eines anderen Projekts.
 
@@ -316,9 +316,9 @@ Ein fehlender Kommentaranker kann durch Dokumentänderungen entstehen. Lies die 
 
 Bilder lassen sich als Bildblöcke einfügen, andere Dokumente als Dateiblöcke anhängen. Der Server ermittelt den gespeicherten Medientyp aus den Dateibytes, statt dem Dateinamen oder der Browserangabe zu vertrauen. Eine akzeptierte Datei hat nicht zwingend eine Vorschau innerhalb der Seite. Lade sie herunter, wenn keine Vorschau verfügbar ist.
 
-Klicken Sie im Projekteditor auf ein Bild oder den Namen eines unterstützten Dateiblocks. Es öffnet sich derselbe fensterfüllende Betrachter wie für Ticketanhänge. Markdown (`.md`), Klartext (`.txt`, `.text`), CSV, PDF sowie unterstützte Audio- und Videoformate werden in eigenen Bereichen angezeigt. Mit Schließen oder Escape kehren Sie zur Seite zurück. Das Menü Dateiaktionen (`…`) bietet Herunterladen. Entfernen ist nur auf einer bearbeitbaren Seite verfügbar und entfernt den Block aus dem Dokument. Der Dateiblock behält außerdem seine direkte Schaltfläche Herunterladen. Nicht unterstützte Formate, externe Dateilinks und Dateiblöcke auf veröffentlichten Seiten behalten ihr Download-Verhalten. Veröffentlichte Bilder verwenden den Betrachter ohne Entfernen-Aktion.
+Klicken Sie im Projekteditor auf ein Bild oder den Namen eines unterstützten Dateiblocks. Es öffnet sich derselbe fensterfüllende Betrachter wie für Ticketanhänge. Markdown (`.md`), Klartext (`.txt`, `.text`), CSV, PDF sowie unterstützte Audio- und Videoformate werden in eigenen Bereichen angezeigt. Mit Schließen oder Escape kehren Sie zur Seite zurück. Das Menü Dateiaktionen (`…`) bietet Herunterladen. Auf einer bearbeitbaren Seite bietet ein Dateiblock außerdem Umbenennen, das den auf der Seite angezeigten Namen ändert, und Bilder wie Dateien bieten Entfernen: Nach einer Bestätigung wird der Block aus dem Dokument entfernt, und Sie können das im Editor rückgängig machen. Der Dateiblock behält außerdem seine direkte Schaltfläche Herunterladen. Nicht unterstützte Formate, externe Dateilinks und Dateiblöcke auf veröffentlichten Seiten behalten ihr Download-Verhalten. Veröffentlichte Bilder verwenden den Betrachter ohne Entfernen-Aktion.
 
-![Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen und Entfernen.](/documentation/de/file-preview.png)
+![Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.](/documentation/de/file-preview.png)
 
 Prüfe, ob die Datei auf der Seite erscheint, und öffne sie oder lade sie herunter. Die Dateidaten liegen in Storage; Seiten- und Dateimetadaten bestimmen den Zugriff. Ein erfolgreiches Speichern der Seite beweist allein nicht, dass die Dateidaten verfügbar sind.
 

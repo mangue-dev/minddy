@@ -77,14 +77,20 @@
 
 ## Den Posteingang lesen {#notifications-and-inbox}
 
-Öffne den Posteingang über die Navigation. Sein Popover gruppiert Benachrichtigungen nach Datum und bietet Filter für ungelesene, alle und Erwähnungen. Wähle einen Eintrag, um das zugrunde liegende Problem oder die Seite zu prüfen, und kontrolliere den Lesestatus. Das Öffnen einer Benachrichtigung markiert sie als gelesen. Ihre Zeile bietet auch Funktionen zum Markieren als gelesen oder ungelesen; im Popover kannst du alle Benachrichtigungen als gelesen markieren. Ungelesen stellt die Aktivitätsmarkierung wieder her, macht aber die zugrunde liegende Änderung am Problem oder an der Seite nicht rückgängig. Eine Benachrichtigung verweist auf zugängliche Arbeit, ersetzt aber nicht deren aktuellen Inhalt.
+Öffne den Posteingang über sein Symbol in der oberen Leiste, auf dem Smartphone über seine Zeile in der Seitenleiste oder mit G und dann I außerhalb eines Textfelds. Eine rote Zahl am Symbol zählt ungelesene Benachrichtigungen und ausstehende Einladungen zusammen; eine installierte PWA zeigt dieselbe Zahl auf ihrem App-Symbol. Der Posteingang öffnet sich als Popover, auf dem Smartphone als Sheet, und gruppiert Benachrichtigungen unter Heute, Gestern und Früher.
 
-Ausstehende Projekteinladungen erscheinen ebenfalls im Posteingang. Nimm sie an oder lehne sie ab, nachdem du Projekt und Konto geprüft hast. Alte Posteingangslinks öffnen den aktuellen Einstiegspunkt, keine gesonderte Seite.
+Er öffnet sich mit dem Filter Ungelesen. Alle zeigt auch gelesene Benachrichtigungen, und Erwähnungen behält nur Erwähnungen in Kommentaren und Seiten. Wähle einen Eintrag, um das zugrunde liegende Problem, die Seite oder den Pull Request zu öffnen. Das Öffnen einer Benachrichtigung markiert sie als gelesen. Ihre Zeile bietet außerdem Als gelesen markieren oder Als ungelesen markieren, und Alle als gelesen markieren in der Kopfzeile des Posteingangs entfernt alle Ungelesen-Markierungen. Ungelesen stellt die Aktivitätsmarkierung wieder her, macht aber die zugrunde liegende Änderung am Problem oder an der Seite nicht rückgängig. Eine Benachrichtigung verweist auf zugängliche Arbeit, ersetzt aber nicht deren aktuellen Inhalt.
+
+Löschen in einer Zeile entfernt diese Benachrichtigung nach einer Bestätigung, und Gelesen löschen in der Kopfzeile entfernt nach einer Bestätigung alle gelesenen Benachrichtigungen. Beide Löschungen sind endgültig; ungelesene Benachrichtigungen bleiben, und das Problem, die Seite oder der Pull Request, auf die eine Benachrichtigung verweist, bleibt unberührt.
+
+Ausstehende Projekteinladungen erscheinen unter Einladungen in den Filtern Ungelesen und Alle. Nimm sie an oder lehne sie ab, nachdem du das Projekt und die einladende Person geprüft hast. Alte Posteingangslinks öffnen den aktuellen Einstiegspunkt, keine gesonderte Seite.
 
 ![Posteingang mit Beispiel-Erwähnungen, Zuweisungen und Kommentaren sowie gelesenen und ungelesenen Einträgen.](/documentation/de/work-inbox.png)
 
 ## Benachrichtigungskanäle wählen {#notification-preferences}
 
-Öffne die Benachrichtigungseinstellungen deines Kontos, um die empfangene Aktivität anzupassen. Zustellung über Browser, PWA oder Desktop benötigt außerdem eine Geräteregistrierung und die Erlaubnis des Betriebssystems. Das Abschalten eines Gerätekanals ist etwas anderes als das Ändern der Aktivitätsfilter in der Anwendung.
+Wähle Posteingangseinstellungen in der Kopfzeile des Posteingangs oder öffne Kontoeinstellungen und dort den Tab Benachrichtigungen. Unter Posteingangsbenachrichtigungen legt ein Schalter pro Kategorie (Aufgaben, Erwähnungen, Kommentare, Numo, Routinen, Pull-Anfragen, Feedback und Seiten) fest, was in deinem Posteingang landet. Das Abschalten einer Kategorie stoppt künftige Benachrichtigungen dieser Art einschließlich ihrer Push-Nachrichten; bereits erhaltene Benachrichtigungen bleiben erhalten.
+
+Der Abschnitt Push-Benachrichtigungen im selben Tab listet die Geräte, die Hinweise erhalten. Zustellung über Browser, PWA oder Desktop benötigt außerdem eine Geräteregistrierung und die Erlaubnis des Betriebssystems. Ein Gerät abzuschalten oder zu entfernen stoppt Hinweise nur auf diesem Gerät; dein Posteingang und seine Kategorien bleiben unverändert.
 
 Führt eine Benachrichtigung zu nicht verfügbarem Inhalt, prüfe geänderte Projektmitgliedschaft oder eine Löschung des Objekts. Bei fehlenden Push-Nachrichten prüfe Geräteerlaubnis und Registrierung anhand der Gerätebenachrichtigungs-Anleitung; der Posteingang bleibt hilfreich zur Prüfung der Aktivität. Versende niemals Sitzungscookies oder private Benachrichtigungsinhalte als Diagnose-Bildschirmaufnahmen.

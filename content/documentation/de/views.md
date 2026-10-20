@@ -112,7 +112,7 @@ Beginne in einem Projektboard oder einer persönlichen projektübergreifenden Pr
 
 Filtere nach unterstützten Eigenschaften wie Status, zuständiger Person, Priorität, Kategorien oder Ziel. Sortiere die Ergebnisse so, dass die nächste Aktion klar wird. Im Kanban bleiben Probleme nach Status gruppiert; eine geänderte Ansicht bearbeitet weder Status noch Zuweisung. Ohne eigenen Statusfilter zeigt ein Board nur **Rückstand**, **Todo**, **In Bearbeitung** und **In Überprüfung**. Wähle **Fertig** oder **Abgebrochen** im Filter **Status**, um diese Spalten anzuzeigen; eine Ansicht behält den Statusfilter, den du mit ihr speicherst.
 
-Speichere die Ansicht unter einem Namen, der ihren Zweck beschreibt, wähle sie erneut in der Navigation und prüfe ihre Filter. Bearbeite oder entferne die gespeicherte Ansicht, wenn sich ihr Zweck ändert. Das Teilen ist eine gesonderte Veröffentlichung mit eigenen Berechtigungen und Widerrufsregeln.
+Speichere die Ansicht unter einem Namen, der ihren Zweck beschreibt, wähle sie erneut in der Ansichtsleiste oben auf dem Board (auf einem schmalen Bildschirm in einem Menü) und prüfe ihre Filter. Bearbeite oder entferne die gespeicherte Ansicht, wenn sich ihr Zweck ändert. **Ansicht löschen** verlangt eine Bestätigung, und ein Board behält immer mindestens eine eigene Ansicht. Das Teilen ist eine gesonderte Veröffentlichung mit eigenen Berechtigungen und Widerrufsregeln.
 
 ![Manuelle Ansichtsfilter und Sortiermenü.](/documentation/de/work-view-filters.png)
 

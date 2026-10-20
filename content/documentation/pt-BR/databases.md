@@ -204,9 +204,9 @@ Um banco de dados combina uma tabela de propriedades estruturadas com uma págin
 
 ## Criar um banco de dados e suas colunas {#create-a-database}
 
-A área de configuração de uma nova base de dados oferece dois cartões: pedir ao Numo que prepare a estrutura ou importar uma base existente. O controle de fechar tem uma dica e oculta essas sugestões; a edição manual continua disponível.
+A área de configuração de uma nova base de dados oferece dois cartões: **Criar com Numo**, para preparar a estrutura, e **Importar um banco existente**. O controle de fechar, com o rótulo **Ocultar a ajuda de criação**, oculta essas sugestões; a edição manual continua disponível.
 
-Como membro do projeto, abra Páginas, use + e escolha um banco de dados. Um banco novo tem o nome das entradas e nenhuma coluna opcional. O aviso “Novo banco de dados” oferece configuração com Numo ou importação de um banco existente. A configuração manual continua disponível sem IA. Escolher a configuração com o Numo abre uma solicitação preparada com este banco de dados como contexto de página, depois que a criação termina. Confira e envie a solicitação para pedir a estrutura de que precisa; abrir a conversa não conclui a configuração. O trabalho real de IA exige um provedor configurado e uso disponível ou uma chave pessoal compatível. Examine o esquema e as entradas resultantes antes de confiar neles.
+Como proprietário ou Membro do projeto, abra Páginas, use + e escolha um banco de dados. Um banco novo tem o nome das entradas e nenhuma coluna opcional. O aviso “Novo banco de dados” oferece configuração com Numo ou importação de um banco existente. A configuração manual continua disponível sem IA. Escolher **Criar com Numo** abre uma solicitação preparada com este banco de dados como contexto de página, depois que a criação termina. Confira e envie a solicitação para pedir a estrutura de que precisa; abrir a conversa não conclui a configuração. O trabalho real de IA exige um provedor configurado e uso disponível ou uma chave pessoal compatível. Examine o esquema e as entradas resultantes antes de confiar neles.
 
 Abra “Colunas” e escolha “Adicionar coluna”, ou use a coluna + na borda direita da tabela. Dê um nome à coluna e escolha Texto, Número, Seleção, Seleção múltipla, Data de criação, Data, Pessoas ou Caixa de seleção. Use o seletor com pesquisa para encontrar o tipo. Salve, adicione uma entrada e confira se a coluna aparece na tabela e na página da entrada.
 
@@ -280,7 +280,7 @@ As alterações de esquema feitas por um agente usam a revisão atual do banco e
 
 ## Importar um banco de dados com o conteúdo das entradas {#import-a-database}
 
-Crie um banco de dados sem colunas opcionais nem entradas existentes. No banner do novo banco, escolha Importar um banco existente. Envie um ZIP do Notion no formato Markdown & CSV com subpáginas, um CSV de banco de dados ou um arquivo de banco de dados do minddy. Se o arquivo contiver vários bancos, selecione aquele que deseja importar.
+Crie um banco de dados sem colunas opcionais nem entradas existentes. No banner do novo banco, escolha **Importar um banco existente**. Envie um ZIP do Notion no formato Markdown & CSV com subpáginas, um CSV de banco de dados ou um arquivo de banco de dados do minddy. Se o arquivo contiver vários bancos, selecione aquele que deseja importar.
 
 Antes de confirmar, confira os nomes e tipos de coluna sugeridos e depois a quantidade de páginas. Quando a assistência à importação está configurada, o Numo pode sugerir tipos com base em uma amostra pequena; o mapeamento manual continua disponível. Propriedades de origem sem suporte são mantidas como texto. Valores incompatíveis bloqueiam a importação em vez de serem apagados sem aviso.
 

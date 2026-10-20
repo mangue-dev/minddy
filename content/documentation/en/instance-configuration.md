@@ -183,15 +183,14 @@ Public installations require a TLS reverse proxy and HTTP-to-HTTPS redirect. App
 
 ### Provide authenticated scheduling {#schedules}
 
-Reference Compose profiles start their scheduler and generate `CRON_SECRET`. Custom source deployments must run an equivalent HTTP scheduler. Every cron request sends `Authorization: Bearer <CRON_SECRET>`; empty or mismatched secrets return 401. Never log the header. The candidate schedules below are UTC. Use the schedule set belonging to the deployed release, because these paths can change with the application.
+Reference Compose profiles start their scheduler and generate `CRON_SECRET`. Custom source deployments must run an equivalent HTTP scheduler. Every cron request sends `Authorization: Bearer <CRON_SECRET>`; empty or mismatched secrets return 401. Never log the header. The schedules below are UTC and belong to this release. Use the schedule set belonging to the deployed release, because these paths can change with the application.
 
 
-The released v0.11.0 scheduler does not include the `numo-turns` endpoint. The candidate scheduler has been corrected to include it once per minute. The table describes the corrected candidate schedule; do not assume this job exists in an unchanged v0.11.0 deployment.
+Compared with the v0.11.0 scheduler, this release adds `numo-turns`, `forge-relay-maintenance`, `page-materialization` and `issue-index`, and no longer calls `/api/cron/agent-drain` or `/api/cron/automations`, which were removed with Numo's code work and project automations. A custom scheduler copied from v0.11.0 must be updated to this table.
 
 | Endpoint | Schedule (UTC) |
 | --- | --- |
 | `/api/cron/feedback-analysis` | `0 * * * *` |
-| `/api/cron/agent-drain` | `*/2 * * * *` |
 | `/api/cron/numo-turns` | `* * * * *` |
 | `/api/cron/forge-relay-deliveries` | `* * * * *` |
 | `/api/cron/forge-relay-maintenance` | `35 * * * *` |

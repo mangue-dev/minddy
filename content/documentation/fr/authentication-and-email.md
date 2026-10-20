@@ -92,7 +92,7 @@
 
 ## Configurer les emails de compte, MFA et la récupération {#authentication-and-email}
 
-Les emails Auth dépendent de Supabase/GoTrue. Les notifications applicatives Resend ne configurent ni confirmation ni récupération du mot de passe. En full, conservez l’overlay minddy dans chaque commande Compose. Réglez `SITE_URL`, `API_EXTERNAL_URL`, `SUPABASE_PUBLIC_URL` et `ADDITIONAL_REDIRECT_URLS` sur vos origines. Renseignez `SMTP_ADMIN_EMAIL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` et `SMTP_SENDER_NAME` avec votre fournisseur. Gardez la confirmation activée et redémarrez Auth dans le contexte Compose installé.
+Les emails Auth dépendent de Supabase/GoTrue. Les notifications applicatives Resend ne configurent ni confirmation ni récupération du mot de passe. En full, conservez l’overlay minddy dans chaque commande Compose. Réglez `SITE_URL`, `API_EXTERNAL_URL`, `SUPABASE_PUBLIC_URL` et `ADDITIONAL_REDIRECT_URLS` sur vos origines. Renseignez `SMTP_ADMIN_EMAIL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` et `SMTP_SENDER_NAME` avec votre fournisseur. L’overlay règle aussi les limites de session : `GOTRUE_SESSIONS_TIMEBOX` vaut `8760h` (un an) et `GOTRUE_SESSIONS_INACTIVITY_TIMEOUT` vaut `720h` (30 jours). Gardez la confirmation activée et redémarrez Auth dans le contexte Compose installé.
 
 
 Avant d’utiliser `compose` ci-dessous, définissez la fonction du profil full installé depuis [le contexte Compose de référence](/fr/documentation/backups-and-restoration#context).
@@ -106,7 +106,7 @@ compose up -d --wait auth
 
 ## Configurer Supabase géré {#managed}
 
-Dans les paramètres Authentication de votre projet, réglez Site URL et la redirection exacte `<app-origin>/auth/callback`. Configurez SMTP personnalisé et les deux modèles versionnés de confirmation et récupération. La confirmation utilise `token_hash` et `type=signup`. Exigez au moins huit caractères, minuscules, majuscules et chiffres, et activez inscription et vérification TOTP. Activez le contrôle des mots de passe compromis quand disponible et consignez les limites du fournisseur. L’overlay full ferme l’accès si ce contrôle échoue et nécessite `api.pwnedpasswords.com` en sortie. Relevez durée des sessions, rotation des refresh tokens, révocation et limites Auth : le bootstrap SQL ne règle pas ces paramètres de plateforme.
+Dans les paramètres Authentication de votre projet, réglez Site URL et la redirection exacte `<app-origin>/auth/callback`. Configurez SMTP personnalisé et les deux modèles versionnés de confirmation et récupération. La confirmation utilise `token_hash` et `type=signup`. Exigez au moins huit caractères, minuscules, majuscules et chiffres, et activez inscription et vérification TOTP. Activez le contrôle des mots de passe compromis quand disponible et consignez les limites du fournisseur. L’overlay full ferme l’accès si ce contrôle échoue et nécessite `api.pwnedpasswords.com` en sortie. Réglez la durée maximale des sessions sur 8760 heures (un an) et le délai d’inactivité sur 720 heures (30 jours). La base de données refuse les sessions qui dépassent ces mêmes limites : une limite Auth désactivée ou plus longue continue donc de rafraîchir des sessions que chaque API rejette ensuite. Relevez durée des sessions, rotation des refresh tokens, révocation et limites Auth : le bootstrap SQL ne règle pas ces paramètres de plateforme.
 
 ## Vérifier le résultat {#verify}
 

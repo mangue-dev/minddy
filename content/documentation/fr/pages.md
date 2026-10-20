@@ -221,8 +221,8 @@
       "id": "page-file-preview",
       "kind": "screenshot",
       "src": "/documentation/fr/file-preview.png",
-      "alt": "Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger et Retirer.",
-      "caption": "Le lecteur commun place Fermer sous l’aperçu. Le menu Actions du fichier propose Télécharger et, si les droits le permettent, Retirer.",
+      "alt": "Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger, Renommer et Retirer.",
+      "caption": "Le lecteur commun place Fermer sous l’aperçu. Le menu Actions du fichier propose Télécharger et, si les droits le permettent, Renommer et Retirer.",
       "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-12",
@@ -252,7 +252,7 @@ Les pages constituent le wiki d’un projet, avec ses documents, ses sous-pages 
 
 ## Construire un wiki de projet {#create-and-organize-pages}
 
-Ouvrez les pages d’un projet dont vous êtes membre. Le menu + propose une page pour un document ou une base pour une liste structurée. Donnez un titre utile et écrivez la spécification, décision ou procédure à conserver.
+Ouvrez les pages d’un projet en tant que propriétaire ou Membre ; les lecteurs peuvent ouvrir les pages mais pas en créer. Le menu + propose une page pour un document ou une base pour une liste structurée. Donnez un titre utile et écrivez la spécification, décision ou procédure à conserver.
 
 Créez des sous-pages pour les documents associés et déplacez-les ou réordonnez-les dans l’arbre. Une page ne peut pas devenir sa propre descendante. Une duplication crée un nouveau contenu plutôt qu’une référence vivante. Examinez la branche dupliquée avant modification ou partage.
 
@@ -278,7 +278,7 @@ Contrairement à une tâche promue depuis le carnet, la page n’est pas retiré
 
 ## Écrire une page avec blocs et mentions {#page-editor}
 
-Ouvrez la page et modifiez son titre ou son corps en tant que propriétaire ou Membre. Les lecteurs peuvent ouvrir et lire les pages, mais ne peuvent ni les modifier, ni les importer, ni les dupliquer, ni les ajouter aux favoris, ni les publier, ni restaurer une version. Le menu slash et les commandes de mise en forme insèrent titres, paragraphes, listes, tâches, code, sections repliables et encadrés. Un encadré peut porter une icône emoji et une couleur de palette ; utilisez-les pour distinguer une information, sans faire de la couleur l’unique moyen de comprendre un avertissement.
+Ouvrez la page et modifiez son titre ou son corps en tant que propriétaire ou Membre. Les lecteurs peuvent ouvrir et lire les pages, mais ne peuvent ni les modifier, ni les importer, ni les dupliquer, ni les ajouter aux favoris, ni les publier, ni restaurer une version. Le menu slash et les commandes de mise en forme insèrent titres, texte, listes à puces, numérotées et de tâches, citations, encadrés, blocs de code, séparateurs, dépliants (sections repliables), sous-pages, images et fichiers. Un encadré peut porter une icône emoji et une couleur de palette ; utilisez-les pour distinguer une information, sans faire de la couleur l’unique moyen de comprendre un avertissement.
 
 Les mentions relient tickets, objectifs, personnes ou pages. Tapez `@` suivi d’un identifiant, de mots du titre ou d’une courte description ; une requête descriptive liste aussi des tickets trouvés [par le sens](/docs/navigation#search-by-meaning) sous **Liés par le sens**, après les correspondances textuelles. Les liens retour aident à retrouver les pages qui citent celle-ci. Un lien apporte du contexte, sans ouvrir les objets privés d’un autre projet.
 
@@ -316,9 +316,9 @@ Ouvrez la page comme membre et utilisez ses commandes de pièce jointe ou d’en
 
 Les images peuvent être insérées en blocs d’image et les autres documents en blocs de fichier. Le serveur détermine le type stocké à partir des octets, sans se fier au nom du fichier ou au libellé du navigateur. L’envoi réussi ne garantit pas un aperçu intégré pour tous les formats ; téléchargez le fichier si l’aperçu est indisponible.
 
-Dans l’éditeur du projet, cliquez sur une image ou sur le nom d’un bloc fichier pris en charge pour ouvrir le même lecteur sur toute la fenêtre que pour les pièces jointes des tickets. Markdown (`.md`), texte brut (`.txt`, `.text`), CSV, PDF et formats audio ou vidéo compatibles s’ouvrent dans des conteneurs dédiés. Utilisez Fermer ou Échap pour revenir à la page. Le menu Actions du fichier (`…`) propose Télécharger ; Retirer apparaît uniquement dans une page modifiable et retire le bloc du document. Le bloc fichier conserve aussi sa commande Télécharger directe. Les formats non pris en charge, les liens de fichiers externes et les blocs fichiers des pages publiées conservent leur téléchargement. Les images publiées utilisent le lecteur sans action de retrait.
+Dans l’éditeur du projet, cliquez sur une image ou sur le nom d’un bloc fichier pris en charge pour ouvrir le même lecteur sur toute la fenêtre que pour les pièces jointes des tickets. Markdown (`.md`), texte brut (`.txt`, `.text`), CSV, PDF et formats audio ou vidéo compatibles s’ouvrent dans des conteneurs dédiés. Utilisez Fermer ou Échap pour revenir à la page. Le menu Actions du fichier (`…`) propose Télécharger. Dans une page modifiable, un bloc fichier propose aussi Renommer, qui change le nom affiché dans la page, et les images comme les fichiers proposent Retirer : après confirmation, le bloc est retiré du document, et vous pouvez l’annuler dans l’éditeur. Le bloc fichier conserve aussi sa commande Télécharger directe. Les formats non pris en charge, les liens de fichiers externes et les blocs fichiers des pages publiées conservent leur téléchargement. Les images publiées utilisent le lecteur sans action de retrait.
 
-![Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger et Retirer.](/documentation/fr/file-preview.png)
+![Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger, Renommer et Retirer.](/documentation/fr/file-preview.png)
 
 Vérifiez l’apparition du fichier, puis ouvrez-le ou téléchargez-le. Les octets sont dans Storage ; page et métadonnées déterminent l’accès. Une page enregistrée ne prouve pas à elle seule que les octets sont disponibles.
 

@@ -204,9 +204,9 @@ Una base de datos combina una tabla de propiedades tipadas con una página compl
 
 ## Crear una base de datos y sus columnas {#create-a-database}
 
-La configuración de una nueva base de datos ofrece dos tarjetas: pedir a Numo que prepare la estructura o importar una base existente. El control de cierre tiene una descripción emergente y oculta estas sugerencias; la edición manual sigue disponible.
+La configuración de una nueva base de datos ofrece dos tarjetas: **Crear con Numo** para preparar la estructura e **Importar una base existente**. El control de cierre, con la etiqueta **Ocultar la ayuda de creación**, oculta estas sugerencias; la edición manual sigue disponible.
 
-Como miembro del proyecto, abre Páginas, usa + y elige una base de datos. Una base nueva tiene el nombre de sus entradas y ninguna columna opcional. Su aviso «Nueva base de datos» ofrece configuración con Numo o importar una base existente. La configuración manual sigue disponible sin IA. Elegir la configuración con Numo abre una solicitud preparada con esta base de datos como contexto de página, una vez terminada su creación. Revisa y envía la solicitud para pedir la estructura que necesitas; abrir la conversación no completa la configuración. El trabajo real de IA necesita un proveedor configurado y uso disponible o una clave personal compatible. Comprueba el esquema y las entradas resultantes antes de utilizarlos.
+Como propietario o Miembro del proyecto, abre Páginas, usa + y elige una base de datos. Una base nueva tiene el nombre de sus entradas y ninguna columna opcional. Su aviso «Nueva base de datos» ofrece configuración con Numo o importar una base existente. La configuración manual sigue disponible sin IA. Elegir **Crear con Numo** abre una solicitud preparada con esta base de datos como contexto de página, una vez terminada su creación. Revisa y envía la solicitud para pedir la estructura que necesitas; abrir la conversación no completa la configuración. El trabajo real de IA necesita un proveedor configurado y uso disponible o una clave personal compatible. Comprueba el esquema y las entradas resultantes antes de utilizarlos.
 
 Abre «Columnas» y elige «Añadir columna», o usa la columna + del extremo derecho. Nombra la columna y elige Texto, Número, Selección, Selección múltiple, Fecha de creación, Fecha, Personas o Casilla de verificación. Usa el selector de tipos con búsqueda para encontrarlo. Guarda, añade una entrada y verifica que la columna aparezca en la tabla y en la página de entrada.
 
@@ -280,7 +280,7 @@ Las modificaciones del esquema realizadas por un agente utilizan la revisión ac
 
 ## Importar una base de datos con el contenido de sus entradas {#import-a-database}
 
-Crea una base de datos sin columnas opcionales ni entradas existentes. En el aviso de la nueva base, elige Importar una base existente. Sube un ZIP de Notion en formato Markdown & CSV con subpáginas, un CSV de una base de datos o un archivo de base de datos de minddy. Si el archivo contiene varias bases, selecciona la que quieres importar.
+Crea una base de datos sin columnas opcionales ni entradas existentes. En el aviso de la nueva base, elige **Importar una base existente**. Sube un ZIP de Notion en formato Markdown & CSV con subpáginas, un CSV de una base de datos o un archivo de base de datos de minddy. Si el archivo contiene varias bases, selecciona la que quieres importar.
 
 Antes de confirmar, revisa los nombres y tipos de columna propuestos y después el número de páginas. Numo puede sugerir tipos a partir de una muestra pequeña si la asistencia de importación está configurada; también puedes establecer la correspondencia manualmente. Las propiedades de origen no compatibles se conservan como texto. Los valores incompatibles bloquean la importación en lugar de borrarse sin aviso.
 

@@ -166,7 +166,7 @@ Les lectures qui renvoient du texte avec des images (`minddy_get_issue`, `minddy
 
 Pour convertir un type, utilisez `operation=convert` avec `propertyId`, `targetType`, `revision` et `preview=true`. Examinez `incompatibleCount`, puis renvoyez les mêmes paramètres avec `preview=false` et le `token` retourné. Définissez `confirmLoss=true` uniquement après autorisation explicite de l’utilisateur d’effacer les valeurs incompatibles.
 
-Les outils de routine réservés au propriétaire permettent de créer, suspendre, replanifier ou supprimer des demandes planifiées. Lisez les routines existantes avant d’en créer une pour éviter les doublons. `minddy_add_resource` limite les fichiers à 10 Mo ; les outils de pages ne créent pas d’URL de fichiers fictives.
+Les outils de routine réservés au propriétaire permettent de créer, modifier, suspendre ou supprimer des routines déclenchées par une planification, un événement ou une nouvelle entrée de base de données. Lisez les routines existantes avant d’en créer une pour éviter les doublons. `minddy_add_resource` limite les fichiers à 10 Mo ; les outils de pages ne créent pas d’URL de fichiers fictives.
 
 ### Vérifier avec un exemple {#example}
 

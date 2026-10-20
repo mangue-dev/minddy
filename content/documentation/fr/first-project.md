@@ -91,16 +91,16 @@ Si votre équipe possède déjà un projet, donnez votre e-mail au propriétaire
 1. Après connexion, ouvrez l’accueil et choisissez Nouveau projet dans la navigation. Dans l’assistant, choisissez un projet entièrement nouveau, puis indiquez un nom et une clé de 2 à 5 lettres. Gardez l’icône par défaut et aucun dépôt pour cet exemple manuel. Vous pouvez laisser le brief initial vide.
 2. L’assistant propose ensuite d’inviter votre équipe. Choisissez Passer pour cet exemple manuel ; pour travailler à plusieurs, cherchez plutôt par leur nom les personnes de vos autres projets, ou saisissez leur adresse e-mail. Rien n’est envoyé avant que vous choisissiez Terminer.
 3. À la dernière étape, examinez Smart Assign et l’attribution automatique. Laissez l’attribution automatique désactivée si vous voulez attribuer vous-même le ticket de démonstration. Choisissez Terminer, attendez la création et ouvrez le projet obtenu.
-4. Ouvrez le projet et créez un ticket. Choisissez un titre concret, par exemple « Vérifier le lien de contact du site ». Décrivez la page, la destination attendue et la vérification à effectuer. Si le bouton Smart-fill est affiché et activé, désactivez-le pour cet exemple manuel avant de créer le ticket. Il contrôle le remplissage de ce ticket et reste indépendant des réglages d’automatisation et de Smart Assign du projet.
+4. Ouvrez le projet et créez un ticket. Choisissez un titre concret, par exemple « Vérifier le lien de contact du site ». Décrivez la page, la destination attendue et la vérification à effectuer. Si le bouton Smart-fill est affiché et activé, désactivez-le pour cet exemple manuel avant de créer le ticket. Il contrôle le remplissage de ce ticket et reste indépendant de Smart Assign et des routines.
 5. Ajoutez un responsable, une priorité et un effort si ces propriétés facilitent la planification. Confirmez la création, puis ouvrez le ticket obtenu pour vérifier son projet et son identifiant.
 6. Passez le ticket en cours lorsque le travail commence. Effectuez la vérification, puis notez le résultat dans un commentaire. Utilisez l’état de revue si quelqu’un doit encore l’inspecter.
-7. Passez le ticket à terminé après avoir vérifié le résultat attendu. Retrouvez-le dans le travail terminé du projet ou par son identifiant pour confirmer le changement.
+7. Passez le ticket à terminé après avoir vérifié le résultat attendu. Les tableaux masquent la colonne **Terminé** par défaut : sélectionnez **Terminé** dans le filtre **Statut** du tableau, ou recherchez l’identifiant du ticket, pour confirmer le changement.
 
 ![Ticket de démonstration terminé, avec description et commentaire enregistré.](/documentation/fr/reader-first-project.png)
 
 ## Résoudre un résultat inattendu {#first-use-recovery}
 
-Une invitation concerne un compte et une instance précis. Si elle manque, vérifiez l’adresse fournie au propriétaire et ouvrez la boîte de réception de cette même instance. Connaître le nom d’un projet ne permet pas de le rejoindre. Si un ticket disparaît du tableau après un changement d’état, retirez les filtres ou recherchez son identifiant avant d’en créer un autre.
+Une invitation concerne un compte et une instance précis. Si elle manque, vérifiez l’adresse fournie au propriétaire et ouvrez la boîte de réception de cette même instance. Connaître le nom d’un projet ne permet pas de le rejoindre. Si un ticket disparaît du tableau après un changement d’état, retirez les filtres ou recherchez son identifiant avant d’en créer un autre. Les tickets terminés et annulés quittent le tableau par défaut ; sélectionnez **Terminé** ou **Annulé** dans le filtre **Statut** pour les afficher.
 
 Si certaines invitations ajoutées dans l’assistant n’ont pas pu partir, le projet est tout de même créé et une notification indique chaque personne non invitée avec la raison. Vérifiez les invitations en attente dans les paramètres des membres du projet avant d’inviter à nouveau.
 

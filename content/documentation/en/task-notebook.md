@@ -91,7 +91,9 @@ Open the task notebook from the personal application controls, or use Command+Sh
 
 To find a task again, open the command palette with Command+K on macOS or Ctrl+K on Windows/Linux and type words from it. Tasks still to do appear under **Task notebook**, with their section; completed and canceled tasks and questions do not. Choose one to open the notebook on that task. Before you type, the palette does not list notebook tasks.
 
-The notebook uses the same editor as project pages, with the same block handles: hover a block to drag it, open its menu or add a block with **+**. Type `/` to insert a task, listed first, or a heading, list, quote, **Callout**, code block, **Toggle** or divider, or choose **Dictate a task** to speak tasks aloud. The notebook is still saved as Markdown, so Numo and connected agents read the same tasks and states. Select text to format it or add a link, and paste or drop an image to insert it in a note. Other kinds of files belong in pages.
+The notebook uses the same editor as project pages, with the same block handles: hover a block to drag it, open its menu or add a block with **+**. Type `/` to insert a task, listed first, or a heading, list, quote, **Callout**, code block, **Toggle** or divider, or choose **Dictate a task** to speak tasks aloud. The notebook is still saved as Markdown, so Numo and connected agents read the same tasks and states. Select text to format it or add a link. Paste or drop an image, or choose **Image** in the `/` menu, to insert it in a note. Other kinds of files belong in pages.
+
+The **Notebook actions** menu (`…`) offers **Copy all as prompt**, which copies the whole notebook for your own coding agent, and **Remove done and dropped tasks**. Removal asks for confirmation, deletes completed and canceled tasks with the headings they leave empty, and keeps tasks to do or in progress. To copy less, use a heading's **Copy section as prompt** control or a task's **Copy as prompt**. If **Start the issue or task when I copy its prompt** is enabled in **Account settings** → **Issues**, copying also moves the copied pending tasks to in progress.
 
 The notebook is private rather than a project wiki. Choose a project page for information that colleagues must share. Numo can read or update the notebook when you request it, but another member's project membership does not make your notebook a shared document.
 
@@ -101,9 +103,9 @@ The notebook is private rather than a project wiki. Choose a project page for in
 
 Promotion uses Numo and needs available AI usage or a compatible personal key.
 
-1. Open the task’s menu and choose its promotion action. The notebook closes and Numo opens with a prepared request containing the task and its subtasks.
+1. Open the task’s menu and choose **Promote to issue**. The notebook closes and Numo opens with a prepared request containing the task and its subtasks.
 2. Check the destination project. The current project is used when you are browsing one; from a global surface, specify it in the conversation.
 3. Review and send the request. Opening the conversation alone has not created an issue.
-4. After Numo reports creation, open the issue and check its identifier, scope and properties. Check that the task’s context was preserved and add any missing acceptance conditions.
+4. After Numo reports creation, open the issue and check its identifier, scope and properties. Check that the task’s context was preserved and add any missing acceptance conditions. The prepared request also asks Numo to remove the task from the notebook once the issue exists, so look for it in the issue rather than in the notebook.
 
 If creation fails or the result is unclear after a network error, search for the resulting issue before promoting again. Keep unrelated notebook sections intact when asking Numo to change a task, and read the result to confirm it changed the intended checkbox rather than replacing the whole notebook.

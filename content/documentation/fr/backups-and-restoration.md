@@ -190,7 +190,7 @@ Pour Supabase géré par un fournisseur, consignez le projet, la version de base
 
 ### Bloquer les écritures et exporter SQL {#outage}
 
-Fermez application, workers, planificateur et API publique Supabase. Les écritures directes PostgREST et Storage restent possibles si seule l’application s’arrête. Définissez `SUPABASE_DB_URL` en privé et `BACKUP_DIR` sur une nouvelle destination chiffrée. Lancez les exports SQL avec les outils de la version choisie. Vérifiez que chaque fichier SQL est non vide et `data.sql` contient les sections `COPY` de `auth.users`, `storage.objects` et tables applicatives. L’export de schéma ordinaire omet les migrations : ses deux exports séparés sont obligatoires. Gardez les politiques Storage et Realtime gérées.
+Fermez application, workers, planificateur et API publique Supabase. Les écritures directes PostgREST et Storage restent possibles si seule l’application s’arrête. Définissez `SUPABASE_DB_URL` en privé, `FROM_TAG` sur le tag de la release actuellement installée et `BACKUP_DIR` sur une nouvelle destination chiffrée. Lancez les exports SQL avec les outils de la version choisie. Vérifiez que chaque fichier SQL est non vide et `data.sql` contient les sections `COPY` de `auth.users`, `storage.objects` et tables applicatives. L’export de schéma ordinaire omet les migrations : ses deux exports séparés sont obligatoires. Gardez les politiques Storage et Realtime gérées.
 
 ```bash
 set -euo pipefail

@@ -80,7 +80,7 @@
 
 ## Deinen Zyklus einrichten und füllen {#personal-cycle}
 
-Aktiviere Zyklen unter Kontoeinstellungen → Zyklen und öffne anschließend Zyklus in der persönlichen Navigation. Er gehört zu deinem Konto und kann Probleme enthalten, die dir in Projekten zugewiesen sind, in denen du Eigentümer oder Mitglied bist. Leser können keine Zuweisungen erhalten, daher trägt ein Projekt, das du nur liest, keine Arbeit bei. Er ist kein Projektsprint und gehört nicht zu einem Teamziel.
+Aktiviere Zyklen unter **Kontoeinstellungen** → **Zyklus** oder mit **Zyklen aktivieren** im Tab **Zyklus**. Öffne diesen Tab in der Ansichtsleiste von **Alle Probleme** oder suche in der Befehlspalette nach Zyklus; der mit einem Pfeil markierte Tab **Zyklus** eines Projektboards führt zum selben persönlichen Zyklus. Er gehört zu deinem Konto und kann Probleme enthalten, die dir in Projekten zugewiesen sind, in denen du Eigentümer oder Mitglied bist. Leser können keine Zuweisungen erhalten, daher trägt ein Projekt, das du nur liest, keine Arbeit bei. Er ist kein Projektsprint und gehört nicht zu einem Teamziel.
 
 Wähle eine Dauer von einer oder zwei Wochen, den Startwochentag, ein bis vier kommende Zyklen und eine leichte, mittlere oder hohe Intensität. Diese Einstellungen bestimmen deinen persönlichen Zeitraum und die Zielkapazität. Die Schalter für automatische Übernahme steuern, ob dir zugewiesene Probleme beim Start oder Abschluss in den aktuellen Zyklus aufgenommen werden.
 
@@ -90,6 +90,6 @@ Der aktuelle Zyklus wird einmal automatisch aus geeigneter Arbeit gefüllt. Um e
 
 ## Den Zeitraum abschließen oder anpassen {#cycle-results}
 
-Aktualisiere die Statuswerte während der Arbeit und prüfe abgeschlossene und verbleibende Aufgaben. An der Zeitgrenze werden geeignete, nicht abgeschlossene Probleme aus vergangenen Zyklen automatisch in den aktuellen übernommen. Die Zuweisung bleibt erhalten; die Übernahme schließt die Probleme nicht ab. Mit der Datumsauswahl kannst du vergangene und kommende Zyklen ansehen. Diese Ansichten sind schreibgeschützt; Änderungen sind im aktuellen Zyklus möglich.
+Aktualisiere die Statuswerte während der Arbeit und prüfe abgeschlossene und verbleibende Aufgaben. An der Zeitgrenze werden geeignete, nicht abgeschlossene Probleme aus vergangenen Zyklen automatisch in den aktuellen übernommen. Die Zuweisung bleibt erhalten; die Übernahme schließt die Probleme nicht ab. Sind alle Probleme des aktuellen Zyklus geschlossen, bietet ein Banner **Zyklus abgeschlossen** die Aktion **Nachfüllen Zyklus** an, um geeignete Arbeit hinzuzufügen; während des Zeitraums wird der Zyklus nicht automatisch nachgefüllt. Mit der Datumsauswahl kannst du vergangene und kommende Zyklen ansehen. Diese Ansichten sind schreibgeschützt; Änderungen sind im aktuellen Zyklus möglich.
 
 Wird eine Voraussetzung in den aktuellen Zyklus aufgenommen, um Abhängigkeiten konsistent zu halten, prüfe den Grund, bevor du sie entfernst. Ein nach Abschluss verschwundenes Problem kann weiterhin unter der abgeschlossenen Zyklusarbeit oder über seine Kennung auffindbar sein. Kontoeinstellungen für Zyklen ändern deine Planungsansicht, nicht den persönlichen Zyklus eines anderen Mitglieds.

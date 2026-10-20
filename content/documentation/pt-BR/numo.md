@@ -257,6 +257,8 @@ Abra a tarefa ou o projeto e use o botão flutuante do Numo. A página atual vir
 3. Envie um pedido delimitado, por exemplo: “Leia esta tarefa e proponha critérios de aceitação. Não altere o status”.
 4. Leia a resposta e abra os links de tarefas ou fontes. Para uma alteração, confira o objeto atualizado.
 
+Em uma conversa nova e vazia, quatro linhas de sugestões acima do campo de mensagem propõem pedidos adequados à página atual, por exemplo **Resumir este problema** ou **Escrever um plano de implementação** quando um problema está aberto no painel lateral. Escolher uma linha preenche o campo sem enviá-lo, para que você possa ajustar o pedido antes. As linhas somem assim que o campo tem texto e voltam quando você o esvazia. Elas aparecem no layout de desktop, não em um celular.
+
 O Numo também pode ver as imagens da descrição de um problema ou objetivo, de um plano, de um comentário, de uma página ou do seu caderno quando o modelo da conversa aceita imagens. Sem essa capacidade, o Numo informa que não conseguiu ver a imagem em vez de descrevê-la.
 
 O modelo padrão do Numo vem de **Configurações da conta → IA e Numo → Modelo padrão do Numo**: o padrão do app ou um modelo pessoal do provedor ativo. Uma escolha explícita na conversa tem prioridade. Consulte [configurações de IA e uso](/docs/ai-settings-and-usage#ai-keys-and-models).
@@ -265,7 +267,7 @@ O modelo padrão do Numo vem de **Configurações da conta → IA e Numo → Mod
 
 ### Continuar uma conversa {#continue}
 
-A lista mantém as conversas anteriores acessíveis. Continue a conversa com as decisões necessárias. O Numo organiza e acompanha o trabalho: lê e atualiza problemas, planos, páginas e outros conteúdos do Minddy e pode ler as pull requests vinculadas. Quando o Numo busca problemas, correspondências de texto e identificadores exatos vêm primeiro; uma busca descritiva pode acrescentar problemas do mesmo projeto encontrados pelo sentido, que o Numo deve conferir antes de se basear neles. Ele não escreve código nem altera repositórios. Para que o código seja escrito, copie o prompt do problema para seu próprio agente de código; consulte [Trabalho de código e pull requests](/docs/code-work#external-coding-agents).
+A lista mantém as conversas anteriores acessíveis. Continue a conversa com as decisões necessárias. O Numo organiza e acompanha o trabalho: lê e atualiza problemas, planos, páginas e outros conteúdos do Minddy e pode ler as pull requests vinculadas. Quando você pede, ele também pode comentar uma pull request, resolver as conversas de revisão já atendidas e fazer o merge dela. Quando o Numo busca problemas, correspondências de texto e identificadores exatos vêm primeiro; uma busca descritiva pode acrescentar problemas do mesmo projeto encontrados pelo sentido, que o Numo deve conferir antes de se basear neles. Ele não escreve código nem faz push de commits. Para que o código seja escrito, copie o prompt do problema para seu próprio agente de código; consulte [Trabalho de código e pull requests](/docs/code-work#external-coding-agents).
 
 Se o Numo pedir informações, envie sua escolha antes de esperar a continuação das ações dependentes. Um cartão de consumo ou erro explica a interrupção. Confira qualquer gravação externa antes de pedir para repetir a ação.
 

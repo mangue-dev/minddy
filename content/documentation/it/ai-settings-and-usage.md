@@ -133,7 +133,7 @@ Una chiave non confermata o irraggiungibile può lasciare le chiamate IA general
 
 ### Modelli locali {#models}
 
-Quando configurati, Ollama locale e gli endpoint compatibili con OpenAI possono gestire le conversazioni tramite il bridge desktop. Le routine vengono eseguite sul server e non possono raggiungere un modello sul tuo computer. Per le routine serve un provider raggiungibile dal server. Quando un provider non serve più, rimuovilo tramite il relativo comando di conferma e verifica l’instradamento risultante prima dell’esecuzione successiva.
+Minddy chiama i modelli di IA dal server, quindi non può usare un modello in esecuzione sul tuo computer. **Aggiungi fornitore** non offre Ollama locale né endpoint locali compatibili con OpenAI. Un endpoint locale salvato in una versione precedente resta visibile in **Fornitori collegati**, ma non può gestire le conversazioni di Numo, le routine o altre funzioni. Rimuovilo e assegna al suo posto un provider raggiungibile dal server. Quando un provider non serve più, rimuovilo tramite il relativo comando di conferma e verifica l’instradamento risultante prima dell’esecuzione successiva.
 
 
 ## Capire i piani Cloud e il consumo IA {#plans-and-ai-usage}
@@ -148,9 +148,9 @@ L’utilizzo IA incluso copre ragionamento e chiamate agli strumenti di Numo, ro
 
 Le chiavi personali compatibili fanno fatturare al provider le chiamate ai modelli anziché consumare l’utilizzo IA incluso. Le famiglie o gli ambiti non assegnati le cui chiamate sono finanziate da minddy restano soggetti al rispettivo budget minddy. L’auto-hosting comporta costi d’infrastruttura e di provider opzionali determinati dall’installazione; eseguire lo stesso nucleo non lo trasforma in un abbonamento Cloud.
 
-### Capacità della versione candidata {#plan-capacities}
+### Capacità dei piani {#plan-capacities}
 
-Questi valori predefiniti descrivono la versione candidata 0.11.1 identificata. Prima di acquistare, verifica la pagina dei prezzi e l’account reali: i prezzi configurati per il pagamento e le deroghe dell’account possono differire. Il conteggio degli ospiti esclude il proprietario del progetto e include membri, lettori e inviti in attesa; non esiste una fatturazione per postazione. Lo spazio occupato dai file viene imputato al proprietario del progetto che li riceve. Quando la proprietà viene trasferita, questi limiti, lo spazio e l’IA in background, come Smart Assign e la revisione dei feedback, usano il piano del nuovo proprietario.
+Questi valori predefiniti descrivono Minddy 0.20.0. Prima di acquistare, verifica la pagina dei prezzi e l’account reali: i prezzi configurati per il pagamento e le deroghe dell’account possono differire. Il conteggio degli ospiti esclude il proprietario del progetto e include membri, lettori e inviti in attesa; non esiste una fatturazione per postazione. Lo spazio occupato dai file viene imputato al proprietario del progetto che li riceve. Quando la proprietà viene trasferita, questi limiti, lo spazio e l’IA in background, come Smart Assign e la revisione dei feedback, usano il piano del nuovo proprietario.
 
 | Piano | Progetti | Ticket per progetto | Ospiti per progetto | Spazio | IA mensile inclusa (USD) |
 | --- | --- | --- | --- | --- | --- |

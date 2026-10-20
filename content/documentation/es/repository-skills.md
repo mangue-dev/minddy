@@ -74,7 +74,7 @@
 
 Numo lee archivos `SKILL.md` en subdirectorios de `.agents/skills`, `.claude/skills`, `.github/skills`, `.cursor/skills`, `.codex/skills` y `.gemini/skills`, en ese orden de prioridad. Nombre y descripción del frontmatter identifican la skill; scripts y referencias pueden acompañarla.
 
-Haga commit y push de los archivos al repositorio GitHub o GitLab vinculado. Elija la referencia adecuada cuando proceda. Los archivos solo locales no están disponibles. La lista se actualiza al abrir la conversación o cambiar de proyecto.
+Haga commit y push de los archivos a la rama predeterminada del repositorio GitHub o GitLab vinculado; Numo lee las skills desde esa rama. Los archivos que solo existen en su ordenador o en otra rama no están disponibles. La lista se actualiza al abrir la conversación o cambiar de proyecto.
 
 ## Seleccionar y comprobar {#selection}
 

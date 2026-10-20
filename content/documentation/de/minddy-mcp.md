@@ -166,7 +166,7 @@ Lesevorgänge, die Text mit Bildern liefern (`minddy_get_issue`, `minddy_get_obj
 
 Geben Sie für eine Konvertierung `operation=convert`, `propertyId`, `targetType`, `revision` und zunächst `preview=true` an. Prüfen Sie `incompatibleCount` und senden Sie dann dieselben Konvertierungseinstellungen mit `preview=false` und dem zurückgegebenen `token`. Setzen Sie `confirmLoss=true` nur, wenn der Benutzer dem Verlust inkompatibler Werte ausdrücklich zugestimmt hat.
 
-Eigentümer können ihre Routinen erstellen, pausieren, neu planen und entfernen. Lesen Sie vorhandene Routinen, bevor Sie eine neue erstellen, um doppelte Aufträge zu vermeiden. `minddy_add_resource` begrenzt Dateien auf 10 MB; Seitenwerkzeuge erfinden keine URLs.
+Mit den Routinenwerkzeugen, die nur Eigentümern zur Verfügung stehen, erstellen, ändern, pausieren und entfernen Sie Routinen, die ein Zeitplan, ein Ereignis oder ein neuer Datenbankeintrag auslöst. Lesen Sie vorhandene Routinen, bevor Sie eine neue erstellen, um doppelte Aufträge zu vermeiden. `minddy_add_resource` begrenzt Dateien auf 10 MB; Seitenwerkzeuge erfinden keine URLs.
 
 ### Mit einem Beispiel überprüfen {#example}
 

@@ -111,4 +111,4 @@ Una página publicada o una vista compartida usa un enlace opaco, que puede tene
 
 ## Probar publicación y revocación {#revocation}
 
-Abra el enlace en una sesión independiente sin iniciar sesión y compruebe contenido, archivos y exclusiones. Revóquelo y repita la prueba. Las copias ya descargadas no se pueden retirar; las URL firmadas siguen siendo válidas hasta que expiran, con un plazo de 24 horas para las páginas. Los enlaces secretos mantienen `noindex`, mientras el centro de documentación puede indexarse. `noindex` orienta a los rastreadores; no controla el acceso. No incluya enlaces privados en informes ni ejemplos públicos.
+Abra el enlace en una sesión independiente sin iniciar sesión y compruebe contenido, archivos y exclusiones. Revóquelo y repita la prueba. Las copias ya descargadas no se pueden retirar; las URL firmadas siguen siendo válidas hasta que expiran, y las URL de archivos emitidas para una página publicada duran 24 horas. Los enlaces secretos mantienen `noindex`, mientras el centro de documentación puede indexarse. `noindex` orienta a los rastreadores; no controla el acceso. No incluya enlaces privados en informes ni ejemplos públicos.

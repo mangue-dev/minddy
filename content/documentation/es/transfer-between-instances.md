@@ -92,7 +92,7 @@
 
 ## Exportar e importar {#transfer-between-instances}
 
-Inicie sesión en la instancia de origen y abra la pestaña **Privacidad y datos** de los ajustes de la cuenta. Descargue el archivo JSON y guárdelo de forma privada: contiene datos de la cuenta y de los proyectos. Cree una cuenta o inicie sesión en la instancia de destino, compruebe su dirección y use allí el control de importación. Seleccione el archivo exportado sin modificarlo y espere el resultado antes de cerrar la página.
+Inicie sesión en la instancia de origen y abra la pestaña **Privacidad y datos** de los ajustes de la cuenta. Elija **Descarga mis datos** y guarde el archivo JSON de forma privada: contiene datos de la cuenta y de los proyectos, incluidos los bytes de los archivos. Cree una cuenta o inicie sesión en la instancia de destino, compruebe su dirección, abra la misma pestaña y elija **Importar un archivo de transferencia**. Seleccione el archivo exportado sin modificarlo y espere el resultado antes de cerrar la página.
 
 La importación añade datos; no sustituye los que ya existen en el destino. Conserva los identificadores que pueden reutilizarse de forma segura y asigna otros nuevos cuando hay conflictos. El resultado informa de los identificadores reasignados y de las membresías omitidas. Las referencias de membresía de proyectos existentes solo se restauran si el proyecto ya existe en el destino y la referencia está autorizada. Después de que la página se recargue, revise los proyectos, tickets, páginas y datos personales.
 
@@ -101,7 +101,7 @@ La importación añade datos; no sustituye los que ya existen en el destino. Con
 
 ## Volver a conectar los servicios {#exclusions}
 
-No se transfieren contraseñas, claves API, tokens OAuth, credenciales de repositorios ni suscripciones. Configure y autorice de nuevo los servicios necesarios en el destino; un proyecto exportado no demuestra que el acceso a su proveedor siga funcionando. Revise los archivos adjuntos y su disponibilidad en lugar de tratar el JSON como una copia operativa de la base de datos y de los archivos de Storage.
+No se transfieren contraseñas, claves API, tokens OAuth, credenciales de repositorios ni suscripciones. Configure y autorice de nuevo los servicios necesarios en el destino; un proyecto exportado no demuestra que el acceso a su proveedor siga funcionando. Revise los archivos adjuntos y su disponibilidad en lugar de tratar el JSON como una copia operativa de la base de datos y de los archivos de Storage. Una exportación creada con v0.11.0 o anterior puede contener vistas guardadas de la paleta de comandos y conversaciones del agente de código; esta versión ya no tiene esas funciones y las ignora al importar.
 
 Conserve la instancia de origen hasta comprobar el trabajo transferido. Si la importación falla, guarde el mensaje de error y verifique el estado del destino antes de repetirla. Elimine o proteja los archivos de transferencia cuando ya no los necesite; nunca los adjunte a un informe público de error.
 

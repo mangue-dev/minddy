@@ -166,7 +166,7 @@ Reads that return text with images (`minddy_get_issue`, `minddy_get_objective`, 
 
 For a type conversion, use `operation=convert` with `propertyId`, `targetType`, `revision` and `preview=true`. Inspect `incompatibleCount`, then submit the same settings with `preview=false` and the returned `token`. Set `confirmLoss=true` only after the user explicitly authorizes clearing incompatible values.
 
-Owner-only routine tools create, pause, retime or remove scheduled requests. Read existing routines first to avoid duplicates. Resource uploads through `minddy_add_resource` are capped at 10 MB; page tools do not invent file URLs.
+Owner-only routine tools create, change, pause or remove routines with a schedule, an event or a new database entry as their trigger. Read existing routines first to avoid duplicates. Resource uploads through `minddy_add_resource` are capped at 10 MB; page tools do not invent file URLs.
 
 ### Verify the returned state {#example}
 

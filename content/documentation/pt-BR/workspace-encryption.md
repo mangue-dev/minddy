@@ -91,7 +91,7 @@
 
 ## Configurar criptografia e preservar chaves {#workspace-encryption}
 
-As opções `--encryption` do instalador e do bootstrap descritas aqui pertencem às ferramentas do candidato 0.11.1 identificado. O instalador e o bootstrap publicados na v0.11.0 não as aceitam.
+As opções `--encryption` do instalador e do bootstrap descritas aqui acompanham as ferramentas desta versão. O instalador e o bootstrap da v0.11.0 não as aceitam.
 
 O runtime dessa versão reconhece `MINDDY_CONTENT_ENCRYPTION_ENABLED`; o serviço Compose de referência carrega o arquivo protegido por meio de `env_file`. Uma alteração explícita da flag exige, portanto, recriar o serviço da aplicação com o mesmo ambiente e verificar o esquema e o comportamento real. Uma chave `MINDDY_DATA_ROOT_KEY` gerada não comprova que o conteúdo do espaço está criptografado. Use ferramentas e configuração correspondentes, verificadas explicitamente para a versão escolhida, antes de receber usuários ou alterar uma instância existente.
 

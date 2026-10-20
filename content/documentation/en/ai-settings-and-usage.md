@@ -132,7 +132,7 @@ An unconfirmed or unreachable key may leave supported general AI calls on manage
 
 ### Local models {#models}
 
-Local Ollama or OpenAI-compatible endpoints can serve conversations through the desktop bridge when configured. Routines run on the server and cannot reach a model on your computer. Use a server-reachable provider for them. Remove a provider with its confirmation control when no longer needed and check the resulting routing before the next run.
+Minddy calls AI models from the server, so it cannot use a model running on your computer. **Add provider** does not offer local Ollama or OpenAI-compatible endpoints. A local endpoint saved in an earlier version still appears in **Connected providers**, but it cannot serve Numo conversations, routines or other features. Remove it and assign a server-reachable provider instead. Remove a provider with its confirmation control when no longer needed and check the resulting routing before the next run.
 
 
 ## Understand Cloud plans and AI consumption {#plans-and-ai-usage}
@@ -147,9 +147,9 @@ Included AI usage covers Numo reasoning and tool calls, routines, automations, v
 
 Compatible personal keys bill model calls to their provider instead of included AI usage. Unassigned families or surfaces that use minddy-funded calls remain subject to their minddy allowance. Self-hosting has infrastructure and optional-provider costs determined by your installation; it does not become a Cloud subscription merely by running the same core.
 
-### Candidate capacity reference {#plan-capacities}
+### Plan capacity reference {#plan-capacities}
 
-These defaults describe the identified 0.11.1 candidate. Verify the live pricing page and account before purchasing; configured checkout prices and account overrides can differ. Guests exclude the project owner and include members, readers and pending invitations; there is no per-seat billing. Storage is charged to the owner of the project receiving files. When ownership is transferred, these limits, storage and background AI such as Smart Assign and feedback review use the new owner's plan.
+These defaults describe Minddy 0.20.0. Verify the live pricing page and account before purchasing; configured checkout prices and account overrides can differ. Guests exclude the project owner and include members, readers and pending invitations; there is no per-seat billing. Storage is charged to the owner of the project receiving files. When ownership is transferred, these limits, storage and background AI such as Smart Assign and feedback review use the new owner's plan.
 
 | Plan | Projects | Issues per project | Guests per project | Storage | Included monthly AI (USD) |
 | --- | --- | --- | --- | --- | --- |

@@ -204,9 +204,9 @@ Un database combina una tabella di proprietà strutturate con una pagina complet
 
 ## Creare un database e le sue colonne {#create-a-database}
 
-L’area di configurazione di una nuova banca dati offre due schede: chiedere a Numo di preparare la struttura o importare una banca dati esistente. Il controllo di chiusura ha un suggerimento e nasconde queste proposte; la modifica manuale resta disponibile.
+L’area di configurazione di una nuova banca dati offre due schede: **Crea con Numo** per preparare la struttura e **Importa un database esistente**. Il controllo di chiusura, etichettato **Nascondi la guida alla creazione**, nasconde queste proposte; la modifica manuale resta disponibile.
 
-Come membro del progetto, apri Pagine, usa + e scegli un database. Un nuovo database ha il nome delle voci e nessuna colonna opzionale. Il banner «Nuovo database» offre la configurazione con Numo o l’importazione di un database esistente. La configurazione manuale resta disponibile senza IA. Scegliere la configurazione con Numo apre una richiesta preparata con questo database come contesto di pagina, dopo che la creazione è terminata. Controlla e invia la richiesta per chiedere la struttura necessaria; aprire la conversazione non completa la configurazione. Il lavoro effettivo dell’IA richiede un fornitore configurato e utilizzo disponibile oppure una chiave personale compatibile. Esamina lo schema e le voci risultanti prima di farvi affidamento.
+Come proprietario o Membro del progetto, apri Pagine, usa + e scegli un database. Un nuovo database ha il nome delle voci e nessuna colonna opzionale. Il banner «Nuovo database» offre la configurazione con Numo o l’importazione di un database esistente. La configurazione manuale resta disponibile senza IA. Scegliere **Crea con Numo** apre una richiesta preparata con questo database come contesto di pagina, dopo che la creazione è terminata. Controlla e invia la richiesta per chiedere la struttura necessaria; aprire la conversazione non completa la configurazione. Il lavoro effettivo dell’IA richiede un fornitore configurato e utilizzo disponibile oppure una chiave personale compatibile. Esamina lo schema e le voci risultanti prima di farvi affidamento.
 
 Apri «Colonne» e scegli «Aggiungi colonna» oppure usa la colonna + sul bordo destro della tabella. Dai un nome alla colonna e scegli Testo, Numero, Selezione, Selezione multipla, Data di creazione, Data, Persone o Casella di controllo. Usa il selettore ricercabile per trovare il tipo. Salva, aggiungi una voce e verifica che la colonna appaia in tabella e nella pagina della voce.
 
@@ -280,7 +280,7 @@ Le modifiche allo schema eseguite da un agente usano la revisione attuale del da
 
 ## Importare un database con il contenuto delle sue voci {#import-a-database}
 
-Crea un database senza colonne facoltative né voci esistenti. Dal banner del nuovo database, scegli Importa un database esistente. Carica uno ZIP di Notion in formato Markdown & CSV con sottopagine, il CSV di un database oppure un archivio di database minddy. Se l’archivio contiene più database, seleziona quello da importare.
+Crea un database senza colonne facoltative né voci esistenti. Dal banner del nuovo database, scegli **Importa un database esistente**. Carica uno ZIP di Notion in formato Markdown & CSV con sottopagine, il CSV di un database oppure un archivio di database minddy. Se l’archivio contiene più database, seleziona quello da importare.
 
 Prima di confermare, controlla i nomi e i tipi di colonna suggeriti e poi il numero di pagine. Se l’assistenza all’importazione è configurata, Numo può suggerire i tipi da un piccolo campione; puoi comunque impostare la corrispondenza manualmente. Le proprietà di origine non supportate rimangono come testo. I valori incompatibili bloccano l’importazione anziché essere cancellati senza avviso.
 

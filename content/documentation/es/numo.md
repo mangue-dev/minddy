@@ -256,6 +256,8 @@ Abra la incidencia o el proyecto y use el botón flotante de Numo. La página ac
 3. Envíe una petición acotada, por ejemplo: «Lee esta incidencia y propone criterios de aceptación. No cambies su estado».
 4. Lea la respuesta y abra sus enlaces a incidencias o fuentes. Si pidió una modificación, compruebe el objeto modificado.
 
+En una conversación nueva y vacía, cuatro filas de sugerencias encima del campo de redacción proponen peticiones adaptadas a la página actual, por ejemplo **Resumir esta incidencia** o **Escribir un plan de implementación** cuando hay una incidencia abierta en el panel lateral. Elegir una fila rellena el campo sin enviarlo, para que pueda ajustar la petición antes. Las filas desaparecen en cuanto el campo contiene texto y vuelven cuando lo vacía. Aparecen en el diseño de escritorio, no en un teléfono.
+
 Numo también puede ver las imágenes de la descripción de una incidencia o de un objetivo, de un plan, de un comentario, de una página o de tu cuaderno cuando el modelo de la conversación acepta imágenes. Sin esa capacidad, Numo indica que no pudo ver la imagen en lugar de describirla.
 
 El modelo predeterminado de Numo se configura en **Ajustes de cuenta → IA y Numo → Modelo predeterminado de Numo**: el valor de la app o un modelo personal del proveedor activo. Una elección explícita en la conversación tiene prioridad. Consulta [los ajustes de IA y uso](/docs/ai-settings-and-usage#ai-keys-and-models).
@@ -264,7 +266,7 @@ El modelo predeterminado de Numo se configura en **Ajustes de cuenta → IA y Nu
 
 ### Continuar una conversación {#continue}
 
-La lista permite recuperar conversaciones anteriores. Continúe la que contiene las decisiones necesarias. Numo organiza y sigue el trabajo: lee y actualiza incidencias, planes, páginas y otros contenidos de Minddy, y puede leer las pull requests vinculadas. Cuando Numo busca incidencias, las coincidencias de texto y los identificadores exactos van primero; una búsqueda descriptiva puede añadir incidencias del mismo proyecto encontradas por el sentido, que Numo debe comprobar antes de basarse en ellas. No escribe código ni modifica ningún repositorio. Para que se escriba código, copie el prompt de la incidencia para su propio agente de código; consulte [Trabajo con código y pull requests](/docs/code-work#external-coding-agents).
+La lista permite recuperar conversaciones anteriores. Continúe la que contiene las decisiones necesarias. Numo organiza y sigue el trabajo: lee y actualiza incidencias, planes, páginas y otros contenidos de Minddy, y puede leer las pull requests vinculadas. Si se lo pide, también puede comentar una pull request, resolver las conversaciones de revisión ya atendidas y fusionarla. Cuando Numo busca incidencias, las coincidencias de texto y los identificadores exactos van primero; una búsqueda descriptiva puede añadir incidencias del mismo proyecto encontradas por el sentido, que Numo debe comprobar antes de basarse en ellas. No escribe código ni hace push de commits. Para que se escriba código, copie el prompt de la incidencia para su propio agente de código; consulte [Trabajo con código y pull requests](/docs/code-work#external-coding-agents).
 
 Si solicita información, envíe su elección antes de esperar que continúen las acciones dependientes. Una tarjeta de consumo o error explica la interrupción. Compruebe cualquier escritura externa antes de pedir que se repita.
 

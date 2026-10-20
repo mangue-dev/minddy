@@ -108,6 +108,6 @@ Faites un clic droit sur une routine de la liste pour ouvrir sa dernière exécu
 
 Chaque occurrence utilise le budget IA du propriétaire, avec un plafond par défaut de 15 % du budget mensuel, qui inclut chaque appel à Numo de cette occurrence. Ouvrez sa conversation pour lire la source, le résultat et les questions. Si Numo demande votre avis, répondez dans cette conversation ; le budget restant de l’occurrence est conservé. Consultez les résultats enregistrés avant de modifier un plafond ou de réessayer. Lorsque la propriété est [transférée](/docs/projects#transfer-ownership), les routines de l’ancien propriétaire dans le projet sont mises en pause et ne peuvent plus démarrer de travail ; le nouveau propriétaire crée les routines qui doivent continuer.
 
-Les anciennes automatisations du projet apparaissent comme propositions en pause lorsque leur propriétaire ouvre Routines. Lisez le [guide de transition](/docs/automation-settings) avant de les activer.
+Les automatisations de projet des versions précédentes ne s’exécutent plus et ne sont pas converties en routines. Lisez le [guide de transition](/docs/automation-settings) pour recréer un workflow sous forme de routine.
 
 Ce plafond s’applique lorsqu’un budget mensuel inclus est disponible ; un mode sans plafond utilisant une clé personnelle ne reçoit pas de budget mensuel artificiel.

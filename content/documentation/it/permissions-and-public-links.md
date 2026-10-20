@@ -111,4 +111,4 @@ Una pagina pubblicata o una vista condivisa usa un link opaco, eventualmente pro
 
 ## Provare pubblicazione e revoca {#revocation}
 
-Apri il link in una sessione separata senza login e controlla contenuti, file ed esclusioni. Revocalo e ripeti la prova. Non puoi richiamare le copie già scaricate; le URL firmate dei file rimangono valide fino alla scadenza, pari a 24 ore per le pagine. I link segreti conservano `noindex`, a differenza del centro di documentazione indicizzabile. `noindex` è un’indicazione per i crawler, non un controllo di accesso. Non inserire link privati in rapporti o esempi pubblici.
+Apri il link in una sessione separata senza login e controlla contenuti, file ed esclusioni. Revocalo e ripeti la prova. Non puoi richiamare le copie già scaricate; le URL firmate dei file rimangono valide fino alla scadenza, e gli URL dei file emessi per una pagina pubblicata durano 24 ore. I link segreti conservano `noindex`, a differenza del centro di documentazione indicizzabile. `noindex` è un’indicazione per i crawler, non un controllo di accesso. Non inserire link privati in rapporti o esempi pubblici.

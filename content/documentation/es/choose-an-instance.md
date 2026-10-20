@@ -81,7 +81,7 @@ Por ejemplo, un equipo sin capacidad para gestionar bases de datos puede usar Cl
 
 Una instalación compatible necesita la aplicación y Supabase con PostgreSQL, Auth, Storage y Realtime. PostgreSQL por sí solo no basta. Usa una versión etiquetada y su matriz de compatibilidad. Las variantes derivadas de Supabase sin versión fijada y los adaptadores autogestionados de GitHub Enterprise o GitLab quedan fuera del contrato compatible.
 
-La IA, el correo, Git, las notificaciones push y la analítica dependen de la configuración. El autoalojamiento no exige Stripe, PostHog, una clave de IA gestionada por minddy ni una cuenta Cloud. La configuración opcional ausente se comunica en lugar de sustituirse silenciosamente por un proveedor. Las claves personales de IA y los puntos de acceso locales de IA son opciones posibles; su disponibilidad y coste dependen de la capacidad configurada.
+La IA, el correo, Git, las notificaciones push y la analítica dependen de la configuración. El autoalojamiento no exige Stripe, PostHog, una clave de IA gestionada por minddy ni una cuenta Cloud. La configuración opcional ausente se comunica en lugar de sustituirse silenciosamente por un proveedor. Las claves personales de IA y, en la aplicación de escritorio, los puntos de acceso locales de IA son opciones posibles; su disponibilidad y coste dependen de la capacidad configurada.
 
 Revisa los permisos y las condiciones sobre datos del proveedor antes de activar una integración. Las conexiones Git pueden usar el servicio de retransmisión de forjas gestionado cuando inicias explícitamente la integración; también puedes usar aplicaciones del proveedor propias o desactivar la retransmisión. El autoalojamiento no es una modalidad reducida de las funciones del núcleo.
 

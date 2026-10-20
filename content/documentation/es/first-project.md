@@ -92,16 +92,16 @@ Si tu equipo ya tiene un proyecto, comunica al propietario el correo de tu cuent
 2. Continúa por los pasos del icono y el repositorio. Para este ejemplo manual, conserva el icono predeterminado y no elijas ningún repositorio. Puedes dejar vacía la descripción inicial.
 3. A continuación, el asistente propone invitar a tu equipo. Sáltalo en este ejemplo manual; si trabajas con otras personas, busca en su lugar por nombre a las personas de tus otros proyectos o introduce sus correos electrónicos. No se envía nada hasta que finalizas la creación del proyecto.
 4. En el último paso, revisa Smart Assign y la asignación automática; deja esta última desactivada si quieres asignar tú el ticket de demostración. Elige la acción para finalizar, espera a que se cree el proyecto y ábrelo.
-5. Abre el proyecto y crea una incidencia. Ponle un título concreto, como «Comprobar el enlace de contacto del sitio web». Describe la página, el destino esperado y cómo verificarás el resultado. Si el botón Rellenado inteligente aparece y está activado, desactívalo para este ejemplo manual antes de crear la incidencia. Controla el rellenado de esta incidencia y es independiente de los interruptores de automatización y Smart Assign del proyecto.
+5. Abre el proyecto y crea una incidencia. Ponle un título concreto, como «Comprobar el enlace de contacto del sitio web». Describe la página, el destino esperado y cómo verificarás el resultado. Si el botón Rellenado inteligente aparece y está activado, desactívalo para este ejemplo manual antes de crear la incidencia. Controla el rellenado de esta incidencia y es independiente de Smart Assign y de las rutinas.
 6. Elige una persona responsable, una prioridad y un esfuerzo si ayudan a planificar la tarea. Confirma la creación, abre la incidencia creada y comprueba su proyecto e identificador.
 7. Cambia el estado a «En curso» cuando empiece el trabajo. Realiza la comprobación y registra el resultado en un comentario. Usa «En examen» si otra persona todavía tiene que revisarlo.
-8. Cambia el estado a «Hecho» después de comprobar el resultado esperado. Busca la incidencia entre el trabajo completado del proyecto o por su identificador para confirmar el cambio.
+8. Cambia el estado a «Hecho» después de comprobar el resultado esperado. Los tableros ocultan la columna **Hecho** de forma predeterminada: selecciona **Hecho** en el filtro **Estado** del tablero, o busca el identificador de la incidencia, para confirmar el cambio.
 
 ![Incidencia de demostración completada con su descripción y comentario guardado.](/documentation/es/reader-first-project.png)
 
 ## Resolver un resultado inesperado {#first-use-recovery}
 
-Una invitación corresponde a una cuenta y una instancia concretas. Si no aparece, comprueba el correo que facilitaste al propietario y abre la bandeja de entrada en esa misma instancia. Conocer el nombre de un proyecto no permite unirse a él. Si una incidencia desaparece del tablero al cambiar su estado, quita los filtros de la vista o busca su identificador antes de crear otra copia.
+Una invitación corresponde a una cuenta y una instancia concretas. Si no aparece, comprueba el correo que facilitaste al propietario y abre la bandeja de entrada en esa misma instancia. Conocer el nombre de un proyecto no permite unirse a él. Si una incidencia desaparece del tablero al cambiar su estado, quita los filtros de la vista o busca su identificador antes de crear otra copia. Las incidencias hechas y canceladas salen del tablero de forma predeterminada; selecciona **Hecho** o **Cancelado** en el filtro **Estado** para mostrarlas.
 
 Si alguna de las invitaciones añadidas en el asistente no pudo enviarse, el proyecto se crea igualmente y una notificación indica cada persona no invitada y el motivo. Revisa las invitaciones pendientes en la configuración de miembros del proyecto antes de volver a invitar.
 

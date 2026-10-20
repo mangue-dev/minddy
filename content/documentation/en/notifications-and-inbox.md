@@ -77,14 +77,20 @@
 
 ## Read Inbox {#notifications-and-inbox}
 
-Open Inbox from navigation. It is a popover that groups notifications by date and offers unread, all and mentions filters. Select an item to inspect its underlying issue or page and check the read state. Opening a notification marks it read. Its row also offers mark-read or mark-unread controls, and the popover can mark all notifications read. Marking unread restores that activity marker; it does not undo the underlying issue or page change. A notification is a pointer to accessible work, not a replacement for its current content.
+Open Inbox from its icon in the top bar, from the Inbox row of the sidebar on a phone, or by pressing G then I outside a text field. A red count on the icon adds unread notifications and pending invitations; an installed PWA shows the same count on its app icon. Inbox opens as a popover, or as a sheet on a phone, and groups notifications under Today, Yesterday and Earlier.
 
-Pending project invitations also appear in Inbox. Accept or decline after checking the project and account. Legacy Inbox links open the current entry point rather than establishing a separate page.
+Inbox opens on the Unread filter. All also lists read notifications, and Mentions keeps only mentions in comments and pages. Select an item to open its underlying issue, page or pull request. Opening a notification marks it read. Its row also offers Mark as read or Mark as unread, and Mark all as read in the Inbox header clears every unread marker. Marking unread restores that activity marker; it does not undo the underlying issue or page change. A notification is a pointer to accessible work, not a replacement for its current content.
+
+Delete on a row removes that notification after a confirmation, and Delete read in the header removes every read notification after a confirmation. Both deletions are permanent; unread notifications stay, and the issue, page or pull request a notification points to is not affected.
+
+Pending project invitations appear under Invitations in the Unread and All filters. Accept or decline after checking the project and the inviter. Legacy Inbox links open the current entry point rather than establishing a separate page.
 
 ![Inbox with demonstration mentions, assignments and comments, including read and unread items.](/documentation/en/work-inbox.png)
 
 ## Choose notification channels {#notification-preferences}
 
-Open account notification preferences to adjust which activity you receive. Browser, PWA or desktop delivery also needs device registration and the operating system's permission. Disabling a device channel is distinct from changing the in-app activity filters.
+Select Inbox settings in the Inbox header, or open Account settings and choose the Notifications tab. Under Inbox notifications, a switch per category (Assignments, Mentions, Comments, Numo, Routines, Pull requests, Feedback and Pages) decides what lands in your Inbox. Turning a category off stops future notifications of that kind, including their push alerts; it does not remove notifications you already received.
+
+The Push notifications section on the same tab lists the devices that receive alerts. Browser, PWA or desktop delivery also needs device registration and the operating system's permission. Turning a device off or removing it stops alerts on that device only; your Inbox and its categories are unchanged.
 
 If a notification leads to unavailable content, verify whether project membership changed or the object was deleted. For missing push delivery, check device permission and registration using the [device-notification section](/docs/applications#devices-and-notifications); in-app Inbox remains a useful place to inspect activity. Never send session cookies or private notification contents as troubleshooting screenshots.

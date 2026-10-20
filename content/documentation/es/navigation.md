@@ -128,7 +128,7 @@ La navegación principal da acceso a tu trabajo personal y a tus proyectos. Sele
 
 Los contadores y las alertas te acompañan entre niveles. El control que vuelve a **Inicio** muestra el total por clasificar en los proyectos que lista **Inicio**, incluido el actual, y la alerta de Smart Assign cuando a uno de tus proyectos le faltan reglas. Una fila de retorno muestra el contador del nivel al que regresa. Dentro de un proyecto, **Clasificación** y **Sugerencias** conservan los contadores de ese proyecto. Las pestañas de la app de escritorio llevan la misma insignia que su entrada de la barra lateral: la alerta en **Inicio** y los contadores en **Caja de entrada**, **Revisión de código** y en **Clasificación** y **Sugerencias** de un proyecto, actualizados aunque la pestaña esté en segundo plano.
 
-Los ciclos personales y las vistas entre proyectos abarcan los proyectos a los que tienes acceso. Los objetivos, la wiki y las sugerencias de un proyecto pertenecen a un único proyecto. Comprueba el proyecto activo antes de crear trabajo o modificar ajustes.
+Los ciclos personales y las vistas entre proyectos abarcan los proyectos a los que tienes acceso. Los objetivos, las páginas y las sugerencias de un proyecto pertenecen a un único proyecto. Comprueba el proyecto activo antes de crear trabajo o modificar ajustes.
 
 ![Navegación del proyecto junto al tablero de incidencias de demostración.](/documentation/es/work-navigation.png)
 
@@ -146,11 +146,9 @@ La acción se aplica a la fila en la que hiciste clic, aunque haya otro proyecto
 
 ### Paneles y navegación móvil {#panels}
 
-En móviles, una barra de carga en la parte superior indica que la navegación está en curso, también mientras terminan los guardados pendientes de la página.
-
 Una incidencia se abre en un panel de detalle para mantener disponible el tablero que hay debajo. Numo se abre desde su botón flotante en un panel de conversación compartido. La bandeja de entrada se abre como un panel emergente de navegación con notificaciones e invitaciones. Los antiguos enlaces a pantallas propias de la bandeja de entrada y Numo llevan a los accesos actuales; no representan pantallas independientes actuales.
 
-En el móvil, abre el menú lateral de navegación para elegir los mismos destinos. Los paneles usan el ancho disponible, así que ciérralos o vuelve desde el panel actual para ver de nuevo la lista. Utiliza los botones visibles cuando no haya un atajo de teclado disponible.
+En el móvil, abre el menú lateral de navegación para elegir los mismos destinos. Una barra de carga en la parte superior indica que la navegación está en curso, también mientras terminan los guardados pendientes de la página. Los paneles usan el ancho disponible, así que ciérralos o vuelve desde el panel actual para ver de nuevo la lista. Utiliza los botones visibles cuando no haya un atajo de teclado disponible.
 
 ### Pestañas de escritorio {#tabs}
 
@@ -158,9 +156,7 @@ La aplicación de escritorio añade pestañas nativas y un selector de servidor 
 
 ## Encontrar trabajo y usar acciones de teclado {#search-and-shortcuts}
 
-El comando Documentación abre el manual público en tu idioma actual.
-
-Abre la paleta de comandos desde el control de búsqueda de la navegación. Busca un título distintivo o un identificador de incidencia y elige un resultado. Los resultados se limitan al trabajo al que tu cuenta puede acceder; conocer un identificador no da acceso a otro proyecto.
+Abre la paleta de comandos desde el control de búsqueda de la navegación. Busca un título distintivo o un identificador de incidencia y elige un resultado. Los resultados se limitan al trabajo al que tu cuenta puede acceder; conocer un identificador no da acceso a otro proyecto. El comando Documentación abre el manual público en tu idioma actual.
 
 Pulsa Command+K en macOS o Ctrl+K en Windows/Linux para abrir la paleta de comandos; Command/Ctrl+P es un atajo alternativo de la aplicación. Fuera del texto editable, ? abre la ayuda de atajos y C la creación de incidencias. Sobre una tarjeta de incidencia bajo el puntero o en sus controles de detalle compatibles, S abre el estado, P la prioridad, E el esfuerzo, A el responsable, L las categorías, D la fecha límite y O el objetivo. R añade una relación desde esos mismos lugares, en la página de un objetivo y en el formulario de nueva incidencia: elige el tipo de relación y después la otra incidencia u objetivo. Estas acciones de una sola tecla no interceptan la escritura en campos, áreas de texto ni editores de contenido. Las secuencias de navegación como G y después H (Inicio) o G y después I (Bandeja de entrada) usan dos teclas sucesivas. G y después W lleva a Páginas solo dentro de un proyecto.
 

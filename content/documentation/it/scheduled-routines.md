@@ -108,6 +108,6 @@ Fai clic con il tasto destro su una routine dell’elenco per aprire la sua ulti
 
 Ogni esecuzione usa il budget IA del proprietario con un limite predefinito del 15 % del budget mensile, comprendendo ogni chiamata a Numo di quell’esecuzione. Apri la conversazione per leggere origine, risultato e domande. Rispondi nella stessa conversazione quando è necessario il tuo intervento; il budget residuo resta disponibile. Esamina i risultati salvati prima di cambiare il limite o riprovare. Quando la proprietà viene [trasferita](/docs/projects#transfer-ownership), le routine dell’ex proprietario nel progetto vengono sospese e non possono avviare nuovo lavoro; il nuovo proprietario crea le routine che devono proseguire.
 
-Le automazioni archiviate appaiono come proposte in pausa quando il proprietario apre Routine. Leggi la [guida alla transizione](/docs/automation-settings) prima di attivarle.
+Le automazioni di progetto delle versioni precedenti non vengono più eseguite e non sono convertite in routine. Leggi la [guida alla transizione](/docs/automation-settings) per ricreare un workflow come routine.
 
 Il limite si applica quando è disponibile un budget mensile incluso; una modalità illimitata con chiave personale non riceve un budget mensile artificiale.

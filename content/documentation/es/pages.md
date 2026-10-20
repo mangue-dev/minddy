@@ -221,8 +221,8 @@
       "id": "page-file-preview",
       "kind": "screenshot",
       "src": "/documentation/es/file-preview.png",
-      "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar y Eliminar.",
-      "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Eliminar.",
+      "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.",
+      "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Cambiar nombre y Eliminar.",
       "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-12",
@@ -252,7 +252,7 @@ Las páginas forman el wiki de un proyecto, con documentos, subpáginas y entrad
 
 ## Crear una wiki del proyecto {#create-and-organize-pages}
 
-Abre Páginas en un proyecto del que seas miembro. Usa el menú + y elige una página para un documento o una base de datos para una lista estructurada. Pon un título útil y escribe la especificación, decisión o procedimiento que deba conservar.
+Abre Páginas en un proyecto como propietario o como Miembro; los lectores pueden abrir las páginas, pero no crearlas. Usa el menú + y elige una página para un documento o una base de datos para una lista estructurada. Pon un título útil y escribe la especificación, decisión o procedimiento que deba conservar.
 
 Crea subpáginas para documentos relacionados y utiliza los controles del árbol para moverlas o reordenarlas. Una página no puede ser descendiente de sí misma. Duplicar una página crea contenido nuevo, no una referencia actualizada al original. Revisa la rama duplicada antes de editarla o compartirla.
 
@@ -278,7 +278,7 @@ A diferencia de una tarea del cuaderno llevada al proyecto, la página no se eli
 
 ## Escribir una página con bloques y menciones {#page-editor}
 
-Abre la página y edita su título o cuerpo como propietario o como Miembro. Los lectores pueden abrir y leer las páginas, pero no pueden editarlas, importarlas, duplicarlas, añadirlas a favoritos ni publicarlas, ni restaurar una versión. Usa el menú de comandos de barra y los controles de formato para insertar encabezados, párrafos, listas, tareas, código, secciones plegables y avisos. Un aviso puede tener un icono emoji y un color de la paleta; elígelos para distinguir información útil, no como única forma de comunicar una advertencia.
+Abre la página y edita su título o cuerpo como propietario o como Miembro. Los lectores pueden abrir y leer las páginas, pero no pueden editarlas, importarlas, duplicarlas, añadirlas a favoritos ni publicarlas, ni restaurar una versión. Usa el menú de comandos de barra y los controles de formato para insertar encabezados, texto, listas con viñetas, numeradas y de tareas, citas, avisos, bloques de código, divisores, desplegables (secciones plegables), subpáginas, imágenes y archivos. Un aviso puede tener un icono emoji y un color de la paleta; elígelos para distinguir información útil, no como única forma de comunicar una advertencia.
 
 Utiliza menciones para enlazar incidencias, objetivos, personas o páginas relevantes. Escribe `@` seguido de un identificador, palabras del título o una breve descripción; una búsqueda descriptiva también muestra incidencias encontradas [por el sentido](/docs/navigation#search-by-meaning) bajo **Relacionadas por el sentido**, después de las coincidencias de texto. Los enlaces inversos ayudan a encontrar páginas que hacen referencia a la actual. Un enlace aporta contexto, no acceso a un objeto privado de otro proyecto.
 
@@ -316,9 +316,9 @@ Abre la página como miembro del proyecto y utiliza los controles de adjuntos o 
 
 Las imágenes pueden insertarse como bloques de imagen y los demás documentos como bloques de archivo. El servidor determina el tipo de medio almacenado a partir de los bytes, sin confiar en el nombre del archivo ni en la etiqueta del navegador. Aceptar una carga no garantiza que todos los formatos tengan una vista previa en la página; descarga el archivo si no hay vista previa.
 
-En el editor del proyecto, haz clic en una imagen o en el nombre de un bloque de archivo compatible para abrir el mismo visor a toda ventana que usan los adjuntos de los tickets. Markdown (`.md`), texto sin formato (`.txt`, `.text`), CSV, PDF y los formatos de audio o vídeo compatibles se abren en contenedores específicos. Usa Cerrar o Escape para volver a la página. El menú Acciones del archivo (`…`) ofrece Descargar; Eliminar solo está disponible en páginas editables y quita el bloque del documento. El bloque de archivo conserva también su control directo Descargar. Los formatos no compatibles, los enlaces a archivos externos y los bloques de archivo de páginas publicadas conservan su comportamiento de descarga. Las imágenes publicadas usan el visor sin la acción de eliminación.
+En el editor del proyecto, haz clic en una imagen o en el nombre de un bloque de archivo compatible para abrir el mismo visor a toda ventana que usan los adjuntos de los tickets. Markdown (`.md`), texto sin formato (`.txt`, `.text`), CSV, PDF y los formatos de audio o vídeo compatibles se abren en contenedores específicos. Usa Cerrar o Escape para volver a la página. El menú Acciones del archivo (`…`) ofrece Descargar. En una página editable, un bloque de archivo ofrece también Cambiar nombre, que cambia el nombre mostrado en la página, y las imágenes y los archivos ofrecen Eliminar: pide confirmación, quita el bloque del documento y puedes deshacerlo en el editor. El bloque de archivo conserva también su control directo Descargar. Los formatos no compatibles, los enlaces a archivos externos y los bloques de archivo de páginas publicadas conservan su comportamiento de descarga. Las imágenes publicadas usan el visor sin la acción de eliminación.
 
-![Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar y Eliminar.](/documentation/es/file-preview.png)
+![Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.](/documentation/es/file-preview.png)
 
 Comprueba que aparezca en la página y ábrelo o descárgalo. Los bytes están en Storage, mientras que los metadatos de página y archivo determinan el acceso. Que la página se guarde correctamente no demuestra por sí solo que estén disponibles los bytes.
 

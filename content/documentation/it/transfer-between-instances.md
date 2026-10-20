@@ -92,7 +92,7 @@
 
 ## Esportare e importare {#transfer-between-instances}
 
-Accedi all’istanza di origine e apri la scheda **Privacy e dati** nelle impostazioni dell’account. Scarica l’esportazione JSON e conservala privatamente: contiene dati dell’account e dei progetti. Crea il tuo account nell’istanza di destinazione oppure accedi a quello esistente, verifica l’indirizzo e scegli lì il comando di importazione. Seleziona il file esportato senza modificarlo e attendi il risultato prima di chiudere la pagina.
+Accedi all’istanza di origine e apri la scheda **Privacy e dati** nelle impostazioni dell’account. Scegli **Scarica i miei dati** e conserva privatamente il file JSON: contiene dati dell’account e dei progetti, compresi i byte dei file. Crea il tuo account nell’istanza di destinazione oppure accedi a quello esistente, verifica l’indirizzo, apri la stessa scheda e scegli **Importa un file di trasferimento**. Seleziona il file esportato senza modificarlo e attendi il risultato prima di chiudere la pagina.
 
 L’importazione aggiunge dati senza sostituire quelli della destinazione. Gli identificatori vengono conservati quando possono essere riutilizzati in sicurezza; in caso di conflitto ne vengono assegnati di nuovi. Il risultato indica gli identificatori rimappati e le appartenenze ai progetti ignorate. I riferimenti di appartenenza a progetti esistenti vengono ripristinati solo se il progetto di destinazione esiste già e il riferimento è autorizzato. Dopo il ricaricamento della pagina, controlla progetti, ticket, pagine e dati personali.
 
@@ -100,7 +100,7 @@ L’importazione aggiunge dati senza sostituire quelli della destinazione. Gli i
 
 ## Ricollegare servizi {#exclusions}
 
-Password, chiavi API, token OAuth, credenziali dei repository e abbonamenti non vengono trasferiti. Configura e autorizza di nuovo i servizi necessari nella destinazione; un progetto esportato non dimostra che l’accesso al provider funzioni. Controlla le risorse file e la loro disponibilità: il JSON non è un backup operativo della base dati e dei byte di Storage.
+Password, chiavi API, token OAuth, credenziali dei repository e abbonamenti non vengono trasferiti. Configura e autorizza di nuovo i servizi necessari nella destinazione; un progetto esportato non dimostra che l’accesso al provider funzioni. Controlla le risorse file e la loro disponibilità: il JSON non è un backup operativo della base dati e dei byte di Storage. Un’esportazione creata da v0.11.0 o precedenti può contenere viste salvate della palette dei comandi e conversazioni dell’agente di codice; questa release non ha più queste funzionalità e le ignora durante l’importazione.
 
 Mantieni l’istanza di origine finché non hai verificato il lavoro trasferito. Se l’importazione fallisce, conserva il messaggio d’errore e controlla lo stato della destinazione prima di ripetere l’operazione. Elimina o proteggi i file di trasferimento quando non servono più; non allegarli mai a una segnalazione pubblica.
 

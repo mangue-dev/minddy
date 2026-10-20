@@ -128,7 +128,7 @@ The main navigation gives access to personal work and your projects. Select a pr
 
 Counters and warnings follow you between levels. The control that leads back to **Home** shows the total waiting to be triaged across the projects **Home** lists, the current one included, and the Smart Assign warning when one of your projects needs rules. A back row shows the counter of the level it returns to. Inside a project, **Triage** and **Feedback** keep that project's own counts. Desktop tabs carry the same badge as their sidebar entry: the warning on **Home**, and the counts on **Inbox**, **Code review** and a project's **Triage** and **Feedback**, updated even when the tab is in the background.
 
-Personal cycles and cross-project views span projects you can access. Project objectives, wiki and feedback belong to one project. Check the active project before creating work or changing settings.
+Personal cycles and cross-project views span projects you can access. Project objectives, pages and feedback belong to one project. Check the active project before creating work or changing settings.
 
 ![Project navigation beside the demonstration issue board.](/documentation/en/work-navigation.png)
 
@@ -146,11 +146,9 @@ The action applies to the row you clicked, even when another project or item is 
 
 ### Panels and mobile navigation {#panels}
 
-On mobile, a loading bar at the top indicates that navigation is in progress, including while pending page saves finish.
-
 An issue opens in a detail panel so the underlying board remains available. Numo opens from its floating button in a shared conversation panel. Inbox opens as a navigation popover with notifications and invitations. Older dedicated Inbox and Numo links lead to the current entry points; they do not establish separate current screens.
 
-On mobile, open the navigation drawer to choose the same destinations. Panels use the available screen width, so close or return from the current panel to see the list again. Use visible buttons when a keyboard shortcut is unavailable.
+On mobile, open the navigation drawer to choose the same destinations. A loading bar at the top indicates that navigation is in progress, including while pending page saves finish. Panels use the available screen width, so close or return from the current panel to see the list again. Use visible buttons when a keyboard shortcut is unavailable.
 
 ### Desktop tabs {#tabs}
 
@@ -158,9 +156,7 @@ The desktop app adds native tabs and a server picker around the application. A t
 
 ## Find work and use keyboard actions {#search-and-shortcuts}
 
-The Documentation command opens the public manual in your current language.
-
-Open the command palette from the navigation search control. Search for a distinctive title or issue identifier and choose a result. Results are limited to work your account can access; a known identifier does not grant access to another project.
+Open the command palette from the navigation search control. Search for a distinctive title or issue identifier and choose a result. Results are limited to work your account can access; a known identifier does not grant access to another project. The Documentation command opens the public manual in your current language.
 
 Press Command+K on macOS or Ctrl+K on Windows/Linux to open the command palette; Command/Ctrl+P is an alternative application binding. Outside editable text, ? opens shortcut help and C opens issue creation. On a hovered issue card or its supported detail controls, S opens status, P priority, E effort, A assignee, L categories, D due date and O objective. R adds a relation from the same places, on an objective page and in the new-issue form: choose the relation type, then the other issue or objective. These single-key actions do not intercept typing in an input, textarea or content editor. Navigation sequences such as G then H (Home) and G then I (Inbox) use two successive keys; G then W reaches Pages only in a project context.
 

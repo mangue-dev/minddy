@@ -78,7 +78,7 @@
 
 Apri il cestino dal menu dell’account. Contiene lavoro eliminato recuperabile, inclusi ticket, obiettivi, feedback, routine, progetti e pagine supportati. Controlla tipo, momento dell’eliminazione e conservazione rimanente mostrata nell’interfaccia prima di scegliere il ripristino.
 
-Ripristina prima il padre o contenitore richiesto quando l’elemento ne dipende. Per esempio, ripristina un database eliminato prima di una voce eliminata separatamente. Riapri la destinazione ripristinata ed esamina contenuto e proprietà. Gli elementi eliminati restano recuperabili per 30 giorni prima che la conservazione li rimuova definitivamente. Solo il proprietario può ripristinare o rimuovere in modo permanente un progetto o una routine. I membri possono ripristinare o rimuovere gli altri oggetti supportati finché mantengono accesso.
+Ripristina prima il padre o contenitore richiesto quando l’elemento ne dipende. Per esempio, ripristina un database eliminato prima di una voce eliminata separatamente. Riapri la destinazione ripristinata ed esamina contenuto e proprietà. Gli elementi eliminati restano recuperabili per 30 giorni prima che la conservazione li rimuova definitivamente. Solo il proprietario può ripristinare o rimuovere in modo permanente un progetto o una routine. Il proprietario e i Membri possono ripristinare o rimuovere gli altri oggetti supportati finché mantengono accesso. Un Lettore non può modificare un progetto, quindi gli elementi di un progetto che ti limiti a leggere non compaiono nel tuo cestino.
 
 ![Ticket dimostrativo recuperabile con trenta giorni rimanenti nel cestino.](/documentation/it/reader-trash.png)
 

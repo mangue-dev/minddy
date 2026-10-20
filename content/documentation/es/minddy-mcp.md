@@ -166,7 +166,7 @@ Las lecturas que devuelven texto con imágenes (`minddy_get_issue`, `minddy_get_
 
 Para convertir una propiedad, indique `operation=convert`, `propertyId`, `targetType`, `revision` y primero `preview=true`. Revise `incompatibleCount` y envíe después los mismos ajustes de conversión con `preview=false` y el `token` devuelto. Use `confirmLoss=true` solo si el usuario ha autorizado expresamente la pérdida de valores incompatibles.
 
-Los propietarios pueden crear, pausar, reprogramar o eliminar sus rutinas. Lea las rutinas existentes antes de crear una nueva para evitar duplicados. `minddy_add_resource` limita los archivos a 10 MB; las herramientas de páginas no inventan URL.
+Las herramientas de rutinas, reservadas al propietario, crean, modifican, pausan o eliminan rutinas cuyo desencadenante es una programación, un evento o una nueva entrada de base de datos. Lea las rutinas existentes antes de crear una nueva para evitar duplicados. `minddy_add_resource` limita los archivos a 10 MB; las herramientas de páginas no inventan URL.
 
 ### Comprobar con un ejemplo {#example}
 

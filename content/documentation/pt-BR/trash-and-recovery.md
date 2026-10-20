@@ -78,7 +78,7 @@
 
 Abra a lixeira pelo menu da conta. Ela contém trabalho excluído recuperável, incluindo problemas, objetivos, feedback, rotinas, projetos e páginas compatíveis. Confira tipo do item, momento da exclusão e retenção restante exibida antes de escolher restaurar.
 
-Restaure primeiro o pai ou contêiner necessário quando o item depender dele. Por exemplo, restaure um banco de dados excluído antes de uma entrada excluída separadamente. Reabra o destino restaurado e inspecione conteúdo e propriedades. Itens excluídos permanecem recuperáveis por 30 dias antes de a retenção removê-los permanentemente. Somente o proprietário pode restaurar ou remover permanentemente um projeto ou uma rotina. Membros podem restaurar ou remover os outros objetos compatíveis do projeto enquanto mantiverem acesso.
+Restaure primeiro o pai ou contêiner necessário quando o item depender dele. Por exemplo, restaure um banco de dados excluído antes de uma entrada excluída separadamente. Reabra o destino restaurado e inspecione conteúdo e propriedades. Itens excluídos permanecem recuperáveis por 30 dias antes de a retenção removê-los permanentemente. Somente o proprietário pode restaurar ou remover permanentemente um projeto ou uma rotina. O proprietário e os Membros podem restaurar ou remover os outros objetos compatíveis do projeto enquanto mantiverem acesso. Um Leitor não pode alterar um projeto, então os itens de um projeto que você apenas lê não aparecem na sua lixeira.
 
 ![Ticket de demonstração recuperável com trinta dias restantes na lixeira.](/documentation/pt-BR/reader-trash.png)
 

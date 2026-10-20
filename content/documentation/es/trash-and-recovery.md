@@ -78,7 +78,7 @@
 
 Abre la papelera desde el menú de la cuenta. Contiene trabajo eliminado recuperable, incluidas incidencias, objetivos, sugerencias, rutinas, proyectos y páginas compatibles. Comprueba el tipo, la fecha de eliminación y la retención restante mostrada antes de restaurar.
 
-Restaura primero el objeto principal o el contenedor requerido cuando el elemento dependa de él. Por ejemplo, restaura una base de datos eliminada antes de una entrada eliminada por separado. Abre el destino restaurado e inspecciona contenido y propiedades. Los elementos eliminados se pueden recuperar durante 30 días antes de que la retención los retire definitivamente. Solo el propietario puede restaurar o eliminar permanentemente un proyecto o una rutina. Los miembros pueden restaurar o retirar los demás objetos compatibles del proyecto mientras conserven acceso.
+Restaura primero el objeto principal o el contenedor requerido cuando el elemento dependa de él. Por ejemplo, restaura una base de datos eliminada antes de una entrada eliminada por separado. Abre el destino restaurado e inspecciona contenido y propiedades. Los elementos eliminados se pueden recuperar durante 30 días antes de que la retención los retire definitivamente. Solo el propietario puede restaurar o eliminar permanentemente un proyecto o una rutina. El propietario y los Miembros pueden restaurar o retirar los demás objetos compatibles del proyecto mientras conserven acceso. Un Lector no puede modificar un proyecto, así que los elementos de un proyecto que solo lees no aparecen en tu papelera.
 
 ![Incidencia de demostración recuperable con treinta días restantes en la papelera.](/documentation/es/reader-trash.png)
 

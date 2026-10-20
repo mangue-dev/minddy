@@ -110,7 +110,7 @@ Instanzadministration ist von Projekteigentum getrennt. `ADMIN_EMAILS` im Server
 
 ## Vorhandene Funktionen verwenden {#panels}
 
-Die Konsole enthält Übersicht, Benutzer, Modelle und bedingt Finanzen. Finanzen fehlt ohne konfigurierte verwaltete OpenRouter-Funktion; Planvergabe hängt von eingerichteter Abrechnung oder bestehendem Override ab. Selbsthosting ohne kommerzielle Anbieter erhält durch Öffnen der Konsole keine Cloud-Abrechnung. Prüfen Sie Modelle, Standardwerte und Nutzer-/Quotenkontrollen in der tatsächlich installierten Version vor Änderungen. Administration betrifft die Instanz, nicht ein einzelnes Projekt. Testen Sie mit Demokonten.
+Die Konsole enthält Übersicht, Benutzer, Modelle und bedingt Finanzen. Finanzen fehlt ohne konfigurierte verwaltete OpenRouter-Funktion; Planvergabe hängt von eingerichteter Abrechnung oder bestehendem Override ab. Selbsthosting ohne kommerzielle Anbieter erhält durch Öffnen der Konsole keine Cloud-Abrechnung. **Benutzer** findet ein Konto nur über seine exakte E-Mail-Adresse. Öffnen Sie es, um den Bestätigungsstatus seiner E-Mail zu sehen, sein KI-Nutzungsbudget zu prüfen oder zurückzusetzen, unter der oben genannten Bedingung einen Plan zu verschenken oder es als internes Konto zu markieren, das dann in keiner Statistik mehr zählt. Das Panel zeigt weder Kontoaktivität noch persönliche Inhalte; öffnen Sie ein Konto nur für eine Support- oder Abrechnungsaufgabe. Prüfen Sie Modelle, Standardwerte und Nutzer-/Quotenkontrollen in der tatsächlich installierten Version vor Änderungen. Administration betrifft die Instanz, nicht ein einzelnes Projekt. Testen Sie mit Demokonten.
 
 ## KI-Entscheidungsmodell wählen {#decision-model}
 

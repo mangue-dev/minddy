@@ -178,7 +178,7 @@ Choose whether visitors identify by email code or through configured SSO. Config
 
 Turning off the board makes its visitor pages unavailable. Server-to-server ingestion uses a separate feedback integration key and can continue without a public board. A post's public choice, review state and spam status also govern its visibility; “board enabled” alone does not publish every post.
 
-Optional Numo review applies to submitted feedback and depends on project/instance settings, providers and owner usage. With review enabled, submissions wait for review before publication; with it disabled they are not held for a nonexistent review. Check the review queue after a demo submission. Numo sends public replies only when explicitly requested.
+The owner turns **Numo review** on or off in the project's Feedback settings; there is no separate instance switch. With review on, public-board and integration submissions wait for review before publication, while feedback created by the team is not held. Anything flagged sensitive, such as a vulnerability or personal data, turns private and waits under **To review**. Review runs on the instance's AI provider and the project owner's AI budget: when the budget runs out, feedback waits, visible to the team only, unless the owner turns on **Publish without review when the AI budget runs out**. With review off, feedback is published as submitted, without automatic categories, prank filtering or the privacy check. Check the review queue after a demo submission. Numo sends public replies only when explicitly requested.
 
 ![Enabled public feedback board with email-code visitor identity, the Enable SSO action and its URL concealed.](/documentation/en/publish-a-feedback-board-workflow.png)
 
@@ -188,7 +188,7 @@ Open the board's public URL. You can read public posts without a minddy account.
 
 Search existing requests before posting. Write a specific title and describe the need and its context. Titles allow 200 characters and bodies 10,000. The public option is selected by default; clear it to send the request privately to the team. Review the text for secrets before submitting. Optional moderation can keep the request pending before it appears publicly.
 
-Use the microphone in the submission form to dictate the title and description. Identify through the board first, allow microphone access, then stop recording and review the text before choosing Send. Dictation fills the draft; it does not submit the request. Availability depends on the instance’s voice configuration, working providers and the project owner’s AI budget. Usage is charged to that owner under their provider settings, rather than to the visitor’s account.
+Use the microphone in the submission form to dictate the title and description. Identify through the board first, allow microphone access, then stop recording and review the text before choosing Send. Dictation fills the draft; it does not submit the request. Availability depends on the instance’s working transcription and AI providers and on the project owner’s AI budget; there is no separate instance switch for voice. Usage is charged to that owner under their provider settings, rather than to the visitor’s account.
 
 Public-board recordings are limited to 10 MiB. Transcription allows 20 requests per identified visitor and 40 per IP address per hour, per board; draft interpretation has a separate limit of 40 requests per visitor per hour. These are separate from account dictation limits. For a rate-limit message, wait before retrying; if voice is unavailable, type the request instead.
 
@@ -218,7 +218,7 @@ Team members can delete public comments for moderation. Editing stays with the a
 
 The list shows the linked objective below the author and categories. In the objective properties, the feedback count includes its requests outside the trash that have not been merged, including private ones visible to the team. Select the count to open Feedback filtered to that objective, with all statuses included.
 
-As a project member, choose **Objective** in the feedback properties, or when creating internal feedback. Choose **None** to remove the link. The objective must belong to this project. This association is internal and does not expose private objectives on the public board. It does not count as issue progress.
+As the owner or a Member, choose **Objective** in the feedback properties, or when creating internal feedback. Choose **None** to remove the link. The objective must belong to this project. This association is internal and does not expose private objectives on the public board. It does not count as issue progress.
 
 The project owner can choose an optional objective when creating a feedback integration in **Project settings** → **Integrations**, or change it later on the **Objective for new feedback** line under an existing feedback integration. That picker can also create a new objective. New API submissions inherit that objective, including with `analyze: false`; changing the default does not move existing feedback. If the objective is in the trash, choose an active objective or clear the default before submitting again. Numo never chooses an objective during feedback review. Ask Numo explicitly to link or unlink a request when you want its help.
 
@@ -230,7 +230,7 @@ A merged group shares one objective. Changing the main request’s objective als
 
 ## Merge feedback and connect it to delivery {#feedback-to-issue}
 
-As a project member, open the feedback request and choose merge into an existing canonical request from the same project. Read both needs first: similar wording is not proof of the same outcome. The current request becomes the duplicate, votes unite by identity and the duplicate redirects to the canonical request. Review the merge activity; the undo action uses that merge event. Reject an incorrect AI merge suggestion rather than accepting it just to clear the queue.
+As the owner or a Member, open the feedback request and choose merge into an existing canonical request from the same project. Read both needs first: similar wording is not proof of the same outcome. The current request becomes the duplicate, votes unite by identity and the duplicate redirects to the canonical request. Review the merge activity; the undo action uses that merge event. Reject an incorrect AI merge suggestion rather than accepting it just to clear the queue.
 
 ### Create or link work {#work}
 

@@ -132,7 +132,7 @@ Una clave sin confirmar o inaccesible puede dejar las llamadas generales de IA c
 
 ### Modelos locales {#models}
 
-Ollama y los endpoints locales compatibles con OpenAI pueden atender conversaciones a través del puente de la aplicación de escritorio cuando esté configurado. Las rutinas se ejecutan en el servidor y no pueden acceder a un modelo de su ordenador. Para ellas, use un proveedor accesible desde el servidor. Cuando deje de necesitar un proveedor, elimínelo mediante su control de confirmación y compruebe las asignaciones resultantes antes de la siguiente ejecución.
+Minddy llama a los modelos de IA desde el servidor, por lo que no puede usar un modelo que se ejecute en su ordenador. **Añadir proveedor** no ofrece Ollama local ni endpoints locales compatibles con OpenAI. Un endpoint local guardado en una versión anterior sigue apareciendo en **Proveedores conectados**, pero no puede atender conversaciones de Numo, rutinas ni otras funciones. Elimínelo y asigne en su lugar un proveedor accesible desde el servidor. Cuando deje de necesitar un proveedor, elimínelo mediante su control de confirmación y compruebe las asignaciones resultantes antes de la siguiente ejecución.
 
 
 ## Entender planes Cloud y consumo de IA {#plans-and-ai-usage}
@@ -147,9 +147,9 @@ El uso de IA incluido cubre el razonamiento y las llamadas a herramientas de Num
 
 Las claves personales compatibles hacen que el proveedor facture las llamadas al modelo en lugar de consumir la IA incluida. Las familias o funciones sin asignación cuyas llamadas financia minddy siguen sujetas a su asignación de minddy. Una instalación self-hosted tiene los costes de infraestructura y de proveedores opcionales que determine su configuración; ejecutar el mismo núcleo no crea una suscripción Cloud.
 
-### Capacidad de la versión candidata {#plan-capacities}
+### Capacidad de los planes {#plan-capacities}
 
-Estos valores predeterminados corresponden a la versión candidata 0.11.1 identificada. Compruebe la página vigente de precios y su cuenta antes de comprar: los precios configurados en el proceso de compra y las excepciones de cada cuenta pueden variar. El número de invitados no incluye al propietario del proyecto, pero sí a los miembros, los lectores y las invitaciones pendientes; no hay facturación por puesto. El almacenamiento se carga al propietario del proyecto que recibe los archivos. Cuando se transfiere la propiedad, estos límites, el almacenamiento y la IA en segundo plano, como Smart Assign y la revisión de feedback, usan el plan del nuevo propietario.
+Estos valores predeterminados corresponden a Minddy 0.20.0. Compruebe la página vigente de precios y su cuenta antes de comprar: los precios configurados en el proceso de compra y las excepciones de cada cuenta pueden variar. El número de invitados no incluye al propietario del proyecto, pero sí a los miembros, los lectores y las invitaciones pendientes; no hay facturación por puesto. El almacenamiento se carga al propietario del proyecto que recibe los archivos. Cuando se transfiere la propiedad, estos límites, el almacenamiento y la IA en segundo plano, como Smart Assign y la revisión de feedback, usan el plan del nuevo propietario.
 
 | Plan | Proyectos | Tickets por proyecto | Invitados por proyecto | Almacenamiento | IA mensual incluida (USD) |
 | --- | --- | --- | --- | --- | --- |

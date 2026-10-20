@@ -80,7 +80,7 @@
 
 ## Configure and fill your cycle {#personal-cycle}
 
-Enable cycles in Account settings → Cycles, then open Cycle from personal navigation. It belongs to your account and can contain issues assigned to you in projects where you are the owner or a Member. Readers cannot be assigned, so a project you only read contributes no work. It is not a project sprint and does not belong to a team objective.
+Enable cycles in **Account settings** → **Cycles**, or with **Activate cycles** on the **Cycle** tab. Open that tab in the view bar of **All issues**, or search for Cycle in the command palette; a project board's **Cycle** tab, marked with an arrow, leads to the same personal cycle. It belongs to your account and can contain issues assigned to you in projects where you are the owner or a Member. Readers cannot be assigned, so a project you only read contributes no work. It is not a project sprint and does not belong to a team objective.
 
 Choose a duration of one or two weeks, the starting weekday, one to four upcoming cycles and light, medium or heavy intensity. These settings determine your personal period and target capacity. The automatic-capture switches control whether assigned issues enter the current cycle when they start or finish.
 
@@ -90,6 +90,6 @@ The current cycle is filled automatically once from eligible work. To add an iss
 
 ## Finish or adjust the period {#cycle-results}
 
-Update issue statuses as work progresses and inspect completed versus remaining work. At a period boundary, unfinished eligible issues from past cycles move into the current cycle automatically; their assignment is preserved. This carry-over does not mark them complete. Use the date selector to inspect past and upcoming cycles; these views are read-only, while the current cycle supports changes.
+Update issue statuses as work progresses and inspect completed versus remaining work. At a period boundary, unfinished eligible issues from past cycles move into the current cycle automatically; their assignment is preserved. This carry-over does not mark them complete. When every issue of the current cycle is closed, a **Cycle completed** banner offers **Refill cycle** to add eligible work; the cycle is not refilled automatically during the period. Use the date selector to inspect past and upcoming cycles; these views are read-only, while the current cycle supports changes.
 
 If a prerequisite is pulled into the current cycle to keep dependencies coherent, inspect why it was added before removing it. An issue that vanishes after completion may still be visible in completed cycle work or by identifier. Account cycle settings affect your planning surface, not another member’s personal cycle.

@@ -168,7 +168,7 @@ Le letture che restituiscono testo con immagini (`minddy_get_issue`, `minddy_get
 
 Per convertire un tipo, usa `operation=convert` con `propertyId`, `targetType`, `revision` e `preview=true`. Controlla `incompatibleCount`, quindi invia le stesse impostazioni con `preview=false` e il `token` restituito. Imposta `confirmLoss=true` solo dopo che l’utente ha autorizzato esplicitamente la cancellazione dei valori incompatibili.
 
-Solo il proprietario può creare, sospendere, ripianificare o eliminare le proprie routine. Leggi prima di creare per evitare duplicati. `minddy_add_resource` limita i file a 10 MB; gli strumenti delle pagine non inventano URL.
+Gli strumenti delle routine, riservati al proprietario, creano, modificano, sospendono o eliminano routine attivate da una pianificazione, da un evento o da una nuova voce di database. Leggi prima di creare per evitare duplicati. `minddy_add_resource` limita i file a 10 MB; gli strumenti delle pagine non inventano URL.
 
 ### Verificare con un esempio {#example}
 

@@ -92,7 +92,7 @@
 
 ## Set the correct Auth origin {#authentication-and-email}
 
-Auth email belongs to Supabase/GoTrue. Application notifications through Resend do not configure confirmation or password recovery. In the full profile, retain the minddy overlay in every Compose command. Set `SITE_URL`, `API_EXTERNAL_URL`, `SUPABASE_PUBLIC_URL` and `ADDITIONAL_REDIRECT_URLS` to your selected origins. Configure `SMTP_ADMIN_EMAIL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` and `SMTP_SENDER_NAME` with your own provider. Keep confirmation enabled and restart Auth in the installed Compose context.
+Auth email belongs to Supabase/GoTrue. Application notifications through Resend do not configure confirmation or password recovery. In the full profile, retain the minddy overlay in every Compose command. Set `SITE_URL`, `API_EXTERNAL_URL`, `SUPABASE_PUBLIC_URL` and `ADDITIONAL_REDIRECT_URLS` to your selected origins. Configure `SMTP_ADMIN_EMAIL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` and `SMTP_SENDER_NAME` with your own provider. The overlay also sets the session limits: `GOTRUE_SESSIONS_TIMEBOX` is `8760h` (one year) and `GOTRUE_SESSIONS_INACTIVITY_TIMEOUT` is `720h` (30 days). Keep confirmation enabled and restart Auth in the installed Compose context.
 
 
 Before using `compose` below, set the installed full-profile function from [the reference Compose context](/docs/backups-and-restoration#context).
@@ -106,7 +106,7 @@ compose up -d --wait auth
 
 ## Configure managed Supabase {#managed}
 
-In your own project Authentication settings, set Site URL and the exact `<app-origin>/auth/callback` redirect. Configure custom SMTP and both versioned confirmation/recovery templates. The confirmation template uses `token_hash` and `type=signup`. Set at least eight characters with lowercase, uppercase and digits and enable TOTP enrollment and verification. Enable compromised-password checks where supported, recording provider limitations. The full overlay uses fail-closed checks requiring outbound `api.pwnedpasswords.com` access. Record session lifetime, refresh-token rotation, revocation and Auth rate limits; SQL bootstrap does not set these platform controls.
+In your own project Authentication settings, set Site URL and the exact `<app-origin>/auth/callback` redirect. Configure custom SMTP and both versioned confirmation/recovery templates. The confirmation template uses `token_hash` and `type=signup`. Set at least eight characters with lowercase, uppercase and digits and enable TOTP enrollment and verification. Enable compromised-password checks where supported, recording provider limitations. The full overlay uses fail-closed checks requiring outbound `api.pwnedpasswords.com` access. Set the session time-box to 8760 hours (one year) and the inactivity timeout to 720 hours (30 days). The database refuses sessions beyond these same limits, so a disabled or longer Auth limit keeps refreshing sessions that every API then rejects. Record session lifetime, refresh-token rotation, revocation and Auth rate limits; SQL bootstrap does not set these platform controls.
 
 ## Test account-level results {#verify}
 

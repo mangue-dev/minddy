@@ -91,16 +91,16 @@ If your team already has a project, give its owner your account email and accept
 1. Open Home after signing in and choose New project in navigation. Choose a brand-new project in the wizard, then enter a name and a key of 2 to 5 letters. Keep the default icon and no repository for this manual example. You can leave the initial brief empty.
 2. The wizard then offers to invite your team. Choose Skip for this manual example; to work with others, search for people from your other projects by name, or enter their emails, instead. Nothing is sent until you choose Finish.
 3. In the finishing step, review Smart Assign and auto-assignment. Leave automatic assignment off if you intend to assign the demonstration issue yourself. Choose Finish, wait for creation and open the resulting project.
-4. Open the project and create an issue. Give it a concrete title, such as “Check the website contact link”. Describe the page, expected destination and how you will verify the result. If the Smart-fill button is shown and enabled, switch it off for this manual example before creating the issue. It controls filling this issue and is independent of the project’s automation and Smart Assign switches.
+4. Open the project and create an issue. Give it a concrete title, such as “Check the website contact link”. Describe the page, expected destination and how you will verify the result. If the Smart-fill button is shown and enabled, switch it off for this manual example before creating the issue. It controls filling this issue and is independent of Smart Assign and of routines.
 5. Choose an assignee, priority and effort if they help plan the task. Confirm creation, then open the resulting issue and check its project and identifier.
 6. Change its status to in progress when work begins. Perform the check, then record the result in a comment. Use in review if someone still needs to inspect it.
-7. Set the status to done after the expected result is verified. Find the issue in the project's completed work or by its identifier to confirm the change.
+7. Set the status to done after the expected result is verified. Boards hide the **Done** column by default: select **Done** in the board's **Status** filter, or search the issue's identifier, to confirm the change.
 
 ![Completed demonstration issue with its description and saved comment.](/documentation/en/reader-first-project.png)
 
 ## Recover from an unexpected result {#first-use-recovery}
 
-An invitation applies to one account and instance. If it is missing, verify the email you gave the owner and open Inbox on that same instance. You cannot join an arbitrary project by knowing its name. If an issue disappears from the current board after a status change, remove view filters or search its identifier before creating another copy.
+An invitation applies to one account and instance. If it is missing, verify the email you gave the owner and open Inbox on that same instance. You cannot join an arbitrary project by knowing its name. If an issue disappears from the current board after a status change, remove view filters or search its identifier before creating another copy. Done and canceled issues leave the board by default; select **Done** or **Canceled** in the **Status** filter to show them.
 
 If not every invitation added in the wizard could be sent, the project is still created and a notification lists each person who was not invited with the reason. Check the pending invitations in the project's member settings before inviting again.
 

@@ -110,4 +110,4 @@ Each occurrence uses the owner's AI budget with a 15% monthly-budget cap by defa
 
 The cap applies when an included monthly budget is available; an uncapped personal-key mode does not acquire an artificial monthly allowance.
 
-Archived project automations appear as paused proposals when their owner opens Routines. Read the [transition guide](/docs/automation-settings) before enabling one.
+Project automations from earlier versions no longer run and are not converted into routines. Read the [transition guide](/docs/automation-settings) to recreate a workflow as a routine.

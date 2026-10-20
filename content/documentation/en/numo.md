@@ -256,6 +256,8 @@ Open the issue or project you want to work on, then use the floating Numo button
 3. Send a bounded request, for example: “Read this issue and propose acceptance criteria. Do not change its status.”
 4. Read the answer and follow its issue or source links. For an action request, open the changed object and check the result.
 
+In a new, empty conversation, four suggestion rows above the composer offer requests suited to the current page, for example **Summarize this issue** or **Write an implementation plan** when an issue is open in the side panel. Choosing a row fills the composer without sending it, so you can edit the request first. The rows disappear as soon as the composer contains text and return when you clear it. They appear in the desktop layout, not on a phone.
+
 Numo can also look at the images in an issue or objective description, a plan, a comment, a page or your notebook when the conversation model accepts images. Without that capability, Numo says it could not view an image instead of describing it.
 
 The default Numo model comes from **Account settings → AI & Numo → Default Numo model**: App default or a personal model for the active provider. An explicit conversation choice takes precedence. See [AI settings and usage](/docs/ai-settings-and-usage#ai-keys-and-models).
@@ -264,7 +266,7 @@ The default Numo model comes from **Account settings → AI & Numo → Default N
 
 ### Continue a conversation {#continue}
 
-The conversation list keeps earlier conversations reachable. Continue the existing conversation when it contains the needed decisions. Numo organizes and tracks work: it reads and updates issues, plans, pages and other Minddy content, and can read linked pull requests. When Numo searches issues, text matches and exact identifiers come first; a descriptive search can add issues of the same project found by meaning, which Numo is told to check before relying on them. It does not write code or change a repository. To have code written, copy the issue's prompt for your own coding agent; see [Code work and pull requests](/docs/code-work#external-coding-agents).
+The conversation list keeps earlier conversations reachable. Continue the existing conversation when it contains the needed decisions. Numo organizes and tracks work: it reads and updates issues, plans, pages and other Minddy content, and can read linked pull requests. When you ask, it can also comment on a pull request, resolve review conversations that are already addressed and merge it. When Numo searches issues, text matches and exact identifiers come first; a descriptive search can add issues of the same project found by meaning, which Numo is told to check before relying on them. It does not write code or push commits. To have code written, copy the issue's prompt for your own coding agent; see [Code work and pull requests](/docs/code-work#external-coding-agents).
 
 If Numo asks for input, submit the requested choice before expecting dependent work to continue. A usage or failure card explains why a turn stopped. Verify any external write before asking it to repeat the action.
 

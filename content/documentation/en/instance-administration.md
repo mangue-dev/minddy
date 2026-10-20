@@ -110,7 +110,7 @@ Instance administration is separate from project ownership. Set `ADMIN_EMAILS` t
 
 ## Use only capabilities present on the instance {#panels}
 
-The console organizes Overview, Users, Models and conditional Finances panels. Finances is hidden when no linked managed OpenRouter capability exists; billing-related plan gifting depends on configured billing or an existing override. A self-hosted instance without commercial providers does not acquire Cloud billing by opening the console. Review model/default configuration and user/quota controls on the actual deployed release before changing them. Administrative changes affect the instance rather than one project; use demonstration accounts for validation.
+The console organizes Overview, Users, Models and conditional Finances panels. Finances is hidden when no linked managed OpenRouter capability exists; billing-related plan gifting depends on configured billing or an existing override. A self-hosted instance without commercial providers does not acquire Cloud billing by opening the console. **Users** finds an account only by its exact email address; open it to see its email confirmation status, review or reset its AI usage budget, gift a plan under the condition above, or mark it as an internal account, which leaves it out of every statistic. The panel does not show account activity or personal content; open an account only for a support or billing task. Review model/default configuration and user/quota controls on the actual deployed release before changing them. Administrative changes affect the instance rather than one project; use demonstration accounts for validation.
 
 ## Choose the AI decision model {#decision-model}
 

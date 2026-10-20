@@ -119,7 +119,7 @@ Prepare un clon dedicado a la evaluación con Node.js 24, `pnpm` 10.28.0, Git, S
 ```bash
 git clone https://github.com/mangue-dev/minddy.git
 cd minddy
-git checkout v0.11.0
+git checkout v0.20.0
 corepack enable
 corepack prepare pnpm@10.28.0 --activate
 pnpm install --frozen-lockfile
@@ -129,6 +129,8 @@ pnpm install --frozen-lockfile
 
 
 ![Asistente público de instalación con el perfil de este ordenador seleccionado.](/documentation/es/install-locally-wizard.png)
+
+Las nuevas instalaciones locales cifran el contenido del espacio de trabajo de forma predeterminada. Para registrar una elección explícita, ejecute `pnpm bootstrap:supabase -- --minimal --app-url http://localhost:6463 --encryption enabled` (o `--encryption disabled`) en el clon antes de abrirlo en la aplicación; los inicios posteriores conservan la elección guardada. Consulte el [cifrado del espacio de trabajo](/es/documentacion/workspace-encryption#workspace-encryption).
 
 ## Dejar que la aplicación gestione los servicios {#launch}
 

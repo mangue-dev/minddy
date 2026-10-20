@@ -257,6 +257,8 @@ Apri il ticket o il progetto interessato e usa il pulsante flottante di Numo. La
 3. Invia una richiesta circoscritta, per esempio: «Leggi questo ticket e proponi criteri di accettazione. Non modificarne lo stato».
 4. Leggi la risposta e apri i collegamenti ai ticket o alle fonti. Se hai chiesto una modifica, verifica l’oggetto aggiornato.
 
+In una conversazione nuova e vuota, quattro righe di suggerimenti sopra il campo di scrittura propongono richieste adatte alla pagina corrente, per esempio **Riassumere questo ticket** o **Scrivere un piano di implementazione** quando un ticket è aperto nel pannello laterale. Scegliere una riga compila il campo senza inviarlo, così puoi prima modificare la richiesta. Le righe scompaiono non appena il campo contiene del testo e tornano quando lo svuoti. Compaiono nel layout desktop, non su un telefono.
+
 Numo può anche guardare le immagini nella descrizione di un ticket o di un obiettivo, in un piano, in un commento, in una pagina o nel tuo taccuino quando il modello della conversazione accetta immagini. Senza questa capacità, Numo dice di non aver potuto vedere l’immagine invece di descriverla.
 
 Il modello predefinito di Numo si configura in **Impostazioni account → IA e Numo → Modello predefinito di Numo**: il valore dell’app o un modello personale del fornitore attivo. Una scelta esplicita nella conversazione ha la precedenza. Consulta [le impostazioni IA e l’utilizzo](/docs/ai-settings-and-usage#ai-keys-and-models).
@@ -265,7 +267,7 @@ Il modello predefinito di Numo si configura in **Impostazioni account → IA e N
 
 ### Continuare una conversazione {#continue}
 
-L’elenco conserva le conversazioni precedenti. Continua quella che contiene le decisioni utili. Numo organizza e segue il lavoro: legge e aggiorna ticket, piani, pagine e altri contenuti Minddy, e può leggere le pull request collegate. Quando Numo cerca ticket, le corrispondenze testuali e gli identificativi esatti vengono per primi; una ricerca descrittiva può aggiungere ticket dello stesso progetto trovati per significato, che Numo deve verificare prima di farvi affidamento. Non scrive codice e non modifica alcun repository. Per far scrivere il codice, copia il prompt del ticket per il tuo agente di codice; consulta [Lavoro sul codice e pull request](/docs/code-work#external-coding-agents).
+L’elenco conserva le conversazioni precedenti. Continua quella che contiene le decisioni utili. Numo organizza e segue il lavoro: legge e aggiorna ticket, piani, pagine e altri contenuti Minddy, e può leggere le pull request collegate. Su tua richiesta può anche commentare una pull request, risolvere le conversazioni di revisione già gestite ed eseguirne il merge. Quando Numo cerca ticket, le corrispondenze testuali e gli identificativi esatti vengono per primi; una ricerca descrittiva può aggiungere ticket dello stesso progetto trovati per significato, che Numo deve verificare prima di farvi affidamento. Non scrive codice e non esegue push di commit. Per far scrivere il codice, copia il prompt del ticket per il tuo agente di codice; consulta [Lavoro sul codice e pull request](/docs/code-work#external-coding-agents).
 
 Se Numo richiede informazioni, invia la scelta prima di attendere il proseguimento delle attività dipendenti. Una scheda di consumo o errore spiega l’interruzione. Verifica ogni scrittura esterna prima di chiedere di ripeterla.
 

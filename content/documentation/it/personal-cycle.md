@@ -80,7 +80,7 @@
 
 ## Configurare e riempire il ciclo {#personal-cycle}
 
-Attiva i cicli in Impostazioni dell’account → Cicli, poi apri Ciclo dalla navigazione personale. Appartiene al tuo account e può contenere i ticket assegnati a te nei progetti in cui sei il proprietario o un Membro. I lettori non possono ricevere assegnazioni, quindi un progetto che ti limiti a leggere non contribuisce con alcun lavoro. Non è uno sprint del progetto e non appartiene a un obiettivo del team.
+Attiva i cicli in **Impostazioni account** → **Cicli**, oppure con **Attiva cicli** nella scheda **Ciclo**. Apri questa scheda nella barra delle viste di **Tutti i ticket**, oppure cerca Ciclo nella palette dei comandi; la scheda **Ciclo** di un tabellone di progetto, contrassegnata da una freccia, porta allo stesso ciclo personale. Appartiene al tuo account e può contenere i ticket assegnati a te nei progetti in cui sei il proprietario o un Membro. I lettori non possono ricevere assegnazioni, quindi un progetto che ti limiti a leggere non contribuisce con alcun lavoro. Non è uno sprint del progetto e non appartiene a un obiettivo del team.
 
 Scegli una durata di una o due settimane, il giorno d’inizio, da uno a quattro cicli futuri e un’intensità leggera, media o elevata. Queste impostazioni definiscono il tuo periodo e la capacità prevista. I controlli di acquisizione automatica stabiliscono se i ticket assegnati entrano nel ciclo attuale quando vengono avviati o completati.
 
@@ -90,6 +90,6 @@ Il ciclo attuale viene riempito automaticamente una volta con il lavoro idoneo. 
 
 ## Concludere o adattare il periodo {#cycle-results}
 
-Aggiorna gli stati durante il lavoro e confronta quanto è completato con quanto rimane. Al cambio di periodo, i ticket idonei non completati dei cicli passati vengono trasferiti automaticamente al ciclo attuale; l’assegnazione rimane invariata. Il trasferimento non li segna come completati. Usa il selettore delle date per consultare i cicli passati e futuri. Queste viste sono in sola lettura; il ciclo attuale permette modifiche.
+Aggiorna gli stati durante il lavoro e confronta quanto è completato con quanto rimane. Al cambio di periodo, i ticket idonei non completati dei cicli passati vengono trasferiti automaticamente al ciclo attuale; l’assegnazione rimane invariata. Il trasferimento non li segna come completati. Quando tutti i ticket del ciclo attuale sono chiusi, un avviso **Ciclo completato** offre **Ciclo di riempimento** per aggiungere lavoro idoneo; il ciclo non viene riempito automaticamente durante il periodo. Usa il selettore delle date per consultare i cicli passati e futuri. Queste viste sono in sola lettura; il ciclo attuale permette modifiche.
 
 Se un prerequisito viene aggiunto al ciclo attuale per mantenere coerenti le dipendenze, controlla il motivo prima di rimuoverlo. Un ticket che scompare dopo il completamento può essere ancora visibile nel lavoro completato del ciclo o reperibile tramite identificativo. Le impostazioni dei cicli dell’account riguardano la tua pianificazione, non il ciclo personale di un altro membro.

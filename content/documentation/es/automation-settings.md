@@ -3,7 +3,7 @@
   "id": "automation-settings",
   "locale": "es",
   "title": "De automatizaciones a rutinas",
-  "summary": "Revisa las propuestas de migración pausadas antes de activar trabajo de Numo por evento.",
+  "summary": "Entiende qué ocurrió con las automatizaciones de proyecto y recrea un flujo como rutina controlada por el propietario.",
   "topic": "Cuenta y aplicaciones",
   "type": "guide",
   "audiences": [
@@ -44,21 +44,21 @@
   "related": [],
   "aliases": [],
   "tags": [
-    "Configurar trabajo automático de incidencias"
+    "Recrear una automatización de proyecto como rutina"
   ],
   "figures": [],
   "requiredFigures": []
 }
 ---
 
-## Revisar el trabajo migrado {#automation-settings}
+## Qué ocurrió con las automatizaciones de proyecto {#automation-settings}
 
-Los interruptores de automatización del proyecto y los preajustes, filtros de esfuerzo y espera inicial de la cuenta se sustituyen por [Rutinas](/docs/scheduled-routines). Abre Rutinas como propietario del proyecto. Las reglas activas archivadas se proponen una sola vez como rutinas pausadas; abrir la lista no las activa ni consume presupuesto de ejecución.
+Los interruptores de automatización del proyecto y los preajustes, filtros de esfuerzo y espera inicial de la cuenta se sustituyen por [Rutinas](/docs/scheduled-routines). Las reglas de automatización configuradas en una versión anterior ya no se ejecutan y Minddy no las convierte en rutinas. Las cadenas pendientes o esperando a una persona se detuvieron sin un paso siguiente. Las reglas archivadas se conservan en el proyecto y en las exportaciones de la cuenta.
 
-Revisa instrucciones, estado desencadenante, condiciones, espera y límite de gasto de cada propuesta. El flujo original permanece en las instrucciones para compararlo. Comprueba las validaciones humanas y referencias no disponibles antes de activarla. Las propuestas solicitan al propietario las validaciones humanas y limitan cada ejecución al 15 % del presupuesto mensual por defecto. No continúan silenciosamente la cadena anterior. Las cadenas pendientes o esperando a una persona se detienen, sin un siguiente paso de cadena. La actividad histórica y las copias de la cuenta conservan el archivo.
+Para conservar un flujo, abre Rutinas como propietario del proyecto y [crea una rutina](/docs/scheduled-routines#scheduled-routines) con las instrucciones, el desencadenante, las condiciones y la espera que necesite.
 
 ## Distinguir otras ayudas del proyecto {#mechanisms}
 
-Smart Fill sigue completando prioridad, esfuerzo, categorías y objetivo ausentes. Smart Assign sigue siendo un ajuste del propietario con reglas por miembro. Smart Triage sigue usando reglas estáticas. La autoasignación sigue siendo una preferencia independiente. Estas ayudas no activan una propuesta migrada.
+Smart Fill sigue completando prioridad, esfuerzo, categorías y objetivo ausentes. Smart Assign sigue siendo un ajuste del propietario con reglas por miembro. Smart Triage sigue usando reglas estáticas. La autoasignación sigue siendo una preferencia independiente. Estas ayudas son independientes de las rutinas y no sustituyen una automatización retirada.
 
-Prueba manualmente una rutina revisada, examina su conversación privada y presupuesto, y actívala para escuchar eventos futuros. Si comienza trabajo inesperado, pausa la rutina y revisa la ejecución antes de reintentar. La [guía de rutinas](/docs/scheduled-routines#conditions) explica las condiciones en espera y su invalidación.
+Prueba manualmente una rutina nueva, examina su conversación privada y presupuesto, y actívala para escuchar eventos futuros. Si comienza trabajo inesperado, pausa la rutina y revisa la ejecución antes de reintentar. La [guía de rutinas](/docs/scheduled-routines#conditions) explica las condiciones en espera y su invalidación.

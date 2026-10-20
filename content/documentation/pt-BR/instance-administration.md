@@ -110,7 +110,7 @@ Administrar a instância é diferente de ser proprietário de um projeto. `ADMIN
 
 ## Usar os controles disponíveis {#panels}
 
-O console inclui Visão geral, Usuários, Modelos e, quando disponível, Finanças. Finanças fica oculto sem OpenRouter gerenciado; a atribuição de plano depende da cobrança habilitada ou de um override já existente. Abrir o console não acrescenta cobrança Cloud a uma instância própria sem provedores comerciais. Confira modelos, padrões, usuários e quotas na versão instalada antes de alterar. As mudanças afetam toda a instância: valide com uma conta de demonstração.
+O console inclui Visão geral, Usuários, Modelos e, quando disponível, Finanças. Finanças fica oculto sem OpenRouter gerenciado; a atribuição de plano depende da cobrança habilitada ou de um override já existente. Abrir o console não acrescenta cobrança Cloud a uma instância própria sem provedores comerciais. **Usuários** encontra uma conta apenas pelo endereço de e-mail exato; abra-a para ver o status de confirmação do e-mail, consultar ou redefinir o orçamento de uso de IA, oferecer um plano na condição acima ou marcá-la como conta interna, o que a exclui de todas as estatísticas. O painel não mostra a atividade da conta nem seu conteúdo pessoal; abra uma conta somente para uma tarefa de suporte ou de cobrança. Confira modelos, padrões, usuários e quotas na versão instalada antes de alterar. As mudanças afetam toda a instância: valide com uma conta de demonstração.
 
 ## Escolher o modelo de decisão de IA {#decision-model}
 

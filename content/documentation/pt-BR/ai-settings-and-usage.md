@@ -133,7 +133,7 @@ Uma chave não confirmada ou inacessível pode manter as chamadas gerais de IA c
 
 ### Modelos locais {#models}
 
-Quando configurados, o Ollama local e endpoints compatíveis com OpenAI podem atender às conversas pela ponte do aplicativo desktop. As rotinas são executadas no servidor e não conseguem acessar um modelo no seu computador. Para elas, escolha um provedor acessível pelo servidor. Remova um provedor pelo controle de confirmação quando ele não for mais necessário e confira o roteamento resultante antes da próxima execução.
+O Minddy chama os modelos de IA pelo servidor, então não consegue usar um modelo executado no seu computador. **Adicionar provedor** não oferece Ollama local nem endpoints locais compatíveis com OpenAI. Um endpoint local salvo em uma versão anterior continua aparecendo em **Provedores conectados**, mas não atende às conversas do Numo, às rotinas nem a outros recursos. Remova-o e atribua no lugar um provedor acessível pelo servidor. Remova um provedor pelo controle de confirmação quando ele não for mais necessário e confira o roteamento resultante antes da próxima execução.
 
 
 ## Entender os planos Cloud e o consumo de IA {#plans-and-ai-usage}
@@ -148,9 +148,9 @@ O uso de IA incluído cobre o raciocínio e as chamadas de ferramentas do Numo, 
 
 As chaves pessoais compatíveis fazem o provedor cobrar as chamadas aos modelos, em vez de consumir o uso de IA incluído. Famílias ou usos não associados cujas chamadas são financiadas pelo minddy continuam sujeitos à sua franquia minddy. O self-hosting tem custos de infraestrutura e de provedores opcionais definidos pela instalação; executar o mesmo núcleo não o transforma em uma assinatura Cloud.
 
-### Capacidades da versão candidata {#plan-capacities}
+### Capacidades dos planos {#plan-capacities}
 
-Estes padrões descrevem a versão candidata 0.11.1 identificada. Confira a página de preços e a conta reais antes de comprar: os preços configurados no pagamento e as exceções da conta podem ser diferentes. A contagem de convidados exclui o proprietário do projeto e inclui membros, leitores e convites pendentes; não há cobrança por assento. O armazenamento é contabilizado para o proprietário do projeto que recebe os arquivos. Quando a propriedade é transferida, esses limites, o armazenamento e a IA em segundo plano, como o Smart Assign e a análise de feedback, passam a usar o plano do novo proprietário.
+Estes padrões descrevem o Minddy 0.20.0. Confira a página de preços e a conta reais antes de comprar: os preços configurados no pagamento e as exceções da conta podem ser diferentes. A contagem de convidados exclui o proprietário do projeto e inclui membros, leitores e convites pendentes; não há cobrança por assento. O armazenamento é contabilizado para o proprietário do projeto que recebe os arquivos. Quando a propriedade é transferida, esses limites, o armazenamento e a IA em segundo plano, como o Smart Assign e a análise de feedback, passam a usar o plano do novo proprietário.
 
 | Plano | Projetos | Tarefas por projeto | Convidados por projeto | Armazenamento | IA mensal incluída (USD) |
 | --- | --- | --- | --- | --- | --- |

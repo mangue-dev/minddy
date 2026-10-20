@@ -81,7 +81,7 @@ Per esempio, un gruppo senza capacità di gestione dei database può usare Cloud
 
 Un’installazione supportata richiede l’applicazione e Supabase con PostgreSQL, Auth, Storage e Realtime. PostgreSQL da solo non basta. Usa una release con tag e la relativa matrice di compatibilità. Le varianti derivate di Supabase senza versione fissata e gli adattatori autogestiti per GitHub Enterprise o GitLab non rientrano nel contratto supportato.
 
-IA, posta elettronica, Git, notifiche push e analisi d’uso dipendono dalla configurazione. L’hosting autonomo non richiede Stripe, PostHog, una chiave IA gestita da minddy o un account Cloud. La configurazione opzionale mancante viene segnalata, senza sostituirla silenziosamente con un fornitore. Chiavi IA personali ed endpoint IA locali sono opzioni possibili; disponibilità e costi dipendono dalla capacità configurata.
+IA, posta elettronica, Git, notifiche push e analisi d’uso dipendono dalla configurazione. L’hosting autonomo non richiede Stripe, PostHog, una chiave IA gestita da minddy o un account Cloud. La configurazione opzionale mancante viene segnalata, senza sostituirla silenziosamente con un fornitore. Chiavi IA personali e, nell’app desktop, endpoint IA locali sono opzioni possibili; disponibilità e costi dipendono dalla capacità configurata.
 
 Controlla permessi e condizioni sui dati prima di attivare un’integrazione. Le connessioni Git possono usare il relay gestito per le forge quando avvii esplicitamente l’integrazione; sono disponibili anche applicazioni del fornitore di proprietà dell’operatore e la disattivazione del relay. L’hosting autonomo non è una versione ridotta delle funzioni del nucleo.
 

@@ -178,7 +178,7 @@ Escolha se os visitantes se identificam por código de email ou pelo SSO configu
 
 Desativar o mural torna suas páginas indisponíveis para os visitantes. A recepção entre servidores usa uma chave de integração de feedback separada e pode continuar sem mural público. A escolha de visibilidade de um feedback, seu estado de revisão e seu status de spam também controlam sua exibição; ativar o mural não publica, por si só, todos os feedbacks.
 
-A revisão opcional do Numo se aplica aos feedbacks enviados e depende das configurações do projeto e da instância, dos provedores e do orçamento do proprietário. Se estiver ativa, os envios aguardam revisão antes da publicação; se estiver desativada, não esperam uma revisão que não ocorrerá. Confira a fila depois de enviar um exemplo de demonstração. O Numo só envia respostas públicas quando solicitado explicitamente.
+O proprietário ativa ou desativa a **Numo revisão** nas configurações de Feedback do projeto; não existe um interruptor separado na instância. Com a revisão ativa, os envios do quadro público e das integrações aguardam revisão antes da publicação, enquanto os feedbacks criados pela equipe não ficam retidos. O que é marcado como sensível, como uma vulnerabilidade ou dados pessoais, passa a ser privado e aguarda em **Para revisar**. A revisão usa o provedor de IA da instância e o orçamento de IA do proprietário do projeto: quando o orçamento acaba, os feedbacks aguardam, visíveis apenas para a equipe, a menos que o proprietário ative **Publique sem revisão quando o orçamento de IA acabar**. Com a revisão desativada, os feedbacks são publicados como enviados, sem categorias automáticas, filtro de brincadeiras nem verificação de privacidade. Confira a fila depois de enviar um exemplo de demonstração. O Numo só envia respostas públicas quando solicitado explicitamente.
 
 ![Mural público de feedback ativado, com identidade dos visitantes por código de e-mail, a ação Ativar SSO e URL oculta.](/documentation/pt-BR/publish-a-feedback-board-workflow.png)
 
@@ -188,7 +188,7 @@ Abra a URL pública do mural. Você pode ler feedbacks públicos sem uma conta m
 
 Procure solicitações existentes antes de publicar. Escreva um título específico e descreva a necessidade e seu contexto. O título aceita 200 caracteres; o corpo, 10.000. A opção pública vem selecionada por padrão; desmarque-a para enviar a solicitação em privado à equipe. Confira se o texto contém segredos antes de enviar. A moderação opcional pode manter a solicitação pendente antes de sua exibição pública.
 
-Use o microfone no formulário de envio para ditar o título e a descrição. Primeiro, identifique-se no mural e permita o acesso ao microfone; depois, pare a gravação e confira o texto antes de escolher Enviar. O ditado preenche o rascunho; ele não envia a solicitação. A disponibilidade depende da configuração de voz da instância, do funcionamento dos provedores e do orçamento de IA do proprietário do projeto. O uso é cobrado desse proprietário de acordo com suas configurações de provedores, em vez de ser cobrado da conta do visitante.
+Use o microfone no formulário de envio para ditar o título e a descrição. Primeiro, identifique-se no mural e permita o acesso ao microfone; depois, pare a gravação e confira o texto antes de escolher Enviar. O ditado preenche o rascunho; ele não envia a solicitação. A disponibilidade depende do funcionamento dos provedores de transcrição e de IA da instância e do orçamento de IA do proprietário do projeto; não há um interruptor separado da instância para a voz. O uso é cobrado desse proprietário de acordo com suas configurações de provedores, em vez de ser cobrado da conta do visitante.
 
 As gravações no mural público são limitadas a 10 MiB. A transcrição permite 20 solicitações por visitante identificado e 40 por endereço IP por hora, por mural; a interpretação do rascunho tem um limite separado de 40 solicitações por visitante por hora. Esses limites são separados dos limites de ditado da conta. Se aparecer uma mensagem de limite atingido, aguarde antes de tentar novamente; se a voz estiver indisponível, digite a solicitação.
 
@@ -218,7 +218,7 @@ Os membros podem excluir comentários públicos para moderá-los. Só o autor po
 
 A lista mostra o objetivo vinculado abaixo do autor e das categorias. Nas propriedades do objetivo, a contagem de feedbacks inclui as solicitações existentes e não mescladas, inclusive as privadas visíveis à equipe. Selecione o número para abrir os feedbacks filtrados por esse objetivo, com todos os status.
 
-Como membro do projeto, escolha **Objetivo** nas propriedades do feedback ou ao criá-lo internamente. Escolha **Nenhum** para remover o vínculo. O objetivo deve pertencer ao mesmo projeto. Essa associação é interna, não expõe objetivos privados no quadro público e não conta para o progresso dos tickets.
+Como proprietário ou Membro, escolha **Objetivo** nas propriedades do feedback ou ao criá-lo internamente. Escolha **Nenhum** para remover o vínculo. O objetivo deve pertencer ao mesmo projeto. Essa associação é interna, não expõe objetivos privados no quadro público e não conta para o progresso dos tickets.
 
 O proprietário pode escolher um objetivo opcional ao criar uma integração de feedback em **Configurações do projeto** → **Integrações**, ou alterá-lo depois na linha **Objetivo dos novos feedbacks** abaixo de uma integração de feedback existente. Esse seletor também pode criar um objetivo novo. Novos envios da API herdam esse objetivo, inclusive com `analyze: false`. Alterar a configuração não move feedbacks existentes. Se o objetivo estiver na lixeira, escolha um ativo ou remova a configuração antes de enviar novamente. O Numo nunca escolhe um objetivo durante a revisão de feedbacks. Peça explicitamente para vincular uma solicitação ou remover seu vínculo.
 
@@ -230,7 +230,7 @@ Um grupo mesclado compartilha um único objetivo. Alterar o objetivo da solicita
 
 ## Unir feedback e conectar à entrega {#feedback-to-issue}
 
-Como membro do projeto, abra a solicitação e escolha uni-la a uma solicitação canônica existente no mesmo projeto. Leia as duas necessidades primeiro: uma redação parecida não comprova que ambas busquem o mesmo resultado. A solicitação atual vira a duplicata, os votos são unidos por identidade e a duplicata redireciona para a solicitação canônica. Confira o evento de união na atividade; a ação de desfazer usa esse evento. Rejeite uma sugestão incorreta da IA em vez de aceitá-la apenas para esvaziar a fila.
+Como proprietário ou Membro, abra a solicitação e escolha uni-la a uma solicitação canônica existente no mesmo projeto. Leia as duas necessidades primeiro: uma redação parecida não comprova que ambas busquem o mesmo resultado. A solicitação atual vira a duplicata, os votos são unidos por identidade e a duplicata redireciona para a solicitação canônica. Confira o evento de união na atividade; a ação de desfazer usa esse evento. Rejeite uma sugestão incorreta da IA em vez de aceitá-la apenas para esvaziar a fila.
 
 ### Criar ou vincular trabalho {#work}
 

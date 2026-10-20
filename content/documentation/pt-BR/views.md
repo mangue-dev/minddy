@@ -113,7 +113,7 @@ Comece no quadro de um projeto ou em uma lista pessoal de problemas entre projet
 
 Filtre por propriedades disponíveis, como estado, responsável, prioridade, categorias ou objetivo. Ordene o resultado para deixar clara a próxima ação. No kanban, os problemas continuam agrupados por estado; mudar uma visualização não altera estado nem atribuição. Sem um filtro de estado próprio, um quadro mostra apenas **Backlog**, **A fazer**, **Em andamento** e **Em revisão**. Selecione **Concluído** ou **Cancelada** no filtro **Status** para mostrar essas colunas; uma visualização mantém o filtro de estado salvo com ela.
 
-Salve a visualização com um nome que descreva seu propósito, selecione-a novamente na navegação e verifique os filtros. Edite ou remova a visualização salva quando o propósito mudar. Compartilhá-la é uma operação de publicação separada com regras próprias de permissão e revogação.
+Salve a visualização com um nome que descreva seu propósito, selecione-a novamente na barra de visualizações no topo do quadro (um menu em uma tela estreita) e verifique os filtros. Edite ou remova a visualização salva quando o propósito mudar. **Excluir visualização** pede confirmação, e um quadro sempre mantém pelo menos uma visualização própria. Compartilhá-la é uma operação de publicação separada com regras próprias de permissão e revogação.
 
 ![Filtros manuais de uma visualização e menu de ordenação.](/documentation/pt-BR/work-view-filters.png)
 

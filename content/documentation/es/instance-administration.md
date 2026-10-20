@@ -112,7 +112,7 @@ Administrar la instancia es distinto de ser propietario de un proyecto. `ADMIN_E
 
 ## Usar capacidades disponibles {#panels}
 
-La consola incluye Resumen, Usuarios, Modelos y, cuando está disponible, Finanzas. Finanzas queda oculto sin una capacidad OpenRouter gestionada vinculada. La asignación de planes depende de la facturación configurada o de un override existente. Abrir la consola no añade facturación Cloud a una instancia self-hosted sin proveedores comerciales. Revise modelos, valores predeterminados, usuarios y cuotas en la versión instalada antes de cambiar nada. Los cambios afectan a toda la instancia: utilice cuentas de demostración para comprobarlos.
+La consola incluye Resumen, Usuarios, Modelos y, cuando está disponible, Finanzas. Finanzas queda oculto sin una capacidad OpenRouter gestionada vinculada. La asignación de planes depende de la facturación configurada o de un override existente. Abrir la consola no añade facturación Cloud a una instancia self-hosted sin proveedores comerciales. **Usuarios** solo encuentra una cuenta por su dirección de correo electrónico exacta; ábrala para ver el estado de confirmación de su correo, consultar o restablecer su presupuesto de uso de IA, regalar un plan con la condición anterior o marcarla como cuenta interna, lo que la excluye de todas las estadísticas. El panel no muestra la actividad de la cuenta ni su contenido personal; abra una cuenta solo para una tarea de soporte o facturación. Revise modelos, valores predeterminados, usuarios y cuotas en la versión instalada antes de cambiar nada. Los cambios afectan a toda la instancia: utilice cuentas de demostración para comprobarlos.
 
 ## Elegir el modelo de decisión de IA {#decision-model}
 

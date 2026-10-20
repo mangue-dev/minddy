@@ -112,7 +112,7 @@ Start from a project board or a personal cross-project issue surface. Use its fi
 
 Filter on supported properties such as status, assignee, priority, categories or objective. Sort the result to make the next action clear. In kanban, issues remain grouped by status; changing a view does not edit their status or assignment. Without a status filter of its own, a board shows only **Backlog**, **Todo**, **In progress** and **In review**. Select **Done** or **Canceled** in the **Status** filter to show those columns; a view keeps the status filter you save with it.
 
-Save the view with a name describing its purpose, then select it again from navigation and verify its filters. Edit or remove it when its purpose changes. For publication permissions and revocation, see [sharing a view](#share-a-view).
+Save the view with a name describing its purpose, then select it again in the view bar at the top of the board (a menu on a narrow screen) and verify its filters. Edit or remove it when its purpose changes. **Delete view** asks for confirmation, and a board always keeps at least one view of its own. For publication permissions and revocation, see [sharing a view](#share-a-view).
 
 ![Manual view filters and the sorting menu.](/documentation/en/work-view-filters.png)
 

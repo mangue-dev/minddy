@@ -221,8 +221,8 @@
       "id": "page-file-preview",
       "kind": "screenshot",
       "src": "/documentation/en/file-preview.png",
-      "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download and Remove.",
-      "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Remove.",
+      "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
+      "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
       "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-12",
@@ -252,7 +252,7 @@ Pages hold a project’s wiki, with documents, nested pages and database entries
 
 ## Build a project wiki {#create-and-organize-pages}
 
-Open Pages in a project where you are a member. Use the + menu and choose a page for a document or a database for a structured list. Give the page a useful title and write the specification, decision or procedure it should preserve.
+Open Pages in a project as its owner or a Member; readers can open pages but cannot create them. Use the + menu and choose a page for a document or a database for a structured list. Give the page a useful title and write the specification, decision or procedure it should preserve.
 
 Create subpages for related documents and use the tree controls to move or reorder them. A page cannot become a descendant of itself. Duplicating a page creates new content rather than a live reference to the original. Review the duplicate's branch before editing or sharing it.
 
@@ -278,7 +278,7 @@ Unlike a promoted notebook task, the page is not removed: it stays in its place 
 
 ## Write a page with blocks and mentions {#page-editor}
 
-Open the page and edit its title or body as the owner or a Member. Readers can open and read pages, but cannot edit, import, duplicate, favorite or publish them, or restore a version. Use the slash-command menu and formatting controls to insert headings, paragraphs, lists, task items, code, collapsible sections and callouts. A callout can have an emoji icon and palette color; choose them to distinguish useful information rather than as the only way to communicate a warning.
+Open the page and edit its title or body as the owner or a Member. Readers can open and read pages, but cannot edit, import, duplicate, favorite or publish them, or restore a version. Use the slash-command menu and formatting controls to insert headings, text, bullet, numbered and task lists, quotes, callouts, code blocks, dividers, toggles (collapsible sections), sub-pages, images and files. A callout can have an emoji icon and palette color; choose them to distinguish useful information rather than as the only way to communicate a warning.
 
 Use mentions to link relevant issues, objectives, people or pages. Type `@` followed by an identifier, title words or a short description; a descriptive query also lists issues found [by meaning](/docs/navigation#search-by-meaning) under **Related by meaning**, after the text matches. Backlinks help readers find pages that reference the current one. A link supplies context rather than granting a reader access to another project's private object.
 
@@ -316,9 +316,9 @@ Open the page as a project member and use its attachment or upload controls. Sel
 
 Images can be inserted as image blocks, and other documents can be attached as file blocks. The server determines the stored media type from the bytes rather than trusting the filename or browser label. Upload acceptance does not guarantee that every format has an inline preview; use the file download when a preview is unavailable.
 
-In the project editor, click an image or the name of a supported file block to open the same full-window reader used by issue attachments. Markdown (`.md`), plain text (`.txt`, `.text`), CSV, PDF and supported audio or video open in dedicated containers. Use Close or Escape to return to the page. The File actions (`…`) menu offers Download; Remove is available only in an editable page and removes the block from the document. The file block also keeps its direct Download control. Unsupported formats, external file links and file blocks on published pages retain their download behavior. Published images use the reader without a removal action.
+In the project editor, click an image or the name of a supported file block to open the same full-window reader used by issue attachments. Markdown (`.md`), plain text (`.txt`, `.text`), CSV, PDF and supported audio or video open in dedicated containers. Use Close or Escape to return to the page. The File actions (`…`) menu offers Download. In an editable page, a file block also offers Rename, which changes the name shown in the page, and images and files offer Remove: it asks for confirmation, then removes the block from the document, and you can undo it in the editor. The file block also keeps its direct Download control. Unsupported formats, external file links and file blocks on published pages retain their download behavior. Published images use the reader without a removal action.
 
-![Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download and Remove.](/documentation/en/file-preview.png)
+![Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.](/documentation/en/file-preview.png)
 
 Check that the file appears in the page and open or download it. File bytes live in Storage, while the page and file metadata determine access. A successful page save alone does not prove the file bytes are available.
 

@@ -77,14 +77,20 @@
 
 ## Leer la bandeja de entrada {#notifications-and-inbox}
 
-Abre la bandeja de entrada desde la navegación. Es un panel emergente que agrupa notificaciones por fecha y ofrece filtros de no leídas, todas y menciones. Selecciona un elemento para examinar la incidencia o página correspondiente y comprueba su estado de lectura. Abrir una notificación la marca como leída. Su fila también ofrece controles para marcarla como leída o no leída, y el panel puede marcar todas las notificaciones como leídas. Marcarla como no leída restaura ese indicador de actividad; no deshace el cambio en la incidencia o página. Una notificación apunta a trabajo accesible; no sustituye su contenido actual.
+Abre la bandeja de entrada con su icono en la barra superior, desde su fila en la barra lateral en un teléfono o pulsando G y luego I fuera de un campo de texto. Un contador rojo en el icono suma las notificaciones sin leer y las invitaciones pendientes; una PWA instalada muestra el mismo número en el icono de la aplicación. La bandeja de entrada se abre en un panel emergente, o en una hoja en un teléfono, y agrupa las notificaciones en Hoy, Ayer y Anteriormente.
 
-Las invitaciones pendientes a proyectos también aparecen allí. Acepta o rechaza después de comprobar proyecto y cuenta. Los enlaces antiguos de la bandeja de entrada abren el acceso actual, no una página independiente.
+Se abre con el filtro Sin leer. Todos muestra también las notificaciones leídas, y Menciones conserva solo las menciones en comentarios y páginas. Selecciona un elemento para abrir la incidencia, la página o la pull request correspondiente. Abrir una notificación la marca como leída. Su fila también ofrece Marcar como leído o Marcar como sin leer, y Marcar todo como leído, en el encabezado de la bandeja de entrada, quita todos los indicadores de no leído. Marcarla como no leída restaura ese indicador de actividad; no deshace el cambio en la incidencia o página. Una notificación apunta a trabajo accesible; no sustituye su contenido actual.
+
+Eliminar, en una fila, borra esa notificación tras una confirmación, y Eliminar leídas, en el encabezado, borra todas las notificaciones leídas tras una confirmación. Ambas eliminaciones son definitivas; las notificaciones sin leer se conservan, y la incidencia, la página o la pull request a la que apunta una notificación no se ven afectadas.
+
+Las invitaciones pendientes a proyectos aparecen en Invitaciones con los filtros Sin leer y Todos. Acepta o rechaza después de comprobar el proyecto y quién te invita. Los enlaces antiguos de la bandeja de entrada abren el acceso actual, no una página independiente.
 
 ![Bandeja de entrada con menciones, asignaciones y comentarios de demostración, leídos y no leídos.](/documentation/es/work-inbox.png)
 
 ## Elegir canales de notificación {#notification-preferences}
 
-Abre las preferencias de notificación de la cuenta para ajustar qué actividad recibes. La entrega por navegador, PWA o escritorio también requiere registrar el dispositivo y obtener permiso del sistema operativo. Desactivar un canal de dispositivo es distinto de cambiar los filtros de actividad dentro de la aplicación.
+Elige Ajustes de la caja de entrada en el encabezado de la bandeja de entrada, o abre Configuración de la cuenta y la pestaña Notificaciones. En Notificaciones de entrada, un interruptor por categoría (Asignaciones, Menciones, Comentarios, Numo, Rutinas, Pull requests, Sugerencias y Páginas) decide qué llega a tu bandeja de entrada. Desactivar una categoría detiene las futuras notificaciones de ese tipo, incluidos sus avisos push; no elimina las notificaciones que ya recibiste.
+
+La sección Notificaciones push de la misma pestaña muestra los dispositivos que reciben avisos. La entrega por navegador, PWA o escritorio también requiere registrar el dispositivo y obtener permiso del sistema operativo. Desactivar o quitar un dispositivo detiene los avisos solo en ese dispositivo; tu bandeja de entrada y sus categorías no cambian.
 
 Si una notificación lleva a contenido no disponible, comprueba si cambió la pertenencia al proyecto o se eliminó el objeto. Si faltan notificaciones push, verifica el permiso y registro del dispositivo con la guía correspondiente; la bandeja de entrada sigue siendo útil para consultar la actividad. Nunca envíes cookies de sesión ni contenido privado de notificaciones en capturas de diagnóstico.

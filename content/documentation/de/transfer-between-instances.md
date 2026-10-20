@@ -92,7 +92,7 @@
 
 ## Exportieren und importieren {#transfer-between-instances}
 
-Melden Sie sich an der Quellinstanz an und öffnen Sie den Tab **Datenschutz & Daten** in den Kontoeinstellungen. Laden Sie den JSON-Export herunter und bewahren Sie ihn privat auf: Er enthält Konto- und Projektinhalte. Erstellen Sie Ihr Konto auf der Zielinstanz oder melden Sie sich dort am bestehenden Konto an. Prüfen Sie deren Adresse und wählen Sie dort den Importbefehl. Wählen Sie die unveränderte Exportdatei und warten Sie auf das Ergebnis, bevor Sie die Seite schließen.
+Melden Sie sich an der Quellinstanz an und öffnen Sie den Tab **Datenschutz & Daten** in den Kontoeinstellungen. Wählen Sie **Meine Daten herunterladen** und bewahren Sie die JSON-Datei privat auf: Sie enthält Konto- und Projektinhalte einschließlich der Dateibytes. Erstellen Sie Ihr Konto auf der Zielinstanz oder melden Sie sich dort am bestehenden Konto an. Prüfen Sie deren Adresse, öffnen Sie denselben Tab und wählen Sie **Eine Übertragungsdatei importieren**. Wählen Sie die unveränderte Exportdatei und warten Sie auf das Ergebnis, bevor Sie die Seite schließen.
 
 Der Import fügt Daten hinzu, statt das Ziel zu ersetzen. Kennungen bleiben erhalten, wenn sie sicher wiederverwendbar sind; Konflikte erhalten neue Kennungen. Das Ergebnis nennt neu zugeordnete Kennungen und übersprungene Mitgliedschaften. Mitgliedschaftsreferenzen zu bestehenden Projekten werden nur wiederhergestellt, wenn das Zielprojekt bereits existiert und die Referenz autorisiert ist. Prüfen Sie nach dem Neuladen Projekte, Tickets, Seiten und persönliche Daten.
 
@@ -100,7 +100,7 @@ Der Import fügt Daten hinzu, statt das Ziel zu ersetzen. Kennungen bleiben erha
 
 ## Dienste neu verbinden {#exclusions}
 
-Passwörter, API-Schlüssel, OAuth-Tokens, Repository-Zugangsdaten und Abrechnungsabonnements werden nicht übertragen. Konfigurieren und autorisieren Sie benötigte Dienste am Ziel erneut. Ein exportiertes Projekt beweist keinen funktionierenden Anbieterzugriff. Prüfen Sie Dateiressourcen und ihre Verfügbarkeit, statt JSON als betriebliches Backup von Datenbank und Storage-Bytes zu behandeln.
+Passwörter, API-Schlüssel, OAuth-Tokens, Repository-Zugangsdaten und Abrechnungsabonnements werden nicht übertragen. Konfigurieren und autorisieren Sie benötigte Dienste am Ziel erneut. Ein exportiertes Projekt beweist keinen funktionierenden Anbieterzugriff. Prüfen Sie Dateiressourcen und ihre Verfügbarkeit, statt JSON als betriebliches Backup von Datenbank und Storage-Bytes zu behandeln. Ein Export aus v0.11.0 oder früher kann gespeicherte Ansichten der Befehlspalette und Unterhaltungen des Code-Agenten enthalten; diese Release hat diese Funktionen nicht mehr und ignoriert sie beim Import.
 
 Behalten Sie die Quellinstanz, bis die übertragenen Arbeiten geprüft sind. Schlägt der Import fehl, bewahren Sie die Fehlermeldung auf und prüfen Sie den Zielzustand vor einer Wiederholung. Löschen oder schützen Sie Übertragungsdateien, sobald sie nicht mehr benötigt werden; hängen Sie sie niemals an einen öffentlichen Fehlerbericht an.
 

@@ -74,7 +74,7 @@
 
 Numo liest `SKILL.md` in Skill-Unterverzeichnissen von `.agents/skills`, `.claude/skills`, `.github/skills`, `.cursor/skills`, `.codex/skills` und `.gemini/skills`, in dieser Rangfolge. Name und Beschreibung im Frontmatter identifizieren den Skill; Skripte und Referenzen können daneben liegen.
 
-Committen und pushen Sie die Dateien in das verknüpfte GitHub- oder GitLab-Repository. Wählen Sie bei Bedarf die passende Repository-Referenz. Rein lokale Dateien fehlen. Die Liste aktualisiert sich beim Öffnen eines Gesprächs und beim Projektwechsel.
+Committen und pushen Sie die Dateien in den Standardbranch des verknüpften GitHub- oder GitLab-Repositorys; Numo liest Skills aus diesem Branch. Dateien, die nur auf Ihrem Computer oder in einem anderen Branch liegen, sind nicht verfügbar. Die Liste aktualisiert sich beim Öffnen eines Gesprächs und beim Projektwechsel.
 
 ## Auswählen und prüfen {#selection}
 

@@ -128,7 +128,7 @@ La navigazione principale permette di raggiungere il lavoro personale e i tuoi p
 
 Contatori e avvisi ti seguono da un livello all’altro. Il controllo che riporta alla **Home** mostra il totale da smistare nei progetti elencati nella **Home**, compreso quello attuale, e l’avviso di Smart Assign quando a uno dei tuoi progetti mancano regole. Una riga di ritorno mostra il contatore del livello a cui riporta. All’interno di un progetto, **Triaggio** e **Feedback** mantengono i contatori di quel progetto. Le schede dell’app desktop portano lo stesso badge della loro voce nella barra laterale: l’avviso sulla **Home** e i contatori su **Invio**, **Revisione del codice** e su **Triaggio** e **Feedback** di un progetto, aggiornati anche quando la scheda è in secondo piano.
 
-I cicli personali e le viste tra progetti comprendono i progetti a cui hai accesso. Obiettivi, wiki e feedback appartengono a un singolo progetto. Controlla il progetto attivo prima di creare lavoro o cambiare impostazioni.
+I cicli personali e le viste tra progetti comprendono i progetti a cui hai accesso. Obiettivi, pagine e feedback appartengono a un singolo progetto. Controlla il progetto attivo prima di creare lavoro o cambiare impostazioni.
 
 ![Navigazione del progetto accanto alla bacheca dei ticket dimostrativi.](/documentation/it/work-navigation.png)
 
@@ -146,11 +146,9 @@ L’azione si applica alla riga su cui hai fatto clic, anche quando è aperto un
 
 ### Pannelli e navigazione mobile {#panels}
 
-Sui dispositivi mobili, una barra di caricamento in alto indica che la navigazione è in corso, anche mentre vengono completati i salvataggi della pagina in sospeso.
-
 Un ticket si apre in un pannello di dettaglio, lasciando disponibile il tabellone sottostante. Numo si apre dal pulsante flottante in un pannello di conversazione condiviso. La posta in arrivo si apre come pannello a comparsa della navigazione, con notifiche e inviti. I vecchi collegamenti alle schermate dedicate della posta in arrivo e di Numo portano ai punti di accesso attuali; non indicano schermate separate ancora presenti.
 
-Sul telefono, apri il menu laterale di navigazione per scegliere le stesse destinazioni. I pannelli usano la larghezza disponibile: chiudi il pannello attuale o torna indietro per rivedere l’elenco. Usa i pulsanti visibili quando una scorciatoia da tastiera non è disponibile.
+Sul telefono, apri il menu laterale di navigazione per scegliere le stesse destinazioni. Una barra di caricamento in alto indica che la navigazione è in corso, anche mentre vengono completati i salvataggi della pagina in sospeso. I pannelli usano la larghezza disponibile: chiudi il pannello attuale o torna indietro per rivedere l’elenco. Usa i pulsanti visibili quando una scorciatoia da tastiera non è disponibile.
 
 ### Schede desktop {#tabs}
 
@@ -158,9 +156,7 @@ L’app desktop aggiunge schede native e un selettore di server intorno all’ap
 
 ## Trovare lavoro e usare azioni da tastiera {#search-and-shortcuts}
 
-Il comando Documentazione apre il manuale pubblico nella lingua attuale.
-
-Apri la palette dei comandi dal controllo di ricerca della navigazione. Cerca un titolo distintivo o un identificativo di ticket e scegli un risultato. I risultati sono limitati al lavoro accessibile al tuo account; conoscere un identificativo non concede accesso a un altro progetto.
+Apri la palette dei comandi dal controllo di ricerca della navigazione. Cerca un titolo distintivo o un identificativo di ticket e scegli un risultato. I risultati sono limitati al lavoro accessibile al tuo account; conoscere un identificativo non concede accesso a un altro progetto. Il comando Documentazione apre il manuale pubblico nella lingua attuale.
 
 Premi Command+K su macOS o Ctrl+K su Windows/Linux per aprire la palette dei comandi; Command/Ctrl+P è una scorciatoia alternativa dell’applicazione. Fuori dal testo modificabile, ? apre la guida delle scorciatoie e C la creazione di ticket. Su una scheda di ticket sotto il puntatore o nei suoi controlli di dettaglio supportati, S apre lo stato, P la priorità, E l’impegno, A l’assegnatario, L le categorie, D la scadenza e O l’obiettivo. R aggiunge una relazione dagli stessi punti, nella pagina di un obiettivo e nel modulo di nuovo ticket: scegli il tipo di relazione, poi l’altro ticket o obiettivo. Queste azioni con un solo tasto non intercettano la scrittura in campi, aree di testo o editor di contenuti. Le sequenze di navigazione come G e poi H (Home) o G e poi I (Posta in arrivo) usano due tasti successivi. G e poi W porta a Pagine solo nel contesto di un progetto.
 

@@ -222,8 +222,8 @@
       "id": "page-file-preview",
       "kind": "screenshot",
       "src": "/documentation/pt-BR/file-preview.png",
-      "alt": "Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar e Remover.",
-      "caption": "O visualizador compartilhado mantém Fechar abaixo da prévia. O menu Ações do arquivo oferece Baixar e, quando permitido, Remover.",
+      "alt": "Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar, Renomear e Remover.",
+      "caption": "O visualizador compartilhado mantém Fechar abaixo da prévia. O menu Ações do arquivo oferece Baixar e, quando permitido, Renomear e Remover.",
       "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-12",
@@ -253,7 +253,7 @@ As páginas formam a wiki do projeto, com documentos, subpáginas, arquivos e di
 
 ## Criar uma wiki do projeto {#create-and-organize-pages}
 
-Abra Páginas em um projeto do qual você participa. Use o menu + e escolha uma página para um documento ou um banco de dados para uma lista estruturada. Dê um título útil e escreva a especificação, decisão ou procedimento que a página precisa preservar.
+Abra Páginas em um projeto como proprietário ou Membro; os leitores podem abrir páginas, mas não criá-las. Use o menu + e escolha uma página para um documento ou um banco de dados para uma lista estruturada. Dê um título útil e escreva a especificação, decisão ou procedimento que a página precisa preservar.
 
 Crie subpáginas para documentos relacionados e use os controles da árvore para mover ou reordenar. Uma página não pode se tornar descendente de si mesma. Duplicar uma página cria conteúdo novo, não uma referência atualizada ao original. Revise a ramificação duplicada antes de editar ou compartilhar.
 
@@ -279,7 +279,7 @@ Diferentemente de uma tarefa do caderno levada para o projeto, a página não é
 
 ## Escrever uma página com blocos e menções {#page-editor}
 
-Abra a página e edite título ou corpo como proprietário ou Membro. Os leitores podem abrir e ler páginas, mas não podem editá-las, importá-las, duplicá-las, marcá-las como favoritas nem publicá-las, nem restaurar uma versão. Use o menu de comandos de barra e os controles de formatação para inserir títulos, parágrafos, listas, tarefas, código, seções recolhíveis e avisos. Um aviso pode ter ícone emoji e cor da paleta; escolha-os para distinguir informação útil, não como a única forma de comunicar uma advertência.
+Abra a página e edite título ou corpo como proprietário ou Membro. Os leitores podem abrir e ler páginas, mas não podem editá-las, importá-las, duplicá-las, marcá-las como favoritas nem publicá-las, nem restaurar uma versão. Use o menu de comandos de barra e os controles de formatação para inserir títulos, texto, listas de marcadores, numeradas e de tarefas, citações, avisos, blocos de código, divisores, seções recolhíveis, subpáginas, imagens e arquivos. Um aviso pode ter ícone emoji e cor da paleta; escolha-os para distinguir informação útil, não como a única forma de comunicar uma advertência.
 
 Use menções para vincular problemas, objetivos, pessoas ou páginas relevantes. Digite `@` seguido de um identificador, palavras do título ou uma breve descrição; uma busca descritiva também lista problemas encontrados [pelo sentido](/docs/navigation#search-by-meaning) em **Relacionados pelo sentido**, depois das correspondências de texto. Referências inversas ajudam leitores a encontrar páginas que apontam para a atual. Um link fornece contexto, não acesso a um objeto privado de outro projeto.
 
@@ -317,9 +317,9 @@ Abra a página como membro do projeto e use os controles de anexo ou upload. Sel
 
 Imagens podem ser inseridas como blocos de imagem, e outros documentos podem ser anexados como blocos de arquivo. O servidor determina o tipo de mídia armazenado pelos bytes, sem confiar no nome do arquivo ou no rótulo do navegador. A aceitação do upload não garante uma prévia na página para todos os formatos; baixe o arquivo quando não houver prévia.
 
-No editor do projeto, clique em uma imagem ou no nome de um bloco de arquivo compatível para abrir o mesmo visualizador de janela inteira usado pelos anexos dos tickets. Markdown (`.md`), texto simples (`.txt`, `.text`), CSV, PDF e formatos de áudio ou vídeo compatíveis abrem em contêineres próprios. Use Fechar ou Escape para voltar à página. O menu Ações do arquivo (`…`) oferece Baixar; Remover só aparece em páginas editáveis e remove o bloco do documento. O bloco de arquivo também mantém o controle direto Baixar. Os formatos não compatíveis, os links para arquivos externos e os blocos de arquivo em páginas publicadas mantêm o comportamento de download. As imagens publicadas usam o visualizador sem a ação de remoção.
+No editor do projeto, clique em uma imagem ou no nome de um bloco de arquivo compatível para abrir o mesmo visualizador de janela inteira usado pelos anexos dos tickets. Markdown (`.md`), texto simples (`.txt`, `.text`), CSV, PDF e formatos de áudio ou vídeo compatíveis abrem em contêineres próprios. Use Fechar ou Escape para voltar à página. O menu Ações do arquivo (`…`) oferece Baixar. Em uma página editável, um bloco de arquivo oferece também Renomear, que muda o nome exibido na página, e imagens e arquivos oferecem Remover: pede confirmação, remove o bloco do documento e você pode desfazer isso no editor. O bloco de arquivo também mantém o controle direto Baixar. Os formatos não compatíveis, os links para arquivos externos e os blocos de arquivo em páginas publicadas mantêm o comportamento de download. As imagens publicadas usam o visualizador sem a ação de remoção.
 
-![Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar e Remover.](/documentation/pt-BR/file-preview.png)
+![Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar, Renomear e Remover.](/documentation/pt-BR/file-preview.png)
 
 Confira se o arquivo aparece na página e abra ou baixe. Os bytes ficam no Storage, enquanto os metadados da página e do arquivo determinam o acesso. Salvar a página com sucesso não prova, por si só, que os bytes do arquivo estejam disponíveis.
 

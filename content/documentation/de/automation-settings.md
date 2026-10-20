@@ -3,7 +3,7 @@
   "id": "automation-settings",
   "locale": "de",
   "title": "Von Automatisierungen zu Routinen",
-  "summary": "Prüfen Sie pausierte Migrationsvorschläge vor der Aktivierung ereignisgesteuerter Numo-Arbeit.",
+  "summary": "Erfahren Sie, was aus den Projektautomatisierungen geworden ist, und bilden Sie einen Workflow als vom Eigentümer gesteuerte Routine neu ab.",
   "topic": "Konto und Apps",
   "type": "guide",
   "audiences": [
@@ -44,21 +44,21 @@
   "related": [],
   "aliases": [],
   "tags": [
-    "Automatische Ticketarbeit konfigurieren"
+    "Eine Projektautomatisierung als Routine neu erstellen"
   ],
   "figures": [],
   "requiredFigures": []
 }
 ---
 
-## Migrierte Arbeit prüfen {#automation-settings}
+## Was aus den Projektautomatisierungen wurde {#automation-settings}
 
-Die Automatisierungsschalter des Projekts sowie Kontovoreinstellungen, Aufwandsfilter und Startverzögerungen wurden durch [Routinen](/docs/scheduled-routines) ersetzt. Öffnen Sie Routinen als Projekteigentümer. Aktivierte archivierte Regeln werden einmalig als pausierte Routinen vorgeschlagen; das Öffnen der Liste aktiviert sie nicht und verbraucht kein Ausführungsbudget.
+Die Automatisierungsschalter des Projekts sowie Kontovoreinstellungen, Aufwandsfilter und Startverzögerungen wurden durch [Routinen](/docs/scheduled-routines) ersetzt. In einer früheren Version konfigurierte Automatisierungsregeln laufen nicht mehr, und Minddy wandelt sie nicht in Routinen um. Ausstehende und auf Menschen wartende Ketten wurden ohne folgenden Schritt beendet. Die archivierten Regeln bleiben im Projekt und in Kontoexporten erhalten.
 
-Prüfen Sie Anweisung, Statusauslöser, Bedingungen, Verzögerung und Ausgabenlimit jedes Vorschlags. Der ursprüngliche Workflow bleibt zum Vergleich in der Anweisung erhalten. Prüfen Sie menschliche Freigaben und nicht verfügbare Referenzen vor der Aktivierung. Vorschläge fordern bei menschlichen Freigaben die Eingabe des Eigentümers und begrenzen jede Ausführung standardmäßig auf 15 % des Monatsbudgets. Sie setzen die alte Kette nicht stillschweigend fort. Ausstehende und auf Menschen wartende Ketten werden beendet, ohne einen folgenden Kettenschritt. Historische Aktivitäten und Kontosicherungen bewahren das Archiv.
+Um einen Workflow beizubehalten, öffnen Sie Routinen als Projekteigentümer und [erstellen Sie eine Routine](/docs/scheduled-routines#scheduled-routines) mit der Anweisung, dem Auslöser, den Bedingungen und der Verzögerung, die er braucht.
 
 ## Andere Projekthilfen unterscheiden {#mechanisms}
 
-Smart Fill ergänzt weiterhin fehlende Priorität, Aufwand, Kategorien und Ziel. Smart Assign bleibt eine Eigentümereinstellung mit Regeln je Mitglied. Smart Triage bleibt eine statische Regelverwaltung. Automatische Selbstzuweisung bleibt eine separate Einstellung. Diese Hilfen aktivieren keine migrierten Vorschläge.
+Smart Fill ergänzt weiterhin fehlende Priorität, Aufwand, Kategorien und Ziel. Smart Assign bleibt eine Eigentümereinstellung mit Regeln je Mitglied. Smart Triage bleibt eine statische Regelverwaltung. Automatische Selbstzuweisung bleibt eine separate Einstellung. Diese Hilfen sind von Routinen getrennt und ersetzen keine eingestellte Automatisierung.
 
-Testen Sie eine geprüfte Routine manuell, lesen Sie ihre private Konversation und ihr Budget und aktivieren Sie sie für künftige Ereignisse. Pausieren Sie bei unerwarteter Arbeit die Routine und prüfen Sie die Ausführung vor einem erneuten Versuch. Der [Routinenleitfaden](/docs/scheduled-routines#conditions) erklärt Wartezustände und deren Verwerfung.
+Testen Sie eine neue Routine manuell, lesen Sie ihre private Konversation und ihr Budget und aktivieren Sie sie für künftige Ereignisse. Pausieren Sie bei unerwarteter Arbeit die Routine und prüfen Sie die Ausführung vor einem erneuten Versuch. Der [Routinenleitfaden](/docs/scheduled-routines#conditions) erklärt Wartezustände und deren Verwerfung.

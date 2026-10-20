@@ -92,7 +92,7 @@
 
 ## Export and import {#transfer-between-instances}
 
-Sign in to the source instance and open the **Privacy & data** tab of account settings. Download the JSON export and store it privately: it contains account and project content. Create or sign in to your account on the destination instance, check its address, and choose the import control there. Select the unmodified export file and wait for the result before closing the page.
+Sign in to the source instance and open the **Privacy & data** tab of account settings. Choose **Download my data** and store the JSON file privately: it contains account and project content, including file bytes. Create or sign in to your account on the destination instance, check its address, open the same tab and choose **Import a transfer file**. Select the unmodified export file and wait for the result before closing the page.
 
 Import adds data rather than replacing the destination. IDs are retained when safely reusable; conflicts receive new IDs. The result reports remapped IDs and skipped memberships. Existing-project membership references are restored only when the target project already exists and the reference is authorized. Inspect projects, issues, pages and personal data after the page reloads.
 
@@ -100,7 +100,7 @@ Import adds data rather than replacing the destination. IDs are retained when sa
 
 ## What to reconnect {#exclusions}
 
-Passwords, API keys, OAuth tokens, repository credentials and billing subscriptions do not transfer. Configure and authorize needed services again on the destination; an exported project is not proof of working provider access. Review file resources and availability rather than treating the JSON as an operational backup of database and Storage bytes.
+Passwords, API keys, OAuth tokens, repository credentials and billing subscriptions do not transfer. Configure and authorize needed services again on the destination; an exported project is not proof of working provider access. Review file resources and availability rather than treating the JSON as an operational backup of database and Storage bytes. An export made by v0.11.0 or earlier can contain command palette saved views and code-agent conversations; this release no longer has those features and ignores them on import.
 
 Keep the original instance until the transferred work has been checked. If import fails, preserve the error and verify destination state before repeating. Delete or protect transfer files when no longer needed; never attach them to a public error report.
 

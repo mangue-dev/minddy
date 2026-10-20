@@ -167,7 +167,7 @@ As leituras que retornam texto com imagens (`minddy_get_issue`, `minddy_get_obje
 
 Para converter um tipo, use `operation=convert` com `propertyId`, `targetType`, `revision` e `preview=true`. Confira `incompatibleCount`, depois envie as mesmas configurações com `preview=false` e o `token` retornado. Defina `confirmLoss=true` somente depois de o usuário autorizar explicitamente a remoção dos valores incompatíveis.
 
-Somente o proprietário pode criar, pausar, reagendar ou remover suas rotinas. Leia antes de criar para evitar duplicatas. `minddy_add_resource` limita os arquivos a 10 MB; as ferramentas de página não inventam URLs.
+As ferramentas de rotinas, exclusivas do proprietário, criam, alteram, pausam ou removem rotinas acionadas por um agendamento, um evento ou uma nova entrada de banco de dados. Leia antes de criar para evitar duplicatas. `minddy_add_resource` limita os arquivos a 10 MB; as ferramentas de página não inventam URLs.
 
 ### Conferir com um exemplo {#example}
 

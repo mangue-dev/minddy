@@ -81,7 +81,7 @@ Por exemplo, uma equipe sem capacidade para operar bancos de dados pode usar o C
 
 Uma instalação compatível precisa da aplicação e do Supabase com PostgreSQL, Auth, Storage e Realtime. Apenas PostgreSQL não é suficiente. Use uma versão com tag e sua matriz de compatibilidade. Variantes derivadas do Supabase sem versão fixada e adaptadores autogerenciados para GitHub Enterprise ou GitLab estão fora do contrato suportado.
 
-IA, e-mail, Git, notificações push e análise de uso dependem da configuração. A hospedagem própria não exige Stripe, PostHog, uma chave de IA gerenciada pelo minddy nem uma conta Cloud. A configuração opcional ausente é informada, sem substituição silenciosa por um provedor. Chaves pessoais de IA e endpoints locais de IA são opções possíveis; disponibilidade e custos dependem da capacidade configurada.
+IA, e-mail, Git, notificações push e análise de uso dependem da configuração. A hospedagem própria não exige Stripe, PostHog, uma chave de IA gerenciada pelo minddy nem uma conta Cloud. A configuração opcional ausente é informada, sem substituição silenciosa por um provedor. Chaves pessoais de IA e, no aplicativo de desktop, endpoints locais de IA são opções possíveis; disponibilidade e custos dependem da capacidade configurada.
 
 Revise as permissões e os termos sobre dados antes de habilitar uma integração. As conexões Git podem usar o relay gerenciado para forjas quando você inicia explicitamente a integração; aplicativos próprios do provedor e a desativação do relay também estão disponíveis. A hospedagem própria não é uma categoria reduzida das funções do núcleo.
 

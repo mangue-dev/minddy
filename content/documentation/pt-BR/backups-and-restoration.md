@@ -192,7 +192,7 @@ Para Supabase gerenciado, registre projeto, versão do banco, identificador do b
 
 ### Bloquear escritas e exportar SQL {#outage}
 
-Feche aplicação, workers, agendador e API pública. Parar apenas o servidor web deixa as gravações do PostgREST e do Storage abertas. Defina `SUPABASE_DB_URL` em privado e escolha uma `BACKUP_DIR` nova e cifrada. Exporte SQL com as ferramentas da versão instalada. Cada arquivo SQL precisa ser não vazio; `data.sql` deve conter instruções `COPY` para `auth.users`, `storage.objects` e tabelas da aplicação. A exportação comum omite o histórico de migrações, por isso são necessárias as duas exportações separadas mostradas. Preserve também as políticas gerenciadas do Storage e do Realtime.
+Feche aplicação, workers, agendador e API pública. Parar apenas o servidor web deixa as gravações do PostgREST e do Storage abertas. Defina `SUPABASE_DB_URL` em privado, `FROM_TAG` com a tag da release instalada atualmente e escolha uma `BACKUP_DIR` nova e cifrada. Exporte SQL com as ferramentas da versão instalada. Cada arquivo SQL precisa ser não vazio; `data.sql` deve conter instruções `COPY` para `auth.users`, `storage.objects` e tabelas da aplicação. A exportação comum omite o histórico de migrações, por isso são necessárias as duas exportações separadas mostradas. Preserve também as políticas gerenciadas do Storage e do Realtime.
 
 ```bash
 set -euo pipefail
