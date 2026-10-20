@@ -78,6 +78,7 @@ import type {
   IssueEffort,
 } from "@/lib/issue-constants";
 import { resolveSmartFill, resolveSmartFillRelations, resolveSmartFillScope } from "@/lib/smart-fill";
+import { smartFillFieldVisible, type SmartFillField } from "@/lib/smart-fill-fields";
 import type { RecurrenceCadence } from "@/lib/recurrence";
 import type {
   Category,
@@ -271,7 +272,9 @@ export function CreateIssueDialog({
    * When active, the row only keeps the three properties that
    * Smart-fill does not touch — status, assigned, due date. The other four
    * are not grayed out but REMOVED: a visible and empty field, on a form
-   * where something is going to fill it, reads like an oversight.
+   * where something is going to fill it, reads like an oversight. One comes
+   * back while its shortcut has its picker open, and stays once it holds a
+   * value set by hand, which Smart-fill then leaves alone (MIN-746).
    */
   const smartFillAvailable = resolveSmartFill(user?.user_metadata);
   // Smart Fill links relations only when the account lets it (MIN-717):
@@ -283,6 +286,17 @@ export function CreateIssueDialog({
   );
   const smartFillTouchedRef = useRef(false);
   const [smartFill, setSmartFill] = useState(smartFillDefault);
+  const showsField = (field: SmartFillField) =>
+    smartFillFieldVisible(field, {
+      smartFill,
+      openPicker,
+      values: {
+        priority: fields.priority,
+        effort: fields.effort,
+        categoryIds,
+        objectiveId: fields.objective_id,
+      },
+    });
   useEffect(() => {
     if (open) {
       smartFillTouchedRef.current = false;
@@ -851,42 +865,45 @@ export function CreateIssueDialog({
                     shortcutHint={KEY_FOR_FIELD.status}
                   />
                 </CreationProperty>
-                {/* Smart Fill provides these values when enabled. */}
-                {!smartFill && (
-                  <>
-                    <CreationProperty mobile={mobile} label={tField("priority")}>
-                      <PriorityCompact
-                        showValue={mobile}
-                        value={fields.priority}
-                        onChange={(priority) => setFields((f) => ({ ...f, priority }))}
-                        open={openPicker === "priority"}
-                        onOpenChange={(o) => setOpenPicker(o ? "priority" : null)}
-                        shortcutHint={KEY_FOR_FIELD.priority}
-                      />
-                    </CreationProperty>
-                    <CreationProperty mobile={mobile} label={tField("effort")}>
-                      <EffortCompact
-                        showValue={mobile}
-                        value={fields.effort}
-                        onChange={(effort) => setFields((f) => ({ ...f, effort }))}
-                        open={openPicker === "effort"}
-                        onOpenChange={(o) => setOpenPicker(o ? "effort" : null)}
-                        shortcutHint={KEY_FOR_FIELD.effort}
-                      />
-                    </CreationProperty>
-                    <CreationProperty mobile={mobile} label={tField("categories")}>
-                      <CategoriesCompact
-                        showValue={mobile}
-                        categories={scopedCategories}
-                        projectId={activeProjectId}
-                        value={categoryIds}
-                        onChange={setCategoryIds}
-                        open={openPicker === "category"}
-                        onOpenChange={(o) => setOpenPicker(o ? "category" : null)}
-                        shortcutHint={KEY_FOR_FIELD.category}
-                      />
-                    </CreationProperty>
-                  </>
+                {/* Smart Fill provides these values when enabled, unless one
+                    is set by hand: its shortcut opens the picker (MIN-746). */}
+                {showsField("priority") && (
+                  <CreationProperty mobile={mobile} label={tField("priority")}>
+                    <PriorityCompact
+                      showValue={mobile}
+                      value={fields.priority}
+                      onChange={(priority) => setFields((f) => ({ ...f, priority }))}
+                      open={openPicker === "priority"}
+                      onOpenChange={(o) => setOpenPicker(o ? "priority" : null)}
+                      shortcutHint={KEY_FOR_FIELD.priority}
+                    />
+                  </CreationProperty>
+                )}
+                {showsField("effort") && (
+                  <CreationProperty mobile={mobile} label={tField("effort")}>
+                    <EffortCompact
+                      showValue={mobile}
+                      value={fields.effort}
+                      onChange={(effort) => setFields((f) => ({ ...f, effort }))}
+                      open={openPicker === "effort"}
+                      onOpenChange={(o) => setOpenPicker(o ? "effort" : null)}
+                      shortcutHint={KEY_FOR_FIELD.effort}
+                    />
+                  </CreationProperty>
+                )}
+                {showsField("category") && (
+                  <CreationProperty mobile={mobile} label={tField("categories")}>
+                    <CategoriesCompact
+                      showValue={mobile}
+                      categories={scopedCategories}
+                      projectId={activeProjectId}
+                      value={categoryIds}
+                      onChange={setCategoryIds}
+                      open={openPicker === "category"}
+                      onOpenChange={(o) => setOpenPicker(o ? "category" : null)}
+                      shortcutHint={KEY_FOR_FIELD.category}
+                    />
+                  </CreationProperty>
                 )}
                 <CreationProperty mobile={mobile} label={tField("assignee")}>
                   <AssigneeCompact
@@ -912,8 +929,8 @@ export function CreateIssueDialog({
                     shortcutHint={KEY_FOR_FIELD.dueDate}
                   />
                 </CreationProperty>
-                {/* Smart Fill also chooses the objective. */}
-                {!smartFill && (
+                {/* Smart Fill also chooses the objective, unless one is set. */}
+                {showsField("objective") && (
                   <CreationProperty mobile={mobile} label={tField("objective")}>
                     <ObjectiveCompact
                       showValue={mobile}

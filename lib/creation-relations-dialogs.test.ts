@@ -137,7 +137,15 @@ vi.mock("@/components/editor/document-editor-lazy", () => ({ LazyDocumentEditor:
 vi.mock("@/components/resources", () => ({ AddResourceButton: () => null, ResourcePills: () => null, ComposerResourcePills: () => null, DropOverlay: () => null, pasteFileHandler: () => undefined, useFileDrop: () => ({ handlers: {} }) }));
 vi.mock("@/components/issue-compact-fields", () => ({
   AssigneeCompact: () => null, CategoriesCompact: () => null, DueDateCompact: () => null,
-  EffortCompact: () => null, ObjectiveCompact: () => null, PriorityCompact: () => null, StatusCompact: () => null,
+  ObjectiveCompact: () => null, StatusCompact: () => null,
+  // Priority and effort keep a trigger and one option, enough to see Smart Fill
+  // hide them and a shortcut bring one back (MIN-746).
+  PriorityCompact: ({ open, onChange, onOpenChange }: { open: boolean; onChange: (value: string) => void; onOpenChange: (open: boolean) => void }) =>
+    React.createElement("div", null, React.createElement("button", { type: "button", "aria-label": "Change priority" }),
+      open && React.createElement("button", { type: "button", onClick: () => { onChange("high"); onOpenChange(false); } }, "High")),
+  EffortCompact: ({ open, onChange, onOpenChange }: { open: boolean; onChange: (value: string) => void; onOpenChange: (open: boolean) => void }) =>
+    React.createElement("div", null, React.createElement("button", { type: "button", "aria-label": "Change effort" }),
+      open && React.createElement("button", { type: "button", onClick: () => { onChange("m"); onOpenChange(false); } }, "M")),
   SmartFillCompact: ({ value, onChange }: { value: boolean; onChange: (value: boolean) => void }) =>
     React.createElement("button", { type: "button", onClick: () => onChange(!value) }, "Smart Fill"),
 }));
@@ -289,6 +297,22 @@ describe("creation relation controls", () => {
     expect(host.textContent).not.toContain("Smart Fill");
     await addRelation("related", "objective");
     expect(host.textContent).toContain("Target objective");
+  });
+
+  it("opens a property hidden by Smart Fill from its shortcut and keeps the value set by hand", async () => {
+    const dialog = await mountDialog("issue");
+    const effortTrigger = () => host.querySelector('button[aria-label="Change effort"]');
+    expect(effortTrigger()).toBeNull();
+    await act(() => { document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "e", bubbles: true })); });
+    expect(effortTrigger()).not.toBeNull();
+    await click("M");
+    // The picker closed, but the effort chosen by hand stays on the form.
+    expect(effortTrigger()).not.toBeNull();
+    expect(host.querySelector('button[aria-label="Change priority"]')).toBeNull();
+    expect(host.textContent).toContain("Smart Fill");
+    await typeTitle("Issue with a chosen effort");
+    await act(async () => { host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
+    expect(dialog.create).toHaveBeenCalledWith(expect.objectContaining({ effort: "m", priority: "none", smart_fill: true }));
   });
 
   it.each(["issue", "objective"] as const)("keeps %s selections when creation is rejected", async (kind) => {
