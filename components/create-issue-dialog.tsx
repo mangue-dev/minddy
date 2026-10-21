@@ -27,6 +27,7 @@ import {
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { useResourceMentions } from "@/lib/use-resource-mentions";
 import { useArrowField } from "@/lib/use-arrow-field";
+import { useTitleBodyLink } from "@/lib/use-title-body-link";
 import { CloseDraftDialog } from "@/components/close-draft-dialog";
 import { CreationDictation, CreationProperty } from "@/components/creation-form-layout";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
@@ -248,6 +249,8 @@ export function CreateIssueDialog({
   const titleRef = useRef<HTMLTextAreaElement>(null);
   // “->” becomes “→” while typing, like in the body editor.
   const arrowTitle = useArrowField(titleRef);
+  // Title and description read as one text on the keyboard (MIN-756).
+  const titleBody = useTitleBodyLink(titleRef);
   // The content of the dialog, to know if the keyboard still belongs to him: a
   // second dialog on top (draft confirmation, objective creation
   // from the picker) must keep his touches to himself.
@@ -833,21 +836,17 @@ export function CreateIssueDialog({
                 value={title}
                 onChange={(e) => setTitle(arrowTitle.read(e))}
                 onKeyDown={(e) => {
-                  if (e.key !== "Enter") return;
-                  e.preventDefault();
-                  if (mobile && !e.metaKey && !e.ctrlKey) {
-                    e.currentTarget.form?.querySelector<HTMLElement>(".creation-description [contenteditable=true]")?.focus();
-                    return;
-                  }
-                  void submit(e.shiftKey || createMore);
+                  titleBody.onTitleKeyDown(e, { submit: () => void submit(createMore), mobile });
                 }}
                 placeholder={t("titlePlaceholder")}
                 className="creation-title w-full overflow-hidden bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50 sm:text-2xl"
               />
               <div className="creation-field-label">{tField("description")}</div>
+              <div ref={titleBody.bodyRef}>
               <LazyDocumentEditor
                 mentions={mentions}
                 key={editorKey}
+                onLeaveTop={titleBody.leaveBody}
                 value={description}
                 document={draftDocument}
                 uploadScope={`projects/${activeProjectId}`}
@@ -868,6 +867,7 @@ export function CreateIssueDialog({
                 placeholder={t("createDescriptionPlaceholder")}
                 className="creation-description mt-2 min-h-16"
               />
+              </div>
 
               {/* Property values stay compact on desktop and receive labels on mobile. */}
               <div className="creation-properties mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">

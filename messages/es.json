@@ -2883,7 +2883,7 @@
     "desktopUpdateCheck": "Comprueba las actualizaciones...",
     "desktopUpdateChecking": "Comprobando…",
     "sendShortcutTitle": "Enviar un mensaje con",
-    "sendShortcutDesc": "Mayús + Intro siempre añade un salto de línea. {mod} + Intro envía con ambos ajustes. Los formularios que incluyen una descripción (una incidencia nueva o un objetivo nuevo) mantienen {mod} + Intro, por lo que Intro puede seguir iniciando un párrafo.",
+    "sendShortcutDesc": "Mayús + Intro siempre añade un salto de línea. {mod} + Intro envía con ambos ajustes. En el título de un formulario (una incidencia nueva o un objetivo nuevo), Intro sigue este ajuste; en la descripción solo envía {mod} + Intro, por lo que Intro siempre inicia un párrafo.",
     "sendShortcutModEnter": "{mod} + Enter",
     "sendShortcutEnter": "Intro",
     "desktopAppLabel": "Aplicación de escritorio",

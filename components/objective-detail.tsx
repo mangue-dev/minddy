@@ -25,6 +25,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { AutoTextarea } from "@/components/auto-textarea";
+import { useTitleBodyLink } from "@/lib/use-title-body-link";
 import { AppContentHeader } from "@/components/app-content-header";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the objectives route —
 // see components/editor/document-editor-lazy.tsx. Warmed from idle time in ObjectiveDetail.
@@ -304,6 +305,8 @@ export function ObjectiveDetail({
   });
   /** Editor container: serves as a focus marker (see effect below). */
   const descriptionRef = useRef<HTMLDivElement>(null);
+  // Title and description read as one text on the keyboard (MIN-756).
+  const titleBody = useTitleBodyLink(undefined, descriptionRef);
   /** Latest version of the description already reflected on the screen: distinguishes a
  rewrite by Numo (to be adopted) from the echo of our own commit. */
   const shownDescription = useRef(objective.description ?? "");
@@ -577,15 +580,13 @@ export function ObjectiveDetail({
       >
         <div className="mx-auto flex max-w-3xl flex-col gap-4">
           <AutoTextarea
+            ref={titleBody.titleRef}
             value={name}
             readOnly={readOnly}
             onChange={(e) => { nameEdited.current = true; setName(e.target.value); }}
             onBlur={commitName}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                e.currentTarget.blur();
-              }
+              titleBody.onTitleKeyDown(e);
             }}
             className="w-full shrink-0 overflow-hidden bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
             placeholder={t("namePlaceholder")}
@@ -624,6 +625,7 @@ export function ObjectiveDetail({
                 mentions={mentions}
                 value={objective.description ?? ""}
                 uploadScope={`projects/${objective.project_id}`}
+                onLeaveTop={titleBody.leaveBody}
                 document={liveDescription.doc}
                 collaboration={liveDescription.collaboration}
                 placeholder={t("descriptionPlaceholder")}
@@ -635,6 +637,7 @@ export function ObjectiveDetail({
               mentions={mentions}
               value={objective.description ?? ""}
               uploadScope={`projects/${objective.project_id}`}
+              onLeaveTop={titleBody.leaveBody}
               document={descriptionDocument}
               onCommit={commitDescription}
               onEdit={() => {

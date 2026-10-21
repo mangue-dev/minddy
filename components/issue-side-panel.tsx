@@ -81,6 +81,7 @@ import { useRichDocument } from "@/lib/use-rich-document";
 import { useDescriptionCollaboration } from "@/lib/use-description-collaboration";
 import type { JSONContent } from "@tiptap/core";
 import { useArrowField } from "@/lib/use-arrow-field";
+import { useTitleBodyLink } from "@/lib/use-title-body-link";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { NumoIcon } from "@/components/numo-icon";
 import { AgentBeamOverlay } from "@/components/agent-beam";
@@ -249,6 +250,8 @@ export function IssueSidePanel({
   // “->” becomes “→” while typing, like in the body editor.
   const arrowTitle = useArrowField(titleRef);
   const descriptionRef = useRef<HTMLDivElement>(null);
+  // Title and description read as one text on the keyboard (MIN-756).
+  const titleBody = useTitleBodyLink(titleRef, descriptionRef);
   /** Ticket whose local copies below carry the version. */
   const shownFor = useRef<string | null>(null);
   /** Latest SERVER version already reflected on the screen: distinguishes a writing
@@ -936,10 +939,7 @@ export function IssueSidePanel({
               }}
               onBlur={commitTitle}
               onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  e.currentTarget.blur();
-                }
+                titleBody.onTitleKeyDown(e);
               }}
               className="w-full shrink-0 overflow-hidden bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
               placeholder={t("titlePlaceholder")}
@@ -1043,6 +1043,7 @@ export function IssueSidePanel({
                       mentions={mentions}
                       value={issue.description ?? ""}
                       uploadScope={`projects/${issue.project_id}`}
+                      onLeaveTop={titleBody.leaveBody}
                       document={liveDescription.doc}
                       collaboration={liveDescription.collaboration}
                       placeholder={
@@ -1056,6 +1057,7 @@ export function IssueSidePanel({
                     mentions={mentions}
                     value={issue.description ?? ""}
                     uploadScope={`projects/${issue.project_id}`}
+                    onLeaveTop={titleBody.leaveBody}
                     document={descriptionDocument}
                     onCommit={commitDescription}
                     // Live markdown on every edit: a close (Escape, ✕, outside

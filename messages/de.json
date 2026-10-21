@@ -2883,7 +2883,7 @@
     "desktopUpdateCheck": "Nach Updates suchen…",
     "desktopUpdateChecking": "Überprüft…",
     "sendShortcutTitle": "Nachricht senden mit",
-    "sendShortcutDesc": "Umschalttaste + Eingabetaste fügt immer einen Zeilenumbruch ein. {mod} + Eingabetaste sendet bei beiden Einstellungen. Formulare mit einer Beschreibung (neues Problem, neues Ziel) verwenden weiterhin {mod} + Eingabetaste zum Senden, sodass die Eingabetaste dort immer einen Absatz beginnen kann.",
+    "sendShortcutDesc": "Umschalttaste + Eingabetaste fügt immer einen Zeilenumbruch ein. {mod} + Eingabetaste sendet bei beiden Einstellungen. Im Titel eines Formulars (neues Problem, neues Ziel) folgt die Eingabetaste dieser Einstellung; in der Beschreibung sendet nur {mod} + Eingabetaste, sodass die Eingabetaste dort immer einen Absatz beginnt.",
     "sendShortcutModEnter": "{mod} + Enter",
     "sendShortcutEnter": "Enter",
     "desktopAppLabel": "Desktop-App",

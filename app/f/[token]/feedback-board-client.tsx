@@ -20,6 +20,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { AutoTextarea } from "@/components/auto-textarea";
+import { useTitleBodyLink } from "@/lib/use-title-body-link";
 import { AgentBeamOverlay } from "@/components/agent-beam";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { EmptyScene } from "@/components/empty-scene";
@@ -508,6 +509,8 @@ function ComposerDialog({
   const tRecovery = useTranslations("ServerUnavailable");
   const router = useRouter();
   const [title, setTitle] = useState("");
+  // Title and description read as one text on the keyboard (MIN-756).
+  const titleBody = useTitleBodyLink();
   // Checked by default: publish on the board. Unchecked = private return to the team.
   const [isPublic, setIsPublic] = useState(true);
   const [similar, setSimilar] = useState<SimilarPost[]>([]);
@@ -807,6 +810,7 @@ function ComposerDialog({
         </div>}
         <div hidden={draftLoading || draftRestoreFailed || Boolean(legacyDraft)}>
         <AutoTextarea
+          ref={titleBody.titleRef}
           autoFocus={allowInputAutoFocus()}
           value={title}
           onChange={(e) => {
@@ -814,17 +818,21 @@ function ComposerDialog({
             persistDraft(e.target.value, bodyRef.current);
           }}
           onKeyDown={(e) => {
-            if (e.key !== "Enter") return;
-            e.preventDefault();
-            if (title.trim() && !pending && !numoBusy) submit();
+            titleBody.onTitleKeyDown(e, {
+              submit: () => {
+                if (title.trim() && !pending && !numoBusy) submit();
+              },
+            });
           }}
           placeholder={t("postTitlePlaceholder")}
           maxLength={200}
           className="w-full overflow-hidden bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
         />
+        <div ref={titleBody.bodyRef}>
         <LazyDocumentEditor
           key={editorKey}
           value={initialBody}
+          onLeaveTop={titleBody.leaveBody}
           onCommit={(markdown) => {
             bodyRef.current = markdown;
             persistDraft(title, markdown);
@@ -832,6 +840,7 @@ function ComposerDialog({
           placeholder={t("postBodyPlaceholder")}
           className="mt-3 min-h-24"
         />
+        </div>
         </div>
         {checking && similar.length === 0 && (
           <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">

@@ -93,6 +93,7 @@ import type {
   Project,
 } from "@/lib/types";
 import { AutoTextarea } from "@/components/auto-textarea";
+import { useTitleBodyLink } from "@/lib/use-title-body-link";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the feedback route —
 // see components/editor/document-editor-lazy.tsx.
 import {
@@ -1251,6 +1252,8 @@ function FeedbackDetail({
   );
 
   const [title, setTitle] = useState("");
+  // Title and description read as one text on the keyboard (MIN-756).
+  const titleBody = useTitleBodyLink();
   const [mergeOpen, setMergeOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
   const [promoteOpen, setPromoteOpen] = useState(false);
@@ -1578,6 +1581,7 @@ function FeedbackDetail({
         ) : (
         <div className="flex flex-col gap-2">
           <AutoTextarea
+            ref={titleBody.titleRef}
             value={title}
             readOnly={readOnly}
             onChange={(e) => setTitle(e.target.value)}
@@ -1586,17 +1590,16 @@ function FeedbackDetail({
               if (trimmed && trimmed !== post.title) patch.mutate({ title: trimmed });
             }}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                e.currentTarget.blur();
-              }
+              titleBody.onTitleKeyDown(e);
             }}
             className="w-full overflow-hidden bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
             maxLength={200}
           />
+          <div ref={titleBody.bodyRef}>
           <LazyDocumentEditor
             key={post.id}
             value={post.body}
+            onLeaveTop={titleBody.leaveBody}
             onCommit={(markdown) => {
               if (markdown !== post.body) patch.mutate({ body: markdown });
             }}
@@ -1604,6 +1607,7 @@ function FeedbackDetail({
             className="min-h-16"
             readOnly={readOnly}
           />
+          </div>
         </div>
         )}
 
@@ -2572,6 +2576,8 @@ function InternalFeedbackDialog({
     null
   );
   const [title, setTitle] = useState("");
+  // Title and description read as one text on the keyboard (MIN-756).
+  const titleBody = useTitleBodyLink();
   const [isPublic, setIsPublic] = useState(true);
   const [busy, setBusy] = useState(false);
   // The LazyDocumentEditor only commits to blur — the ref always carries the
@@ -2748,27 +2754,29 @@ function InternalFeedbackDialog({
       >
         <DialogTitle className="sr-only">{t("internalDialogTitle")}</DialogTitle>
         <AutoTextarea
+          ref={titleBody.titleRef}
           autoFocus={allowInputAutoFocus()}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key !== "Enter") return;
-            e.preventDefault();
-            void submit();
+            titleBody.onTitleKeyDown(e, { submit: () => void submit() });
           }}
           placeholder={t("postTitlePlaceholder")}
           maxLength={200}
           className="w-full overflow-hidden bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
         />
+        <div ref={titleBody.bodyRef}>
         <LazyDocumentEditor
           key={editorKey}
           value={initialBody}
+          onLeaveTop={titleBody.leaveBody}
           onCommit={(markdown) => {
             bodyRef.current = markdown;
           }}
           placeholder={t("postBodyPlaceholder")}
           className="mt-3 min-h-24"
         />
+        </div>
 
         <div className="mt-4 flex items-center justify-between gap-4">
           <span className="shrink-0 text-sm font-medium">{t("authorLabel")}</span>

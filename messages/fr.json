@@ -2883,7 +2883,7 @@
     "desktopUpdateCheck": "Rechercher des mises à jour…",
     "desktopUpdateChecking": "Recherche…",
     "sendShortcutTitle": "Envoyer un message avec",
-    "sendShortcutDesc": "Maj + Entrée saute toujours la ligne ; {mod} + Entrée envoie. Les formulaires décrits gardent {mod} + Entrée.",
+    "sendShortcutDesc": "Maj + Entrée saute toujours la ligne ; {mod} + Entrée envoie. Dans le titre d’un formulaire, Entrée suit ce choix ; sa description garde {mod} + Entrée.",
     "sendShortcutModEnter": "{mod} + Entrée",
     "sendShortcutEnter": "Entrée",
     "desktopAppLabel": "App de bureau",

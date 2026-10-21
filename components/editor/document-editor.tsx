@@ -104,6 +104,10 @@ export interface DocumentEditorProps {
   onUploadingChange?: (uploading: boolean) => void;
   /** Escape with no menu open: a composer closes or cancels with it. */
   onEscape?: () => void;
+  /** ↑ from the first line, or ⌫ at the very start: the caret leaves for the
+      title above, with its x for ↑ (MIN-756, see title-bridge.ts). Read at
+      mount: pass it from the first render. */
+  onLeaveTop?: (x?: number) => void;
   autoFocus?: boolean;
   /** One call, as soon as the surface exists: the caller keeps the handles
       and writes into the editor without owning its state. */
@@ -136,6 +140,7 @@ export function DocumentEditor({
   onSubmit,
   onUploadingChange,
   onEscape,
+  onLeaveTop,
   autoFocus,
   apiRef,
   mentions,
@@ -305,6 +310,7 @@ export function DocumentEditor({
         onChange={handleChange}
         onBlur={handleBlur}
         onEditor={setEditor}
+        onLeaveTop={readOnly ? undefined : onLeaveTop}
         blocks="document"
         blockChrome={false}
         size={size}

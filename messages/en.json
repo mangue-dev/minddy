@@ -2883,7 +2883,7 @@
     "desktopUpdateCheck": "Check for updates…",
     "desktopUpdateChecking": "Checking…",
     "sendShortcutTitle": "Send a message with",
-    "sendShortcutDesc": "Shift + Enter always breaks the line; {mod} + Enter sends. Described forms keep {mod} + Enter.",
+    "sendShortcutDesc": "Shift + Enter always breaks the line; {mod} + Enter sends. In a form's title, Enter follows this choice; its description keeps {mod} + Enter.",
     "sendShortcutModEnter": "{mod} + Enter",
     "sendShortcutEnter": "Enter",
     "desktopAppLabel": "Desktop app",
