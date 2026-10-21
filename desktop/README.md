@@ -22,7 +22,7 @@ to be checked back and forth rather than reread twice separately.
 | | |
 | --- | --- |
 | `src/main.ts` | window, navigation guard, `minddy://`, dock badge, IPC |
-| `src/channel-store.ts` | the channel retained on disk (`userData/channel.json`) |
+| `src/channel-store.ts` | rewrites a retired preview channel in `userData/channel.json` to stable |
 | `src/server-store.ts` | the selected self-hosted origin (`userData/server.json`) |
 | `src/server-picker.ts` | the isolated server form and its validation bridge |
 | `src/local-runtime.ts` | the selected local clone and its owned Supabase + minddy process |
@@ -121,9 +121,8 @@ The server picker stores one normalized origin in `userData/server.json` before
 loading it. A new selection opens `/signup`; later launches open `/home` as
 usual. Cookies are not copied between cloud and self-hosted origins.
 
-Choosing **Use minddy Cloud** removes the custom selection and returns to the
-stable cloud channel. While a custom server is active, the preview channel is
-hidden because it is a property of minddy Cloud, not of the operator's server.
+Choosing **Use minddy Cloud** removes the custom selection and returns to
+`www.minddy.app`.
 
 If the selected server cannot load, the shell replaces Chromium's network error
 with a local recovery screen. It names the configured server, preserves the
@@ -138,43 +137,36 @@ official SVG brandmark, pill buttons, inputs, and focus treatment. The packaged
 shell also carries the same Inter Latin subset as the site; these local surfaces
 must never depend on an asset served by the selected origin.
 
-## The channel (MIN-352)
+## minddy Cloud, and the retired preview channel
 
-When minddy Cloud is selected, the shell loads one of two cloud origins:
+When minddy Cloud is selected, the shell loads `www.minddy.app`, the Vercel
+Production deployment for the SHA referenced by `production`.
 
-| Channel | Origin | What it is |
-| --- | --- | --- |
-| `stable` | `www.minddy.app` | the Vercel Production deployment for the SHA referenced by `production` |
-| `preview` | `preview.minddy.app` | the latest `main` preview candidate, before production approval and promotion |
-
-Short-lived work branches can have disposable preview deployments, but neither
-desktop cloud channel follows them. The preview channel follows `main`; the
-stable channel follows only the automation-managed `production` pointer.
-
-**Each channel has its own database** (MIN-740): stable serves production,
-preview serves the Supabase `preview` branch where `main` is tested. Accounts,
-projects and tickets therefore differ between channels, and a session belongs
-to one channel: the first switch to preview asks to sign in with a preview
-account, and returning to stable finds the production session intact. See
+Earlier versions also offered a **preview channel** (MIN-352) that loaded
+`preview.minddy.app`, with a toggle in the application menu and in account
+settings, and copied the session cookies between the two origins (MIN-353).
+Since MIN-740 preview has its own database, so its accounts, projects and
+tickets differ from production: the toggle led people to a sign-in screen for an
+account that does not exist there, and the copied cookies were never read
+because the two Supabase projects use different cookie names. MIN-765 removed
+the toggle, the bridge member and the session carry. See
 [database environments](../docs/database-environments.md).
 
-The native application menu is the reference surface for channel, server,
-update, and diagnostic controls. Unlike a settings screen served by the selected
-origin, the menu remains available when that origin does not load. On Windows
-and Linux it is hidden by default and can be revealed with **Alt**; macOS keeps
-its normal global menu.
+Installations that had switched still have `"preview"` in
+`userData/channel.json`. At startup, before the window loads,
+`src/channel-store.ts` rewrites it to `"stable"`; the window never reads the
+file otherwise. The decision lives in
+[lib/desktop/channel.ts](../lib/desktop/channel.ts), tested.
 
-It is retained in `userData/channel.json`, therefore **by machine and by profile**,
-never in the account: a setting that decides which page to serve should read
-before having used a single page. `MINDDY_DESKTOP_ORIGIN` wins on him — on
-`localhost` there are not two channels.
+To try preview in the desktop shell, start a development shell with
+`MINDDY_DESKTOP_ORIGIN=https://preview.minddy.app`. The override wins over
+minddy Cloud; there is no hidden toggle.
 
-Decisions in [lib/desktop/channel.ts](../lib/desktop/channel.ts), tested.
-
-**A prerequisite on the Supabase side**, the same as in the following paragraph: the
-“Redirect URLs” allowlist of the preview branch must accept
-`https://preview.minddy.app/auth/callback?**`, otherwise Google, GitHub and magic
-links fail on this channel.
+The native application menu is the reference surface for server, update, and
+diagnostic controls. Unlike a settings screen served by the selected origin, the
+menu remains available when that origin does not load. On Windows and Linux it
+is hidden by default and can be revealed with **Alt**; macOS keeps its normal
+global menu.
 
 ## Authentication, in one sentence
 

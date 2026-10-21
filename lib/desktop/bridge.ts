@@ -19,7 +19,6 @@
  */
 
 import type { DesktopAuthLink } from "@/lib/desktop/auth-link";
-import type { DesktopChannel } from "@/lib/desktop/channel";
 import type {
   LocalModelDiscoveryInput,
   LocalModelDiscoveryResult,
@@ -138,18 +137,6 @@ export interface DesktopBridge {
    * behind the browser.
    */
   focus(): void;
-  /**
-   * Change CHANNEL — the version of minddy that the window shows (MIN-352).
-   *
-   * In writing only, and this is intentional: the page does not have to ask in which
-   * channel she is, she reads it on her own origin
-   * (`desktopChannelForOrigin`, lib/desktop/channel.ts). A channel copied here
-   * would be a second state to keep synchronous with the URL actually loaded.
-   *
-   * The call does not return control: the main process retains the choice, then
-   * reloads the window on the other origin. This document no longer exists afterward.
-   */
-  setChannel(channel: DesktopChannel): void;
   /**
    * Where is the shell update (MIN-353). Returns his unsubscription,
    * and replays the current state at subscription — otherwise a page mounted after the

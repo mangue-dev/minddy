@@ -128,8 +128,8 @@ window. The launcher uses the user's configured shell or `/bin/sh`, and stops
 with the desktop app.
 
 Account → Preferences is the primary Linux surface for changing the server,
-switching the minddy Cloud preview channel, checking for updates, and copying a
-diagnostic report after native confirmation. **Change…** opens the same picker
+checking for updates, and copying a diagnostic report after native
+confirmation. **Change…** opens the same picker
 for a validated HTTPS or private-network origin, local minddy folder, or return
 to minddy Cloud. The native application menu keeps these recovery commands and
 the edit, zoom, full-screen, close, and quit shortcuts, but is hidden by default;

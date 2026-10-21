@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-21",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -71,10 +71,10 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 15,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-21"
   },
   "related": [
     "choose-an-instance",
@@ -106,7 +106,7 @@
       "src": "/documentation/en/account-security-workflow.png",
       "alt": "Two-factor authentication card with the Turn on button.",
       "caption": "Start enrollment here, then verify the authenticator and store recovery codes privately.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -123,7 +123,7 @@
       "src": "/documentation/en/profile-and-preferences-workflow.png",
       "alt": "Profile header with the avatar and its edit badge, the name and the read-only email.",
       "caption": "Select the avatar to generate or upload one, or the name to rename yourself; the email address stays read-only.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -140,7 +140,7 @@
       "src": "/documentation/en/profile-and-preferences-preferences-workflow.png",
       "alt": "Language selector, light, dark and system theme controls, the light and dark mode palette selectors and the transparency switch.",
       "caption": "Account appearance preferences are separate from the public website language.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -157,7 +157,7 @@
       "src": "/documentation/en/privacy-and-account-deletion-workflow.png",
       "alt": "Deletion preview listing owned projects, issues and members who lose access.",
       "caption": "Read the preview and export wanted data before opening the deletion confirmation.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -250,7 +250,7 @@ In Preferences, select the interface language and theme, then check another page
 
 Theme chooses light, dark or system mode. **Light mode palette** and **Dark mode palette** each set the colors of one mode. **Accent colors** (minddy, Blue, Violet, Green, Orange, Rose) keep minddy's colors and only recolor buttons and the focus ring; **Full palettes** (Solarized, Catppuccin, Nord) recolor every surface; **High contrast** sits under Accessibility. The palette of the mode on screen applies immediately; the other is saved and appears whenever its mode becomes active, including when System follows an operating-system switch. High contrast raises text and border contrast, outlines fields, menus, dialogs and tabs, marks the current page and selected item, always shows keyboard focus and keeps menus opaque. Turn off **Transparency** to paint menus, popovers and the command palette opaque, without blur. Palettes and transparency are saved to the account; another device applies them the next time it loads a page.
 
-Choose the message-send shortcut in Keyboard. This preference governs comments and Numo's composer. Use the send button when a platform intercepts the shortcut; do not assume every OS maps the modifier key identically. Projects you hid are listed in their own **Hidden projects** tab, where you can show them again. **Preferences** also holds the **Desktop app** card: on the web it links to the desktop download, and in the desktop app it shows the connected server, the preview channel when available and the app version. Issue preferences also belong to the account and do not change another member's settings: automatic assignment is in the **Issues** tab, and the status for issues Numo creates is in **AI & Numo** → **Issues Numo creates**.
+Choose the message-send shortcut in Keyboard. This preference governs comments and Numo's composer. Use the send button when a platform intercepts the shortcut; do not assume every OS maps the modifier key identically. Projects you hid are listed in their own **Hidden projects** tab, where you can show them again. **Preferences** also holds the **Desktop app** card: on the web it links to the desktop download, and in the desktop app it shows the connected server and the app version. Issue preferences also belong to the account and do not change another member's settings: automatic assignment is in the **Issues** tab, and the status for issues Numo creates is in **AI & Numo** → **Issues Numo creates**.
 
 ![Language selector, light, dark and system theme controls, the light and dark mode palette selectors and the transparency switch.](/documentation/en/profile-and-preferences-preferences-workflow.png)
 

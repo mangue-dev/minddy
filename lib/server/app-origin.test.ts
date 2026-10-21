@@ -48,8 +48,7 @@ describe("resolveOauthAppOrigin", () => {
 
   it("anchors the main preview to its fixed alias, not the deployment URL", () => {
     // OAuth registrations (DCR redirect_uris, provider apps, the issuer)
-    // survive a deployment only if the origin does. The alias is the one the
-    // desktop preview channel already loads.
+    // survive a deployment only if the origin does, hence the fixed alias.
     expect(
       resolveOauthAppOrigin(
         {

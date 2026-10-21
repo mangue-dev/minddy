@@ -14,38 +14,36 @@
  * origin from its environment. Installed users can choose a server through the
  * validated native picker, and that explicit choice is stored in `userData`.
  *
- * When it is installed, it wins on EVERYTHING, channel included: on `localhost` there
- * is neither stable nor preview, there is only one dev server.
+ * When it is set, it wins over minddy Cloud. It is also how the team opens
+ * `https://preview.minddy.app` in a development shell, now that the app has no
+ * preview channel (MIN-765).
  */
 export const DESKTOP_ORIGIN_OVERRIDE: string | null =
   process.env.MINDDY_DESKTOP_ORIGIN?.trim() || null;
 
 /**
- * The origin of the STABLE channel — the one that the window loads by default.
- *
- * The channel is chosen at runtime: see lib/desktop/channel.ts.
+ * The origin of minddy Cloud — the one that the window loads by default.
  */
 export const DESKTOP_STABLE_ORIGIN: string =
   process.env.MINDDY_PUBLIC_APP_URL?.trim().replace(/\/+$/, "") ||
   "https://www.minddy.app";
 
 /**
- * The origin of the PREVIEW channel — branch deployment `main` (MIN-352).
+ * The fixed alias of the `main` branch deployment.
  *
- * Hard, like its neighbor, and for the same reason. This is not a separate
- * environment: it is the SAME Supabase project (same accounts, same
- * data, same public keys), served by the last commit of `main` instead of
- * of the last one promoted to production. Hence the fact that you can switch to it without losing anything — the only thing that doesn't follow is cookies, which are par
- * origin.
+ * The desktop window no longer loads it (MIN-765): since MIN-740 preview has
+ * its own database, so its accounts are not those of minddy Cloud. The OAuth
+ * origin of the preview website still anchors to it
+ * (`resolveOauthAppOrigin`, lib/server/app-origin.ts).
  */
 export const DESKTOP_PREVIEW_ORIGIN = "https://preview.minddy.app";
 
 /**
- * The DEFAULT origin of the window — the dev if requested, the stable otherwise.
+ * The DEFAULT origin of the window — the dev if requested, minddy Cloud otherwise.
  *
- * ⚠ This is not necessarily the one that the window loads: the channel chosen by the
- * person lives in the main process (`desktop/src/channel-store.ts`) and se
- * resolves to `desktopOriginForChannel`. This constant remains the starting point, and what surfaces that do not have a channel read (the help menu link, for example).
+ * ⚠ This is not necessarily the one that the window loads: a server chosen in
+ * the native picker lives in the main process (`desktop/src/server-store.ts`)
+ * and wins over it. This constant remains the starting point.
  */
 export const DESKTOP_ORIGIN: string = DESKTOP_ORIGIN_OVERRIDE ?? DESKTOP_STABLE_ORIGIN;
 

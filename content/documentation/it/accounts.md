@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-21",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -71,10 +71,10 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 15,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-21"
   },
   "related": [
     "choose-an-instance",
@@ -106,7 +106,7 @@
       "src": "/documentation/it/account-security-workflow.png",
       "alt": "Scheda di autenticazione a due fattori con pulsante di attivazione.",
       "caption": "Inizia qui, poi verifica l’autenticatore e conserva privatamente i codici di recupero.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -123,7 +123,7 @@
       "src": "/documentation/it/profile-and-preferences-workflow.png",
       "alt": "Intestazione del profilo con l’avatar e il suo badge di modifica, il nome e l’email di sola lettura.",
       "caption": "Seleziona l’avatar per generarne o caricarne uno, oppure il nome per cambiarlo; l’indirizzo email resta di sola lettura.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -140,7 +140,7 @@
       "src": "/documentation/it/profile-and-preferences-preferences-workflow.png",
       "alt": "Selettore della lingua, controlli del tema chiaro, scuro e di sistema, selettori di palette delle modalità chiara e scura e interruttore della trasparenza.",
       "caption": "La lingua dell’account e quella del sito pubblico si impostano separatamente.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -157,7 +157,7 @@
       "src": "/documentation/it/privacy-and-account-deletion-workflow.png",
       "alt": "Anteprima di eliminazione con progetti posseduti, ticket e membri che perderanno l’accesso.",
       "caption": "Leggi l’anteprima ed esporta i dati da conservare prima di aprire la conferma.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -248,7 +248,7 @@ Nelle preferenze seleziona lingua e tema e controlla un’altra pagina. La lingu
 
 Il tema sceglie la modalità chiara, scura o di sistema. **Palette modalità chiara** e **Palette modalità scura** impostano ciascuna i colori di una modalità. I **colori d'accento** (minddy, Blu, Viola, Verde, Arancione, Rosa) mantengono i colori di minddy e ricolorano solo i pulsanti e l'anello di focus; le **palette complete** (Solarized, Catppuccin, Nord) ricolorano tutte le superfici; **Contrasto elevato** si trova in Accessibilità. La palette della modalità visualizzata si applica subito; l’altra viene salvata e compare quando la sua modalità torna attiva, anche quando Sistema segue un cambio del sistema operativo. Contrasto elevato aumenta il contrasto di testo e bordi, contorna campi, menu, finestre di dialogo e schede, segnala la pagina corrente e l'elemento selezionato, mostra sempre il focus da tastiera e mantiene opachi i menu. Disattiva **Trasparenza** per rendere opachi, senza sfocatura, menu, popover e palette dei comandi. Palette e trasparenza vengono salvate nell’account; un altro dispositivo le applica al successivo caricamento di una pagina.
 
-Scegli la scorciatoia di invio nella sezione tastiera. Si applica a commenti e Numo. Usa il pulsante di invio quando la piattaforma intercetta la scorciatoia; i modificatori variano tra sistemi. I progetti che hai nascosto sono elencati nella loro scheda **Progetti nascosti**, dove puoi mostrarli di nuovo. **Preferenze** contiene anche il riquadro **App desktop**: sul web rimanda al download dell’app desktop; nell’app desktop mostra il server collegato, il canale di anteprima quando disponibile e la versione dell’app. Anche le preferenze dei ticket appartengono all’account, senza cambiare quelle degli altri membri: l’assegnazione automatica è nella scheda **Ticket**, lo stato dei ticket creati da Numo in **IA e Numo** → **Ticket creati da Numo**.
+Scegli la scorciatoia di invio nella sezione tastiera. Si applica a commenti e Numo. Usa il pulsante di invio quando la piattaforma intercetta la scorciatoia; i modificatori variano tra sistemi. I progetti che hai nascosto sono elencati nella loro scheda **Progetti nascosti**, dove puoi mostrarli di nuovo. **Preferenze** contiene anche il riquadro **App desktop**: sul web rimanda al download dell’app desktop; nell’app desktop mostra il server collegato e la versione dell’app. Anche le preferenze dei ticket appartengono all’account, senza cambiare quelle degli altri membri: l’assegnazione automatica è nella scheda **Ticket**, lo stato dei ticket creati da Numo in **IA e Numo** → **Ticket creati da Numo**.
 
 ![Selettore della lingua, controlli del tema chiaro, scuro e di sistema, selettori di palette delle modalità chiara e scura e interruttore della trasparenza.](/documentation/it/profile-and-preferences-preferences-workflow.png)
 

@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-21",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -71,10 +71,10 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 15,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-21"
   },
   "related": [
     "choose-an-instance",
@@ -106,7 +106,7 @@
       "src": "/documentation/es/account-security-workflow.png",
       "alt": "Tarjeta de autenticación de dos factores con botón de activación.",
       "caption": "Empieza aquí, verifica después el autenticador y guarda los códigos de recuperación de forma privada.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -123,7 +123,7 @@
       "src": "/documentation/es/profile-and-preferences-workflow.png",
       "alt": "Cabecera del perfil con el avatar y su distintivo de edición, el nombre y el correo de solo lectura.",
       "caption": "Selecciona el avatar para generar o subir uno, o el nombre para cambiarlo; el correo sigue siendo de solo lectura.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -140,7 +140,7 @@
       "src": "/documentation/es/profile-and-preferences-preferences-workflow.png",
       "alt": "Selector de idioma, controles de tema claro, oscuro y del sistema, selectores de paleta de los modos claro y oscuro e interruptor de transparencia.",
       "caption": "El idioma de la cuenta se configura por separado del idioma del sitio público.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -157,7 +157,7 @@
       "src": "/documentation/es/privacy-and-account-deletion-workflow.png",
       "alt": "Vista previa de eliminación con proyectos propios, tickets y miembros que perderán acceso.",
       "caption": "Lee la vista previa y exporta los datos que quieras conservar antes de abrir la confirmación.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -246,7 +246,7 @@ Selecciona idioma y tema en preferencias y comprueba otra página. El idioma de 
 
 El tema elige el modo claro, oscuro o del sistema. **Paleta del modo claro** y **Paleta del modo oscuro** fijan cada una los colores de un modo. Los **colores de acento** (minddy, Azul, Violeta, Verde, Naranja, Rosa) conservan los colores de minddy y solo cambian el color de los botones y del anillo de foco; las **paletas completas** (Solarized, Catppuccin, Nord) cambian todas las superficies; **Alto contraste** está en Accesibilidad. La paleta del modo en pantalla se aplica al instante; la otra se guarda y aparece cuando su modo vuelve a estar activo, también cuando Sistema sigue un cambio del sistema operativo. Alto contraste refuerza el contraste del texto y los bordes, contornea campos, menús, diálogos y pestañas, marca la página actual y el elemento seleccionado, muestra siempre el foco del teclado y mantiene opacos los menús. Desactiva **Transparencia** para que los menús, las ventanas emergentes y la paleta de comandos sean opacos y sin desenfoque. Las paletas y la transparencia se guardan en la cuenta; otro dispositivo las aplica la próxima vez que carga una página.
 
-Elige el atajo de envío en los ajustes de teclado. Se aplica a comentarios y Numo. Usa el botón de enviar si la plataforma intercepta el atajo; las teclas modificadoras varían según el sistema. Los proyectos que ocultaste aparecen en su propia pestaña **Proyectos ocultos**, donde puedes volver a mostrarlos. **Preferencias** también contiene la tarjeta **Aplicación de escritorio**: en la web enlaza a la descarga de la aplicación de escritorio y, en la aplicación de escritorio, muestra el servidor conectado, el canal de vista previa cuando está disponible y la versión de la aplicación. Las preferencias de incidencias también pertenecen a la cuenta y no cambian los ajustes de otros miembros: la asignación automática está en la pestaña **Incidencias** y el estado de las incidencias que crea Numo, en **IA y Numo** → **Incidencias que crea Numo**.
+Elige el atajo de envío en los ajustes de teclado. Se aplica a comentarios y Numo. Usa el botón de enviar si la plataforma intercepta el atajo; las teclas modificadoras varían según el sistema. Los proyectos que ocultaste aparecen en su propia pestaña **Proyectos ocultos**, donde puedes volver a mostrarlos. **Preferencias** también contiene la tarjeta **Aplicación de escritorio**: en la web enlaza a la descarga de la aplicación de escritorio y, en la aplicación de escritorio, muestra el servidor conectado y la versión de la aplicación. Las preferencias de incidencias también pertenecen a la cuenta y no cambian los ajustes de otros miembros: la asignación automática está en la pestaña **Incidencias** y el estado de las incidencias que crea Numo, en **IA y Numo** → **Incidencias que crea Numo**.
 
 ![Selector de idioma, controles de tema claro, oscuro y del sistema, selectores de paleta de los modos claro y oscuro e interruptor de transparencia.](/documentation/es/profile-and-preferences-preferences-workflow.png)
 

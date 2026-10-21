@@ -2858,8 +2858,6 @@
     "desktopSectionDesc": "Conexão, atualizações e ferramentas de suporte para este computador.",
     "desktopServerLabel": "Servidor conectado",
     "desktopServerChange": "Alterar…",
-    "desktopPreviewLabel": "Visualizar o mais recente recursos",
-    "desktopPreviewDesc": "Mostra minddy antes de chegar à produção. Os mesmos projetos, os mesmos problemas, a mesma conta: você permanece conectado. Volte aqui sempre que quiser.",
     "desktopVersionLabel": "Versão do aplicativo",
     "desktopVersionValue": "minddy {version}",
     "desktopUpdateCheck": "Verifique se há atualizações…",

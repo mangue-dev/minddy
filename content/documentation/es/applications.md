@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-21",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -65,10 +65,10 @@
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; 3 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 14,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; 3 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-21"
   },
   "related": [
     "issues"
@@ -93,7 +93,7 @@
       "src": "/documentation/es/web-and-mobile-workflow.png",
       "alt": "Panel móvil de una incidencia con título, descripción, propiedades y campo de comentario.",
       "caption": "En una pantalla estrecha, los detalles de la incidencia ocupan un panel adaptable. Use el botón de cierre para volver al proyecto; Numo sigue disponible mediante su botón flotante.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -110,7 +110,7 @@
       "src": "/documentation/es/install-the-pwa-workflow.png",
       "alt": "Guía ilustrada de instalación en Safari de minddy: Compartir, Añadir a pantalla de inicio y confirmar.",
       "caption": "La guía pública ilustra los tres pasos de Safari y la opción Abrir como app web que debe permanecer activada. Son ilustraciones didácticas mostradas por minddy, no capturas de una instalación de iOS realizada.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -127,7 +127,7 @@
       "src": "/documentation/es/devices-and-notifications-workflow.png",
       "alt": "Ajustes push con permiso bloqueado en el navegador y ningún dispositivo registrado.",
       "caption": "Este navegador bloquea las notificaciones. Restablezca el permiso del sitio antes de registrar este dispositivo.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -144,7 +144,7 @@
       "src": "/documentation/es/devices-and-notifications-registered.png",
       "alt": "Dispositivo de navegador registrado y activo en la cuenta, con la fecha real del último envío.",
       "caption": "La cuenta tiene un dispositivo de navegador registrado y activo. La lista muestra las fechas de registro y del último envío. La aparición de una notificación sigue dependiendo del permiso del navegador y de los ajustes del sistema operativo.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -160,7 +160,7 @@
       "src": "/documentation/es/desktop-renderer-recovery.png",
       "alt": "Página local de recuperación tras un fallo forzado del proceso de renderizado, con los controles Reload window y Check server settings.",
       "caption": "Página de recuperación en la aplicación de desarrollo para macOS, con un perfil aislado y un servidor de demostración. La interfaz nativa utiliza etiquetas en inglés en todos los idiomas.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -222,7 +222,7 @@ En el selector de servidor, elija minddy Cloud, el origen de un servidor self-ho
 
 Utilice los controles de pestañas y la paleta de comandos para desplazarse entre sus tareas. Siga los atajos indicados para su plataforma: macOS utiliza Command donde Windows y Linux suelen utilizar Control. Cerrar la ventana la oculta y mantiene la aplicación en ejecución. Utilice Salir para terminar la aplicación; en macOS también puede usar Cmd+Q. Las notificaciones en segundo plano dependen del paquete y de las funciones de la plataforma.
 
-macOS y las AppImage portátiles ofrecen actualizaciones dentro de la aplicación. Windows las instala desde Microsoft Store. Para `deb`/`rpm`, instale el siguiente paquete verificado. En la aplicación de escritorio, **Ajustes de cuenta** → **Preferencias** → **Aplicación de escritorio** muestra el servidor conectado, el canal de vista previa cuando está disponible y la versión de la aplicación, con una comprobación de actualizaciones cuando el paquete la admite. En la web, la misma tarjeta enlaza a la página de descarga. Tras actualizar, compruebe la versión de escritorio indicada y que siga abriéndose la instancia deseada.
+macOS y las AppImage portátiles ofrecen actualizaciones dentro de la aplicación. Windows las instala desde Microsoft Store. Para `deb`/`rpm`, instale el siguiente paquete verificado. En la aplicación de escritorio, **Ajustes de cuenta** → **Preferencias** → **Aplicación de escritorio** muestra el servidor conectado y la versión de la aplicación, con una comprobación de actualizaciones cuando el paquete la admite. En la web, la misma tarjeta enlaza a la página de descarga. Tras actualizar, compruebe la versión de escritorio indicada y que siga abriéndose la instancia deseada.
 
 ### Recuperar una ventana bloqueada {#desktop-renderer-recovery}
 

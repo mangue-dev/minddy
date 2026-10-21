@@ -1,6 +1,5 @@
 import { Menu, app, type BrowserWindow } from "electron";
 
-import type { DesktopChannel } from "@/lib/desktop/channel";
 import { DESKTOP_STABLE_ORIGIN } from "@/lib/desktop/config";
 import { hideWindow } from "./hide-window";
 import { openDesktopExternal } from "./open-external";
@@ -20,18 +19,13 @@ import { checkForUpdatesManually } from "./updater";
  * editing (cut/copy/paste, and especially ⌘A / ⌘Z, which are roles native
  * without which nothing works in a control) and the window.
  *
- * **One exception, and one only: the channel** (MIN-352). The settings screen
- * has the same switch, and that's where we look for it - but this
- * switch is SERVED by the origin it controls. If the preview doesn't load, the window no longer has a settings screen at all, and the menu is the only thing left to get back into production. This is why it
- * exists here, not for convenience.
- *
- * The menu is REBUILT at each toggle (`setChannel`, main.ts): the check mark is
- * set at construction, it is not updated every time. only.
+ * The server items are the exception: if a custom server does not load, the
+ * window has no settings screen at all, and the menu is the only way back to
+ * minddy Cloud. The menu is REBUILT when the server changes (`rebuildAppMenu`,
+ * main.ts) because its labels are set at construction.
  */
 export function buildAppMenu(
   window: BrowserWindow,
-  channel: DesktopChannel,
-  onChannelChange: (channel: DesktopChannel) => void,
   server: {
     origin: string;
     isCustom: boolean;
@@ -67,14 +61,6 @@ export function buildAppMenu(
       // the app is up to date. Background checks remain silent.
       label: "Check for Updates…",
       click: () => void checkForUpdatesManually(),
-    },
-    {
-      label: "Preview Latest Features",
-      type: "checkbox",
-      checked: channel === "preview",
-      click: (item) =>
-        onChannelChange(item.checked ? "preview" : "stable"),
-      visible: !server.isCustom,
     },
     { type: "separator" },
     ...serverMenuItems,
@@ -144,8 +130,8 @@ export function buildAppMenu(
       role: "help",
       submenu: [
         {
-          // The SITE, not the active origin: this link leads to the showcase, which has no
-          // no channel — and a preview of the landing interests no one.
+          // The SITE, not the active origin: this link leads to the showcase,
+          // which has nothing to do with the server the window is on.
           label: "minddy.app",
           click: () => void openDesktopExternal(DESKTOP_STABLE_ORIGIN),
         },
