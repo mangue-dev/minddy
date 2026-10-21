@@ -3097,35 +3097,35 @@
     "file": "lib/server/create-issue.ts",
     "operation": "rpc",
     "resource": "next_issue_number",
-    "line": 390,
+    "line": 388,
     "storage": false
   },
   {
     "file": "lib/server/create-issue.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 406,
+    "line": 404,
     "storage": false
   },
   {
     "file": "lib/server/create-issue.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 428,
+    "line": 426,
     "storage": false
   },
   {
     "file": "lib/server/create-issue.ts",
     "operation": "from",
     "resource": "categories",
-    "line": 486,
+    "line": 484,
     "storage": false
   },
   {
     "file": "lib/server/create-issue.ts",
     "operation": "from",
     "resource": "issue_categories",
-    "line": 510,
+    "line": 508,
     "storage": false
   },
   {
@@ -9990,58 +9990,58 @@
   },
   {
     "file": "lib/server/smart-fill-ownership.ts",
-    "operation": "from",
-    "resource": "issue_smart_fill",
-    "line": 48,
+    "operation": "rpc",
+    "resource": "release_smart_fill_fields",
+    "line": 51,
     "storage": false
   },
   {
     "file": "lib/server/smart-fill-ownership.ts",
     "operation": "from",
     "resource": "issue_smart_fill",
-    "line": 60,
+    "line": 63,
     "storage": false
   },
   {
     "file": "lib/server/smart-fill-ownership.ts",
     "operation": "from",
     "resource": "issue_smart_fill",
-    "line": 73,
+    "line": 79,
     "storage": false
   },
   {
     "file": "lib/server/smart-fill-reevaluation.ts",
     "operation": "from",
     "resource": "issue_smart_fill",
-    "line": 118,
+    "line": 133,
     "storage": false
   },
   {
     "file": "lib/server/smart-fill-reevaluation.ts",
     "operation": "from",
     "resource": "issue_smart_fill",
-    "line": 128,
+    "line": 156,
     "storage": false
   },
   {
     "file": "lib/server/smart-fill-reevaluation.ts",
     "operation": "from",
     "resource": "issue_smart_fill",
-    "line": 202,
+    "line": 168,
     "storage": false
   },
   {
     "file": "lib/server/smart-fill-reevaluation.ts",
     "operation": "from",
     "resource": "issue_categories",
-    "line": 239,
+    "line": 267,
     "storage": false
   },
   {
     "file": "lib/server/smart-fill-reevaluation.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 240,
+    "line": 268,
     "storage": false
   },
   {

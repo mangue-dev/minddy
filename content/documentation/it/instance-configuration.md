@@ -47,8 +47,8 @@
   },
   "review": {
     "revision": 10,
-    "fact": "agent:/root/min750 (schedule table checked against vercel.json and deploy/self-hosted/scheduler.mjs after adding smart-fill-reevaluation; rest of the article unchanged since the 0.20.0 release review; no screenshot in scope)",
-    "language": "agent:/root/min750 (it table row, identical to the source; agent review, not human acceptance)",
+    "fact": "agent:/root/min750 (schedule table and release delta sentence checked against vercel.json and deploy/self-hosted/scheduler.mjs after adding smart-fill-reevaluation; rest of the article unchanged since the 0.20.0 release review; no screenshot in scope)",
+    "language": "agent:/root/min750 (it table row and release delta sentence; agent review, not human acceptance)",
     "date": "2026-10-21"
   },
   "related": [
@@ -185,7 +185,7 @@ Un servizio pubblico richiede un proxy TLS e il redirect da HTTP a HTTPS. Le ori
 I profili Compose di riferimento avviano lo scheduler e l’installer genera `CRON_SECRET`. Un deployment personalizzato dai sorgenti deve fornire uno scheduler HTTP equivalente. Ogni richiesta invia `Authorization: Bearer <CRON_SECRET>`; un valore vuoto o errato restituisce 401. Non registrare questo header. Gli orari elencati sotto sono in UTC e appartengono a questa release. Usa le route della release installata, perché possono cambiare.
 
 
-Rispetto allo scheduler di v0.11.0, questa release aggiunge `numo-turns`, `forge-relay-maintenance`, `page-materialization` e `issue-index` e non chiama più `/api/cron/agent-drain` né `/api/cron/automations`, rimossi insieme al lavoro sul codice di Numo e alle automazioni di progetto. Uno scheduler personalizzato copiato da v0.11.0 va aggiornato secondo questa tabella.
+Rispetto allo scheduler di v0.11.0, questa release aggiunge `numo-turns`, `forge-relay-maintenance`, `page-materialization`, `issue-index` e `smart-fill-reevaluation` e non chiama più `/api/cron/agent-drain` né `/api/cron/automations`, rimossi insieme al lavoro sul codice di Numo e alle automazioni di progetto. Uno scheduler personalizzato copiato da v0.11.0 va aggiornato secondo questa tabella.
 
 | Endpoint | Orario (UTC) |
 | --- | --- |

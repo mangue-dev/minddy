@@ -7,6 +7,8 @@ import { decodeProjectName } from "@/lib/server/project-content";
 import { runSmartFill, type SmartFillPatch } from "@/lib/server/smart-fill";
 import { updateIssueFields } from "@/lib/server/update-issue";
 import { setIssueCategories } from "@/lib/server/set-issue-categories";
+import { getProjectAccess } from "@/lib/server/project-access";
+import { readSmartFillOwnership } from "@/lib/server/smart-fill-ownership";
 import { resolveSmartFillReevaluation } from "@/lib/smart-fill";
 
 /**
@@ -38,6 +40,15 @@ import { resolveSmartFillReevaluation } from "@/lib/smart-fill";
 
 /** Passes one worker run takes on; each one is a model call. */
 const BATCH_SIZE = 10;
+/** Passes run at the same time within one worker run. */
+const CONCURRENCY = 3;
+/** No pass starts after this much of the run: one pass (decision model, then
+ * the LLM fallback and its deadline) must still finish within the route's
+ * 60-second limit. */
+const START_BUDGET_MS = 30_000;
+/** How long a claim holds a pass. A run killed mid-pass leaves the lease to
+ * expire, and the pass is run again instead of being lost. */
+const LEASE_MS = 5 * 60_000;
 
 export interface ReevaluationState {
   priority: string;
@@ -100,6 +111,7 @@ export type ReevaluationOutcome =
   | "applied"
   | "unchanged"
   | "no_editor"
+  | "no_access"
   | "nothing_owned"
   | "disabled"
   | "issue_unavailable"
@@ -107,13 +119,16 @@ export type ReevaluationOutcome =
   | "write_failed";
 
 /**
- * The scheduled worker: claims the passes that are due, then runs them one by
- * one. A claim clears `reevaluate_at` only if it still holds the value read,
- * so an edit arriving meanwhile keeps its own, later, pass.
+ * The scheduled worker: claims the passes that are due and runs a few at a
+ * time. A claim replaces `reevaluate_at` with a lease, only if it still holds
+ * the value read; the lease is cleared after the pass, again only if it is
+ * still there. An edit arriving meanwhile therefore keeps its own, later,
+ * pass, and a run killed mid-pass leaves the lease to expire and run again.
  */
 export async function runDueSmartFillReevaluations(
   limit = BATCH_SIZE,
 ): Promise<{ due: number; outcomes: Partial<Record<ReevaluationOutcome, number>> }> {
+  const startedAt = Date.now();
   const service = getServiceClient();
   const { data, error } = await service
     .from("issue_smart_fill")
@@ -124,21 +139,38 @@ export async function runDueSmartFillReevaluations(
   if (error) throw new Error("Unable to read due Smart Fill re-evaluations");
   const rows = (data ?? []) as DueRow[];
   const outcomes: Partial<Record<ReevaluationOutcome, number>> = {};
-  for (const row of rows) {
-    const { data: claimed, error: claimError } = await service
-      .from("issue_smart_fill")
-      .update({ reevaluate_at: null })
-      .eq("issue_id", row.issue_id)
-      .eq("reevaluate_at", row.reevaluate_at)
-      .select("issue_id");
-    if (claimError || !claimed?.length) continue;
-    const outcome = await reevaluateIssue(service, row).catch((): ReevaluationOutcome => {
-      console.error("[smart-fill-reevaluation] pass failed: unexpected_error");
-      return "write_failed";
-    });
-    outcomes[outcome] = (outcomes[outcome] ?? 0) + 1;
-  }
+  const pending = [...rows];
+  const lane = async () => {
+    for (let row = pending.shift(); row; row = pending.shift()) {
+      if (Date.now() - startedAt > START_BUDGET_MS) return;
+      const outcome = await claimAndRun(service, row);
+      if (outcome) outcomes[outcome] = (outcomes[outcome] ?? 0) + 1;
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, rows.length) }, lane));
   return { due: rows.length, outcomes };
+}
+
+async function claimAndRun(service: SupabaseClient, row: DueRow): Promise<ReevaluationOutcome | null> {
+  const lease = new Date(Date.now() + LEASE_MS).toISOString();
+  const { data: claimed, error: claimError } = await service
+    .from("issue_smart_fill")
+    .update({ reevaluate_at: lease })
+    .eq("issue_id", row.issue_id)
+    .eq("reevaluate_at", row.reevaluate_at)
+    .select("issue_id");
+  if (claimError || !claimed?.length) return null;
+  const outcome = await reevaluateIssue(service, row).catch((): ReevaluationOutcome => {
+    console.error("[smart-fill-reevaluation] pass failed: unexpected_error");
+    return "write_failed";
+  });
+  // A stale answer runs again on the next tick; any other outcome is final.
+  await service
+    .from("issue_smart_fill")
+    .update({ reevaluate_at: outcome === "requeued" ? new Date().toISOString() : null })
+    .eq("issue_id", row.issue_id)
+    .eq("reevaluate_at", lease);
+  return outcome;
 }
 
 async function reevaluateIssue(service: SupabaseClient, row: DueRow): Promise<ReevaluationOutcome> {
@@ -152,6 +184,10 @@ async function reevaluateIssue(service: SupabaseClient, row: DueRow): Promise<Re
   if (!resolveSmartFillReevaluation((account.user.user_metadata ?? {}) as Record<string, unknown>)) {
     return "disabled";
   }
+  // The editor pays and the issue's text goes to their model: someone who
+  // has since lost write access to the project gets neither.
+  const access = await getProjectAccess(editorId, row.project_id);
+  if (!access?.canWrite) return "no_access";
 
   const issue = await readState(service, row.issue_id, row.project_id, editorId);
   if (!issue) return "issue_unavailable";
@@ -177,15 +213,17 @@ async function reevaluateIssue(service: SupabaseClient, row: DueRow): Promise<Re
       viaSmartFill: true,
       expectedUpdatedAt: issue.updatedAt,
     });
-    if (!result.ok) {
-      if (result.status === 409) return requeue(service, row.issue_id);
-      return "write_failed";
-    }
+    if (!result.ok) return result.status === 409 ? "requeued" : "write_failed";
   } else {
     const fresh = await readUpdatedAt(service, row.issue_id);
-    if (fresh !== issue.updatedAt) return requeue(service, row.issue_id);
+    if (fresh !== issue.updatedAt) return "requeued";
   }
   if (changes.categoryIds) {
+    // A category change by hand does not move the issue's `updated_at`, so
+    // ownership is read again right before writing: categories someone set
+    // while the model answered are no longer Smart Fill's to replace.
+    const ownedNow = await readSmartFillOwnership(service, row.issue_id);
+    if (!ownedNow?.includes("category_ids")) return hasFields ? "applied" : "unchanged";
     const result = await setIssueCategories({
       issueId: row.issue_id,
       actorId: editorId,
@@ -195,16 +233,6 @@ async function reevaluateIssue(service: SupabaseClient, row: DueRow): Promise<Re
     if (!result.ok) return "write_failed";
   }
   return "applied";
-}
-
-/** Run the pass again on the next tick, unless an edit already queued one. */
-async function requeue(service: SupabaseClient, issueId: string): Promise<ReevaluationOutcome> {
-  await service
-    .from("issue_smart_fill")
-    .update({ reevaluate_at: new Date().toISOString() })
-    .eq("issue_id", issueId)
-    .is("reevaluate_at", null);
-  return "requeued";
 }
 
 async function readUpdatedAt(service: SupabaseClient, issueId: string): Promise<string | null> {

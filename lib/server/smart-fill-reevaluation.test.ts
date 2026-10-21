@@ -8,7 +8,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 interface Row extends Record<string, unknown> {}
 
-const { runSmartFill, updateIssueFields, setIssueCategories } = vi.hoisted(() => ({
+const { runSmartFill, updateIssueFields, setIssueCategories, getProjectAccess } = vi.hoisted(() => ({
+  getProjectAccess: vi.fn(),
   runSmartFill: vi.fn(),
   updateIssueFields: vi.fn(),
   setIssueCategories: vi.fn(),
@@ -80,6 +81,7 @@ vi.mock("@/lib/server/project-content", () => ({ decodeProjectName: async () => 
 vi.mock("@/lib/server/smart-fill", () => ({ runSmartFill }));
 vi.mock("@/lib/server/update-issue", () => ({ updateIssueFields }));
 vi.mock("@/lib/server/set-issue-categories", () => ({ setIssueCategories }));
+vi.mock("@/lib/server/project-access", () => ({ getProjectAccess }));
 
 const { reevaluationChanges, runDueSmartFillReevaluations } = await import(
   "@/lib/server/smart-fill-reevaluation"
@@ -149,6 +151,7 @@ describe("runDueSmartFillReevaluations", () => {
       },
     ];
     updateIssueFields.mockResolvedValue({ ok: true });
+    getProjectAccess.mockResolvedValue({ role: "member", canWrite: true, canComment: true });
     setIssueCategories.mockResolvedValue({ ok: true, categoryIds: [] });
   });
 
@@ -191,6 +194,50 @@ describe("runDueSmartFillReevaluations", () => {
 
     expect((await runDueSmartFillReevaluations()).outcomes).toEqual({ disabled: 1 });
     expect(runSmartFill).not.toHaveBeenCalled();
+    expect(queue[0].reevaluate_at).toBeNull();
+  });
+
+  it("neither spends nor reads for an editor who lost write access", async () => {
+    getProjectAccess.mockResolvedValue({ role: "reader", canWrite: false, canComment: true });
+
+    expect((await runDueSmartFillReevaluations()).outcomes).toEqual({ no_access: 1 });
+    expect(runSmartFill).not.toHaveBeenCalled();
+  });
+
+  it("leaves categories someone set while the model answered", async () => {
+    runSmartFill.mockImplementation(async () => {
+      // A change by hand releases the categories mid-pass.
+      queue[0].fields = ["priority", "effort"];
+      return { priority: "high", category_ids: ["category-b"] };
+    });
+
+    expect((await runDueSmartFillReevaluations()).outcomes).toEqual({ applied: 1 });
+    expect(updateIssueFields).toHaveBeenCalled();
+    expect(setIssueCategories).not.toHaveBeenCalled();
+  });
+
+  it("keeps the pass an edit queued while this one ran", async () => {
+    const later = new Date(Date.now() + 7 * 60_000).toISOString();
+    runSmartFill.mockImplementation(async () => {
+      queue[0].reevaluate_at = later;
+      return {};
+    });
+
+    await runDueSmartFillReevaluations();
+
+    expect(queue[0].reevaluate_at).toBe(later);
+  });
+
+  it("holds a lease while the pass runs, so a killed run is retried", async () => {
+    let during: unknown;
+    runSmartFill.mockImplementation(async () => {
+      during = queue[0].reevaluate_at;
+      return {};
+    });
+
+    await runDueSmartFillReevaluations();
+
+    expect(Date.parse(during as string)).toBeGreaterThan(Date.now() + 60_000);
     expect(queue[0].reevaluate_at).toBeNull();
   });
 

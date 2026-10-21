@@ -47,8 +47,8 @@
   },
   "review": {
     "revision": 10,
-    "fact": "agent:/root/min750 (schedule table checked against vercel.json and deploy/self-hosted/scheduler.mjs after adding smart-fill-reevaluation; rest of the article unchanged since the 0.20.0 release review; no screenshot in scope)",
-    "language": "agent:/root/min750 (fr table row, identical to the source; agent review, not human acceptance)",
+    "fact": "agent:/root/min750 (schedule table and release delta sentence checked against vercel.json and deploy/self-hosted/scheduler.mjs after adding smart-fill-reevaluation; rest of the article unchanged since the 0.20.0 release review; no screenshot in scope)",
+    "language": "agent:/root/min750 (fr table row and release delta sentence; agent review, not human acceptance)",
     "date": "2026-10-21"
   },
   "related": [
@@ -187,7 +187,7 @@ Une installation publique exige un proxy TLS et une redirection HTTP vers HTTPS.
 Les profils Compose de référence démarrent leur planificateur et génèrent `CRON_SECRET`. Un déploiement personnalisé depuis les sources doit fournir un planificateur HTTP équivalent. Chaque requête envoie `Authorization: Bearer <CRON_SECRET>` ; une valeur vide ou incorrecte retourne 401. Ne journalisez pas cet en-tête. Les horaires ci-dessous sont en UTC et appartiennent à cette version. Utilisez l’ensemble de la version déployée : les routes peuvent évoluer avec l’application.
 
 
-Par rapport au scheduler de la v0.11.0, cette version ajoute `numo-turns`, `forge-relay-maintenance`, `page-materialization` et `issue-index`, et n’appelle plus `/api/cron/agent-drain` ni `/api/cron/automations`, retirés avec le travail de code de Numo et les automatisations de projet. Un scheduler personnalisé copié depuis la v0.11.0 doit être mis à jour selon ce tableau.
+Par rapport au scheduler de la v0.11.0, cette version ajoute `numo-turns`, `forge-relay-maintenance`, `page-materialization`, `issue-index` et `smart-fill-reevaluation`, et n’appelle plus `/api/cron/agent-drain` ni `/api/cron/automations`, retirés avec le travail de code de Numo et les automatisations de projet. Un scheduler personnalisé copié depuis la v0.11.0 doit être mis à jour selon ce tableau.
 
 | Endpoint | Horaire (UTC) |
 | --- | --- |

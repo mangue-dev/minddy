@@ -47,8 +47,8 @@
   },
   "review": {
     "revision": 10,
-    "fact": "agent:/root/min750 (schedule table checked against vercel.json and deploy/self-hosted/scheduler.mjs after adding smart-fill-reevaluation; rest of the article unchanged since the 0.20.0 release review; no screenshot in scope)",
-    "language": "agent:/root/min750 (pt-BR table row, identical to the source; agent review, not human acceptance)",
+    "fact": "agent:/root/min750 (schedule table and release delta sentence checked against vercel.json and deploy/self-hosted/scheduler.mjs after adding smart-fill-reevaluation; rest of the article unchanged since the 0.20.0 release review; no screenshot in scope)",
+    "language": "agent:/root/min750 (pt-BR table row and release delta sentence; agent review, not human acceptance)",
     "date": "2026-10-21"
   },
   "related": [
@@ -185,7 +185,7 @@ Um serviço público exige proxy TLS e redirect de HTTP para HTTPS. As origens m
 Os perfis Compose de referência iniciam o agendador, e o instalador gera `CRON_SECRET`. Uma implantação personalizada a partir do código precisa fornecer um agendador HTTP equivalente. Cada requisição envia `Authorization: Bearer <CRON_SECRET>`; um valor vazio ou errado retorna 401. Não registre esse cabeçalho. Os horários listados abaixo estão em UTC e pertencem a esta versão. Use as rotas da versão instalada, pois elas podem mudar.
 
 
-Em relação ao agendador da v0.11.0, esta versão acrescenta `numo-turns`, `forge-relay-maintenance`, `page-materialization` e `issue-index` e não chama mais `/api/cron/agent-drain` nem `/api/cron/automations`, removidos junto com o trabalho de código do Numo e as automações de projeto. Um agendador personalizado copiado da v0.11.0 precisa ser atualizado conforme esta tabela.
+Em relação ao agendador da v0.11.0, esta versão acrescenta `numo-turns`, `forge-relay-maintenance`, `page-materialization`, `issue-index` e `smart-fill-reevaluation` e não chama mais `/api/cron/agent-drain` nem `/api/cron/automations`, removidos junto com o trabalho de código do Numo e as automações de projeto. Um agendador personalizado copiado da v0.11.0 precisa ser atualizado conforme esta tabela.
 
 | Endpoint | Horário (UTC) |
 | --- | --- |

@@ -72,7 +72,15 @@ function makeQuery(table: string) {
 
 const service = {
   from: (table: string) => makeQuery(table),
-  rpc: async () => ({ data: null, error: null }),
+  // `release_smart_fill_fields`, as the SQL function does it.
+  rpc: async (name: string, args: { p_issue_id: string; p_fields: string[] }) => {
+    if (name === "release_smart_fill_fields") {
+      const row = db.issue_smart_fill.find((r) => r.issue_id === args.p_issue_id);
+      if (row) row.fields = (row.fields as string[]).filter((f) => !args.p_fields.includes(f));
+      db.issue_smart_fill = db.issue_smart_fill.filter((r) => (r.fields as string[]).length > 0);
+    }
+    return { data: null, error: null };
+  },
 };
 
 const deferred: unknown[] = [];
@@ -161,6 +169,14 @@ describe("Smart Fill ownership on issue writes (MIN-750)", () => {
 
     // Effort was sent with its current value: nobody changed it.
     expect(ownership().fields).toEqual(["effort", "objective_id", "category_ids"]);
+  });
+
+  it("drops the row once every property was taken back", async () => {
+    db.issue_smart_fill[0].fields = ["priority"];
+
+    await patch({ priority: "high" });
+
+    expect(db.issue_smart_fill).toEqual([]);
   });
 
   it("keeps ownership of what a re-evaluation writes and names Smart Fill", async () => {

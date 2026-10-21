@@ -47,8 +47,8 @@
   },
   "review": {
     "revision": 10,
-    "fact": "agent:/root/min750 (schedule table checked against vercel.json and deploy/self-hosted/scheduler.mjs after adding smart-fill-reevaluation; rest of the article unchanged since the 0.20.0 release review; no screenshot in scope)",
-    "language": "agent:/root/min750 (es table row, identical to the source; agent review, not human acceptance)",
+    "fact": "agent:/root/min750 (schedule table and release delta sentence checked against vercel.json and deploy/self-hosted/scheduler.mjs after adding smart-fill-reevaluation; rest of the article unchanged since the 0.20.0 release review; no screenshot in scope)",
+    "language": "agent:/root/min750 (es table row and release delta sentence; agent review, not human acceptance)",
     "date": "2026-10-21"
   },
   "related": [
@@ -184,7 +184,7 @@ Un servicio público requiere un proxy inverso TLS y una redirección de HTTP a 
 
 Los perfiles Compose de referencia inician su planificador y el instalador genera `CRON_SECRET`. Un despliegue personalizado desde el código necesita un planificador HTTP equivalente. Cada petición envía `Authorization: Bearer <CRON_SECRET>`; si el secreto está vacío o no coincide, recibe 401. No registre ese encabezado. Los horarios siguientes están en UTC y pertenecen a esta versión. Utilice las rutas de la versión desplegada, porque pueden cambiar.
 
-Respecto al planificador de v0.11.0, esta versión añade `numo-turns`, `forge-relay-maintenance`, `page-materialization` e `issue-index`, y ya no llama a `/api/cron/agent-drain` ni a `/api/cron/automations`, que se retiraron junto con el trabajo de código de Numo y las automatizaciones de proyecto. Un planificador personalizado copiado de v0.11.0 debe actualizarse según esta tabla.
+Respecto al planificador de v0.11.0, esta versión añade `numo-turns`, `forge-relay-maintenance`, `page-materialization`, `issue-index` y `smart-fill-reevaluation`, y ya no llama a `/api/cron/agent-drain` ni a `/api/cron/automations`, que se retiraron junto con el trabajo de código de Numo y las automatizaciones de proyecto. Un planificador personalizado copiado de v0.11.0 debe actualizarse según esta tabla.
 
 | Endpoint | Horario (UTC) |
 | --- | --- |

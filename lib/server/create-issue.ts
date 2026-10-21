@@ -328,14 +328,18 @@ export async function createIssueForProject({
   // of a ticket whose author had already put “urgent” would be a lie, and
   // it's precisely the kind of line that makes you stop believing in the timeline.
   const smartFilled: string[] = [];
-  const hasMissingSmartFillField =
-    row.priority == null ||
-    row.priority === "none" ||
-    row.effort == null ||
-    row.objective_id == null ||
+  // The properties the author left empty — the only ones Smart-fill may set.
+  const emptySmartFillFields: SmartFillOwnedField[] = [];
+  if (row.priority == null || row.priority === "none") emptySmartFillFields.push("priority");
+  if (row.effort == null) emptySmartFillFields.push("effort");
+  if (row.objective_id == null) emptySmartFillFields.push("objective_id");
+  if (
     (!Array.isArray(input.category_ids) || input.category_ids.length === 0) &&
-      (!Array.isArray(input.category_names) || input.category_names.length === 0);
-  const smartFillPayer = hasMissingSmartFillField
+    (!Array.isArray(input.category_names) || input.category_names.length === 0)
+  ) {
+    emptySmartFillFields.push("category_ids");
+  }
+  const smartFillPayer = emptySmartFillFields.length > 0
     ? await resolveSmartFillPayer({
         projectId,
         actorId,
@@ -348,19 +352,13 @@ export async function createIssueForProject({
       })
     : null;
   // What Smart Fill owns from now on (MIN-750): every field the author left
-  // empty, whether or not this first pass fills it. A later edit of the title
-  // or description lets Smart Fill read the issue again for these fields only.
-  const smartFillOwned: SmartFillOwnedField[] = [];
+  // empty, whether or not this first pass fills it, except an objective it
+  // may not infer. A later edit of the title or description lets Smart Fill
+  // read the issue again for these fields only.
+  const smartFillOwned = smartFillPayer
+    ? emptySmartFillFields.filter((field) => inferObjective || field !== "objective_id")
+    : [];
   if (smartFillPayer) {
-    if (row.priority == null || row.priority === "none") smartFillOwned.push("priority");
-    if (row.effort == null) smartFillOwned.push("effort");
-    if (inferObjective && row.objective_id == null) smartFillOwned.push("objective_id");
-    if (
-      (!Array.isArray(input.category_ids) || input.category_ids.length === 0) &&
-      (!Array.isArray(input.category_names) || input.category_names.length === 0)
-    ) {
-      smartFillOwned.push("category_ids");
-    }
     const patch = await runSmartFill({
       projectId,
       projectName: projectName ?? "this project",

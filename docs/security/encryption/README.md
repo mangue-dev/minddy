@@ -280,7 +280,7 @@ in [the closure matrix](closure-matrix.md).
 - `consumers.json` records 1,506 TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 461 functions, six views and 371 application triggers. Function
+- `sql-consumers.json` records 462 functions, six views and 371 application triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations

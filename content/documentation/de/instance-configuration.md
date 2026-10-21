@@ -47,8 +47,8 @@
   },
   "review": {
     "revision": 10,
-    "fact": "agent:/root/min750 (schedule table checked against vercel.json and deploy/self-hosted/scheduler.mjs after adding smart-fill-reevaluation; rest of the article unchanged since the 0.20.0 release review; no screenshot in scope)",
-    "language": "agent:/root/min750 (de table row, identical to the source; agent review, not human acceptance)",
+    "fact": "agent:/root/min750 (schedule table and release delta sentence checked against vercel.json and deploy/self-hosted/scheduler.mjs after adding smart-fill-reevaluation; rest of the article unchanged since the 0.20.0 release review; no screenshot in scope)",
+    "language": "agent:/root/min750 (de table row and release delta sentence; agent review, not human acceptance)",
     "date": "2026-10-21"
   },
   "related": [
@@ -187,7 +187,7 @@ Unterstützt werden GitHub.com und GitLab.com, nicht Enterprise Server oder selb
 Referenz-Compose startet den Scheduler und erzeugt `CRON_SECRET`. Eigene Quellcodebereitstellungen brauchen einen gleichwertigen HTTP-Scheduler. Jede Anfrage sendet `Authorization: Bearer <CRON_SECRET>`; ein leeres oder falsches Geheimnis ergibt 401. Protokollieren Sie den Header nicht. Die folgenden Zeitpläne verwenden UTC und gehören zu dieser Version. Verwenden Sie den Satz der installierten Version, denn Pfade können sich ändern.
 
 
-Gegenüber dem Scheduler von v0.11.0 fügt diese Version `numo-turns`, `forge-relay-maintenance`, `page-materialization` und `issue-index` hinzu und ruft `/api/cron/agent-drain` und `/api/cron/automations` nicht mehr auf; beide wurden mit Numos Codearbeit und den Projektautomatisierungen entfernt. Ein aus v0.11.0 kopierter eigener Scheduler muss an diese Tabelle angepasst werden.
+Gegenüber dem Scheduler von v0.11.0 fügt diese Version `numo-turns`, `forge-relay-maintenance`, `page-materialization`, `issue-index` und `smart-fill-reevaluation` hinzu und ruft `/api/cron/agent-drain` und `/api/cron/automations` nicht mehr auf; beide wurden mit Numos Codearbeit und den Projektautomatisierungen entfernt. Ein aus v0.11.0 kopierter eigener Scheduler muss an diese Tabelle angepasst werden.
 
 | Endpunkt | Zeitplan (UTC) |
 | --- | --- |
