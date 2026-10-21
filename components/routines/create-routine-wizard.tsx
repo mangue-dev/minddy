@@ -23,6 +23,7 @@ import { RoutineScheduleFields } from "@/components/routines/routine-schedule-fi
 import { SpendCapCombobox } from "@/components/routines/spend-cap-combobox";
 import { DEFAULT_MAX_SPEND_PERCENT } from "@/lib/routine-budget";
 import { useProjects } from "@/lib/projects-context";
+import { useOfferedProjects } from "@/lib/use-offered-projects";
 import { useAuth } from "@/lib/auth-context";
 import {
   createRoutineApi,
@@ -92,9 +93,11 @@ export function CreateRoutineWizard({
    * Eligible projects are owned by the account paying for the routine. A
    * repository is optional until Numo decides that code delegation is needed.
    */
+  // A hidden project is not offered (MIN-751) unless the wizard opens on it.
+  const offeredProjects = useOfferedProjects(projects, initialProjectId);
   const eligible = useMemo(
-    () => projects.filter((p) => p.owner_id === user?.id),
-    [projects, user?.id],
+    () => offeredProjects.filter((p) => p.owner_id === user?.id),
+    [offeredProjects, user?.id],
   );
 
   const [chosenProjectId, setChosenProjectId] = useState(

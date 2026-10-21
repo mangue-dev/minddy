@@ -295,12 +295,43 @@ export const mapEffortToken = (token: string): IssueEffortValue | null =>
  *  misrouted orphan column would create one on every row. */
 export const MAX_LABEL_LENGTH = 60;
 
-/** Split a multi-label cell — Linear joins with ", ", generic CSVs use , or ;. */
-export const splitLabels = (raw: string): string[] =>
-  raw
-    .split(/[,;]/)
-    .map((l) => l.trim().slice(0, MAX_LABEL_LENGTH))
-    .filter(Boolean);
+/** What minddy writes between two labels of a multi-label cell. */
+const LABEL_SEPARATOR = ", ";
+
+/**
+ * Join label names into one cell, reversibly (MIN-702). A category name may
+ * itself contain a comma, a semicolon or a quote: such a name is wrapped in
+ * double quotes, its own quotes doubled — the CSV convention, one level down.
+ * Names without those characters stay bare, so ordinary exports read exactly
+ * as before and other tools still see a plain ", "-separated list.
+ */
+export const joinLabels = (labels: string[]): string =>
+  labels
+    .map((label) => (/[,;"]/.test(label) ? `"${label.replace(/"/g, '""')}"` : label))
+    .join(LABEL_SEPARATOR);
+
+/**
+ * Split a multi-label cell — Linear joins with ", ", generic CSVs use , or ;.
+ * A label that starts with a double quote runs to its closing quote, so the
+ * separators inside a name quoted by `joinLabels` stay part of it.
+ */
+export function splitLabels(raw: string): string[] {
+  const labels: string[] = [];
+  let rest = raw;
+  while (rest) {
+    rest = rest.trimStart();
+    // A quote that never closes is not ours: the label is read as written.
+    const quoted = /^"((?:[^"]|"")*)"/.exec(rest);
+    let label = quoted ? quoted[1].replace(/""/g, '"') : "";
+    if (quoted) rest = rest.slice(quoted[0].length);
+    const separator = rest.search(/[,;]/);
+    label += separator === -1 ? rest : rest.slice(0, separator);
+    rest = separator === -1 ? "" : rest.slice(separator + 1);
+    const trimmed = label.trim().slice(0, MAX_LABEL_LENGTH);
+    if (trimmed) labels.push(trimmed);
+  }
+  return labels;
+}
 
 // ── Dates ────────────────────────────────────────────────────────────────────
 

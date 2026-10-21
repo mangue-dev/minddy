@@ -128,7 +128,11 @@ export default async function PublicFeedbackPostPage({ params }: PageProps) {
           post={detail.post}
           mergedFromTitles={detail.mergedFromTitles}
           comments={detail.comments}
-          allowComments={ctx.board.allow_comments}
+          commentsEarlierCursor={detail.commentsEarlierCursor}
+          // A post merged into one its author can no longer read stays
+          // readable for them, but takes neither votes nor comments (MIN-713).
+          allowComments={ctx.board.allow_comments && !detail.mergedIntoUnreadable}
+          mergedIntoUnreadable={detail.mergedIntoUnreadable}
           identity={identity}
         />
       </main>

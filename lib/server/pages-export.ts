@@ -18,6 +18,7 @@ import { materializePendingPages, materializePendingProjectPages } from "@/lib/s
 import { pageToMarkdownServer } from "@/lib/server/pages-projection";
 import { descendantIds } from "@/lib/pages";
 import {
+  encodeLinkPath,
   exportPagePaths,
   exportPagesToFiles,
   relativePath,
@@ -195,10 +196,7 @@ export async function exportPage({
           context,
           names,
           (id) =>
-            relativePath(archivePaths.get(page.id)!, archivePaths.get(id)!)
-              .split("/")
-              .map(encodeURIComponent)
-              .join("/"),
+            encodeLinkPath(relativePath(archivePaths.get(page.id)!, archivePaths.get(id)!)),
         ) as never,
       }),
     });

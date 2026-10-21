@@ -293,9 +293,30 @@ describe("deleteAccount storage cleanup", () => {
     expect(result.warnings).toEqual([]);
   });
 
-  it("deletes the auth account after storage cleanup", async () => {
+  it("erases storage only after the auth account is deleted", async () => {
+    let removedBeforeDeletion = -1;
+    service.deleteUser.mockImplementationOnce(async () => {
+      removedBeforeDeletion = service.removed.length;
+      return { error: null };
+    });
+
     await deleteAccount(USER);
+
     expect(service.deleteUser).toHaveBeenCalledWith(USER);
+    expect(removedBeforeDeletion).toBe(0);
+    expect(removedPaths()).toContain(`projects/${PROJECT}/a/note.pdf`);
+  });
+
+  it("keeps every file when the account deletion fails (MIN-767)", async () => {
+    service.deleteUser.mockImplementationOnce(async () => ({
+      error: { message: "Database error deleting user" },
+    }) as never);
+
+    await expect(deleteAccount(USER)).rejects.toThrow("Database error deleting user");
+
+    expect(service.removed).toEqual([]);
+    expect(service.objects.attachments).toContain(`projects/${PROJECT}/a/note.pdf`);
+    expect(service.objects["user-avatars"]).toContain(`users/${USER}.webp`);
   });
 
 });

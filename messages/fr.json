@@ -1189,6 +1189,7 @@
     "meAuthored": "Votre retour",
     "meVoted": "Vous avez voté",
     "meMergedFrom": "Votre retour « {title} » a été regroupé avec celui-ci",
+    "mergedIntoPrivate": "Votre retour a été regroupé avec un autre que l’équipe garde privé. Vous pouvez toujours le relire ici.",
     "status": {
       "open": "Ouvert",
       "planned": "Prévu",
@@ -1263,6 +1264,7 @@
     "teamName": "Équipe {project}",
     "comments": "Commentaires",
     "commentCount": "{count, plural, =1 {1 commentaire} other {# commentaires}}",
+    "commentsShowEarlier": "Afficher les commentaires précédents",
     "commentPlaceholder": "Ajoutez un détail, ou dites que ça vous arrive aussi…",
     "commentSignedOutPlaceholder": "Écrivez votre réponse; on vous demandera votre email avant de la publier.",
     "commentSend": "Commenter",

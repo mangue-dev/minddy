@@ -44,6 +44,10 @@
       "components/settings/project-visibility-section.tsx",
       "components/settings/account-hidden-projects-section.tsx",
       "lib/use-hidden-projects.ts",
+      "lib/use-offered-projects.ts",
+      "components/global-board.tsx",
+      "app/api/me/issues/export/route.ts",
+      "lib/server/cycles.ts",
       "lib/server/hidden-projects.ts",
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
@@ -145,7 +149,7 @@ En **Categorías**, el propietario y los miembros gestionan las categorías que 
 
 Oculta un proyecto que ya no sigues a diario para quitarlo de tu barra lateral y de tu inicio sin abandonarlo. En la configuración general del proyecto, elige **Ocultar** en la **Zona de peligro**, o haz clic derecho en el proyecto en la barra lateral y elige **Ocultar proyecto** y confirma. En ambos casos, un diálogo que nombra el proyecto pide confirmación porque sale de tu navegación; volver a mostrarlo no requiere confirmación. Cualquier persona del proyecto puede ocultarlo, incluidos el propietario y los lectores.
 
-Ocultarlo solo cambia tu propia navegación. La preferencia se guarda en tu cuenta, así que se mantiene al volver a iniciar sesión y en tus otros dispositivos. Conservas tu acceso y puedes seguir abriendo y editando el proyecto desde un enlace directo o desde la pestaña **Proyectos ocultos** de la **Configuración de la cuenta**. Los demás miembros siguen viendo el proyecto, y sus rutinas, integraciones y notificaciones siguen funcionando. Abrir un proyecto oculto no lo devuelve a tu barra lateral.
+Ocultarlo solo cambia tu propia navegación. Fuera del propio proyecto, Minddy ya no lo propone, ni sus incidencias, objetivos y páginas, en ningún lugar donde eliges algo: la paleta de comandos, las sugerencias de mención tras @, el contexto de Numo y la elección del proyecto al crear una incidencia, un objetivo o una rutina. Las menciones y los enlaces ya escritos conservan su nombre y se siguen abriendo. Sus incidencias también salen del tablero **Todas las incidencias** y de sus filtros, de la exportación CSV de todos tus proyectos y del llenado automático de tu ciclo; si eliges el proyecto de forma explícita en la exportación, se sigue incluyendo. La preferencia se guarda en tu cuenta, así que se mantiene al volver a iniciar sesión y en tus otros dispositivos. Conservas tu acceso y puedes seguir abriendo y editando el proyecto desde un enlace directo o desde la pestaña **Proyectos ocultos** de la **Configuración de la cuenta**. Los demás miembros siguen viendo el proyecto, y sus rutinas, integraciones y notificaciones siguen funcionando. Abrir un proyecto oculto no lo devuelve a tu barra lateral.
 
 Para recuperarlo, elige **Mostrar** en **Proyectos ocultos** o en la configuración general del proyecto, o elige **Mostrar proyecto** en su menú de la barra lateral. Si el cambio no se puede guardar, aparece un error y el proyecto vuelve a su estado anterior; inténtalo de nuevo. A diferencia de abandonar el proyecto o moverlo a la papelera, ocultarlo nunca retira acceso ni contenido.
 

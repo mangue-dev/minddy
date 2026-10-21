@@ -64,6 +64,61 @@ export function nextDueDate(
 }
 
 /**
+ * The deadline that follows `due` in a series laid on the grid of `anchor`
+ * (MIN-697). The grid is recalculated from the anchor, so a series started
+ * on January 31 comes back to March 31 after February 28 instead of
+ * keeping the clamped day. `due` must sit on that grid (see
+ * {@link seriesAnchor}); otherwise this is plain {@link nextDueDate}.
+ */
+export function nextDueDateFrom(
+  anchor: Date,
+  due: Date,
+  cadence: RecurrenceCadence,
+  now: Date = new Date(),
+): Date {
+  const step = gridStep(anchor, cadence, due);
+  if (step === null) return nextDueDate(due, cadence, now);
+  return advanceFrom(anchor, cadence, now, step + 1);
+}
+
+/**
+ * The anchor of the occurrence due at `due`: the oldest earlier occurrence
+ * of the series whose grid still lands on `due`, walking back from the most
+ * recent one (MIN-697).
+ *
+ * Only monthly and yearly cadences clamp a day (31 → 28, February 29 →
+ * 28), and only them lose the original day of the month: the walk stops at
+ * the first occurrence whose grid misses `due` — an explicit date change, a
+ * different cadence — so an anchor never reaches past a deliberate edit.
+ */
+export function seriesAnchor(
+  due: Date,
+  cadence: RecurrenceCadence,
+  earlier: readonly Date[],
+): Date {
+  if (cadence !== "monthly" && cadence !== "yearly") return due;
+  const previous = earlier
+    .filter((d) => d.getTime() < due.getTime())
+    .sort((a, b) => b.getTime() - a.getTime());
+  let anchor = due;
+  for (const candidate of previous) {
+    if (gridStep(candidate, cadence, due) === null) break;
+    anchor = candidate;
+  }
+  return anchor;
+}
+
+/** The number of cadences that lead from `base` exactly to `target`, or null
+    when `target` is not an occurrence of `base`. */
+function gridStep(base: Date, cadence: RecurrenceCadence, target: Date): number | null {
+  const estimate = estimateSteps(base, cadence, target);
+  for (const step of [estimate, estimate + 1]) {
+    if (addCadence(base, cadence, step).getTime() === target.getTime()) return step;
+  }
+  return null;
+}
+
+/**
  * The DEPARTURE deadline for a recurrence: the chosen date if it is still
  * ahead, otherwise the first occurrence to come.
  *
@@ -198,6 +253,25 @@ export function nextDueDateISO(
   const base = parseDueDate(storedDueDate);
   if (!base) return null;
   return nextDueDate(base, cadence, now).toISOString();
+}
+
+/**
+ * {@link nextDueDateISO} for an occurrence of a series: `earlierDueDates`
+ * are the STORED deadlines of the series' previous occurrences, which give
+ * back the original day of the month (see {@link seriesAnchor}).
+ */
+export function nextSeriesDueDateISO(
+  storedDueDate: string | null | undefined,
+  cadence: RecurrenceCadence,
+  earlierDueDates: ReadonlyArray<string | null | undefined>,
+  now: Date = new Date(),
+): string | null {
+  const due = parseDueDate(storedDueDate);
+  if (!due) return null;
+  const earlier = earlierDueDates
+    .map((value) => parseDueDate(value))
+    .filter((d): d is Date => d !== null);
+  return nextDueDateFrom(seriesAnchor(due, cadence, earlier), due, cadence, now).toISOString();
 }
 
 /**

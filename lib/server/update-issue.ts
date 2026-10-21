@@ -432,6 +432,13 @@ export async function updateIssueFields({
     }
   }
 
+  // `completed_at` records the TRANSITION into done (MIN-699): a repeated
+  // `done` (request retry, grouped edit, forge sync) keeps the original
+  // closing date, which duration metrics read against `started_at`.
+  if (updates.status === "done" && before.status === "done" && before.completed_at) {
+    updates.completed_at = before.completed_at;
+  }
+
   // Recurrence and deadline go together (MIN-136): a cadence says “and
   // After ? » of a date which must exist — it is she who carries the next
   // occurrence. Setting a pace without a deadline is refused; clear the deadline
@@ -455,10 +462,13 @@ export async function updateIssueFields({
   // cadence, choice of a deadline on a recurring ticket — and only there:
   // a late recurring ticket must continue to appear late as long as
   // that it has not been checked, and a title edition does not have to move its date.
+  // Nor when the same request closes the ticket (MIN-700): its date is then
+  // the occurrence just done, and the successor already moves one cadence on.
   if (
     isRecurrenceCadence(recurrenceAfter) &&
     dueDateAfter &&
-    ("recurrence" in updates || "due_date" in updates)
+    ("recurrence" in updates || "due_date" in updates) &&
+    !(updates.status === "done" && before.status !== "done")
   ) {
     const start = startDueDateISO(dueDateAfter, recurrenceAfter);
     if (start && start !== before.due_date) updates.due_date = start;
@@ -683,15 +693,18 @@ export async function updateIssueFields({
 
     // Recurring ticket completed (MIN-136): the next occurrence is born here, in
     // backlog, at the deadline shifted by one cadence. After the response like
-    // other effects — realtime makes it appear on open tables.
+    // other effects — realtime makes it appear on open tables. It is built
+    // from the row as WRITTEN (MIN-700): a cadence, title or date changed in
+    // the same request as the closing carries over, and a cadence removed in
+    // it stops the series.
     if (
       updates.status === "done" &&
       before.status !== "done" &&
-      before.recurrence
+      data.recurrence
     ) {
       await spawnNextOccurrence({
         service,
-        completed: before,
+        completed: data,
         actorId,
         projectName,
       });

@@ -22,6 +22,9 @@ import type {
   IssuePriorityValue,
   IssueStatusValue,
 } from "@/lib/issue-validation";
+// `joinLabels` and `splitLabels` live side by side: changing one without the
+// other would break the round trip.
+import { joinLabels } from "@/lib/import/normalize";
 
 /** One line to write — what the route has finished resolving (names, identifiers). */
 export interface ExportIssueRow {
@@ -56,9 +59,6 @@ export interface ExportColumn {
   value: (row: ExportIssueRow) => string;
 }
 
-/** The separator of a multi-value cell. Also the one that `splitLabels`
- * rereads on import — changing one without the other would break the round trip. */
-const LABEL_SEPARATOR = ", ";
 
 /**
  * Columns, in file order. The order is the same whatever the
@@ -96,8 +96,10 @@ export const EXPORT_COLUMNS: ExportColumn[] = [
   },
   {
     header: "Labels",
-    meaning: `The issue's categories, separated by "${LABEL_SEPARATOR.trim()} ".`,
-    value: (r) => r.labels.join(LABEL_SEPARATOR),
+    meaning:
+      'The issue\'s categories, separated by ", ". A name containing a comma, a semicolon ' +
+      'or a double quote is wrapped in double quotes, its own quotes doubled.',
+    value: (r) => joinLabels(r.labels),
   },
   {
     header: "Assignee",

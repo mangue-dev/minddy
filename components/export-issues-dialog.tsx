@@ -20,6 +20,7 @@ import { exportIssuesApi } from "@/lib/export-api";
 import { ALL_STATUSES, CLOSED_STATUSES, type IssueStatus } from "@/lib/issue-constants";
 import { StatusIndicator } from "@/components/issue-indicators";
 import { useProjects } from "@/lib/projects-context";
+import { useOfferedProjects } from "@/lib/use-offered-projects";
 
 /**
  * The CSV export of my tickets, opened from ⌘K — two questions, not one of
@@ -49,6 +50,8 @@ export function ExportIssuesDialog({
   const tc = useTranslations("Common");
   const tStatus = useTranslations("Status");
   const { projects } = useProjects();
+  // A hidden project is not offered (MIN-751) unless the dialog opens on it.
+  const offeredProjects = useOfferedProjects(projects, defaultProjectId);
 
   const [scope, setScope] = useState<string>(defaultProjectId ?? ALL_SCOPE);
   const [statuses, setStatuses] = useState<Set<IssueStatus>>(defaultStatuses);
@@ -107,7 +110,7 @@ export function ExportIssuesDialog({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL_SCOPE}>{t("scopeAll")}</SelectItem>
-                {projects.map((p) => (
+                {offeredProjects.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
                     {p.name}
                   </SelectItem>

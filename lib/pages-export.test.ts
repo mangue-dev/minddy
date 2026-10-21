@@ -1,3 +1,6 @@
+import path from "node:path";
+
+import MarkdownIt from "markdown-it";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -94,6 +97,49 @@ describe("exportPagesToFiles", () => {
       "R/Notes.md",
       "R/Notes (2).md",
     ]);
+  });
+});
+
+describe("subpage links with special titles (MIN-701)", () => {
+  const titles = ["Meeting notes", "Plan#draft", "100% done", "[Draft] a)b", "Été", "Notes", "Notes"];
+  const children = titles.map((title, index) => ({
+    id: `c${index}`,
+    parent_id: "root",
+    title,
+    icon: null,
+    markdown: md(`c${index}`),
+  }));
+  const root = {
+    id: "root",
+    parent_id: null,
+    title: "Root",
+    icon: null,
+    markdown: md("root", children.map((child) => `[[page:${child.id}]]`).join("\n\n")),
+  };
+
+  it("produces links that a Markdown parser reads and that open the exported files", () => {
+    const files = exportPagesToFiles([root, ...children]);
+    const rootFile = files.find((file) => file.path === "Root/index.md")!;
+    const tokens = new MarkdownIt().parseInline(rootFile.markdown, {});
+    const links: Array<{ href: string; text: string }> = [];
+    for (const token of tokens.flatMap((t) => t.children ?? [])) {
+      if (token.type === "link_open") links.push({ href: String(token.attrGet("href")), text: "" });
+      else if (token.type === "text" && links.length > 0) links[links.length - 1].text += token.content;
+    }
+
+    expect(links.map((link) => link.text)).toEqual(
+      expect.arrayContaining(["Meeting notes", "Plan#draft", "[Draft] a)b"])
+    );
+    expect(links).toHaveLength(titles.length);
+    const resolved = links.map((link) =>
+      path.posix.join(
+        path.posix.dirname(rootFile.path),
+        ...link.href.split("/").map((segment) => decodeURIComponent(segment))
+      )
+    );
+    expect(resolved).toEqual(files.filter((file) => file !== rootFile).map((file) => file.path));
+    expect(resolved).toContain("Root/Notes (2).md");
+    expect(resolved).toContain("Root/Plan#draft.md");
   });
 });
 

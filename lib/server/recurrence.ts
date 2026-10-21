@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { isRecurrenceCadence, nextDueDateISO, seriesIdOf } from "@/lib/recurrence";
+import { isRecurrenceCadence, nextSeriesDueDateISO, seriesIdOf } from "@/lib/recurrence";
 import { createIssueForProject } from "@/lib/server/create-issue";
 import { insertEvents } from "@/lib/server/issue-events";
 
@@ -29,8 +29,8 @@ export async function spawnNextOccurrence({
   projectName = null,
 }: {
   service: SupabaseClient;
-  /** The completed ticket line, such that update-issue loaded it BEFORE the
- update (it still carries its recurrence). */
+  /** The completed ticket line, as update-issue WROTE it (MIN-700): it still
+ carries its recurrence, and the fields changed in the closing request. */
   completed: Record<string, unknown>;
   /** Who checked the ticket: author of the following occurrence and its
  creation event — it was his gesture that gave rise to it. */
@@ -59,7 +59,34 @@ export async function spawnNextOccurrence({
   // checked on Wednesday falls on the following Monday. Without deadline (line
   // written before the rule “a cadence requires a date”), the series stops —
   // the cadence has just been removed, there is nothing to reschedule.
-  const due = nextDueDateISO(completed.due_date as string | null, cadence);
+  // The earlier occurrences give back the series' day of the month (MIN-697):
+  // a series of the 31st clamped to February 28 returns to March 31. Two
+  // monthly or four yearly steps reach the last unclamped one; a few more
+  // rows cost nothing and absorb occurrences whose date was edited.
+  const seriesId = seriesIdOf({
+    id: issueId,
+    recurrence_series_id: completed.recurrence_series_id as string | null,
+  });
+  let earlierDueDates: string[] = [];
+  if (completed.due_date && (cadence === "monthly" || cadence === "yearly")) {
+    const { data: earlierRows, error: earlierError } = await service
+      .from("issues")
+      .select("due_date")
+      .or(`id.eq.${seriesId},recurrence_series_id.eq.${seriesId}`)
+      .neq("id", issueId)
+      .lt("due_date", completed.due_date as string)
+      .order("due_date", { ascending: false })
+      .limit(8);
+    if (earlierError) {
+      console.error("[recurrence] series lookup failed:", earlierError.message);
+    }
+    earlierDueDates = (earlierRows ?? []).map((row) => row.due_date as string);
+  }
+  const due = nextSeriesDueDateISO(
+    completed.due_date as string | null,
+    cadence,
+    earlierDueDates,
+  );
   if (!due) {
     console.error("[recurrence] no due date to schedule from, series stopped:", issueId);
     return;
@@ -89,10 +116,7 @@ export async function spawnNextOccurrence({
       recurrence: cadence,
       category_ids: (categoryRows ?? []).map((c) => c.category_id as string),
     },
-    recurrenceSeriesId: seriesIdOf({
-      id: issueId,
-      recurrence_series_id: completed.recurrence_series_id as string | null,
-    }),
+    recurrenceSeriesId: seriesId,
   });
 
   if (!result.ok) {

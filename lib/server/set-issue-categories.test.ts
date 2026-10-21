@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setIssueCategories } from "./set-issue-categories";
@@ -19,7 +21,14 @@ const PROJECT_ID = "00000000-0000-4000-8000-000000000002";
 const OLD_CATEGORY = "00000000-0000-4000-8000-000000000003";
 const NEW_CATEGORY = "00000000-0000-4000-8000-000000000004";
 
-function database(failure?: { table: string; code: string }) {
+type Rpc = { status: number; body: unknown };
+
+/**
+ * Fake PostgREST: plain reads for the issue lookup, and an in-memory
+ * `replace_issue_categories` that, like the SQL function, commits all or
+ * nothing. `rpc` overrides its response to simulate a failed transaction.
+ */
+function database(options: { failure?: { table: string; code: string }; rpc?: Rpc } = {}) {
   const requests: Request[] = [];
   const state = { categoryIds: [OLD_CATEGORY] };
   service = createClient("https://fixture.supabase.co", "fixture-key", {
@@ -29,25 +38,25 @@ function database(failure?: { table: string; code: string }) {
         const request = new Request(input, init);
         requests.push(request);
         const table = new URL(request.url).pathname.split("/").at(-1);
+        const { failure } = options;
         if (failure && request.method === "GET" && table === failure.table) {
           return Response.json({
             code: failure.code, message: "read failed", details: null, hint: null,
           }, { status: 400 });
         }
-        if (request.method === "DELETE") {
-          state.categoryIds = [];
-          return new Response(null, { status: 204 });
-        }
-        if (request.method === "POST") {
-          const rows = await request.json() as { category_id: string }[];
-          state.categoryIds = rows.map((row) => row.category_id);
-          return new Response(null, { status: 201 });
+        if (table === "replace_issue_categories") {
+          if (options.rpc) return Response.json(options.rpc.body, { status: options.rpc.status });
+          const { p_category_ids: wanted } = await request.json() as { p_category_ids: string[] };
+          const valid = [...new Set(wanted)].filter((id) => id === (NEW_CATEGORY as string));
+          const added = valid.filter((id) => !state.categoryIds.includes(id));
+          const removed = state.categoryIds.filter((id) => !valid.includes(id));
+          state.categoryIds = valid;
+          return Response.json({ category_ids: valid, added, removed });
         }
         if (table === "issues") {
           return Response.json({ id: ISSUE_ID, project_id: PROJECT_ID });
         }
-        if (table === "categories") return Response.json([{ id: NEW_CATEGORY }]);
-        return Response.json(state.categoryIds.map((category_id) => ({ category_id })));
+        return Response.json({ message: `unexpected ${request.method} ${table}` }, { status: 500 });
       },
     },
   });
@@ -66,55 +75,56 @@ beforeEach(() => {
 });
 afterEach(() => vi.restoreAllMocks());
 
-describe("category replacement read failures", () => {
-  it.each([
-    { code: "57014", requested: NEW_CATEGORY },
-    { code: "22P02", requested: "undefined" },
-  ])("preserves existing categories after a $code lookup error", async ({ code, requested }) => {
-    const { requests, state } = database({ table: "categories", code });
+describe("atomic category replacement", () => {
+  it("never writes the join table outside the replacement function", async () => {
+    const { requests } = database();
 
-    expect(await replace([requested])).toEqual({
-      ok: false, status: 500, errorKey: "databaseError",
-    });
-    expect(state.categoryIds).toEqual([OLD_CATEGORY]);
-    expect(requests.every((request) => request.method === "GET")).toBe(true);
-    expect(insertEvents).not.toHaveBeenCalled();
-    expect(console.error).toHaveBeenCalledWith(
-      "[set-issue-categories] category lookup failed:", "read failed",
-    );
+    await replace([NEW_CATEGORY]);
+    const tables = requests.map((request) => new URL(request.url).pathname.split("/").at(-1));
+    expect(tables).toEqual(["issues", "replace_issue_categories"]);
+    expect(requests.at(-1)?.method).toBe("POST");
   });
 
-  it("does not clear categories when the current snapshot cannot be read", async () => {
-    const { requests, state } = database({ table: "issue_categories", code: "57014" });
-
-    expect(await replace([])).toEqual({ ok: false, status: 500, errorKey: "databaseError" });
-    expect(state.categoryIds).toEqual([OLD_CATEGORY]);
-    expect(requests.every((request) => request.method === "GET")).toBe(true);
-    expect(insertEvents).not.toHaveBeenCalled();
-    expect(console.error).toHaveBeenCalledWith(
-      "[set-issue-categories] current categories lookup failed:", "read failed",
-    );
-  });
-
-  it("reports an issue lookup failure as a database error", async () => {
-    const { requests, state } = database({ table: "issues", code: "57014" });
+  it("keeps the previous categories and logs nothing when the replacement fails", async () => {
+    const { state } = database({ rpc: { status: 409, body: {
+      code: "23503", message: "category deleted concurrently", details: null, hint: null,
+    } } });
 
     expect(await replace([NEW_CATEGORY])).toEqual({
       ok: false, status: 500, errorKey: "databaseError",
     });
     expect(state.categoryIds).toEqual([OLD_CATEGORY]);
-    expect(requests).toHaveLength(1);
-    expect(getProjectAccess).not.toHaveBeenCalled();
     expect(insertEvents).not.toHaveBeenCalled();
     expect(console.error).toHaveBeenCalledWith(
-      "[set-issue-categories] issue lookup failed:", "read failed",
+      "[set-issue-categories] replace failed:", "category deleted concurrently",
     );
   });
 
-  it("replaces the categories and records the successful diff", async () => {
+  it("maps the function's actor guard to a read-only refusal", async () => {
+    database({ rpc: { status: 403, body: {
+      code: "42501", message: "tenant_guard_forbidden", details: null, hint: null,
+    } } });
+
+    expect(await replace([NEW_CATEGORY])).toEqual({
+      ok: false, status: 403, errorKey: "readOnlyProject",
+    });
+    expect(insertEvents).not.toHaveBeenCalled();
+  });
+
+  it("reports an issue deleted before the lock as not found", async () => {
+    database({ rpc: { status: 200, body: { code: "not_found" } } });
+
+    expect(await replace([NEW_CATEGORY])).toEqual({
+      ok: false, status: 404, errorKey: "issueNotFound",
+    });
+    expect(insertEvents).not.toHaveBeenCalled();
+  });
+
+  it("records the committed difference, not the requested list", async () => {
     const { state } = database();
 
-    expect(await replace([NEW_CATEGORY])).toEqual({ ok: true, categoryIds: [NEW_CATEGORY] });
+    expect(await replace([NEW_CATEGORY, NEW_CATEGORY, "00000000-0000-4000-8000-000000000009"]))
+      .toEqual({ ok: true, categoryIds: [NEW_CATEGORY] });
     expect(state.categoryIds).toEqual([NEW_CATEGORY]);
     expect(insertEvents).toHaveBeenCalledWith(service, [
       { issue_id: ISSUE_ID, actor_id: "member-1", type: "category_added", to_value: NEW_CATEGORY },
@@ -130,5 +140,37 @@ describe("category replacement read failures", () => {
     expect(insertEvents).toHaveBeenCalledWith(service, [
       { issue_id: ISSUE_ID, actor_id: "member-1", type: "category_removed", from_value: OLD_CATEGORY },
     ]);
+  });
+
+  it("reports an issue lookup failure as a database error", async () => {
+    const { requests, state } = database({ failure: { table: "issues", code: "57014" } });
+
+    expect(await replace([NEW_CATEGORY])).toEqual({
+      ok: false, status: 500, errorKey: "databaseError",
+    });
+    expect(state.categoryIds).toEqual([OLD_CATEGORY]);
+    expect(requests).toHaveLength(1);
+    expect(getProjectAccess).not.toHaveBeenCalled();
+    expect(insertEvents).not.toHaveBeenCalled();
+    expect(console.error).toHaveBeenCalledWith(
+      "[set-issue-categories] issue lookup failed:", "read failed",
+    );
+  });
+});
+
+describe("replace_issue_categories migration", () => {
+  const sql = readFileSync(join(process.cwd(),
+    "supabase/migrations/20270109200072_atomic_issue_category_replacement.sql"), "utf8");
+
+  it("serializes replacements on the issue row and checks the actor", () => {
+    expect(sql).toMatch(/WHERE i\.id = p_issue_id AND i\.deleted_at IS NULL\s+FOR NO KEY UPDATE;/);
+    expect(sql).toContain("m.role = 'member'");
+    expect(sql).toContain("ERRCODE = '42501'");
+  });
+
+  it("is callable by the service role only", () => {
+    expect(sql).toContain("SECURITY DEFINER SET search_path = ''");
+    expect(sql).toMatch(/REVOKE ALL ON FUNCTION public\.replace_issue_categories\(uuid, uuid, uuid\[\]\)\s+FROM PUBLIC, anon, authenticated;/);
+    expect(sql).toContain("TO service_role;");
   });
 });

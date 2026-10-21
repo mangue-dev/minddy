@@ -97,6 +97,11 @@ describe("personal Numo preferences", () => {
   it("does not silently reset a preference when storage is unavailable", async () => {
     h.readError = true;
     expect((await GET(request())).status).toBe(503);
+    expect(h.capture).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ operation: "read_numo_preferences" }),
+      null,
+      { routePath: "/api/account/numo-preferences", routeType: "route", httpMethod: "GET" },
+    );
   });
   it.each(["PGRST205", "42501", "57014"])("keeps model discovery available after a %s preference read failure", async (code) => {
     h.readError = true; h.readCode = code;

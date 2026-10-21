@@ -19,6 +19,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { caretLeft, caretOnLastLine } from "@/lib/textarea-caret";
+import { isImeComposing } from "@/lib/keyboard/ime";
 import { EmojiPicker } from "@/components/pages/emoji-picker";
 import { useArrowField } from "@/lib/use-arrow-field";
 import type { LiveTitle } from "@/lib/use-page-collaboration";
@@ -168,6 +169,8 @@ export function PageHeader({
         onFocus={live ? (event) => live.publishCaret(event.currentTarget) : undefined}
         onBlur={live ? () => live.publishCaret(null) : undefined}
         onKeyDown={(event) => {
+          // Enter and ↓ belong to an IME while it composes (MIN-706).
+          if (isImeComposing(event)) return;
           // A title has no line break: Enter OPENS the next line,
           // which is the first of the body — the field behaves like the line
           // as it appears to be (cf. block-actions.ts, `focusDocumentStart`).

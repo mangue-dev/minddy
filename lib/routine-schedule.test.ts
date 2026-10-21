@@ -254,3 +254,74 @@ describe("describeSchedule", () => {
     expect(String(seen[0][1].day)).toBe("4");
   });
 });
+
+describe("nextRunAt — daylight saving transitions (MIN-707)", () => {
+  const newYork = (over: Partial<RoutineSchedule> = {}): RoutineSchedule =>
+    paris({ frequency: "daily", weekdays: null, hour: 2, minute: 30, timezone: "America/New_York", ...over });
+
+  it("moves a nonexistent spring time forward by the gap, the same day", () => {
+    // On 2027-03-14, New York jumps from 02:00 EST to 03:00 EDT.
+    const next = nextRunAt(newYork(), new Date("2027-03-14T05:00:00Z"));
+    expect(next.toISOString()).toBe("2027-03-14T07:30:00.000Z");
+    expect(localClock(next, "America/New_York")).toBe("14/03/2027, 03:30");
+  });
+
+  it("does not skip the spring day once the hour before the jump has passed", () => {
+    const next = nextRunAt(newYork(), new Date("2027-03-14T06:45:00Z"));
+    expect(next.toISOString()).toBe("2027-03-14T07:30:00.000Z");
+  });
+
+  it("keeps the first occurrence of a repeated autumn time", () => {
+    // On 2026-10-25, Paris replays 02:00–03:00: 02:30 CEST comes first.
+    const schedule = paris({ frequency: "daily", weekdays: null, hour: 2, minute: 30 });
+    const first = nextRunAt(schedule, new Date("2026-10-24T23:00:00Z"));
+    expect(first.toISOString()).toBe("2026-10-25T00:30:00.000Z");
+    // Rearming from that run skips the second 02:30 instead of running twice.
+    expect(nextRunAt(schedule, first).toISOString()).toBe("2026-10-26T01:30:00.000Z");
+  });
+
+  it("keeps the first occurrence in New York autumn", () => {
+    const next = nextRunAt(
+      newYork({ hour: 1, minute: 30 }),
+      new Date("2026-11-01T04:00:00Z"),
+    );
+    // 01:30 EDT (UTC-4) comes before 01:30 EST (UTC-5).
+    expect(next.toISOString()).toBe("2026-11-01T05:30:00.000Z");
+  });
+
+  it("handles a 30-minute shift (Lord Howe Island)", () => {
+    // On 2026-10-04, Lord Howe moves from 02:00 (+10:30) to 02:30 (+11:00).
+    const schedule = paris({
+      frequency: "daily",
+      weekdays: null,
+      hour: 2,
+      minute: 15,
+      timezone: "Australia/Lord_Howe",
+    });
+    const spring = nextRunAt(schedule, new Date("2026-10-03T12:00:00Z"));
+    expect(localClock(spring, "Australia/Lord_Howe")).toBe("04/10/2026, 02:45");
+    // On 2027-04-04 it replays 01:30–02:00; 01:45 runs once, at +11:00.
+    const autumn = nextRunAt(
+      { ...schedule, hour: 1, minute: 45 },
+      new Date("2027-04-03T12:00:00Z"),
+    );
+    expect(autumn.toISOString()).toBe("2027-04-03T14:45:00.000Z");
+    expect(
+      nextRunAt({ ...schedule, hour: 1, minute: 45 }, autumn).toISOString(),
+    ).toBe("2027-04-04T15:15:00.000Z");
+  });
+
+  it("applies the same policy to weekly and monthly cadences", () => {
+    // 2027-03-14 is a Sunday.
+    expect(
+      nextRunAt(newYork({ frequency: "weekly", weekdays: [0] }), new Date("2027-03-10T12:00:00Z"))
+        .toISOString(),
+    ).toBe("2027-03-14T07:30:00.000Z");
+    expect(
+      nextRunAt(
+        newYork({ frequency: "monthly", daysOfMonth: [14] }),
+        new Date("2027-03-01T12:00:00Z"),
+      ).toISOString(),
+    ).toBe("2027-03-14T07:30:00.000Z");
+  });
+});

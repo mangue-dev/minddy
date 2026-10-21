@@ -6,7 +6,8 @@ import {
   type ExportIssueRow,
 } from "@/lib/export/issues-csv";
 import { mapCsvToIssues, prepareImport } from "@/lib/import/parse";
-import { mappingHasGaps } from "@/lib/import/mapping";
+import { mappingHasGaps, splitLabelValues } from "@/lib/import/mapping";
+import { joinLabels, splitLabels } from "@/lib/import/normalize";
 import type { ImportContext } from "@/lib/import/types";
 
 const row = (over: Partial<ExportIssueRow> = {}): ExportIssueRow => ({
@@ -175,5 +176,30 @@ describe("minddy export, read back by minddy", () => {
     const strangers = prepareImport(EXPORTED);
     if (!strangers.ok) throw new Error("expected ok");
     expect(mappingHasGaps(strangers.stats, strangers.mapping, strangers.source)).toBe(true);
+  });
+});
+
+describe("category names that contain separators (MIN-702)", () => {
+  const NAMES = ["Design, UX", "Support; Sales", 'Say "hi"', "Bug"];
+  const csv = buildIssuesCsv([row({ labels: NAMES })]);
+
+  it("reads back exactly the names it wrote", () => {
+    const read = mapCsvToIssues(csv, undefined, TEAM);
+    if (!read.ok) throw new Error(`expected ok, got ${read.error}`);
+    expect(read.issues[0].labels).toEqual(NAMES);
+    expect(read.warnings).toEqual([]);
+  });
+
+  it("shows the same names in the import preview", () => {
+    const prepared = prepareImport(csv, TEAM);
+    if (!prepared.ok) throw new Error("expected ok");
+    expect(splitLabelValues(prepared.stats, prepared.mapping)).toEqual(NAMES);
+  });
+
+  it("keeps plain names bare, so older exports and other tools read the same list", () => {
+    expect(joinLabels(["Bug", "UI"])).toBe("Bug, UI");
+    expect(splitLabels("Bug, UI; Docs")).toEqual(["Bug", "UI", "Docs"]);
+    // An unterminated quote predates the quoting rule: read as written.
+    expect(splitLabels('"Draft, Bug')).toEqual(['"Draft', "Bug"]);
   });
 });

@@ -15,6 +15,7 @@ const state = vi.hoisted(() => ({
   record: vi.fn(),
   client: {},
   preload: vi.fn(),
+  hidden: new Set<string>(),
 }));
 vi.mock("next/navigation", () => ({ usePathname: () => state.pathname }));
 vi.mock("next/dynamic", () => ({ default: () => {
@@ -29,6 +30,7 @@ vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => state.client }));
 vi.mock("@/lib/projects-context", () => ({ useProjects: () => ({ projects: state.projects }) }));
 vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: null }) }));
+vi.mock("@/lib/use-hidden-projects", () => ({ useHiddenProjects: () => ({ hiddenProjectIds: state.hidden }) }));
 vi.mock("@/lib/undo/undo-context", () => ({ useUndoHistory: () => ({ record: state.record }) }));
 vi.mock("@/lib/use-members-query", () => ({ useMembersQuery: () => ({ members: [] }) }));
 vi.mock("@/lib/use-categories-query", () => ({ useCategoriesQuery: () => ({ categories: [] }) }));
@@ -43,6 +45,7 @@ beforeEach(() => {
   state.projects = [{ id: "first" }, { id: "second" }] as Project[];
   state.issue = null;
   state.objective = null;
+  state.hidden = new Set();
   window.localStorage.clear();
   window.history.replaceState(null, "", "/all");
 });
@@ -117,6 +120,29 @@ describe("creation action subscriptions", () => {
       await act(() => { original.openCreateIssue(); original.openCreateObjective(); });
       expect(state.issue).toBe(previousIssue);
       expect(state.objective).toBe(previousObjective);
+    } finally { await act(() => root.unmount()); }
+  });
+
+  it("neither offers nor defaults to a hidden project, except the one on screen (MIN-751)", async () => {
+    let actions: ReturnType<typeof useCreate> | null = null;
+    const Consumer = memo(() => { actions = useCreate(); return null; });
+    const root = createRoot(document.createElement("div"));
+    const render = () => root.render(createElement(CreateProvider, { children: createElement(Consumer) }));
+    const pickerIds = () => (state.issue!.projects as Project[]).map((p) => p.id);
+    state.hidden = new Set(["second"]);
+    try {
+      await act(render);
+      rememberCreateProject("second");
+      await act(() => actions!.openCreateIssue());
+      expect(state.issue).toMatchObject({ projectId: "first" });
+      expect(pickerIds()).toEqual(["first"]);
+
+      // Opened by link, the hidden project is where I create, and it is listed.
+      state.pathname = "/projects/second";
+      await act(render);
+      await act(() => actions!.openCreateIssue());
+      expect(state.issue).toMatchObject({ projectId: "second" });
+      expect(pickerIds()).toEqual(["first", "second"]);
     } finally { await act(() => root.unmount()); }
   });
 });

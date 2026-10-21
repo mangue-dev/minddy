@@ -19,6 +19,23 @@ export function checkboxValue(value: string): boolean | undefined {
       ? false
       : undefined;
 }
+/**
+ * The identity of a select option: the rule `isDatabaseSchema` enforces, so
+ * "Done" and "done" are one option (MIN-703). Option generation and cell
+ * conversion both go through it; the first spelling met names the option.
+ */
+const optionKey = (name: string) => name.trim().toLowerCase();
+function distinctOptions(labels: string[]): string[] {
+  const byKey = new Map<string, string>();
+  for (const label of labels) {
+    if (!byKey.has(optionKey(label))) byKey.set(optionKey(label), label);
+  }
+  return [...byKey.values()];
+}
+function optionId(property: DatabaseProperty, label: string): string {
+  return property.options!.find((option) => optionKey(option.name) === optionKey(label))!.id;
+}
+
 export function selectionLabels(value: string): string[] {
   return [
     ...new Set(
@@ -60,7 +77,7 @@ export function inferColumns(
     else if (
       values.length &&
       values.every((value) => value.length <= 80) &&
-      new Set(values).size <= 100 &&
+      distinctOptions(values).length <= 100 &&
       /status|state|category|priority|type|statut|tag|label/i.test(name)
     )
       type = values.some((value) => /[,;]/.test(value))
@@ -88,17 +105,15 @@ export function mappedColumns(
       type: column.type,
     };
     if (column.type === "select" || column.type === "multi_select") {
-      const labels = [
-        ...new Set(
-          rows.flatMap((row) =>
-            column.type === "multi_select"
-              ? selectionLabels(row[index])
-              : row[index].trim()
-                ? [row[index].trim()]
-                : [],
-          ),
+      const labels = distinctOptions(
+        rows.flatMap((row) =>
+          column.type === "multi_select"
+            ? selectionLabels(row[index])
+            : row[index].trim()
+              ? [row[index].trim()]
+              : [],
         ),
-      ];
+      );
       if (labels.length > 100 || labels.some((label) => label.length > 80))
         throw new Error("importInvalidMapping");
       property.options = labels.map((name, i) => ({
@@ -136,13 +151,9 @@ export function importCell(
         throw new Error("importInvalidMapping");
       return value.trim();
     case "select":
-      return property.options!.find((option) => option.name === value.trim())!
-        .id;
+      return optionId(property, value);
     case "multi_select":
-      return selectionLabels(value).map(
-        (label) =>
-          property.options!.find((option) => option.name === label)!.id,
-      );
+      return [...new Set(selectionLabels(value).map((label) => optionId(property, label)))];
     case "people": {
       const ids = selectionLabels(value).map((label) =>
         people.get(token(label)),

@@ -1189,6 +1189,7 @@
     "meAuthored": "Your feedback",
     "meVoted": "You voted",
     "meMergedFrom": "Your feedback “{title}” was grouped into this one",
+    "mergedIntoPrivate": "Your feedback was grouped with another one that the team keeps private. You can still read it here.",
     "status": {
       "open": "Open",
       "planned": "Planned",
@@ -1263,6 +1264,7 @@
     "teamName": "The {project} team",
     "comments": "Comments",
     "commentCount": "{count, plural, =1 {1 comment} other {# comments}}",
+    "commentsShowEarlier": "Show earlier comments",
     "commentPlaceholder": "Add a detail, or say it happens to you too…",
     "commentSignedOutPlaceholder": "Write your reply; we'll ask for your email before posting it.",
     "commentSend": "Comment",

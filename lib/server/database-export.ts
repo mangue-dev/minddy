@@ -9,7 +9,7 @@ import {
   type ImportPage,
 } from "@/lib/database-import/types";
 import { databasePropertyValue, databaseValueText } from "@/lib/page-databases";
-import { relativePath } from "@/lib/pages-export";
+import { encodeLinkPath, relativePath } from "@/lib/pages-export";
 import { pageFileUrl, sanitizeFileKey } from "@/lib/page-files";
 import { downloadAttachment } from "@/lib/server/attachments";
 import { decodeAttachmentRow } from "@/lib/server/attachment-content";
@@ -60,10 +60,7 @@ export async function databaseArchiveFiles(
         });
         for (const from of paths.values()) {
           if (!entries[from]) continue;
-          const url = relativePath(from, path)
-            .split("/")
-            .map(encodeURIComponent)
-            .join("/");
+          const url = encodeLinkPath(relativePath(from, path));
           const markdown = new TextDecoder()
             .decode(entries[from])
             .replace(

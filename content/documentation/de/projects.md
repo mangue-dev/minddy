@@ -44,6 +44,10 @@
       "components/settings/project-visibility-section.tsx",
       "components/settings/account-hidden-projects-section.tsx",
       "lib/use-hidden-projects.ts",
+      "lib/use-offered-projects.ts",
+      "components/global-board.tsx",
+      "app/api/me/issues/export/route.ts",
+      "lib/server/cycles.ts",
       "lib/server/hidden-projects.ts",
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
@@ -145,7 +149,7 @@ Unter **Kategorien** verwalten der Eigentümer und die Mitglieder die Kategorien
 
 Blende ein Projekt aus, das du nicht mehr täglich verfolgst, damit es aus deiner Seitenleiste und deiner Startseite verschwindet, ohne dass du es verlässt. Wähle in den allgemeinen Projekteinstellungen in der **Gefahrenzone** die Option **Ausblenden**, oder klicke das Projekt in der Seitenleiste mit der rechten Maustaste an und wähle **Projekt ausblenden** und bestätige. In beiden Fällen fragt zuerst ein Dialog mit dem Projektnamen nach, weil das Projekt aus deiner Navigation verschwindet; das Wiedereinblenden braucht keine Bestätigung. Alle Personen im Projekt können es ausblenden, auch der Eigentümer und Leser.
 
-Das Ausblenden ändert nur deine eigene Navigation. Die Einstellung wird in deinem Konto gespeichert und gilt daher auch nach einer erneuten Anmeldung und auf deinen anderen Geräten. Du behältst deinen Zugriff und kannst das Projekt weiterhin über einen direkten Link oder über den Tab **Ausgeblendete Projekte** der **Kontoeinstellungen** öffnen und bearbeiten. Andere Mitglieder sehen das Projekt weiterhin, und seine Routinen, Integrationen und Benachrichtigungen laufen weiter. Das Öffnen eines ausgeblendeten Projekts bringt es nicht in deine Seitenleiste zurück.
+Das Ausblenden ändert nur deine eigene Navigation. Außerhalb des Projekts selbst bietet Minddy weder das Projekt noch seine Tickets, Ziele und Seiten mehr an, wo du etwas auswählst: in der Befehlspalette, in den Erwähnungsvorschlägen nach @, im Numo-Kontext und bei der Projektwahl beim Erstellen eines Tickets, Ziels oder einer Routine. Bereits geschriebene Erwähnungen und Links zeigen weiterhin ihren Namen und lassen sich öffnen. Seine Tickets verschwinden außerdem aus der Ansicht **Alle Probleme** und ihren Filtern, aus dem CSV-Export aller deiner Projekte und aus dem automatischen Befüllen deines Zyklus; wählst du das Projekt im Export ausdrücklich aus, wird es weiterhin exportiert. Die Einstellung wird in deinem Konto gespeichert und gilt daher auch nach einer erneuten Anmeldung und auf deinen anderen Geräten. Du behältst deinen Zugriff und kannst das Projekt weiterhin über einen direkten Link oder über den Tab **Ausgeblendete Projekte** der **Kontoeinstellungen** öffnen und bearbeiten. Andere Mitglieder sehen das Projekt weiterhin, und seine Routinen, Integrationen und Benachrichtigungen laufen weiter. Das Öffnen eines ausgeblendeten Projekts bringt es nicht in deine Seitenleiste zurück.
 
 Um es wieder anzuzeigen, wähle **Einblenden** unter **Ausgeblendete Projekte** oder in den allgemeinen Projekteinstellungen, oder wähle **Projekt einblenden** im Menü der Seitenleiste. Kann die Änderung nicht gespeichert werden, erscheint ein Fehler und das Projekt kehrt in seinen vorherigen Zustand zurück; versuche es erneut. Anders als Verlassen oder In den Papierkorb verschieben entfernt das Ausblenden nie Zugriff oder Inhalte.
 

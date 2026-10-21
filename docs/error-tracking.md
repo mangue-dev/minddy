@@ -60,6 +60,7 @@ independent gates:
 | Browser (React boundary) | `captureClientException` from `app/error.tsx` via `lib/analytics.ts` | Render errors, which React swallows before the window listener |
 | Server (request context) | `onRequestError` hook in `instrumentation.ts` → `lib/server/error-tracking.ts` | Route handlers, server actions, RSC rendering errors |
 | Server (handled preference read) | `captureServerException` from `/api/assistant/models` | Personal Numo preference read failures; the model catalog remains available with an unknown default |
+| Server (handled preference read, settings) | `captureServerException` from `GET /api/account/numo-preferences` | The same read failure behind the AI settings alert, answered with a 503 |
 | Server (background) | `enableExceptionAutocapture` on the shared `posthog-node` client | Uncaught exceptions and unhandled rejections outside requests (crons, agent code) |
 
 Server exception context carries template facts: `route_path` (the route

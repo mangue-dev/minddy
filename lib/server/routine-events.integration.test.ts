@@ -29,7 +29,7 @@ describe.skipIf(!enabled)("transactional routine events on isolated PostgreSQL",
       try { execFileSync("docker", ["exec", container, "pg_isready", "-h", "127.0.0.1", "-U", "postgres"], { stdio: "pipe" }); break; }
       catch { await new Promise(resolve => setTimeout(resolve, 100)); }
     }
-    for (const file of ["test/routine-events-fixture.sql", "supabase/migrations/20270106780000_numo_routine_occurrences.sql", "supabase/migrations/20270109200043_enriched_routines.sql"]) await sql(readFileSync(file, "utf8"));
+    for (const file of ["test/routine-events-fixture.sql", "supabase/migrations/20270106780000_numo_routine_occurrences.sql", "supabase/migrations/20270109200043_enriched_routines.sql", "supabase/migrations/20270109200071_routine_event_cascade_guard.sql"]) await sql(readFileSync(file, "utf8"));
     await sql(`INSERT INTO projects VALUES('${project}','${owner}',NULL);
       INSERT INTO agent_routines(id,project_id,owner_id,title,prompt,trigger_type,trigger) VALUES('${routine}','${project}','${owner}','Test','Test','event','{"type":"event","event":"issue.created"}');`);
   }, 30_000);
@@ -149,6 +149,23 @@ describe.skipIf(!enabled)("transactional routine events on isolated PostgreSQL",
     const a = await row(`SELECT row_to_json(a) FROM arm_routine_event('${routine}',1,${e},30) a;`);
     expect(await sql(`SELECT extract(epoch FROM a.retry_at-e.created_at)::integer FROM routine_armings a JOIN routine_events e ON e.id=a.event_id WHERE a.id='${a.id}';`)).toBe('1800');
     expect(await sql(`SELECT id FROM claim_routine_arming('${a.id}',1);`)).toBe('');
+  });
+
+  it("lets an account erasure cascade through projects with issues and pages", async () => {
+    // Mirrors auth.users: owned projects cascade while author columns of
+    // their rows are set to NULL in the same statement (MIN-767).
+    const account = randomUUID(), doomed = randomUUID(), issue = randomUUID(), page = randomUUID();
+    await sql(`CREATE TABLE erasure_accounts(id uuid PRIMARY KEY);
+      ALTER TABLE projects ADD COLUMN account_id uuid REFERENCES erasure_accounts(id) ON DELETE CASCADE;
+      ALTER TABLE issues ADD COLUMN created_by uuid REFERENCES erasure_accounts(id) ON DELETE SET NULL;
+      ALTER TABLE pages ADD COLUMN created_by uuid REFERENCES erasure_accounts(id) ON DELETE SET NULL;
+      INSERT INTO erasure_accounts VALUES('${account}');
+      INSERT INTO projects(id,owner_id,account_id) VALUES('${doomed}','${account}','${account}');
+      INSERT INTO issues(id,project_id,assignee_id,created_by) VALUES('${issue}','${doomed}','${account}','${account}');
+      INSERT INTO pages(id,project_id,created_by) VALUES('${page}','${doomed}','${account}');`);
+    await sql(`DELETE FROM erasure_accounts WHERE id='${account}';`);
+    expect(await sql(`SELECT (SELECT count(*) FROM projects WHERE id='${doomed}')+(SELECT count(*) FROM issues WHERE id='${issue}')
+      +(SELECT count(*) FROM pages WHERE id='${page}')+(SELECT count(*) FROM routine_events WHERE project_id='${doomed}');`)).toBe('0');
   });
 
 });

@@ -44,6 +44,10 @@
       "components/settings/project-visibility-section.tsx",
       "components/settings/account-hidden-projects-section.tsx",
       "lib/use-hidden-projects.ts",
+      "lib/use-offered-projects.ts",
+      "components/global-board.tsx",
+      "app/api/me/issues/export/route.ts",
+      "lib/server/cycles.ts",
       "lib/server/hidden-projects.ts",
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
@@ -145,7 +149,7 @@ Dans **Catégories**, le propriétaire et les membres gèrent les catégories qu
 
 Masquez un projet que vous ne suivez plus au quotidien pour le retirer de votre barre latérale et de votre accueil sans le quitter. Dans les réglages généraux du projet, choisissez **Masquer** dans la **Zone sensible**, ou faites un clic droit sur le projet dans la barre latérale et choisissez **Masquer le projet**, puis confirmez. Dans les deux cas, une boîte de dialogue qui nomme le projet demande une confirmation, car il quitte votre navigation ; le réafficher ne demande aucune confirmation. Toute personne du projet peut le masquer, y compris le propriétaire et les lecteurs.
 
-Le masquage ne modifie que votre propre navigation. La préférence est enregistrée sur votre compte : vous la retrouvez après une reconnexion et sur vos autres appareils. Vous conservez votre accès et pouvez toujours ouvrir et modifier le projet depuis un lien direct ou depuis l’onglet **Projets masqués** des **Paramètres du compte**. Les autres membres voient toujours le projet, et ses routines, intégrations et notifications continuent de fonctionner. Ouvrir un projet masqué ne le réaffiche pas dans votre barre latérale.
+Le masquage ne modifie que votre propre navigation. En dehors du projet lui-même, Minddy ne le propose plus, ni ses tickets, objectifs et pages, partout où vous choisissez quelque chose : la palette de commandes, les suggestions de mention après @, le contexte de Numo et le choix du projet à la création d’un ticket, d’un objectif ou d’une routine. Les mentions et liens déjà écrits gardent leur nom et s’ouvrent toujours. Ses tickets quittent aussi le tableau **Tous les tickets** et ses filtres, l’export CSV de tous vos projets et le remplissage automatique de votre cycle ; choisir explicitement le projet dans l’export l’inclut toujours. La préférence est enregistrée sur votre compte : vous la retrouvez après une reconnexion et sur vos autres appareils. Vous conservez votre accès et pouvez toujours ouvrir et modifier le projet depuis un lien direct ou depuis l’onglet **Projets masqués** des **Paramètres du compte**. Les autres membres voient toujours le projet, et ses routines, intégrations et notifications continuent de fonctionner. Ouvrir un projet masqué ne le réaffiche pas dans votre barre latérale.
 
 Pour le retrouver, choisissez **Réafficher** dans **Projets masqués** ou dans les réglages généraux du projet, ou choisissez **Réafficher le projet** dans son menu de la barre latérale. Si la modification ne peut pas être enregistrée, une erreur s’affiche et le projet revient à son état précédent ; réessayez. Contrairement au départ ou à la mise à la corbeille, le masquage ne retire jamais d’accès ni de contenu.
 

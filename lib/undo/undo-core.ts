@@ -3,9 +3,10 @@
 // side-effect free so it can be unit-tested (see undo-core.test.ts).
 //
 // An entry records ONE user-initiated issue mutation with enough data to apply
-// it in both directions. Undoing a deletion re-creates the issue client-side
-// (the server hard-deletes), which yields a NEW id — the alias map keeps older
-// entries that still reference the original id applicable.
+// it in both directions. Undoing a deletion restores the trashed row; only a
+// row purged in the meantime is re-created client-side, which yields a NEW id
+// — the alias map keeps older entries that still reference the original id
+// applicable.
 
 import type {
   Issue,

@@ -1,6 +1,7 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
 import type { AgentProviderId } from "./agent-providers";
+import { apiErrorCode, HttpResponseError } from "./backend-availability";
 export type NumoPreferences = { provider: AgentProviderId; default_model: string | null; application_model: string | null };
 export const numoPreferencesQueryKey = ["numo-preferences"] as const;
 async function requestNumoPreferences(patch?: Pick<NumoPreferences, "provider" | "default_model">): Promise<NumoPreferences> {
@@ -8,8 +9,12 @@ async function requestNumoPreferences(patch?: Pick<NumoPreferences, "provider" |
     method: patch ? "PUT" : "GET", cache: "no-store",
     ...(patch ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) } : {}),
   });
-  const body = await response.json();
-  if (!response.ok) throw new Error(body.error ?? "Could not save Numo preferences");
+  // A gateway or timeout page is not JSON: keep the HTTP status instead of a parse error.
+  const body = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new HttpResponseError(body?.error ?? (patch ? "Could not save Numo preferences" : "Could not load Numo preferences"),
+      response.status, apiErrorCode(body));
+  }
   return body;
 }
 export const saveNumoPreferencesApi = (patch: Pick<NumoPreferences, "provider" | "default_model">) => requestNumoPreferences(patch);

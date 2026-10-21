@@ -19,6 +19,7 @@ import { usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useProjects } from "@/lib/projects-context";
+import { useOfferedProject } from "@/lib/use-offered-projects";
 import { capabilitiesForProject } from "@/lib/use-project-capabilities";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/lib/auth-context";
@@ -146,12 +147,17 @@ export function CreateProvider({ children }: { children: ReactNode }) {
     () => allProjects.filter((p) => capabilitiesForProject(p, userId).canWrite),
     [allProjects, userId]
   );
-  const targetInputs = useRef({ pathname, projects });
+  // Hidden projects (MIN-692) are not offered (MIN-751): neither listed in the
+  // pickers nor chosen as the default target, unless the project is on screen
+  // or explicitly requested. Requesting one still creates there.
+  const isOffered = useOfferedProject();
+  const offeredProjects = useMemo(() => projects.filter((p) => isOffered(p.id)), [projects, isOffered]);
+  const targetInputs = useRef({ pathname, projects, offeredProjects });
   // Creation actions resolve the committed route when invoked. Publishing a
   // new action on every navigation wakes all closed card pickers, even inside
   // an Activity-hidden board. Layout synchronization avoids abandoned renders
   // changing the target used by an event on the still-visible route.
-  useLayoutEffect(() => { targetInputs.current = { pathname, projects }; }, [pathname, projects]);
+  useLayoutEffect(() => { targetInputs.current = { pathname, projects, offeredProjects }; }, [pathname, projects, offeredProjects]);
   const allProjectsRef = useRef(allProjects);
   useLayoutEffect(() => { allProjectsRef.current = allProjects; }, [allProjects]);
   // Local undo history (MIN-35): creations from the global dialog record too.
@@ -263,7 +269,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
 
   const resolveTarget = useCallback(
     (projectId?: string, notify = false) => {
-      const { pathname: currentPath, projects: currentProjects } = targetInputs.current;
+      const { pathname: currentPath, projects: currentProjects, offeredProjects: offered } = targetInputs.current;
       const requested = projectId ?? projectIdFromPath(currentPath);
       if (requested) {
         // Only projects the list knows as read-only are refused; an unknown
@@ -277,7 +283,8 @@ export function CreateProvider({ children }: { children: ReactNode }) {
       }
       // Outside a project, prefer the last creation target when it is still
       // accessible, then fall back to the current project's display order.
-      return defaultCreateProjectId(currentProjects, lastCreateProjectId());
+      // Every writable project hidden: creating still needs a target.
+      return defaultCreateProjectId(offered.length > 0 ? offered : currentProjects, lastCreateProjectId());
     },
     []
   );
@@ -399,6 +406,11 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   // Only availability changes are render state; every action reads current
   // inputs when invoked, without broadcasting route changes to card pickers.
   const canCreate = projects.length > 0;
+  // The dialogs' project picker: what may be offered, plus the target itself.
+  const pickerProjects = useMemo(
+    () => projects.filter((p) => p.id === target || offeredProjects.includes(p)),
+    [projects, offeredProjects, target]
+  );
   const value = useMemo(
     () => ({
       openCreateIssue,
@@ -424,7 +436,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
           open={issueOpen}
           onOpenChange={setIssueOpen}
           projectId={target}
-          projects={projects}
+          projects={pickerProjects}
           members={members}
           categories={categories}
           objectives={objectives}
@@ -446,7 +458,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
             setObjectiveOpen(next);
           }}
           members={members}
-          projects={projects}
+          projects={pickerProjects}
           projectId={target}
           initialName={objectiveName}
           initialDraftId={objectiveDraftId}

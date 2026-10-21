@@ -497,7 +497,7 @@ async function applyRemoteLabels(
   // SPLIT: `readForgeLabels` separates two labels that `categoryKey` can
   // bring back to the same category (it trims the accents, the key does not; it keeps
   // integer two names that the 200 character limit confuses). A repeated id
-  // would fail the comparison below, and the DELETE/INSERT would start again
+  // would fail the comparison below, and the replacement would run again on
   // every webhook — precisely what it is there to avoid.
   const ids = [
     ...new Set(
@@ -513,9 +513,9 @@ async function applyRemoteLabels(
     .select("category_id")
     .eq("issue_id", issueId);
   const before = new Set((current ?? []).map((r) => r.category_id as string));
-  // Nothing has changed: do not rewrite. `setIssueCategories` does a DELETE then
-  // an INSERT, and replaying it on each webhook would flash the categories
-  // on all open tables, in real time, without anything happening.
+  // Nothing has changed: do not rewrite. Each replacement locks the issue row
+  // and logs its difference, so skipping a no-op keeps webhooks from taking
+  // that lock for nothing.
   if (before.size === ids.length && ids.every((id) => before.has(id))) return;
 
   const result = await setIssueCategories({

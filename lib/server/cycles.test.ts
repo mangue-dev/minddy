@@ -165,6 +165,22 @@ it("does not pull an objective passed as the blocker", async () => {
   expect(writes).toEqual([]);
 });
 
+describe("hidden projects (MIN-751)", () => {
+  it("never fills the cycle from a project the user hid", async () => {
+    const { service, writes } = database({
+      cycles: [cycle()],
+      projects: [{ id: "project", owner_id: "user" }, { id: "hidden", owner_id: "user" }],
+      hidden_projects: [{ user_id: "user", project_id: "hidden" }],
+      issues: [issue("visible-work"), issue("hidden-work", { project_id: "hidden" })],
+    });
+    const fill = await fillCycleForUser({ service, userId: "user", actorId: null, cycle: cycle() });
+    expect(fill.pickedIds).toEqual(["visible-work"]);
+    expect(writes.filter((write) => write.table === "issues")).toEqual([
+      { table: "issues", ids: ["visible-work"], values: { cycle_id: "cycle" } },
+    ]);
+  });
+});
+
 describe("project roles (MIN-693)", () => {
   const roleTables = () => ({
     cycles: [cycle()],

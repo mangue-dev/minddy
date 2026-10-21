@@ -126,7 +126,8 @@ type WireQuestion =
  *
  * Multi-choice does not exist natively: a decision model evaluates every
  * question independently against the same state, so a multi_choice becomes ONE
- * `noul` per option, keyed `<key>:<value>`. The option values are
+ * `noul` per option, keyed `<key>:<value>`, that asks the parent question
+ * about that single option. The option values are
  * guaranteed separator-free (`validateDecisionSpec`), so the prefix split
  * on the way back is unambiguous.
  */
@@ -149,7 +150,10 @@ export function expandDecisionQuestions(spec: DecisionSpec): Record<string, Wire
         for (const option of question.options) {
           questions[`${question.key}:${option.value}`] = {
             type: "noul",
-            instructions: describe(option.label, option.description),
+            // Each option is answered on its own, so its question restates
+            // what is asked: a bare option label ("Documentation") is not a
+            // yes/no question, and a decision model may refuse it (MIN-752).
+            instructions: `${question.label} Does this option apply: ${describe(option.label, option.description)}?`,
           };
         }
         break;

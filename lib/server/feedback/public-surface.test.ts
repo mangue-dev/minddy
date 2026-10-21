@@ -20,9 +20,23 @@ interface Row {
 }
 
 /** Base posts, all projects combined. */
+const visiblePost = {
+  merged_into_id: null,
+  deleted_at: null,
+  author_id: "someone-else",
+  is_public: true,
+  review_state: "published",
+  status: "open",
+};
 const posts: Row[] = [
-  { id: "post-mine", project_id: "proj-a", merged_into_id: null, deleted_at: null },
-  { id: "post-theirs", project_id: "proj-b", merged_into_id: null, deleted_at: null },
+  { ...visiblePost, id: "post-mine", project_id: "proj-a" },
+  { ...visiblePost, id: "post-theirs", project_id: "proj-b" },
+  // MIN-715: posts the team removed from the board after a visitor opened them.
+  { ...visiblePost, id: "post-private", project_id: "proj-a", is_public: false },
+  { ...visiblePost, id: "post-pending", project_id: "proj-a", review_state: "pending" },
+  { ...visiblePost, id: "post-spam", project_id: "proj-a", status: "spam" },
+  { ...visiblePost, id: "post-own-private", project_id: "proj-a", is_public: false, author_id: "u1" },
+  { ...visiblePost, id: "post-merged", project_id: "proj-a", merged_into_id: "post-mine" },
 ];
 
 /** The OTP lines written, plus those planted before the call. */
@@ -231,6 +245,41 @@ describe("votePost", () => {
     // The refusal is valid for the absence of writing: a `false` returned after an upsert
     // would have left the voice in base.
     expect(voteUpserts).toEqual([]);
+  });
+
+  it.each(["post-private", "post-pending", "post-spam", "post-merged"])(
+    "rejects a stale card on %s that the visitor can no longer read",
+    async (postId) => {
+      expect(await votePost({ postId, userId: "u1", projectId: "proj-a" })).toBe(false);
+      expect(voteUpserts).toEqual([]);
+    }
+  );
+
+  it("keeps the author's vote on their own private post", async () => {
+    expect(
+      await votePost({ postId: "post-own-private", userId: "u1", projectId: "proj-a" })
+    ).toBe(true);
+    expect(voteUpserts).toEqual([{ post_id: "post-own-private", user_id: "u1" }]);
+  });
+
+  it("lets the trusted integration API vote on a private post of its project", async () => {
+    expect(
+      await votePost({
+        postId: "post-private",
+        userId: "u1",
+        projectId: "proj-a",
+        trustedIntegration: true,
+      })
+    ).toBe(true);
+    expect(
+      await votePost({
+        postId: "post-merged",
+        userId: "u1",
+        projectId: "proj-a",
+        trustedIntegration: true,
+      })
+    ).toBe(false);
+    expect(voteUpserts).toEqual([{ post_id: "post-private", user_id: "u1" }]);
   });
 });
 

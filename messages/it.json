@@ -1189,6 +1189,7 @@
     "meAuthored": "Il tuo feedback",
     "meVoted": "Hai votato.",
     "meMergedFrom": "Il tuo feedback «{title}» è stato unito a questo",
+    "mergedIntoPrivate": "Il tuo feedback è stato unito a un altro che il team mantiene privato. Puoi ancora leggerlo qui.",
     "status": {
       "open": "Apri",
       "planned": "Pianificato",
@@ -1263,6 +1264,7 @@
     "teamName": "Il {project} squadra",
     "comments": "Osservazioni",
     "commentCount": "{count, plural, =1 {1 commento} other {# commenti}}",
+    "commentsShowEarlier": "Mostra i commenti precedenti",
     "commentPlaceholder": "Aggiungete un dettaglio, o dite che succede anche a voi...",
     "commentSignedOutPlaceholder": "Scrivi la tua risposta; ti chiediamo la tua email prima di pubblicarla.",
     "commentSend": "Commento",

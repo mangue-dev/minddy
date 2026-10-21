@@ -194,7 +194,7 @@ Las grabaciones del tablero público están limitadas a 10 MiB. La transcripció
 
 ### Votar, comentar y seguir {#follow}
 
-Vote por una solicitud existente en lugar de duplicarla. Cada identidad tiene un voto por solicitud. Comentar requiere identificación y que los comentarios públicos estén habilitados; un comentario público admite 5.000 caracteres. Puede eliminar definitivamente su propio comentario tras confirmarlo, y el equipo puede moderar los comentarios públicos.
+Vote por una solicitud existente en lugar de duplicarla. Cada identidad tiene un voto por solicitud, en una solicitud que aún puede leer: una pública o la suya. Comentar requiere identificación y que los comentarios públicos estén habilitados; un comentario público admite 5.000 caracteres. Un hilo largo se abre en sus comentarios más recientes; elija **Mostrar comentarios anteriores** para leer el resto. Puede eliminar definitivamente su propio comentario tras confirmarlo, y el equipo puede moderar los comentarios públicos.
 
 Abra Mis sugerencias para encontrar sus solicitudes y votos según lo que permita su identidad actual. Lea allí, o en la solicitud, el estado público y las respuestas del equipo. Las notas internas del equipo no son respuestas públicas. Si el SSO ha caducado, vuelva mediante un nuevo enlace del producto; cambiar de navegador o identidad puede cambiar su lista personal.
 
@@ -230,7 +230,7 @@ Un grupo fusionado comparte un único objetivo. Cambiar el objetivo de la solici
 
 ## Fusionar feedback y vincularlo a entregas {#feedback-to-issue}
 
-Como propietario o Miembro, abra la solicitud y elija unirla a una solicitud canónica existente del mismo proyecto. Lea primero ambas necesidades: una redacción parecida no demuestra que busquen el mismo resultado. La solicitud actual se convierte en duplicada, los votos se unen por identidad y el duplicado redirige a la solicitud canónica. Revise el evento de unión en la actividad; la acción de deshacer utiliza ese evento. Rechace una sugerencia de unión incorrecta de la IA en lugar de aceptarla solo para vaciar la cola.
+Como propietario o Miembro, abra la solicitud y elija unirla a una solicitud canónica existente del mismo proyecto. Lea primero ambas necesidades: una redacción parecida no demuestra que busquen el mismo resultado. La solicitud actual se convierte en duplicada, los votos se unen por identidad y el duplicado redirige a la solicitud canónica. Si la solicitud canónica no es pública, el autor del duplicado lo sigue abriendo en modo de solo lectura, y los demás visitantes no obtienen ninguna página. Revise el evento de unión en la actividad; la acción de deshacer utiliza ese evento. Rechace una sugerencia de unión incorrecta de la IA en lugar de aceptarla solo para vaciar la cola.
 
 ### Crear o vincular trabajo {#work}
 

@@ -95,7 +95,9 @@ export function NumoModelPreference() {
       placeholder={ta("modelSearchPlaceholder")} emptyLabel={ta("modelSearchEmpty")}
       loadingLabel={ta("modelSearchLoading")} freeTextLabel={(model) => ta("modelUseCustom", { model })}
       ariaLabel={t("numoDefaultModel")} />}>
-    {preferences.error && <p role="alert" className="py-2 text-sm text-destructive">{t("numoModelLoadError")}</p>}
+    {/* A failed background refresh keeps the loaded preference usable, as
+        every other read does; only a preference that never loaded is an error. */}
+    {preferences.error && !preferences.data && <p role="alert" className="py-2 text-sm text-destructive">{t("numoModelLoadError")}</p>}
   </SettingsRow>;
 }
 

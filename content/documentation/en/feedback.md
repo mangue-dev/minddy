@@ -194,7 +194,7 @@ Public-board recordings are limited to 10 MiB. Transcription allows 20 requests 
 
 ### Vote, comment and follow {#follow}
 
-Vote on an existing request instead of duplicating it. Your identity has one vote per post. Comments require identification and enabled public comments; the public comment limit is 5,000 characters. You can remove your own comment after confirming, which deletes it permanently; the team can moderate public comments.
+Vote on an existing request instead of duplicating it. Your identity has one vote per post, on a request you can still read: a public one, or your own. Comments require identification and enabled public comments; the public comment limit is 5,000 characters. A long thread opens on its latest comments; choose **Show earlier comments** to read the rest. You can remove your own comment after confirming, which deletes it permanently; the team can moderate public comments.
 
 Open My feedback to find your submitted requests and votes, including what your current identity can see. Read the public status and team replies there or on the request. Team-only notes are not public replies. If SSO expired, return through a fresh product link; changing browser or identity can change the personal list.
 
@@ -230,7 +230,7 @@ A merged group shares one objective. Changing the main request’s objective als
 
 ## Merge feedback and connect it to delivery {#feedback-to-issue}
 
-As the owner or a Member, open the feedback request and choose merge into an existing canonical request from the same project. Read both needs first: similar wording is not proof of the same outcome. The current request becomes the duplicate, votes unite by identity and the duplicate redirects to the canonical request. Review the merge activity; the undo action uses that merge event. Reject an incorrect AI merge suggestion rather than accepting it just to clear the queue.
+As the owner or a Member, open the feedback request and choose merge into an existing canonical request from the same project. Read both needs first: similar wording is not proof of the same outcome. The current request becomes the duplicate, votes unite by identity and the duplicate redirects to the canonical request. If the canonical request is not public, its author still opens the duplicate they wrote, read-only, while others get no page. Review the merge activity; the undo action uses that merge event. Reject an incorrect AI merge suggestion rather than accepting it just to clear the queue.
 
 ### Create or link work {#work}
 
