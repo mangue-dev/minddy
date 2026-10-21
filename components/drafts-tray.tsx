@@ -113,14 +113,14 @@ function DraftRow({ draft, onOpen, onDelete }: { draft: DraftEntry; onOpen: () =
   const title = draft.title.trim() || t("untitled");
 
   return (
-    // The draft card and its delete button sit side by side, the button as
-    // tall as the card and always visible.
-    <li className="flex items-stretch gap-1">
+    // The draft card and its delete button sit side by side at one fixed
+    // height, the button square and always visible.
+    <li className="flex gap-1">
       <button
         type="button"
         onClick={onOpen}
         aria-label={t("resumeAria", { name: title })}
-        className="flex min-w-0 flex-1 rounded-md bg-muted/50 px-2.5 py-1.5 text-left outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex h-13 min-w-0 flex-1 items-center rounded-md bg-muted/50 px-2.5 text-left outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
       >
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="flex min-w-0 items-baseline gap-1.5">
@@ -140,7 +140,7 @@ function DraftRow({ draft, onOpen, onDelete }: { draft: DraftEntry; onOpen: () =
             type="button"
             onClick={onDelete}
             aria-label={t("deleteAria", { name: title })}
-            className="flex w-9 shrink-0 items-center justify-center rounded-md bg-muted/50 text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex size-13 shrink-0 items-center justify-center rounded-md bg-muted/50 text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
           >
             <HugeiconsIcon icon={Delete02Icon} className="size-4" />
           </button>
