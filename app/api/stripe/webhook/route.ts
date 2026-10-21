@@ -16,6 +16,8 @@ import {
   type StripeSubscription,
 } from "@/lib/server/stripe";
 import { captureServerEvent, identifyServerUser } from "@/lib/server/posthog";
+import { afterOrNow } from "@/lib/server/after-safe";
+import { reconcileUserAiKey } from "@/lib/server/managed-ai-key";
 import type { ServerAnalyticsEventName } from "@/lib/analytics-events";
 
 /**
@@ -205,10 +207,14 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "Event already in flight" }, { status: 409 });
     }
 
+    // The account whose plan this event may have changed: its OpenRouter key
+    // is re-capped once the billing row is written (MIN-761).
+    let billedUserId: string | null = null;
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as StripeCheckoutSession;
         await handleCheckoutCompleted(session, event);
+        billedUserId = session.metadata?.user_id ?? null;
         trackBilling(event, session.metadata?.user_id ?? null, {
           plan_id: session.metadata?.plan_id ?? "unknown",
         });
@@ -222,6 +228,7 @@ export async function POST(request: NextRequest) {
       case "customer.subscription.resumed": {
         const subscription = event.data.object as StripeSubscription;
         const userId = await syncSubscriptionToBillingAccount(subscription, event);
+        billedUserId = userId;
         trackBilling(event, userId, {
           status: subscription.status,
           cancel_at_period_end: subscription.cancel_at_period_end,
@@ -234,6 +241,7 @@ export async function POST(request: NextRequest) {
         if (invoice.subscription) {
           const subscription = await fetchStripeSubscription(invoice.subscription);
           const failedUserId = await syncSubscriptionToBillingAccount(subscription, event);
+          billedUserId = failedUserId;
           trackBilling(event, failedUserId, { status: subscription.status });
           break;
         }
@@ -256,6 +264,11 @@ export async function POST(request: NextRequest) {
     }
 
     await markStripeEventProcessed(event.id);
+    if (billedUserId) {
+      const userId = billedUserId;
+      // Best-effort: the next AI call reconciles the key lazily anyway.
+      afterOrNow(() => reconcileUserAiKey(userId));
+    }
     return Response.json({ received: true });
   } catch (error) {
     console.error("[stripe-webhook] failed:", (error as Error).message);

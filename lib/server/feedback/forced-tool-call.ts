@@ -14,9 +14,9 @@ import type { AiSurface, ByokModelKey } from "@/lib/ai-surfaces";
 import {
   fetchAiChat,
   resolveAiRuntime,
+  resolvePlatformApiKey,
   type ResolvedAiRuntime,
 } from "@/lib/server/ai-runtime";
-import { isManagedAiEnabled } from "@/lib/managed-services";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getCachedOpenRouterModelInfo, loadOpenRouterIndex } from "@/lib/server/agent/openrouter-index";
 
@@ -156,26 +156,42 @@ export async function forcedToolCall(
   })();
 
   let runtime: ResolvedAiRuntime | null = null;
+  let keyUnavailable = false;
   if (billedUserId && options?.modelKey) {
     runtime = await resolveAiRuntime({
       userId: billedUserId,
       modelKey: options.modelKey,
       surface: options.surface,
-    }).catch(() => null);
+    }).catch((err: Error) => {
+      keyUnavailable = err.name === "ManagedAiKeyUnavailableError";
+      return null;
+    });
   }
-  const apiKey = runtime?.apiKey ?? (isManagedAiEnabled() ? process.env.OPENROUTER_API_KEY : undefined);
-  if (!apiKey) return null;
+  // The account's key already failed to resolve: the fallback would repeat it.
+  if (keyUnavailable) {
+    console.error(`${logPrefix} managed key unavailable`);
+    return null;
+  }
+  // Without an account runtime, the call stays on managed AI: the billed
+  // account's own key on Cloud, the public key when it bills no account.
+  const platformKey = runtime
+    ? null
+    : await resolvePlatformApiKey(billedUserId).catch((err: Error) => {
+        console.error(`${logPrefix} managed key unavailable: ${err.message}`);
+        return null;
+      });
   const provider = runtime?.provider ?? "openrouter";
   const resolvedModel = runtime?.model ?? model;
-  const effectiveRuntime: ResolvedAiRuntime =
-    runtime ?? {
-      apiKey,
+  const effectiveRuntime: ResolvedAiRuntime | null =
+    runtime ?? (platformKey && {
+      ...platformKey,
       mode: "platform",
       provider: "openrouter",
       baseUrl: "https://openrouter.ai/api/v1",
       model: resolvedModel,
       requestProfile: getAgentProvider("openrouter")!.requestProfile,
-    };
+    });
+  if (!effectiveRuntime) return null;
 
   const signal = options?.signal
     ? AbortSignal.any([options.signal, AbortSignal.timeout(options?.timeoutMs ?? 45_000)])

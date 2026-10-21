@@ -1,5 +1,7 @@
 import "server-only";
 
+import { isPlanLimitError } from "@/lib/server/plan-limit-error";
+
 import { getAppConfigValues } from "@/lib/server/app-config";
 import {
   aiModelFallback,
@@ -96,6 +98,17 @@ export function modelConfigKeys(key: string): [string, string] {
  * (the dictations) stick to the model which worked instead of re-attempt the suffix
  * — and therefore pay two requests each turn.
  */
+/**
+ * A refusal of the key itself (invalid key, no credit, key limit reached) does
+ * not depend on the model: replaying it on the bare model only costs a second
+ * refused request.
+ */
+async function refusesTheKey(response: Response): Promise<boolean> {
+  if (response.status === 401 || response.status === 402) return true;
+  if (response.status !== 403) return false;
+  return /key limit/i.test(await response.clone().text().catch(() => ""));
+}
+
 export async function fetchOpenRouterWithSuffixFallback(
   url: string,
   model: string,
@@ -105,7 +118,7 @@ export async function fetchOpenRouterWithSuffixFallback(
 ): Promise<{ response: Response; model: string }> {
   const response = await http(url, request(model));
   const base = stripModelSuffix(model);
-  if (response.ok || base === model) return { response, model };
+  if (response.ok || base === model || (await refusesTheKey(response))) return { response, model };
   console.warn(`${logPrefix} ${model} refused (${response.status}), retrying on ${base}`);
   return { response: await http(url, request(base)), model: base };
 }
@@ -141,6 +154,9 @@ export async function withModelSuffixFallback<T>(
     if (!options?.ok || options.ok(result)) return result;
     console.warn(`${logPrefix} ${model} failed, retrying on ${base}`);
   } catch (err) {
+    // A budget refusal does not depend on the model: replaying it only costs
+    // another refused request.
+    if (isPlanLimitError(err)) throw err;
     console.warn(`${logPrefix} ${model} threw, retrying on ${base}:`, (err as Error).message);
   }
   return run(base);

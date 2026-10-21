@@ -485,6 +485,8 @@ export async function POST(
   } catch (err) {
     console.error("[api/dictate-objective] loop failed:", err);
     if (usageRows.length > 0) after(() => recordAiUsage(usageRows));
+    // OpenRouter's per-account cap held where the pre-flight did not (MIN-761).
+    if (isPlanLimitError(err)) return planLimitResponse(err);
     return NextResponse.json({ error: "Dictation processing failed" }, { status: 502 });
   }
 

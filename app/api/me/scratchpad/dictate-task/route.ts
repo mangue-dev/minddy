@@ -249,6 +249,8 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     console.error("[api/me/scratchpad/dictate-task] failed:", err);
     if (usageRows.length > 0) after(() => recordAiUsage(usageRows));
+    // OpenRouter's per-account cap held where the pre-flight did not (MIN-761).
+    if (isPlanLimitError(err)) return planLimitResponse(err);
     // The client falls back on the raw transcript: the take is never lost.
     return NextResponse.json({ error: "Dictation processing failed" }, { status: 502 });
   }

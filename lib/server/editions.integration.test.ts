@@ -59,6 +59,13 @@ vi.mock("@/lib/supabase-service", () => ({
     })),
   })),
 }));
+// Per-account keys (MIN-761) are issued through OpenRouter's management API,
+// which this matrix never reaches: the account key is a fixed fake.
+vi.mock("@/lib/server/managed-ai-key", () => ({
+  resolveUserAiKey: vi.fn(async () => "fake-minddy-account-key"),
+  resolvePublicAiKey: vi.fn(async () => "fake-minddy-public-key"),
+  reconcileUserAiKey: vi.fn(async () => {}),
+}));
 vi.mock("@/lib/server/posthog", () => ({
   captureServerEvent: vi.fn(),
   identifyServerUser: vi.fn(),
@@ -75,7 +82,7 @@ const matrix = edition ? describe : describe.skip;
 
 matrix(`edition matrix: ${edition ?? "no fixture"}`, () => {
   it("resolves services and clearly announces partial capabilities", () => {
-    expect(managedServices()).toEqual({
+    expect(managedServices()).toMatchObject({
       billing: expectBilling,
       ai: expectAi,
       forge: false,
@@ -144,9 +151,11 @@ matrix(`edition matrix: ${edition ?? "no fixture"}`, () => {
         apiKey: "fake-operator-byok-key",
       });
     } else if (expectAi) {
+      // Billed Cloud calls pay with the account's own capped key, never
+      // with the shared platform key.
       await expect(runtime).resolves.toMatchObject({
         mode: "platform",
-        apiKey: "fake-minddy-platform-key",
+        apiKey: expectBilling ? "fake-minddy-account-key" : "fake-minddy-platform-key",
       });
     } else {
       await expect(runtime).rejects.toMatchObject({ name: "ManagedAiUnavailableError" });

@@ -29,7 +29,8 @@ import {
   type AiChatRequest,
 } from "@/lib/ai-chat";
 import { fetchOpenRouterWithSuffixFallback } from "@/lib/server/model-config";
-import { isManagedAiEnabled } from "@/lib/managed-services";
+import { isManagedAiEnabled, managedAiKeyMode } from "@/lib/managed-services";
+import { PlanLimitError } from "@/lib/server/plan-limit-error";
 import { fetchAiProvider } from "@/lib/server/ai-provider-request";
 import { providerSupportsModelKey } from "@/lib/model-catalog-capability";
 import { modelCatalogCapabilityForKey } from "@/lib/model-catalog-capability";
@@ -54,6 +55,69 @@ export interface ResolvedAiRuntime {
   baseUrl: string;
   model: string;
   requestProfile: ProviderRequestProfile;
+  /**
+   * Set when `apiKey` is a per-account Minddy Cloud key (MIN-761): the billed
+   * account, or `"public"` for the anonymous surfaces' key.
+   */
+  managedKeyOwner?: string;
+}
+
+/** A managed OpenRouter key, and whose it is. */
+export interface PlatformApiKey {
+  apiKey: string;
+  managedKeyOwner?: string;
+}
+
+/**
+ * The OpenRouter key a managed call pays with (MIN-761): on Minddy Cloud, the
+ * billed account's own capped key, or the daily-capped public key for a call
+ * that bills no account; elsewhere the single `OPENROUTER_API_KEY`. `null`
+ * when managed AI is off. Throws when Cloud cannot provide the account key:
+ * there is no fallback to the uncapped shared key.
+ */
+export async function resolvePlatformApiKey(
+  billedUserId: string | null,
+): Promise<PlatformApiKey | null> {
+  if (!isManagedAiEnabled()) return null;
+  if (managedAiKeyMode() === "per_user") {
+    // Loaded on demand: the key module reads billing and usage, which import
+    // this module.
+    const managed = await import("@/lib/server/managed-ai-key");
+    return billedUserId
+      ? { apiKey: await managed.resolveUserAiKey(billedUserId), managedKeyOwner: billedUserId }
+      : { apiKey: await managed.resolvePublicAiKey(), managedKeyOwner: "public" };
+  }
+  return sharedPlatformApiKey();
+}
+
+/** The shared key, for reads that spend nothing (model catalog). */
+function sharedPlatformApiKey(): PlatformApiKey | null {
+  const apiKey = isManagedAiEnabled() ? process.env.OPENROUTER_API_KEY : undefined;
+  return apiKey ? { apiKey } : null;
+}
+
+/**
+ * Reacts to OpenRouter refusing a per-account key, for any caller that reads
+ * the response itself. 401: the key was deleted or revoked outside Minddy, so it
+ * is discarded and the next call issues a new one. 402, or a 403 about the key
+ * limit: the provider cap held where our pre-flight did not, and the caller
+ * shows the same "budget reached" error, never the provider's.
+ */
+export async function handleManagedKeyRejection(
+  key: PlatformApiKey,
+  status: number,
+  detail = "",
+): Promise<void> {
+  const owner = key.managedKeyOwner;
+  if (!owner || (status !== 401 && status !== 402 && status !== 403)) return;
+  if (status === 401) {
+    const managed = await import("@/lib/server/managed-ai-key");
+    await managed.discardManagedAiKey(owner, key.apiKey);
+    return;
+  }
+  if (status === 403 && !/limit/i.test(detail)) return;
+  console.warn(`[ai-runtime] OpenRouter refused a managed key at its cap (HTTP ${status})`);
+  if (owner !== "public") throw new PlanLimitError("usage_budget_exceeded");
 }
 
 async function platformModel(modelKey: ByokModelKey): Promise<string> {
@@ -107,6 +171,12 @@ export async function resolveAiRuntime(params: {
   managedOnly?: boolean;
   /** Numo account defaults supersede legacy per-key assistant model settings. */
   applicationModelDefault?: boolean;
+  /**
+   * The runtime only validates a choice or lists models, and never pays for a
+   * call: on Minddy Cloud no account key is issued for it, and its platform key
+   * is the shared one, which only reads the catalog (MIN-761).
+   */
+  catalogOnly?: boolean;
 }): Promise<ResolvedAiRuntime> {
   const surface = params.surface ?? surfaceForModelKey(params.modelKey);
   const modelOverride = params.modelOverride?.trim() || null;
@@ -146,22 +216,40 @@ export async function resolveAiRuntime(params: {
     }
   }
 
-  if (!isManagedAiEnabled()) throw new ManagedAiUnavailableError();
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) throw new ManagedAiUnavailableError();
+  return platformRuntime(
+    params.catalogOnly ? sharedPlatformApiKey() : await resolvePlatformApiKey(params.userId),
+    modelOverride || rootModel || aiModelFallback(params.modelKey),
+  );
+}
+
+function platformRuntime(platformKey: PlatformApiKey | null, model: string): ResolvedAiRuntime {
+  if (!platformKey) throw new ManagedAiUnavailableError();
   const baseUrl = resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER);
   if (!baseUrl) throw new Error("OpenRouter base URL not configured");
   return {
-    apiKey,
+    ...platformKey,
     mode: "platform",
     provider: DEFAULT_AGENT_PROVIDER,
     baseUrl,
-    model: modelOverride || rootModel || aiModelFallback(params.modelKey),
+    model,
     requestProfile: getAgentProvider(DEFAULT_AGENT_PROVIDER)
       ?.requestProfile ?? {
       outputTokenField: "max_completion_tokens",
     },
   };
+}
+
+/**
+ * Runtime of a managed call that bills no account (a public board without a
+ * resolvable owner): the platform model on the public key, never on an
+ * account's key.
+ */
+export async function resolveUnbilledAiRuntime(modelKey: ByokModelKey): Promise<ResolvedAiRuntime> {
+  const [platformKey, rootModel] = await Promise.all([
+    resolvePlatformApiKey(null),
+    platformModel(modelKey),
+  ]);
+  return platformRuntime(platformKey, rootModel || aiModelFallback(modelKey));
 }
 
 export async function usesByokForSurface(
@@ -240,13 +328,21 @@ export async function fetchAiChat(
     };
   };
   if (runtime.provider === "openrouter") {
-    return fetchOpenRouterWithSuffixFallback(
+    const result = await fetchOpenRouterWithSuffixFallback(
       endpoint,
       model,
       request,
       logPrefix,
       (url, options) => fetchAiProvider(runtime.provider, url, options),
     );
+    if (!result.response.ok && runtime.managedKeyOwner) {
+      await handleManagedKeyRejection(
+        runtime,
+        result.response.status,
+        await result.response.clone().text().catch(() => ""),
+      );
+    }
+    return result;
   }
   const http = (url: string, options: RequestInit) =>
     fetchAiProvider(runtime.provider, url, options);

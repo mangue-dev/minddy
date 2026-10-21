@@ -35,7 +35,11 @@ export async function PUT(request: NextRequest) {
     const preferences = await getNumoPreferences(auth.user.id);
     if (body.provider !== preferences.provider) return NextResponse.json({ error: "The Numo provider changed. Reload settings before saving." }, { status: 409 });
     if (body.default_model !== null) {
-      const validated = await resolveNumoTurnConfiguration({ userId: auth.user.id, model: body.default_model });
+      const validated = await resolveNumoTurnConfiguration({
+        userId: auth.user.id,
+        model: body.default_model,
+        catalogOnly: true,
+      });
       if (validated.runtime.provider !== preferences.provider) return NextResponse.json({ error: "The Numo provider changed. Reload settings before saving." }, { status: 409 });
     }
     const { error } = await auth.supabase.from("user_numo_preferences").upsert({

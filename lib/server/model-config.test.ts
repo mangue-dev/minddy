@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { PlanLimitError } from "@/lib/server/plan-limit-error";
 
 /**
  * Resolving a template setting and collapsing its routing shortcut
@@ -206,5 +207,29 @@ describe("fetchOpenRouterWithSuffixFallback", () => {
     );
     expect(out.model).toBe("qwen/qwen3-coder:free");
     expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("key refusals (MIN-761)", () => {
+  const URL_ = "https://openrouter.ai/api/v1/chat/completions";
+  const request = (model: string) => ({ method: "POST", body: JSON.stringify({ model }) });
+
+  it.each([
+    [401, "User not found"],
+    [402, "Insufficient credits"],
+    [403, "Key limit exceeded (total limit)"],
+  ])("does not replay a refusal of the key itself (%i) on the bare model", async (status, body) => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(body, { status }));
+    const out = await fetchOpenRouterWithSuffixFallback(URL_, "openai/gpt-5:exacto", request, "[test]");
+    expect(out.response.status).toBe(status);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not replay a budget refusal on the bare model", async () => {
+    const run = vi.fn(async () => {
+      throw new PlanLimitError("usage_budget_exceeded");
+    });
+    await expect(withModelSuffixFallback("openai/gpt-5:exacto", run)).rejects.toBeInstanceOf(PlanLimitError);
+    expect(run).toHaveBeenCalledTimes(1);
   });
 });

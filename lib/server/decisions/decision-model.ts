@@ -10,7 +10,10 @@ import {
 } from "@/lib/server/ai-usage";
 import { DEFAULT_AGENT_PROVIDER, resolveProviderBaseUrl } from "@/lib/agent-providers";
 import { getUserByok } from "@/lib/server/agent/model";
-import { isManagedAiEnabled } from "@/lib/managed-services";
+import {
+  handleManagedKeyRejection,
+  resolvePlatformApiKey,
+} from "@/lib/server/ai-runtime";
 import { resolveConfiguredModel } from "@/lib/server/model-config";
 import { getServiceClient } from "@/lib/supabase-service";
 import { clamp01, type DecisionAnswers, type DecisionSpec } from "@/lib/server/decisions/types";
@@ -85,6 +88,7 @@ async function resolveDecisionApiKey(billTo: AiUsageBillTo): Promise<{
   apiKey: string;
   baseUrl: string;
   keyMode: "platform" | "byok";
+  managedKeyOwner?: string;
 } | null> {
   let billedUserId: string | null = null;
   if ("userId" in billTo) billedUserId = billTo.userId || null;
@@ -102,12 +106,15 @@ async function resolveDecisionApiKey(billTo: AiUsageBillTo): Promise<{
       return { apiKey: byok.apiKey, baseUrl: byok.baseUrl, keyMode: "byok" };
     }
   }
-  if (isManagedAiEnabled() && process.env.OPENROUTER_API_KEY) {
-    const baseUrl = resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER);
-    if (!baseUrl) return null;
-    return { apiKey: process.env.OPENROUTER_API_KEY, baseUrl, keyMode: "platform" };
-  }
-  return null;
+  // A call that bills no account pays with the public key on Cloud.
+  const platform = await resolvePlatformApiKey(billedUserId).catch((err: Error) => {
+    console.error("[decisions-model] managed key unavailable:", err.message);
+    return null;
+  });
+  if (!platform) return null;
+  const baseUrl = resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER);
+  if (!baseUrl) return null;
+  return { ...platform, baseUrl, keyMode: "platform" };
 }
 
 // ── Wire mapping: DecisionQuestion → native questions, and back ──────────────
@@ -451,6 +458,8 @@ export async function callDecisionModel(
         response.status,
         detail.slice(0, 200)
       );
+      // This call never throws: a capped key reads as an ordinary HTTP failure.
+      await handleManagedKeyRejection(key, response.status, detail).catch(() => {});
       return { ok: false, reason: "http", status: response.status };
     }
     const data = (await response.json()) as {

@@ -127,6 +127,7 @@ describe("resolveCapabilities", () => {
       STRIPE_PRICE_ID_PRO: "pro",
       STRIPE_PRICE_ID_GO_YEARLY: "go-year",
       STRIPE_PRICE_ID_PRO_YEARLY: "pro-year",
+      OPENROUTER_MANAGEMENT_KEY: "management-key",
     });
     expect(cloud.managedAi.configured).toBe(true);
     expect(cloud.managedBilling.configured).toBe(true);
@@ -141,6 +142,26 @@ describe("resolveCapabilities", () => {
     });
     expect(selfHosted.managedAi.configured).toBe(false);
     expect(selfHosted.managedBilling.configured).toBe(false);
+  });
+
+  it("reports billed Cloud AI as incomplete without a management key", () => {
+    const capabilities = resolveCapabilities({
+      ...core,
+      MINDDY_EDITION: "cloud",
+      MINDDY_MANAGED_AI: "1",
+      MINDDY_MANAGED_BILLING: "1",
+      OPENROUTER_API_KEY: "managed-key",
+      STRIPE_SECRET_KEY: "stripe-key",
+      STRIPE_WEBHOOK_SECRET: "webhook-key",
+      STRIPE_PRICE_ID_GO: "go",
+      STRIPE_PRICE_ID_PRO: "pro",
+      STRIPE_PRICE_ID_GO_YEARLY: "go-year",
+      STRIPE_PRICE_ID_PRO_YEARLY: "pro-year",
+    });
+    expect(capabilities.managedAi).toMatchObject({
+      state: "incomplete",
+      missing: ["OPENROUTER_MANAGEMENT_KEY"],
+    });
   });
 
   it("does not combine two partial PostHog pairs", () => {

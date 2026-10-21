@@ -221,6 +221,7 @@ describe("readPlanUsageTool", () => {
       billing: true,
       ai: true,
       forge: true,
+      aiKeyMode: "per_user",
     });
     vi.mocked(getUserUsage).mockResolvedValue(usage({ numo_chat: 1, routine_code: 0.5 }));
 
@@ -248,6 +249,7 @@ describe("readPlanUsageTool", () => {
       billing: true,
       ai: false,
       forge: true,
+      aiKeyMode: "per_user",
     });
 
     const result = await readPlanUsageTool({ userId: "user-1" });

@@ -15,6 +15,8 @@ import {
   listStripeBalanceTransactions,
 } from "@/lib/server/stripe";
 import { fetchOpenRouterKeyStatus } from "@/lib/server/openrouter-key";
+import { summarizeManagedKeys } from "@/lib/server/managed-ai-key";
+import { isManagedAiEnabled, managedAiKeyMode } from "@/lib/managed-services";
 import { getLatestFxRate } from "@/lib/server/fx";
 import type { AdminFinance, AdminFinanceDay } from "@/lib/types";
 
@@ -165,11 +167,20 @@ export async function getFinanceSummary(options: {
     Math.ceil((now.getTime() - monthStart.getTime()) / 86_400_000) + 1
   );
 
+  // On Minddy Cloud every billed call pays with its account's own key
+  // (MIN-761): the shared key spends nothing, so its cap says nothing.
+  const perAccountKeys = isManagedAiEnabled() && managedAiKeyMode() === "per_user";
   const service = getServiceClient();
-  const [costsRes, accounts, keyStatus, fx, ledger] = await Promise.all([
+  const [costsRes, accounts, keyStatus, managedKeys, fx, ledger] = await Promise.all([
     service.rpc("get_ai_cost_daily", { p_days: costSpan, p_tz: "UTC" }),
     loadBillingAccounts(),
-    fetchOpenRouterKeyStatus(),
+    perAccountKeys ? Promise.resolve(null) : fetchOpenRouterKeyStatus(),
+    perAccountKeys
+      ? summarizeManagedKeys().catch((err: Error) => {
+          console.error("[finance] managed keys unreadable:", err.message);
+          return null;
+        })
+      : Promise.resolve(null),
     getLatestFxRate(),
     isStripeConfigured()
       ? // Same reduction as the costs: each collection is borne by SA
@@ -281,6 +292,7 @@ export async function getFinanceSummary(options: {
           ),
         }
       : null,
+    managedKeys: perAccountKeys ? { summary: managedKeys } : null,
     stripe: {
       configured: isStripeConfigured(),
       reachable: ledger !== null,

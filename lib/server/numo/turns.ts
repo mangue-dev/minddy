@@ -21,6 +21,7 @@ import {
   spentFromNumoOperationPlatform,
 } from "@/lib/server/ai-usage";
 import { getUserUsage } from "@/lib/server/usage";
+import { isPlanLimitError } from "@/lib/server/plan-limit-error";
 import { nextBillingPlanId, type BillingPlanId } from "@/lib/billing-plans";
 import { isManagedAiEnabled } from "@/lib/managed-services";
 import { gatherProjectPromptContext } from "@/lib/server/assistant/prompt-context";
@@ -810,6 +811,22 @@ async function saveFinalMessage(input: {
   return (data?.id as string | undefined) ?? null;
 }
 
+/**
+ * OpenRouter refused the account's own key at its cap (MIN-761): the turn ends
+ * the way the pre-flight ends it, never on the provider's error.
+ */
+async function providerCapExhausted(turn: NumoTurn): Promise<NumoUsageExhaustedError> {
+  const usage = await getUserUsage(turn.user_id).catch(() => null);
+  return new NumoUsageExhaustedError({
+    cause: "account",
+    percent: 100,
+    resetsAt: usage?.period.end ?? null,
+    nextPlanId: usage ? nextBillingPlanId(usage.billing.plan.id) : null,
+    byok: false,
+    routineId: turn.intent.routineId ?? null,
+  });
+}
+
 async function ensureNumoOperationBudget(
   turn: NumoTurn,
   runtime: ResolvedAiRuntime,
@@ -1177,7 +1194,10 @@ async function executeClaimedNumoTurn(input: {
     await emitter.flush();
     emitter.close();
     return { status: turn.status, turn };
-  } catch (error) {
+  } catch (caught) {
+    const error = isPlanLimitError(caught) && caught.code === "usage_budget_exceeded"
+      ? await providerCapExhausted(claimed)
+      : caught;
     if (error instanceof NumoUsageExhaustedError) {
       const messageId = await saveFinalMessage({
         service,

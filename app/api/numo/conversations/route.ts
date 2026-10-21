@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
         userId: auth.user.id,
         model: body.model,
         reasoningLevel: body.reasoningLevel,
+        catalogOnly: true,
       });
     } catch (error) {
       if (isPlanLimitError(error)) return planLimitResponse(error);

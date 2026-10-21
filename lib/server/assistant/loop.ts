@@ -17,6 +17,7 @@ import {
 import type { AssistantToolDef } from "./tools";
 import { redactDeep, SecretRedactor } from "@/lib/server/agent/redact";
 import { fetchAiChat, type ResolvedAiRuntime } from "@/lib/server/ai-runtime";
+import { managedAiKeyMode } from "@/lib/managed-services";
 import {
   getCachedOpenRouterModelInfo,
   getOpenRouterModelInfo,
@@ -320,6 +321,12 @@ export async function processChat(
   emitter: SafeEmitter,
   context: ProcessChatContext
 ): Promise<ProcessChatResult> {
+  // Numo turns always pass their resolved runtime. The shared-key default only
+  // serves a shared-key deployment: on Minddy Cloud, every billed call pays
+  // with its account's own key (MIN-761).
+  if (!context.aiRuntime && managedAiKeyMode() === "per_user") {
+    throw new Error("A Numo turn needs its resolved AI runtime on Minddy Cloud");
+  }
   const aiRuntime: ResolvedAiRuntime = context.aiRuntime ?? {
     apiKey: process.env.OPENROUTER_API_KEY ?? "",
     mode: "platform",

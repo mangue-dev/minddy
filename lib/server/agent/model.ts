@@ -27,7 +27,9 @@ import type { ModelCatalogCapability } from "@/lib/model-catalog-capability";
  *
  * ENDPOINT — the BYOK credential assigned to the requested model capability,
  * if present (unlimited use, at own expense), otherwise the OpenRouter platform key
- * OPENROUTER_API_KEY (capped monthly, see quota.ts).
+ * OPENROUTER_API_KEY. That endpoint only lists models: billed calls resolve
+ * their key through `resolveAiRuntime`, which on Minddy Cloud uses the
+ * account's own capped key (MIN-761).
  */
 
 // ── Endpoint (provider + base URL + key) ─────────────────────────────────────
@@ -314,6 +316,7 @@ export interface ResolvedAgentEndpoint {
   baseUrl: string;
 }
 
+/** Read-only catalog access: listing models spends no credit (MIN-761). */
 function resolvePlatformAgentEndpoint(): ResolvedAgentEndpoint {
   if (!isManagedAiEnabled()) throw new ManagedAgentServiceUnavailableError();
   const platform = process.env.OPENROUTER_API_KEY;

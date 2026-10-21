@@ -144,13 +144,25 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
     ],
     ready: "Managed Stripe billing is enabled.",
   });
-  const managedAi = cloudOptIn(env, edition, {
+  const sharedAi = cloudOptIn(env, edition, {
     id: "managedAi",
     requirement: "replaceable",
     flag: "MINDDY_MANAGED_AI",
     keys: ["OPENROUTER_API_KEY"],
     ready: "Managed OpenRouter quota is enabled; BYOK remains an alternative.",
   });
+  // Billed plans pay with per-account OpenRouter keys (MIN-761), which the
+  // management key issues; without it, billed AI calls are refused.
+  const managedAi = sharedAi.state === "ready" && billing.state === "ready" &&
+    !present(env, "OPENROUTER_MANAGEMENT_KEY") && !present(env, "OPENROUTER_PROVISIONING_KEY")
+    ? status({
+        id: "managedAi",
+        requirement: "replaceable",
+        state: "incomplete",
+        missing: ["OPENROUTER_MANAGEMENT_KEY"],
+        diagnostic: "Configuration incomplete; missing: OPENROUTER_MANAGEMENT_KEY (per-account keys for billed plans).",
+      })
+    : sharedAi;
 
   const clientAnalytics = present(env, "MINDDY_PUBLIC_POSTHOG_KEY") &&
     present(env, "MINDDY_PUBLIC_POSTHOG_HOST");

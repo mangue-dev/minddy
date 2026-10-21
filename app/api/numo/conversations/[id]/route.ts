@@ -49,6 +49,7 @@ export async function PATCH(request: NextRequest, { params }: Context) {
         reasoningLevel: Object.hasOwn(patch, "reasoningLevel")
           ? patch.reasoningLevel
           : config.reasoningLevel,
+        catalogOnly: true,
       });
     } catch (error) {
       if (isPlanLimitError(error)) return planLimitResponse(error);
