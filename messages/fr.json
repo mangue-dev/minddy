@@ -2246,6 +2246,7 @@
       "general": "Général",
       "create": "Création",
       "card": "Ticket (au survol d'une carte ou du panneau)",
+      "objective": "Objectif (sa page ou le formulaire de création)",
       "selection": "Sélection de tickets"
     },
     "shortcuts": {
@@ -2292,6 +2293,9 @@
       "dueDate": "Changer l'échéance",
       "objective": "Changer l'objectif",
       "relation": "Ajouter une relation",
+      "objectiveLead": "Changer le responsable",
+      "objectiveTargetDate": "Changer la date cible",
+      "objectiveColor": "Changer la couleur",
       "askNumo": "Demander à Numo (carte ou sélection)",
       "copyPrompt": "Copier le prompt",
       "selectionCopyPrompt": "Copier le prompt combiné de la sélection",

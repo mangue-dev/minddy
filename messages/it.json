@@ -2246,6 +2246,7 @@
       "general": "Generalità",
       "create": "Crea",
       "card": "Emissione (affermazione di una carta o del pannello)",
+      "objective": "Obiettivo (la sua pagina o il modulo di nuovo obiettivo)",
       "selection": "Selezione di ticket"
     },
     "shortcuts": {
@@ -2292,6 +2293,9 @@
       "dueDate": "Modifica della data di scadenza",
       "objective": "Obiettivo di cambiamento",
       "relation": "Aggiungi una relazione",
+      "objectiveLead": "Modifica il responsabile",
+      "objectiveTargetDate": "Modifica la data limite",
+      "objectiveColor": "Modifica il colore",
       "askNumo": "Chieda a Numo (carta o selezione)",
       "copyPrompt": "Copia come prompt",
       "selectionCopyPrompt": "Copia il prompt combinato della selezione",

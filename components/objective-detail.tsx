@@ -78,6 +78,26 @@ import type {
   ObjectiveUpdateInput,
 } from "@/lib/types";
 import { AppTooltip } from "@/components/ui/app-tooltip";
+import {
+  OBJECTIVE_KEY_FOR_FIELD,
+  useObjectiveFieldShortcuts,
+  type ObjectiveShortcutField,
+} from "@/components/objective-field-shortcuts";
+
+/** Controlled open state + key badge, driven by the field shortcuts. */
+type PickerControl = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  shortcutHint: string;
+};
+
+/** The objective page's own field keys; R lives in the relations section. */
+const PAGE_SHORTCUT_FIELDS: readonly ObjectiveShortcutField[] = [
+  "status",
+  "lead",
+  "targetDate",
+  "color",
+];
 
 // Bare (borderless) value-style trigger — matches the issue panel's property rows.
 const TRIGGER =
@@ -87,10 +107,11 @@ const TRIGGER =
 function ObjectiveStatusValue({
   value,
   onChange,
+  ...control
 }: {
   value: ObjectiveStatus;
   onChange: (v: ObjectiveStatus) => void;
-}) {
+} & PickerControl) {
   const t = useTranslations("Objectives");
   const tStatus = useTranslations("ObjectiveStatus");
   const meta = OBJECTIVE_STATUS_MAP[value];
@@ -108,6 +129,7 @@ function ObjectiveStatusValue({
       options={options}
       align="end"
       tooltip={t("statusFieldLabel")}
+      {...control}
       trigger={
         <button type="button" aria-label={t("statusFieldLabel")} className={TRIGGER}>
           <ObjectiveStatusIndicator status={meta.value} className="size-4" />
@@ -122,34 +144,38 @@ function ObjectiveStatusValue({
 function ObjectiveColorValue({
   value,
   onChange,
+  open,
+  onOpenChange: setOpen,
+  shortcutHint,
 }: {
   value: string | null;
   onChange: (v: string | null) => void;
-}) {
+} & PickerControl) {
   const t = useTranslations("Objectives");
   const tColors = useTranslations("Categories.colors");
   const tCommon = useTranslations("Common");
-  const [open, setOpen] = useState(false);
   const pick = (c: string | null) => {
     onChange(c);
     setOpen(false);
   };
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button type="button" aria-label={t("colorFieldLabel")} className={TRIGGER}>
-          <span
-            className={cn(
-              "flex size-[18px] shrink-0 items-center justify-center rounded-full",
-              value === null && "border border-dashed border-muted-foreground/60"
-            )}
-            style={value ? { backgroundColor: value } : undefined}
-          />
-          <span className="truncate text-muted-foreground">
-            {value ? t("colorFieldLabel") : tCommon("none")}
-          </span>
-        </button>
-      </PopoverTrigger>
+      <AppTooltip label={t("colorFieldLabel")} shortcut={[shortcutHint]}>
+        <PopoverTrigger asChild>
+          <button type="button" aria-label={t("colorFieldLabel")} className={TRIGGER}>
+            <span
+              className={cn(
+                "flex size-[18px] shrink-0 items-center justify-center rounded-full",
+                value === null && "border border-dashed border-muted-foreground/60"
+              )}
+              style={value ? { backgroundColor: value } : undefined}
+            />
+            <span className="truncate text-muted-foreground">
+              {value ? t("colorFieldLabel") : tCommon("none")}
+            </span>
+          </button>
+        </PopoverTrigger>
+      </AppTooltip>
       <PopoverContent align="end" className="w-auto p-2">
         <div className="flex flex-wrap items-center gap-1.5">
           <AppTooltip label={t("noColor")}>
@@ -236,6 +262,19 @@ export function ObjectiveDetail({
   // Project readers (MIN-693) read the objective; comments follow their option.
   const { canWrite, canComment } = useProjectCapabilities(projectId);
   const readOnly = !canWrite;
+  // Field shortcuts (MIN-757): S/A/D like an issue's fields, C for the color.
+  // Page-wide, as R for relations: the page shows a single objective.
+  const [openPicker, setOpenPicker] = useState<ObjectiveShortcutField | null>(null);
+  const pickerControl = (field: ObjectiveShortcutField): PickerControl => ({
+    open: openPicker === field,
+    onOpenChange: (o) => setOpenPicker(o ? field : null),
+    shortcutHint: OBJECTIVE_KEY_FOR_FIELD[field],
+  });
+  useObjectiveFieldShortcuts({
+    enabled: canWrite,
+    fields: PAGE_SHORTCUT_FIELDS,
+    onField: setOpenPicker,
+  });
   const [name, setName] = useState(objective.name);
   const nameEdited = useRef(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -616,6 +655,7 @@ export function ObjectiveDetail({
               <ObjectiveStatusValue
                 value={objective.status}
                 onChange={(status) => void patch({ status })}
+                {...pickerControl("status")}
               />
             </PropertyRow>
             <PropertyRow label={t("leadFieldLabel")}>
@@ -623,18 +663,21 @@ export function ObjectiveDetail({
                 value={objective.lead_user_id}
                 members={members}
                 onChange={(lead_user_id) => void patch({ lead_user_id })}
+                {...pickerControl("lead")}
               />
             </PropertyRow>
             <PropertyRow label={t("targetDatePlaceholder")}>
               <DueDateValue
                 value={objective.target_date}
                 onChange={(target_date) => void patch({ target_date })}
+                {...pickerControl("targetDate")}
               />
             </PropertyRow>
             <PropertyRow label={t("colorFieldLabel")}>
               <ObjectiveColorValue
                 value={objective.color}
                 onChange={(color) => void patch({ color })}
+                {...pickerControl("color")}
               />
             </PropertyRow>
             </fieldset>

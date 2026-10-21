@@ -2246,6 +2246,7 @@
       "general": "Geral",
       "create": "Criar",
       "card": "Problema (passar o mouse sobre um cartão ou painel)",
+      "objective": "Objetivo (sua página ou o formulário de novo objetivo)",
       "selection": "Seleção de problemas"
     },
     "shortcuts": {
@@ -2292,6 +2293,9 @@
       "dueDate": "Alterar data de vencimento",
       "objective": "Alterar objetivo",
       "relation": "Adicionar uma relação",
+      "objectiveLead": "Alterar responsável",
+      "objectiveTargetDate": "Alterar data prevista",
+      "objectiveColor": "Alterar cor",
       "askNumo": "Perguntar a Numo (cartão ou seleção)",
       "copyPrompt": "Copiar como prompt",
       "selectionCopyPrompt": "Copiar o prompt combinado da seleção",

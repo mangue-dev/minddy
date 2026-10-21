@@ -2246,6 +2246,7 @@
       "general": "General",
       "create": "Crear",
       "card": "Incidencia (al pasar el cursor por una tarjeta o por el panel)",
+      "objective": "Objetivo (su página o el formulario de nuevo objetivo)",
       "selection": "Selección de incidencias"
     },
     "shortcuts": {
@@ -2292,6 +2293,9 @@
       "dueDate": "Cambiar la fecha límite",
       "objective": "Cambiar el objetivo",
       "relation": "Añadir una relación",
+      "objectiveLead": "Cambiar el responsable",
+      "objectiveTargetDate": "Cambiar la fecha objetivo",
+      "objectiveColor": "Cambiar el color",
       "askNumo": "Preguntar a Numo (tarjeta o selección)",
       "copyPrompt": "Copiar como prompt",
       "selectionCopyPrompt": "Copiar el prompt combinado de la selección",
