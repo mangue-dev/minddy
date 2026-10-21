@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 28,
-  "sourceRevision": 28,
+  "revision": 29,
+  "sourceRevision": 29,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-21",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review)",
+    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -111,14 +111,16 @@
       "components/issue-field-shortcuts.tsx",
       "components/creation-relations.tsx",
       "lib/keyboard/shortcuts.ts",
-      "lib/server/assistant/prompt.ts"
+      "lib/server/assistant/prompt.ts",
+      "components/drafts-tray.tsx",
+      "lib/use-all-drafts.ts"
     ]
   },
   "review": {
-    "revision": 28,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 8 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 29,
+    "fact": "agent:/root/min753 (drafts paragraph checked against components/drafts-tray.tsx, lib/use-all-drafts.ts, lib/drafts.ts and the creation dialogs; rest of the article unchanged since the 0.20.0 release review; no figure changed)",
+    "language": "agent:/root/min753 (fr translation of the drafts paragraph with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-21"
   },
   "related": [
     "feedback",
@@ -163,7 +165,7 @@
       "src": "/documentation/fr/new-issue.png",
       "alt": "Brouillon de ticket non envoyé dans le projet Aurora, avec titre, description, propriétés manuelles et le bouton Créer AUR-19.",
       "caption": "Décrivez le résultat attendu, puis choisissez les propriétés utiles avant de créer le ticket.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -179,7 +181,7 @@
       "src": "/documentation/fr/triage-incoming.png",
       "alt": "Ticket de démonstration DOC-11 reçu dans le triage, avec son signalement, ses propriétés et les commandes Doublon, Refuser et Accepter.",
       "caption": "Lisez le signalement reçu avant de l’accepter, de le refuser ou de le relier à un doublon.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -195,7 +197,7 @@
       "src": "/documentation/fr/issue-statuses.png",
       "alt": "Les huit statuts du ticket dans le sélecteur, avec Backlog sélectionné.",
       "caption": "La coche indique le statut actuel. Choisissez celui qui reflète l’état réel du travail.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -211,7 +213,7 @@
       "src": "/documentation/fr/work-resources.png",
       "alt": "Dialogue d’ajout de lien avec une adresse de contact d’exemple.",
       "caption": "Vérifiez la destination avant d’ajouter la ressource. Ce lien d’exemple n’a pas été envoyé.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -227,7 +229,7 @@
       "src": "/documentation/fr/work-dependencies.png",
       "alt": "Recherche d’un préalable par identifiant de ticket.",
       "caption": "Choisissez le sens de la relation avant sa destination. Aucune relation n’a été envoyée dans ce sélecteur.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -243,7 +245,7 @@
       "src": "/documentation/fr/work-sub-issues.png",
       "alt": "Champ de création d’un sous-ticket dans un parent de démonstration.",
       "caption": "Ce champ crée un enfant sous le parent ; chaque enfant conserve son état et sa discussion.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -259,7 +261,7 @@
       "src": "/documentation/fr/work-implementation-plan.png",
       "alt": "Plan de démonstration avec deux tâches de travail terminées sur six.",
       "caption": "Le plan enregistré distingue les étapes terminées, actives et en attente. Sa progression ne prouve pas l’exécution de la tâche de code fictive.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -275,7 +277,7 @@
       "src": "/documentation/fr/issue-date-recurrence.png",
       "alt": "Sélecteur d’échéance en mode récurrent avec aperçu hebdomadaire le dimanche et heure optionnelle.",
       "caption": "Le mode récurrent prévisualise la cadence hebdomadaire. Confirmez la première échéance avant de créer le ticket.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -291,7 +293,7 @@
       "src": "/documentation/fr/import-issues-preview-workflow.png",
       "alt": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées.",
       "caption": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées. Aucun import n’a été lancé ; la préparation IA optionnelle a été bloquée pour la capture.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -308,7 +310,7 @@
       "src": "/documentation/fr/file-preview.png",
       "alt": "Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger, Renommer et Retirer.",
       "caption": "Le lecteur commun place Fermer sous l’aperçu. Le menu Actions du fichier propose Télécharger et, si les droits le permettent, Renommer et Retirer.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -347,7 +349,7 @@ Définissez les propriétés utiles avant de confirmer : état, priorité, effor
 
 Confirmez la création et ouvrez le ticket. Vérifiez son identifiant et son projet. Modifiez ses propriétés à mesure que la tâche se précise. La description explique le travail ; le plan d’implémentation est séparé, dans l’onglet Plan.
 
-Le bouton de suppression d’un brouillon enregistré ouvre une confirmation. Annuler conserve le brouillon ; confirmer supprime ce brouillon enregistré. La même confirmation existe lors de la création d’un objectif.
+Fermer le formulaire alors qu’il contient du texte demande s’il faut le garder : **Enregistrer** le conserve comme brouillon, **Abandonner** l’efface, **Revenir** rouvre le formulaire. Les brouillons de tickets et d’objectifs enregistrés se retrouvent dans **Brouillons**, en bas à droite de la fenêtre, entre Numo et le carnet de tâches ; le bouton n’apparaît que si vous avez un brouillon et en indique le nombre. Sa liste donne le titre et la première ligne de description de chaque brouillon. Choisissez un brouillon pour le rouvrir dans son formulaire de création et le terminer ; créer le ticket supprime le brouillon. Le bouton de suppression à côté d’un brouillon demande d’abord une confirmation, et la suppression est irréversible. Sur un téléphone, ouvrez la palette de commandes et cherchez le titre du brouillon. Les brouillons sont conservés sur cet appareil pendant 30 jours, dix de chaque type au plus ; la liste ne montre que ceux des projets où vous pouvez encore créer des tickets.
 
 
 ![Brouillon de ticket non envoyé dans le projet Aurora, avec titre, description, propriétés manuelles et le bouton Créer AUR-19.](/documentation/fr/new-issue.png)

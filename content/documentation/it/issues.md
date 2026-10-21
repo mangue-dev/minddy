@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 28,
-  "sourceRevision": 28,
+  "revision": 29,
+  "sourceRevision": 29,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-21",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review)",
+    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -111,14 +111,16 @@
       "components/issue-field-shortcuts.tsx",
       "components/creation-relations.tsx",
       "lib/keyboard/shortcuts.ts",
-      "lib/server/assistant/prompt.ts"
+      "lib/server/assistant/prompt.ts",
+      "components/drafts-tray.tsx",
+      "lib/use-all-drafts.ts"
     ]
   },
   "review": {
-    "revision": 28,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 8 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 29,
+    "fact": "agent:/root/min753 (drafts paragraph checked against components/drafts-tray.tsx, lib/use-all-drafts.ts, lib/drafts.ts and the creation dialogs; rest of the article unchanged since the 0.20.0 release review; no figure changed)",
+    "language": "agent:/root/min753 (it translation of the drafts paragraph with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-21"
   },
   "related": [
     "feedback",
@@ -163,7 +165,7 @@
       "src": "/documentation/it/new-issue.png",
       "alt": "Bozza non inviata nel progetto Aurora con titolo, descrizione, proprietà selezionabili manualmente e il pulsante Crea AUR-19.",
       "caption": "Descrivi il risultato atteso e scegli le proprietà utili prima di creare il ticket.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -179,7 +181,7 @@
       "src": "/documentation/it/triage-incoming.png",
       "alt": "Ticket dimostrativo DOC-11 in arrivo con segnalazione, proprietà e comandi per duplicato, Rifiuta e Accetta.",
       "caption": "Leggi la segnalazione ricevuta prima di accettarla, rifiutarla o collegare un duplicato.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -195,7 +197,7 @@
       "src": "/documentation/it/issue-statuses.png",
       "alt": "Gli otto stati del ticket nel selettore, con Backlog selezionato.",
       "caption": "La spunta indica lo stato attuale. Scegli quello che rispecchia lo stato effettivo del lavoro.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -211,7 +213,7 @@
       "src": "/documentation/it/work-resources.png",
       "alt": "Finestra di aggiunta di un link con un indirizzo di contatto d’esempio.",
       "caption": "Controlla la destinazione prima di aggiungere la risorsa. Questo link d’esempio non è stato inviato.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -227,7 +229,7 @@
       "src": "/documentation/it/work-dependencies.png",
       "alt": "Ricerca di un ticket bloccante tramite identificativo.",
       "caption": "Scegli la direzione della relazione prima della destinazione. Il selettore è mostrato senza inviare la relazione.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -243,7 +245,7 @@
       "src": "/documentation/it/work-sub-issues.png",
       "alt": "Campo per creare un sotto-ticket in un ticket principale dimostrativo.",
       "caption": "Il campo crea un figlio di questo ticket; ogni figlio conserva stato e discussione propri.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -259,7 +261,7 @@
       "src": "/documentation/it/work-implementation-plan.png",
       "alt": "Piano dimostrativo con due attività di lavoro completate su sei.",
       "caption": "Il piano salvato distingue passaggi completati, attivi e in attesa. L’avanzamento non dimostra l’esecuzione dell’attività di codice fittizia.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -275,7 +277,7 @@
       "src": "/documentation/it/issue-date-recurrence.png",
       "alt": "Selettore di scadenza ricorrente con anteprima settimanale la domenica e orario facoltativo.",
       "caption": "La modalità ricorrente mostra la cadenza settimanale. Conferma la prima scadenza prima di creare il ticket.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -291,7 +293,7 @@
       "src": "/documentation/it/import-issues-preview-workflow.png",
       "alt": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate.",
       "caption": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate. L’importazione non è stata inviata; la pianificazione IA facoltativa è stata bloccata per la cattura.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -308,7 +310,7 @@
       "src": "/documentation/it/file-preview.png",
       "alt": "Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica, Rinomina e Rimuovi.",
       "caption": "Il visualizzatore condiviso colloca Chiudi sotto l’anteprima. Il menu Azioni del file offre Scarica e, con i permessi necessari, Rinomina e Rimuovi.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -347,7 +349,7 @@ Imposta le proprietà utili prima di confermare: stato, priorità, impegno, asse
 
 Conferma la creazione e apri il nuovo ticket. Controlla identificativo e progetto. Riapri i selettori delle proprietà per cambiare i valori quando l’attività diventa più chiara. La descrizione spiega il lavoro; il piano di implementazione si mantiene separatamente nella scheda del piano.
 
-Il comando per eliminare una bozza salvata apre una conferma. Annullare conserva la bozza; confermare elimina quella bozza salvata. La stessa conferma è disponibile quando si crea un obiettivo.
+Chiudendo il modulo quando contiene testo, ti viene chiesto se conservarlo: **Salva** lo tiene come bozza, **Scartare** lo elimina, **Indietro** torna al modulo. Le bozze salvate di ticket e obiettivi si raccolgono in **Bozze**, in basso a destra nella finestra, tra Numo e il taccuino delle attività; il pulsante compare solo quando hai una bozza e ne indica il numero. Il suo elenco mostra il titolo e la prima riga della descrizione di ogni bozza. Scegli una bozza per riaprirla nel suo modulo di creazione e completarla; creare il ticket rimuove la bozza. Il pulsante di eliminazione accanto a una bozza chiede prima una conferma, e l’eliminazione non può essere annullata. Su un telefono, apri la palette dei comandi e cerca il titolo della bozza. Le bozze restano su questo dispositivo per 30 giorni, al massimo dieci per tipo; l’elenco mostra solo quelle dei progetti in cui puoi ancora creare ticket.
 
 
 ![Bozza non inviata nel progetto Aurora con titolo, descrizione, proprietà selezionabili manualmente e il pulsante Crea AUR-19.](/documentation/it/new-issue.png)

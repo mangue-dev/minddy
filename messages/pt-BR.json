@@ -2427,11 +2427,10 @@
     "noProject": "Nenhum projeto encontrado."
   },
   "Drafts": {
-    "recent": "Rascunhos recentes",
     "untitled": "Sem título",
     "delete": "Excluir rascunho",
     "closeTitle": "Salvar este rascunho?",
-    "closeDescription": "Você o encontrará em seus rascunhos recentes.",
+    "closeDescription": "Você o encontrará em seus rascunhos.",
     "closeConfirm": "Salvar",
     "closeDiscard": "Descartar",
     "keepEditing": "Voltar",
@@ -2440,8 +2439,16 @@
     "deleteFailed": "Não foi possível excluir o rascunho. Tente novamente.",
     "recoverLegacy": "Recuperar rascunhos antigos neste dispositivo",
     "legacyWarning": "Recupere apenas rascunhos que você criou neste dispositivo.",
-    "deleteTitle": "Excluir este rascunho?",
-    "deleteDescription": "Este rascunho será excluído permanentemente."
+    "deleteTitle": "Excluir “{name}”?",
+    "deleteDescription": "Este rascunho será excluído permanentemente. Isso não pode ser desfeito.",
+    "tray": "Rascunhos",
+    "trayAria": "{count, plural, one {# rascunho} other {# rascunhos}}",
+    "trayTooltip": "Problemas e objetivos inacabados",
+    "resumeAria": "Retomar “{name}”",
+    "noDescription": "Sem descrição",
+    "deleteAria": "Excluir o rascunho “{name}”",
+    "resumeIssue": "Retomar o rascunho de problema “{name}”",
+    "resumeObjective": "Retomar o rascunho de objetivo “{name}”"
   },
   "Pages": {
     "filePreview": "Visualizar arquivo",

@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 28,
-  "sourceRevision": 28,
+  "revision": 29,
+  "sourceRevision": 29,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-21",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review)",
+    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -111,14 +111,16 @@
       "components/issue-field-shortcuts.tsx",
       "components/creation-relations.tsx",
       "lib/keyboard/shortcuts.ts",
-      "lib/server/assistant/prompt.ts"
+      "lib/server/assistant/prompt.ts",
+      "components/drafts-tray.tsx",
+      "lib/use-all-drafts.ts"
     ]
   },
   "review": {
-    "revision": 28,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 8 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 29,
+    "fact": "agent:/root/min753 (drafts paragraph checked against components/drafts-tray.tsx, lib/use-all-drafts.ts, lib/drafts.ts and the creation dialogs; rest of the article unchanged since the 0.20.0 release review; no figure changed)",
+    "language": "agent:/root/min753 (pt-BR translation of the drafts paragraph with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-21"
   },
   "related": [
     "feedback",
@@ -164,7 +166,7 @@
       "src": "/documentation/pt-BR/new-issue.png",
       "alt": "Rascunho não enviado no projeto Aurora com título, descrição, propriedades que podem ser escolhidas manualmente e o botão Criar AUR-19.",
       "caption": "Descreva o resultado esperado e escolha as propriedades úteis antes de criar o ticket.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -180,7 +182,7 @@
       "src": "/documentation/pt-BR/triage-incoming.png",
       "alt": "Problema recebido de demonstração DOC-11 com relato, propriedades e controles de duplicado, Recusar e Aceitar.",
       "caption": "Leia o relato recebido antes de aceitar, recusar ou vincular um duplicado.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -196,7 +198,7 @@
       "src": "/documentation/pt-BR/issue-statuses.png",
       "alt": "Os oito estados do ticket no seletor, com Backlog selecionado.",
       "caption": "A marca indica o estado atual. Escolha o que representa a situação real do trabalho.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -212,7 +214,7 @@
       "src": "/documentation/pt-BR/work-resources.png",
       "alt": "Janela para adicionar um link com um endereço de contato de exemplo.",
       "caption": "Confira o destino antes de adicionar o recurso. Este link de exemplo não foi enviado.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -228,7 +230,7 @@
       "src": "/documentation/pt-BR/work-dependencies.png",
       "alt": "Busca de um ticket bloqueador pelo identificador.",
       "caption": "Escolha o sentido da relação antes do destino. O seletor é mostrado sem enviar a relação.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -244,7 +246,7 @@
       "src": "/documentation/pt-BR/work-sub-issues.png",
       "alt": "Campo de criação de um subticket em um ticket pai de demonstração.",
       "caption": "O campo cria um filho deste ticket; cada filho mantém seu próprio status e discussão.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -260,7 +262,7 @@
       "src": "/documentation/pt-BR/work-implementation-plan.png",
       "alt": "Plano de demonstração com duas tarefas de trabalho concluídas de seis.",
       "caption": "O plano salvo distingue etapas concluídas, ativas e pendentes. O progresso não comprova a execução da tarefa fictícia de código.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -276,7 +278,7 @@
       "src": "/documentation/pt-BR/issue-date-recurrence.png",
       "alt": "Seletor de prazo no modo recorrente com prévia semanal aos domingos e horário opcional.",
       "caption": "O modo recorrente mostra a frequência semanal. Confirme o primeiro prazo antes de criar o ticket.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -292,7 +294,7 @@
       "src": "/documentation/pt-BR/import-issues-preview-workflow.png",
       "alt": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas.",
       "caption": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas. A importação não foi enviada; o planejamento opcional com IA foi bloqueado para a captura.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -309,7 +311,7 @@
       "src": "/documentation/pt-BR/file-preview.png",
       "alt": "Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar, Renomear e Remover.",
       "caption": "O visualizador compartilhado mantém Fechar abaixo da prévia. O menu Ações do arquivo oferece Baixar e, quando permitido, Renomear e Remover.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -348,7 +350,7 @@ Defina as propriedades úteis antes de confirmar: estado, prioridade, esforço, 
 
 Confirme a criação e abra a nova tarefa. Confira seu identificador e projeto. Abra novamente os seletores de propriedades para mudar valores conforme a tarefa ficar mais clara. A descrição explica o trabalho; o plano de implementação é mantido separadamente na aba do plano.
 
-O controle para excluir um rascunho salvo abre uma confirmação. Cancelar mantém o rascunho; confirmar remove esse rascunho salvo. A mesma confirmação está disponível ao criar um objetivo.
+Ao fechar o formulário com texto, você escolhe se quer mantê-lo: **Salvar** guarda como rascunho, **Descartar** apaga e **Voltar** retorna ao formulário. Os rascunhos salvos de problemas e objetivos ficam em **Rascunhos**, no canto inferior direito da janela, entre Numo e o caderno de tarefas; o botão só aparece enquanto você tem um rascunho e mostra quantos são. A lista mostra o título e a primeira linha da descrição de cada rascunho. Escolha um rascunho para reabri-lo no formulário de criação e terminá-lo; criar o problema remove o rascunho. O botão de excluir ao lado de um rascunho pede confirmação antes, e a exclusão não pode ser desfeita. Em um telefone, abra a paleta de comandos e pesquise o título do rascunho. Os rascunhos ficam neste dispositivo por 30 dias, no máximo dez de cada tipo; a lista mostra apenas os de projetos em que você ainda pode criar problemas.
 
 
 ![Rascunho não enviado no projeto Aurora com título, descrição, propriedades que podem ser escolhidas manualmente e o botão Criar AUR-19.](/documentation/pt-BR/new-issue.png)

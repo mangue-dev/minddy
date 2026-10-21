@@ -2427,11 +2427,10 @@
     "noProject": "No se encontró ningún proyecto."
   },
   "Drafts": {
-    "recent": "Borradores recientes",
     "untitled": "Sin título",
     "delete": "Eliminar borrador",
     "closeTitle": "¿Guardar este borrador?",
-    "closeDescription": "Lo encontrarás en tus recientes borradores.",
+    "closeDescription": "Lo encontrarás en tus borradores.",
     "closeConfirm": "Guardar",
     "closeDiscard": "Desechar",
     "keepEditing": "Volver",
@@ -2440,8 +2439,16 @@
     "deleteFailed": "No se pudo eliminar el borrador. Inténtalo de nuevo.",
     "recoverLegacy": "Recuperar borradores antiguos en este dispositivo",
     "legacyWarning": "Recupera solo los borradores que creaste en este dispositivo.",
-    "deleteTitle": "¿Eliminar este borrador?",
-    "deleteDescription": "Este borrador se eliminará permanentemente."
+    "deleteTitle": "¿Eliminar «{name}»?",
+    "deleteDescription": "Este borrador se eliminará permanentemente. No se puede deshacer.",
+    "tray": "Borradores",
+    "trayAria": "{count, plural, one {# borrador} other {# borradores}}",
+    "trayTooltip": "Incidencias y objetivos sin terminar",
+    "resumeAria": "Reanudar «{name}»",
+    "noDescription": "Sin descripción",
+    "deleteAria": "Eliminar el borrador «{name}»",
+    "resumeIssue": "Reanudar el borrador de incidencia «{name}»",
+    "resumeObjective": "Reanudar el borrador de objetivo «{name}»"
   },
   "Pages": {
     "filePreview": "Ver archivo",
@@ -3133,7 +3140,7 @@
     "wizardSeedFileReady": "Importado una vez que se crea el proyecto.",
     "wizardSeedFileLost": "Un archivo no puede ser guardado en un borrador; suéltalo de nuevo.",
     "draftBadge": "Proyecto",
-    "draftResume": "Reanudar el{name}Proyecto",
+    "draftResume": "Reanudar el borrador «{name}»",
     "draftDelete": "Suprimir el proyecto",
     "draftDeleteTitle": "¿Eliminar el borrador «{name}»?",
     "draftDeleteDescription": "Todo lo introducido en el asistente de creación se elimina de forma permanente. No se puede deshacer.",

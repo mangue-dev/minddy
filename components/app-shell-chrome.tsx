@@ -35,6 +35,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useHiddenProjects, visibleNavigationProjects } from "@/lib/use-hidden-projects";
 import { useCreate } from "@/lib/create-context";
+import { useAllDrafts } from "@/lib/use-all-drafts";
 import { useScratchpad } from "@/lib/scratchpad-context";
 import { useNotifications } from "@/lib/use-notifications";
 import { useMyInvitations } from "@/lib/use-invitations-query";
@@ -268,6 +269,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const ti = useTranslations("Issue");
   const tk = useTranslations("Keyboard");
   const tScratch = useTranslations("Scratchpad");
+  const tDrafts = useTranslations("Drafts");
   const tRoutines = useTranslations("Routines");
   const tSettings = useTranslations("Settings");
   const tExport = useTranslations("Export");
@@ -291,6 +293,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     deleteProjectDraft,
   } = useProjects();
   const { openCreateIssue, openCreateObjective } = useCreate();
+  const { drafts: creationDrafts } = useAllDrafts();
   const { open: openScratchpad } = useScratchpad();
   const { unreadCount } = useNotifications();
   const {
@@ -682,6 +685,22 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         onSelect: () => openProjectDraft(d),
       });
     }
+    // Issue and objective drafts too (MIN-753): the bottom bar's drafts tray
+    // is hidden on a phone, where the palette is their only way back.
+    for (const d of creationDrafts) {
+      const draftProject = projectById.get(d.projectId);
+      const name = d.title.trim() || tDrafts("untitled");
+      createItems.push({
+        key: `resume-${d.kind}-draft-${d.id}`,
+        label: d.kind === "issue" ? tDrafts("resumeIssue", { name }) : tDrafts("resumeObjective", { name }),
+        icon: d.kind === "issue" ? TaskEdit01Icon : Target01Icon,
+        keywords: [...createKw, name, "brouillon", "draft", "reprendre", "resume"],
+        ...(draftProject ? { meta: projectChip(draftProject), metaText: draftProject.name, contextId: draftProject.id } : {}),
+        onSelect: () => d.kind === "issue"
+          ? openCreateIssue({ projectId: d.projectId, draftId: d.id })
+          : openCreateObjective({ projectId: d.projectId, draftId: d.id }),
+      });
+    }
     groups.push({ key: "create", heading: t("create"), items: createItems });
 
     // ── Go to (global) ────────────────────────────────────────────────
@@ -933,7 +952,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     }
 
     return groups;
-  }, [projects, projectById, projectDrafts, openProjectDraft, currentProject, createPageFromPalette, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, openAssistant, agentsAllowed, projectLimitReached, openExport, locale, t, ti, tk, tPages, tScratch, tSettings, tExport, tProjects, setCheatsheetOpen]);
+  }, [projects, projectById, projectDrafts, openProjectDraft, creationDrafts, tDrafts, currentProject, createPageFromPalette, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, openAssistant, agentsAllowed, projectLimitReached, openExport, locale, t, ti, tk, tPages, tScratch, tSettings, tExport, tProjects, setCheatsheetOpen]);
 
   // ── Settings: one line per CARD, not per tab ───────────────────────
   // A settings tab is a column of cards; “Cadence”, “Zone

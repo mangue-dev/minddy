@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 28,
-  "sourceRevision": 28,
+  "revision": 29,
+  "sourceRevision": 29,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-21",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review)",
+    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -111,14 +111,16 @@
       "components/issue-field-shortcuts.tsx",
       "components/creation-relations.tsx",
       "lib/keyboard/shortcuts.ts",
-      "lib/server/assistant/prompt.ts"
+      "lib/server/assistant/prompt.ts",
+      "components/drafts-tray.tsx",
+      "lib/use-all-drafts.ts"
     ]
   },
   "review": {
-    "revision": 28,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 8 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 29,
+    "fact": "agent:/root/min753 (drafts paragraph checked against components/drafts-tray.tsx, lib/use-all-drafts.ts, lib/drafts.ts and the creation dialogs; rest of the article unchanged since the 0.20.0 release review; no figure changed)",
+    "language": "agent:/root/min753 (de translation of the drafts paragraph with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-21"
   },
   "related": [
     "feedback",
@@ -163,7 +165,7 @@
       "src": "/documentation/de/new-issue.png",
       "alt": "Noch nicht abgesendeter Ticketentwurf im Projekt Aurora mit Titel, Beschreibung, manuell wählbaren Eigenschaften und der Schaltfläche AUR-19 erstellen.",
       "caption": "Beschreibe das erwartete Ergebnis und wähle vor der Erstellung die passenden Eigenschaften.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -179,7 +181,7 @@
       "src": "/documentation/de/triage-incoming.png",
       "alt": "Eingegangenes Demoproblem DOC-11 mit Bericht, Eigenschaften und Funktionen für Duplikat, Ablehnen und Akzeptieren.",
       "caption": "Lies den eingegangenen Bericht, bevor du ihn akzeptierst, ablehnst oder mit einem Duplikat verknüpfst.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -195,7 +197,7 @@
       "src": "/documentation/de/issue-statuses.png",
       "alt": "Die acht Ticketstatus im Auswahlmenü, mit ausgewähltem Backlog-Status.",
       "caption": "Das Häkchen zeigt den aktuellen Status. Wähle den Status, der dem tatsächlichen Arbeitsstand entspricht.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -211,7 +213,7 @@
       "src": "/documentation/de/work-resources.png",
       "alt": "Dialog zum Hinzufügen eines Links mit einer Beispiel-Kontaktadresse.",
       "caption": "Prüfe das Ziel, bevor du die Ressource hinzufügst. Dieser Beispiellink wurde nicht gesendet.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -227,7 +229,7 @@
       "src": "/documentation/de/work-dependencies.png",
       "alt": "Suche nach einem blockierenden Ticket anhand seiner Kennung.",
       "caption": "Wähle zuerst die Richtung der Beziehung und dann ihr Ziel. Hier wurde keine Beziehung gespeichert.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -243,7 +245,7 @@
       "src": "/documentation/de/work-sub-issues.png",
       "alt": "Eingabefeld für ein Unterticket in einem Demo-Elternticket.",
       "caption": "Das Feld erstellt ein Kind dieses Elterntickets; jedes Kind behält seinen eigenen Status und Diskussionsverlauf.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -259,7 +261,7 @@
       "src": "/documentation/de/work-implementation-plan.png",
       "alt": "Demo-Plan mit zwei von sechs abgeschlossenen Arbeitsschritten.",
       "caption": "Der gespeicherte Demo-Plan unterscheidet abgeschlossene, laufende und ausstehende Schritte. Der Fortschritt belegt nicht, dass die fiktive Codeaufgabe ausgeführt wurde.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -275,7 +277,7 @@
       "src": "/documentation/de/issue-date-recurrence.png",
       "alt": "Fälligkeitsauswahl im wiederkehrenden Modus mit Sonntagsvorschau und optionaler Uhrzeit.",
       "caption": "Der wiederkehrende Modus zeigt die wöchentliche Folge. Bestätige die erste Fälligkeit vor der Ticketerstellung.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -291,7 +293,7 @@
       "src": "/documentation/de/import-issues-preview-workflow.png",
       "alt": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen.",
       "caption": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen. Es wurde nichts importiert; die optionale KI-Planung war für die Aufnahme gesperrt.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -308,7 +310,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Umbenennen und Entfernen.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -347,7 +349,7 @@ Setze vor der Bestätigung die hilfreichen Eigenschaften: Status, Priorität, Au
 
 Bestätige die Erstellung und öffne das neue Problem. Prüfe Kennung und Projekt. Öffne die Eigenschaftsauswahl erneut, um Werte zu ändern, sobald die Aufgabe klarer wird. Die Beschreibung erklärt die Arbeit; ein Umsetzungsplan wird gesondert im Plan-Tab gepflegt.
 
-Das Löschen eines gespeicherten Entwurfs erfordert eine Bestätigung. Abbrechen behält den Entwurf; Bestätigen entfernt diesen gespeicherten Entwurf. Dieselbe Bestätigung gibt es beim Erstellen eines Ziels.
+Wenn Sie das Formular schließen, während es Text enthält, fragt minddy, ob er erhalten bleiben soll: **Speichern** behält ihn als Entwurf, **Verwerfen** löscht ihn, **Zurück** kehrt zum Formular zurück. Gespeicherte Entwürfe von Problemen und Zielen sammeln sich unter **Entwürfe**, unten rechts im Fenster zwischen Numo und dem Aufgabennotizbuch; die Schaltfläche erscheint nur, solange Sie einen Entwurf haben, und zeigt deren Anzahl. Ihre Liste zeigt Titel und erste Beschreibungszeile jedes Entwurfs. Wählen Sie einen Entwurf, um ihn in seinem Erstellungsformular wieder zu öffnen und fertigzustellen; das Erstellen des Problems entfernt den Entwurf. Die Löschschaltfläche neben einem Entwurf fragt zuerst nach einer Bestätigung, und das Löschen lässt sich nicht rückgängig machen. Auf einem Telefon öffnen Sie die Befehlspalette und suchen nach dem Titel des Entwurfs. Entwürfe bleiben 30 Tage auf diesem Gerät, höchstens zehn je Art; die Liste zeigt nur Entwürfe aus Projekten, in denen Sie noch Probleme erstellen können.
 
 
 ![Noch nicht abgesendeter Ticketentwurf im Projekt Aurora mit Titel, Beschreibung, manuell wählbaren Eigenschaften und der Schaltfläche AUR-19 erstellen.](/documentation/de/new-issue.png)

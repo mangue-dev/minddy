@@ -114,9 +114,11 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                                   </OnboardingProvider>
                                 </PrUnlinkConfirmationProvider>
                               </BulkActionsProvider>
+                              {/* Inside creation: its drafts tray reopens a
+                                  draft in the creation dialogs (MIN-753). */}
+                              <AssistantFab />
                             </CreateProvider>
                             <AssistantPanel />
-                            <AssistantFab />
                             <ScratchpadModal />
                             <DeferredKeyboardCheatsheet />
                             <AnalyticsProjectGroup />

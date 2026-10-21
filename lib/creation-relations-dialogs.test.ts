@@ -164,9 +164,6 @@ vi.mock("@/components/numo-icon", () => ({ NumoIcon: () => null }));
 vi.mock("@/components/agent-beam", () => ({ AgentBeamOverlay: () => null }));
 vi.mock("@/components/ai-elements/dictate-button", () => ({ DictateButton: ({ showLabel = false }: { showLabel?: boolean }) => React.createElement("button", { type: "button", "data-prominent-dictation": String(showLabel) }, "Dictate") }));
 vi.mock("@/components/send-shortcut", () => ({ SendShortcutTooltip: ({ children }: { children: React.ReactNode }) => children }));
-vi.mock("@/components/draft-recovery-row", () => ({ DraftRecoveryRow: ({ drafts, onRecover }: { drafts: { id: string }[]; onRecover: (id: string) => void }) =>
-  React.createElement("div", null, drafts.map((draft) => React.createElement("button", { key: draft.id, type: "button", onClick: () => onRecover(draft.id) }, "Recover draft"))),
-}));
 vi.mock("@/components/close-draft-dialog", () => ({ CloseDraftDialog: ({ open, onConfirm, onDiscard }: { open: boolean; onConfirm: () => void; onDiscard: () => void }) => open &&
   React.createElement("div", null, React.createElement("button", { onClick: onConfirm }, "Save draft"), React.createElement("button", { onClick: onDiscard }, "Discard draft")),
 }));
@@ -224,14 +221,17 @@ async function mountDialog(kind: "issue" | "objective", withProjectMenu = true) 
   const createOther = vi.fn().mockResolvedValue({ id: "created" });
   let open = true;
   let projects = [project, otherProject];
+  // The draft the drafts tray asks the dialog to restore (MIN-753).
+  let initialDraftId: string | null = null;
   const render = () => root.render(kind === "issue"
-    ? React.createElement(CreateIssueDialog, { open, onOpenChange, projectId: project.id, projects, members: [], categories: [], objectives: [], onCreate: create, onCreateInProject: createOther })
-    : React.createElement(ObjectiveDialog, { open, onOpenChange, projectId: project.id, projectKey: project.key, projects: withProjectMenu ? [project, otherProject] : [], members: [], onCreate: create, onCreateInProject: createOther, onUpdate: vi.fn() }));
+    ? React.createElement(CreateIssueDialog, { open, onOpenChange, projectId: project.id, projects, members: [], categories: [], objectives: [], onCreate: create, onCreateInProject: createOther, initialDraftId })
+    : React.createElement(ObjectiveDialog, { open, onOpenChange, projectId: project.id, projectKey: project.key, projects: withProjectMenu ? [project, otherProject] : [], members: [], onCreate: create, onCreateInProject: createOther, onUpdate: vi.fn(), initialDraftId }));
   const onOpenChange = (next: boolean) => { open = next; render(); };
   await act(render);
   return {
     create, createOther,
-    reopen: () => act(() => onOpenChange(true)),
+    close: () => onOpenChange(false),
+    reopen: (draftId: string | null = null) => act(() => { initialDraftId = draftId; onOpenChange(true); }),
     setProjects: (next: Project[]) => act(() => { projects = next; render(); }),
   };
 }
@@ -405,11 +405,11 @@ describe("creation relation controls", () => {
     await click("Close creation");
     await click("Save draft");
     expect(fixture.save).toHaveBeenCalledWith(expect.objectContaining({ relations: [expect.objectContaining({ target_id: objective.id })] }));
-    await dialog.reopen();
-    await click("Recover draft");
+    await dialog.reopen(fixture.drafts[0].id);
     expect(host.textContent).toContain("Target objective");
     await click("Close creation");
     await click("Discard draft");
+    expect(fixture.remove).toHaveBeenCalledWith(fixture.save.mock.calls[0][0].id);
     await dialog.reopen();
     expect(host.querySelector(`[aria-label="${en.Relations.related}: Target objective"]`)).toBeNull();
   });
@@ -421,9 +421,10 @@ describe("creation relation controls", () => {
     fixture.drafts = [kind === "issue"
       ? { ...base, title: "Draft", status: "todo", priority: "none", effort: null, assignee_id: null, objective_id: null, due_date: null, category_ids: [], resources: [] } as IssueDraft
       : { ...base, name: "Draft", status: "planned", lead_user_id: null, target_date: null, color: null } as ObjectiveDraft];
-    await mountDialog(kind);
+    const dialog = await mountDialog(kind);
     expect(fixture.editorDocuments.at(-1)).toBeNull();
-    await click("Recover draft");
+    await act(() => dialog.close());
+    await dialog.reopen("draft");
     expect(fixture.editorDocuments.at(-1)).toEqual(doc);
   });
 

@@ -2427,11 +2427,10 @@
     "noProject": "No project found."
   },
   "Drafts": {
-    "recent": "Recent drafts",
     "untitled": "Untitled",
     "delete": "Delete draft",
     "closeTitle": "Save this draft?",
-    "closeDescription": "You'll find it in your recent drafts.",
+    "closeDescription": "You'll find it in your drafts.",
     "closeConfirm": "Save",
     "closeDiscard": "Discard",
     "keepEditing": "Back",
@@ -2440,8 +2439,16 @@
     "deleteFailed": "Could not delete the draft. Try again.",
     "recoverLegacy": "Recover older drafts on this device",
     "legacyWarning": "Recover only drafts you created on this device.",
-    "deleteTitle": "Delete this draft?",
-    "deleteDescription": "This draft will be permanently deleted."
+    "deleteTitle": "Delete “{name}”?",
+    "deleteDescription": "This draft will be permanently deleted. This can't be undone.",
+    "tray": "Drafts",
+    "trayAria": "{count, plural, one {# draft} other {# drafts}}",
+    "trayTooltip": "Unfinished issues and objectives",
+    "resumeAria": "Resume “{name}”",
+    "noDescription": "No description",
+    "deleteAria": "Delete the “{name}” draft",
+    "resumeIssue": "Resume the “{name}” issue draft",
+    "resumeObjective": "Resume the “{name}” objective draft"
   },
   "Pages": {
     "filePreview": "Preview file",
