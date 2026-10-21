@@ -23,6 +23,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { sanitizeInternalRedirectPath } from "@/lib/auth-redirect";
 import { preserveAuthParams } from "@/lib/signup-wizard";
+import { isPreviewEnv } from "@/lib/env";
 import { useAnalytics } from "@/lib/use-analytics";
 import { errorReason } from "@/lib/analytics-sanitize";
 import { authErrorMessage } from "@/lib/auth-errors";
@@ -98,7 +99,9 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
   const errorParam = searchParams.get("error");
   // A session that ended on its own belongs to an existing account (MIN-691).
   const sessionExpired = searchParams.get(SESSION_EXPIRED_PARAM) === SESSION_EXPIRED_VALUE;
-  const shouldAutoSignup = inDesktopApp && !user && modeParam !== "signin" && !errorParam && !sessionExpired;
+  // Preview has no sign-up to send anyone to (MIN-766).
+  const signupOpen = !isPreviewEnv();
+  const shouldAutoSignup = signupOpen && inDesktopApp && !user && modeParam !== "signin" && !errorParam && !sessionExpired;
   const [redirectingToSignup, setRedirectingToSignup] = useState(false);
   useEffect(() => {
     if (authLoading || !shouldAutoSignup) return;
@@ -309,15 +312,17 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
             </Button>
           </form>
 
-          <p className="text-center text-sm text-muted-foreground">
-            {t("noAccountYet")}{" "}
-            <Link
-              href={signUpHref}
-              className="font-medium text-foreground underline-offset-4 hover:underline"
-            >
-              {t("createAccountLink")}
-            </Link>
-          </p>
+          {signupOpen && (
+            <p className="text-center text-sm text-muted-foreground">
+              {t("noAccountYet")}{" "}
+              <Link
+                href={signUpHref}
+                className="font-medium text-foreground underline-offset-4 hover:underline"
+              >
+                {t("createAccountLink")}
+              </Link>
+            </p>
+          )}
         </div>
       )}
     </AuthColumn>

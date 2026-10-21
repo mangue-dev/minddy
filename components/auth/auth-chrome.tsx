@@ -256,7 +256,7 @@ export function Field({
 
 /**
  * The column of auth screens: the mark at the top left, the content at
- * center, all the way up. The bottom belongs to the shell
+ * center, filling the height the shell's column leaves it. The bottom belongs to the shell
  * (`app/(auth)/auth-shell.tsx`) — both screens share it.
  *
  * In the desktop app, the logo does not lead anywhere: the public site is not there
@@ -278,7 +278,7 @@ export function AuthColumn({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-[100dvh] w-full flex-col p-8">
+    <div className="flex w-full flex-1 flex-col p-8">
       <div className={cn("flex", inDesktopApp && "justify-end")}>
         <LogoMark asLink={!inDesktopApp} />
       </div>

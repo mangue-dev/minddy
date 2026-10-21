@@ -141,6 +141,33 @@ See [the Auth configuration record](auth-supabase-config.md).
   production, and the team opens preview in a development shell with
   `MINDDY_DESKTOP_ORIGIN=https://preview.minddy.app`.
 
+## Preview is for the team only
+
+Preview is not a place for real work: its code has not been validated for
+production, its database can be reset, and the services listed above do not
+run there. Two layers keep visitors out.
+
+- **Sign-ups are closed in Supabase Auth.** The `preview` branch sets
+  `disable_signup: true` (production is unchanged). Email, Google and GitHub
+  sign-ups for a new account fail with `signup_disabled`; existing accounts
+  still sign in. Create a preview account from the Supabase dashboard
+  (branch `preview` → Authentication → Add user, with the email confirmed) or
+  through the admin API, as the capture seeds (`captures/world/seed/`) and
+  `captures/world/admin-account.mjs` do. Resend does not send confirmation
+  emails from preview, so a confirmed account is required.
+- **The interface explains it** whenever `getAppEnv()` is `preview`
+  (`lib/env.ts`), which includes pull request previews. A warning banner
+  (`components/preview-env-banner.tsx`) sits above the public navigation and
+  on the auth screens; the app itself does not show it, since whoever is
+  signed in there holds a test account. Sign-up calls to action point to
+  `https://www.minddy.app/signup` through `signupHref()`, the login screen has
+  no "Create an account" link, and `/signup` shows a closed message linking to
+  the production sign-up. Production, local and self-hosted instances never
+  resolve to `preview` and show none of this.
+
+The interface only explains the closure; Auth enforces it. Do not reopen
+sign-ups on the preview branch to test the sign-up journey: run it locally.
+
 ## Deployment preflight
 
 Vercel builds run `npm run check:deployment-db` before compiling the app. The

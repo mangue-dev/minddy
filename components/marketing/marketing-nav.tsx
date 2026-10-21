@@ -14,6 +14,7 @@ import { MinddyLogo } from "@/components/minddy-logo";
 import styles from "./nav-wordmark.module.css";
 import { WordmarkLetters } from "./wordmark-letters";
 import { NavProductMenu, type ProductEntry } from "./nav-product-menu";
+import { PreviewEnvBanner } from "@/components/preview-env-banner";
 import { ENV_LOGO_TINT, getAppEnv } from "@/lib/env";
 import { useAnalytics } from "@/lib/use-analytics";
 import { localizedHref } from "@/lib/locale-href";
@@ -127,6 +128,8 @@ export function MarketingNav() {
   return (
     <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
       {probeSession && <SessionProbe onChange={setHasSession} />}
+      {/* Above the sticky bar and scrolled away with the page: only preview shows it. */}
+      <PreviewEnvBanner />
       <header className="sticky top-0 z-50 border-b border-border bg-background/95 text-foreground backdrop-blur-md">
         <div className="mx-auto grid h-16 w-full max-w-[1440px] grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 sm:px-6 lg:px-10">
           <Link

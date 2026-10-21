@@ -20,6 +20,7 @@ import { SectionHeading } from "@/components/marketing/section-heading";
 import { ScreenshotSlot } from "@/components/marketing/screenshot-slot";
 import { StructuredData } from "@/components/marketing/structured-data";
 import { TrackedCta } from "@/components/marketing/tracked-cta";
+import { signupHref } from "@/lib/env";
 
 /** Public MCP setup and workflows; all configuration artifacts remain in server HTML. */
 export async function generateMetadata(): Promise<Metadata> {
@@ -159,7 +160,7 @@ export default async function McpPage() {
             ))}
           </ul>
           <Button asChild size="lg" className="mt-8 rounded-full">
-            <TrackedCta href="/signup" location="mcp_page">{tl("ctaButton")}<HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" /></TrackedCta>
+            <TrackedCta href={signupHref()} location="mcp_page">{tl("ctaButton")}<HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" /></TrackedCta>
           </Button>
         </div>
       </section>

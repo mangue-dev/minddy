@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 import { TrackedCta } from "./tracked-cta";
 import { Reveal, RevealHeading } from "./reveal";
+import { signupHref } from "@/lib/env";
 
 /**
  * Last restart before the footer (MIN-73). Shared by the landing and the page
@@ -32,7 +33,7 @@ export async function SectionCta() {
         </Reveal>
         <Reveal delay={0.25}>
           <Button asChild size="lg">
-            <TrackedCta href="/signup" location="cta_section">
+            <TrackedCta href={signupHref()} location="cta_section">
               {t("ctaButton")}
               <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
             </TrackedCta>

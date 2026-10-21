@@ -4,6 +4,7 @@ import {
   legacyCloudProfileDiagnostic,
   resolveAppEnv,
   resolveDeploymentEdition,
+  resolveSignupHref,
 } from "@/lib/env";
 
 describe("resolveAppEnv", () => {
@@ -19,6 +20,24 @@ describe("resolveAppEnv", () => {
 
   it("keeps local development out of production", () => {
     expect(resolveAppEnv({ NODE_ENV: "development" })).toBe("development");
+  });
+});
+
+describe("resolveSignupHref", () => {
+  it("sends preview sign-ups to the production site, query included", () => {
+    expect(resolveSignupHref("preview")).toBe("https://www.minddy.app/signup");
+    expect(resolveSignupHref("preview", "/signup?redirect=%2Fdocs")).toBe(
+      "https://www.minddy.app/signup?redirect=%2Fdocs",
+    );
+  });
+
+  it("keeps the local sign-up page in production and development", () => {
+    expect(resolveSignupHref("production")).toBe("/signup");
+    expect(resolveSignupHref("development", "/signup?invite=x")).toBe("/signup?invite=x");
+  });
+
+  it("resolves a self-hosted instance outside preview", () => {
+    expect(resolveSignupHref(resolveAppEnv({ NODE_ENV: "production" }))).toBe("/signup");
   });
 });
 
