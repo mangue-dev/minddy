@@ -51,6 +51,7 @@ import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { useResourceMentions } from "@/lib/use-resource-mentions";
 import { useIssueResources } from "@/lib/use-issue-resources";
 import { AutoTextarea } from "@/components/auto-textarea";
+import { useTitleBodyLink } from "@/lib/use-title-body-link";
 import { CommentEditor, extractMentions } from "@/components/editor/comment-editor";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { useRichDocument } from "@/lib/use-rich-document";
@@ -290,6 +291,8 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   );
 
   const [title, setTitle] = useState("");
+  // Title and description read as one text on the keyboard (MIN-756).
+  const titleBody = useTitleBodyLink();
   // Accept/decline go through a confirmation dialog with an optional message
   // (posted as a comment on the issue, Linear-style).
   const [confirming, setConfirming] = useState<{
@@ -578,19 +581,18 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
                 {/* Title + description */}
                 <div className="flex flex-col gap-2">
                   <AutoTextarea
+                    ref={titleBody.titleRef}
                     value={title}
                     readOnly={readOnly}
                     onChange={(e) => setTitle(e.target.value)}
                     onBlur={commitTitle}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        e.currentTarget.blur();
-                      }
+                      titleBody.onTitleKeyDown(e);
                     }}
                     className="w-full overflow-hidden bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
                     placeholder={tIssueUI("titlePlaceholder")}
                   />
+                  <div ref={titleBody.bodyRef}>
                   {liveDescription.status === "loading" ||
                   (!liveReady && selectedDocument === undefined) ? (
                     // Formatted while the live session loads (see the issue panel).
@@ -607,6 +609,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
                       mentions={descriptionMentions}
                       value={selected.description ?? ""}
                       uploadScope={`projects/${selected.project_id}`}
+                      onLeaveTop={titleBody.leaveBody}
                       document={liveDescription.doc}
                       collaboration={liveDescription.collaboration}
                       placeholder={tIssueUI("descriptionPlaceholder")}
@@ -618,6 +621,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
                     mentions={descriptionMentions}
                     value={selected.description ?? ""}
                     uploadScope={`projects/${selected.project_id}`}
+                    onLeaveTop={titleBody.leaveBody}
                     document={selectedDocument}
                     onCommit={(markdown, content) => {
                       const next = markdown.trim() || null;
@@ -633,6 +637,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
                     readOnly={readOnly}
                   />
                   )}
+                  </div>
                 </div>
 
                 {/* Key/value properties — same borderless rows as the side panel */}

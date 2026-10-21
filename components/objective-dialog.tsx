@@ -55,6 +55,7 @@ import { useAnalytics } from "@/lib/use-analytics";
 import { useDrafts } from "@/lib/use-drafts";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { useSubmitShortcut } from "@/lib/keyboard/use-submit-shortcut";
+import { useTitleBodyLink } from "@/lib/use-title-body-link";
 import {
   OBJECTIVE_STATUSES,
   OBJECTIVE_STATUS_MAP,
@@ -248,6 +249,8 @@ export function ObjectiveDialog({
   const mobile = useMobileLayout() === true;
   const tField = useTranslations("Field");
   const titleId = useId();
+  // Title and description read as one text on the keyboard (MIN-756).
+  const titleBody = useTitleBodyLink();
   const tCommon = useTranslations("Common");
   const tDrafts = useTranslations("Drafts");
   const tRelations = useTranslations("Relations");
@@ -670,19 +673,15 @@ export function ObjectiveDialog({
                 required
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                ref={titleBody.titleRef}
                 onKeyDown={(e) => {
-                  if (e.key !== "Enter") return;
-                  e.preventDefault();
-                  if (mobile && !e.metaKey && !e.ctrlKey) {
-                    e.currentTarget.form?.querySelector<HTMLElement>(".creation-description [contenteditable=true]")?.focus();
-                    return;
-                  }
-                  void submit();
+                  titleBody.onTitleKeyDown(e, { submit: () => void submit(), mobile });
                 }}
                 placeholder={t("namePlaceholder")}
                 className="creation-title w-full overflow-hidden bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50 sm:text-2xl"
               />
               <div className="creation-field-label">{tField("description")}</div>
+              <div ref={titleBody.bodyRef}>
               {objective && storedDocument === undefined ? (
                 <DocumentEditorFallback
                   value={form.description}
@@ -692,6 +691,7 @@ export function ObjectiveDialog({
               <LazyDocumentEditor
                 key={editorKey}
                 mentions={mentions}
+                onLeaveTop={titleBody.leaveBody}
                 value={form.description}
                 uploadScope={activeProjectId ? `projects/${activeProjectId}` : null}
                 onUploadingChange={setImagesUploading}
@@ -713,6 +713,7 @@ export function ObjectiveDialog({
                 className="creation-description mt-2 min-h-16"
               />
               )}
+              </div>
 
               {/* Property values stay compact on desktop and receive labels on mobile. */}
               <div className="creation-properties mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">

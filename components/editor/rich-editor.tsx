@@ -275,8 +275,9 @@ export interface RichEditorProps {
   /**
    * The cursor exits the body FROM THE TOP — ⌫ at the very beginning of the document, or ↑
    * from its first line. The caller returns focus to the title, which is the line above for who writes (see title-bridge.ts).
+   * ↑ passes the caret's x, so the title takes the caret at about the same place.
    */
-  onLeaveTop?: () => void;
+  onLeaveTop?: (x?: number) => void;
   /**
    * COMMENT on a passage (MIN-282): the bubble that appears on a selection of
    * text, and what it renders — the block to anchor in, and the selected extract.
@@ -422,8 +423,8 @@ export function RichEditor({
   onLeaveTopRef.current = onLeaveTop;
   const [hasTitle] = useState(() => onLeaveTop !== undefined);
   const leaveTop = useMemo(
-    () => () => {
-      onLeaveTopRef.current?.();
+    () => (x?: number) => {
+      onLeaveTopRef.current?.(x);
     },
     []
   );

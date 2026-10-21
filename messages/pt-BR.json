@@ -2883,7 +2883,7 @@
     "desktopUpdateCheck": "Verifique se há atualizações…",
     "desktopUpdateChecking": "Verificando…",
     "sendShortcutTitle": "Enviar uma mensagem com",
-    "sendShortcutDesc": "Shift + Enter sempre adiciona uma quebra de linha. {mod} + Enter envia em ambas as configurações. Formulários com uma descrição (novo problema ou novo objetivo) mantêm {mod} + Enter, portanto Enter ainda pode iniciar um parágrafo nesses campos.",
+    "sendShortcutDesc": "Shift + Enter sempre adiciona uma quebra de linha. {mod} + Enter envia em ambas as configurações. No título de um formulário (novo problema ou novo objetivo), Enter segue esta configuração; na descrição só {mod} + Enter envia, portanto Enter sempre inicia um parágrafo.",
     "sendShortcutModEnter": "{mod} + Enter",
     "sendShortcutEnter": "Enter",
     "desktopAppLabel": "Aplicativo de desktop",

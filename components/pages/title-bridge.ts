@@ -10,8 +10,9 @@
 //
 // - ⌫ at the very beginning of the document goes to the end of the title (nothing to delete there
 // where we are, so nothing is lost);
-// - ↑ from the first line of the body does the same;
-// - ↓ from the title goes down into the body (page-header.tsx).
+// - ↑ from the first line of the body goes to the title's last line, at about
+//   the same x (MIN-756);
+// - ↓ from the title goes down into the body (lib/use-title-body-link.ts).
 //
 // The extension KNOWS NOTHING about the title: it notices that we exit from the top and
 // says it. It is the caller who returns the focus, because he alone holds the field.
@@ -35,7 +36,7 @@ export interface TitleBridgeOptions {
  * gesture has been supported — `null` (the default) lets the key follow its usual
  * path, which is the behavior of an untitled surface.
  */
-  onLeaveTop: (() => void) | null;
+  onLeaveTop: ((x?: number) => void) | null;
 }
 
 /**
@@ -86,16 +87,19 @@ export const TitleBridge = Extension.create<TitleBridgeOptions>({
   addKeyboardShortcuts() {
     // Read at the time of typing, and not captured: the option can be set
     // after editing.
-    const leave = () => {
+    const leave = (x?: number) => {
       const go = this.options.onLeaveTop;
       if (!go) return false;
-      go();
+      go(x);
       return true;
     };
 
     return {
       Backspace: ({ editor }) => atDocumentStart(editor.state) && leave(),
-      ArrowUp: ({ editor }) => onFirstLine(editor.view) && leave(),
+      // The caret's x goes along: ↑ lands above it, as between two lines.
+      ArrowUp: ({ editor }) =>
+        onFirstLine(editor.view) &&
+        leave(editor.view.coordsAtPos(editor.state.selection.head).left),
     };
   },
 });

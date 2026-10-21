@@ -80,6 +80,8 @@ import {
   revealBlock,
 } from "@/components/pages/block-actions";
 import { PageHeader } from "@/components/pages/page-header";
+import { focusLastLine } from "@/lib/textarea-caret";
+import { focusFirstLine } from "@/lib/use-title-body-link";
 import { IssueActionsMenu } from "@/components/issue-context-menu";
 import {
   usePageDocumentMenu,
@@ -405,19 +407,16 @@ function PageSurface({
   /* ── The title and body, sewn on the keyboard ─────────────────────────── */
   //
   // The title is a separate field, but for those writing it is the line above
-  // of the first line of the body: ⌫ at the very beginning of the document and ↑ from its
-  // first line goes back to the END of the title, ↓ since the title goes back down to
-  // the body. The "document" half of the passage lives in title-bridge.ts;
-  // it is here that it joins the field, the only place that holds both.
+  // of the first line of the body: ⌫ at the very beginning of the document goes
+  // back to the END of the title, ↑ from its first line to the title's last
+  // line at the same x, and ↓ from the title goes back down to the body, at the
+  // same x too (MIN-756). The "document" half of the passage lives in
+  // title-bridge.ts; it is here that it joins the field, the only place that
+  // holds both.
   const titleFieldRef = useRef<HTMLTextAreaElement | null>(null);
-  const focusTitleEnd = useCallback(() => {
+  const focusTitle = useCallback((x?: number) => {
     const field = titleFieldRef.current;
-    if (!field) return;
-    field.focus();
-    // At the END of the title, and not where the caret was left: we arrive by the
-    // left, as we would arrive at the end of the previous line.
-    const end = field.value.length;
-    field.setSelectionRange(end, end);
+    if (field) focusLastLine(field, x);
   }, []);
 
   /* ── Writing, grouped and VERSIONED (MIN-271) ──────────────────────── */
@@ -427,8 +426,9 @@ function PageSurface({
   // publisher's ref — a successful submission must find its block.
   const uploads = usePageUploads(projectId, pageId, editorRef);
   // ↓ DOWN — the cursor goes to the first line of the body, as it is.
-  const focusBodyStart = useCallback(() => {
-    editorRef.current?.commands.focus("start");
+  const focusBodyStart = useCallback((x?: number) => {
+    const editor = editorRef.current;
+    if (editor) focusFirstLine(editor, x);
   }, []);
   // Enter OPENS a line, like anywhere else in the document: one line
   // empty at the head of the body, cursor inside (see `focusDocumentStart`).
@@ -1147,7 +1147,7 @@ function PageSurface({
                 editorRef={editorRef}
                 onEditor={onEditor}
                 onSubpagesRemoved={onSubpagesRemoved}
-                onLeaveTop={focusTitleEnd}
+                onLeaveTop={focusTitle}
                 onComment={onComment}
               />
             </PageTaskSurface>

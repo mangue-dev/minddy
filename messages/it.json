@@ -2883,7 +2883,7 @@
     "desktopUpdateCheck": "Controlla gli aggiornamenti...",
     "desktopUpdateChecking": "Controllo...",
     "sendShortcutTitle": "Invia un messaggio con",
-    "sendShortcutDesc": "Maiusc + Invio aggiunge sempre un'interruzione di riga. {mod} + Invio invia con entrambe le impostazioni. Nei moduli con una descrizione (nuovo ticket o nuovo obiettivo), l'invio resta su {mod} + Invio, così Invio può sempre iniziare un paragrafo.",
+    "sendShortcutDesc": "Maiusc + Invio aggiunge sempre un'interruzione di riga. {mod} + Invio invia con entrambe le impostazioni. Nel titolo di un modulo (nuovo ticket o nuovo obiettivo), Invio segue questa impostazione; nella descrizione invia solo {mod} + Invio, così Invio inizia sempre un paragrafo.",
     "sendShortcutModEnter": "{mod} + Enter",
     "sendShortcutEnter": "Invio",
     "desktopAppLabel": "App desktop",

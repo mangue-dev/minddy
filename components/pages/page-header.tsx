@@ -18,28 +18,11 @@ import { useCallback, useEffect, useRef, useState, type RefObject } from "react"
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { AutoTextarea } from "@/components/auto-textarea";
+import { caretLeft, caretOnLastLine } from "@/lib/textarea-caret";
 import { EmojiPicker } from "@/components/pages/emoji-picker";
 import { useArrowField } from "@/lib/use-arrow-field";
 import type { LiveTitle } from "@/lib/use-page-collaboration";
 import { PageTitleCarets } from "@/components/pages/page-title-carets";
-
-/**
- * Is the cursor on the LAST visible line of the field?
- *
- * A title does not have a line break (Enter goes down in the body), but it is
- * FOLDED: a long title is two or three lines on the screen, and ↓ must y
- * go down one line before leaving the field. Nothing in the DOM says about
- * which folded line falls on the caret, hence the measurement: a field which fits on
- * a line always returns `true`, and beyond that we only pass the hand at the end of the
- * text — that is to say at the end of the last line, the only position of which on
- * be sure.
- */
-function caretOnLastLine(field: HTMLTextAreaElement): boolean {
-  if (field.selectionStart !== field.selectionEnd) return false;
-  if (field.selectionEnd === field.value.length) return true;
-  const line = parseFloat(getComputedStyle(field).lineHeight);
-  return !Number.isFinite(line) || field.scrollHeight < line * 1.5;
-}
 
 export function PageHeader({
   title,
@@ -66,7 +49,7 @@ export function PageHeader({
  * the first line of the body is indeed the line below. This is
  * the other half of the passage that title-bridge.ts holds in the editor.
  */
-  onDown?: () => void;
+  onDown?: (x?: number) => void;
   /** The field itself — where the caller returns focus (⌫ or ↑ in the
  body returns to the end of the title). */
   fieldRef?: RefObject<HTMLTextAreaElement | null>;
@@ -193,9 +176,11 @@ export function PageHeader({
             onEnter?.();
             return;
           }
+          // A long title folds over several lines: ↓ leaves it from the
+          // last one only, at the caret's x (lib/textarea-caret.ts).
           if (event.key === "ArrowDown" && onDown && caretOnLastLine(event.currentTarget)) {
             event.preventDefault();
-            onDown();
+            onDown(caretLeft(event.currentTarget));
           }
         }}
         className="w-full border-0 bg-transparent p-0 font-display text-4xl font-semibold tracking-tight outline-none placeholder:text-muted-foreground/50"
