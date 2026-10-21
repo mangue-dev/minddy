@@ -11,6 +11,7 @@ import {
 } from "@/lib/desktop/install-prompt";
 import { TrackedCta } from "./tracked-cta";
 import { usePwaInstall } from "./use-pwa-install";
+import { signupHref } from "@/lib/env";
 
 type NavigatorWithUserAgentData = Navigator & {
   userAgentData?: { platform?: string };
@@ -102,7 +103,7 @@ export function HeroPlatformCta({
 
   return (
     <Button asChild size="lg">
-      <TrackedCta href="/signup" location="hero">
+      <TrackedCta href={signupHref()} location="hero">
         {browserLabel}
       </TrackedCta>
     </Button>

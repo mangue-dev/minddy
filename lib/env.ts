@@ -90,6 +90,31 @@ export function getAppEnv(): AppEnv {
 }
 
 /**
+ * The public production site. Preview pages link here with an absolute URL:
+ * a relative link would stay on the preview deployment.
+ */
+export const PRODUCTION_SITE_ORIGIN = "https://www.minddy.app";
+
+/**
+ * Preview (preview.minddy.app and PR previews) is a team-only test environment
+ * with its own database and closed sign-ups (MIN-766). The interface says so;
+ * Supabase Auth's `disable_signup` remains the actual closure.
+ */
+export function isPreviewEnv(): boolean {
+  return getAppEnv() === "preview";
+}
+
+/** Pure resolution of a sign-up link: preview sends it to the production site. */
+export function resolveSignupHref(appEnv: AppEnv, path = "/signup"): string {
+  return appEnv === "preview" ? `${PRODUCTION_SITE_ORIGIN}${path}` : path;
+}
+
+/** Destination of a sign-up call to action in the running environment. */
+export function signupHref(path = "/signup"): string {
+  return resolveSignupHref(getAppEnv(), path);
+}
+
+/**
  * Favicon mark colors per environment, one value for light browser chrome and
  * one for dark (the generated icon embeds a `prefers-color-scheme` rule). Used
  * by app/icon.tsx. Production keeps the neutral near-black / near-white mark.

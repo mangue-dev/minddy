@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { AuthProvider } from "@/lib/auth-context";
 import { DesktopAuthBridge } from "@/components/desktop-auth-bridge";
+import { PreviewEnvBanner } from "@/components/preview-env-banner";
 
 /**
  * The shell of the auth screens: a plain background, and nothing else (MIN-300).
@@ -47,11 +48,14 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
       {/* The window moving strip no longer lives here: it is in
  the root layout, therefore on ALL screens (MIN-292). These screens
  were just one of five that were missing. */}
-      <div className="auth-shell min-h-[100dvh] bg-background">
+      {/* A column, so the preview warning (MIN-766) takes its height from
+ the screen below it instead of pushing it past the fold. */}
+      <div className="auth-shell flex min-h-[100dvh] flex-col bg-background">
+        <PreviewEnvBanner />
         {fullBleed ? (
           children
         ) : (
-          <div className="flex min-h-[100dvh] items-center justify-center p-6">
+          <div className="flex flex-1 items-center justify-center p-6">
             {children}
           </div>
         )}

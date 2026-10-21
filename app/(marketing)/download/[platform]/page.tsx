@@ -14,6 +14,7 @@ import { CARD_TONES } from "@/components/marketing/card-tones";
 import { MobilePwaGuideSteps } from "@/components/marketing/mobile-pwa-install-guide";
 import { standaloneMobileInstallGuideCopy } from "@/components/marketing/mobile-install-guide-copy";
 import { DownloadPlatformStructuredData } from "@/components/marketing/structured-data";
+import { signupHref } from "@/lib/env";
 
 export function generateStaticParams() {
   return [{ platform: "mobile-pwa" }];
@@ -54,7 +55,7 @@ export default async function DownloadPlatformPage({ params }: { params: Promise
             <h2 className="text-xl font-medium tracking-tight">{t("availabilityTitle")}</h2>
             <p className="mt-3 text-sm leading-relaxed opacity-80">{t("availabilityBody")}</p>
           </div>
-          <Button asChild size="lg" className="w-fit shrink-0 rounded-full"><a href="/signup">{t("secondaryCta")}<HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" /></a></Button>
+          <Button asChild size="lg" className="w-fit shrink-0 rounded-full"><a href={signupHref()}>{t("secondaryCta")}<HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" /></a></Button>
         </div>
       </section>
 

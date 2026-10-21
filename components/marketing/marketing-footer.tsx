@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { MinddyLogo } from "@/components/minddy-logo";
 import { CopyButton } from "@/components/marketing/copy-button";
 import { localizedHref } from "@/lib/locale-href";
-import { ENV_LOGO_TINT, getAppEnv } from "@/lib/env";
+import { ENV_LOGO_TINT, getAppEnv, signupHref } from "@/lib/env";
 import type { Locale } from "@/i18n/config";
 import type { MessageKey } from "@/lib/i18n-keys";
 import { MINDDY_REPOSITORY_URL } from "@/lib/brand-constants";
@@ -66,7 +66,8 @@ const COLUMNS: ReadonlyArray<FooterColumn> = [
       { href: "/alternatives/notion", labelKey: "footerAltNotion" },
       { href: "/#faq", labelKey: "navFaq" },
       { href: "/login", labelKey: "navSignIn" },
-      { href: "/signup", labelKey: "navGetStarted" },
+      // Absolute on preview, whose sign-ups are closed (MIN-766).
+      { href: signupHref(), labelKey: "navGetStarted" },
     ],
   },
   {
@@ -199,7 +200,7 @@ export function MarketingFooter() {
                       </a>
                     ) : (
                       <Link
-                        href={localizedHref(link.href, locale)}
+                        href={link.href.startsWith("/") ? localizedHref(link.href, locale) : link.href}
                         className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                       >
                         {t(link.labelKey)}

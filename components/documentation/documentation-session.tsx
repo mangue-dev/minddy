@@ -21,6 +21,7 @@ import type { Locale } from "@/i18n/config";
 import type { DocumentationArticle } from "@/lib/documentation";
 import { DocumentationHelpContext, preserveDocumentationPosition } from "./documentation-help-context";
 import { SELF_HOSTING_OVERVIEW, type SelfHostingHelpContext } from "@/lib/self-hosting-help-context";
+import { signupHref } from "@/lib/env";
 
 type ArticleContext = { articleId: string | null; sections: DocumentationArticle["sections"] };
 const DocumentationNumo = dynamic(() => import("./documentation-numo").then(m => m.DocumentationNumo), { ssr: false });
@@ -66,7 +67,7 @@ function DocumentationGuestActions({ currentId, locale }: { currentId: string | 
   const destination = documentationPath(currentId, locale);
   return <div className="flex items-center gap-1 sm:gap-2">
     <Button asChild variant="ghost" size="sm" className="px-2 sm:px-3"><a href={`/login?redirect=${encodeURIComponent(destination)}`} onClick={preserveDocumentationPosition}>{auth("signIn")}</a></Button>
-    <Button asChild size="sm" className="hidden px-2 sm:inline-flex sm:px-3"><a href={`/signup?redirect=${encodeURIComponent(destination)}`} onClick={preserveDocumentationPosition}>{t("signUp")}</a></Button>
+    <Button asChild size="sm" className="hidden px-2 sm:inline-flex sm:px-3"><a href={signupHref(`/signup?redirect=${encodeURIComponent(destination)}`)} onClick={preserveDocumentationPosition}>{t("signUp")}</a></Button>
   </div>;
 }
 

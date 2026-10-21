@@ -6675,5 +6675,12 @@
   "ProjectAccess": {
     "readOnlyToast": "You can only read this project.",
     "sharedViewReadOnly": "Only members can change shared views. Save your own view instead."
+  },
+  "PreviewEnvironment": {
+    "banner": "This is a test version. To use minddy, go to <link>minddy.app</link>.",
+    "signupClosedTitle": "Sign-ups are closed here",
+    "signupClosedBody": "This test version is for the team only. Create your account on minddy.app.",
+    "signupClosedCta": "Sign up on minddy.app",
+    "signupClosedSignIn": "Already have a test account? <link>Sign in</link>"
   }
 }

@@ -16,6 +16,7 @@ import { useTrackView } from "@/lib/use-track-view";
 import { localizedHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
 import { CARD_TONES } from "./card-tones";
+import { signupHref } from "@/lib/env";
 
 const PLAN_LABEL_KEYS = { free: "planFree", go: "planGo", pro: "planPro" } as const;
 const PLAN_DESC_KEYS = { free: "planDescFree", go: "planDescGo", pro: "planDescPro" } as const;
@@ -80,7 +81,7 @@ export function PricingPlans({
                   <HugeiconsIcon icon={CheckIcon} className="mt-1 size-4 shrink-0" strokeWidth={1.5} aria-hidden /><span>{feature}</span>
                 </li>)}
               </ul>
-              <Link href="/signup" onClick={() => track("plan_cta_clicked", { plan_id: plan.id, interval, current_plan_id: "anonymous" })}
+              <Link href={signupHref()} onClick={() => track("plan_cta_clicked", { plan_id: plan.id, interval, current_plan_id: "anonymous" })}
                 className="inline-flex min-h-12 items-center justify-between gap-3 rounded-lg border border-current/20 px-4 py-3 text-sm font-medium transition-colors hover:bg-white/40 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current dark:hover:bg-white/10">
                 {tl("pricingCta")}<HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0" aria-hidden />
               </Link>

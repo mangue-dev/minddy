@@ -56,6 +56,8 @@ export const PUBLIC_CLIENT_NAMESPACES = [
   // dialog, sheet and side-panel crosses (`components/ui/close-button.tsx`).
   // About 1 KB raw.
   "Common",
+  // The preview warning above the public navigation (MIN-766), a few lines.
+  "PreviewEnvironment",
 ] as const;
 
 /**
