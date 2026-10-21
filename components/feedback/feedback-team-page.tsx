@@ -200,9 +200,8 @@ function CategorySummary({
    */
   separated?: boolean;
 }) {
-  const cats = categoryIds
-    .map((id) => categoryMap.get(id))
-    .filter((c): c is Category => !!c);
+  // The map follows the project's category order (MIN-760).
+  const cats = [...categoryMap.values()].filter((c) => categoryIds.includes(c.id));
   if (cats.length === 0) return null;
   const [first, ...rest] = cats;
   return (

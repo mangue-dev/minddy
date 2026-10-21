@@ -4833,7 +4833,7 @@
       "functionReferences": []
     },
     "get_user_stats(text,timestamp with time zone)": {
-      "sha256": "173f73a14ddc276554ce846f18828b3e29df2cf92c4259f3925b76c611d6fec0",
+      "sha256": "f3dc1156bf2f91f5fc0338ee1bcf39b28a7162a0248f54f958db23e7167b893e",
       "securityDefiner": false,
       "configuration": [
         "search_path=public"
@@ -5490,7 +5490,7 @@
       "functionReferences": []
     },
     "migrate_verified_content_backfill(text,jsonb,jsonb)": {
-      "sha256": "7f9ea63de6323e523c5f9dc38368e09058c330e58a71ee1a5d6f9e888b83077f",
+      "sha256": "1bc3db6e52efc89da8f652b54c67599fb21cfdf56d2ac94356ca69887b3d38b9",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -5975,7 +5975,7 @@
       "functionReferences": []
     },
     "record_encryption_backfill_progress(text,text,jsonb,boolean)": {
-      "sha256": "20b5c49907054f8e2fce81c0f9d38eae9b7a970b93a2c6365ecaca611ec97102",
+      "sha256": "bd2407f149090822e6de3330e0d70844bb05923df11de1791b596531df707aca",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""

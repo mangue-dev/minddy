@@ -299,9 +299,10 @@ export const KanbanBoard = memo(function KanbanBoard({
       projectId,
       projectKey,
       resourceCount: issue.resource_count,
-      categories: issue.category_ids
-        .map((cid) => categoryMap.get(cid)?.name)
-        .filter((name): name is string => !!name),
+      // In the project's category order (MIN-760), which the map follows.
+      categories: [...categoryMap.values()]
+        .filter((category) => issue.category_ids.includes(category.id))
+        .map((category) => category.name),
       relations: promptRelations(relationsByIssue.get(issue.id), {
         identifierOf: (otherId) =>
           issueIdentifier(projectKey, allIssueMap.get(otherId)?.number ?? 0),
