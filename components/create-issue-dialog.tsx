@@ -27,7 +27,6 @@ import {
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { useResourceMentions } from "@/lib/use-resource-mentions";
 import { useArrowField } from "@/lib/use-arrow-field";
-import { DraftRecoveryRow } from "@/components/draft-recovery-row";
 import { CloseDraftDialog } from "@/components/close-draft-dialog";
 import { CreationDictation, CreationProperty } from "@/components/creation-form-layout";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
@@ -122,6 +121,7 @@ export function CreateIssueDialog({
   initialCategoryIds,
   autoDictate = false,
   analyticsSource = "dialog",
+  initialDraftId = null,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -172,6 +172,9 @@ export function CreateIssueDialog({
   autoDictate?: boolean;
   /** Surface where creation comes from — analytics only (MIN-78). */
   analyticsSource?: AnalyticsPropsFor<"issue_created">["source"];
+  /** A saved draft of `projectId` to restore when the dialog opens — the
+      drafts tray's "open" (MIN-753). */
+  initialDraftId?: string | null;
 }) {
   const t = useTranslations("IssueUI");
   const mobile = useMobileLayout() === true;
@@ -580,6 +583,16 @@ export function CreateIssueDialog({
     setActiveDraftId(draft.id);
   };
 
+  // The drafts tray opens the form on a saved draft (MIN-753): restored once
+  // per opening, as soon as the store has been read.
+  const restoredDraftRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!open) { restoredDraftRef.current = null; return; }
+    if (!initialDraftId || restoredDraftRef.current === initialDraftId || !drafts.find(initialDraftId)) return;
+    restoredDraftRef.current = initialDraftId;
+    recoverDraft(initialDraftId);
+  }, [open, initialDraftId, drafts.find]);
+
   const tPages = useTranslations("Pages");
   const writableProjects = projects.filter(
     (p) => p.id === projectId || capabilitiesForProject(p, user?.id).canWrite
@@ -797,16 +810,6 @@ export function CreateIssueDialog({
           >
             <DropOverlay show={drop.dragging} />
             <MobileSheetScrollArea className="creation-form-body">
-              {/* Recent drafts — a row above the title to restore or delete an
-                abandoned draft (MIN-41). Hidden once the form has content. */}
-              {title.trim() === "" && description.trim() === "" && (
-                <DraftRecoveryRow
-                  drafts={drafts.drafts.map((d) => ({ id: d.id, title: d.title }))}
-                  onRecover={recoverDraft}
-                  onDelete={drafts.remove}
-                  className="mb-3"
-                />
-              )}
               {/* Resources are context — they sit ABOVE the text being written. */}
               <ComposerResourcePills
                 uploads={uploads}

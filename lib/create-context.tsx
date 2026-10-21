@@ -79,6 +79,8 @@ interface OpenIssueOptions {
   assigneeId?: string | null;
   /** Opens the already open microphone dialog (global shortcut ⌘⇧D). */
   dictate?: boolean;
+  /** Reopens this saved draft of `projectId` in the form (drafts tray, MIN-753). */
+  draftId?: string;
 }
 
 interface OpenObjectiveOptions {
@@ -91,6 +93,8 @@ interface OpenObjectiveOptions {
  * links to his ticket. Never recalled for a creation in ANOTHER project
  * (split button): the objective is not linkable. */
   onCreated?: (objective: Objective) => void;
+  /** Same as {@link OpenIssueOptions.draftId}. */
+  draftId?: string;
 }
 
 interface CreateContextValue {
@@ -161,6 +165,10 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   // Does the dialog open in dictation? Rested at EVERY opening, never
   // left lying around: otherwise a `C` typed after a ⌘⇧D would turn the microphone back on.
   const [issueDictate, setIssueDictate] = useState(false);
+  // The draft the next opening restores — reset at every opening too, so a
+  // later `C` opens a blank form.
+  const [issueDraftId, setIssueDraftId] = useState<string | null>(null);
+  const [objectiveDraftId, setObjectiveDraftId] = useState<string | null>(null);
   const [issuePresets, setIssuePresets] = useState<{
     status?: IssueStatus;
     objectiveId: string | null;
@@ -311,6 +319,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
         assigneeId: opts?.assigneeId ?? null,
       });
       setIssueDictate(opts?.dictate === true);
+      setIssueDraftId(opts?.draftId ?? null);
       setIssueMounted(true);
       setIssueOpen(true);
     },
@@ -324,6 +333,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
       setTarget(pid);
       setObjectiveName(opts?.name?.trim() || undefined);
       objectiveCreatedRef.current = opts?.onCreated ?? null;
+      setObjectiveDraftId(opts?.draftId ?? null);
       setObjectiveMounted(true);
       setObjectiveOpen(true);
     },
@@ -424,6 +434,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
           initialObjectiveId={issuePresets.objectiveId}
           initialAssigneeId={issuePresets.assigneeId}
           autoDictate={issueDictate}
+          initialDraftId={issueDraftId}
         />
       ) : null}
       {target && objectiveMounted ? (
@@ -438,6 +449,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
           projects={projects}
           projectId={target}
           initialName={objectiveName}
+          initialDraftId={objectiveDraftId}
           onCreate={(input) => createObjectiveForTarget(target, input)}
           onCreateInProject={createObjectiveGlobal}
           onUpdate={async () => {}}

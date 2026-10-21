@@ -2427,11 +2427,10 @@
     "noProject": "Nessun progetto trovato."
   },
   "Drafts": {
-    "recent": "Recenti progetti",
     "untitled": "Senza titolo",
-    "delete": "Cancella il progetto",
-    "closeTitle": "Salvare questo disegno?",
-    "closeDescription": "Lo troverai nei tuoi recenti progetti.",
+    "delete": "Elimina bozza",
+    "closeTitle": "Salvare questa bozza?",
+    "closeDescription": "La troverai nelle tue bozze.",
     "closeConfirm": "Salva",
     "closeDiscard": "Scartare",
     "keepEditing": "Indietro",
@@ -2440,8 +2439,16 @@
     "deleteFailed": "Impossibile eliminare la bozza. Riprova.",
     "recoverLegacy": "Recupera le vecchie bozze su questo dispositivo",
     "legacyWarning": "Recupera solo le bozze che hai creato su questo dispositivo.",
-    "deleteTitle": "Eliminare questa bozza?",
-    "deleteDescription": "Questa bozza verrà eliminata definitivamente."
+    "deleteTitle": "Eliminare «{name}»?",
+    "deleteDescription": "Questa bozza verrà eliminata definitivamente. L’operazione non può essere annullata.",
+    "tray": "Bozze",
+    "trayAria": "{count, plural, one {# bozza} other {# bozze}}",
+    "trayTooltip": "Ticket e obiettivi non finiti",
+    "resumeAria": "Riprendi «{name}»",
+    "noDescription": "Nessuna descrizione",
+    "deleteAria": "Elimina la bozza «{name}»",
+    "resumeIssue": "Riprendi la bozza del ticket «{name}»",
+    "resumeObjective": "Riprendi la bozza dell’obiettivo «{name}»"
   },
   "Pages": {
     "filePreview": "Visualizza file",
@@ -3133,7 +3140,7 @@
     "wizardSeedFileReady": "Importato una volta che il progetto è creato.",
     "wizardSeedFileLost": "Un file non può essere tenuto in una bozza; lasciarlo di nuovo.",
     "draftBadge": "Progetto",
-    "draftResume": "Riprendi il progetto «{name}»",
+    "draftResume": "Riprendi la bozza «{name}»",
     "draftDelete": "Cancella il progetto",
     "draftDeleteTitle": "Eliminare la bozza «{name}»?",
     "draftDeleteDescription": "Tutto ciò che è stato inserito nella procedura di creazione viene eliminato definitivamente. Non si può annullare.",

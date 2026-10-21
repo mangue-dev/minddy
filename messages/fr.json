@@ -2427,11 +2427,10 @@
     "noProject": "Aucun projet trouvé."
   },
   "Drafts": {
-    "recent": "Brouillons récents",
     "untitled": "Sans titre",
     "delete": "Supprimer le brouillon",
     "closeTitle": "Enregistrer ce brouillon ?",
-    "closeDescription": "Vous le retrouverez dans vos brouillons récents.",
+    "closeDescription": "Vous le retrouverez dans vos brouillons.",
     "closeConfirm": "Enregistrer",
     "closeDiscard": "Abandonner",
     "keepEditing": "Revenir",
@@ -2440,8 +2439,16 @@
     "deleteFailed": "Suppression impossible. Réessayez.",
     "recoverLegacy": "Récupérer les anciens brouillons sur cet appareil",
     "legacyWarning": "Récupérez uniquement les brouillons que vous avez créés sur cet appareil.",
-    "deleteTitle": "Supprimer ce brouillon ?",
-    "deleteDescription": "Ce brouillon sera supprimé définitivement."
+    "deleteTitle": "Supprimer « {name} » ?",
+    "deleteDescription": "Ce brouillon sera supprimé définitivement. Cette action est irréversible.",
+    "tray": "Brouillons",
+    "trayAria": "{count, plural, one {# brouillon} other {# brouillons}}",
+    "trayTooltip": "Tickets et objectifs inachevés",
+    "resumeAria": "Reprendre « {name} »",
+    "noDescription": "Pas de description",
+    "deleteAria": "Supprimer le brouillon « {name} »",
+    "resumeIssue": "Reprendre le brouillon de ticket « {name} »",
+    "resumeObjective": "Reprendre le brouillon d’objectif « {name} »"
   },
   "Pages": {
     "filePreview": "Afficher le fichier",

@@ -7,6 +7,7 @@ import { Kbd, KbdSequence } from "@/components/ui/kbd";
 import { NumoLauncherIcon } from "@/components/assistant/numo-launcher-icon";
 import { AgentBeam } from "@/components/agent-beam";
 import { ScratchpadTrigger } from "@/components/scratchpad/scratchpad-trigger";
+import { DraftsTray } from "@/components/drafts-tray";
 import { useAssistantPanelActions, useAssistantPanel } from "@/lib/assistant-panel-context";
 import { useAssistantBusy, useAssistantUnreadResponseConversationId } from "@/lib/assistant-chat-context";
 import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
@@ -18,7 +19,8 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Bottom-right chrome buttons: Numo's opener and the task notebook.
+ * Bottom-right chrome buttons: Numo's opener, the drafts tray (only while a
+ * draft exists, MIN-753) and the task notebook.
  *
  * Closing the panel during a turn no longer stops Numo (the conversation lives in
  * AssistantChatProvider): the Numo button then carries the shared animated border of the app
@@ -141,6 +143,7 @@ export function AssistantFab() {
               )}
             </AnimatePresence>
           </div>
+          <DraftsTray />
           <ScratchpadTrigger variant="chrome" />
         </motion.div>
       )}

@@ -37,7 +37,6 @@ import { CreationProjectSelect } from "@/components/creation-project-select";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useAuth } from "@/lib/auth-context";
 import { capabilitiesForProject } from "@/lib/use-project-capabilities";
-import { DraftRecoveryRow } from "@/components/draft-recovery-row";
 import { CloseDraftDialog } from "@/components/close-draft-dialog";
 import { CreationDictation, CreationProperty } from "@/components/creation-form-layout";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
@@ -199,6 +198,7 @@ export function ObjectiveDialog({
   projectKey,
   initialName,
   onCreateInProject,
+  initialDraftId = null,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -208,6 +208,9 @@ export function ObjectiveDialog({
   /** Pre-filled name when opening, in creation: quick addition from an objective picker
  * passes the text already typed in the search. */
   initialName?: string;
+  /** A saved draft of `projectId` to restore when the dialog opens — the
+      drafts tray's "open" (MIN-753). */
+  initialDraftId?: string | null;
   onCreate: (input: CreateObjectiveInput) => Promise<unknown>;
   onUpdate: (id: string, updates: ObjectiveUpdateInput) => Promise<unknown>;
   /** The user's projects — the "Create in" select lists those the viewer can
@@ -451,6 +454,16 @@ export function ObjectiveDialog({
     setActiveDraftId(draft.id);
   };
 
+  // The drafts tray opens the form on a saved draft (MIN-753): restored once
+  // per opening, as soon as the store has been read.
+  const restoredDraftRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!open) { restoredDraftRef.current = null; return; }
+    if (!initialDraftId || restoredDraftRef.current === initialDraftId || !drafts.find(initialDraftId)) return;
+    restoredDraftRef.current = initialDraftId;
+    recoverDraft(initialDraftId);
+  }, [open, initialDraftId, drafts.find]);
+
   const tPages = useTranslations("Pages");
   const submit = async () => {
     const name = form.name.trim();
@@ -593,18 +606,6 @@ export function ObjectiveDialog({
           >
             {composerEnabled && <DropOverlay show={drop.dragging} />}
             <MobileSheetScrollArea className="creation-form-body">
-              {/* Recent drafts — a row above the name to restore or delete an
-                abandoned draft (MIN-41). Hidden once the form has content. */}
-              {composerEnabled &&
-                form.name.trim() === "" &&
-                form.description.trim() === "" && (
-                  <DraftRecoveryRow
-                    drafts={drafts.drafts.map((d) => ({ id: d.id, title: d.name }))}
-                    onRecover={recoverDraft}
-                    onDelete={drafts.remove}
-                    className="mb-3"
-                  />
-                )}
               {/* Resources are context — they sit ABOVE the text being written. */}
               {composerEnabled && (
                 <ComposerResourcePills

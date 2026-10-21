@@ -1,6 +1,6 @@
 // Local draft store (MIN-41) — when a create dialog is abandoned with content
-// still in it, the form state is stashed here instead of being lost, and a
-// recovery row above the title field lets the user restore or delete it later.
+// still in it, the form state is stashed here instead of being lost. The drafts
+// tray of the bottom bar (MIN-753) lists them to reopen or delete later.
 //
 // Drafts use server-authenticated envelopes in localStorage, with no key on the
 // device. Each kind keeps a capped, most-recent-first list for 30 days. Drafts are
@@ -82,6 +82,21 @@ export const MAX_DRAFTS = 10;
 export const DRAFT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 const keyFor = (kind: DraftKind) => `minddy:drafts:${kind}`;
+/** The storage key of a kind, so another tab's write can be recognized. */
+export const draftStorageKey = keyFor;
+
+type DraftListener = <K extends DraftKind>(kind: K, drafts: DraftFor<K>[]) => void;
+const listeners = new Set<DraftListener>();
+
+/**
+ * Follow this tab's draft writes: the listener receives the kind's whole
+ * trimmed list after every save or delete, so the drafts tray follows what a
+ * creation dialog just stashed without reading (and unsealing) it again.
+ */
+export function subscribeDrafts(listener: DraftListener): () => void {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
 const queues = new Map<DraftKind, Promise<unknown>>();
 export class LegacyDraftRecoveryRequired extends Error {}
 
@@ -157,6 +172,7 @@ async function persist<K extends DraftKind>(
     // failed flush leaves the ordinary deferred commit, so it is not an error.
     try { await getDesktopBridge()?.flushStorage?.(); } catch {}
   }
+  for (const listener of listeners) listener(kind, trimmed);
   return trimmed;
 }
 
