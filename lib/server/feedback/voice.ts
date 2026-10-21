@@ -1,11 +1,6 @@
 import "server-only";
 
-import { getAppConfigValues } from "@/lib/server/app-config";
-import {
-  modelConfigKeys,
-  resolveFromValues,
-  withModelSuffixFallback,
-} from "@/lib/server/model-config";
+import { withModelSuffixFallback } from "@/lib/server/model-config";
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
 import {
   resolveAudioFormat,
@@ -24,11 +19,14 @@ import {
   type FeedbackVoicePatch,
   type FeedbackVoiceTurn,
 } from "@/lib/feedback/types";
-import { fetchAiChat, resolveAiRuntime } from "@/lib/server/ai-runtime";
+import {
+  fetchAiChat,
+  resolveAiRuntime,
+  resolveUnbilledAiRuntime,
+} from "@/lib/server/ai-runtime";
 import { polishDictationTranscript } from "@/lib/server/dictation-polish";
 import { getServiceClient } from "@/lib/supabase-service";
 import type { ByokModelKey } from "@/lib/ai-surfaces";
-import { isManagedAiEnabled } from "@/lib/managed-services";
 import { responseLanguageInstruction } from "@/lib/locale-language";
 import {
   normalizeDictationText,
@@ -75,7 +73,7 @@ async function feedbackRuntime(
   }
   return userId
     ? resolveAiRuntime({ userId, modelKey, surface: "feedback" })
-    : null;
+    : resolveUnbilledAiRuntime(modelKey);
 }
 const MAX_HISTORY_TURNS = 12;
 const MAX_HISTORY_CHARS = 4000;
@@ -241,9 +239,8 @@ export async function transcribeFeedbackAudio({
   if (!format) throw new Error(`Unsupported audio mime type: ${audio.type}`);
 
   const runtime = await feedbackRuntime(billTo, projectId, "transcription_model");
-  const cfg = runtime ? null : await getAppConfigValues(modelConfigKeys("transcription_model"));
-  const model = runtime?.model ?? resolveFromValues("transcription_model", cfg ?? {}).model;
-  const apiKey = runtime?.apiKey ?? requireApiKey();
+  const model = runtime.model;
+  const apiKey = runtime.apiKey;
 
   const audioBase64 = Buffer.from(await audio.arrayBuffer()).toString("base64");
   // The pattern ACTUALLY called: routing shortcut fallback (MIN-263)
@@ -257,8 +254,9 @@ export async function transcribeFeedbackAudio({
         language: locale,
         temperature: 0,
         title: "minddy Feedback voice",
-        providerId: runtime?.provider,
-        baseUrl: runtime?.baseUrl,
+        providerId: runtime.provider,
+        baseUrl: runtime.baseUrl,
+        managedKeyOwner: runtime.managedKeyOwner,
       });
     },
     { logPrefix: "[feedback-voice]" },
@@ -268,8 +266,8 @@ export async function transcribeFeedbackAudio({
       runId,
       seq: 0,
       feature: "feedback_voice",
-      provider: runtime?.provider ?? "openrouter",
-      keyMode: runtime?.mode ?? "platform",
+      provider: runtime.provider,
+      keyMode: runtime.mode,
       model: usedModel,
       promptTokens: result.inputTokens || null,
       completionTokens: result.outputTokens || null,
@@ -346,10 +344,8 @@ export async function runFeedbackVoicePass({
   billTo: AiUsageBillTo;
   projectId: string;
 }): Promise<{ patch: FeedbackVoicePatch; reply: string; usage: AiUsageInput[] }> {
-  const runtime = await feedbackRuntime(billTo, projectId, "dictate_model");
-  const cfg = runtime ? null : await getAppConfigValues(modelConfigKeys("dictate_model"));
-  const model = runtime?.model ?? resolveFromValues("dictate_model", cfg ?? {}).model;
-  if (!runtime) requireApiKey();
+  const effectiveRuntime = await feedbackRuntime(billTo, projectId, "dictate_model");
+  const model = effectiveRuntime.model;
 
   const messages: OpenRouterMessage[] = [
     {
@@ -360,13 +356,6 @@ export async function runFeedbackVoicePass({
     { role: "user", content: transcript },
   ];
 
-  const effectiveRuntime =
-    runtime ??
-    (await resolveAiRuntime({
-      userId: "userId" in billTo ? billTo.userId : "",
-      modelKey: "dictate_model",
-      surface: "feedback",
-    }));
   const { response } = await fetchAiChat(
     effectiveRuntime,
     model,
@@ -424,13 +413,4 @@ export async function runFeedbackVoicePass({
   const { patch } = sanitizeFeedbackPatch(args, draft);
   const reply = typeof args.reply === "string" ? args.reply.trim().slice(0, 300) : "";
   return { patch, reply, usage };
-}
-
-function requireApiKey(): string {
-  if (!isManagedAiEnabled()) {
-    throw new Error("Managed AI is not configured. Configure BYOK or enable MINDDY_MANAGED_AI.");
-  }
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) throw new Error("OPENROUTER_API_KEY not configured");
-  return apiKey;
 }

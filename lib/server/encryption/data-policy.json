@@ -4195,5 +4195,36 @@
         "encryption_version"
       ]
     }
+  },
+  "managed_ai_keys": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [
+      "key_encrypted"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "baseline_usd",
+        "limit_usd"
+      ],
+      "operational_configuration": [
+        "plan_id",
+        "purpose"
+      ],
+      "one_way_authentication": [
+        "key_hash"
+      ],
+      "routing_identity": [
+        "id",
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "updated_at",
+        "window_start"
+      ]
+    }
   }
 }

@@ -98,6 +98,21 @@ selects Cloud-managed billing and AI; it never activates code execution by
 itself. A hostname, Vercel deployment, branch name, customer ID, or environment
 key cannot silently switch an installation to Cloud or enable a provider.
 
+On Minddy Cloud, managed AI does not spend through that single key.
+`OPENROUTER_MANAGEMENT_KEY` (an OpenRouter management key; the former
+`OPENROUTER_PROVISIONING_KEY` name is still read) issues one API key per billed
+account, capped at the usage its plan still includes, and one daily-capped key
+for the anonymous dictation demo and FAQ answers. OpenRouter then refuses an
+account's calls at its cap even when Minddy's own pre-flight check misses them.
+Minddy re-caps each key when the usage window or the plan changes, and deletes
+keys it no longer uses. Key names carry the Supabase project they belong to, so
+environments that share the OpenRouter account (preview and production) never
+delete each other's keys. When billing is enabled, the management key is
+required: without it, billed AI calls fail rather than fall back to the
+uncapped shared key, and the capability catalog reports managed AI as
+incomplete. `OPENROUTER_API_KEY` remains for model catalog reads. Self-hosted
+instances keep using their own provider keys and need none of this.
+
 PostHog needs a complete browser or server pair, with a separate opt-in for
 server-hashed anonymous visitors. `EMAIL_PROVIDER=resend` needs the operator's
 sender configuration. The executable catalog in `lib/capabilities.ts` classifies each

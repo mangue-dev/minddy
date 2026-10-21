@@ -92,6 +92,8 @@ export async function resolveNumoTurnConfiguration(input: {
   reasoningLevel?: unknown;
   admittedBilling?: ResolvedBilling;
   managedOnly?: boolean;
+  /** Validation only: the returned runtime must not pay for a call (MIN-761). */
+  catalogOnly?: boolean;
 }): Promise<ResolvedNumoTurnConfiguration> {
   const persistedModel = normalizeModel(input.model);
   const persistedReasoningLevel = normalizeReasoning(input.reasoningLevel);
@@ -107,6 +109,7 @@ export async function resolveNumoTurnConfiguration(input: {
     modelOverride: persistedModel ?? account?.default_model,
     applicationModelDefault: true,
     ...(input.managedOnly ? { managedOnly: true } : {}),
+    ...(input.catalogOnly ? { catalogOnly: true } : {}),
   });
 
   if (account?.default_model && account.provider !== runtime.provider) {

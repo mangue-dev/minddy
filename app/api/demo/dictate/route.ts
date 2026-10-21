@@ -2,7 +2,7 @@ import { NextResponse, after, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { defaultLocale, type Locale } from "@/i18n/config";
 import { getAppConfigValues } from "@/lib/server/app-config";
-import { isManagedAiEnabled } from "@/lib/managed-services";
+import { handleManagedKeyRejection, resolvePlatformApiKey } from "@/lib/server/ai-runtime";
 import {
   fetchOpenRouterWithSuffixFallback,
   modelConfigKeys,
@@ -120,9 +120,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const apiKey = isManagedAiEnabled() ? process.env.OPENROUTER_API_KEY : undefined;
+  // No account pays here: on Minddy Cloud, the daily-capped public key.
+  const platformKey = await resolvePlatformApiKey(null).catch((err: Error) => {
+    console.error("[api/demo/dictate] managed key unavailable:", err.message);
+    return null;
+  });
+  const apiKey = platformKey?.apiKey;
   if (!apiKey) {
-    console.error("[api/demo/dictate] OPENROUTER_API_KEY not configured");
+    console.error("[api/demo/dictate] managed AI not configured");
     return NextResponse.json({ error: "unavailable" }, { status: 503 });
   }
 
@@ -175,6 +180,7 @@ export async function POST(request: NextRequest) {
             language: locale,
             temperature: 0,
             title: "minddy public demo",
+            managedKeyOwner: platformKey?.managedKeyOwner,
           });
         },
         { logPrefix: "[api/demo/dictate]" },
@@ -296,9 +302,10 @@ export async function POST(request: NextRequest) {
       "[api/demo/dictate]",
     );
     if (!result.response.ok) {
-      throw new Error(
-        `LLM error (${result.response.status}): ${(await result.response.text()).slice(0, 200)}`,
-      );
+      const detail = await result.response.text();
+      // A revoked public key is discarded so the next visitor gets a new one.
+      if (platformKey) await handleManagedKeyRejection(platformKey, result.response.status, detail);
+      throw new Error(`LLM error (${result.response.status}): ${detail.slice(0, 200)}`);
     }
 
     const data = (await result.response.json()) as DemoCompletionData;

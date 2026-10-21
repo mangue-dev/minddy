@@ -15,8 +15,11 @@ import {
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage";
 import { ownerHasUsageBudget } from "@/lib/server/usage";
-import { resolveAiRuntime } from "@/lib/server/ai-runtime";
-import { isManagedAiEnabled } from "@/lib/managed-services";
+import {
+  handleManagedKeyRejection,
+  resolveAiRuntime,
+  resolvePlatformApiKey,
+} from "@/lib/server/ai-runtime";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { fetchAiProvider } from "@/lib/server/ai-provider-request";
 import type { AgentProviderId } from "@/lib/agent-providers";
@@ -95,10 +98,14 @@ export async function requestEmbeddings(
         surface: opts.surface,
       }).catch(() => null)
     : null;
-  const apiKey =
-    runtime?.apiKey ??
-    (opts.allowPlatformWithoutUser && isManagedAiEnabled() ? process.env.OPENROUTER_API_KEY : undefined);
-  if (!apiKey) return null;
+  // The legacy feedback-board path may still pay with managed AI when no
+  // account runtime resolves: the owner's own key on Cloud, else the public one.
+  const platformKey = !runtime && opts.allowPlatformWithoutUser
+    ? await resolvePlatformApiKey(opts.billedUserId).catch(() => null)
+    : null;
+  const managedKey = runtime ?? platformKey;
+  const apiKey = managedKey?.apiKey;
+  if (!managedKey || !apiKey) return null;
   const endpoint = runtime
     ? `${runtime.baseUrl.replace(/\/+$/, "")}/embeddings`
     : OPENROUTER_EMBEDDINGS_URL;
@@ -131,6 +138,7 @@ export async function requestEmbeddings(
     });
     if (!response.ok) {
       const detail = await response.text();
+      await handleManagedKeyRejection(managedKey, response.status, detail);
       throw new Error(`embeddings error (${response.status}): ${detail.slice(0, 200)}`);
     }
     const data = (await response.json()) as {

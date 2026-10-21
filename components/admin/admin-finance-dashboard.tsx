@@ -17,7 +17,9 @@ import {
   StatsSection,
   TotalItem,
 } from "@/components/stats/stats-chrome";
-import type { AdminFinance, AdminFinanceDay } from "@/lib/types";
+import type { AdminFinance, AdminFinanceDay, AdminManagedKeysSummary } from "@/lib/types";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { toast } from "sonner";
 import type { MessageKey } from "@/lib/i18n-keys";
 import {
   ADMIN_SECTIONS,
@@ -348,7 +350,15 @@ export function AdminFinanceDashboard() {
             </StatsCard>
           </StatsSection>
 
-          <SpendCap finance={finance} t={t} />
+          {finance.managedKeys ? (
+            <ManagedKeys
+              summary={finance.managedKeys.summary}
+              onSwept={refresh}
+              t={t}
+            />
+          ) : (
+            <SpendCap finance={finance} t={t} />
+          )}
 
           <StatsSection
             id={adminSectionAnchor(ADMIN_SECTIONS.financeByType)}
@@ -784,6 +794,98 @@ function SpendCap({
           />
         </div>
       </StatsCard>
+    </StatsSection>
+  );
+}
+
+/**
+ * Minddy Cloud pays OpenRouter with one capped key per account (MIN-761): no
+ * single key can run dry for everyone, so the screen shows what the account
+ * keys may still spend, and offers to delete keys no account references.
+ */
+function ManagedKeys({
+  summary,
+  onSwept,
+  t,
+}: {
+  summary: AdminManagedKeysSummary | null;
+  onSwept: () => Promise<void>;
+  t: AdminT;
+}) {
+  const [confirming, setConfirming] = useState(false);
+
+  const sweep = async () => {
+    try {
+      const response = await fetch("/api/admin/finance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "sweep_orphan_keys" }),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const result = (await response.json()) as { deleted: number };
+      toast.success(t("finance.managedKeysSweepDone", { count: result.deleted }));
+      await onSwept();
+    } catch {
+      toast.error(t("finance.managedKeysSweepFailed"));
+    }
+  };
+
+  return (
+    <StatsSection
+      id={adminSectionAnchor(ADMIN_SECTIONS.financeCap)}
+      title={t("finance.managedKeysTitle")}
+      info={t("finance.managedKeysInfo")}
+    >
+      <StatsCard className="flex flex-col gap-4">
+        {summary ? (
+          <div className="grid grid-cols-2 gap-5 sm:grid-cols-4">
+            <TotalItem
+              label={t("finance.managedKeysAccounts")}
+              value={String(summary.accountKeys)}
+            />
+            <TotalItem
+              label={t("finance.managedKeysRemaining")}
+              value={`$${summary.remainingUsd.toFixed(2)}`}
+              info={t("finance.managedKeysRemainingInfo")}
+            />
+            <TotalItem
+              label={t("finance.managedKeysToday")}
+              value={`$${summary.usageTodayUsd.toFixed(2)}`}
+            />
+            <TotalItem
+              label={t("finance.managedKeysPublic")}
+              value={
+                summary.publicKey
+                  ? t("finance.managedKeysPublicUsage", {
+                      usage: `$${summary.publicKey.usageTodayUsd.toFixed(2)}`,
+                      limit:
+                        summary.publicKey.limitUsd === null
+                          ? "—"
+                          : `$${summary.publicKey.limitUsd.toFixed(0)}`,
+                    })
+                  : "—"
+              }
+              info={t("finance.managedKeysPublicInfo")}
+            />
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">{t("finance.managedKeysUnavailable")}</p>
+        )}
+        <div>
+          <Button variant="outline" size="sm" onClick={() => setConfirming(true)}>
+            {t("finance.managedKeysSweep")}
+          </Button>
+        </div>
+      </StatsCard>
+      <ConfirmDeleteDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        title={t("finance.managedKeysSweepTitle")}
+        description={t("finance.managedKeysSweepDescription")}
+        confirmLabel={t("finance.managedKeysSweepConfirm")}
+        cancelLabel={t("finance.managedKeysSweepCancel")}
+        onConfirm={sweep}
+      />
     </StatsSection>
   );
 }

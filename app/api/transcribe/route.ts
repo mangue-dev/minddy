@@ -184,6 +184,7 @@ export async function POST(request: NextRequest) {
           title: "minddy Dictate",
           providerId: runtime.provider,
           baseUrl: runtime.baseUrl,
+          managedKeyOwner: runtime.managedKeyOwner,
         });
       },
       { logPrefix: "[/api/transcribe]" },
@@ -253,6 +254,8 @@ export async function POST(request: NextRequest) {
       durationSeconds: result.seconds,
     });
   } catch (e) {
+    // OpenRouter's per-account cap held where the pre-flight did not (MIN-761).
+    if (isPlanLimitError(e)) return planLimitResponse(e);
     const message = e instanceof Error ? e.message : "Transcription failed";
     console.error("[/api/transcribe]", message);
     return Response.json({ error: message }, { status: 500 });

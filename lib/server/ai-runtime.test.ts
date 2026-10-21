@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
@@ -21,8 +21,22 @@ vi.mock("@/lib/server/agent/model", () => ({
 }));
 vi.mock("@/lib/server/safe-fetch", () => ({ safeFetchResponse }));
 
-const { fetchAiChat, resolveAiRuntime, usesByokForSurface } =
-  await import("@/lib/server/ai-runtime");
+const resolveUserAiKey = vi.fn(async (userId: string) => `account-key-${userId}`);
+const resolvePublicAiKey = vi.fn(async () => "public-key");
+const discardManagedAiKey = vi.fn(async () => {});
+vi.mock("@/lib/server/managed-ai-key", () => ({
+  resolveUserAiKey,
+  resolvePublicAiKey,
+  discardManagedAiKey,
+}));
+
+const {
+  fetchAiChat,
+  handleManagedKeyRejection,
+  resolveAiRuntime,
+  resolveUnbilledAiRuntime,
+  usesByokForSurface,
+} = await import("@/lib/server/ai-runtime");
 
 describe("resolveAiRuntime", () => {
   beforeEach(() => {
@@ -351,5 +365,68 @@ describe("fetchAiChat", () => {
     ).toMatchObject({
       reasoning_effort: "none",
     });
+  });
+});
+
+describe("per-account managed keys (MIN-761)", () => {
+  beforeEach(() => {
+    config.clear();
+    config.set("assistant_model", "platform/chat");
+    getUserByok.mockReset().mockResolvedValue(null);
+    safeFetchResponse.mockReset();
+    discardManagedAiKey.mockClear();
+    process.env.MINDDY_EDITION = "cloud";
+    process.env.MINDDY_MANAGED_AI = "1";
+    process.env.OPENROUTER_API_KEY = "platform-key";
+    process.env.OPENROUTER_MANAGEMENT_KEY = "management-key";
+  });
+
+  afterEach(() => {
+    delete process.env.OPENROUTER_MANAGEMENT_KEY;
+  });
+
+  it("pays a billed call with the account's own key, never the shared one", async () => {
+    await expect(resolveAiRuntime({ userId: "u1", modelKey: "assistant_model" }))
+      .resolves.toMatchObject({ mode: "platform", apiKey: "account-key-u1", managedKeyOwner: "u1" });
+    expect(resolveUserAiKey).toHaveBeenCalledWith("u1");
+  });
+
+  it("pays a call that bills no account with the public key", async () => {
+    await expect(resolveUnbilledAiRuntime("assistant_model"))
+      .resolves.toMatchObject({ apiKey: "public-key", managedKeyOwner: "public" });
+  });
+
+  it("keeps the shared key on a deployment without per-account keys", async () => {
+    delete process.env.OPENROUTER_MANAGEMENT_KEY;
+    await expect(resolveAiRuntime({ userId: "u1", modelKey: "assistant_model" }))
+      .resolves.toMatchObject({ apiKey: "platform-key" });
+    expect((await resolveAiRuntime({ userId: "u1", modelKey: "assistant_model" })).managedKeyOwner)
+      .toBeUndefined();
+  });
+
+  it("shows the budget error when OpenRouter refuses an account key at its cap", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const runtime = await resolveAiRuntime({ userId: "u1", modelKey: "assistant_model" });
+    safeFetchResponse.mockResolvedValue(new Response("Key limit exceeded", { status: 402 }));
+
+    await expect(fetchAiChat(runtime, runtime.model, (model) => ({ model, messages: [] }), "t", "[t]"))
+      .rejects.toMatchObject({ name: "PlanLimitError", code: "usage_budget_exceeded" });
+  });
+
+  it("discards a key OpenRouter no longer accepts", async () => {
+    await handleManagedKeyRejection({ apiKey: "account-key-u1", managedKeyOwner: "u1" }, 401);
+    expect(discardManagedAiKey).toHaveBeenCalledWith("u1", "account-key-u1");
+  });
+
+  it("ignores refusals of keys Minddy does not manage", async () => {
+    await expect(handleManagedKeyRejection({ apiKey: "byok" }, 402)).resolves.toBeUndefined();
+    await handleManagedKeyRejection({ apiKey: "byok" }, 401);
+    expect(discardManagedAiKey).not.toHaveBeenCalled();
+  });
+
+  it("does not turn an unrelated 403 into a budget error", async () => {
+    await expect(
+      handleManagedKeyRejection({ apiKey: "k", managedKeyOwner: "u1" }, 403, "model not allowed"),
+    ).resolves.toBeUndefined();
   });
 });

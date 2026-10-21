@@ -11,8 +11,11 @@ import {
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage";
 import type { AiSurface } from "@/lib/ai-surfaces";
-import { resolveAiRuntime } from "@/lib/server/ai-runtime";
-import { isManagedAiEnabled } from "@/lib/managed-services";
+import {
+  handleManagedKeyRejection,
+  resolveAiRuntime,
+  resolvePlatformApiKey,
+} from "@/lib/server/ai-runtime";
 import {
   aiChatProviderHeaders,
   translateAiChatRequest,
@@ -137,6 +140,8 @@ export async function runWebSearch(params: {
   query: string;
   /** OpenRouter key (platform, or user's OpenRouter BYOK). */
   apiKey: string;
+  /** Owner of a per-account Minddy Cloud key (MIN-761). */
+  managedKeyOwner?: string;
   model: string;
   maxResults?: number;
   signal?: AbortSignal;
@@ -154,6 +159,8 @@ export async function runWebSearch(params: {
 async function attemptWebSearch(params: {
   query: string;
   apiKey: string;
+  /** Owner of a per-account Minddy Cloud key (MIN-761). */
+  managedKeyOwner?: string;
   model: string;
   maxResults?: number;
   signal?: AbortSignal;
@@ -202,12 +209,20 @@ async function attemptWebSearch(params: {
 
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
+      // A refused managed key is discarded (401). At its cap, the tool returns
+      // an error: the turn's next generation ends on the budget message.
+      const keyRefused = await handleManagedKeyRejection(
+        { apiKey: params.apiKey, managedKeyOwner: params.managedKeyOwner },
+        response.status,
+        detail,
+      ).then(() => response.status === 401, () => true);
       return {
         outcome: {
           ok: false,
           error: `web search failed (${response.status}): ${detail.slice(0, 200)}`,
         },
-        refused: true,
+        // The key, not the model, was refused: no replay without the suffix.
+        refused: !keyRefused,
       };
     }
 
@@ -298,10 +313,10 @@ export async function runWebSearchTool(params: {
   // OpenAI-compatible. A native key therefore remains on the Minddy quota for CE
   // subcall; an OpenRouter key uses its model per feature.
   const byokOpenRouter = runtime?.provider === "openrouter" ? runtime : null;
-  const apiKey =
-    byokOpenRouter?.apiKey ??
-    params.apiKey ??
-    (isManagedAiEnabled() ? process.env.OPENROUTER_API_KEY : undefined);
+  const managedKey = byokOpenRouter ?? (params.apiKey
+    ? { apiKey: params.apiKey }
+    : await resolvePlatformApiKey(params.userId ?? null).catch(() => null));
+  const apiKey = managedKey?.apiKey;
   if (!apiKey) {
     return { result: { error: "Web search is not available here." }, success: false };
   }
@@ -309,6 +324,7 @@ export async function runWebSearchTool(params: {
   const outcome = await runWebSearch({
     query: params.query,
     apiKey,
+    managedKeyOwner: managedKey?.managedKeyOwner,
     model: byokOpenRouter?.model ?? settings.model,
     maxResults: params.maxResults,
     signal: params.signal,

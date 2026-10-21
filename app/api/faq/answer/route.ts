@@ -4,7 +4,7 @@ import { isSameOriginRequest } from "@/lib/server/same-origin";
 import { getClientIp } from "@/lib/server/request-ip";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { getAppConfigValues } from "@/lib/server/app-config";
-import { isManagedAiEnabled } from "@/lib/managed-services";
+import { handleManagedKeyRejection, resolvePlatformApiKey } from "@/lib/server/ai-runtime";
 import {
   fetchOpenRouterWithSuffixFallback,
   modelConfigKeys,
@@ -96,9 +96,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const apiKey = isManagedAiEnabled() ? process.env.OPENROUTER_API_KEY : undefined;
+  // No account pays here: on Minddy Cloud, the daily-capped public key.
+  const platformKey = await resolvePlatformApiKey(null).catch((err: Error) => {
+    console.error("[api/faq/answer] managed key unavailable:", err.message);
+    return null;
+  });
+  const apiKey = platformKey?.apiKey;
   if (!apiKey) {
-    console.error("[api/faq/answer] OPENROUTER_API_KEY not configured");
+    console.error("[api/faq/answer] managed AI not configured");
     return NextResponse.json({ error: "unavailable" }, { status: 503 });
   }
 
@@ -166,11 +171,10 @@ export async function POST(request: NextRequest) {
     "[api/faq/answer]",
   );
   if (!response.response.ok) {
-    console.error(
-      "[api/faq/answer] LLM error:",
-      response.response.status,
-      (await response.response.text()).slice(0, 200),
-    );
+    const detail = await response.response.text();
+    // A revoked public key is discarded so the next question gets a new one.
+    if (platformKey) await handleManagedKeyRejection(platformKey, response.response.status, detail);
+    console.error("[api/faq/answer] LLM error:", response.response.status, detail.slice(0, 200));
     return NextResponse.json({ error: "failed" }, { status: 502 });
   }
 

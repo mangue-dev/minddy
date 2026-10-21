@@ -21,12 +21,24 @@ export interface ManagedServiceEnvironment {
   STRIPE_PRICE_ID_GO_YEARLY?: string;
   STRIPE_PRICE_ID_PRO_YEARLY?: string;
   OPENROUTER_API_KEY?: string;
+  OPENROUTER_MANAGEMENT_KEY?: string;
+  /** Former name of the management key, still read so a deployment keeps working. */
+  OPENROUTER_PROVISIONING_KEY?: string;
 }
+
+/**
+ * How managed AI pays OpenRouter (MIN-761). `per_user`: every billed call uses
+ * an OpenRouter key issued for its account and capped at its included usage.
+ * `shared`: the single `OPENROUTER_API_KEY`, capped only by Minddy's pre-flight.
+ */
+export type ManagedAiKeyMode = "per_user" | "shared";
 
 export interface ManagedServices {
   billing: boolean;
   ai: boolean;
   forge: boolean;
+  /** Meaningful only when `ai` is on. */
+  aiKeyMode: ManagedAiKeyMode;
 }
 
 function enabled(value: string | undefined): boolean {
@@ -47,9 +59,17 @@ export function hasManagedBillingConfiguration(env: ManagedServiceEnvironment): 
 
 export function resolveManagedServices(env: ManagedServiceEnvironment): ManagedServices {
   const cloud = resolveDeploymentEdition(env) === "cloud";
+  const billing = cloud && enabled(env.MINDDY_MANAGED_BILLING) && hasManagedBillingConfiguration(env);
+  const managementKey = Boolean(
+    env.OPENROUTER_MANAGEMENT_KEY?.trim() || env.OPENROUTER_PROVISIONING_KEY?.trim(),
+  );
   return {
-    billing: cloud && enabled(env.MINDDY_MANAGED_BILLING) && hasManagedBillingConfiguration(env),
+    billing,
     ai: cloud && enabled(env.MINDDY_MANAGED_AI) && Boolean(env.OPENROUTER_API_KEY),
+    // Billed plans always use per-account keys: without a management key the
+    // billed calls fail closed rather than fall back to the uncapped shared
+    // key. A management key alone (preview) opts into the same mode.
+    aiKeyMode: cloud && (billing || managementKey) ? "per_user" : "shared",
     // The managed forge relay (docs/managed-forge-relay-plan.md): the Cloud
     // deployment operates the GitHub App / GitLab OAuth relay for opting-in
     // self-hosted instances. Active only with the explicit flag AND a
@@ -72,6 +92,8 @@ export function managedServices(): ManagedServices {
     STRIPE_PRICE_ID_GO_YEARLY: process.env.STRIPE_PRICE_ID_GO_YEARLY,
     STRIPE_PRICE_ID_PRO_YEARLY: process.env.STRIPE_PRICE_ID_PRO_YEARLY,
     OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
+    OPENROUTER_MANAGEMENT_KEY: process.env.OPENROUTER_MANAGEMENT_KEY,
+    OPENROUTER_PROVISIONING_KEY: process.env.OPENROUTER_PROVISIONING_KEY,
   });
 }
 
@@ -81,6 +103,10 @@ export function isManagedBillingEnabled(): boolean {
 
 export function isManagedAiEnabled(): boolean {
   return managedServices().ai;
+}
+
+export function managedAiKeyMode(): ManagedAiKeyMode {
+  return managedServices().aiKeyMode;
 }
 
 export function isManagedForgeEnabled(): boolean {

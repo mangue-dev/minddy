@@ -7,13 +7,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * mocked; the body mapping and the parsing are the real ones.
  */
 
-const { fetchAiProviderMock, recordAiUsageMock, resolveConfiguredModelMock, getUserByokMock } =
-  vi.hoisted(() => ({
-    fetchAiProviderMock: vi.fn(),
-    recordAiUsageMock: vi.fn(),
-    resolveConfiguredModelMock: vi.fn(),
-    getUserByokMock: vi.fn(),
-  }));
+const {
+  fetchAiProviderMock,
+  recordAiUsageMock,
+  resolveConfiguredModelMock,
+  getUserByokMock,
+  resolvePlatformApiKeyMock,
+  handleManagedKeyRejectionMock,
+} = vi.hoisted(() => ({
+  fetchAiProviderMock: vi.fn(),
+  recordAiUsageMock: vi.fn(),
+  resolveConfiguredModelMock: vi.fn(),
+  getUserByokMock: vi.fn(),
+  resolvePlatformApiKeyMock: vi.fn(),
+  handleManagedKeyRejectionMock: vi.fn(),
+}));
 
 vi.mock("@/lib/server/ai-provider-request", () => ({ fetchAiProvider: fetchAiProviderMock }));
 vi.mock("@/lib/server/ai-usage", () => ({
@@ -27,7 +35,11 @@ vi.mock("@/lib/server/ai-usage", () => ({
 }));
 vi.mock("@/lib/server/model-config", () => ({ resolveConfiguredModel: resolveConfiguredModelMock }));
 vi.mock("@/lib/server/agent/model", () => ({ getUserByok: getUserByokMock }));
-vi.mock("@/lib/managed-services", () => ({ isManagedAiEnabled: () => true }));
+// The managed key of the billed account, or the public key when none is billed.
+vi.mock("@/lib/server/ai-runtime", () => ({
+  resolvePlatformApiKey: resolvePlatformApiKeyMock,
+  handleManagedKeyRejection: handleManagedKeyRejectionMock,
+}));
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => ({}) }));
 
 const { callDecisionModel, probeDecisionModel, runModelDecision, DECISION_MODEL_PROBE_SPEC } =
@@ -58,11 +70,12 @@ function respond(body: unknown, status = 200) {
 }
 
 beforeEach(() => {
-  process.env.OPENROUTER_API_KEY = "platform-key";
   fetchAiProviderMock.mockReset();
   recordAiUsageMock.mockReset().mockResolvedValue(undefined);
   resolveConfiguredModelMock.mockReset().mockResolvedValue({ model: "liquid/d1" });
   getUserByokMock.mockReset().mockResolvedValue(null);
+  resolvePlatformApiKeyMock.mockReset().mockResolvedValue({ apiKey: "platform-key" });
+  handleManagedKeyRejectionMock.mockReset().mockResolvedValue(undefined);
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -149,7 +162,7 @@ describe("callDecisionModel", () => {
   });
 
   it("fails without a call when no OpenRouter key can carry it", async () => {
-    delete process.env.OPENROUTER_API_KEY;
+    resolvePlatformApiKeyMock.mockResolvedValue(null);
     await expect(callDecisionModel(SPEC, CTX)).resolves.toEqual({ ok: false, reason: "no_key" });
     expect(fetchAiProviderMock).not.toHaveBeenCalled();
   });
@@ -209,5 +222,28 @@ describe("probeDecisionModel", () => {
       reason: "http",
       status: 400,
     });
+  });
+});
+
+describe("managed keys (MIN-761)", () => {
+  it("pays with the billed account's key and lets a refusal reach the key handler", async () => {
+    resolvePlatformApiKeyMock.mockResolvedValue({ apiKey: "account-key", managedKeyOwner: "user-1" });
+    fetchAiProviderMock.mockResolvedValue(respond({ error: { message: "Key limit exceeded" } }, 402));
+
+    await expect(callDecisionModel(SPEC, CTX)).resolves.toEqual({ ok: false, reason: "http", status: 402 });
+    expect(resolvePlatformApiKeyMock).toHaveBeenCalledWith("user-1");
+    const [, , init] = fetchAiProviderMock.mock.calls[0] as [string, string, RequestInit];
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer account-key");
+    expect(handleManagedKeyRejectionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ managedKeyOwner: "user-1" }),
+      402,
+      expect.any(String),
+    );
+  });
+
+  it("never throws when the account key cannot be provided", async () => {
+    resolvePlatformApiKeyMock.mockRejectedValue(new Error("management key not configured"));
+    await expect(callDecisionModel(SPEC, CTX)).resolves.toEqual({ ok: false, reason: "no_key" });
+    expect(fetchAiProviderMock).not.toHaveBeenCalled();
   });
 });

@@ -4,6 +4,7 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { isAdminUser } from "@/lib/server/admin";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getBillingWindow, getUserUsage } from "@/lib/server/usage";
+import { reconcileUserAiKey } from "@/lib/server/managed-ai-key";
 import type { AdminQuotaResetsResponse } from "@/lib/types";
 
 /** Support quota resets preserve the ledger and change only the budget watermark. */
@@ -107,6 +108,8 @@ export async function POST(request: NextRequest) {
     console.error("[admin/agent-quota] reset failed:", error.message);
     return NextResponse.json({ error: "Reset failed" }, { status: 500 });
   }
+  // The account's OpenRouter key starts its new window now, not at its next call.
+  await reconcileUserAiKey(userId);
 
   try {
     return NextResponse.json(await quotaStateOf(userId), { headers: { "Cache-Control": "private, no-store" } });
@@ -141,6 +144,7 @@ export async function DELETE(request: NextRequest) {
   }
   const userId = (data as { user_id?: string } | null)?.user_id;
   if (!userId) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  await reconcileUserAiKey(userId);
 
   try {
     return NextResponse.json(await quotaStateOf(userId), { headers: { "Cache-Control": "private, no-store" } });

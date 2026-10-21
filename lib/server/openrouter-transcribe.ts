@@ -1,6 +1,7 @@
 import "server-only";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { fetchAiProvider } from "@/lib/server/ai-provider-request";
+import { handleManagedKeyRejection } from "@/lib/server/ai-runtime";
 import type { AgentProviderId } from "@/lib/agent-providers";
 
 /**
@@ -45,6 +46,8 @@ export interface TranscribeAudioOptions {
   title?: string;
   providerId?: AgentProviderId;
   baseUrl?: string;
+  /** Owner of a per-account Minddy Cloud key (MIN-761), so a refusal is handled. */
+  managedKeyOwner?: string;
 }
 
 export interface TranscribeAudioResult {
@@ -115,6 +118,11 @@ export async function transcribeAudio(
 
   if (!res.ok) {
     const text = await res.text();
+    await handleManagedKeyRejection(
+      { apiKey, managedKeyOwner: options?.managedKeyOwner },
+      res.status,
+      text,
+    );
     throw new Error(
       `STT error ${res.status}: ${text.slice(0, 300)}`,
     );

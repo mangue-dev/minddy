@@ -4,6 +4,7 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { cancelStripeSubscription, isStripeConfigured } from "@/lib/server/stripe";
+import { deleteUserAiKey } from "@/lib/server/managed-ai-key";
 import { pageFilePathsForProjects } from "@/lib/server/page-files";
 import { FORGE_ATTACHMENTS_BUCKET } from "@/lib/forge-image-assets";
 import {
@@ -151,7 +152,7 @@ async function removeObjects(
 
 /**
  * Clears the account and everything related to it. Idempotent in fact: a
- * second call to an account that has already left fails at step 3 with a clear
+ * second call to an account that has already left fails at step 4 with a clear
  * message, it does not destroy anything else.
  */
 export async function deleteAccount(userId: string): Promise<DeletionResult> {
@@ -236,11 +237,21 @@ export async function deleteAccount(userId: string): Promise<DeletionResult> {
   const avatarPath = avatar?.image_path as string | null | undefined;
   if (avatarPath) pending.push({ bucket: "user-avatars", paths: [avatarPath] });
 
-  // ── 3. The account ─────────────────────────────────────────────────────
+  // ── 3. Managed AI key ──────────────────────────────────────────────────
+  // Deleted at OpenRouter, then its row (MIN-761). A failure is reported, not
+  // fatal: the row cascades with the account and the admin orphan sweep
+  // removes the key it no longer references.
+  try {
+    await deleteUserAiKey(userId);
+  } catch (e) {
+    warnings.push(`managed AI key: ${(e as Error).message}`);
+  }
+
+  // ── 4. The account ─────────────────────────────────────────────────────
   const { error } = await service.auth.admin.deleteUser(userId);
   if (error) throw new Error(error.message);
 
-  // ── 4. Storage objects ─────────────────────────────────────────────────
+  // ── 5. Storage objects ─────────────────────────────────────────────────
   let removedStorageObjects = 0;
   for (const { bucket, paths } of pending) {
     removedStorageObjects += await removeObjects(service, bucket, paths, warnings);

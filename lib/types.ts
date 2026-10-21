@@ -1553,6 +1553,17 @@ export interface AdminFinanceDay {
  * `month` carries the REAL unsmoothed numbers of the tiles: the two do not
  * add up, and that is intended.
  */
+export interface AdminManagedKeysSummary {
+  /** Account keys issued by Minddy. */
+  accountKeys: number;
+  /** What the account keys may still spend before OpenRouter refuses them. */
+  remainingUsd: number;
+  /** Usage of the account keys today (UTC). */
+  usageTodayUsd: number;
+  /** The key of the anonymous surfaces (demo, FAQ); `null` before its first use. */
+  publicKey: { limitUsd: number | null; usageTodayUsd: number } | null;
+}
+
 export interface AdminFinance {
   windowDays: number;
   days: AdminFinanceDay[];
@@ -1580,6 +1591,12 @@ export interface AdminFinance {
     resetDay: string;
     projectedExhaustionDay: string | null;
   } | null;
+  /**
+   * Per-account OpenRouter keys (MIN-761), shown instead of `cap` on Minddy
+   * Cloud. `null` on a shared-key deployment; `summary` is `null` when the
+   * keys could not be read.
+   */
+  managedKeys: { summary: AdminManagedKeysSummary | null } | null;
   stripe: {
     configured: boolean;
     reachable: boolean;
