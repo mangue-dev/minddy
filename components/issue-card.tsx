@@ -1134,9 +1134,10 @@ const IssueCardContent = memo(function IssueCardContent({
             : (titleById.get(r.otherId) ?? ""),
       })),
       // Category names (IDs live on the issue, names in categoryMap).
-      categories: issue.category_ids
-        .map((cid) => categoryMap.get(cid)?.name)
-        .filter((name): name is string => !!name),
+      // In the project's category order (MIN-760), which the map follows.
+      categories: [...categoryMap]
+        .filter(([id]) => issue.category_ids.includes(id))
+        .map(([, category]) => category.name),
     };
   };
 

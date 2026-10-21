@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
-  "sourceRevision": 14,
+  "revision": 16,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-21",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -50,6 +50,7 @@
       "components/settings/project-identity-header.tsx",
       "components/settings/inline-edit-field.tsx",
       "components/project-categories.tsx",
+      "lib/server/categories.ts",
       "components/settings/project-settings-page.tsx",
       "components/create-project-wizard.tsx",
       "lib/project-draft.ts",
@@ -62,10 +63,10 @@
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 16,
+    "fact": "agent:claude (MIN-760: category reordering paragraph checked against components/project-categories.tsx, the order route and the Numo/MCP tools; existing figures unaffected and kept; no browser walkthrough of the procedure)",
+    "language": "agent:claude (es translation of the added en paragraph, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-21"
   },
   "related": [
     "issues",
@@ -89,7 +90,7 @@
       "src": "/documentation/es/project-general.png",
       "alt": "Cabecera del proyecto con el icono y su distintivo de edición, el nombre, la clave y las cifras Incidencias, Miembros, Objetivos, Categorías y Creado.",
       "caption": "Selecciona el icono, el nombre o la clave para cambiarlos ahí mismo; mover el proyecto a la papelera sigue siendo una acción aparte, más abajo.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -106,7 +107,7 @@
       "src": "/documentation/es/project-members.png",
       "alt": "Tarjeta «Invitar a personas» sobre la tarjeta Miembros, que lista tres miembros de demostración con la persona propietaria identificada.",
       "caption": "Invita con el correo de la cuenta e identifica al propietario antes de retirar el acceso de un miembro.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -135,7 +136,7 @@ La pestaña **General** empieza con la identidad del proyecto: su icono, su nomb
 
 Las demás pestañas son **Categorías**, **Miembros**, **Recurrencias**, **Asignar inteligentemente**, **Sugerencias**, **Git**, **Importación** e **Integraciones**. Sigue la guía correspondiente antes de activar un proveedor o trabajo automático. Las preferencias de la cuenta, como el idioma de la interfaz, son independientes de la configuración del proyecto.
 
-En **Categorías**, el propietario y los miembros gestionan las categorías que clasifican las incidencias. Elige **Nueva categoría** en la línea de título de la tarjeta: aparece arriba de la lista una fila con un punto de color y un campo de nombre. Pulsa Intro o elige **Añadir** para crear la categoría; Escape cierra la fila sin crearla. Selecciona el punto de color de una categoría para elegir otro color, que se aplica al instante (en un teléfono los colores se abren en una hoja), o selecciona su nombre para renombrarla allí mismo. El botón de eliminar pide confirmación y después quita la categoría de todas las incidencias.
+En **Categorías**, el propietario y los miembros gestionan las categorías que clasifican las incidencias. Elige **Nueva categoría** en la línea de título de la tarjeta: aparece arriba de la lista una fila con un punto de color y un campo de nombre. Pulsa Intro o elige **Añadir** para crear la categoría; Escape cierra la fila sin crearla. Selecciona el punto de color de una categoría para elegir otro color, que se aplica al instante (en un teléfono los colores se abren en una hoja), o selecciona su nombre para renombrarla allí mismo. El botón de eliminar pide confirmación y después quita la categoría de todas las incidencias. En cuanto el proyecto tiene dos categorías o más, cada fila muestra un asa a la izquierda: arrástrala para subir o bajar la categoría. Con el teclado, enfoca el asa, pulsa Espacio, mueve la categoría con las flechas Arriba y Abajo y pulsa Espacio de nuevo para soltarla; Escape cancela. Este orden es el que muestran todos los menús y filtros de categorías a todo el proyecto. Numo y los clientes MCP de Minddy también pueden leerlo y cambiarlo, por ejemplo cuando pides a Numo que ponga una categoría en primer lugar.
 
 
 ![Cabecera del proyecto con el icono y su distintivo de edición, el nombre, la clave y las cifras Incidencias, Miembros, Objetivos, Categorías y Creado.](/documentation/es/project-general.png)

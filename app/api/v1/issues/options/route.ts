@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
   const { data: categories, error } = await categoryStore(service)
     .select("id, name, color")
     .eq("project_id", auth.project.id)
-    .order("name");
+    .order("position");
 
   if (error) {
     console.error("[api/v1/issues/options] list failed:", error.message);

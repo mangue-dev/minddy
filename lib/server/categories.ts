@@ -71,10 +71,13 @@ export async function seedDefaultCategories({
 
   let rows;
   try {
-    rows = await Promise.all(DEFAULT_CATEGORIES.map((category) => encodeCategory({
+    // Explicit positions: the rows share one insertion time, and the set keeps
+    // its listed order rather than falling back to id order.
+    rows = await Promise.all(DEFAULT_CATEGORIES.map((category, index) => encodeCategory({
       project_id: projectId,
       name: names[category.key] ?? category.key,
       color: category.color,
+      position: index,
     })));
   } catch {
     console.error("[categories] default seed encryption failed");
@@ -136,8 +139,10 @@ export async function resolveCategoryIdsByName(
   const missing = [...wanted].filter(([key]) => !idByKey.has(key));
   if (missing.length === 0) return { idByKey, created: 0 };
 
-  // Continue the palette round-robin where the project's list left off.
+  // Continue the palette round-robin where the project's list left off. The
+  // new categories go last, in the order their names arrived.
   const offset = (existing ?? []).length;
+  const firstPosition = Date.now();
   let newRows;
   try {
     newRows = await Promise.all(missing.map(([, name], i) => encodeCategory({
@@ -146,6 +151,7 @@ export async function resolveCategoryIdsByName(
         // truncating here would reopen the gap between the key and the written line.
         name,
         color: CATEGORY_COLORS[(offset + i) % CATEGORY_COLORS.length],
+        position: firstPosition + i,
       })));
   } catch {
     console.error("[categories] resolve encryption failed");
@@ -328,4 +334,68 @@ export async function updateCategory({
   } catch {
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
+}
+
+/**
+ * Reorder a project's categories (MIN-760). Shared by the settings route and
+ * the Numo and MCP tools. The listed categories come first, in that order;
+ * the others keep their relative order after them, so moving one category
+ * needs only its id. The whole move is one SQL statement, run under the
+ * project lock taken by `guard_project_actor`.
+ *
+ * Returns every category of the project in its new order.
+ */
+export type ReorderCategoriesResult =
+  | { ok: true; categories: Record<string, unknown>[] }
+  | {
+      ok: false;
+      status: number;
+      errorKey?:
+        | "invalidRequest"
+        | "categoryNotFound"
+        | "projectNotFound"
+        | "readOnlyProject"
+        | "databaseError";
+      rawMessage?: string;
+    };
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function reorderCategories({
+  projectId,
+  actorId,
+  categoryIds,
+}: {
+  projectId: string;
+  actorId: string;
+  categoryIds: unknown;
+}): Promise<ReorderCategoriesResult> {
+  if (!Array.isArray(categoryIds) || categoryIds.length === 0 ||
+      !categoryIds.every((id) => typeof id === "string" && UUID.test(id)) ||
+      new Set(categoryIds).size !== categoryIds.length) {
+    return { ok: false, status: 400, errorKey: "invalidRequest" };
+  }
+  const access = await getProjectAccess(actorId, projectId);
+  if (!access) return { ok: false, status: 404, errorKey: "projectNotFound" };
+  if (!access.canWrite) return { ok: false, status: 403, errorKey: "readOnlyProject" };
+
+  const service = getServiceClient();
+  const { data, error } = await service.rpc("reorder_categories", {
+    p_project_id: projectId, p_actor_id: actorId, p_category_ids: categoryIds,
+  });
+  if (error) {
+    if (error.code === "42501") return { ok: false, status: 403, errorKey: "readOnlyProject" };
+    console.error("[categories] reorder failed:", error.message);
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+  const code = (data as { code?: string } | null)?.code;
+  if (code === "not_found") return { ok: false, status: 404, errorKey: "categoryNotFound" };
+  if (code) return { ok: false, status: 400, errorKey: "invalidRequest" };
+
+  const { data: categories, error: readError } = await categoryStore(service, actorId)
+    .select("*")
+    .eq("project_id", projectId)
+    .order("position", { ascending: true });
+  if (readError) return { ok: false, status: 500, errorKey: "databaseError" };
+  return { ok: true, categories: categories ?? [] };
 }

@@ -6,6 +6,7 @@ import {
   createCategoryApi,
   deleteCategoryApi,
   fetchCategoriesApi,
+  reorderCategoriesApi,
   updateCategoryApi,
 } from "./categories-api";
 import type { Category, CategoryUpdateInput, CreateCategoryInput } from "./types";
@@ -46,6 +47,33 @@ export function useCategoriesQuery(projectId: string | null) {
     [invalidate]
   );
 
+  // Optimistic: the list takes its new order at once, and returns to the
+  // previous one if the server refuses it.
+  const reorderCategories = useCallback(
+    async (categoryIds: string[]) => {
+      if (!projectId) return;
+      const key = categoriesKey(projectId);
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<Category[]>(key);
+      if (previous) {
+        const byId = new Map(previous.map((category) => [category.id, category]));
+        queryClient.setQueryData<Category[]>(key, [
+          ...categoryIds.flatMap((id) => byId.get(id) ?? []),
+          ...previous.filter((category) => !categoryIds.includes(category.id)),
+        ]);
+      }
+      try {
+        queryClient.setQueryData<Category[]>(key, await reorderCategoriesApi(projectId, categoryIds));
+      } catch (error) {
+        if (previous) queryClient.setQueryData<Category[]>(key, previous);
+        throw error;
+      } finally {
+        invalidate();
+      }
+    },
+    [projectId, queryClient, invalidate]
+  );
+
   const deleteCategory = useCallback(
     async (categoryId: string) => {
       await deleteCategoryApi(categoryId);
@@ -63,6 +91,7 @@ export function useCategoriesQuery(projectId: string | null) {
     loading: enabled && isPending,
     createCategory,
     updateCategory,
+    reorderCategories,
     deleteCategory,
   };
 }

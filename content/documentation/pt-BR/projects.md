@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-21",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -50,6 +50,7 @@
       "components/settings/project-identity-header.tsx",
       "components/settings/inline-edit-field.tsx",
       "components/project-categories.tsx",
+      "lib/server/categories.ts",
       "components/settings/project-settings-page.tsx",
       "components/create-project-wizard.tsx",
       "lib/project-draft.ts",
@@ -62,10 +63,10 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 15,
+    "fact": "agent:claude (MIN-760: category reordering paragraph checked against components/project-categories.tsx, the order route and the Numo/MCP tools; existing figures unaffected and kept; no browser walkthrough of the procedure)",
+    "language": "agent:claude (pt-BR translation of the added en paragraph, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-21"
   },
   "related": [
     "issues",
@@ -89,7 +90,7 @@
       "src": "/documentation/pt-BR/project-general.png",
       "alt": "Cabeçalho do projeto com o ícone e seu selo de edição, o nome, a chave e os números Tickets, Membros, Objetivos, Categorias e Criado em.",
       "caption": "Selecione o ícone, o nome ou a chave para alterá-los no lugar; mover o projeto para a lixeira continua sendo uma ação separada, mais abaixo.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -106,7 +107,7 @@
       "src": "/documentation/pt-BR/project-members.png",
       "alt": "Cartão “Convidar pessoas” acima do cartão Membros, que lista três membros de demonstração com o proprietário identificado.",
       "caption": "Convide pelo email da conta e identifique o proprietário antes de remover o acesso de um membro.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -135,7 +136,7 @@ A aba **Geral** abre com a identidade do projeto: o ícone, o nome e a chave, e 
 
 As outras abas são **Categorias**, **Membros**, **Recorrências**, **Inteligente Atribuir**, **Feedback**, **Git**, **Importar** e **Integrações**. Siga o guia correspondente antes de habilitar um provedor ou trabalho automático. As preferências da conta, como o idioma da interface, são separadas da configuração do projeto.
 
-Em **Categorias**, o proprietário e os membros gerenciam as categorias que classificam os tickets. Escolha **Nova categoria** na linha de título do cartão: uma linha com um ponto de cor e um campo de nome aparece no topo da lista. Pressione Enter ou escolha **Adicionar** para criar a categoria; Esc fecha a linha sem criá-la. Selecione o ponto de cor de uma categoria para escolher outra cor, aplicada na hora (no celular as cores abrem em um painel), ou selecione o nome dela para renomeá-la ali mesmo. O botão de excluir pede confirmação e depois remove a categoria de todos os tickets.
+Em **Categorias**, o proprietário e os membros gerenciam as categorias que classificam os tickets. Escolha **Nova categoria** na linha de título do cartão: uma linha com um ponto de cor e um campo de nome aparece no topo da lista. Pressione Enter ou escolha **Adicionar** para criar a categoria; Esc fecha a linha sem criá-la. Selecione o ponto de cor de uma categoria para escolher outra cor, aplicada na hora (no celular as cores abrem em um painel), ou selecione o nome dela para renomeá-la ali mesmo. O botão de excluir pede confirmação e depois remove a categoria de todos os tickets. Assim que o projeto tem duas categorias ou mais, cada linha mostra uma alça à esquerda: arraste-a para subir ou descer a categoria. Pelo teclado, coloque o foco na alça, pressione Espaço, mova a categoria com as setas para cima e para baixo e pressione Espaço de novo para soltá-la; Esc cancela. Essa ordem é a que todos os menus e filtros de categorias mostram para todo o projeto. O Numo e os clientes MCP do Minddy também podem lê-la e alterá-la, por exemplo quando você pede ao Numo para colocar uma categoria em primeiro lugar.
 
 
 ![Cabeçalho do projeto com o ícone e seu selo de edição, o nome, a chave e os números Tickets, Membros, Objetivos, Categorias e Criado em.](/documentation/pt-BR/project-general.png)

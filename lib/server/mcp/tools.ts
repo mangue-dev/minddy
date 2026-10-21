@@ -67,6 +67,7 @@ import {
   removeIssueRelation,
 } from "@/lib/server/issue-relations";
 import { setIssueCategories } from "@/lib/server/set-issue-categories";
+import { reorderCategories } from "@/lib/server/categories";
 import {
   addCommentToIssue,
   addCommentToFeedbackPost,
@@ -1481,7 +1482,9 @@ export function registerMinddyTools(
     {
       title: "List categories",
       description:
-        "List a project's categories (labels). Read-only: assign them to issues " +
+        "List a project's categories (labels) in their display order, the " +
+        "order of every category picker and filter (change it with " +
+        "minddy_reorder_categories). Read-only: assign them to issues " +
         "via category_ids in minddy_create_issue / minddy_update_issues.",
       inputSchema: z.object({ project_id: PROJECT_ID }),
       annotations: READ_ONLY,
@@ -1492,9 +1495,53 @@ export function registerMinddyTools(
       const { data, error } = await categoryStore(getServiceClient())
         .select("id, name, color")
         .eq("project_id", scope.access.project.id)
-        .order("name", { ascending: true });
+        .order("position", { ascending: true });
       if (error) return fail("database_error", error.message);
       return ok({ categories: data ?? [] });
+    },
+  );
+
+  server.registerTool(
+    "minddy_reorder_categories",
+    {
+      title: "Reorder categories",
+      description:
+        "Change the display order of a project's categories (labels), the " +
+        "order every category picker and filter follows. The listed " +
+        "categories come first, in the order given; the others keep their " +
+        "relative order after them, so moving one category to the top takes " +
+        "just its id. Read the ids and current order with " +
+        "minddy_list_categories. Returns the complete new order.",
+      inputSchema: z.object({
+        project_id: PROJECT_ID,
+        category_ids: z
+          .array(z.string().uuid())
+          .min(1)
+          .describe("Distinct category UUIDs (minddy_list_categories), in the wanted order."),
+      }),
+      annotations: WRITE_IDEMPOTENT,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const result = await reorderCategories({
+        projectId: scope.access.project.id,
+        actorId: scope.userId,
+        categoryIds: args.category_ids,
+      });
+      if (!result.ok) {
+        if (result.errorKey === "invalidRequest") {
+          return fail("invalid_params", "category_ids must be distinct category ids of this project.");
+        }
+        if (result.errorKey === "categoryNotFound") {
+          return fail("not_found", "A category id is not in this project.");
+        }
+        if (result.status === 403) return fail("forbidden", "This project is read-only for you.");
+        return coreFail(result);
+      }
+      return ok({
+        categories: result.categories.map(({ id, name, color }) => ({ id, name, color })),
+      });
     },
   );
 

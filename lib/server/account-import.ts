@@ -612,7 +612,7 @@ async function importAccountTransferCore(
     userId,
     projects.projectIds,
     categoryIds,
-    ["id", "project_id", "name", "color", "created_at"],
+    ["id", "project_id", "name", "color", "position", "created_at"],
   );
 
   const cycleIds = new Map<string, string>();

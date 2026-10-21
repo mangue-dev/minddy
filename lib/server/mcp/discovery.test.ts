@@ -60,6 +60,7 @@ const EXPECTED_TOOL_NAMES = [
   "minddy_move_to_cycle",
   "minddy_promote_feedback",
   "minddy_remove_from_cycle",
+  "minddy_reorder_categories",
   "minddy_respond_feedback",
   "minddy_revoke_integration",
   "minddy_search_pages",

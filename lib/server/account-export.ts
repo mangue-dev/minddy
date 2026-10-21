@@ -316,7 +316,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       : Promise.resolve({ data: [] as Row[], error: null }),
     ownedIds.length
       ? categoryStore(service)
-          .select("id, project_id, name, color, created_at")
+          .select("id, project_id, name, color, position, created_at")
           .in("project_id", ownedIds)
           .order("created_at")
       : Promise.resolve({ data: [] as Row[], error: null }),

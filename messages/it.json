@@ -1427,6 +1427,8 @@
     "rename": "Rinomina {name}",
     "nameRequired": "Inserisci un nome.",
     "deleteAria": "Elimina {name}",
+    "reorderAria": "Sposta {name}",
+    "reorderHint": "Trascina per riordinare. Tastiera: Spazio afferra, Su/Giù sposta, Spazio rilascia, Esc annulla.",
     "addCategory": "Aggiungi"
   },
   "Common": {
@@ -3677,6 +3679,9 @@
     "updatingCategory": "Aggiornamento categoria...",
     "categoryUpdated": "Categoria aggiornata",
     "updateCategoryFailed": "Impossibile aggiornare la categoria",
+    "reorderingCategories": "Riordino delle categorie…",
+    "categoriesReordered": "Categorie riordinate",
+    "reorderCategoriesFailed": "Impossibile riordinare le categorie",
     "creatingIntegration": "Creazione di integrazione...",
     "integrationCreated": "Integrazione creata",
     "createIntegrationFailed": "Impossibile creare l'integrazione",

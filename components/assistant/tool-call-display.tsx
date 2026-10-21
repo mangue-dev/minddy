@@ -492,6 +492,13 @@ const TOOL_META: Record<string, ToolMeta> = {
       return success ? t("categoryUpdated") : t("updateCategoryFailed");
     },
   },
+  reorder_categories: {
+    icon: TagsIcon,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("reorderingCategories");
+      return success ? t("categoriesReordered") : t("reorderCategoriesFailed");
+    },
+  },
   create_integration: {
     icon: Plug01Icon,
     getLabel: (_args, _result, success, status, t) => {

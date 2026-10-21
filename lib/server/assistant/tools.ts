@@ -452,7 +452,8 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     type: "function",
     function: {
       name: "list_categories",
-      description: "List the project's categories (labels): id, name, color.",
+      description:
+        "List the project's categories (labels): id, name, color, in their display order — the order of every category picker and filter, set with reorder_categories.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -1461,6 +1462,26 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           color: { type: "string", description: "New hex color like #7c5cff." },
         },
         required: ["category_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "reorder_categories",
+      description:
+        "Change the display order of the project's categories (labels), the order every category picker and filter follows. Get the ids and the current order via list_categories. The listed categories come first, in the order given; the others keep their relative order after them — so moving one category to the top takes just its id, while a full order takes every id. The result is the complete new order.",
+      parameters: {
+        type: "object",
+        properties: {
+          category_ids: {
+            type: "array",
+            items: { type: "string" },
+            description:
+              "Distinct category ids (from list_categories), in the wanted order.",
+          },
+        },
+        required: ["category_ids"],
       },
     },
   },

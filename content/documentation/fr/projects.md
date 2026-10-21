@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-21",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -50,6 +50,7 @@
       "components/settings/project-identity-header.tsx",
       "components/settings/inline-edit-field.tsx",
       "components/project-categories.tsx",
+      "lib/server/categories.ts",
       "components/settings/project-settings-page.tsx",
       "components/create-project-wizard.tsx",
       "lib/project-draft.ts",
@@ -62,10 +63,10 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 15,
+    "fact": "agent:claude (MIN-760: category reordering paragraph checked against components/project-categories.tsx, the order route and the Numo/MCP tools; existing figures unaffected and kept; no browser walkthrough of the procedure)",
+    "language": "agent:claude (fr translation of the added en paragraph, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-21"
   },
   "related": [
     "issues",
@@ -89,7 +90,7 @@
       "src": "/documentation/fr/project-general.png",
       "alt": "En-tête du projet avec l’icône et son badge de modification, le nom, la clé et les chiffres Tickets, Membres, Objectifs, Catégories et Créé en.",
       "caption": "Sélectionnez l’icône, le nom ou la clé pour les changer sur place ; la mise à la corbeille reste une action distincte, plus bas.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -106,7 +107,7 @@
       "src": "/documentation/fr/project-members.png",
       "alt": "Carte « Inviter des personnes » au-dessus de la carte Membres, qui liste trois membres de démonstration avec le propriétaire identifié.",
       "caption": "Invitez par l’adresse du compte et identifiez le propriétaire avant de retirer l’accès d’un membre.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -135,7 +136,7 @@ L’onglet **Général** s’ouvre sur l’identité du projet : son icône, son
 
 Les autres onglets sont **Catégories**, **Membres**, **Récurrences**, **Smart Assign**, **Retours**, **Git**, **Import** et **Intégrations**. Consultez le guide correspondant avant d’activer un fournisseur ou du travail automatique. Les préférences du compte, comme la langue de votre interface, restent distinctes de la configuration du projet.
 
-Dans **Catégories**, le propriétaire et les membres gèrent les catégories qui classent les tickets. Choisissez **Nouvelle catégorie** sur la ligne de titre de la carte : une ligne avec une pastille de couleur et un champ de nom apparaît en haut de la liste. Appuyez sur Entrée ou choisissez **Ajouter** pour créer la catégorie ; Échap referme la ligne sans la créer. Sélectionnez la pastille d’une catégorie pour choisir une autre couleur, appliquée aussitôt (sur téléphone, les couleurs s’ouvrent dans une feuille), ou sélectionnez son nom pour la renommer sur place. Le bouton de suppression demande une confirmation, puis retire la catégorie de tous les tickets.
+Dans **Catégories**, le propriétaire et les membres gèrent les catégories qui classent les tickets. Choisissez **Nouvelle catégorie** sur la ligne de titre de la carte : une ligne avec une pastille de couleur et un champ de nom apparaît en haut de la liste. Appuyez sur Entrée ou choisissez **Ajouter** pour créer la catégorie ; Échap referme la ligne sans la créer. Sélectionnez la pastille d’une catégorie pour choisir une autre couleur, appliquée aussitôt (sur téléphone, les couleurs s’ouvrent dans une feuille), ou sélectionnez son nom pour la renommer sur place. Le bouton de suppression demande une confirmation, puis retire la catégorie de tous les tickets. Dès que le projet compte au moins deux catégories, chaque ligne porte une poignée à gauche : faites-la glisser pour monter ou descendre la catégorie. Au clavier, placez le focus sur la poignée, appuyez sur Espace, déplacez la catégorie avec les flèches Haut et Bas, puis appuyez de nouveau sur Espace pour la déposer ; Échap annule. Cet ordre est celui de tous les menus et filtres de catégories, pour tout le projet. Numo et les clients MCP de Minddy peuvent aussi le lire et le modifier, par exemple quand vous demandez à Numo de placer une catégorie en premier.
 
 
 ![En-tête du projet avec l’icône et son badge de modification, le nom, la clé et les chiffres Tickets, Membres, Objectifs, Catégories et Créé en.](/documentation/fr/project-general.png)

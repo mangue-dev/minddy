@@ -569,7 +569,8 @@
     ],
     "clear": {
       "operational_configuration": [
-        "color"
+        "color",
+        "position"
       ],
       "routing_identity": [
         "id",

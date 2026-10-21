@@ -1368,6 +1368,11 @@
         "nullable": false,
         "generated": false
       },
+      "position": {
+        "type": "bigint",
+        "nullable": false,
+        "generated": false
+      },
       "created_at": {
         "type": "timestamp with time zone",
         "nullable": false,

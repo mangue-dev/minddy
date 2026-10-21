@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
       .is("projects.deleted_at", null)
       .order("updated_at", { ascending: false })
       .limit(MAX_PAGES),
-    categoryStore(auth.supabase, auth.user.id).select("id, project_id, name, color"),
+    categoryStore(auth.supabase, auth.user.id).select("id, project_id, name, color").order("position"),
     auth.supabase.from("projects").select("id, owner_id").is("deleted_at", null),
   ]);
 

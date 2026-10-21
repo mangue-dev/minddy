@@ -6,7 +6,7 @@ import { createCategory } from "@/lib/server/categories";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-/** GET /api/projects/[id]/categories — the project's categories. */
+/** GET /api/projects/[id]/categories — the project's categories, in display order. */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const { data, error } = await categoryStore(auth.supabase, auth.user.id)
     .select("*")
     .eq("project_id", id)
-    .order("created_at", { ascending: true });
+    .order("position", { ascending: true });
 
   if (error) {
     console.error("[api/categories] list failed:", error.message);

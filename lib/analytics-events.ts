@@ -427,6 +427,7 @@ export interface AnalyticsEventProps {
   project_invitation_responded: { response: "accepted" | "declined" };
   category_created: NoProps;
   category_updated: NoProps;
+  category_reordered: NoProps;
   category_deleted: NoProps;
   import_started: { source: string };
   import_completed: { source: string; issue_count: number };
@@ -774,6 +775,7 @@ const EVENT_NAMES = [
   "project_invitation_responded",
   "category_created",
   "category_updated",
+  "category_reordered",
   "category_deleted",
   "import_started",
   "import_completed",

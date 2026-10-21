@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-21",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -50,6 +50,7 @@
       "components/settings/project-identity-header.tsx",
       "components/settings/inline-edit-field.tsx",
       "components/project-categories.tsx",
+      "lib/server/categories.ts",
       "components/settings/project-settings-page.tsx",
       "components/create-project-wizard.tsx",
       "lib/project-draft.ts",
@@ -62,10 +63,10 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 15,
+    "fact": "agent:claude (MIN-760: category reordering paragraph checked against components/project-categories.tsx, the order route and the Numo/MCP tools; existing figures unaffected and kept; no browser walkthrough of the procedure)",
+    "language": "agent:claude (en paragraph added with catalog UI labels; agent self-review, not human acceptance)",
+    "date": "2026-10-21"
   },
   "related": [
     "issues",
@@ -89,7 +90,7 @@
       "src": "/documentation/en/project-general.png",
       "alt": "Project header with the icon and its edit badge, the name, the key and the Issues, Members, Objectives, Categories and Created figures.",
       "caption": "Select the icon, the name or the key to change it in place; moving the project to trash stays a separate action below.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -106,7 +107,7 @@
       "src": "/documentation/en/project-members.png",
       "alt": "Invite people card above the Members card, which lists three demonstration members with the owner identified.",
       "caption": "Invite by account email and check who owns the project before removing another member’s access.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -135,7 +136,7 @@ The **General** tab opens with the project's identity: its icon, its name and ke
 
 The other tabs are **Categories**, **Members**, **Recurrences**, **Smart Assign**, **Feedback**, **Git**, **Import** and **Integrations**. Follow the corresponding task guide before enabling a provider or automatic work. Account preferences such as your interface language are separate from project configuration.
 
-In **Categories**, the owner and members manage the categories used to label issues. Choose **New category** on the card's title line: a row with a color dot and a name field appears at the top of the list. Press Enter or choose **Add** to create the category; Escape leaves without creating it. Select a category's color dot to choose another color, which applies at once (on a phone the colors open in a sheet), or select its name to rename it in place. The delete button asks for confirmation, then removes the category from every issue.
+In **Categories**, the owner and members manage the categories used to label issues. Choose **New category** on the card's title line: a row with a color dot and a name field appears at the top of the list. Press Enter or choose **Add** to create the category; Escape leaves without creating it. Select a category's color dot to choose another color, which applies at once (on a phone the colors open in a sheet), or select its name to rename it in place. The delete button asks for confirmation, then removes the category from every issue. Once the project has two categories or more, each row has a handle on its left: drag it to move the category up or down. From the keyboard, focus the handle, press Space, move the category with the Up and Down arrows and press Space again to drop it; Escape cancels. This order is the one every category menu and filter shows to everyone in the project. Numo and Minddy MCP clients can read and change it too, for example when you ask Numo to put a category first.
 
 
 ![Project header with the icon and its edit badge, the name, the key and the Issues, Members, Objectives, Categories and Created figures.](/documentation/en/project-general.png)

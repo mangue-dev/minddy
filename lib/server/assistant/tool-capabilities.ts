@@ -105,6 +105,7 @@ export const NUMO_TOOL_CAPABILITIES: Record<string, NumoToolCapability> = {
   update_objective: "write",
   create_category: "write",
   update_category: "write",
+  reorder_categories: "write",
   triage_decision: "write",
   promote_feedback_to_issue: "write",
   link_feedback_to_objective: "write",

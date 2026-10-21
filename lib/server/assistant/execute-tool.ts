@@ -85,7 +85,7 @@ import {
 } from "@/lib/relation-validation";
 import { createView, updateView } from "@/lib/server/views";
 import { createObjective, updateObjective } from "@/lib/server/objectives";
-import { createCategory, updateCategory } from "@/lib/server/categories";
+import { createCategory, reorderCategories, updateCategory } from "@/lib/server/categories";
 import { updateProjectSettings } from "@/lib/server/update-project";
 import {
   createRoutine,
@@ -693,7 +693,7 @@ async function listGlobalFilterOptions(
   }
 
   const [catsRes, objsRes] = await Promise.all([
-    categoryStore(ctx.service).select("id, name").in("project_id", projectIds),
+    categoryStore(ctx.service).select("id, name").in("project_id", projectIds).order("position"),
     objectiveStore(ctx.service).select("id, name").in("project_id", projectIds).is("deleted_at", null),
   ]);
   if (catsRes.error) return toolError(catsRes.error.message);
@@ -1197,7 +1197,7 @@ async function executeToolUnlisted(
         const { data, error } = await categoryStore(ctx.supabase)
           .select("id, name, color")
           .eq("project_id", projectId)
-          .order("name", { ascending: true });
+          .order("position", { ascending: true });
         if (error) return toolError(error.message);
         return { result: { categories: data ?? [] }, success: true };
       }
@@ -2715,6 +2715,25 @@ async function executeToolUnlisted(
         if (!result.ok)
           return settingsError(result.errorKey ?? "databaseError");
         return { result: { category: result.category }, success: true };
+      }
+
+      case "reorder_categories": {
+        const result = await reorderCategories({
+          projectId,
+          actorId: ctx.userId,
+          categoryIds: args.category_ids,
+        });
+        if (!result.ok) {
+          return result.errorKey === "invalidRequest"
+            ? toolError("category_ids must be a non-empty list of distinct category ids from list_categories.")
+            : settingsError(result.errorKey ?? "databaseError");
+        }
+        return {
+          result: {
+            categories: result.categories.map(({ id, name, color }) => ({ id, name, color })),
+          },
+          success: true,
+        };
       }
 
       // ── Integrations (owner-gated) ────────────────────────────────────
