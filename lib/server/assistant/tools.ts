@@ -1654,6 +1654,11 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             description:
               "Automatically run Smart Fill on eligible triage issues and promoted feedback.",
           },
+          smart_fill_reevaluate: {
+            type: "boolean",
+            description:
+              "Let Smart Fill read an issue again five minutes after its title or description stops changing, and update the priority, effort, categories or objective nobody set by hand. Requires smart_fill.",
+          },
           smart_fill_relations: {
             type: "boolean",
             description:

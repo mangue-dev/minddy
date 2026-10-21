@@ -20,6 +20,8 @@ interface Row extends Record<string, unknown> {}
 
 let eventRows: Row[] = [];
 let categoryLinkRows: Row[] = [];
+/** Rows recorded in `issue_smart_fill` (MIN-750). */
+let ownershipRows: Row[] = [];
 let knownCategoryRows: Row[] = [];
 let categoryLookupErrors: Record<string, { message: string }> = {};
 let categoryLinkError: { message: string } | null = null;
@@ -63,6 +65,8 @@ function table(name: string) {
     } else if (name === "issue_events") {
       writeLog.push(...inserted.map((r) => `event:${r.type}${r.field ? `/${r.field}` : ""}`));
       eventRows.push(...inserted);
+    } else if (name === "issue_smart_fill") {
+      ownershipRows.push(...inserted);
     } else if (name === "issue_categories" && !categoryLinkError) {
       categoryLinkRows.push(...inserted);
     }
@@ -145,6 +149,7 @@ const create = (input: Record<string, unknown> = {}) =>
 beforeEach(() => {
   eventRows = [];
   categoryLinkRows = [];
+  ownershipRows = [];
   knownCategoryRows = [];
   categoryLookupErrors = {};
   categoryLinkError = null;
@@ -217,6 +222,26 @@ describe("createIssueForProject birth activity", () => {
     });
   });
 
+  it("gives Smart Fill ownership of every field the author left empty", async () => {
+    smartFillPayer = { userId: "member-1", scope: "created" };
+    // Effort is left empty by the author AND by the model: still Smart Fill's.
+    smartFillPatch = { priority: "high" };
+
+    await create({ category_ids: ["category-manual"] });
+
+    expect(ownershipRows).toEqual([
+      { issue_id: "issue-1", project_id: "project-1", fields: ["priority", "effort", "objective_id"] },
+    ]);
+  });
+
+  it("records no ownership when Smart Fill was not armed for the creation", async () => {
+    smartFillPatch = { priority: "high" };
+
+    await create();
+
+    expect(ownershipRows).toEqual([]);
+  });
+
   it("never infers an objective during feedback promotion while filling other fields", async () => {
     smartFillPayer = { userId: "member-1", scope: "created" };
     smartFillPatch = { objective_id: "objective-1", priority: "high", effort: "m" };
@@ -224,6 +249,7 @@ describe("createIssueForProject birth activity", () => {
       inferObjective: false, input: { title: "Feedback", objective_id: null } });
     expect(result).toMatchObject({ ok: true, issue: { objective_id: null, priority: "high", effort: "m" } });
     expect(eventRows.find((row) => row.field === "smart_fill")?.to_value).toBe("priority,effort");
+    expect(ownershipRows[0]?.fields).toEqual(["priority", "effort", "category_ids"]);
   });
 
   it("reports Smart Fill categories only when they were actually linked", async () => {

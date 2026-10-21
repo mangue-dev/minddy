@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 29,
-  "sourceRevision": 29,
+  "revision": 30,
+  "sourceRevision": 30,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-21",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray",
+    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -47,6 +47,8 @@
       "components/issue-compact-fields.tsx",
       "lib/smart-fill.ts",
       "lib/smart-fill-fields.ts",
+      "lib/server/smart-fill-reevaluation.ts",
+      "lib/server/smart-fill-ownership.ts",
       "app/(app)/projects/[id]/triage/page.tsx",
       "components/triage/triage-page.tsx",
       "lib/smart-triage.ts",
@@ -117,9 +119,9 @@
     ]
   },
   "review": {
-    "revision": 29,
-    "fact": "agent:/root/min753 (drafts paragraph checked against components/drafts-tray.tsx, lib/use-all-drafts.ts, lib/drafts.ts and the creation dialogs; rest of the article unchanged since the 0.20.0 release review; no figure changed)",
-    "language": "agent:/root/min753 (pt-BR translation of the drafts paragraph with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 30,
+    "fact": "agent:/root/min750 (Smart Fill re-evaluation bullet and section checked against lib/server/smart-fill-reevaluation.ts, lib/server/smart-fill-ownership.ts, lib/server/update-issue.ts, lib/server/set-issue-categories.ts and components/settings/account-smart-fill-section.tsx; rest of the article unchanged since the MIN-753 review; no figure changed)",
+    "language": "agent:/root/min750 (pt-BR translation of the re-evaluation bullet and section with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-21"
   },
   "related": [
@@ -166,7 +168,7 @@
       "src": "/documentation/pt-BR/new-issue.png",
       "alt": "Rascunho não enviado no projeto Aurora com título, descrição, propriedades que podem ser escolhidas manualmente e o botão Criar AUR-19.",
       "caption": "Descreva o resultado esperado e escolha as propriedades úteis antes de criar o ticket.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -182,7 +184,7 @@
       "src": "/documentation/pt-BR/triage-incoming.png",
       "alt": "Problema recebido de demonstração DOC-11 com relato, propriedades e controles de duplicado, Recusar e Aceitar.",
       "caption": "Leia o relato recebido antes de aceitar, recusar ou vincular um duplicado.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -198,7 +200,7 @@
       "src": "/documentation/pt-BR/issue-statuses.png",
       "alt": "Os oito estados do ticket no seletor, com Backlog selecionado.",
       "caption": "A marca indica o estado atual. Escolha o que representa a situação real do trabalho.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -214,7 +216,7 @@
       "src": "/documentation/pt-BR/work-resources.png",
       "alt": "Janela para adicionar um link com um endereço de contato de exemplo.",
       "caption": "Confira o destino antes de adicionar o recurso. Este link de exemplo não foi enviado.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -230,7 +232,7 @@
       "src": "/documentation/pt-BR/work-dependencies.png",
       "alt": "Busca de um ticket bloqueador pelo identificador.",
       "caption": "Escolha o sentido da relação antes do destino. O seletor é mostrado sem enviar a relação.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -246,7 +248,7 @@
       "src": "/documentation/pt-BR/work-sub-issues.png",
       "alt": "Campo de criação de um subticket em um ticket pai de demonstração.",
       "caption": "O campo cria um filho deste ticket; cada filho mantém seu próprio status e discussão.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -262,7 +264,7 @@
       "src": "/documentation/pt-BR/work-implementation-plan.png",
       "alt": "Plano de demonstração com duas tarefas de trabalho concluídas de seis.",
       "caption": "O plano salvo distingue etapas concluídas, ativas e pendentes. O progresso não comprova a execução da tarefa fictícia de código.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -278,7 +280,7 @@
       "src": "/documentation/pt-BR/issue-date-recurrence.png",
       "alt": "Seletor de prazo no modo recorrente com prévia semanal aos domingos e horário opcional.",
       "caption": "O modo recorrente mostra a frequência semanal. Confirme o primeiro prazo antes de criar o ticket.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -294,7 +296,7 @@
       "src": "/documentation/pt-BR/import-issues-preview-workflow.png",
       "alt": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas.",
       "caption": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas. A importação não foi enviada; o planejamento opcional com IA foi bloqueado para a captura.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -311,7 +313,7 @@
       "src": "/documentation/pt-BR/file-preview.png",
       "alt": "Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar, Renomear e Remover.",
       "caption": "O visualizador compartilhado mantém Fechar abaixo da prévia. O menu Ações do arquivo oferece Baixar e, quando permitido, Renomear e Remover.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -368,11 +370,19 @@ Se a criação ou o salvamento falhar, preserve o texto, leia o erro e confira s
 As preferências do Preenchimento inteligente pertencem à sua conta. Abra **Configurações da conta** → **Smart Fill**. Cada opção tem seu próprio cartão:
 
 - No cartão **Smart Fill**, **Ativar o Smart Fill** liga ou desliga o Preenchimento inteligente na sua conta. Ele completa prioridade, esforço, categorias e objetivo ausentes; estado, responsável e prazo continuam por sua conta. Os interruptores dos dois cartões seguintes dependem dele.
-- Em **Tickets a preencher**, **Preencher tickets criados** e **Preencher tickets na triagem** escolhem quais problemas novos ele completa: os que você cria e os problemas em triagem pelos quais você é responsável.
+- Em **Tickets a preencher**, **Preencher tickets criados** e **Preencher tickets na triagem** escolhem quais problemas novos ele completa: os que você cria e os problemas em triagem pelos quais você é responsável. **Reavaliar tickets editados**, ativado por padrão, permite que o Preenchimento inteligente [leia um ticket de novo](#smart-fill-reevaluation) depois que o título ou a descrição muda.
 - Em **Tickets relacionados**, **Vincular tickets relacionados**, ativado por padrão, permite que o Preenchimento inteligente [adicione relações](#smart-fill-relations) depois que um problema é salvo.
 - Em **Indexação de tickets**, **Indexar tickets**, ativado por padrão e independente do Preenchimento inteligente, transforma o título e a descrição dos problemas que você cria ou edita em vetores privados usados para encontrar problemas relacionados e para [buscar problemas pelo sentido](/docs/navigation#search-by-meaning). A indexação em segundo plano dos problemas existentes de um projeto respeita tanto o interruptor do proprietário do projeto quanto o do autor: um problema cujo autor o desligou nunca é indexado. Os vetores são criptografados com o projeto, como o problema; os salvos antes de o projeto passar a criptografar são convertidos pela tarefa em segundo plano. Com o interruptor desligado, nenhum vetor é criado para os seus problemas, mesmo quando outra pessoa os edita, e a busca de problemas relacionados compara apenas palavras. Suas próprias buscas passam então a usar só o texto, sem busca pelo sentido. Os vetores já criados permanecem enquanto o texto não muda; são excluídos assim que o texto muda, ou junto com o problema.
 
 Desligar um interruptor também cancela as execuções que ainda não aconteceram. O Numo pode alterar essas preferências quando você pedir.
+
+### Quando o Preenchimento inteligente lê um ticket de novo {#smart-fill-reevaluation}
+
+Com **Reavaliar tickets editados** ativado, um ticket criado com o Preenchimento inteligente ligado é lido de novo depois que o título ou a descrição muda. O Preenchimento inteligente espera o texto ficar cinco minutos sem mudar, de modo que uma série de edições é lida uma só vez; a execução pode começar até um minuto depois. Em seguida, ele define de novo a prioridade, o esforço, as categorias e o objetivo a partir do novo texto.
+
+Ele só altera as propriedades que ninguém escolheu manualmente: as que ficaram vazias na criação do ticket e que ninguém mudou desde então. Assim que você, o Numo ou um agente conectado muda uma delas, o Preenchimento inteligente deixa de mexer nela. Ele nunca remove o objetivo nem todas as categorias; pode limpar o esforço quando o texto não descreve mais um trabalho estimável. Tickets criados antes deste recurso, com o Preenchimento inteligente desligado ou com todas as propriedades já definidas nunca são lidos de novo.
+
+Cada alteração aparece na atividade do ticket com o Preenchimento inteligente como autor, e um ticket movido para outro objetivo aparece também na atividade dos dois objetivos. Uma execução que não encontra nada para mudar não grava nada. A execução conta na parte **Automações** da pessoa que fez a última edição, segue a preferência **Reavaliar tickets editados** dessa pessoa e é ignorada quando o orçamento dela acabou ou o provedor falha.
 
 ## Analisar trabalho recebido na triagem {#triage-incoming-work}
 

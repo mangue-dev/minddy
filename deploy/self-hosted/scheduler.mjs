@@ -9,6 +9,8 @@ const JOBS = [
   // Markdown after typing rests; this writes what no request did.
   ["* * * * *", "/api/cron/page-materialization"],
   ["*/5 * * * *", "/api/cron/smart-assign"],
+  // Smart Fill re-reads an edited issue five minutes after its text rests.
+  ["* * * * *", "/api/cron/smart-fill-reevaluation"],
   ["25 * * * *", "/api/cron/issue-index"],
   ["*/5 * * * *", "/api/cron/routines"],
   ["15 * * * *", "/api/cron/billing-sync"],

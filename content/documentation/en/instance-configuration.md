@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-21",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review)",
+    "version": "0.20.0 (MIN-747 release review); MIN-750 Smart Fill re-evaluation schedule",
     "editions": [
       "self-hosted"
     ],
@@ -41,14 +41,15 @@
       "vercel.json",
       "deploy/self-hosted/compose.full.yml",
       "deploy/self-hosted/scheduler.mjs",
-      "app/api/cron/issue-index/route.ts"
+      "app/api/cron/issue-index/route.ts",
+      "app/api/cron/smart-fill-reevaluation/route.ts"
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 10,
+    "fact": "agent:/root/min750 (schedule table and release delta sentence checked against vercel.json and deploy/self-hosted/scheduler.mjs after adding smart-fill-reevaluation; rest of the article unchanged since the 0.20.0 release review; no screenshot in scope)",
+    "language": "agent:/root/min750 (en table row and release delta sentence; agent review, not human acceptance)",
+    "date": "2026-10-21"
   },
   "related": [
     "workspace-encryption",
@@ -73,7 +74,7 @@
       "src": "/documentation/en/optional-providers-flow.svg",
       "alt": "Diagram: Operator selects an optional capability. Complete credentials and provider conditions. Explicit outbound provider data path. Verify behavior and monitor usage costs.",
       "caption": "Enabling an optional service adds its own credentials, data destination and usage costs.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -105,7 +106,7 @@
       "src": "/documentation/en/proxy-network-and-jobs-flow.svg",
       "alt": "Diagram: Public HTTPS reverse proxy. Application and public Supabase origins. Private database and internal ports. Authenticated scheduler; stopped in maintenance.",
       "caption": "Public access uses HTTPS while internal services stay private and scheduled jobs pause during maintenance.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -186,7 +187,7 @@ Public installations require a TLS reverse proxy and HTTP-to-HTTPS redirect. App
 Reference Compose profiles start their scheduler and generate `CRON_SECRET`. Custom source deployments must run an equivalent HTTP scheduler. Every cron request sends `Authorization: Bearer <CRON_SECRET>`; empty or mismatched secrets return 401. Never log the header. The schedules below are UTC and belong to this release. Use the schedule set belonging to the deployed release, because these paths can change with the application.
 
 
-Compared with the v0.11.0 scheduler, this release adds `numo-turns`, `forge-relay-maintenance`, `page-materialization` and `issue-index`, and no longer calls `/api/cron/agent-drain` or `/api/cron/automations`, which were removed with Numo's code work and project automations. A custom scheduler copied from v0.11.0 must be updated to this table.
+Compared with the v0.11.0 scheduler, this release adds `numo-turns`, `forge-relay-maintenance`, `page-materialization`, `issue-index` and `smart-fill-reevaluation`, and no longer calls `/api/cron/agent-drain` or `/api/cron/automations`, which were removed with Numo's code work and project automations. A custom scheduler copied from v0.11.0 must be updated to this table.
 
 | Endpoint | Schedule (UTC) |
 | --- | --- |
@@ -196,6 +197,7 @@ Compared with the v0.11.0 scheduler, this release adds `numo-turns`, `forge-rela
 | `/api/cron/forge-relay-maintenance` | `35 * * * *` |
 | `/api/cron/page-materialization` | `* * * * *` |
 | `/api/cron/smart-assign` | `*/5 * * * *` |
+| `/api/cron/smart-fill-reevaluation` | `* * * * *` |
 | `/api/cron/issue-index` | `25 * * * *` |
 | `/api/cron/routines` | `*/5 * * * *` |
 | `/api/cron/billing-sync` | `15 * * * *` |

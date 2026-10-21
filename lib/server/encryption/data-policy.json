@@ -4120,6 +4120,27 @@
       ]
     }
   },
+  "issue_smart_fill": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "bounded_metadata": [
+        "fields"
+      ],
+      "routing_identity": [
+        "issue_id",
+        "project_id",
+        "reevaluate_by"
+      ],
+      "timestamp": [
+        "created_at",
+        "reevaluate_at"
+      ]
+    }
+  },
   "rich_documents": {
     "scope": {
       "choices": [

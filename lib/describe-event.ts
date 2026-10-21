@@ -296,6 +296,12 @@ export function describeObjectiveEvent(
   if (e.type === "relation_added")
     return t(`objectiveRelationAdded_${e.field ?? "related"}`, { ref: relationRef(ctx, tr, e.to_value) });
   if (e.type === "relation_removed") return describeEvent(e, ctx, tr);
+  // An issue Smart Fill moved after reading it again (MIN-750); `to_value`
+  // carries the issue.
+  if (e.type === "objective_issue_added")
+    return t("objectiveIssueAdded", { ref: issueRef(ctx, tr, e.to_value) });
+  if (e.type === "objective_issue_removed")
+    return t("objectiveIssueRemoved", { ref: issueRef(ctx, tr, e.to_value) });
 
   if (e.type === "updated") {
     switch (e.field) {

@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 29,
-  "sourceRevision": 29,
+  "revision": 30,
+  "sourceRevision": 30,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-21",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray",
+    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -47,6 +47,8 @@
       "components/issue-compact-fields.tsx",
       "lib/smart-fill.ts",
       "lib/smart-fill-fields.ts",
+      "lib/server/smart-fill-reevaluation.ts",
+      "lib/server/smart-fill-ownership.ts",
       "app/(app)/projects/[id]/triage/page.tsx",
       "components/triage/triage-page.tsx",
       "lib/smart-triage.ts",
@@ -117,9 +119,9 @@
     ]
   },
   "review": {
-    "revision": 29,
-    "fact": "agent:/root/min753 (drafts paragraph checked against components/drafts-tray.tsx, lib/use-all-drafts.ts, lib/drafts.ts and the creation dialogs; rest of the article unchanged since the 0.20.0 release review; no figure changed)",
-    "language": "agent:/root/min753 (it translation of the drafts paragraph with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 30,
+    "fact": "agent:/root/min750 (Smart Fill re-evaluation bullet and section checked against lib/server/smart-fill-reevaluation.ts, lib/server/smart-fill-ownership.ts, lib/server/update-issue.ts, lib/server/set-issue-categories.ts and components/settings/account-smart-fill-section.tsx; rest of the article unchanged since the MIN-753 review; no figure changed)",
+    "language": "agent:/root/min750 (it translation of the re-evaluation bullet and section with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-21"
   },
   "related": [
@@ -165,7 +167,7 @@
       "src": "/documentation/it/new-issue.png",
       "alt": "Bozza non inviata nel progetto Aurora con titolo, descrizione, proprietà selezionabili manualmente e il pulsante Crea AUR-19.",
       "caption": "Descrivi il risultato atteso e scegli le proprietà utili prima di creare il ticket.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -181,7 +183,7 @@
       "src": "/documentation/it/triage-incoming.png",
       "alt": "Ticket dimostrativo DOC-11 in arrivo con segnalazione, proprietà e comandi per duplicato, Rifiuta e Accetta.",
       "caption": "Leggi la segnalazione ricevuta prima di accettarla, rifiutarla o collegare un duplicato.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -197,7 +199,7 @@
       "src": "/documentation/it/issue-statuses.png",
       "alt": "Gli otto stati del ticket nel selettore, con Backlog selezionato.",
       "caption": "La spunta indica lo stato attuale. Scegli quello che rispecchia lo stato effettivo del lavoro.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -213,7 +215,7 @@
       "src": "/documentation/it/work-resources.png",
       "alt": "Finestra di aggiunta di un link con un indirizzo di contatto d’esempio.",
       "caption": "Controlla la destinazione prima di aggiungere la risorsa. Questo link d’esempio non è stato inviato.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -229,7 +231,7 @@
       "src": "/documentation/it/work-dependencies.png",
       "alt": "Ricerca di un ticket bloccante tramite identificativo.",
       "caption": "Scegli la direzione della relazione prima della destinazione. Il selettore è mostrato senza inviare la relazione.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -245,7 +247,7 @@
       "src": "/documentation/it/work-sub-issues.png",
       "alt": "Campo per creare un sotto-ticket in un ticket principale dimostrativo.",
       "caption": "Il campo crea un figlio di questo ticket; ogni figlio conserva stato e discussione propri.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -261,7 +263,7 @@
       "src": "/documentation/it/work-implementation-plan.png",
       "alt": "Piano dimostrativo con due attività di lavoro completate su sei.",
       "caption": "Il piano salvato distingue passaggi completati, attivi e in attesa. L’avanzamento non dimostra l’esecuzione dell’attività di codice fittizia.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -277,7 +279,7 @@
       "src": "/documentation/it/issue-date-recurrence.png",
       "alt": "Selettore di scadenza ricorrente con anteprima settimanale la domenica e orario facoltativo.",
       "caption": "La modalità ricorrente mostra la cadenza settimanale. Conferma la prima scadenza prima di creare il ticket.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -293,7 +295,7 @@
       "src": "/documentation/it/import-issues-preview-workflow.png",
       "alt": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate.",
       "caption": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate. L’importazione non è stata inviata; la pianificazione IA facoltativa è stata bloccata per la cattura.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -310,7 +312,7 @@
       "src": "/documentation/it/file-preview.png",
       "alt": "Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica, Rinomina e Rimuovi.",
       "caption": "Il visualizzatore condiviso colloca Chiudi sotto l’anteprima. Il menu Azioni del file offre Scarica e, con i permessi necessari, Rinomina e Rimuovi.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -367,11 +369,19 @@ Se la creazione o il salvataggio falliscono, conserva il testo, leggi l’errore
 Le preferenze di Riempimento intelligente appartengono al tuo account. Apri **Impostazioni account** → **Smart Fill**. Ogni opzione ha il proprio riquadro:
 
 - Nel riquadro **Smart Fill**, **Attiva Smart Fill** attiva o disattiva Riempimento intelligente per il tuo account. Completa priorità, impegno, categorie e obiettivo mancanti; stato, assegnatario e scadenza restano una tua scelta. Gli interruttori dei due riquadri successivi dipendono da questo.
-- In **Ticket da compilare**, **Completa i ticket creati** e **Completa i ticket in triage** scelgono quali nuovi ticket completa: quelli che crei e i ticket in triage di cui sei responsabile.
+- In **Ticket da compilare**, **Completa i ticket creati** e **Completa i ticket in triage** scelgono quali nuovi ticket completa: quelli che crei e i ticket in triage di cui sei responsabile. **Rivaluta i ticket modificati**, attivo per impostazione predefinita, permette a Riempimento intelligente di [rileggere un ticket](#smart-fill-reevaluation) dopo una modifica del titolo o della descrizione.
 - In **Ticket correlati**, **Collega i ticket correlati**, attivo per impostazione predefinita, permette a Riempimento intelligente di [aggiungere relazioni](#smart-fill-relations) dopo il salvataggio di un ticket.
 - In **Indicizzazione dei ticket**, **Indicizza i ticket**, attivo per impostazione predefinita e indipendente da Riempimento intelligente, trasforma il titolo e la descrizione dei ticket che crei o modifichi in vettori privati usati per trovare i ticket correlati e per [cercare i ticket per significato](/docs/navigation#search-by-meaning). L’indicizzazione in background dei ticket esistenti di un progetto rispetta sia l’interruttore del proprietario del progetto sia quello dell’autore: un ticket il cui autore l’ha disattivato non viene mai indicizzato. I vettori sono cifrati con il progetto, come il ticket; quelli salvati prima che il progetto iniziasse a cifrare vengono convertiti dal job in background. Con l’interruttore disattivato non viene creato alcun vettore per i tuoi ticket, anche quando qualcun altro li modifica, e la ricerca dei ticket correlati confronta solo le parole. Anche le tue ricerche usano allora solo il testo, senza ricerca per significato. I vettori già creati restano finché il testo non cambia; vengono eliminati appena il testo cambia, o insieme al ticket.
 
 Disattivare un interruttore annulla anche i passaggi non ancora eseguiti. Numo può modificare queste preferenze quando glielo chiedi.
+
+### Quando Riempimento intelligente rilegge un ticket {#smart-fill-reevaluation}
+
+Con **Rivaluta i ticket modificati** attivo, un ticket creato con Riempimento intelligente attivo viene riletto dopo una modifica del titolo o della descrizione. Riempimento intelligente aspetta che il testo resti invariato per cinque minuti, così una serie di modifiche viene letta una sola volta; il passaggio può partire fino a un minuto dopo. Poi ridefinisce priorità, impegno, categorie e obiettivo a partire dal nuovo testo.
+
+Modifica solo le proprietà che nessuno ha scelto a mano: quelle lasciate vuote alla creazione del ticket e che nessuno ha cambiato da allora. Non appena tu, Numo o un agente collegato ne cambiate una, Riempimento intelligente non la tocca più. Non rimuove mai l’obiettivo né tutte le categorie; può svuotare l’impegno quando il testo non descrive più un lavoro stimabile. I ticket creati prima di questa funzione, con Riempimento intelligente disattivato o con tutte le proprietà già impostate non vengono mai riletti.
+
+Ogni modifica compare nell’attività del ticket con Riempimento intelligente come autore, e un ticket spostato in un altro obiettivo compare anche nell’attività di entrambi gli obiettivi. Un passaggio che non trova nulla da cambiare non scrive nulla. Il passaggio conta nella quota **Automazioni** della persona che ha fatto l’ultima modifica, segue la sua preferenza **Rivaluta i ticket modificati** e viene saltato quando il suo budget è esaurito o il fornitore non risponde.
 
 ## Valutare il lavoro in arrivo nel triage {#triage-incoming-work}
 

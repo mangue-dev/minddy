@@ -145,6 +145,8 @@
     "pageRestored": "ha ripristinato la pagina",
     "objectiveRelationAdded_blocks": "ha segnato questo obiettivo come bloccante per {ref}",
     "objectiveRelationAdded_blocked_by": "ha segnato questo obiettivo come bloccato da {ref}",
+    "objectiveIssueAdded": "ha aggiunto {ref} a questo obiettivo",
+    "objectiveIssueRemoved": "ha rimosso {ref} da questo obiettivo",
     "objectiveRelationAdded_related": "ha collegato questo obiettivo a {ref}"
   },
   "ApiErrors": {
@@ -2772,6 +2774,8 @@
     "smartFillCreatedLabel": "Completa i ticket creati",
     "smartFillTriageDesc": "Completa i valori mancanti nei ticket in triage e nei feedback promossi nei progetti di tua proprietà.",
     "smartFillTriageLabel": "Completa i ticket in triage",
+    "smartFillReevaluateLabel": "Rivaluta i ticket modificati",
+    "smartFillReevaluateDesc": "Cinque minuti dopo l'ultima modifica del titolo o della descrizione di un ticket, lo rilegge e aggiorna priorità, impegno, categorie od obiettivo che nessuno ha impostato a mano.",
     "smartFillRelationsLabel": "Collega i ticket correlati",
     "smartFillRelationsDesc": "Dopo il salvataggio di un ticket, lo collega ai ticket correlati e alle dipendenze evidenti. Puoi rimuovere ogni collegamento; un collegamento rimosso non viene aggiunto di nuovo.",
     "issueIndexingLabel": "Indicizza i ticket",

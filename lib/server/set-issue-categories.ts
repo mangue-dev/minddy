@@ -9,8 +9,10 @@ import {
   stampForgeSync,
   stampViaAssistant,
   stampMcpKey,
+  stampViaSmartFill,
   type EventRow,
 } from "@/lib/server/issue-events";
+import { releaseSmartFillFields } from "@/lib/server/smart-fill-ownership";
 import type { RepoProviderId } from "@/lib/repo-providers";
 
 /**
@@ -40,6 +42,7 @@ export async function setIssueCategories({
   actorId,
   categoryIds,
   viaAssistant = false,
+  viaSmartFill = false,
   mcpKeyId = null,
   forgeSync = null,
 }: {
@@ -48,6 +51,9 @@ export async function setIssueCategories({
   categoryIds: string[];
   /** Marks the resulting activity events as triggered through Numo. */
   viaAssistant?: boolean;
+  /** The set comes from a Smart Fill re-evaluation (MIN-750): the timeline
+   names Smart-fill and the categories stay its own to re-evaluate. */
+  viaSmartFill?: boolean;
   /** Attributes the resulting activity events to an MCP API key (agent actor). */
   mcpKeyId?: string | null;
   /** Assigns events to the forge when the categories come from
@@ -102,6 +108,11 @@ export async function setIssueCategories({
   }
 
   scheduleRoutineEvents();
+  // Changed by anyone but Smart Fill, the categories are no longer its own
+  // to re-evaluate (MIN-750) — before the answer, like the write.
+  if (!viaSmartFill && (outcome.added.length > 0 || outcome.removed.length > 0)) {
+    await releaseSmartFillFields(service, issueId, ["category_ids"]);
+  }
   // Activity reflects the committed difference only.
   const events: EventRow[] = [
     ...outcome.added.map((cid): EventRow => (
@@ -114,7 +125,7 @@ export async function setIssueCategories({
   await insertEvents(
     service,
     stampForgeSync(
-      stampMcpKey(stampViaAssistant(events, viaAssistant), mcpKeyId),
+      stampMcpKey(stampViaSmartFill(stampViaAssistant(events, viaAssistant), viaSmartFill), mcpKeyId),
       forgeSync
     )
   );

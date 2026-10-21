@@ -4,13 +4,15 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setIssueCategories } from "./set-issue-categories";
 
-const { insertEvents, getProjectAccess } = vi.hoisted(() => ({
+const { insertEvents, getProjectAccess, releaseSmartFillFields } = vi.hoisted(() => ({
   insertEvents: vi.fn(),
+  releaseSmartFillFields: vi.fn(async () => {}),
   getProjectAccess: vi.fn(async () => ({ role: "member", canWrite: true, canComment: true })),
 }));
 let service: SupabaseClient;
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => service }));
 vi.mock("@/lib/server/project-access", () => ({ getProjectAccess }));
+vi.mock("@/lib/server/smart-fill-ownership", () => ({ releaseSmartFillFields }));
 vi.mock("@/lib/server/issue-events", async (importOriginal) => ({
   ...await importOriginal<typeof import("./issue-events")>(),
   insertEvents,
@@ -139,6 +141,42 @@ describe("atomic category replacement", () => {
     expect(state.categoryIds).toEqual([]);
     expect(insertEvents).toHaveBeenCalledWith(service, [
       { issue_id: ISSUE_ID, actor_id: "member-1", type: "category_removed", from_value: OLD_CATEGORY },
+    ]);
+  });
+
+  it("takes the categories back from Smart Fill after a change by hand", async () => {
+    database();
+
+    await replace([NEW_CATEGORY]);
+
+    expect(releaseSmartFillFields).toHaveBeenCalledWith(service, ISSUE_ID, ["category_ids"]);
+  });
+
+  it("keeps ownership when nothing changed", async () => {
+    database();
+
+    await replace([]);
+    vi.clearAllMocks();
+    // The set is already empty: the replacement commits no difference.
+    await replace([]);
+
+    expect(releaseSmartFillFields).not.toHaveBeenCalled();
+  });
+
+  it("stamps a Smart Fill re-evaluation and keeps its ownership", async () => {
+    database();
+
+    await setIssueCategories({
+      issueId: ISSUE_ID,
+      actorId: "member-1",
+      categoryIds: [NEW_CATEGORY],
+      viaSmartFill: true,
+    });
+
+    expect(releaseSmartFillFields).not.toHaveBeenCalled();
+    expect(insertEvents).toHaveBeenCalledWith(service, [
+      expect.objectContaining({ type: "category_added", to_value: NEW_CATEGORY, via_smart_fill: true }),
+      expect.objectContaining({ type: "category_removed", from_value: OLD_CATEGORY, via_smart_fill: true }),
     ]);
   });
 

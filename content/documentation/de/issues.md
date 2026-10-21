@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 29,
-  "sourceRevision": 29,
+  "revision": 30,
+  "sourceRevision": 30,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-21",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray",
+    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -47,6 +47,8 @@
       "components/issue-compact-fields.tsx",
       "lib/smart-fill.ts",
       "lib/smart-fill-fields.ts",
+      "lib/server/smart-fill-reevaluation.ts",
+      "lib/server/smart-fill-ownership.ts",
       "app/(app)/projects/[id]/triage/page.tsx",
       "components/triage/triage-page.tsx",
       "lib/smart-triage.ts",
@@ -117,9 +119,9 @@
     ]
   },
   "review": {
-    "revision": 29,
-    "fact": "agent:/root/min753 (drafts paragraph checked against components/drafts-tray.tsx, lib/use-all-drafts.ts, lib/drafts.ts and the creation dialogs; rest of the article unchanged since the 0.20.0 release review; no figure changed)",
-    "language": "agent:/root/min753 (de translation of the drafts paragraph with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 30,
+    "fact": "agent:/root/min750 (Smart Fill re-evaluation bullet and section checked against lib/server/smart-fill-reevaluation.ts, lib/server/smart-fill-ownership.ts, lib/server/update-issue.ts, lib/server/set-issue-categories.ts and components/settings/account-smart-fill-section.tsx; rest of the article unchanged since the MIN-753 review; no figure changed)",
+    "language": "agent:/root/min750 (de translation of the re-evaluation bullet and section with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-21"
   },
   "related": [
@@ -165,7 +167,7 @@
       "src": "/documentation/de/new-issue.png",
       "alt": "Noch nicht abgesendeter Ticketentwurf im Projekt Aurora mit Titel, Beschreibung, manuell wählbaren Eigenschaften und der Schaltfläche AUR-19 erstellen.",
       "caption": "Beschreibe das erwartete Ergebnis und wähle vor der Erstellung die passenden Eigenschaften.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -181,7 +183,7 @@
       "src": "/documentation/de/triage-incoming.png",
       "alt": "Eingegangenes Demoproblem DOC-11 mit Bericht, Eigenschaften und Funktionen für Duplikat, Ablehnen und Akzeptieren.",
       "caption": "Lies den eingegangenen Bericht, bevor du ihn akzeptierst, ablehnst oder mit einem Duplikat verknüpfst.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -197,7 +199,7 @@
       "src": "/documentation/de/issue-statuses.png",
       "alt": "Die acht Ticketstatus im Auswahlmenü, mit ausgewähltem Backlog-Status.",
       "caption": "Das Häkchen zeigt den aktuellen Status. Wähle den Status, der dem tatsächlichen Arbeitsstand entspricht.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -213,7 +215,7 @@
       "src": "/documentation/de/work-resources.png",
       "alt": "Dialog zum Hinzufügen eines Links mit einer Beispiel-Kontaktadresse.",
       "caption": "Prüfe das Ziel, bevor du die Ressource hinzufügst. Dieser Beispiellink wurde nicht gesendet.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -229,7 +231,7 @@
       "src": "/documentation/de/work-dependencies.png",
       "alt": "Suche nach einem blockierenden Ticket anhand seiner Kennung.",
       "caption": "Wähle zuerst die Richtung der Beziehung und dann ihr Ziel. Hier wurde keine Beziehung gespeichert.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -245,7 +247,7 @@
       "src": "/documentation/de/work-sub-issues.png",
       "alt": "Eingabefeld für ein Unterticket in einem Demo-Elternticket.",
       "caption": "Das Feld erstellt ein Kind dieses Elterntickets; jedes Kind behält seinen eigenen Status und Diskussionsverlauf.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -261,7 +263,7 @@
       "src": "/documentation/de/work-implementation-plan.png",
       "alt": "Demo-Plan mit zwei von sechs abgeschlossenen Arbeitsschritten.",
       "caption": "Der gespeicherte Demo-Plan unterscheidet abgeschlossene, laufende und ausstehende Schritte. Der Fortschritt belegt nicht, dass die fiktive Codeaufgabe ausgeführt wurde.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -277,7 +279,7 @@
       "src": "/documentation/de/issue-date-recurrence.png",
       "alt": "Fälligkeitsauswahl im wiederkehrenden Modus mit Sonntagsvorschau und optionaler Uhrzeit.",
       "caption": "Der wiederkehrende Modus zeigt die wöchentliche Folge. Bestätige die erste Fälligkeit vor der Ticketerstellung.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -293,7 +295,7 @@
       "src": "/documentation/de/import-issues-preview-workflow.png",
       "alt": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen.",
       "caption": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen. Es wurde nichts importiert; die optionale KI-Planung war für die Aufnahme gesperrt.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -310,7 +312,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Umbenennen und Entfernen.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -367,11 +369,19 @@ Schlägt Erstellen oder Speichern fehl, bewahre deinen Text auf, lies den Fehler
 Die Smart-Fill-Einstellungen gehören zu deinem Konto. Öffne **Kontoeinstellungen** → **Smart Fill**. Jede Option hat ihre eigene Karte:
 
 - In der Karte **Smart Fill** schaltet **Smart Fill aktivieren** Smart-Fill für dein Konto ein oder aus. Es ergänzt fehlende Priorität, fehlenden Aufwand, fehlende Kategorien und ein fehlendes Ziel; Status, zuständige Person und Fälligkeitsdatum bleiben deine Sache. Die Schalter der beiden folgenden Karten hängen davon ab.
-- In **Zu füllende Vorgänge** legen **Erstellte Vorgänge ausfüllen** und **Triage-Vorgänge ausfüllen** fest, welche neuen Probleme es ergänzt: die Probleme, die du erstellst, und die Triage-Probleme, für die du zuständig bist.
+- In **Zu füllende Vorgänge** legen **Erstellte Vorgänge ausfüllen** und **Triage-Vorgänge ausfüllen** fest, welche neuen Probleme es ergänzt: die Probleme, die du erstellst, und die Triage-Probleme, für die du zuständig bist. **Bearbeitete Vorgänge neu bewerten** ist standardmäßig eingeschaltet und lässt Smart-Fill einen Vorgang [erneut lesen](#smart-fill-reevaluation), nachdem sich sein Titel oder seine Beschreibung geändert hat.
 - In **Verwandte Vorgänge** ist **Verwandte Vorgänge verknüpfen** standardmäßig eingeschaltet und erlaubt Smart-Fill, nach dem Speichern eines Problems [Beziehungen hinzuzufügen](#smart-fill-relations).
 - In **Vorgangsindexierung** ist **Vorgänge indexieren** standardmäßig eingeschaltet und von Smart-Fill unabhängig. Es wandelt Titel und Beschreibung der Probleme, die du erstellst oder bearbeitest, in private Vektoren um, mit denen verwandte Probleme gefunden und Probleme [inhaltlich gesucht](/docs/navigation#search-by-meaning) werden. Die Indexierung der bestehenden Probleme eines Projekts im Hintergrund folgt sowohl dem Schalter des Projekteigentümers als auch dem des Autors: Ein Problem, dessen Autor ihn ausgeschaltet hat, wird nie indexiert. Die Vektoren werden wie das Problem mit dem Projekt verschlüsselt; Vektoren, die gespeichert wurden, bevor das Projekt verschlüsselt wurde, wandelt der Hintergrundjob um. Ist der Schalter aus, entsteht für deine Probleme kein Vektor, auch wenn jemand anderes sie bearbeitet, und die Suche nach verwandten Problemen vergleicht nur Wörter. Deine eigenen Suchen nutzen dann nur den Text, ohne inhaltliche Suche. Bereits erstellte Vektoren bleiben, solange sich der Text nicht ändert; sie werden gelöscht, sobald sich der Text ändert, oder mit dem Problem.
 
 Das Ausschalten eines Schalters bricht auch Durchläufe ab, die noch nicht ausgeführt wurden. Numo kann diese Einstellungen auf deine Bitte hin ändern.
+
+### Wenn Smart-Fill einen Vorgang erneut liest {#smart-fill-reevaluation}
+
+Mit eingeschaltetem **Bearbeitete Vorgänge neu bewerten** wird ein Vorgang, der mit aktivem Smart-Fill erstellt wurde, erneut gelesen, nachdem sich sein Titel oder seine Beschreibung geändert hat. Smart-Fill wartet, bis sich der Text fünf Minuten lang nicht mehr geändert hat, sodass eine Reihe von Änderungen nur einmal gelesen wird; der Durchlauf kann bis zu einer Minute später starten. Danach setzt es Priorität, Aufwand, Kategorien und Ziel anhand des neuen Textes neu.
+
+Es ändert nur Eigenschaften, die niemand von Hand gewählt hat: die beim Erstellen leer gelassenen, die seitdem niemand geändert hat. Sobald du, Numo oder ein verbundener Agent eine davon ändert, lässt Smart-Fill sie dauerhaft in Ruhe. Es entfernt nie das Ziel oder alle Kategorien; den Aufwand kann es leeren, wenn der Text keine schätzbare Arbeit mehr beschreibt. Vorgänge, die vor dieser Funktion, mit ausgeschaltetem Smart-Fill oder mit bereits gesetzten Eigenschaften erstellt wurden, werden nie erneut gelesen.
+
+Jede Änderung erscheint in der Aktivität des Vorgangs mit Smart-Fill als Urheber, und ein Vorgang, der einem anderen Ziel zugeordnet wird, erscheint auch in der Aktivität beider Ziele. Ein Durchlauf, der nichts zu ändern findet, schreibt nichts. Der Durchlauf zählt zum Anteil **Automatisierungen** der Person, die zuletzt geändert hat, folgt deren Einstellung **Bearbeitete Vorgänge neu bewerten** und entfällt, wenn ihr Budget aufgebraucht ist oder der Anbieter ausfällt.
 
 ## Eingehende Arbeit in der Triage prüfen {#triage-incoming-work}
 

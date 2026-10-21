@@ -145,6 +145,8 @@
     "pageRestored": "die Seite wiederhergestellt",
     "objectiveRelationAdded_blocks": "hat dieses Ziel als blockierend für {ref} markiert",
     "objectiveRelationAdded_blocked_by": "hat dieses Ziel als durch {ref} blockiert markiert",
+    "objectiveIssueAdded": "hat {ref} diesem Ziel zugeordnet",
+    "objectiveIssueRemoved": "hat {ref} aus diesem Ziel entfernt",
     "objectiveRelationAdded_related": "hat dieses Ziel mit {ref} verknüpft"
   },
   "ApiErrors": {
@@ -2772,6 +2774,8 @@
     "smartFillCreatedLabel": "Erstellte Vorgänge ausfüllen",
     "smartFillTriageDesc": "Ergänzt fehlende Werte bei Triage-Vorgängen und hochgestuftem Feedback in Projekten, deren Eigentümer Sie sind.",
     "smartFillTriageLabel": "Triage-Vorgänge ausfüllen",
+    "smartFillReevaluateLabel": "Bearbeitete Vorgänge neu bewerten",
+    "smartFillReevaluateDesc": "Liest einen Vorgang fünf Minuten nach der letzten Änderung von Titel oder Beschreibung erneut und aktualisiert Priorität, Aufwand, Kategorien oder Ziel, die niemand von Hand gesetzt hat.",
     "smartFillRelationsLabel": "Verwandte Vorgänge verknüpfen",
     "smartFillRelationsDesc": "Verknüpft einen Vorgang nach dem Speichern mit verwandten Vorgängen und eindeutigen Abhängigkeiten. Sie können jede Verknüpfung entfernen; eine entfernte Verknüpfung wird nicht erneut angelegt.",
     "issueIndexingLabel": "Vorgänge indexieren",
