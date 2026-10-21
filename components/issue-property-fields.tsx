@@ -168,10 +168,17 @@ export function AssigneeValue({
   value,
   members,
   onChange,
+  open,
+  onOpenChange,
+  shortcutHint = KEY_FOR_FIELD.assignee,
 }: {
   value: string | null;
   members: Member[];
   onChange: (v: string | null) => void;
+  /** Controlled open state, for a surface that opens it from its own shortcut. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  shortcutHint?: string;
 }) {
   const tField = useTranslations("Field");
   const t = useTranslations("IssueUI");
@@ -195,7 +202,9 @@ export function AssigneeValue({
       noneOption={{ label: tField("unassigned") }}
       align="end"
       tooltip={tField("assignee")}
-      shortcutHint={KEY_FOR_FIELD.assignee}
+      open={open}
+      onOpenChange={onOpenChange}
+      shortcutHint={shortcutHint}
       trigger={
         <button type="button" aria-label={t("changeAssigneeAria")} className={TRIGGER}>
           {current ? (
@@ -276,9 +285,16 @@ export function DueDateValue({
   onChange,
   recurrence,
   onRecurrenceChange,
+  open,
+  onOpenChange,
+  shortcutHint = KEY_FOR_FIELD.dueDate,
 }: {
   value: string | null;
   onChange: (v: string | null) => void;
+  /** Controlled open state, for a surface that opens it from its own shortcut. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  shortcutHint?: string;
   /** Skipping these two opens recurring mode (MIN-136) — tickets have it,
  the target date of an objective no. */
   recurrence?: RecurrenceCadence | null;
@@ -299,7 +315,9 @@ export function DueDateValue({
       placeholder={t("noneFem")}
       ariaLabel={t("changeDueDateAria")}
       tooltip={tField("dueDate")}
-      shortcutHint={KEY_FOR_FIELD.dueDate}
+      open={open}
+      onOpenChange={onOpenChange}
+      shortcutHint={shortcutHint}
     />
   );
 }

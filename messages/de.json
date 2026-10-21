@@ -2246,6 +2246,7 @@
       "general": "Allgemein",
       "create": "Erstellen",
       "card": "Problem (bewegen der Maus über eine Karte oder das Panel)",
+      "objective": "Ziel (seine Seite oder das Formular für ein neues Ziel)",
       "selection": "Problemauswahl"
     },
     "shortcuts": {
@@ -2292,6 +2293,9 @@
       "dueDate": "Fälligkeitsdatum ändern",
       "objective": "Ziel ändern",
       "relation": "Beziehung hinzufügen",
+      "objectiveLead": "Lead ändern",
+      "objectiveTargetDate": "Zieldatum ändern",
+      "objectiveColor": "Farbe ändern",
       "askNumo": "Numo fragen (Karte oder Auswahl)",
       "copyPrompt": "Als Eingabeaufforderung kopieren",
       "selectionCopyPrompt": "Kombinierte Eingabeaufforderung der Auswahl kopieren",

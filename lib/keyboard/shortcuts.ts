@@ -168,6 +168,20 @@ export const CHEATSHEET: CheatsheetSection[] = [
     ],
   },
   {
+    // An objective's fields (MIN-757), on its page and in the new-objective
+    // form: the issue keys where the field matches, plus C for the color —
+    // claimed there before the app-wide C (new issue).
+    id: "objective",
+    titleKey: "objective",
+    shortcuts: [
+      { id: "objective.status", labelKey: "status", keys: [["S"]] },
+      { id: "objective.lead", labelKey: "objectiveLead", keys: [["A"]] },
+      { id: "objective.targetDate", labelKey: "objectiveTargetDate", keys: [["D"]] },
+      { id: "objective.color", labelKey: "objectiveColor", keys: [["C"]] },
+      { id: "objective.relation", labelKey: "relation", keys: [["R"]] },
+    ],
+  },
+  {
     // The same combo as the card section, but on a multi-selection: while the
     // selection pill is up, it acts on EVERY checked ticket with one combined
     // prompt (MIN-539) — and outrank the hovered card, the same

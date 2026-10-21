@@ -71,6 +71,18 @@ import type {
   Project,
 } from "@/lib/types";
 import { AppTooltip } from "@/components/ui/app-tooltip";
+import {
+  OBJECTIVE_KEY_FOR_FIELD,
+  useObjectiveFieldShortcuts,
+  type ObjectiveShortcutField,
+} from "@/components/objective-field-shortcuts";
+
+/** Controlled open state + key badge, driven by the field shortcuts. */
+type PickerControl = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  shortcutHint: string;
+};
 
 // Bare (borderless) compact-field trigger — matches issue-compact-fields.tsx so
 // the objective dialog's options row reads like the create-issue dialog's.
@@ -81,10 +93,11 @@ const BARE =
 function ObjectiveStatusCompact({
   value,
   onChange,
+  ...control
 }: {
   value: ObjectiveStatus;
   onChange: (v: ObjectiveStatus) => void;
-}) {
+} & PickerControl) {
   const t = useTranslations("Objectives");
   const tStatus = useTranslations("ObjectiveStatus");
   const meta = OBJECTIVE_STATUS_MAP[value];
@@ -101,6 +114,7 @@ function ObjectiveStatusCompact({
       onChange={(v) => onChange(v as ObjectiveStatus)}
       options={options}
       tooltip={t("statusFieldLabel")}
+      {...control}
       trigger={
         <button type="button" aria-label={t("statusFieldLabel")} className={BARE}>
           <ObjectiveStatusIndicator status={meta.value} className="size-[18px]" />
@@ -115,31 +129,35 @@ function ObjectiveStatusCompact({
 function ColorCompact({
   value,
   onChange,
+  open,
+  onOpenChange: setOpen,
+  shortcutHint,
 }: {
   value: string | null;
   onChange: (v: string | null) => void;
-}) {
+} & PickerControl) {
   const t = useTranslations("Objectives");
   const tColors = useTranslations("Categories.colors");
-  const [open, setOpen] = useState(false);
   const pick = (c: string | null) => {
     onChange(c);
     setOpen(false);
   };
   return (
     <ResponsivePopover open={open} onOpenChange={setOpen}>
-      <ResponsivePopoverTrigger asChild>
-        <button type="button" aria-label={t("colorFieldLabel")} className={BARE}>
-          <span
-            className={cn(
-              "flex size-[18px] shrink-0 items-center justify-center rounded-full",
-              value === null && "border border-dashed border-muted-foreground/60"
-            )}
-            style={value ? { backgroundColor: value } : undefined}
-          />
-          <span className="text-muted-foreground">{t("colorFieldLabel")}</span>
-        </button>
-      </ResponsivePopoverTrigger>
+      <AppTooltip label={t("colorFieldLabel")} shortcut={[shortcutHint]}>
+        <ResponsivePopoverTrigger asChild>
+          <button type="button" aria-label={t("colorFieldLabel")} className={BARE}>
+            <span
+              className={cn(
+                "flex size-[18px] shrink-0 items-center justify-center rounded-full",
+                value === null && "border border-dashed border-muted-foreground/60"
+              )}
+              style={value ? { backgroundColor: value } : undefined}
+            />
+            <span className="text-muted-foreground">{t("colorFieldLabel")}</span>
+          </button>
+        </ResponsivePopoverTrigger>
+      </AppTooltip>
       <ResponsivePopoverContent mobileTitle={t("colorFieldLabel")} align="start" className="w-auto p-2">
         <div className="flex flex-wrap items-center gap-1.5">
           <AppTooltip label={t("noColor")}>
@@ -292,11 +310,30 @@ export function ObjectiveDialog({
   // understood from the description, which the name field does not cover.
   const submitShortcut = useSubmitShortcut();
 
+  // Field shortcuts (MIN-757): the issue keys S/A/D/R plus C for the color open
+  // the matching picker, never while typing in the name or description.
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [openPicker, setOpenPicker] = useState<ObjectiveShortcutField | null>(null);
+  const pickerControl = (field: ObjectiveShortcutField): PickerControl => ({
+    open: openPicker === field,
+    onOpenChange: (o) => setOpenPicker(o ? field : null),
+    shortcutHint: OBJECTIVE_KEY_FOR_FIELD[field],
+  });
+
   // Drafts, resources and voice dictation share the same two conditions: each
   // is project-scoped (the draft store, the storage prefix, the dictation route)
   // and each only makes sense while composing — editing an objective happens in
   // the side panel, whose own attach button and mic write straight to it.
   const composerEnabled = !objective && !!activeProjectId;
+  useObjectiveFieldShortcuts({
+    enabled: open,
+    // Relations are only picked while composing (see `composerEnabled`).
+    fields: composerEnabled
+      ? ["status", "lead", "targetDate", "color", "relation"]
+      : ["status", "lead", "targetDate", "color"],
+    onField: setOpenPicker,
+    scope: contentRef,
+  });
   const drafts = useDrafts("objective", activeProjectId ?? null, open && composerEnabled);
   const uploads = useAttachmentUploads(() => `projects/${activeProjectId ?? ""}`);
   const drop = useFileDrop(uploads.addFiles);
@@ -346,6 +383,7 @@ export function ObjectiveDialog({
   }, [open, objective, initialName, projectId]);
 
   const closeAndReset = () => {
+    setOpenPicker(null);
     descriptionDocument.current = null;
     setDraftDocument(null);
     setSelectedProjectId(projectId);
@@ -574,6 +612,7 @@ export function ObjectiveDialog({
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent
+          ref={contentRef}
           aria-describedby={undefined}
           // In creation, the extra top padding clears the "Create in" pill and
           // the close button.
@@ -681,6 +720,7 @@ export function ObjectiveDialog({
                   <ObjectiveStatusCompact
                     value={form.status}
                     onChange={(status) => setForm((f) => ({ ...f, status }))}
+                    {...pickerControl("status")}
                   />
                 </CreationProperty>
                 <CreationProperty mobile={mobile} label={t("leadFieldLabel")}>
@@ -690,6 +730,7 @@ export function ObjectiveDialog({
                     onChange={(lead_user_id) => setForm((f) => ({ ...f, lead_user_id }))}
                     members={scopedMembers}
                     noneLabel={t("noLead")}
+                    {...pickerControl("lead")}
                   />
                 </CreationProperty>
                 <CreationProperty mobile={mobile} label={t("targetDatePlaceholder")}>
@@ -700,12 +741,14 @@ export function ObjectiveDialog({
                     placeholder={t("targetDatePlaceholder")}
                     ariaLabel={t("targetDatePlaceholder")}
                     tooltip={t("targetDatePlaceholder")}
+                    {...pickerControl("targetDate")}
                   />
                 </CreationProperty>
                 <CreationProperty mobile={mobile} label={t("colorFieldLabel")}>
                   <ColorCompact
                     value={form.color}
                     onChange={(color) => setForm((f) => ({ ...f, color }))}
+                    {...pickerControl("color")}
                   />
                 </CreationProperty>
                 {composerEnabled && (
@@ -717,6 +760,7 @@ export function ObjectiveDialog({
                       value={relations}
                       onChange={setRelations}
                       disabled={submitting}
+                      {...pickerControl("relation")}
                     />
                   </CreationProperty>
                 )}

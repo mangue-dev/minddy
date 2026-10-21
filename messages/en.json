@@ -2246,6 +2246,7 @@
       "general": "General",
       "create": "Create",
       "card": "Issue (hovering a card or the panel)",
+      "objective": "Objective (its page or the new-objective form)",
       "selection": "Issue selection"
     },
     "shortcuts": {
@@ -2292,6 +2293,9 @@
       "dueDate": "Change due date",
       "objective": "Change objective",
       "relation": "Add a relation",
+      "objectiveLead": "Change lead",
+      "objectiveTargetDate": "Change target date",
+      "objectiveColor": "Change color",
       "askNumo": "Ask Numo (card or selection)",
       "copyPrompt": "Copy as prompt",
       "selectionCopyPrompt": "Copy the combined prompt of the selection",
