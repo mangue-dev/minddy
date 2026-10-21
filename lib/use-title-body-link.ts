@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, type KeyboardEvent, type RefObject } from "react";
 import type { Editor } from "@tiptap/core";
+import { isImeComposing } from "@/lib/keyboard/ime";
 import { planTitleEnter } from "@/lib/keyboard/title-enter";
 import { useSendMode } from "@/lib/keyboard/use-send-mode";
 import { caretLeft, caretOnLastLine, focusLastLine } from "@/lib/textarea-caret";
@@ -75,7 +76,8 @@ export function useTitleBodyLink(
       event: KeyboardEvent<HTMLTextAreaElement>,
       options: { submit?: () => void; mobile?: boolean } = {}
     ) => {
-      if (event.defaultPrevented) return false;
+      // Enter and ↓ belong to an IME while it composes (MIN-706).
+      if (event.defaultPrevented || isImeComposing(event)) return false;
       const field = event.currentTarget;
       if (event.key === "ArrowDown") {
         if (event.shiftKey || event.altKey || event.metaKey || event.ctrlKey) return false;
@@ -91,7 +93,6 @@ export function useTitleBodyLink(
           ctrlKey: event.ctrlKey,
           shiftKey: event.shiftKey,
           altKey: event.altKey,
-          isComposing: event.nativeEvent.isComposing,
         },
         { mode, canSubmit: !!options.submit, mobile: options.mobile }
       );

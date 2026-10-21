@@ -154,7 +154,15 @@ export interface PublicPostDetail {
   mergedFromTitles: string[];
   /** The public feedback thread (MIN-196), anonymized, from oldest to most recent. Team response is one of them — it's no longer around. */
   comments: PublicComment[];
+  /** Set when the thread has comments older than `comments` (MIN-714). */
+  commentsEarlierCursor: string | null;
+  /**
+   * This post was merged into one the viewer cannot read (MIN-713): its
+   * author sees it read-only instead of being redirected to a 404.
+   */
+  mergedIntoUnreadable: boolean;
 }
+
 
 export async function getPublicPostDetail(params: {
   projectId: string;
@@ -187,16 +195,46 @@ export async function getPublicPostDetail(params: {
     row.is_public && row.review_state === "published" && !isHiddenFeedbackStatus(row.status);
   if (!publiclyVisible && (params.viewerId === null || row.author_id !== params.viewerId)) return null;
   if (row.merged_into_id !== null) {
-    // Tombstone: canonical carries all, caller redirects.
+    // Tombstone: the caller redirects to the canonical, which carries
+    // everything — but only when this viewer can read it. Redirecting to a
+    // destination the team made private (or moderated, or deleted) ends on a
+    // 404, which is what "My feedback" linked to (MIN-713).
+    const { data: target } = await service.from("feedback_posts")
+      .select("id, author_id, is_public, review_state, status")
+      .is("deleted_at", null).eq("id", row.merged_into_id)
+      .eq("project_id", params.projectId).maybeSingle();
+    const targetReadable = target !== null && (
+      (target.is_public && target.review_state === "published" &&
+        !isHiddenFeedbackStatus(target.status as FeedbackPostStatus)) ||
+      (params.viewerId !== null && target.author_id === params.viewerId)
+    );
+    if (targetReadable) {
+      return {
+        post: toPublicPost(row, params.viewerId, new Set<string>()),
+        mergedIntoId: row.merged_into_id,
+        mergedFromTitles: [],
+        comments: [],
+        commentsEarlierCursor: null,
+        mergedIntoUnreadable: false,
+      };
+    }
+    // Only the author keeps a view of their own post, read-only: it no longer
+    // takes votes or comments, and nothing of the destination comes out —
+    // neither its id, nor its title, nor its progress. Anyone else gets the
+    // same 404 as the destination would have given them.
+    if (params.viewerId === null || row.author_id !== params.viewerId) return null;
+    const thread = await listPublicComments({ postId: row.id, viewerId: params.viewerId });
     return {
-      post: toPublicPost(row, params.viewerId, new Set<string>()),
-      mergedIntoId: row.merged_into_id,
+      post: toPublicPost(row, params.viewerId, new Set<string>(), thread.summary),
+      mergedIntoId: null,
       mergedFromTitles: [],
-      comments: [],
+      comments: thread.comments,
+      commentsEarlierCursor: thread.earlierCursor,
+      mergedIntoUnreadable: true,
     };
   }
 
-  const [voted, mergedFromRes, comments] = await Promise.all([
+  const [voted, mergedFromRes, thread] = await Promise.all([
     fetchViewerVotes(params.viewerId, [row.id]),
     feedbackPostStore(service)
       .select("title")
@@ -211,15 +249,48 @@ export async function getPublicPostDetail(params: {
   ]);
 
   return {
-    post: toPublicPost(row, params.viewerId, voted, {
-      count: comments.length,
-      teamRepliedAt:
-        comments.filter((c) => c.isTeam).at(-1)?.createdAt ?? null,
-    }),
+    // The thread's own summary covers every comment, not just this page.
+    post: toPublicPost(row, params.viewerId, voted, thread.summary),
     mergedIntoId: null,
     mergedFromTitles: (mergedFromRes.data ?? []).map((p) => p.title as string),
-    comments,
+    comments: thread.comments,
+    commentsEarlierCursor: thread.earlierCursor,
+    mergedIntoUnreadable: false,
   };
+}
+
+/**
+ * An earlier page of a post's public thread (MIN-714), for the "show earlier
+ * comments" button of its page.
+ *
+ * Same reading rule as `getPublicPostDetail`, rechecked on every call since
+ * the request comes straight from the client: a publicly visible canonical
+ * post, or one the viewer wrote (including their own post merged into one
+ * they cannot read). A merged post someone else wrote has no thread of its
+ * own publicly: its page redirects. Null = nothing readable here.
+ */
+export async function listEarlierPublicComments(params: {
+  projectId: string;
+  postId: string;
+  viewerId: string | null;
+  before: string;
+}): Promise<{ comments: PublicComment[]; earlierCursor: string | null } | null> {
+  const service = getServiceClient();
+  const { data: post } = await service.from("feedback_posts")
+    .select("id, author_id, is_public, review_state, status, merged_into_id")
+    .is("deleted_at", null).eq("id", params.postId)
+    .eq("project_id", params.projectId).maybeSingle();
+  if (!post) return null;
+  const publiclyVisible = post.is_public && post.review_state === "published" &&
+    !isHiddenFeedbackStatus(post.status as FeedbackPostStatus) && post.merged_into_id === null;
+  const mine = params.viewerId !== null && post.author_id === params.viewerId;
+  if (!publiclyVisible && !mine) return null;
+  const thread = await listPublicComments({
+    postId: post.id as string,
+    viewerId: params.viewerId,
+    before: params.before,
+  });
+  return { comments: thread.comments, earlierCursor: thread.earlierCursor };
 }
 
 /**

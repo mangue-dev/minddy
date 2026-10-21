@@ -44,6 +44,10 @@
       "components/settings/project-visibility-section.tsx",
       "components/settings/account-hidden-projects-section.tsx",
       "lib/use-hidden-projects.ts",
+      "lib/use-offered-projects.ts",
+      "components/global-board.tsx",
+      "app/api/me/issues/export/route.ts",
+      "lib/server/cycles.ts",
       "lib/server/hidden-projects.ts",
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
@@ -145,7 +149,7 @@ In **Categorie**, il proprietario e i membri gestiscono le categorie che classif
 
 Nascondi un progetto che non segui più ogni giorno per toglierlo dalla tua barra laterale e dalla tua home senza lasciarlo. Nelle impostazioni generali del progetto, scegli **Nascondi** nella **Zona pericolosa**, oppure fai clic con il tasto destro sul progetto nella barra laterale e scegli **Nascondi progetto**, poi conferma. In entrambi i casi una finestra che nomina il progetto chiede prima conferma, perché esce dalla tua navigazione; mostrarlo di nuovo non richiede conferma. Chiunque faccia parte del progetto può nasconderlo, compresi il proprietario e i lettori.
 
-Nascondere cambia solo la tua navigazione. La preferenza è salvata nel tuo account, quindi resta dopo un nuovo accesso e sugli altri tuoi dispositivi. Mantieni il tuo accesso e puoi ancora aprire e modificare il progetto da un link diretto o dalla scheda **Progetti nascosti** delle **Impostazioni account**. Gli altri membri continuano a vedere il progetto, e le sue routine, integrazioni e notifiche continuano a funzionare. Aprire un progetto nascosto non lo riporta nella tua barra laterale.
+Nascondere cambia solo la tua navigazione. Fuori dal progetto stesso, Minddy non propone più il progetto né i suoi ticket, obiettivi e pagine ovunque tu scelga qualcosa: la palette dei comandi, i suggerimenti di menzione dopo @, il contesto di Numo e la scelta del progetto quando crei un ticket, un obiettivo o una routine. Le menzioni e i link già scritti mantengono il loro nome e si aprono ancora. I suoi ticket escono anche dalla bacheca **Tutti i ticket** e dai suoi filtri, dall’esportazione CSV di tutti i tuoi progetti e dal riempimento automatico del tuo ciclo; se scegli esplicitamente il progetto nell’esportazione, viene ancora incluso. La preferenza è salvata nel tuo account, quindi resta dopo un nuovo accesso e sugli altri tuoi dispositivi. Mantieni il tuo accesso e puoi ancora aprire e modificare il progetto da un link diretto o dalla scheda **Progetti nascosti** delle **Impostazioni account**. Gli altri membri continuano a vedere il progetto, e le sue routine, integrazioni e notifiche continuano a funzionare. Aprire un progetto nascosto non lo riporta nella tua barra laterale.
 
 Per ritrovarlo, scegli **Mostra** in **Progetti nascosti** o nelle impostazioni generali del progetto, oppure scegli **Mostra progetto** dal suo menu nella barra laterale. Se la modifica non può essere salvata, compare un errore e il progetto torna allo stato precedente; riprova. A differenza di lasciare il progetto o spostarlo nel cestino, nasconderlo non rimuove mai accesso o contenuti.
 

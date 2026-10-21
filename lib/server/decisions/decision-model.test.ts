@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { decisionsUrl, expandDecisionQuestions, parseDecisionAnswers } from "./decision-model";
+import {
+  DECISION_MODEL_PROBE_SPEC,
+  decisionsUrl,
+  expandDecisionQuestions,
+  parseDecisionAnswers,
+} from "./decision-model";
 import type { DecisionSpec } from "./types";
 
 /**
@@ -71,17 +76,25 @@ describe("expandDecisionQuestions", () => {
     const questions = expandDecisionQuestions(SPEC);
     expect(questions["category_ids:cat-a"]).toEqual({
       type: "noul",
-      instructions: "A",
+      instructions: "categories Does this option apply: A?",
     });
     expect(questions["category_ids:cat-b"]).toEqual({
       type: "noul",
-      instructions: "B",
+      instructions: "categories Does this option apply: B?",
     });
     expect(questions["category_ids:cat-c"]).toEqual({
       type: "noul",
-      instructions: "C",
+      instructions: "categories Does this option apply: C?",
     });
     expect(questions.category_ids).toBeUndefined();
+  });
+
+  it("asks every multi-choice option as a yes/no question, never as a bare label (MIN-752)", () => {
+    const questions = expandDecisionQuestions(DECISION_MODEL_PROBE_SPEC);
+    expect(questions["category_ids:docs"]).toEqual({
+      type: "noul",
+      instructions: "Which of this project's categories does the issue belong to? Does this option apply: Documentation?",
+    });
   });
 
   it("maps a boolean to noul and a score to its ordered criteria", () => {

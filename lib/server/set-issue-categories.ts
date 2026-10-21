@@ -15,7 +15,8 @@ import type { RepoProviderId } from "@/lib/repo-providers";
 
 /**
  * Shared category-assignment core: replaces the issue's category set (full
- * replace — ids not sent are removed), keeping only ids that belong to the
+ * replace — ids not sent are removed) atomically through the
+ * `replace_issue_categories` function, keeping only ids that belong to the
  * issue's project, and logs category_added / category_removed events. Used by
  * PUT /api/issues/[id]/categories and the assistant tools.
  *
@@ -78,72 +79,38 @@ export async function setIssueCategories({
     return { ok: false, status: 403, errorKey: "readOnlyProject" };
   }
 
-  // Keep only categories that actually belong to this issue's project.
-  let valid: string[] = [];
-  if (requested.length > 0) {
-    const { data: cats, error: categoryError } = await service
-      .from("categories")
-      .select("id")
-      .eq("project_id", issue.project_id)
-      .in("id", requested);
-    if (categoryError) {
-      console.error("[set-issue-categories] category lookup failed:", categoryError.message);
-      return { ok: false, status: 500, errorKey: "databaseError" };
-    }
-    valid = (cats ?? []).map((c) => c.id as string);
-  }
-
-  // Snapshot the current set so we can log which categories were added/removed.
-  const { data: currentRows, error: snapshotError } = await service
-    .from("issue_categories")
-    .select("category_id")
-    .eq("issue_id", issueId);
-  if (snapshotError) {
-    console.error("[set-issue-categories] current categories lookup failed:", snapshotError.message);
+  // One transaction (MIN-698): the function locks the issue, keeps only ids
+  // that belong to its project, writes the difference and returns it. A
+  // failure leaves the previous set untouched, and concurrent replacements of
+  // the same issue are serialized, so the last one leaves exactly its set.
+  const { data, error: replaceError } = await service.rpc("replace_issue_categories", {
+    p_issue_id: issueId,
+    p_actor_id: actorId,
+    p_category_ids: requested,
+  });
+  if (replaceError) {
+    if (replaceError.code === "42501") return { ok: false, status: 403, errorKey: "readOnlyProject" };
+    console.error("[set-issue-categories] replace failed:", replaceError.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  const current = new Set((currentRows ?? []).map((r) => r.category_id as string));
-
-  const { error: delError } = await service
-    .from("issue_categories")
-    .delete()
-    .eq("issue_id", issueId);
-  if (delError) {
-    console.error("[set-issue-categories] clear failed:", delError.message);
-    return { ok: false, status: 500, errorKey: "databaseError" };
+  const outcome = data as
+    | { code: string }
+    | { category_ids: string[]; added: string[]; removed: string[] }
+    | null;
+  if (!outcome || "code" in outcome) {
+    return { ok: false, status: 404, errorKey: "issueNotFound" };
   }
 
   scheduleRoutineEvents();
-  if (valid.length > 0) {
-    // upsert + ignoreDuplicates: tolerate a concurrent request having already
-    // inserted the same (issue_id, category_id) pair, so it can't 500 on the
-    // join table's primary key.
-    const { error: insError } = await service
-      .from("issue_categories")
-      .upsert(valid.map((category_id) => ({ issue_id: issueId, category_id })), {
-        onConflict: "issue_id,category_id",
-        ignoreDuplicates: true,
-      });
-    if (insError) {
-      console.error("[set-issue-categories] set failed:", insError.message);
-      return { ok: false, status: 500, errorKey: "databaseError" };
-    }
-  }
-
-  scheduleRoutineEvents();
-  // Activity: one event per added / removed category.
-  const nextSet = new Set(valid);
-  const events: EventRow[] = [];
-  for (const cid of valid) {
-    if (!current.has(cid)) {
-      events.push({ issue_id: issueId, actor_id: actorId, type: "category_added", to_value: cid });
-    }
-  }
-  for (const cid of current) {
-    if (!nextSet.has(cid)) {
-      events.push({ issue_id: issueId, actor_id: actorId, type: "category_removed", from_value: cid });
-    }
-  }
+  // Activity reflects the committed difference only.
+  const events: EventRow[] = [
+    ...outcome.added.map((cid): EventRow => (
+      { issue_id: issueId, actor_id: actorId, type: "category_added", to_value: cid }
+    )),
+    ...outcome.removed.map((cid): EventRow => (
+      { issue_id: issueId, actor_id: actorId, type: "category_removed", from_value: cid }
+    )),
+  ];
   await insertEvents(
     service,
     stampForgeSync(
@@ -152,5 +119,5 @@ export async function setIssueCategories({
     )
   );
 
-  return { ok: true, categoryIds: valid };
+  return { ok: true, categoryIds: outcome.category_ids };
 }

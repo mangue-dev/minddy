@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import { useSmartAssignWarningsQuery } from "@/lib/use-smart-assign-warnings-query";
 import { useProjects } from "@/lib/projects-context";
+import { useHiddenProjects } from "@/lib/use-hidden-projects";
 import { ProjectOrb } from "@/components/project-orb";
 import { orbSeedOr } from "@/lib/project-orb-colors";
 
@@ -34,8 +35,11 @@ const MOTION = { duration: 0.22, ease: [0.16, 1, 0.3, 1] as const };
  */
 export function HomeSmartAssignWarning() {
   const t = useTranslations("Home");
-  const { warnings } = useSmartAssignWarningsQuery();
+  const { warnings: allWarnings } = useSmartAssignWarningsQuery();
   const { projects } = useProjects();
+  // Hidden projects stay out of Home (MIN-692), their warnings too (MIN-751).
+  const { hiddenProjectIds } = useHiddenProjects();
+  const warnings = allWarnings.filter((warning) => !hiddenProjectIds.has(warning.projectId));
 
   if (warnings.length === 0) return null;
 

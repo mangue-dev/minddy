@@ -6,6 +6,7 @@ import { afterOrNow } from "@/lib/server/after-safe";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/supabase-service";
 import { writableProjectIds } from "@/lib/server/project-access";
+import { listHiddenProjectIds } from "@/lib/server/hidden-projects";
 import { insertEvents, type EventRow } from "@/lib/server/issue-events";
 import { resolveCyclePrefs, type CyclePrefs } from "@/lib/cycle-prefs";
 import {
@@ -329,7 +330,7 @@ export async function fillCycleForUser({
   weights?: FillWeights;
   viaAssistant?: boolean;
 }): Promise<{ pickedIds: string[]; points: number }> {
-  const [{ data: candidateRows }, { data: cycleIssues }] = await Promise.all([
+  const [{ data: candidateRows }, { data: cycleIssues }, hiddenIds] = await Promise.all([
     issueStore(service).select(
         "id, project_id, title, status, priority, effort, objective_id, issue_categories(category_id), projects!inner(deleted_at)"
       )
@@ -341,12 +342,20 @@ export async function fillCycleForUser({
     issueStore(service).select("effort, status")
       .eq("cycle_id", cycle.id)
       .is("deleted_at", null),
+    // A project the user hid (MIN-692) never feeds their cycle (MIN-751). When
+    // the preference cannot be read, fill nothing rather than risk it.
+    listHiddenProjectIds(service, userId).catch(() => null),
   ]);
+  if (hiddenIds === null) return { pickedIds: [], points: 0 };
+  const hidden = new Set(hiddenIds);
 
   // A fill writes each picked issue: never in a project where the user can
   // no longer write (MIN-693).
   const writableCandidates = new Set(
-    await writableIssueIds(userId, candidateRows ?? [])
+    await writableIssueIds(
+      userId,
+      (candidateRows ?? []).filter((row) => !hidden.has(row.project_id as string))
+    )
   );
   const candidates: RecoIssue[] = (candidateRows ?? [])
     .filter((row) => writableCandidates.has(row.id as string))

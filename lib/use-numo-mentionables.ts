@@ -18,8 +18,6 @@ import {
   useMentionLinksFor,
   useMentionSources,
 } from "@/lib/use-mention-sources";
-import { useProjects } from "@/lib/projects-context";
-import { projectOrbSeed } from "@/lib/project-orb-colors";
 import type { MentionLinks } from "@/components/mention-links";
 import type { MentionOption } from "@/components/mention-suggest";
 import type { AssistantMention } from "@/lib/assistant-types";
@@ -77,7 +75,6 @@ export function useNumoMentionables(
 } {
   const [wanted, setWanted] = useState(false);
   const { members } = useNumoMembers(wanted, scopeProjectId);
-  const { projects } = useProjects();
   // Tickets and objectives come from the palette index, like the mentions
   // a description: it already carries everything, of all my projects. The pages, they
   // are those of the project in scope — a wiki belongs to its project.
@@ -86,6 +83,7 @@ export function useNumoMentionables(
     issues,
     objectives,
     pages,
+    offered,
     armNow,
   } = useMentionSources(
     scopeProjectId,
@@ -114,17 +112,19 @@ export function useNumoMentionables(
         avatarSeed: m.avatar_seed,
         keywords: m.email ? [m.email] : [],
       })),
-      ...projects.map((p) => ({
+      // Hidden projects and their items are not offered (MIN-751); the scan
+      // and the links above still resolve what earlier messages cite.
+      ...offered.projects.map((p) => ({
         type: "project" as const,
         id: p.id,
         label: p.name,
-        avatarSeed: projectOrbSeed(p),
-        iconUrl: p.icon_url,
+        avatarSeed: p.avatarSeed,
+        iconUrl: p.iconUrl,
         keywords: [p.key],
       })),
       // The TITLE in second row, and searchable: we find “the ticket on
       // webhooks” without knowing the number.
-      ...issues.map((i) => ({
+      ...offered.issues.map((i) => ({
         type: "issue" as const,
         id: i.id,
         projectId: i.project_id,
@@ -133,7 +133,7 @@ export function useNumoMentionables(
         status: i.status,
         keywords: [i.title],
       })),
-      ...objectives.map((o) => ({
+      ...offered.objectives.map((o) => ({
         type: "objective" as const,
         id: o.id,
         projectId: o.project_id,
@@ -152,7 +152,7 @@ export function useNumoMentionables(
           icon: p.icon,
         })),
     ],
-    [members, projects, issues, objectives, pages],
+    [members, offered, pages],
   );
 
   const onMentionQuery = useCallback(

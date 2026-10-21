@@ -100,6 +100,15 @@ it("goes down into the description on ↓ from the end of the title", async () =
   expect(document.activeElement).toBe(editor.view.dom);
 });
 
+it("leaves Enter and ↓ to an IME while it composes (MIN-706)", async () => {
+  const title = await mount({ mode: "enter" });
+  expect(press(title, "Enter", { isComposing: true }).defaultPrevented).toBe(false);
+  expect(press(title, "ArrowDown", { isComposing: true }).defaultPrevented).toBe(false);
+  expect(press(title, "Enter", { keyCode: 229 }).defaultPrevented).toBe(false);
+  expect(submit).not.toHaveBeenCalled();
+  expect(document.activeElement).toBe(title);
+});
+
 it("leaves ↓ to the field when the description is read-only", async () => {
   const title = await mount({ editable: false });
   expect(press(title, "ArrowDown").defaultPrevented).toBe(false);

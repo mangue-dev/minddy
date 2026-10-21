@@ -377,6 +377,13 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     () => visibleNavigationProjects(projects, hiddenProjectIds, currentProjectId),
     [projects, hiddenProjectIds, currentProjectId]
   );
+  // ⌘K resolves every row through the projects it may show (MIN-751): the
+  // pages, tickets and objectives of a hidden project stay out of the palette,
+  // index and content search alike, unless it is the project on screen.
+  const paletteProjectById = useMemo(
+    () => new Map(switcherProjects.map((p) => [p.id, p])),
+    [switcherProjects]
+  );
   // CSV export: only one pallet line, never per project — this is the
   // dialogue which requires scope, because “one project or all” is precisely
   // the question we ask ourselves when clicking. As for cleaning the branches, the
@@ -522,7 +529,12 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // Smart Assign active but without rules on one of my projects (MIN-31): the
   // sidebar bears the mark, and it is the welcome which explains it — the entrance
   // “Home” therefore carries it, in both modes of the sidebar.
-  const { warnings: smartAssignWarnings } = useSmartAssignWarningsQuery();
+  // A project I hid (MIN-692) does not raise this mark either (MIN-751).
+  const { warnings: allSmartAssignWarnings } = useSmartAssignWarningsQuery();
+  const smartAssignWarnings = useMemo(
+    () => allSmartAssignWarnings.filter((w) => !hiddenProjectIds.has(w.projectId)),
+    [allSmartAssignWarnings, hiddenProjectIds]
+  );
   const smartAssignBadge =
     smartAssignWarnings.length > 0 ? (
       <HugeiconsIcon icon={Alert01Icon} className="size-3.5 text-amber-500" aria-label={t("smartAssignIncomplete")} />
@@ -839,12 +851,12 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       ],
     });
 
-    if (projects.length > 0) {
+    if (switcherProjects.length > 0) {
       // ── Projects (quick switch) ─────────────────────────────────────
       groups.push({
         key: "projects",
         heading: t("projects"),
-        items: projects.map((p) => ({
+        items: switcherProjects.map((p) => ({
           key: `project-${p.id}`,
           label: p.name,
           icon: projectOrbIcon(projectOrbSeed(p), p.icon_url),
@@ -859,7 +871,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
 
       // ── Pages (per-project navigation) ──────────────────────────────
       const pageItems: PaletteItem[] = [];
-      for (const p of projects) {
+      for (const p of switcherProjects) {
         const base = `/projects/${p.id}`;
         const chip = projectChip(p);
         const metaText = p.name;
@@ -952,7 +964,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     }
 
     return groups;
-  }, [projects, projectById, projectDrafts, openProjectDraft, creationDrafts, tDrafts, currentProject, createPageFromPalette, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, openAssistant, agentsAllowed, projectLimitReached, openExport, locale, t, ti, tk, tPages, tScratch, tSettings, tExport, tProjects, setCheatsheetOpen]);
+  }, [projects, switcherProjects, projectById, projectDrafts, openProjectDraft, creationDrafts, tDrafts, currentProject, createPageFromPalette, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, openAssistant, agentsAllowed, projectLimitReached, openExport, locale, t, ti, tk, tPages, tScratch, tSettings, tExport, tProjects, setCheatsheetOpen]);
 
   // ── Settings: one line per CARD, not per tab ───────────────────────
   // A settings tab is a column of cards; “Cadence”, “Zone
@@ -1024,7 +1036,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // that only the content search found.
   const buildPageItem = useCallback(
     (page: SearchIndexPage): PaletteItem | null => {
-      const project = projectById.get(page.project_id);
+      const project = paletteProjectById.get(page.project_id);
       if (!project) return null;
       return {
         key: `wiki-${page.id}`,
@@ -1040,7 +1052,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         onSelect: () => navigateToWikiPage(page.project_id, page.id),
       };
     },
-    [projectById, navigateToWikiPage, tPages]
+    [paletteProjectById, navigateToWikiPage, tPages]
   );
 
   // ── Data groups: tickets + objectives, all projects combined (MIN-91) ────
@@ -1065,7 +1077,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           key: "issues",
           heading: ti("entityPlural"),
           items: issues.flatMap((i) => {
-            const project = projectById.get(i.project_id);
+            const project = paletteProjectById.get(i.project_id);
             // Unknown project (deleted, or left) → nothing to label or
             // route the ticket: we discard it rather than displaying “-12”.
             if (!project) return [];
@@ -1096,7 +1108,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           key: "objectives",
           heading: t("objectives"),
           items: objectives.flatMap((o) => {
-            const project = projectById.get(o.project_id);
+            const project = paletteProjectById.get(o.project_id);
             if (!project) return [];
             return [
               {
@@ -1135,7 +1147,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
 
       return groups;
     },
-    [projectById, buildPageItem, openIssuePanel, t, ti]
+    [paletteProjectById, buildPageItem, openIssuePanel, t, ti]
   );
 
   // Prepare the full model during the palette's idle warmup and retain it

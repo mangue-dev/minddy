@@ -33,8 +33,10 @@ import { toast } from "sonner";
 import {
   createIssueApi,
   deleteIssueApi,
+  fetchIssueApi,
   updateIssueApi,
 } from "@/lib/issues-api";
+import { HttpResponseError } from "@/lib/backend-availability";
 import { setIssueCategoriesApi } from "@/lib/categories-api";
 import { restoreTrashItemApi } from "@/lib/trash-api";
 import {
@@ -87,6 +89,11 @@ const UndoContext = createContext<UndoHistory>({ record: () => null });
 /** Recording facade for the mutation hooks. No-op outside an UndoProvider. */
 export function useUndoHistory(): UndoHistory {
   return useContext(UndoContext);
+}
+
+/** Only a 404 says the row is gone; anything else may be an outage. */
+function isNotFound(err: unknown): boolean {
+  return err instanceof HttpResponseError && err.status === 404;
 }
 
 /** i18n key under `Undo.actions` for each entry kind. */
@@ -337,6 +344,42 @@ export function UndoProvider({ children }: { children: ReactNode }) {
     [readdRelation]
   );
 
+  /**
+   * Bring a soft-deleted issue back: restore THE SAME row from the trash, so
+   * its id, number, recurrence, comments and history return with it (MIN-708).
+   * Re-creating a copy is reserved for a row that is definitively gone — a
+   * 404 from the restore, confirmed by a 404 on the live row. A network error
+   * or a 5xx propagates instead (MIN-709): reading an outage as a purge would
+   * leave the original in the trash next to a copy. A 404 on the restore
+   * while the live row exists means an earlier restore already succeeded
+   * (its response was lost, or someone restored it from the trash).
+   */
+  const restoreOrRecreate = useCallback(
+    async (
+      projectId: string,
+      issueId: string,
+      snapshot: IssueSnapshot,
+      childIds: string[],
+      relations: RelationSnapshot[]
+    ): Promise<void> => {
+      const id = resolveAliased(aliasRef.current, issueId);
+      try {
+        await restoreTrashItemApi("issue", id);
+        return;
+      } catch (err) {
+        if (!isNotFound(err)) throw err;
+      }
+      try {
+        await fetchIssueApi(id);
+        return;
+      } catch (err) {
+        if (!isNotFound(err)) throw err;
+      }
+      await recreate(projectId, issueId, snapshot, childIds, relations);
+    },
+    [recreate]
+  );
+
   /** Returns the server row of a replayed field update, merged into the caches. */
   const applyServer = useCallback(
     async (entry: UndoEntry, direction: "undo" | "redo"): Promise<Issue | undefined> => {
@@ -363,28 +406,20 @@ export function UndoProvider({ children }: { children: ReactNode }) {
           if (direction === "undo") {
             await deleteIssueApi(resolveAliased(alias, entry.issueId));
           } else {
-            await recreate(entry.projectId, entry.issueId, entry.snapshot, [], []);
+            await restoreOrRecreate(entry.projectId, entry.issueId, entry.snapshot, [], []);
           }
           break;
         case "delete":
           if (direction === "undo") {
-            // Since MIN-133, delete puts in trash: cancel, it's
-            // restore THE SAME line — its number, its comments, its
-            // attachments and its history return with it. There
-            // re-creation of before made an impoverished copy AND left
-            // the original in the trash, in duplicate. She remains in rescue
-            // for the line already purged by hand in the meantime (404).
-            try {
-              await restoreTrashItemApi("issue", resolveAliased(alias, entry.issueId));
-            } catch {
-              await recreate(
-                entry.projectId,
-                entry.issueId,
-                entry.snapshot,
-                entry.childIds,
-                entry.relations
-              );
-            }
+            // Since MIN-133, delete puts in trash: undoing it restores THE
+            // SAME row rather than an impoverished copy (restoreOrRecreate).
+            await restoreOrRecreate(
+              entry.projectId,
+              entry.issueId,
+              entry.snapshot,
+              entry.childIds,
+              entry.relations
+            );
           } else {
             await deleteIssueApi(resolveAliased(alias, entry.issueId));
           }
@@ -409,7 +444,7 @@ export function UndoProvider({ children }: { children: ReactNode }) {
       invalidate(entry);
       return undefined;
     },
-    [queryClient, invalidate, recreate, readdRelation]
+    [queryClient, invalidate, restoreOrRecreate, readdRelation]
   );
 
   const run = useCallback(

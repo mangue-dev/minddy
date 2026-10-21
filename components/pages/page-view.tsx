@@ -92,6 +92,7 @@ import {
   type PageHistoryTab,
 } from "@/components/pages/page-history";
 import { PageTaskSurface } from "@/components/pages/page-task-surface";
+import { useLocalPageMetadata } from "@/components/pages/use-local-page-metadata";
 import { useRegisterPagePromotionSource } from "@/components/pages/page-promotion-context";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { PageBreadcrumb } from "@/components/pages/page-breadcrumb";
@@ -375,12 +376,9 @@ function PageSurface({
   // As soon as you type, on the other hand, it is THIS component which is authentic. Without this,
   // the response of a PATCH left a second earlier rewritten in the field
   // title BEFORE the last letters — a quick typing was seen returning
-  // backwards with each recording.
+  // backwards with each recording. That precedence lasts only until the save
+  // is acknowledged (see `useLocalPageMetadata` below).
   const summary = byId.get(pageId);
-  const [edited, setEdited] = useState<{
-    title?: string;
-    icon?: string | null;
-  }>({});
 
   /* ── The live session (MIN-688) ─────────────────────────────────────────
      Body and title are edited together with every collaborator, Numo and the
@@ -400,9 +398,6 @@ function PageSurface({
   });
   const live = collaboration.status === "ready";
   const liveTitle = live ? collaboration.title : null;
-  const title = liveTitle?.value ?? edited.title ?? summary?.title ?? page?.title ?? "";
-  const icon =
-    edited.icon !== undefined ? edited.icon : (summary?.icon ?? page?.icon ?? null);
 
   /* ── The title and body, sewn on the keyboard ─────────────────────────── */
   //
@@ -457,6 +452,12 @@ function PageSurface({
     collaborative: live,
   });
   const { schedule, flush: flushSnapshot, takePending, resumeEditor } = autosave;
+  // Once every local write is acknowledged, the list line takes over again
+  // (MIN-704), so a later rename from elsewhere reaches this header.
+  const [edited, setEdited] = useLocalPageMetadata(autosave);
+  const title = liveTitle?.value ?? edited.title ?? summary?.title ?? page?.title ?? "";
+  const icon =
+    edited.icon !== undefined ? edited.icon : (summary?.icon ?? page?.icon ?? null);
   const collaborationFlush = collaboration.flush;
   // Everything this surface still has to save: metadata through the PATCH,
   // body and title through the live session.
@@ -1123,7 +1124,7 @@ function PageSurface({
               projectId={projectId}
               pageId={pageId}
               pageTitle={title}
-              flush={flush}
+              flush={flushBeforeNavigation}
             >
               <PageEditor
                 // A new session (another page, a role change) builds a new editor.

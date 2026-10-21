@@ -13,6 +13,7 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
+import { useOfferedProjects } from "@/lib/use-offered-projects";
 import { useAnalytics } from "@/lib/use-analytics";
 import { ImportWizardDialog } from "@/components/import/import-wizard-dialog";
 
@@ -50,9 +51,11 @@ export function OnboardingImportDialog({
 
   // Import written in a project, and the route is reserved for its owner:
   // an account entered by invitation has nowhere to deposit its CSV.
+  // A hidden project is not offered as the import target (MIN-751).
+  const offeredProjects = useOfferedProjects(projects);
   const owned = useMemo(
-    () => projects.filter((p) => p.owner_id === user?.id),
-    [projects, user?.id]
+    () => offeredProjects.filter((p) => p.owner_id === user?.id),
+    [offeredProjects, user?.id]
   );
   const [targetId, setTargetId] = useState<string | null>(null);
   const target = owned.find((p) => p.id === targetId) ?? owned[0] ?? null;

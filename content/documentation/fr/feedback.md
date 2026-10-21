@@ -194,7 +194,7 @@ Les enregistrements du tableau public sont limités à 10 MiB. La transcription 
 
 ### Voter, commenter et suivre {#follow}
 
-Votez pour une demande existante plutôt que de la dupliquer. Votre identité dispose d’un vote par retour. Pour commenter, vous devez vous identifier et les commentaires publics doivent être activés ; un commentaire public accepte 5 000 caractères. Vous pouvez supprimer définitivement votre propre commentaire après confirmation, et l’équipe peut modérer les commentaires publics.
+Votez pour une demande existante plutôt que de la dupliquer. Votre identité dispose d’un vote par retour, sur une demande que vous pouvez encore lire : publique, ou la vôtre. Pour commenter, vous devez vous identifier et les commentaires publics doivent être activés ; un commentaire public accepte 5 000 caractères. Un long fil s’ouvre sur ses derniers commentaires ; choisissez **Afficher les commentaires précédents** pour lire la suite. Vous pouvez supprimer définitivement votre propre commentaire après confirmation, et l’équipe peut modérer les commentaires publics.
 
 Ouvrez Mes retours pour retrouver vos demandes et vos votes, selon les droits de votre identité actuelle. Consultez leur statut public et les réponses de l’équipe à cet endroit ou sur la demande. Les notes réservées à l’équipe ne sont pas des réponses publiques. Si le SSO a expiré, revenez par un nouveau lien du produit ; un changement de navigateur ou d’identité peut modifier cette liste personnelle.
 
@@ -230,7 +230,7 @@ Un groupe fusionné partage un seul objectif. Modifier l’objectif du retour pr
 
 ## Fusionner des retours et les relier à la livraison {#feedback-to-issue}
 
-En tant que propriétaire ou Membre, ouvrez la demande et choisissez de la fusionner dans une demande canonique existante du même projet. Lisez d’abord les deux besoins : des formulations similaires ne prouvent pas qu’ils visent le même résultat. La demande courante devient le doublon, les votes sont réunis par identité et le doublon redirige vers la demande canonique. Examinez l’événement de fusion dans l’activité ; l’annulation utilise cet événement. Refusez une suggestion de fusion IA incorrecte plutôt que de l’accepter pour vider la file.
+En tant que propriétaire ou Membre, ouvrez la demande et choisissez de la fusionner dans une demande canonique existante du même projet. Lisez d’abord les deux besoins : des formulations similaires ne prouvent pas qu’ils visent le même résultat. La demande courante devient le doublon, les votes sont réunis par identité et le doublon redirige vers la demande canonique. Si la demande canonique n’est pas publique, l’auteur du doublon l’ouvre toujours, en lecture seule, et les autres visiteurs n’obtiennent aucune page. Examinez l’événement de fusion dans l’activité ; l’annulation utilise cet événement. Refusez une suggestion de fusion IA incorrecte plutôt que de l’accepter pour vider la file.
 
 ### Créer ou lier du travail {#work}
 

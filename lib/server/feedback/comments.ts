@@ -27,9 +27,13 @@ import {
  * taken over by the migration (neither one nor the other).
  */
 
-/** Depth ≤ 1, like ticket threads: `parent_id` always carries the
- ROOT of the thread, never the response we were aiming for. */
-const PUBLIC_THREAD_LIMIT = 200;
+/**
+ * One page of the public thread. Reading is bounded, but nothing past the
+ * bound is lost (MIN-714): the page is the MOST RECENT window, so a new
+ * comment always shows after it is posted, and older windows are reached
+ * through `earlierCursor`.
+ */
+export const PUBLIC_THREAD_LIMIT = 200;
 
 interface PublicCommentRow {
   id: string;
@@ -55,25 +59,111 @@ function toPublicComment(row: PublicCommentRow, viewerId: string | null): Public
   };
 }
 
-/** The public thread of a return, from oldest to newest. */
+export interface PublicCommentPage {
+  /** Oldest to newest; a loaded reply always comes with its thread root. */
+  comments: PublicComment[];
+  /**
+   * The oldest comment of this page when older ones exist: pass it as
+   * `before` to read the previous page. Null when the page reaches the start.
+   */
+  earlierCursor: string | null;
+  /** Count and last team reply of the WHOLE thread, not of this page. */
+  summary: PublicCommentSummary;
+}
+
+interface PublicCommentMeta {
+  id: string;
+  created_at: string;
+  parent_id: string | null;
+  feedback_user_id: string | null;
+}
+
+function byThreadOrder(a: { created_at: string; id: string }, b: { created_at: string; id: string }): number {
+  if (a.created_at !== b.created_at) return a.created_at < b.created_at ? -1 : 1;
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+}
+
+/** Ids per body read: keeps each request URL well under proxy limits. */
+const BODY_READ_CHUNK = 100;
+
+/**
+ * A page of the public thread of a return, oldest to newest within the page.
+ *
+ * Reading is bounded where it costs (bodies) and complete where it is cheap
+ * (metadata). The metadata of the whole thread is read first: it gives the
+ * true count and the last team reply, and places the page. The page is the
+ * newest `PUBLIC_THREAD_LIMIT` comments before `before` (the newest of all
+ * without it), so a comment just posted always shows (MIN-714). Depth ≤ 1
+ * means a reply in the page may answer a root posted long before it: that
+ * root's body is read too, so a reply never shows detached from what it
+ * answers. A later page that reaches such a root returns it again; the reader
+ * dedupes by id.
+ *
+ * `before` comes from the client: it is only ever matched against ids of
+ * THIS thread, never interpolated into a query. An unknown id yields an empty
+ * page. The CALLER decides whether the viewer may read this post; this
+ * function only guarantees that nothing but public comments of `postId` comes
+ * out.
+ */
 export async function listPublicComments(params: {
   postId: string;
   viewerId: string | null;
-}): Promise<PublicComment[]> {
+  before?: string | null;
+}): Promise<PublicCommentPage> {
+  const empty: PublicCommentPage = {
+    comments: [],
+    earlierCursor: null,
+    summary: emptyCommentSummary(),
+  };
   const service = getServiceClient();
-  const { data, error } = await commentStore(service, "comments")
-    .select(PUBLIC_COMMENT_SELECT)
+  // Newest first, so that a server-side row cap would drop the oldest
+  // metadata rather than the comments just posted; the exact count stays true.
+  const { data: metaData, error: metaError, count } = await commentStore(service, "comments")
+    .select("id, created_at, parent_id, feedback_user_id", { count: "exact" })
     .eq("feedback_post_id", params.postId)
     .eq("visibility", "public")
-    .order("created_at", { ascending: true })
-    .limit(PUBLIC_THREAD_LIMIT);
-  if (error) {
+    .order("created_at", { ascending: false });
+  if (metaError) {
     console.error("[feedback-comments] list_failed");
-    return [];
+    return empty;
   }
-  return ((data ?? []) as unknown as PublicCommentRow[]).map((row) =>
-    toPublicComment(row, params.viewerId)
+  const meta = ((metaData ?? []) as unknown as PublicCommentMeta[]).sort(byThreadOrder);
+
+  const summary = emptyCommentSummary();
+  summary.count = Math.max(count ?? 0, meta.length);
+  summary.teamRepliedAt =
+    meta.filter((row) => row.feedback_user_id === null).at(-1)?.created_at ?? null;
+
+  const end = params.before ? meta.findIndex((row) => row.id === params.before) : meta.length;
+  if (end < 0) return { ...empty, summary };
+  const start = Math.max(0, end - PUBLIC_THREAD_LIMIT);
+  const page = meta.slice(start, end);
+
+  const wanted = new Set(page.map((row) => row.id));
+  for (const row of page) if (row.parent_id) wanted.add(row.parent_id);
+  const ids = [...wanted];
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += BODY_READ_CHUNK) chunks.push(ids.slice(i, i + BODY_READ_CHUNK));
+  const results = await Promise.all(
+    chunks.map((chunk) =>
+      commentStore(service, "comments")
+        .select(PUBLIC_COMMENT_SELECT)
+        .eq("feedback_post_id", params.postId)
+        .eq("visibility", "public")
+        .in("id", chunk)
+    )
   );
+  if (results.some((result) => result.error)) {
+    console.error("[feedback-comments] list_failed");
+    return { ...empty, summary };
+  }
+  const rows = results.flatMap((result) => (result.data ?? []) as unknown as PublicCommentRow[]);
+
+  return {
+    comments: rows.sort(byThreadOrder).map((row) => toPublicComment(row, params.viewerId)),
+    earlierCursor: start > 0 ? page[0].id : null,
+    summary,
+  };
 }
 
 export interface PublicCommentSummary {

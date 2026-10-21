@@ -123,6 +123,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     postId: post.id as string,
     userId: feedbackUser.id,
     projectId: auth.project.id,
+    // The project's own key reads every post, private ones included.
+    trustedIntegration: true,
   });
   if (!voted) {
     return publicApiError(500, "internal_error", "Something went wrong.");

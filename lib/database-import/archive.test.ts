@@ -135,6 +135,27 @@ describe("Notion database archives", () => {
       pages[0].database_schema?.at(-1)?.options?.map((option) => option.name),
     ).toEqual(["Design", "Product"]);
   });
+  it("treats case variants of an option as one option (MIN-703)", () => {
+    const prepared = readDatabaseArchive(
+      strToU8('Name,Status,Tags\nOne,Done,"Design, UX"\nTwo,done,"design; Docs, DOCS"'),
+      "data.csv",
+    );
+    const source = prepared.sources[0];
+    expect(source.columns.map((column) => column.type)).toEqual([
+      "title",
+      "select",
+      "multi_select",
+    ]);
+    const pages = prepareImportPages(prepared, source, source.columns, new Map());
+    expect(pages).toHaveLength(3);
+    const [status, tags] = pages[0].database_schema!;
+    expect(status.options?.map((option) => option.name)).toEqual(["Done"]);
+    expect(tags.options?.map((option) => option.name)).toEqual(["Design", "UX", "Docs"]);
+    const [done] = status.options!;
+    const [design, ux, docs] = tags.options!;
+    expect(pages[1].property_values).toEqual({ [status.id]: done.id, [tags.id]: [design.id, ux.id] });
+    expect(pages[2].property_values).toEqual({ [status.id]: done.id, [tags.id]: [design.id, docs.id] });
+  });
   it("retains nested databases inside entry pages", () => {
     const nested =
       entry.slice(0, -3) + "/Tasks bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";

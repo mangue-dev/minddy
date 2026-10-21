@@ -68,6 +68,23 @@ export function parsePostHogDistinctId(
   return null;
 }
 
+/**
+ * A client that leaves mid-response (navigation, cancelled prefetch, closed
+ * tab) is not a server failure (MIN-763). Next.js 16.4 aborts an RSC render
+ * with `ResponseAborted` and drops it before `onRequestError`; up to 16.3,
+ * React's generic `The destination stream closed early.` reached the hook
+ * instead and produced hundreds of events a week. Both shapes, and the
+ * standard `AbortError`, are filtered here so a framework change cannot bring
+ * the noise back.
+ */
+const CLIENT_ABORT_NAMES = new Set(["AbortError", "ResponseAborted"]);
+const CLIENT_ABORT_MESSAGES = new Set(["The destination stream closed early."]);
+
+export function isClientAbortError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return CLIENT_ABORT_NAMES.has(error.name) || CLIENT_ABORT_MESSAGES.has(error.message);
+}
+
 export interface ServerErrorContext {
   routePath?: string;
   routeType?: string;
@@ -81,6 +98,7 @@ export async function captureServerException(
   context: ServerErrorContext = {},
 ): Promise<void> {
   if (!isErrorTrackingEnabled()) return;
+  if (isClientAbortError(error)) return;
   const posthog = getServerPostHog();
   if (!posthog) return;
   try {

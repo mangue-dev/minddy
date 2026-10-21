@@ -28,6 +28,7 @@ import {
   mapPriorityToken,
   mapStatusToken,
   normalizeToken,
+  splitLabels,
   type CsvTable,
 } from "@/lib/import/normalize";
 import {
@@ -153,8 +154,7 @@ export function splitLabelValues(stats: TableStats, mapping: ImportMapping): str
   const indexes = [...columnsOf(mapping, "labels"), ...columnsOf(mapping, "extraLabels")];
   const seen = new Map<string, string>();
   for (const value of valuesOfColumns(stats, indexes).values()) {
-    for (const label of value.label.split(/[,;]/)) {
-      const trimmed = label.trim();
+    for (const trimmed of splitLabels(value.label)) {
       const token = normalizeToken(trimmed);
       if (token && !seen.has(token)) seen.set(token, trimmed);
     }

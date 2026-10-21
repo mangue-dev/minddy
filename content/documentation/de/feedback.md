@@ -194,7 +194,7 @@ Aufnahmen auf dem öffentlichen Board sind auf 10 MiB begrenzt. Die Transkriptio
 
 ### Abstimmen, kommentieren und verfolgen {#follow}
 
-Stimmen Sie für eine vorhandene Anfrage, statt sie zu duplizieren. Ihre Identität hat eine Stimme pro Beitrag. Kommentare erfordern eine Identifikation und aktivierte öffentliche Kommentare; ein öffentlicher Kommentar darf 5.000 Zeichen enthalten. Sie können Ihren eigenen Kommentar nach einer Bestätigung endgültig entfernen; das Team kann öffentliche Kommentare moderieren.
+Stimmen Sie für eine vorhandene Anfrage, statt sie zu duplizieren. Ihre Identität hat eine Stimme pro Beitrag, für eine Anfrage, die Sie noch lesen können: eine öffentliche oder Ihre eigene. Kommentare erfordern eine Identifikation und aktivierte öffentliche Kommentare; ein öffentlicher Kommentar darf 5.000 Zeichen enthalten. Ein langer Verlauf öffnet sich mit den neuesten Kommentaren; wählen Sie **Frühere Kommentare anzeigen**, um den Rest zu lesen. Sie können Ihren eigenen Kommentar nach einer Bestätigung endgültig entfernen; das Team kann öffentliche Kommentare moderieren.
 
 Öffnen Sie Mein Feedback, um Ihre Einreichungen und Stimmen im Rahmen Ihrer aktuellen Identität zu finden. Lesen Sie dort oder in der Anfrage den öffentlichen Status und die Teamantworten. Interne Teamnotizen sind keine öffentlichen Antworten. Ist das SSO abgelaufen, kehren Sie über einen neuen Produktlink zurück. Ein anderer Browser oder eine andere Identität kann Ihre persönliche Liste verändern.
 
@@ -230,7 +230,7 @@ Eine zusammengeführte Gruppe teilt ein Ziel. Wenn du das Ziel der Hauptanfrage 
 
 ## Feedback zusammenführen und mit Umsetzung verbinden {#feedback-to-issue}
 
-Öffnen Sie als Eigentümer oder Mitglied die Feedback-Anfrage und wählen Sie die Zusammenführung mit einer bestehenden kanonischen Anfrage desselben Projekts. Lesen Sie zunächst beide Anliegen: Ähnliche Formulierungen beweisen noch kein gleiches Ziel. Die aktuelle Anfrage wird zum Duplikat, Stimmen werden nach Identität zusammengeführt und das Duplikat leitet zur kanonischen Anfrage weiter. Prüfen Sie das Zusammenführungsereignis in der Aktivität; die Rückgängig-Aktion verwendet dieses Ereignis. Lehnen Sie einen falschen KI-Vorschlag ab, statt ihn nur zum Leeren der Warteschlange anzunehmen.
+Öffnen Sie als Eigentümer oder Mitglied die Feedback-Anfrage und wählen Sie die Zusammenführung mit einer bestehenden kanonischen Anfrage desselben Projekts. Lesen Sie zunächst beide Anliegen: Ähnliche Formulierungen beweisen noch kein gleiches Ziel. Die aktuelle Anfrage wird zum Duplikat, Stimmen werden nach Identität zusammengeführt und das Duplikat leitet zur kanonischen Anfrage weiter. Ist die kanonische Anfrage nicht öffentlich, öffnet der Autor des Duplikats es weiterhin schreibgeschützt; andere Besucher erhalten keine Seite. Prüfen Sie das Zusammenführungsereignis in der Aktivität; die Rückgängig-Aktion verwendet dieses Ereignis. Lehnen Sie einen falschen KI-Vorschlag ab, statt ihn nur zum Leeren der Warteschlange anzunehmen.
 
 ### Arbeit erstellen oder verknüpfen {#work}
 

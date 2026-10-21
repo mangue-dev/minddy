@@ -174,17 +174,22 @@ function offsetMs(at: Date, timeZone: string): number {
   return asUtc - (at.getTime() - at.getMilliseconds());
 }
 
+const DAY_MS = 86_400_000;
+
 /**
  * The UTC instant where the `timeZone` clock displays this date and time.
  *
- * Two passes, and it is the time change which imposes them: the offset to
- * applied depends on the instant we are looking for, which we do not yet know. The
- * first pass gives a candidate, the second passes it with the offset
- * TRUE of this candidate. At the two annual shifts:
- * - non-existent hour (spring skips 2 h → 3 h): the result falls
- * after the jump, i.e. the first hour that exists — never the day before;
- * - doubled hour (autumn replays 2 h → 3 h): we retain the FIRST
- * occurrence, the one the clock displays first.
+ * The offset to apply depends on the instant we are looking for, which we do
+ * not know yet, so the wall time is tried against the offsets in force a day
+ * before and a day after it: at most one transition separates them. A
+ * candidate only counts if the clock really reads the requested time at that
+ * instant. The two annual shifts follow one explicit policy (the “compatible”
+ * disambiguation of Temporal and of most schedulers):
+ * - non-existent time (spring skips 2:00 → 3:00): the time is moved forward by
+ *   the length of the gap, so 2:30 runs at 3:30 the SAME day — never the hour
+ *   before the jump, and never skipped to the next day;
+ * - repeated time (autumn replays 2:00 → 3:00): the FIRST occurrence, the one
+ *   the clock displays first, so a routine never runs twice that night.
  */
 function zonedTimeToUtc(
   timeZone: string,
@@ -195,8 +200,24 @@ function zonedTimeToUtc(
   minute: number,
 ): Date {
   const wanted = Date.UTC(year, month - 1, day, hour, minute, 0, 0);
-  const firstGuess = new Date(wanted - offsetMs(new Date(wanted), timeZone));
-  return new Date(wanted - offsetMs(firstGuess, timeZone));
+  const offsetBefore = offsetMs(new Date(wanted - DAY_MS), timeZone);
+  const offsetAfter = offsetMs(new Date(wanted + DAY_MS), timeZone);
+  const matches = [...new Set([offsetBefore, offsetAfter])]
+    .map((offset) => wanted - offset)
+    .filter((at) => {
+      const p = zonedParts(new Date(at), timeZone);
+      return (
+        p.year === year &&
+        p.month === month &&
+        p.day === day &&
+        p.hour === hour &&
+        p.minute === minute
+      );
+    });
+  if (matches.length > 0) return new Date(Math.min(...matches));
+  // The time falls in the gap: reading it with the offset in force BEFORE the
+  // jump lands exactly “gap length” later on the clock.
+  return new Date(wanted - offsetBefore);
 }
 
 /** Number of days of the month (1-indexed) — to return a 31 to a short month. */

@@ -10,11 +10,11 @@ import { AccountAiKeysSection, NumoModelPreference } from "./account-ai-keys-sec
 const h = vi.hoisted(() => ({
   keys: [] as AiKey[], invalidate: vi.fn(), update: vi.fn(),
   saveNumo: vi.fn(), numoModel: null as string | null,
-  numoProvider: "openrouter", numoError: null as Error | null,
+  numoProvider: "openrouter", numoError: null as Error | null, numoLoaded: true,
 }));
 vi.mock("@/lib/use-numo-preferences-query", () => ({
   numoPreferencesQueryKey: ["numo-preferences"],
-  useNumoPreferencesQuery: () => ({ data: { provider: h.numoProvider, default_model: h.numoModel, application_model: "provider/model" }, isPending: false, error: h.numoError }),
+  useNumoPreferencesQuery: () => ({ data: h.numoLoaded ? { provider: h.numoProvider, default_model: h.numoModel, application_model: "provider/model" } : undefined, isPending: false, error: h.numoError }),
   saveNumoPreferencesApi: h.saveNumo,
 }));
 vi.mock("@/components/model-logo", () => ({ ProviderLogo: () => null }));
@@ -57,6 +57,7 @@ beforeEach(() => {
   h.numoModel = null;
   h.numoProvider = "openrouter";
   h.numoError = null;
+  h.numoLoaded = true;
   h.saveNumo.mockResolvedValue(undefined);
   h.keys = [];
   h.update.mockResolvedValue(undefined);
@@ -121,6 +122,15 @@ it("retains the saved choice when saving fails and reports a load failure", asyn
   expect(h.invalidate).not.toHaveBeenCalled();
   expect(host.querySelector<HTMLSelectElement>("select")!.value).toBe("provider/model");
   h.numoError = new Error("Fixture load failure");
+  h.numoLoaded = false;
   await renderNumo();
   expect(host.querySelector('[role="alert"]')?.textContent).toBe(messages.Account.numoModelLoadError);
+});
+it("keeps a loaded Numo choice usable when a background refresh fails (MIN-722)", async () => {
+  h.numoModel = "provider/model";
+  h.numoError = new Error("Fixture refresh failure");
+  await renderNumo();
+  expect(host.querySelector('[role="alert"]')).toBeNull();
+  expect(host.querySelector<HTMLSelectElement>("select")!.value).toBe("provider/model");
+  expect(host.querySelector<HTMLSelectElement>("select")!.disabled).toBe(false);
 });

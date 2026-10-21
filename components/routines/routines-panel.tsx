@@ -24,6 +24,7 @@ import {
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
+import { useOfferedProjects } from "@/lib/use-offered-projects";
 import { routinesQueryKey, useRoutinesQuery } from "@/lib/use-routines-query";
 import { describeSchedule } from "@/lib/routine-schedule";
 import { orderRoutinesWithinWeek } from "@/lib/routine-week-order";
@@ -99,6 +100,8 @@ export function RoutinesPanel({
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { projects, loading: projectsLoading } = useProjects();
+  // An empty accordion offers creation: none for a hidden project (MIN-751).
+  const offeredProjects = useOfferedProjects(projects);
   const { routines, loading } = useRoutinesQuery();
   const {
     routineSchedulingConfigured,
@@ -209,7 +212,7 @@ export function RoutinesPanel({
  * its button which opens the wizard.
  */
     const seen = new Set(ordered.map((g) => g.key));
-    const extra = projects
+    const extra = offeredProjects
       .filter((p) => !seen.has(p.id) && canCreateIn(p.id))
       .map((p) => ({
         key: p.id,
@@ -224,7 +227,7 @@ export function RoutinesPanel({
       }));
     return [...ordered, ...extra];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, projectById, projects, query, user?.id, locale]);
+  }, [visible, projectById, offeredProjects, query, user?.id, locale]);
 
   const selected = routines.find((r) => r.id === selectedId) ?? null;
   const selectedIsOwner =

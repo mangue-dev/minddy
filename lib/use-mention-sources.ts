@@ -32,6 +32,7 @@ import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { usePagesQuery } from "@/lib/use-pages-query";
 import { useSearchIndex } from "@/lib/use-search-index";
+import { useOfferedProject } from "@/lib/use-offered-projects";
 import { useIssuePanelActions } from "@/lib/issue-panel-context";
 import { pagesHref, pushPagesHistory } from "@/lib/pages-navigation";
 import type { DocumentEditorMentions } from "@/components/editor/document-editor";
@@ -68,6 +69,14 @@ export interface MentionSources {
       the palette index: quoting a page from another project makes no sense —
       a wiki belongs to his project, and its title is unique only to him. */
   pages: MentionPage[];
+  /** What a picker may PROPOSE (MIN-751): the same lists without my hidden
+      projects, except the one on screen. The complete lists above keep
+      resolving the mentions already written. */
+  offered: {
+    projects: MentionProject[];
+    issues: MentionIssue[];
+    objectives: MentionObjective[];
+  };
   /** Request the index right away — call at the first “@” typed, rather
       than to wait for the dead time which usually arms it. */
   armNow: () => void;
@@ -179,7 +188,25 @@ export function useMentionSources(
   }, [projectId, exactProjectId, pagesLoading, projectPages, index?.pages]);
   previousPages.current = pages;
 
-  return { projects: mentionProjects, issues, objectives, pages, armNow };
+  const isOffered = useOfferedProject(projectId);
+  const offeredProjects = useMemo(() => offeredRows(mentionProjects, (p) => isOffered(p.id)), [mentionProjects, isOffered]);
+  const offeredIssues = useMemo(() => offeredRows(issues, (i) => isOffered(i.project_id)), [issues, isOffered]);
+  const offeredObjectives = useMemo(
+    () => offeredRows(objectives, (o) => isOffered(o.project_id)),
+    [objectives, isOffered],
+  );
+  const offered = useMemo(
+    () => ({ projects: offeredProjects, issues: offeredIssues, objectives: offeredObjectives }),
+    [offeredProjects, offeredIssues, offeredObjectives],
+  );
+
+  return { projects: mentionProjects, issues, objectives, pages, offered, armNow };
+}
+
+/** `rows` itself when nothing is left out, so its consumers keep their identity. */
+function offeredRows<T>(rows: T[], keep: (row: T) => boolean): T[] {
+  const kept = rows.filter(keep);
+  return kept.length === rows.length ? rows : kept;
 }
 
 /**
@@ -277,7 +304,7 @@ export function useDescriptionMentions(
   members: Member[],
   onOpenIssue?: (projectId: string, issueId: string) => void,
 ): DocumentEditorMentions {
-  const { projects, issues, objectives, pages, armNow } =
+  const { projects, issues, objectives, pages, offered, armNow } =
     useMentionSources(projectId);
   const links = useMentionLinksFor({ issues, objectives, pages, members, projects }, onOpenIssue);
 
@@ -292,7 +319,9 @@ export function useDescriptionMentions(
         avatarSeed: m.avatar_seed,
         keywords: m.email ? [m.email] : [],
       })),
-      ...projects.map((project) => ({
+      // Only what I may be offered (MIN-751); the scan and the links below
+      // still resolve every mention already written.
+      ...offered.projects.map((project) => ({
         type: "project" as const,
         id: project.id,
         label: project.name,
@@ -300,7 +329,7 @@ export function useDescriptionMentions(
         iconUrl: project.iconUrl,
         keywords: [project.key],
       })),
-      ...issues.map((i) => ({
+      ...offered.issues.map((i) => ({
         type: "issue" as const,
         id: i.id,
         label: i.identifier,
@@ -308,14 +337,14 @@ export function useDescriptionMentions(
         status: i.status,
         keywords: [i.title],
       })),
-      ...objectives.map((o) => ({
+      ...offered.objectives.map((o) => ({
         type: "objective" as const,
         id: o.id,
         label: o.name,
         color: o.color,
       })),
     ],
-    [members, projects, issues, objectives],
+    [members, offered],
   );
   const options = useMemo<MentionOption[]>(
     () => [

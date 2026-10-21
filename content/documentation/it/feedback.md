@@ -194,7 +194,7 @@ Le registrazioni sulla bacheca pubblica sono limitate a 10 MiB. La trascrizione 
 
 ### Votare, commentare e seguire {#follow}
 
-Vota una richiesta esistente anziché duplicarla. Ogni identità ha un voto per feedback. I commenti richiedono identificazione e commenti pubblici abilitati; un commento pubblico ammette 5.000 caratteri. Puoi eliminare definitivamente il tuo commento dopo una conferma, e il team può moderare i commenti pubblici.
+Vota una richiesta esistente anziché duplicarla. Ogni identità ha un voto per feedback, su una richiesta che puoi ancora leggere: pubblica, o la tua. I commenti richiedono identificazione e commenti pubblici abilitati; un commento pubblico ammette 5.000 caratteri. Una discussione lunga si apre sui commenti più recenti; scegli **Mostra i commenti precedenti** per leggere il resto. Puoi eliminare definitivamente il tuo commento dopo una conferma, e il team può moderare i commenti pubblici.
 
 Apri Il mio feedback per ritrovare richieste e voti secondo ciò che può vedere la tua identità corrente. Leggi lì, o nella richiesta, lo stato pubblico e le risposte del team. Le note interne non sono risposte pubbliche. Se il SSO è scaduto, torna tramite un nuovo link del prodotto; cambiare browser o identità può cambiare l’elenco personale.
 
@@ -230,7 +230,7 @@ Un gruppo unito condivide un solo obiettivo. Modificare l’obiettivo della rich
 
 ## Unire feedback e collegarlo alla consegna {#feedback-to-issue}
 
-Come proprietario o Membro, apri la richiesta e scegli di unirla a una richiesta canonica esistente nello stesso progetto. Leggi prima entrambi i bisogni: parole simili non dimostrano che il risultato atteso sia lo stesso. La richiesta corrente diventa il duplicato, i voti vengono uniti per identità e il duplicato reindirizza alla richiesta canonica. Controlla l’evento di unione nell’attività; il comando di annullamento usa quell’evento. Rifiuta un suggerimento IA errato anziché accettarlo solo per svuotare la coda.
+Come proprietario o Membro, apri la richiesta e scegli di unirla a una richiesta canonica esistente nello stesso progetto. Leggi prima entrambi i bisogni: parole simili non dimostrano che il risultato atteso sia lo stesso. La richiesta corrente diventa il duplicato, i voti vengono uniti per identità e il duplicato reindirizza alla richiesta canonica. Se la richiesta canonica non è pubblica, l’autore del duplicato lo apre comunque in sola lettura, mentre gli altri visitatori non ottengono alcuna pagina. Controlla l’evento di unione nell’attività; il comando di annullamento usa quell’evento. Rifiuta un suggerimento IA errato anziché accettarlo solo per svuotare la coda.
 
 ### Creare o collegare lavoro {#work}
 

@@ -29,6 +29,7 @@ import { displayName } from "@/lib/display-name";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { issueTierKeyword, orderIssuesForSearch } from "@/lib/issue-search-order";
 import { useMentionSources } from "@/lib/use-mention-sources";
+import { useOfferedProject } from "@/lib/use-offered-projects";
 import { usePagesQuery } from "@/lib/use-pages-query";
 import { flattenPageTree } from "@/lib/pages";
 import { useProjects } from "@/lib/projects-context";
@@ -58,6 +59,10 @@ function AddContextButton({
   // changes, otherwise the focus falls back on the body and Radix closes the menu.
   const [query, setQuery] = useState("");
   const { projects } = useProjects();
+  // Hidden projects and their items are not offered as context (MIN-751),
+  // except the project in scope.
+  const isOffered = useOfferedProject(scopeProjectId);
+  const offeredProjects = useMemo(() => projects.filter((p) => isOffered(p.id)), [projects, isOffered]);
   const { members, loading: membersLoading } = useNumoMembers(
     open && kind === "member",
     scopeProjectId,
@@ -102,11 +107,11 @@ function AddContextButton({
   );
 
   const issues = useMemo(() => {
-    const list = board.data?.issues ?? [];
+    const list = (board.data?.issues ?? []).filter((issue) => isOffered(issue.project_id));
     // Work under way first, then open issues, triage and closed ones last
     // — all remain selectable (MIN-726).
     return orderIssuesForSearch(list, (issue) => issue.status);
-  }, [board.data]);
+  }, [board.data, isOffered]);
 
   const close = () => {
     setOpen(false);
@@ -235,7 +240,7 @@ function AddContextButton({
                 </CommandItem>
               ))}
             {kind === "project" &&
-              projects.map((p) => (
+              offeredProjects.map((p) => (
                 <CommandItem
                   key={p.id}
                   value={`${p.name} ${p.key}`}
@@ -247,7 +252,7 @@ function AddContextButton({
                 </CommandItem>
               ))}
             {kind === "objective" &&
-              mentionSources.objectives.map((objective) => (
+              mentionSources.offered.objectives.map((objective) => (
                 <CommandItem
                   key={objective.id}
                   value={`${objective.name} ${projectById.get(objective.project_id)?.name ?? ""}`}

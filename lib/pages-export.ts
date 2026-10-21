@@ -152,8 +152,30 @@ function rewriteSubpageLinks(
     if (!target) return whole;
     const page = titleOf.get(id);
     const label = page ? `${page.icon ? `${page.icon} ` : ""}${page.title || id}` : id;
-    return `[${label}](${relativePath(fromPath, target)})`;
+    return `[${escapeLinkLabel(label)}](${encodeLinkPath(relativePath(fromPath, target))})`;
   });
+}
+
+/** A page title as Markdown link text: brackets and backslashes would otherwise
+    end the label early or swallow the next character. */
+function escapeLinkLabel(label: string): string {
+  return label.replace(/[\\[\]]/g, "\\$&");
+}
+
+/**
+ * A relative archive path as a Markdown link destination. File names keep their
+ * spaces, `#` and `%`, which a raw destination would read as the end of the
+ * link, a fragment or an escape; each segment is percent-encoded, separators and
+ * `..` stay as they are. Parentheses are encoded too, since an unbalanced one
+ * would close the destination.
+ */
+export function encodeLinkPath(path: string): string {
+  return path
+    .split("/")
+    .map((segment) =>
+      encodeURIComponent(segment).replace(/[()]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)
+    )
+    .join("/");
 }
 
 /** The path to `to` as seen from the file `from` (`../other/page.md`). */

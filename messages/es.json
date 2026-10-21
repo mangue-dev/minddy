@@ -1189,6 +1189,7 @@
     "meAuthored": "Tus sugerencias",
     "meVoted": "Has votado",
     "meMergedFrom": "Tu sugerencia «{title}» se ha agrupado con esta",
+    "mergedIntoPrivate": "Tu sugerencia se ha agrupado con otra que el equipo mantiene privada. Puedes seguir leyéndola aquí.",
     "status": {
       "open": "Abierta",
       "planned": "Planeado",
@@ -1263,6 +1264,7 @@
     "teamName": "El equipo de {project}",
     "comments": "Comentarios",
     "commentCount": "{count, plural, =1 {1 comentario} other {# comentarios}}",
+    "commentsShowEarlier": "Mostrar comentarios anteriores",
     "commentPlaceholder": "Añade un detalle o di que también te ocurre…",
     "commentSignedOutPlaceholder": "Escribe tu respuesta; te pediremos el correo electrónico antes de publicarla.",
     "commentSend": "Comentar",

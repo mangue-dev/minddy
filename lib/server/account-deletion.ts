@@ -179,12 +179,14 @@ export async function deleteAccount(userId: string): Promise<DeletionResult> {
     }
   }
 
-  // ── 2. Storage objects ─────────────────────────────────────────────────
+  // ── 2. Storage paths ───────────────────────────────────────────────────
   // The `attachments` lines cascade with the project, the FILES do not: without
   // this passage they would remain in the bucket with nothing left to designate them.
+  // Paths are READ here, while their rows still exist, but the objects are only
+  // removed once the account row is gone (MIN-767): a database failure must
+  // leave a whole account behind, not one whose files were already erased.
   const ownedIds = await listAccountScopedIds(service, "projects", userId);
-
-  let removedStorageObjects = 0;
+  const pending: Array<{ bucket: string; paths: string[] }> = [];
 
   if (ownedIds.length) {
     // A link type resource has no object — `storage_path` null.
@@ -193,66 +195,56 @@ export async function deleteAccount(userId: string): Promise<DeletionResult> {
       .select("storage_path")
       .in("project_id", ownedIds)
       .not("storage_path", "is", null);
-    removedStorageObjects += await removeObjects(
-      service,
-      "attachments",
-      (attachments ?? []).map((a) => a.storage_path as string),
-      warnings
-    );
+    pending.push({
+      bucket: "attachments",
+      paths: (attachments ?? []).map((a) => a.storage_path as string),
+    });
 
     // Files placed IN page bodies (MIN-280): same bucket, same
     // rule, other table. Without this passage, deleting an account would leave
     // storage all the images from the wikis of its projects.
-    removedStorageObjects += await removeObjects(
-      service,
-      "attachments",
-      await pageFilePathsForProjects(service, ownedIds),
-      warnings
-    );
+    pending.push({
+      bucket: "attachments",
+      paths: await pageFilePathsForProjects(service, ownedIds),
+    });
 
     // Project icons: one per project, extension unknown → we list.
-    removedStorageObjects += await removeObjects(
-      service,
-      "project-icons",
-      await projectIconPaths(service, ownedIds),
-      warnings
-    );
+    pending.push({ bucket: "project-icons", paths: await projectIconPaths(service, ownedIds) });
 
     // Remove private, project-scoped forge objects and historical PR paths
     // whose repository has no surviving project link.
-    removedStorageObjects += await removeObjects(
-      service,
-      FORGE_ATTACHMENTS_BUCKET,
-      await forgeAttachmentPathsForProjects(service, ownedIds),
-      warnings
-    );
+    pending.push({
+      bucket: FORGE_ATTACHMENTS_BUCKET,
+      paths: await forgeAttachmentPathsForProjects(service, ownedIds),
+    });
   }
 
   // Assistant chat uploads: no basic lines, only
   // objects under `chat/{user_id}/`.
-  const chatObjects = await listStoragePrefix(service, "attachments", `chat/${userId}`);
-  removedStorageObjects += await removeObjects(service, "attachments", chatObjects, warnings);
+  pending.push({
+    bucket: "attachments",
+    paths: await listStoragePrefix(service, "attachments", `chat/${userId}`),
+  });
 
   // The auth-user cascade removes the avatar row, not the public storage
-  // object. Read its path while the row still exists, then erase the image.
+  // object. Read its path while the row still exists.
   const { data: avatar } = await service
     .from("user_avatars")
     .select("image_path")
     .eq("user_id", userId)
     .maybeSingle();
   const avatarPath = avatar?.image_path as string | null | undefined;
-  if (avatarPath) {
-    removedStorageObjects += await removeObjects(
-      service,
-      "user-avatars",
-      [avatarPath],
-      warnings,
-    );
-  }
+  if (avatarPath) pending.push({ bucket: "user-avatars", paths: [avatarPath] });
 
-  // ── 3. The account ──────────────────────────── ────────────────────────────
+  // ── 3. The account ─────────────────────────────────────────────────────
   const { error } = await service.auth.admin.deleteUser(userId);
   if (error) throw new Error(error.message);
+
+  // ── 4. Storage objects ─────────────────────────────────────────────────
+  let removedStorageObjects = 0;
+  for (const { bucket, paths } of pending) {
+    removedStorageObjects += await removeObjects(service, bucket, paths, warnings);
+  }
 
   return {
     deletedProjects: ownedIds.length,

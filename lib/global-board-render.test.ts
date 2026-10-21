@@ -15,6 +15,8 @@ const state = vi.hoisted(() => ({
   update: vi.fn(async () => {}),
   openCreateIssue: vi.fn(),
   noop: () => {},
+  hidden: new Set<string>(),
+  toolbar: null as Record<string, unknown> | null,
 }));
 const project = { id: "project", key: "PERF", smart_triage_mode: "rules" } as Project;
 const issues = Array.from({ length: 600 }, (_, index) => ({
@@ -65,7 +67,8 @@ vi.mock("@/lib/analytics", () => ({ trackEvent: () => {} }));
 vi.mock("@/lib/issues-api", () => ({ smartTriageApi: vi.fn() }));
 vi.mock("@/lib/assistant-panel-context", () => ({ useAssistantContext: () => {}, useAssistantPanelActions: () => ({ open: state.noop, openIntent: state.noop }) }));
 vi.mock("@/components/empty-scene", () => ({ EmptyScene: () => null }));
-vi.mock("@/components/board-toolbar", () => ({ BoardToolbar: () => null }));
+vi.mock("@/components/board-toolbar", () => ({ BoardToolbar: (props: Record<string, unknown>) => { state.toolbar = props; return null; } }));
+vi.mock("@/lib/use-hidden-projects", () => ({ useHiddenProjects: () => ({ hiddenProjectIds: state.hidden }) }));
 vi.mock("@/components/board-loading-skeleton", () => ({ BoardLoadingSkeleton: () => null }));
 vi.mock("@/components/cycle/cycle-header", () => ({ CycleControls: () => null, formatCycleRange: () => "" }));
 vi.mock("@/components/cycle/cycle-empty-states", () => ({ CycleActivationWelcome: () => null, CycleCompletedBanner: () => null, CycleEmptyNotice: () => null, CycleFutureNotice: () => null }));
@@ -85,7 +88,7 @@ vi.mock("@/components/global-kanban-board", () => {
 
 import { GlobalBoard } from "@/components/global-board";
 
-afterEach(() => { vi.unstubAllGlobals(); vi.clearAllMocks(); });
+afterEach(() => { vi.unstubAllGlobals(); vi.clearAllMocks(); state.hidden = new Set(); });
 
 describe("global board panel isolation", () => {
   it("preserves all 600 cards while opening, changing, and closing issue panels", async () => {
@@ -109,5 +112,30 @@ describe("global board panel isolation", () => {
       board.onCreateIssue!("todo");
       expect(state.openCreateIssue).toHaveBeenCalledWith({ status: "todo" });
     } finally { await act(() => root.unmount()); }
+  });
+
+  it("leaves a hidden project out of the board and its filters (MIN-751)", async () => {
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    const hidden = { id: "hidden", key: "OLD" } as Project;
+    const hiddenIssue = { ...issues[0], id: "hidden-issue", project_id: hidden.id } as Issue;
+    const category = (id: string, project_id: string) => ({ id, project_id, name: id });
+    projects.push(hidden);
+    issues.push(hiddenIssue);
+    Object.assign(data, {
+      categoriesByProject: { project: [category("bug", "project")], hidden: [category("legacy", "hidden")] },
+    });
+    state.hidden = new Set(["hidden"]);
+    const root = createRoot(document.createElement("div"));
+    try {
+      await act(() => root.render(createElement(GlobalBoard)));
+      expect(state.board!.issues.some((issue) => issue.id === "hidden-issue")).toBe(false);
+      expect((state.toolbar!.projects as Project[]).map((p) => p.id)).toEqual(["project"]);
+      expect((state.toolbar!.categories as Array<{ id: string }>).map((c) => c.id)).toEqual(["bug"]);
+    } finally {
+      await act(() => root.unmount());
+      projects.pop();
+      issues.pop();
+      Object.assign(data, { categoriesByProject: empty });
+    }
   });
 });

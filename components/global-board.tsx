@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Kbd } from "@/components/ui/kbd";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
+import { useOfferedProjects } from "@/lib/use-offered-projects";
 import { useCreate } from "@/lib/create-context";
 import { useGlobalBoardQuery } from "@/lib/use-global-board-query";
 import { useBoardViews } from "@/lib/use-board-views";
@@ -249,9 +250,17 @@ function GlobalBoardInner() {
     }
   }, [issueParam]);
 
+  // A project I hid is not on this board at all (MIN-751): neither its issues
+  // nor its members, categories, objectives and integrations in the filters.
+  const listedProjects = useOfferedProjects(projects);
   const projectMap = useMemo(
-    () => new Map<string, Project>(projects.map((p) => [p.id, p])),
-    [projects]
+    () => new Map<string, Project>(listedProjects.map((p) => [p.id, p])),
+    [listedProjects]
+  );
+  const listedEntries = useCallback(
+    <T,>(byProject: Record<string, T[]>) =>
+      Object.entries(byProject).filter(([pid]) => projectMap.has(pid)),
+    [projectMap]
   );
 
   // Only surface issues from live, listed projects (a soft-deleted project's
@@ -281,30 +290,30 @@ function GlobalBoardInner() {
   // (a user can be a member of several projects).
   const unionMembers = useMemo(() => {
     const seen = new Map<string, Member>();
-    for (const list of Object.values(membersByProject)) {
+    for (const [, list] of listedEntries(membersByProject)) {
       for (const m of list) if (!seen.has(m.user_id)) seen.set(m.user_id, m);
     }
     return [...seen.values()];
-  }, [membersByProject]);
+  }, [membersByProject, listedEntries]);
 
   // Flat cross-project facet lists. Each is every project's entities concatenated
   // — the toolbar's `groupFacetsByName` then collapses same-named rows (e.g. a
   // "Bug" category in several projects) into one that filters all their ids.
   const allCategories = useMemo(
-    () => Object.values(categoriesByProject).flat(),
-    [categoriesByProject]
+    () => listedEntries(categoriesByProject).flatMap(([, list]) => list),
+    [categoriesByProject, listedEntries]
   );
   const allObjectives = useMemo(
-    () => Object.values(objectivesByProject).flat(),
-    [objectivesByProject]
+    () => listedEntries(objectivesByProject).flatMap(([, list]) => list),
+    [objectivesByProject, listedEntries]
   );
   const allIntegrations = useMemo(
     () =>
       boardIntegrationFacets(
-        Object.values(integrationsByProject).flat(),
+        listedEntries(integrationsByProject).flatMap(([, list]) => list),
         scopedIssues,
       ),
-    [integrationsByProject, scopedIssues]
+    [integrationsByProject, scopedIssues, listedEntries]
   );
 
   const filtered = useMemo(
@@ -355,9 +364,9 @@ function GlobalBoardInner() {
     const currentCycleId = cycles?.current?.id;
     if (!currentCycleId) return null;
     return (
-      cycleCompletionPercent(issues.filter((i) => i.cycle_id === currentCycleId)) ?? 0
+      cycleCompletionPercent(scopedIssues.filter((i) => i.cycle_id === currentCycleId)) ?? 0
     );
-  }, [cycles?.current?.id, issues]);
+  }, [cycles?.current?.id, scopedIssues]);
   // Reco ordering: blockers may live outside the cycle, so the status map
   // covers the whole board. Relations can also block through an OBJECTIVE
   // (MIN-513): objective-ended edges are folded down onto their issues before
@@ -507,7 +516,7 @@ function GlobalBoardInner() {
    * then nothing to bite on, and the screen is reduced to what there is to do.
    * Excluding cycle mode, which already has its own waiting screens.
    */
-  const nothingAnywhere = !cycleMode && (projects.length === 0 || issues.length === 0);
+  const nothingAnywhere = !cycleMode && (projects.length === 0 || scopedIssues.length === 0);
 
   return (
     <div className="flex h-full flex-col">
@@ -532,7 +541,7 @@ function GlobalBoardInner() {
           categories={allCategories}
           objectives={allObjectives}
           integrations={allIntegrations}
-          projects={projects}
+          projects={listedProjects}
           groupFacetsByName
           dirty={cycleMode ? false : dirty}
           onCreateView={handleCreateView}

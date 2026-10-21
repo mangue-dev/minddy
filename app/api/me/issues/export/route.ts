@@ -5,6 +5,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
+import { listHiddenProjectIds } from "@/lib/server/hidden-projects";
 import { buildMembersByProject } from "@/lib/server/project-members";
 import { displayName } from "@/lib/display-name";
 import { issueIdentifier } from "@/lib/issue-constants";
@@ -46,15 +47,19 @@ export async function GET(request: NextRequest) {
   const projectId = projectParam && projectParam !== "all" ? projectParam : null;
   const statuses = parseStatuses(params.get("statuses"));
 
-  const [projectsRes, objectivesRes, categoriesRes] = await Promise.all([
+  const [projectsRes, objectivesRes, categoriesRes, hiddenIds] = await Promise.all([
     auth.supabase.from("projects")
       .select("id, key, name, owner_id, encrypted_content, encryption_version")
       .is("deleted_at", null),
     objectiveStore(auth.supabase).select("id, name"),
     categoryStore(auth.supabase, auth.user.id).select("id, name"),
+    // “All my projects” leaves out the ones I hid (MIN-751); a project
+    // chosen by its id is exported even when hidden.
+    projectId ? Promise.resolve([] as string[]) : listHiddenProjectIds(auth.supabase, auth.user.id).catch(() => null),
   ]);
 
-  const loadError = projectsRes.error || objectivesRes.error || categoriesRes.error;
+  const loadError = projectsRes.error || objectivesRes.error || categoriesRes.error ||
+    (hiddenIds === null ? { message: "hidden projects unavailable" } : null);
   if (loadError) {
     console.error("[api/me/issues/export] load failed:", loadError.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
@@ -68,7 +73,10 @@ export async function GET(request: NextRequest) {
     name: string;
     owner_id: string;
   }[];
-  const scoped = projectId ? projects.filter((p) => p.id === projectId) : projects;
+  const hidden = new Set(hiddenIds ?? []);
+  const scoped = projectId
+    ? projects.filter((p) => p.id === projectId)
+    : projects.filter((p) => !hidden.has(p.id));
   const projectById = new Map(scoped.map((p) => [p.id, p]));
 
   // Nothing accessible under this scope: an empty file (header only) rather
@@ -83,6 +91,8 @@ export async function GET(request: NextRequest) {
       .order("number", { ascending: true })
       .limit(MAX_EXPORT_ISSUES);
     if (projectId) query = query.eq("project_id", projectId);
+    // Hidden projects must not take a share of the export ceiling either.
+    else if (hidden.size > 0) query = query.in("project_id", scoped.map((p) => p.id));
 
     const { data, error } = await query;
     if (error) {

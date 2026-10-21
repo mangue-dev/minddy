@@ -1,6 +1,7 @@
 "use client";
 
 import { trackEvent } from "./analytics";
+import { apiErrorCode, HttpResponseError } from "./backend-availability";
 
 /**
  * The six types that the recycle bin collects (MIN-133; routines: MIN-201;
@@ -46,7 +47,13 @@ export interface TrashPayload {
 async function ok(response: Response, fallback: string): Promise<void> {
   if (response.ok) return;
   const data = await response.json().catch(() => null);
-  throw new Error((data as { error?: string } | null)?.error || fallback);
+  // The status travels with the error: undo tells a row that is gone (404)
+  // from an outage, which must never be read as a deletion.
+  throw new HttpResponseError(
+    (data as { error?: string } | null)?.error || fallback,
+    response.status,
+    apiErrorCode(data)
+  );
 }
 
 export async function fetchTrashApi(): Promise<TrashPayload> {

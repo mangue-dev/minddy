@@ -94,6 +94,30 @@ export function useAttachmentUploads(
   pendingRef.current = pending;
   const onUploadedRef = useRef(onUploaded);
   onUploadedRef.current = onUploaded;
+  // One controller per entry still in flight (MIN-711). Cancelling an entry
+  // aborts its request AND invalidates its outcome: a response that was
+  // already on its way must not land, let alone register the resource.
+  const inFlightRef = useRef(new Map<string, AbortController>());
+
+  const begin = useCallback((localId: string) => {
+    const controller = new AbortController();
+    inFlightRef.current.set(localId, controller);
+    return controller.signal;
+  }, []);
+
+  /** True once, when the entry may land: it was not cancelled meanwhile. */
+  const land = useCallback((localId: string, signal: AbortSignal) => {
+    if (signal.aborted) return false;
+    inFlightRef.current.delete(localId);
+    return true;
+  }, []);
+
+  const cancel = useCallback((localIds: Iterable<string>) => {
+    for (const localId of localIds) {
+      inFlightRef.current.get(localId)?.abort();
+      inFlightRef.current.delete(localId);
+    }
+  }, []);
 
   const addFiles = useCallback(
     (files: Iterable<File>) => {
@@ -124,6 +148,7 @@ export function useAttachmentUploads(
           size_bytes: file.size,
         };
         setPending((prev) => [...prev, entry]);
+        const signal = begin(localId);
 
         void (async () => {
           try {
@@ -136,14 +161,18 @@ export function useAttachmentUploads(
             const form = new FormData();
             form.set("prefix", prefix);
             form.set("file", blob, fileName.slice(0, 200));
+            signal.throwIfAborted();
             const response = await fetch("/api/attachments/upload", {
-              method: "POST", body: form,
+              method: "POST", body: form, signal,
             });
             if (!response.ok) throw new Error("Attachment upload failed");
             const uploaded = await response.json() as {
               storage_path: string; mime_type: string; size_bytes: number;
             };
             const path = uploaded.storage_path;
+            // Cancelled while in flight: the stored object stays an orphan,
+            // like any abandoned upload, but nothing references it.
+            if (!land(localId, signal)) return;
 
             setPending((prev) =>
               prev.map((p) =>
@@ -180,13 +209,15 @@ export function useAttachmentUploads(
               localId
             );
           } catch {
+            if (signal.aborted) return;
+            inFlightRef.current.delete(localId);
             toast.error(t("uploadFailed", { name: entry.file_name }));
             setPending((prev) => prev.filter((p) => p.localId !== localId));
           }
         })();
       }
     },
-    [getPrefix, max, t]
+    [getPrefix, max, t, begin, land]
   );
 
   /**
@@ -217,19 +248,24 @@ export function useAttachmentUploads(
           url,
         },
       ]);
+      const signal = begin(localId);
 
       try {
         const response = await fetch(`/api/projects/${projectId}/link-preview`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ url }),
+          signal,
         });
         const data = (await response.json().catch(() => null)) as
           | (LinkResourceInput & { error?: string })
           | null;
+        // Cancelled: the caller is not left with an error to show.
+        if (signal.aborted) return;
         if (!response.ok || !data?.url) {
           throw new Error(data?.error || t("linkFailed"));
         }
+        if (!land(localId, signal)) return;
 
         setPending((prev) =>
           prev.map((p) =>
@@ -259,11 +295,13 @@ export function useAttachmentUploads(
           localId
         );
       } catch (e) {
+        if (signal.aborted) return;
+        inFlightRef.current.delete(localId);
         setPending((prev) => prev.filter((p) => p.localId !== localId));
         throw e;
       }
     },
-    [getPrefix, max, t]
+    [getPrefix, max, t, begin, land]
   );
 
   /**
@@ -311,10 +349,12 @@ export function useAttachmentUploads(
   );
 
   // No storage delete policy for users — the dropped object stays orphaned,
-  // same policy as an abandoned composer.
+  // same policy as an abandoned composer. Removing an entry still in flight
+  // cancels it: its late response no longer lands or registers.
   const remove = useCallback((localId: string) => {
+    cancel([localId]);
     setPending((prev) => prev.filter((p) => p.localId !== localId));
-  }, []);
+  }, [cancel]);
 
   /**
    * Rename a landed entry before it is saved (MIN-742). Pages keep their
@@ -333,13 +373,18 @@ export function useAttachmentUploads(
     );
   }, []);
 
-  const clear = useCallback(() => setPending([]), []);
+  const clear = useCallback(() => {
+    cancel([...inFlightRef.current.keys()]);
+    setPending([]);
+  }, [cancel]);
 
   // Reseed the composer from already-added references (a recovered draft,
   // MIN-41). The storage objects still exist and the links are still resolved —
   // mark each done. The localId is the id the draft carried, so mentions the
   // recovered text makes still point at their resource (MIN-742).
   const restore = useCallback((restored: ResourceInput[]) => {
+    // The restored list replaces the queue, entries in flight included.
+    cancel([...inFlightRef.current.keys()]);
     setPending(
       restored.map((input) =>
         input.kind === "page"
@@ -378,7 +423,7 @@ export function useAttachmentUploads(
             }
       )
     );
-  }, []);
+  }, [cancel]);
 
   const inputs = useMemo<ResourceInput[]>(
     () =>

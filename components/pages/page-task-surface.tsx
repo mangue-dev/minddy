@@ -28,8 +28,9 @@ export function PageTaskSurface({
   pageId: string;
   /** The DISPLAYED title of the page — so the one you may have just typed. */
   pageTitle: string;
-  /** Persist pending editor changes before Numo reads the page. */
-  flush: () => Promise<void>;
+  /** Persist pending editor changes before Numo reads the page; resolves
+      `false` when they could not be saved and are still pending. */
+  flush: () => Promise<boolean>;
   children: ReactNode;
 }) {
   const t = useTranslations("Pages");
@@ -45,16 +46,22 @@ export function PageTaskSurface({
       promote: (note) => {
         // The panel does not unmount the editor, but persist the new task state
         // before Numo rereads the page.
+        // A failed save keeps its draft queued for a retry: Numo must not
+        // open on the older persisted page in the meantime.
         void flush()
-          .then(() =>
+          .then((saved) => {
+            if (!saved) {
+              toast.error(t("saveFailed"));
+              return;
+            }
             openIntent({
               source: "page",
               action: "promote",
               projectId,
               prompt: t("promotePrompt", { note, page: pageTitle }),
               pageContext: { projectId, pageId, pageTitle },
-            })
-          )
+            });
+          })
           .catch(() => toast.error(t("saveFailed")));
       },
     }),

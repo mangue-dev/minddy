@@ -22,7 +22,11 @@ import {
   type PublicIdentity,
   type PublicProject,
 } from "@/lib/feedback/types";
-import { addPublicCommentAction, deletePublicCommentAction } from "./actions";
+import {
+  addPublicCommentAction,
+  deletePublicCommentAction,
+  loadEarlierPublicCommentsAction,
+} from "./actions";
 import {
   Tooltip,
   TooltipContent,
@@ -52,6 +56,9 @@ export function PublicComments({
   project,
   postId,
   comments,
+  totalCount,
+  earlierCursor,
+  showClosedNotice = true,
   /** Board adjustment. False = read only: what is written remains, the
  composer disappears. */
   allowComments,
@@ -61,7 +68,14 @@ export function PublicComments({
   token: string;
   project: PublicProject;
   postId: string;
+  /** The newest page of the thread (MIN-714). */
   comments: PublicComment[];
+  /** Comments in the whole thread, loaded or not. */
+  totalCount: number;
+  /** Set when older comments exist before `comments`. */
+  earlierCursor: string | null;
+  /** False hides the "comments are closed" line when the board is not why. */
+  showClosedNotice?: boolean;
   allowComments: boolean;
   identity: PublicIdentity | null;
   /** Opens the OTP gate then replays the sending (the voting pattern). */
@@ -75,15 +89,50 @@ export function PublicComments({
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   /** The thread whose response zone is open (id of its root). */
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  /**
+   * Older pages read through "show earlier", with the newest page as it was
+   * at that moment: when new comments push the newest page forward, the ones
+   * it drops are still here, so the thread never shows a gap.
+   */
+  const [earlier, setEarlier] = useState<{ comments: PublicComment[]; cursor: string | null } | null>(null);
+  const [loadingEarlier, startLoadingEarlier] = useTransition();
+  const cursor = earlier ? earlier.cursor : earlierCursor;
+
+  // A reply can arrive on its own page AND with its root on a later one:
+  // one entry per id, in thread order.
+  const allComments = useMemo(() => {
+    const byId = new Map<string, PublicComment>();
+    for (const c of earlier?.comments ?? []) byId.set(c.id, c);
+    for (const c of comments) byId.set(c.id, c);
+    return [...byId.values()].sort((a, b) =>
+      a.createdAt === b.createdAt
+        ? a.id.localeCompare(b.id)
+        : a.createdAt < b.createdAt
+          ? -1
+          : 1
+    );
+  }, [earlier, comments]);
+
+  const loadEarlier = () => {
+    if (!cursor) return;
+    startLoadingEarlier(async () => {
+      const result = await loadEarlierPublicCommentsAction(token, postId, cursor);
+      if (!result.ok) return;
+      setEarlier((previous) => ({
+        comments: [...result.comments, ...(previous?.comments ?? []), ...comments],
+        cursor: result.earlierCursor,
+      }));
+    });
+  };
 
   // The server renders the thread flat, from oldest to newest; we
   // groups here, as `useFeedbackTimeline` does on the team side — only one
   // threading convention in the repository, to be reread in the same place.
   const threads = useMemo(() => {
-    const roots = comments.filter((c) => c.parentId === null);
+    const roots = allComments.filter((c) => c.parentId === null);
     const rootIds = new Set(roots.map((r) => r.id));
     const repliesByRoot = new Map<string, PublicComment[]>();
-    for (const c of comments) {
+    for (const c of allComments) {
       if (c.parentId && rootIds.has(c.parentId)) {
         const list = repliesByRoot.get(c.parentId) ?? [];
         list.push(c);
@@ -91,7 +140,7 @@ export function PublicComments({
       }
     }
     return roots.map((root) => ({ root, replies: repliesByRoot.get(root.id) ?? [] }));
-  }, [comments]);
+  }, [allComments]);
 
   const post = (body: string, parentId: string | null, onDone: () => void) =>
     new Promise<string | null>((resolve) => {
@@ -116,7 +165,14 @@ export function PublicComments({
 
   const remove = (commentId: string) => {
     startTransition(async () => {
-      await deletePublicCommentAction(token, postId, commentId);
+      const result = await deletePublicCommentAction(token, postId, commentId);
+      if (result.ok) {
+        setEarlier((previous) =>
+          previous
+            ? { ...previous, comments: previous.comments.filter((c) => c.id !== commentId) }
+            : previous
+        );
+      }
       router.refresh();
     });
   };
@@ -124,13 +180,27 @@ export function PublicComments({
   // Nothing to read and nothing to write: the entire section disappears. A title
   // “Comments” followed by a blank above a word that says they are
   // closed, it's three lines to announce that there is nothing.
-  if (comments.length === 0 && !allowComments) return null;
+  if (allComments.length === 0 && !allowComments) return null;
 
   return (
     <section className="flex flex-col gap-5 border-t pt-5">
       <h2 className="text-sm font-medium text-muted-foreground">
-        {comments.length > 0 ? t("commentCount", { count: comments.length }) : t("comments")}
+        {totalCount > 0 ? t("commentCount", { count: totalCount }) : t("comments")}
       </h2>
+
+      {cursor && (
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="self-start"
+          disabled={loadingEarlier}
+          onClick={loadEarlier}
+        >
+          {loadingEarlier && <Spinner />}
+          {t("commentsShowEarlier")}
+        </Button>
+      )}
 
       {threads.length > 0 && (
         <ul className="flex flex-col gap-6">
@@ -194,7 +264,7 @@ export function PublicComments({
           notice={t("commentAnonymousNotice")}
           onSubmit={(body) => post(body, null, () => {})}
         />
-      ) : (
+      ) : showClosedNotice && (
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
           <HugeiconsIcon icon={LockIcon} className="size-3.5 shrink-0" />
           {t("commentsClosed")}

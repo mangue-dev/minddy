@@ -1189,6 +1189,7 @@
     "meAuthored": "Seus comentários",
     "meVoted": "Você votou",
     "meMergedFrom": "Seu feedback “{title}” foi agrupado neste",
+    "mergedIntoPrivate": "Seu feedback foi agrupado com outro que a equipe mantém privado. Você ainda pode lê-lo aqui.",
     "status": {
       "open": "Abrir",
       "planned": "Planejado",
@@ -1263,6 +1264,7 @@
     "teamName": "A equipe de {project}",
     "comments": "Comentários",
     "commentCount": "{count, plural, =1 {1 comment} other {# comentários}}",
+    "commentsShowEarlier": "Mostrar comentários anteriores",
     "commentPlaceholder": "Adicione um detalhe ou diga que isso também acontece com você…",
     "commentSignedOutPlaceholder": "Escreva sua resposta; solicitaremos seu e-mail antes de publicá-lo.",
     "commentSend": "Comentário",

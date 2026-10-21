@@ -4,6 +4,7 @@ import {
   isRecurrenceOrNull,
   nextDueDate,
   nextDueDateISO,
+  nextSeriesDueDateISO,
   occurrencesBetween,
   startDueDate,
   startDueDateISO,
@@ -250,5 +251,84 @@ describe("nextDueDateISO", () => {
     expect(nextDueDateISO(null, "weekly")).toBeNull();
     expect(nextDueDateISO("", "weekly")).toBeNull();
     expect(nextDueDateISO("pas une date", "weekly")).toBeNull();
+  });
+});
+
+describe("nextSeriesDueDateISO (MIN-697)", () => {
+  /** Completes each generated occurrence in turn, as the server does, and
+      returns the deadlines it would lay. */
+  const generations = (first: string, cadence: "monthly" | "yearly", count: number) => {
+    const series = [first];
+    for (let i = 0; i < count; i++) {
+      const current = series[series.length - 1];
+      const next = nextSeriesDueDateISO(current, cadence, series.slice(0, -1), new Date(current));
+      series.push(next!);
+    }
+    return series.slice(1);
+  };
+
+  it("returns to the original day of the month after a shorter month", () => {
+    expect(generations("2027-01-31T09:00:00.000Z", "monthly", 4)).toEqual([
+      "2027-02-28T09:00:00.000Z",
+      "2027-03-31T09:00:00.000Z",
+      "2027-04-30T09:00:00.000Z",
+      "2027-05-31T09:00:00.000Z",
+    ]);
+  });
+
+  it("lays the same deadlines as the series preview", () => {
+    const base = at("2027-01-31T09:00:00.000Z");
+    const preview = occurrencesBetween(
+      base,
+      "monthly",
+      at("2027-02-01T00:00:00.000Z"),
+      at("2027-12-31T23:59:59.000Z"),
+    ).map((d) => d.toISOString());
+    expect(generations(base.toISOString(), "monthly", 11)).toEqual(preview);
+  });
+
+  it("returns to February 29 in the next leap year", () => {
+    expect(generations("2028-02-29T09:00:00.000Z", "yearly", 4)).toEqual([
+      "2029-02-28T09:00:00.000Z",
+      "2030-02-28T09:00:00.000Z",
+      "2031-02-28T09:00:00.000Z",
+      "2032-02-29T09:00:00.000Z",
+    ]);
+  });
+
+  it("follows a deadline that was moved by hand", () => {
+    // Series of the 31st whose March occurrence was moved to the 15th: the
+    // 15th is the new rhythm, the January anchor no longer reaches it.
+    const now = at("2027-03-15T10:00:00.000Z");
+    expect(
+      nextSeriesDueDateISO(
+        "2027-03-15T09:00:00.000Z",
+        "monthly",
+        ["2027-01-31T09:00:00.000Z", "2027-02-28T09:00:00.000Z"],
+        now,
+      ),
+    ).toBe("2027-04-15T09:00:00.000Z");
+  });
+
+  it("keeps a series genuinely set on the 28th", () => {
+    const now = at("2027-02-28T10:00:00.000Z");
+    expect(
+      nextSeriesDueDateISO("2027-02-28T09:00:00.000Z", "monthly", ["2027-01-28T09:00:00.000Z"], now),
+    ).toBe("2027-03-28T09:00:00.000Z");
+  });
+
+  it("still catches up when the occurrence was completed late", () => {
+    const now = at("2027-05-10T10:00:00.000Z");
+    expect(
+      nextSeriesDueDateISO("2027-02-28T09:00:00.000Z", "monthly", ["2027-01-31T09:00:00.000Z"], now),
+    ).toBe("2027-05-31T09:00:00.000Z");
+  });
+
+  it("ignores the series history for daily and weekly cadences", () => {
+    const now = at("2027-02-28T10:00:00.000Z");
+    expect(
+      nextSeriesDueDateISO("2027-02-28T09:00:00.000Z", "weekly", ["2027-02-21T09:00:00.000Z"], now),
+    ).toBe("2027-03-07T09:00:00.000Z");
+    expect(nextSeriesDueDateISO(null, "monthly", [])).toBeNull();
   });
 });

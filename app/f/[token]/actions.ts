@@ -22,6 +22,7 @@ import {
   deletePublicComment,
 } from "@/lib/server/feedback/comments";
 import { votePost, unvotePost } from "@/lib/server/feedback/votes";
+import { listEarlierPublicComments } from "@/lib/server/feedback/queries";
 import { embedText, matchFeedbackPosts } from "@/lib/server/embeddings";
 import {
   normalizeVoiceDraft,
@@ -34,7 +35,11 @@ import { ownerHasUsageBudget } from "@/lib/server/usage";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { clientIpFromHeaders } from "@/lib/server/request-ip";
 import { consumeFeedbackVoiceLimit } from "@/lib/server/feedback/voice-limits";
-import type { FeedbackVoicePatch, SimilarPost } from "@/lib/feedback/types";
+import type {
+  FeedbackVoicePatch,
+  PublicComment,
+  SimilarPost,
+} from "@/lib/feedback/types";
 
 /**
  * Server actions of the public board (MIN-37). Session cookie is path-scoped
@@ -248,6 +253,34 @@ export async function addPublicCommentAction(
   }
   revalidatePath(`/f/${token}`, "layout");
   return { ok: true };
+}
+
+/**
+ * The page of the public thread before `before` (MIN-714). Reading needs no
+ * identity, like the post page itself; the session only matters to let an
+ * author read the thread of their own non-public post. The visibility rule is
+ * rechecked server-side: the client only names a post and a comment id.
+ */
+export async function loadEarlierPublicCommentsAction(
+  token: string,
+  postId: string,
+  before: string
+): Promise<{ ok: true; comments: PublicComment[]; earlierCursor: string | null } | { ok: false }> {
+  if (typeof postId !== "string" || typeof before !== "string") return { ok: false };
+  const ctx = await resolveBoard(token);
+  if (!ctx) return { ok: false };
+  const rate = checkSessionRateLimit(await clientIp(), "feedback:comments-page", { limit: 60 });
+  if (!rate.allowed) return { ok: false };
+  const cookie = (await cookies()).get(FEEDBACK_SESSION_COOKIE)?.value;
+  const session = await getFeedbackSession(ctx.board.id, cookie);
+  const page = await listEarlierPublicComments({
+    projectId: ctx.project.id,
+    postId,
+    viewerId: session?.user.id ?? null,
+    before,
+  });
+  if (!page) return { ok: false };
+  return { ok: true, ...page };
 }
 
 /** Remove HIS comment. The thread is anonymous: no one else can

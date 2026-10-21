@@ -194,7 +194,7 @@ As gravações no mural público são limitadas a 10 MiB. A transcrição permit
 
 ### Votar, comentar e acompanhar {#follow}
 
-Vote em uma solicitação existente em vez de duplicá-la. Cada identidade tem um voto por feedback. Para comentar, é necessário identificar-se e os comentários públicos precisam estar habilitados; um comentário público aceita 5.000 caracteres. Você pode remover definitivamente seu próprio comentário depois de confirmar, e a equipe pode moderar comentários públicos.
+Vote em uma solicitação existente em vez de duplicá-la. Cada identidade tem um voto por feedback, em uma solicitação que você ainda pode ler: pública ou sua. Para comentar, é necessário identificar-se e os comentários públicos precisam estar habilitados; um comentário público aceita 5.000 caracteres. Uma conversa longa abre nos comentários mais recentes; escolha **Mostrar comentários anteriores** para ler o restante. Você pode remover definitivamente seu próprio comentário depois de confirmar, e a equipe pode moderar comentários públicos.
 
 Abra Meus comentários para encontrar suas solicitações e votos, conforme o que sua identidade atual pode acessar. Leia ali, ou na solicitação, o status público e as respostas da equipe. Notas internas da equipe não são respostas públicas. Se o SSO tiver expirado, volte por um novo link do produto; mudar de navegador ou identidade pode alterar a lista pessoal.
 
@@ -230,7 +230,7 @@ Um grupo mesclado compartilha um único objetivo. Alterar o objetivo da solicita
 
 ## Unir feedback e conectar à entrega {#feedback-to-issue}
 
-Como proprietário ou Membro, abra a solicitação e escolha uni-la a uma solicitação canônica existente no mesmo projeto. Leia as duas necessidades primeiro: uma redação parecida não comprova que ambas busquem o mesmo resultado. A solicitação atual vira a duplicata, os votos são unidos por identidade e a duplicata redireciona para a solicitação canônica. Confira o evento de união na atividade; a ação de desfazer usa esse evento. Rejeite uma sugestão incorreta da IA em vez de aceitá-la apenas para esvaziar a fila.
+Como proprietário ou Membro, abra a solicitação e escolha uni-la a uma solicitação canônica existente no mesmo projeto. Leia as duas necessidades primeiro: uma redação parecida não comprova que ambas busquem o mesmo resultado. A solicitação atual vira a duplicata, os votos são unidos por identidade e a duplicata redireciona para a solicitação canônica. Se a solicitação canônica não for pública, o autor da duplicata continua a abri-la somente para leitura, e os demais visitantes não obtêm nenhuma página. Confira o evento de união na atividade; a ação de desfazer usa esse evento. Rejeite uma sugestão incorreta da IA em vez de aceitá-la apenas para esvaziar a fila.
 
 ### Criar ou vincular trabalho {#work}
 

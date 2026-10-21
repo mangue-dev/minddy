@@ -37,7 +37,9 @@ export function FeedbackPostClient({
   post,
   mergedFromTitles,
   comments,
+  commentsEarlierCursor,
   allowComments,
+  mergedIntoUnreadable = false,
   identity,
 }: {
   token: string;
@@ -47,8 +49,12 @@ export function FeedbackPostClient({
   post: PublicPost;
   mergedFromTitles: string[];
   comments: PublicComment[];
+  /** Set when the thread has comments older than `comments`. */
+  commentsEarlierCursor: string | null;
   /** Board setting: false = read-only wire. */
   allowComments: boolean;
+  /** My post, merged into feedback I cannot read: shown read-only. */
+  mergedIntoUnreadable?: boolean;
   identity: PublicIdentity | null;
 }) {
   const t = useTranslations("PublicFeedback");
@@ -101,7 +107,11 @@ export function FeedbackPostClient({
         </div>
         <div className="flex items-start justify-between gap-4">
           <h2 className="min-w-0 text-xl font-semibold leading-snug">{post.title}</h2>
-          <VoteButton count={count} voted={voted} onToggle={toggleVote} />
+          {/* Its votes moved to the destination with the merge: there is
+              nothing left to vote on here. */}
+          {!mergedIntoUnreadable && (
+            <VoteButton count={count} voted={voted} onToggle={toggleVote} />
+          )}
         </div>
       </div>
 
@@ -109,6 +119,13 @@ export function FeedbackPostClient({
         <MessageResponse className="text-sm leading-relaxed text-foreground/90">
           {post.body}
         </MessageResponse>
+      )}
+
+      {mergedIntoUnreadable && (
+        <div className="flex items-start gap-2 rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          <HugeiconsIcon icon={GitMergeIcon} className="mt-0.5 size-3.5 shrink-0" />
+          <span>{t("mergedIntoPrivate")}</span>
+        </div>
       )}
 
       {mergedFromTitles.length > 0 && (
@@ -128,6 +145,11 @@ export function FeedbackPostClient({
         project={project}
         postId={post.id}
         comments={comments}
+        totalCount={post.commentCount}
+        earlierCursor={commentsEarlierCursor}
+        // A read-only merged post: the board's setting is not why nobody can
+        // comment, so the "comments are closed" line would be wrong.
+        showClosedNotice={!mergedIntoUnreadable}
         allowComments={allowComments}
         identity={identity}
         onNeedAuth={requireAuth}

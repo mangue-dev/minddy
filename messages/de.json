@@ -1189,6 +1189,7 @@
     "meAuthored": "Ihr Feedback",
     "meVoted": "Sie haben abgestimmt",
     "meMergedFrom": "Ihr Feedback „{title}“ wurde in dieser Gruppe zusammengefasst",
+    "mergedIntoPrivate": "Ihr Feedback wurde mit einem anderen zusammengefasst, das das Team privat hält. Sie können es hier weiterhin lesen.",
     "status": {
       "open": "Offen",
       "planned": "Geplant",
@@ -1263,6 +1264,7 @@
     "teamName": "Das Team von {project}",
     "comments": "Kommentare",
     "commentCount": "{count, plural, =1 {1 Kommentar} other {# Kommentare}}",
+    "commentsShowEarlier": "Frühere Kommentare anzeigen",
     "commentPlaceholder": "Fügen Sie ein Detail hinzu oder sagen Sie, dass es Ihnen auch passiert…",
     "commentSignedOutPlaceholder": "Schreiben Sie Ihre Antwort; wir werden Sie um Ihre E-Mail-Adresse bitten, bevor wir sie veröffentlichen.",
     "commentSend": "Kommentieren",

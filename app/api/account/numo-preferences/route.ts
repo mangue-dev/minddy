@@ -3,13 +3,19 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { getNumoPreferences } from "@/lib/server/assistant/model-preferences";
 import { resolveNumoTurnConfiguration, isNumoConversationConfigError } from "@/lib/server/assistant/conversation-config";
 import { isPlanLimitError, planLimitResponse } from "@/lib/server/plan-limit-error";
+import { captureServerException } from "@/lib/server/error-tracking";
 
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
   try {
     return NextResponse.json(await getNumoPreferences(auth.user.id));
-  } catch {
+  } catch (error) {
+    // A handled 503 never reaches `onRequestError`; report it so the
+    // settings alert (MIN-722) has a server-side trace.
+    await captureServerException(error, request.headers.get("cookie"), {
+      routePath: "/api/account/numo-preferences", routeType: "route", httpMethod: "GET",
+    });
     return NextResponse.json({ error: "Could not load Numo preferences" }, { status: 503 });
   }
 }
