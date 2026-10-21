@@ -10390,5 +10390,59 @@
         "targetColumn": "id"
       }
     ]
+  },
+  "issue_smart_fill": {
+    "columns": {
+      "issue_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "project_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "fields": {
+        "type": "text[]",
+        "nullable": false,
+        "generated": false
+      },
+      "reevaluate_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "reevaluate_by": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "created_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "issue_id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "issues",
+        "column": "issue_id",
+        "targetColumn": "id"
+      },
+      {
+        "table": "projects",
+        "column": "project_id",
+        "targetColumn": "id"
+      },
+      {
+        "table": "users",
+        "column": "reevaluate_by",
+        "targetColumn": "id"
+      }
+    ]
   }
 }

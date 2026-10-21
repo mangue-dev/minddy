@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 29,
-  "sourceRevision": 29,
+  "revision": 30,
+  "sourceRevision": 30,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-21",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray",
+    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -47,6 +47,8 @@
       "components/issue-compact-fields.tsx",
       "lib/smart-fill.ts",
       "lib/smart-fill-fields.ts",
+      "lib/server/smart-fill-reevaluation.ts",
+      "lib/server/smart-fill-ownership.ts",
       "app/(app)/projects/[id]/triage/page.tsx",
       "components/triage/triage-page.tsx",
       "lib/smart-triage.ts",
@@ -117,9 +119,9 @@
     ]
   },
   "review": {
-    "revision": 29,
-    "fact": "agent:/root/min753 (drafts paragraph checked against components/drafts-tray.tsx, lib/use-all-drafts.ts, lib/drafts.ts and the creation dialogs; rest of the article unchanged since the 0.20.0 release review; no figure changed)",
-    "language": "agent:/root/min753 (es translation of the drafts paragraph with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 30,
+    "fact": "agent:/root/min750 (Smart Fill re-evaluation bullet and section checked against lib/server/smart-fill-reevaluation.ts, lib/server/smart-fill-ownership.ts, lib/server/update-issue.ts, lib/server/set-issue-categories.ts and components/settings/account-smart-fill-section.tsx; rest of the article unchanged since the MIN-753 review; no figure changed)",
+    "language": "agent:/root/min750 (es translation of the re-evaluation bullet and section with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-21"
   },
   "related": [
@@ -165,7 +167,7 @@
       "src": "/documentation/es/new-issue.png",
       "alt": "Borrador sin enviar en el proyecto Aurora con título, descripción, propiedades que se pueden elegir manualmente y el botón Crear AUR-19.",
       "caption": "Describe el resultado esperado y elige las propiedades útiles antes de crear el ticket.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -181,7 +183,7 @@
       "src": "/documentation/es/triage-incoming.png",
       "alt": "Incidencia entrante de demostración DOC-11 con informe, propiedades y controles de duplicado, Rechazar y Aceptar.",
       "caption": "Lee el informe recibido antes de aceptarlo, rechazarlo o enlazar un duplicado.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -197,7 +199,7 @@
       "src": "/documentation/es/issue-statuses.png",
       "alt": "Los ocho estados del ticket en el selector, con el estado de backlog seleccionado.",
       "caption": "La marca indica el estado actual. Elige el que corresponda al estado real del trabajo.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -213,7 +215,7 @@
       "src": "/documentation/es/work-resources.png",
       "alt": "Diálogo para añadir un enlace con una dirección de contacto de ejemplo.",
       "caption": "Revisa el destino antes de añadir el recurso. Este enlace de ejemplo no se ha enviado.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -229,7 +231,7 @@
       "src": "/documentation/es/work-dependencies.png",
       "alt": "Búsqueda de una incidencia bloqueante por identificador.",
       "caption": "Elige el sentido de la relación antes de su destino. El selector se muestra sin enviar la relación.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -245,7 +247,7 @@
       "src": "/documentation/es/work-sub-issues.png",
       "alt": "Campo para crear una subincidencia en una incidencia principal de demostración.",
       "caption": "El campo crea una hija de esta incidencia; cada hija conserva su estado y conversación.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -261,7 +263,7 @@
       "src": "/documentation/es/work-implementation-plan.png",
       "alt": "Plan de demostración con dos tareas de trabajo completadas de seis.",
       "caption": "El plan guardado distingue pasos completados, activos y pendientes. Su progreso no demuestra que se ejecutara la tarea de código ficticia.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -277,7 +279,7 @@
       "src": "/documentation/es/issue-date-recurrence.png",
       "alt": "Selector de fecha en modo recurrente con vista previa semanal los domingos y hora opcional.",
       "caption": "El modo recurrente muestra la frecuencia semanal. Confirma la primera fecha antes de crear el ticket.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -293,7 +295,7 @@
       "src": "/documentation/es/import-issues-preview-workflow.png",
       "alt": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas.",
       "caption": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas. No se envió la importación; la planificación opcional con IA se bloqueó para la captura.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -310,7 +312,7 @@
       "src": "/documentation/es/file-preview.png",
       "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.",
       "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Cambiar nombre y Eliminar.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -367,11 +369,19 @@ Si falla la creación o el guardado, conserva el texto, lee el error y comprueba
 Las preferencias de Rellenado inteligente pertenecen a tu cuenta. Abre **Configuración de la cuenta** → **Smart Fill**. Cada opción tiene su propia tarjeta:
 
 - En la tarjeta **Smart Fill**, **Activar Smart Fill** activa o desactiva Rellenado inteligente para tu cuenta. Completa la prioridad, el esfuerzo, las categorías y el objetivo que falten; el estado, el responsable y la fecha límite siguen siendo cosa tuya. Los interruptores de las dos tarjetas siguientes dependen de él.
-- En **Incidencias que rellenar**, **Completar incidencias creadas** y **Completar incidencias de triaje** eligen qué incidencias nuevas completa: las que creas y las incidencias de triaje de las que eres responsable.
+- En **Incidencias que rellenar**, **Completar incidencias creadas** y **Completar incidencias de triaje** eligen qué incidencias nuevas completa: las que creas y las incidencias de triaje de las que eres responsable. **Reevaluar incidencias editadas**, activado por defecto, permite a Rellenado inteligente [volver a leer una incidencia](#smart-fill-reevaluation) después de un cambio en su título o su descripción.
 - En **Incidencias relacionadas**, **Vincular incidencias relacionadas**, activado por defecto, permite a Rellenado inteligente [añadir relaciones](#smart-fill-relations) después de guardar una incidencia.
 - En **Indexación de incidencias**, **Indexar incidencias**, activado por defecto e independiente de Rellenado inteligente, convierte el título y la descripción de las incidencias que creas o editas en vectores privados que sirven para encontrar incidencias relacionadas y para [buscar incidencias por el sentido](/docs/navigation#search-by-meaning). La indexación en segundo plano de las incidencias existentes de un proyecto respeta a la vez el interruptor del propietario del proyecto y el del autor: una incidencia cuyo autor lo desactivó nunca se indexa. Los vectores se cifran con el proyecto, igual que la incidencia; los guardados antes de que el proyecto empezara a cifrar los convierte la tarea en segundo plano. Con el interruptor desactivado no se crea ningún vector para tus incidencias, aunque otra persona las edite, y la búsqueda de incidencias relacionadas solo compara palabras. Tus propias búsquedas usan entonces solo el texto, sin búsqueda por el sentido. Los vectores ya creados se mantienen mientras el texto no cambie; se eliminan en cuanto el texto cambia, o con la incidencia.
 
 Desactivar un interruptor también cancela las pasadas que aún no se han ejecutado. Numo puede cambiar estas preferencias cuando se lo pidas.
+
+### Cuando Rellenado inteligente vuelve a leer una incidencia {#smart-fill-reevaluation}
+
+Con **Reevaluar incidencias editadas** activado, una incidencia creada con Rellenado inteligente activo se vuelve a leer después de un cambio en su título o su descripción. Rellenado inteligente espera a que el texto lleve cinco minutos sin cambiar, de modo que una serie de cambios se lee una sola vez; la pasada puede empezar hasta un minuto después. Luego vuelve a definir la prioridad, el esfuerzo, las categorías y el objetivo a partir del nuevo texto.
+
+Solo cambia las propiedades que nadie eligió a mano: las que quedaron vacías al crear la incidencia y que nadie ha cambiado desde entonces. En cuanto tú, Numo o un agente conectado cambiáis una de ellas, Rellenado inteligente deja de tocarla. Nunca quita el objetivo ni todas las categorías; puede vaciar el esfuerzo cuando el texto ya no describe trabajo estimable. Las incidencias creadas antes de esta función, con Rellenado inteligente desactivado o con todas sus propiedades ya definidas nunca se vuelven a leer.
+
+Cada cambio aparece en la actividad de la incidencia con Rellenado inteligente como autor, y una incidencia que pasa a otro objetivo aparece también en la actividad de ambos objetivos. Una pasada que no encuentra nada que cambiar no escribe nada. La pasada cuenta en la parte **Automatizaciones** de la persona que hizo el último cambio, sigue su preferencia **Reevaluar incidencias editadas** y se omite cuando su presupuesto está agotado o el proveedor falla.
 
 ## Revisar el trabajo entrante en clasificación {#triage-incoming-work}
 

@@ -23,6 +23,10 @@ import {
 import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
 import { decodeIssue, encodeIssue } from "@/lib/server/issue-store";
 import { resolveSmartFillPayer, runSmartFill } from "@/lib/server/smart-fill";
+import {
+  recordSmartFillOwnership,
+  type SmartFillOwnedField,
+} from "@/lib/server/smart-fill-ownership";
 import { scheduleIssueAiPass } from "@/lib/server/issue-relation-inference";
 import { insertNotifications } from "@/lib/server/notifications";
 import { notificationActorSource } from "@/lib/notification-actor";
@@ -343,7 +347,20 @@ export async function createIssueForProject({
         excluded: remote !== null || recurrenceSeriesId !== null,
       })
     : null;
+  // What Smart Fill owns from now on (MIN-750): every field the author left
+  // empty, whether or not this first pass fills it. A later edit of the title
+  // or description lets Smart Fill read the issue again for these fields only.
+  const smartFillOwned: SmartFillOwnedField[] = [];
   if (smartFillPayer) {
+    if (row.priority == null || row.priority === "none") smartFillOwned.push("priority");
+    if (row.effort == null) smartFillOwned.push("effort");
+    if (inferObjective && row.objective_id == null) smartFillOwned.push("objective_id");
+    if (
+      (!Array.isArray(input.category_ids) || input.category_ids.length === 0) &&
+      (!Array.isArray(input.category_names) || input.category_names.length === 0)
+    ) {
+      smartFillOwned.push("category_ids");
+    }
     const patch = await runSmartFill({
       projectId,
       projectName: projectName ?? "this project",
@@ -506,6 +523,12 @@ export async function createIssueForProject({
       }
     }
   }
+
+  await recordSmartFillOwnership(service, {
+    issueId: data.id as string,
+    projectId,
+    fields: smartFillOwned,
+  });
 
   /**
    * BIRTH OF THE TICKET IN HIS JOURNAL — written HERE, before the response, and

@@ -25,7 +25,7 @@ describe("optional scheduler", () => {
       readFileSync(new URL("../../vercel.json", import.meta.url), "utf8"),
     ) as { crons?: unknown[] };
 
-    expect(config.crons).toHaveLength(12);
+    expect(config.crons).toHaveLength(13);
     expect(JSON.stringify(config.crons)).not.toContain("agent-drain");
     expect(config.crons).toContainEqual({
       path: "/api/cron/numo-turns",
@@ -41,6 +41,10 @@ describe("optional scheduler", () => {
     });
     expect(config.crons).toContainEqual({
       path: "/api/cron/page-materialization",
+      schedule: "* * * * *",
+    });
+    expect(config.crons).toContainEqual({
+      path: "/api/cron/smart-fill-reevaluation",
       schedule: "* * * * *",
     });
   });

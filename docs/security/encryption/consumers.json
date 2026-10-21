@@ -3090,42 +3090,42 @@
     "file": "lib/server/create-issue.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 289,
+    "line": 293,
     "storage": false
   },
   {
     "file": "lib/server/create-issue.ts",
     "operation": "rpc",
     "resource": "next_issue_number",
-    "line": 373,
+    "line": 390,
     "storage": false
   },
   {
     "file": "lib/server/create-issue.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 389,
+    "line": 406,
     "storage": false
   },
   {
     "file": "lib/server/create-issue.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 411,
+    "line": 428,
     "storage": false
   },
   {
     "file": "lib/server/create-issue.ts",
     "operation": "from",
     "resource": "categories",
-    "line": 469,
+    "line": 486,
     "storage": false
   },
   {
     "file": "lib/server/create-issue.ts",
     "operation": "from",
     "resource": "issue_categories",
-    "line": 493,
+    "line": 510,
     "storage": false
   },
   {
@@ -7136,56 +7136,56 @@
     "file": "lib/server/managed-ai-key.ts",
     "operation": "from",
     "resource": "managed_ai_keys",
-    "line": 144,
+    "line": 160,
     "storage": false
   },
   {
     "file": "lib/server/managed-ai-key.ts",
     "operation": "from",
     "resource": "managed_ai_keys",
-    "line": 154,
+    "line": 170,
     "storage": false
   },
   {
     "file": "lib/server/managed-ai-key.ts",
     "operation": "from",
     "resource": "managed_ai_keys",
-    "line": 164,
+    "line": 180,
     "storage": false
   },
   {
     "file": "lib/server/managed-ai-key.ts",
     "operation": "from",
     "resource": "managed_ai_keys",
-    "line": 196,
+    "line": 212,
     "storage": false
   },
   {
     "file": "lib/server/managed-ai-key.ts",
     "operation": "from",
     "resource": "managed_ai_keys",
-    "line": 286,
+    "line": 302,
     "storage": false
   },
   {
     "file": "lib/server/managed-ai-key.ts",
     "operation": "from",
     "resource": "managed_ai_keys",
-    "line": 315,
+    "line": 331,
     "storage": false
   },
   {
     "file": "lib/server/managed-ai-key.ts",
     "operation": "from",
     "resource": "managed_ai_keys",
-    "line": 384,
+    "line": 400,
     "storage": false
   },
   {
     "file": "lib/server/managed-ai-key.ts",
     "operation": "from",
     "resource": "managed_ai_keys",
-    "line": 471,
+    "line": 487,
     "storage": false
   },
   {
@@ -9922,7 +9922,7 @@
     "file": "lib/server/set-issue-categories.ts",
     "operation": "rpc",
     "resource": "replace_issue_categories",
-    "line": 86,
+    "line": 92,
     "storage": false
   },
   {
@@ -9979,6 +9979,69 @@
     "operation": "from",
     "resource": "project_members",
     "line": 488,
+    "storage": false
+  },
+  {
+    "file": "lib/server/smart-fill-ownership.ts",
+    "operation": "from",
+    "resource": "issue_smart_fill",
+    "line": 29,
+    "storage": false
+  },
+  {
+    "file": "lib/server/smart-fill-ownership.ts",
+    "operation": "from",
+    "resource": "issue_smart_fill",
+    "line": 48,
+    "storage": false
+  },
+  {
+    "file": "lib/server/smart-fill-ownership.ts",
+    "operation": "from",
+    "resource": "issue_smart_fill",
+    "line": 60,
+    "storage": false
+  },
+  {
+    "file": "lib/server/smart-fill-ownership.ts",
+    "operation": "from",
+    "resource": "issue_smart_fill",
+    "line": 73,
+    "storage": false
+  },
+  {
+    "file": "lib/server/smart-fill-reevaluation.ts",
+    "operation": "from",
+    "resource": "issue_smart_fill",
+    "line": 118,
+    "storage": false
+  },
+  {
+    "file": "lib/server/smart-fill-reevaluation.ts",
+    "operation": "from",
+    "resource": "issue_smart_fill",
+    "line": 128,
+    "storage": false
+  },
+  {
+    "file": "lib/server/smart-fill-reevaluation.ts",
+    "operation": "from",
+    "resource": "issue_smart_fill",
+    "line": 202,
+    "storage": false
+  },
+  {
+    "file": "lib/server/smart-fill-reevaluation.ts",
+    "operation": "from",
+    "resource": "issue_categories",
+    "line": 239,
+    "storage": false
+  },
+  {
+    "file": "lib/server/smart-fill-reevaluation.ts",
+    "operation": "from",
+    "resource": "projects",
+    "line": 240,
     "storage": false
   },
   {
@@ -10202,28 +10265,28 @@
     "file": "lib/server/update-issue.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 284,
+    "line": 294,
     "storage": false
   },
   {
     "file": "lib/server/update-issue.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 317,
+    "line": 327,
     "storage": false
   },
   {
     "file": "lib/server/update-issue.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 529,
+    "line": 539,
     "storage": false
   },
   {
     "file": "lib/server/update-issue.ts",
     "operation": "from",
     "resource": "cycles",
-    "line": 665,
+    "line": 713,
     "storage": false
   },
   {

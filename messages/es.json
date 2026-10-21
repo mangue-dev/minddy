@@ -145,6 +145,8 @@
     "pageRestored": "ha restaurado la página",
     "objectiveRelationAdded_blocks": "marcó este objetivo como bloqueante de {ref}",
     "objectiveRelationAdded_blocked_by": "marcó este objetivo como bloqueado por {ref}",
+    "objectiveIssueAdded": "añadió {ref} a este objetivo",
+    "objectiveIssueRemoved": "quitó {ref} de este objetivo",
     "objectiveRelationAdded_related": "vinculó este objetivo con {ref}"
   },
   "ApiErrors": {
@@ -2772,6 +2774,8 @@
     "smartFillCreatedLabel": "Completar incidencias creadas",
     "smartFillTriageDesc": "Completa los valores que falten en incidencias de triaje y comentarios promovidos en proyectos de tu propiedad.",
     "smartFillTriageLabel": "Completar incidencias de triaje",
+    "smartFillReevaluateLabel": "Reevaluar incidencias editadas",
+    "smartFillReevaluateDesc": "Cinco minutos después de que el título o la descripción de una incidencia dejen de cambiar, la vuelve a leer y actualiza la prioridad, el esfuerzo, las categorías o el objetivo que nadie haya definido a mano.",
     "smartFillRelationsLabel": "Vincular incidencias relacionadas",
     "smartFillRelationsDesc": "Después de guardar una incidencia, la vincula con las incidencias relacionadas y las dependencias que tiene claramente. Puedes quitar cualquier vínculo; un vínculo quitado no se vuelve a añadir.",
     "issueIndexingLabel": "Indexar incidencias",

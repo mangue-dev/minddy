@@ -44,6 +44,21 @@ export function resolveSmartFillScope(
 }
 
 /**
+ * SMART FILL RE-EVALUATION (MIN-750) — whether an edit of the title or the
+ * description lets Smart Fill read the issue again, once the edits have
+ * rested. It lives under the master switch, is enabled by default like the
+ * others, and belongs to the account that made the latest edit: that account
+ * pays the pass, and its refusal cancels a pass that has not run yet.
+ */
+export const SMART_FILL_REEVALUATE_META_KEY = "smart_fill_reevaluate";
+
+export function resolveSmartFillReevaluation(
+  meta: Record<string, unknown> | null | undefined,
+): boolean {
+  return resolveSmartFill(meta) && meta?.[SMART_FILL_REEVALUATE_META_KEY] !== false;
+}
+
+/**
  * SMART FILL RELATIONS (MIN-717) — two more account preferences, kept apart.
  *
  * - `smart_fill_relations`: whether Smart Fill may LINK an issue to related

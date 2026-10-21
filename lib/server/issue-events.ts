@@ -40,8 +40,9 @@ export interface EventRow {
       written, model call failed) — the timeline words the two differently. */
   smart_assign_ai?: boolean;
   /** True when Smart-fill (MIN-260) filled the issue's properties as it was
-      created; the timeline then shows "Smart-fill" as the actor, and
-      `to_value` lists the fields it set. */
+      created (`to_value` then lists the fields it set), or changed them when
+      it read the issue again after an edit (MIN-750); the timeline then
+      shows "Smart-fill" as the actor. */
   via_smart_fill?: boolean;
   /** True when the write came from a project AUTOMATION (MIN-147); the timeline
       then names the automation instead of the account whose id technically
@@ -84,6 +85,13 @@ export function stampViaAssistant(rows: EventRow[], viaAssistant: boolean): Even
 export function stampViaAutomation(rows: EventRow[], viaAutomation: boolean): EventRow[] {
   if (!viaAutomation) return rows;
   return rows.map((r) => ({ ...r, via_automation: true }));
+}
+
+/** Stamp a batch of events as written by a Smart Fill re-evaluation (MIN-750,
+ no-op when false): the timeline then names Smart-fill as the actor. */
+export function stampViaSmartFill(rows: EventRow[], viaSmartFill: boolean): EventRow[] {
+  if (!viaSmartFill) return rows;
+  return rows.map((r) => ({ ...r, via_smart_fill: true }));
 }
 
 /** Stamp a batch of events as MCP-triggered, attributed to the acting API key

@@ -15,6 +15,7 @@
     { "path": "/api/cron/page-materialization", "schedule": "* * * * *" },
     { "path": "/api/cron/forge-relay-maintenance", "schedule": "35 * * * *" },
     { "path": "/api/cron/smart-assign", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/smart-fill-reevaluation", "schedule": "* * * * *" },
     { "path": "/api/cron/issue-index", "schedule": "25 * * * *" },
     { "path": "/api/cron/routines", "schedule": "*/5 * * * *" },
     { "path": "/api/cron/billing-sync", "schedule": "15 * * * *" },

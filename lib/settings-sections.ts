@@ -453,7 +453,8 @@ export function useSettingsSections(): SettingsSection[] {
         title: tAccount("smartFillScopeTitle"),
         keywords: [
           "smart fill", "smart-fill", "smartfill", "créés", "crees",
-          "created", "triage", "remplir", "fill",
+          "created", "triage", "remplir", "fill", "réévaluer", "reevaluer",
+          "re-evaluate", "reevaluate", "modifiés", "modifies", "edited",
         ],
       }),
       account({

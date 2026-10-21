@@ -145,6 +145,8 @@
     "pageRestored": "a restauré la page",
     "objectiveRelationAdded_blocks": "a marqué cet objectif comme bloquant {ref}",
     "objectiveRelationAdded_blocked_by": "a marqué cet objectif comme bloqué par {ref}",
+    "objectiveIssueAdded": "a ajouté {ref} à cet objectif",
+    "objectiveIssueRemoved": "a retiré {ref} de cet objectif",
     "objectiveRelationAdded_related": "a lié cet objectif à {ref}"
   },
   "ApiErrors": {
@@ -2772,6 +2774,8 @@
     "smartFillCreatedLabel": "Remplir les tickets créés",
     "smartFillTriageDesc": "Remplit les tickets en triage que vous possédez.",
     "smartFillTriageLabel": "Remplir les tickets en triage",
+    "smartFillReevaluateLabel": "Réévaluer les tickets modifiés",
+    "smartFillReevaluateDesc": "Cinq minutes après la dernière modification du titre ou de la description d'un ticket, le relit et met à jour la priorité, l'effort, les catégories ou l'objectif que personne n'a définis à la main.",
     "smartFillRelationsLabel": "Relier les tickets liés",
     "smartFillRelationsDesc": "Après l'enregistrement d'un ticket, le relie aux tickets liés et aux dépendances qu'il a clairement. Vous pouvez retirer chaque lien ; un lien retiré n'est pas remis.",
     "issueIndexingLabel": "Indexer les tickets",

@@ -1,7 +1,7 @@
 import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
 
-import { describeEvent, type EventContext, type EventTranslators } from "./describe-event";
+import { describeEvent, describeObjectiveEvent, type EventContext, type EventTranslators } from "./describe-event";
 import type { IssueEvent } from "./types";
 import en from "@/messages/en.json";
 import fr from "@/messages/fr.json";
@@ -100,5 +100,30 @@ describe("describeEvent — Smart-fill", () => {
       to_value: "high",
     } as unknown as IssueEvent;
     expect(describeEvent(plain, ctx, translators("fr"))).not.toContain("a rempli");
+  });
+});
+
+describe("describeObjectiveEvent — Smart Fill re-evaluation (MIN-750)", () => {
+  const moved = (type: string): IssueEvent =>
+    ({
+      ...smartFillEvent(null),
+      issue_id: null,
+      objective_id: "o1",
+      type,
+      field: null,
+      to_value: "i1",
+    }) as unknown as IssueEvent;
+  const withIssue: EventContext = { ...ctx, issues: [{ id: "i1", number: 42 } as EventContext["issues"][number]] };
+
+  it("names the issue that joined or left the objective, in English", () => {
+    expect(describeObjectiveEvent(moved("objective_issue_added"), withIssue, translators("en")))
+      .toBe("added MIN-42 to this objective");
+    expect(describeObjectiveEvent(moved("objective_issue_removed"), withIssue, translators("en")))
+      .toBe("moved MIN-42 out of this objective");
+  });
+
+  it("names the issue that joined or left the objective, in French", () => {
+    expect(describeObjectiveEvent(moved("objective_issue_added"), withIssue, translators("fr")))
+      .toBe("a ajouté MIN-42 à cet objectif");
   });
 });

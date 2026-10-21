@@ -145,6 +145,8 @@
     "pageRestored": "restored the page",
     "objectiveRelationAdded_blocks": "marked this objective as blocking {ref}",
     "objectiveRelationAdded_blocked_by": "marked this objective as blocked by {ref}",
+    "objectiveIssueAdded": "added {ref} to this objective",
+    "objectiveIssueRemoved": "moved {ref} out of this objective",
     "objectiveRelationAdded_related": "linked this objective to {ref}"
   },
   "ApiErrors": {
@@ -2772,6 +2774,8 @@
     "smartFillCreatedLabel": "Fill created issues",
     "smartFillTriageDesc": "Fills missing values on triage issues you own.",
     "smartFillTriageLabel": "Fill triage issues",
+    "smartFillReevaluateLabel": "Re-evaluate edited issues",
+    "smartFillReevaluateDesc": "Five minutes after an issue's title or description stops changing, reads it again and updates the priority, effort, categories or objective nobody set by hand.",
     "smartFillRelationsLabel": "Link related issues",
     "smartFillRelationsDesc": "After you save an issue, links it to related issues and dependencies it plainly has. You can remove any link; a removed link is not added again.",
     "issueIndexingLabel": "Index issues",

@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 29,
-  "sourceRevision": 29,
+  "revision": 30,
+  "sourceRevision": 30,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-21",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray",
+    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -47,6 +47,8 @@
       "components/issue-compact-fields.tsx",
       "lib/smart-fill.ts",
       "lib/smart-fill-fields.ts",
+      "lib/server/smart-fill-reevaluation.ts",
+      "lib/server/smart-fill-ownership.ts",
       "app/(app)/projects/[id]/triage/page.tsx",
       "components/triage/triage-page.tsx",
       "lib/smart-triage.ts",
@@ -117,9 +119,9 @@
     ]
   },
   "review": {
-    "revision": 29,
-    "fact": "agent:/root/min753 (drafts paragraph checked against components/drafts-tray.tsx, lib/use-all-drafts.ts, lib/drafts.ts and the creation dialogs; rest of the article unchanged since the 0.20.0 release review; no figure changed)",
-    "language": "agent:/root/min753 (en paragraph with catalog UI labels; agent review, not human acceptance)",
+    "revision": 30,
+    "fact": "agent:/root/min750 (Smart Fill re-evaluation bullet and section checked against lib/server/smart-fill-reevaluation.ts, lib/server/smart-fill-ownership.ts, lib/server/update-issue.ts, lib/server/set-issue-categories.ts and components/settings/account-smart-fill-section.tsx; rest of the article unchanged since the MIN-753 review; no figure changed)",
+    "language": "agent:/root/min750 (en paragraphs with catalog UI labels; agent review, not human acceptance)",
     "date": "2026-10-21"
   },
   "related": [
@@ -165,7 +167,7 @@
       "src": "/documentation/en/new-issue.png",
       "alt": "Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-19 button.",
       "caption": "Describe the expected result, then choose the useful properties before creating the issue.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -181,7 +183,7 @@
       "src": "/documentation/en/triage-incoming.png",
       "alt": "Incoming demonstration issue DOC-11 with its report, properties and duplicate, Decline and Accept controls.",
       "caption": "Read the incoming report before accepting it, declining it or linking a duplicate.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -197,7 +199,7 @@
       "src": "/documentation/en/issue-statuses.png",
       "alt": "Eight issue statuses in the picker, with backlog currently selected.",
       "caption": "The check marks the current status. Choose the status that reflects the work’s actual state.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -213,7 +215,7 @@
       "src": "/documentation/en/work-resources.png",
       "alt": "Add-link dialog with an example contact URL.",
       "caption": "Review the destination before adding a resource. This example link has not been submitted.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -229,7 +231,7 @@
       "src": "/documentation/en/work-dependencies.png",
       "alt": "Search for a blocker by issue identifier.",
       "caption": "Choose the relation direction before selecting its endpoint. The picker is shown without submitting a relation.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -245,7 +247,7 @@
       "src": "/documentation/en/work-sub-issues.png",
       "alt": "Sub-issue creation field in a demonstration parent issue.",
       "caption": "The inline field creates a child under this parent; a child keeps its own status and discussion.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -261,7 +263,7 @@
       "src": "/documentation/en/work-implementation-plan.png",
       "alt": "Demonstration plan showing two of six work tasks complete.",
       "caption": "The saved demonstration plan separates completed, active and pending steps. Its progress does not prove the fictional code task was executed.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -277,7 +279,7 @@
       "src": "/documentation/en/issue-date-recurrence.png",
       "alt": "Due-date picker in recurring mode with a weekly Sunday preview and optional time.",
       "caption": "Recurring mode previews the weekly cadence. Confirm the first due date before creating the issue.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -293,7 +295,7 @@
       "src": "/documentation/en/import-issues-preview-workflow.png",
       "alt": "CSV preview with two localized demonstration rows and detected column mappings.",
       "caption": "CSV preview with two localized demonstration rows and detected column mappings. No import was submitted; optional AI planning was blocked for the capture.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -310,7 +312,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -367,11 +369,19 @@ If creation or saving fails, retain your text, read the error and check that mem
 Smart-fill preferences belong to your account. Open **Account settings** → **Smart Fill**. Each option has its own card:
 
 - In the **Smart Fill** card, **Enable Smart Fill** turns Smart-fill on or off for your account. It fills missing priority, effort, categories and objective; status, assignee and due date stay yours. The switches of the next two cards depend on it.
-- In **Issues to fill**, **Fill created issues** and **Fill triage issues** choose which new issues it fills: the issues you create, and the triage issues you own.
+- In **Issues to fill**, **Fill created issues** and **Fill triage issues** choose which new issues it fills: the issues you create, and the triage issues you own. **Re-evaluate edited issues**, on by default, lets Smart-fill [read an issue again](#smart-fill-reevaluation) after its title or description changes.
 - In **Related issues**, **Link related issues**, on by default, lets Smart-fill [add relations](#smart-fill-relations) after an issue is saved.
 - In **Issue indexing**, **Index issues**, on by default and independent of Smart-fill, turns the titles and descriptions of the issues you create or edit into private vectors used to find related issues and to [search issues by meaning](/docs/navigation#search-by-meaning). Background indexing of a project's existing issues follows both the project owner's switch and the author's: an issue whose author turned it off is never indexed. Vectors are encrypted with the project, like the issue; vectors stored before the project started encrypting are converted by the background job. When the switch is off, no vector is created for your issues, even when someone else edits them, and the related-issue search compares words only. Your own searches then use text only, without search by meaning. Vectors already created stay while the text is unchanged; they are deleted as soon as the text changes, or with the issue.
 
 Turning a switch off also cancels the passes that have not run yet. Numo can change these preferences when you ask it to.
+
+### When Smart-fill reads an issue again {#smart-fill-reevaluation}
+
+With **Re-evaluate edited issues** on, an issue created with Smart-fill on is read again after its title or description changes. Smart-fill waits until the text has not changed for five minutes, so a series of edits is read once; the pass can start up to one minute later. It then sets the priority, effort, categories and objective again from the new text.
+
+It only changes the properties nobody chose by hand: those left empty when the issue was created and that nobody has changed since. As soon as you, Numo or a connected agent changes one of them, Smart-fill leaves it alone for good. It never removes the objective or all the categories; it can clear the effort when the text no longer describes estimable work. Issues created before this feature, with Smart-fill switched off or with every property already set are never read again.
+
+Each change appears in the issue's activity with Smart-fill as its author, and an issue moved to another objective also appears in the activity of both objectives. A pass that finds nothing to change writes nothing. The pass counts toward the **Automations** share of the person who made the latest edit, follows that person's **Re-evaluate edited issues** preference, and is skipped when their budget is exhausted or the provider fails.
 
 ## Review incoming work in triage {#triage-incoming-work}
 

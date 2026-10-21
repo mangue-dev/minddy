@@ -27,6 +27,7 @@ import {
   stampOccurredAt,
   stampViaAssistant,
   stampViaAutomation,
+  stampViaSmartFill,
   stampMcpKey,
   type EventRow,
 } from "@/lib/server/issue-events";
@@ -52,6 +53,11 @@ import {
 import { scheduleFeedbackStatusSync } from "@/lib/server/feedback/status-sync";
 import { scheduleRemoteStatusPush } from "@/lib/server/git/issue-push";
 import { scheduleIssueAiPass } from "@/lib/server/issue-relation-inference";
+import {
+  releaseSmartFillFields,
+  scheduleSmartFillReevaluation,
+  type SmartFillOwnedField,
+} from "@/lib/server/smart-fill-ownership";
 import {
   cycleBelongsToUser,
   issueInProject,
@@ -126,7 +132,7 @@ export async function updateIssueFields({
   input,
   viaAssistant = false,
   viaAutomation = false,
-
+  viaSmartFill = false,
   mcpKeyId = null,
   forgeSync = null,
   expectedUpdatedAt = null,
@@ -151,6 +157,10 @@ export async function updateIssueFields({
  which separates “Numo relays my request” from “Numo describes where his run is”.
  Only changes the ORIGIN seen by the automations (MIN-147). */
   viaAgentRun?: boolean;
+  /** The write is a Smart Fill re-evaluation (MIN-750): the timeline names
+   Smart-fill, the issue's objectives say it too, and the properties it
+   writes stay its own instead of counting as set by hand. */
+  viaSmartFill?: boolean;
   /** Attributes the resulting activity events to an MCP API key (agent actor). */
   mcpKeyId?: string | null;
   /** Assigns events to the forge ('github' | 'gitlab') when the write
@@ -555,6 +565,16 @@ export async function updateIssueFields({
   }
   const data = await decodeIssue(storedData as Record<string, unknown>, actorId);
 
+  // Smart Fill ownership (MIN-750): a property changed by anyone but Smart
+  // Fill is no longer its to re-evaluate. Before the answer, like the write
+  // it follows: lost afterwards, a later pass could overwrite this choice.
+  if (!viaSmartFill) {
+    const released: SmartFillOwnedField[] = (["priority", "effort", "objective_id"] as const).filter(
+      (field) => field in updates && (updates[field] ?? null) !== (before[field] ?? null),
+    );
+    await releaseSmartFillFields(service, issueId, released);
+  }
+
   // Live descriptions (MIN-728): every description write reaches the editors
   // connected to it as steps, through the authority, before the answer.
   if ("description" in updates && !descriptionFromDocument &&
@@ -634,14 +654,42 @@ export async function updateIssueFields({
         });
       }
     }
+    // A re-evaluation that moves the issue between objectives says so on
+    // the objectives too (MIN-750): their activity is where the scope of the
+    // work they group is read.
+    if (
+      viaSmartFill &&
+      "objective_id" in updates &&
+      (updates.objective_id ?? null) !== (before.objective_id ?? null)
+    ) {
+      if (before.objective_id) {
+        events.push({
+          objective_id: before.objective_id as string,
+          actor_id: actorId,
+          type: "objective_issue_removed",
+          to_value: issueId,
+        });
+      }
+      if (updates.objective_id) {
+        events.push({
+          objective_id: updates.objective_id as string,
+          actor_id: actorId,
+          type: "objective_issue_added",
+          to_value: issueId,
+        });
+      }
+    }
     await insertEvents(
       service,
       stampOccurredAt(
         stampForgeSync(
           stampMcpKey(
-            stampViaAutomation(
-              stampViaAssistant(events as EventRow[], viaAssistant),
-              viaAutomation,
+            stampViaSmartFill(
+              stampViaAutomation(
+                stampViaAssistant(events as EventRow[], viaAssistant),
+                viaAutomation,
+              ),
+              viaSmartFill,
             ),
             mcpKeyId,
           ),
@@ -860,6 +908,10 @@ export async function updateIssueFields({
       actorId,
       mcpKeyId,
     });
+    // Smart Fill re-evaluation (MIN-750): the new text may change the
+    // issue's scope. Pushed five minutes ahead at each edit, so a burst of
+    // edits is read once, when it rests.
+    if (!viaSmartFill) scheduleSmartFillReevaluation({ issueId, actorId });
   }
 
   // Server Analytics (MIN-78): same reason as for creation — a good one

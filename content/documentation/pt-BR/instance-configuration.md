@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-21",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review)",
+    "version": "0.20.0 (MIN-747 release review); MIN-750 Smart Fill re-evaluation schedule",
     "editions": [
       "self-hosted"
     ],
@@ -41,14 +41,15 @@
       "vercel.json",
       "deploy/self-hosted/compose.full.yml",
       "deploy/self-hosted/scheduler.mjs",
-      "app/api/cron/issue-index/route.ts"
+      "app/api/cron/issue-index/route.ts",
+      "app/api/cron/smart-fill-reevaluation/route.ts"
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 10,
+    "fact": "agent:/root/min750 (schedule table checked against vercel.json and deploy/self-hosted/scheduler.mjs after adding smart-fill-reevaluation; rest of the article unchanged since the 0.20.0 release review; no screenshot in scope)",
+    "language": "agent:/root/min750 (pt-BR table row, identical to the source; agent review, not human acceptance)",
+    "date": "2026-10-21"
   },
   "related": [
     "workspace-encryption",
@@ -73,7 +74,7 @@
       "src": "/documentation/pt-BR/optional-providers-flow.svg",
       "alt": "Diagrama: Operador escolhe capacidade opcional. Credenciais completas e condições. Destino externo explícito dos dados. Verificar comportamento e acompanhar custos.",
       "caption": "Antes de ativar uma integração, confira as credenciais, as condições e o destino dos dados.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -105,7 +106,7 @@
       "src": "/documentation/pt-BR/proxy-network-and-jobs-flow.svg",
       "alt": "Diagrama: Proxy HTTPS público. Origens app e Supabase públicas. Banco e portas internas privadas. Tarefas autenticadas; paradas em manutenção.",
       "caption": "O proxy expõe as origens públicas e mantém os serviços internos privados; durante a manutenção, pare também as tarefas agendadas.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -194,6 +195,7 @@ Em relação ao agendador da v0.11.0, esta versão acrescenta `numo-turns`, `for
 | `/api/cron/forge-relay-maintenance` | `35 * * * *` |
 | `/api/cron/page-materialization` | `* * * * *` |
 | `/api/cron/smart-assign` | `*/5 * * * *` |
+| `/api/cron/smart-fill-reevaluation` | `* * * * *` |
 | `/api/cron/issue-index` | `25 * * * *` |
 | `/api/cron/routines` | `*/5 * * * *` |
 | `/api/cron/billing-sync` | `15 * * * *` |
