@@ -137,8 +137,9 @@ See [the Auth configuration record](auth-supabase-config.md).
   `MINDDY_CHANGELOG_URL` on preview to read production's public changelog, or
   preview shows the bundled history only.
 - **Accounts are separate.** A production account does not exist on preview.
-  The desktop app keeps one session per channel, so switching between the
-  stable and preview channels asks to sign in once on each.
+  The desktop app therefore has no preview channel (MIN-765): it opens
+  production, and the team opens preview in a development shell with
+  `MINDDY_DESKTOP_ORIGIN=https://preview.minddy.app`.
 
 ## Deployment preflight
 

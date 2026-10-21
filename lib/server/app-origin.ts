@@ -57,8 +57,7 @@ export function canonicalAppOrigin(): string {
  * `resolveCanonicalAppOrigin` deliberately moves on every Vercel preview
  * deployment so that a preview stays on itself (invitation links). So OAuth
  * does not follow it: production keeps the canonical domain, and the main
- * preview keeps `preview.minddy.app` — the fixed alias the desktop preview
- * channel already loads — whatever deployment currently serves it. A PR
+ * preview keeps `preview.minddy.app` — its fixed alias — whatever deployment currently serves it. A PR
  * preview (or a dev station) falls back to its own origin, which stays
  * self-consistent within one deployment: registration and authorization
  * always agree, only the persistence across deployments is best-effort.

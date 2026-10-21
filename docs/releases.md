@@ -45,7 +45,7 @@ The delivery flow is deliberately short:
 Vercel Production deployment → `vX.Y.Z`
 
 - `main` is the default integration branch, the target of pull requests, and
-  the candidate for the Minddy Cloud preview channel. It may contain changes
+  the candidate served by `preview.minddy.app`. It may contain changes
   that have passed CI but have not yet been approved or deployed to production.
 - `production` is an automation-only pointer to the exact SHA currently served
   by Minddy Cloud. Humans do not commit or merge into it. The protected

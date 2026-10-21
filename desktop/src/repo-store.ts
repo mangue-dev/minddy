@@ -14,7 +14,7 @@ import {
  * Same pattern as [channel-store.ts](channel-store.ts), and for some reason
  * plus: **this setting only makes sense on this machine.** A home path ne
  * means nothing elsewhere; storing it server side would publish it, falsely, to all
- * project members. It therefore lives in `userData`, next to the channel and the
+ * project members. It therefore lives in `userData`, next to the selected server and the
  * session, under the app name set by `main.ts`.
  *
  * ⚠ The CHANGE folder in development (`minddy-dev`, cf. `app.setName`): the

@@ -193,8 +193,8 @@ Frame style is a constructor option, so a replacement loads the document a
 second time. To avoid that on every launch, the shell keeps the frame that the
 selected origin's last successful (2xx) main document asked for in
 `window-chrome.json` under `userData`, and creates the first window with it
-when the origin is the same. A first launch, another origin (channel switch,
-custom server, local runtime) or a missing or unreadable file starts with the
+when the origin is the same. A first launch, another origin (custom server,
+local runtime) or a missing or unreadable file starts with the
 native frame for compatibility with older self-hosted renderers. The stored
 value is a cached observation of that origin's own document; no capability is
 inferred from the origin name or app version, and a document that disagrees
@@ -610,8 +610,8 @@ context only. None of its launch behavior remains active.
 > **And a rule that results from this, simpler than any arbitration: the
 > machine only speaks to the origin which gave it its work.** The manifesto of
 > harness, its bytes, assignment and control plane all come from
-> the origin of the active channel, or none. This is what prevents a typo from
-> preview of playing a trick with the production harness — the typical contract
+> the active origin, or none. This is what prevents a preview deployment from
+> playing a trick with the production harness — the typical contract
 > would diverge silently — and that’s also what makes development work
 > against `localhost`.
 >

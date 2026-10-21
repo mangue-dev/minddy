@@ -132,7 +132,8 @@ Only its URLs differ:
 | `uri_allow_list` | `https://preview.minddy.app/auth/callback?**` |
 
 The `?**` suffix keeps the desktop's `desktop=1` and `turn` parameters, so
-desktop OAuth on the preview channel returns to the preview callback, which
+desktop OAuth from a development shell pointed at preview
+(`MINDDY_DESKTOP_ORIGIN`) returns to the preview callback, which
 relays the code to `minddy://auth` without reading the system browser's
 session. Local and self-hosted desktop instances also use their own callback
 origins. Google and GitHub sign-in on preview also need the branch's

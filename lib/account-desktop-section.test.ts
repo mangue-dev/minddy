@@ -9,7 +9,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AccountDesktopSection } from "@/components/settings/account-desktop-section";
 import type { DesktopBridge } from "@/lib/desktop/bridge";
-import * as channelModule from "@/lib/desktop/channel";
 import messages from "@/messages/en.json";
 
 // The hint of each row measures itself with a ResizeObserver to decide
@@ -101,25 +100,21 @@ type BridgeMocks = {
   bridge: DesktopBridge;
   openServerPicker: ReturnType<typeof vi.fn>;
   checkForUpdates: ReturnType<typeof vi.fn>;
-  setChannel: ReturnType<typeof vi.fn>;
 };
 
 function currentBridge(): BridgeMocks {
   const openServerPicker = vi.fn();
   const checkForUpdates = vi.fn().mockResolvedValue(undefined);
-  const setChannel = vi.fn();
   const bridge = {
     version: "1.2.3",
     platform: "win32",
     openServerPicker,
     checkForUpdates,
-    setChannel,
   } as unknown as DesktopBridge;
   return {
     bridge,
     openServerPicker,
     checkForUpdates,
-    setChannel,
   };
 }
 
@@ -127,7 +122,6 @@ function legacyBridge(): DesktopBridge {
   return {
     version: "1.0.0",
     platform: "linux",
-    setChannel: vi.fn(),
   } as unknown as DesktopBridge;
 }
 
@@ -178,7 +172,6 @@ describe("AccountDesktopSection", () => {
     // that used to sit in the profile, never controls the bridge would own.
     expect(container.textContent).toContain(messages.Account.desktopSectionTitle);
     expect(container.querySelector('a[href="/download"]')).not.toBeNull();
-    expect(container.textContent).not.toContain("Preview the latest features");
   });
 
   it("renders Cloud state and routes each control to its argument-free bridge action", async () => {
@@ -188,7 +181,9 @@ describe("AccountDesktopSection", () => {
 
     expect(container.textContent).toContain("https://www.minddy.app");
     expect(container.textContent).toContain("minddy 1.2.3");
-    expect(container.textContent).toContain("Preview the latest features");
+    // The preview channel is retired (MIN-765): no switch leads to an origin
+    // whose accounts differ from minddy Cloud.
+    expect(container.querySelector('button[role="switch"]')).toBeNull();
 
     act(() => button("Change…").click());
     expect(mocks.openServerPicker).toHaveBeenCalledWith();
@@ -197,22 +192,14 @@ describe("AccountDesktopSection", () => {
     await act(async () => button("Check for updates…").click());
     expect(mocks.checkForUpdates).toHaveBeenCalledWith();
     expect(container.textContent).not.toContain("Copy report…");
-
-    const previewSwitch = container.querySelector<HTMLButtonElement>(
-      'button[role="switch"]',
-    );
-    act(() => previewSwitch?.click());
-    expect(mocks.setChannel).toHaveBeenCalledWith("preview");
   });
 
-  it("renders on a custom origin without the Cloud preview switch", async () => {
-    vi.spyOn(channelModule, "desktopChannelForOrigin").mockReturnValue(null);
+  it("labels the connected server with its origin", async () => {
     window.minddy = currentBridge().bridge;
     await renderSection();
 
     expect(container.textContent).toContain("Connected server");
     expect(container.textContent).toContain(window.location.origin);
-    expect(container.textContent).not.toContain("Preview the latest features");
   });
 
   it("keeps the card compatible with a legacy shell", async () => {
@@ -220,7 +207,6 @@ describe("AccountDesktopSection", () => {
     await renderSection();
 
     expect(container.textContent).toContain("minddy 1.0.0");
-    expect(container.textContent).toContain("Preview the latest features");
     expect(container.textContent).not.toContain("Change…");
     expect(container.textContent).not.toContain("Check for updates…");
   });

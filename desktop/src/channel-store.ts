@@ -3,63 +3,49 @@ import path from "node:path";
 import { app } from "electron";
 
 import {
-  DESKTOP_DEFAULT_CHANNEL,
-  parseDesktopChannel,
-  type DesktopChannel,
+  DESKTOP_STABLE_CHANNEL,
+  storedChannelNeedsReset,
 } from "@/lib/desktop/channel";
 
 /**
- * The chosen channel, retained from one launch to another (MIN-352).
+ * Brings installations back from the retired preview channel (MIN-765).
  *
- * **A JSON file, and not the cookies nor the `localStorage` of the page**:
- * the channel IS the origin, so you have to know it before loading whatever
- * whatever — a setting stored in the page that serves it would never read
- * early enough to decide which page to serve. It therefore lives in `userData`, next to
- * of the session and the caches, under the app name set by `main.ts`.
+ * Versions before MIN-765 recorded the chosen channel in
+ * `userData/channel.json`. An installation that had switched to preview would
+ * otherwise keep a file that no longer means anything, so the shell rewrites it
+ * to stable once, at startup, before the window loads. The window itself never
+ * reads the file again: it always loads the stable origin.
  *
- * ⚠ This folder CHANGES in development (`minddy-dev`, cf. `app.setName`): a dev session cannot switch the channel of the installed app, and that's very good.
+ * ⚠ This folder CHANGES in development (`minddy-dev`, cf. `app.setName`): a dev
+ * session never touches the file of the installed app.
  *
- * Reading and writing **synchronous**, and this is deliberate: reading must be
- * finished before `createWindow`, and writing before the reload that follows it.
- * The file is forty bytes.
+ * Synchronous on purpose: it runs before `createWindow`, and the file is forty
+ * bytes. Any failure is silent apart from a log line — the window opens on
+ * production either way.
  */
 
 const FILE_NAME = "channel.json";
 
-function channelFile(): string {
-  return path.join(app.getPath("userData"), FILE_NAME);
-}
-
-/**
- * The channel on disk, or the stable.
- *
- * **Any failure falls on the stable, silently**: file missing (first
- * opening, the normal case), JSON truncated by a sudden stop, folder in
- * read only. None of these cases justify preventing the app from opening, and
- * fallback always goes to production.
- */
-export function readDesktopChannel(): DesktopChannel {
+/** Returns `true` when a recorded preview channel was rewritten to stable. */
+export function resetRetiredDesktopChannel(): boolean {
+  const file = path.join(app.getPath("userData"), FILE_NAME);
+  let raw: unknown;
   try {
-    const raw: unknown = JSON.parse(readFileSync(channelFile(), "utf8"));
-    if (typeof raw !== "object" || raw === null) return DESKTOP_DEFAULT_CHANNEL;
-    return parseDesktopChannel((raw as { channel?: unknown }).channel);
+    raw = JSON.parse(readFileSync(file, "utf8"));
   } catch {
-    return DESKTOP_DEFAULT_CHANNEL;
+    // Missing (the normal case) or unreadable: nothing to migrate.
+    return false;
   }
-}
-
-/**
- * Keeps the channel. Returns `false` if the write failed — the caller toggles
- * still the window, but the choice will not survive the next launch, and
- * is something we want to see in the logs rather than discovering on
- * reboot.
- */
-export function writeDesktopChannel(channel: DesktopChannel): boolean {
+  if (!storedChannelNeedsReset(raw)) return false;
   try {
-    writeFileSync(channelFile(), `${JSON.stringify({ channel }, null, 2)}\n`, "utf8");
+    writeFileSync(
+      file,
+      `${JSON.stringify({ channel: DESKTOP_STABLE_CHANNEL }, null, 2)}\n`,
+      "utf8",
+    );
     return true;
   } catch (error) {
-    console.error("[channel] write failed", error);
+    console.error("[channel] reset failed", error);
     return false;
   }
 }

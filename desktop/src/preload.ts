@@ -2,7 +2,6 @@ import { contextBridge, ipcRenderer } from "electron";
 
 import type { DesktopAuthLink } from "@/lib/desktop/auth-link";
 import type { DesktopBridge } from "@/lib/desktop/bridge";
-import type { DesktopChannel } from "@/lib/desktop/channel";
 import { notificationCapabilitiesForPlatform } from "@/lib/desktop/notification-capabilities";
 import type { DesktopUpdateStatus } from "@/lib/desktop/update-status";
 
@@ -201,17 +200,13 @@ const bridge: DesktopBridge = {
     ipcRenderer.send("minddy:focus");
   },
 
-  setChannel(channel: DesktopChannel) {
-    ipcRenderer.send("minddy:set-channel", channel);
-  },
-
   onUpdateStatus(handler: (status: DesktopUpdateStatus) => void) {
     const listener = (_event: unknown, status: DesktopUpdateStatus) =>
       handler(status);
     ipcRenderer.on("minddy:update-status", listener);
     // Same reason as for the macOS buttons: the download was able to complete
-    // finish before this page exists — it reloads on each toggle
-    // channel, and the shell lives for weeks. The main process replays.
+    // finish before this page exists — it reloads whenever the server
+    // changes, and the shell lives for weeks. The main process replays.
     ipcRenderer.send("minddy:update-status-ready");
     return () => {
       ipcRenderer.removeListener("minddy:update-status", listener);

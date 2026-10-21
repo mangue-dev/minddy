@@ -95,7 +95,8 @@ const COQUILLE = {
   "updater-module.ts":
     "loads electron-updater on first use; load timing regressions live in @/lib/desktop/updater.test",
   "hide-window.ts": "wires hideWindowStep from @/lib/desktop/hide-window",
-  "channel-store.ts": "reads and writes the channel file; parsing lives in @/lib/desktop/channel",
+  "channel-store.ts":
+    "rewrites a retired preview channel file to stable; the decision lives in @/lib/desktop/channel",
   "push-installation-store.ts":
     "reads and writes the APNs identity; validation lives in @/lib/desktop/push-installation",
   "repo-store.ts": "reads and writes attachments; parsing lives in @/lib/desktop/local-repo",

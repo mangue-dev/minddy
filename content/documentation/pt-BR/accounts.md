@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-21",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -71,10 +71,10 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 15,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (pt-BR MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-21"
   },
   "related": [
     "choose-an-instance",
@@ -106,7 +106,7 @@
       "src": "/documentation/pt-BR/account-security-workflow.png",
       "alt": "Cartão de autenticação de dois fatores com botão de ativação.",
       "caption": "Comece aqui, depois verifique o autenticador e guarde os códigos de recuperação em local protegido.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -123,7 +123,7 @@
       "src": "/documentation/pt-BR/profile-and-preferences-workflow.png",
       "alt": "Cabeçalho do perfil com o avatar e seu selo de edição, o nome e o email somente leitura.",
       "caption": "Selecione o avatar para gerar ou enviar um, ou o nome para alterá-lo; o endereço de email continua somente leitura.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -140,7 +140,7 @@
       "src": "/documentation/pt-BR/profile-and-preferences-preferences-workflow.png",
       "alt": "Seletor de idioma, controles de tema claro, escuro e do sistema, seletores de paleta dos modos claro e escuro e o interruptor de transparência.",
       "caption": "O idioma da conta e o do site público são configurados separadamente.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -157,7 +157,7 @@
       "src": "/documentation/pt-BR/privacy-and-account-deletion-workflow.png",
       "alt": "Prévia de exclusão com projetos próprios, tickets e membros que perderão acesso.",
       "caption": "Leia a prévia e exporte os dados que deseja manter antes de abrir a confirmação.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -248,7 +248,7 @@ Selecione o idioma e o tema nas preferências e confira outra página. O idioma 
 
 O tema escolhe o modo claro, escuro ou do sistema. **Paleta do modo claro** e **Paleta do modo escuro** definem cada uma as cores de um modo. As **cores de destaque** (minddy, Azul, Violeta, Verde, Laranja, Rosa) mantêm as cores do minddy e só mudam a cor dos botões e do anel de foco; as **paletas completas** (Solarized, Catppuccin, Nord) mudam todas as superfícies; **Alto contraste** fica em Acessibilidade. A paleta do modo exibido se aplica na hora; a outra fica salva e aparece quando seu modo volta a ficar ativo, inclusive quando Sistema acompanha uma troca do sistema operacional. Alto contraste reforça o contraste de texto e bordas, contorna campos, menus, diálogos e abas, marca a página atual e o item selecionado, sempre mostra o foco do teclado e mantém os menus opacos. Desative **Transparência** para deixar menus, popovers e a paleta de comandos opacos, sem desfoque. As paletas e a transparência ficam salvas na conta; outro dispositivo as aplica no próximo carregamento de página.
 
-Escolha o atalho de envio na seção de teclado. Ele vale para comentários e Numo. Use o botão de enviar se a plataforma interceptar o atalho; as teclas modificadoras variam entre sistemas. Os projetos que você ocultou ficam listados na aba própria **Projetos ocultos**, onde você pode mostrá-los de novo. **Preferências** também reúne o cartão **Aplicativo de desktop**: na web, ele leva ao download do aplicativo de desktop; no aplicativo de desktop, mostra o servidor conectado, o canal de prévia quando disponível e a versão do aplicativo. As preferências de tickets também pertencem à conta e não alteram as de outros membros: a atribuição automática fica na aba **Tickets**, e o status dos tickets criados pelo Numo em **IA e Numo** → **Tickets criados pelo Numo**.
+Escolha o atalho de envio na seção de teclado. Ele vale para comentários e Numo. Use o botão de enviar se a plataforma interceptar o atalho; as teclas modificadoras variam entre sistemas. Os projetos que você ocultou ficam listados na aba própria **Projetos ocultos**, onde você pode mostrá-los de novo. **Preferências** também reúne o cartão **Aplicativo de desktop**: na web, ele leva ao download do aplicativo de desktop; no aplicativo de desktop, mostra o servidor conectado e a versão do aplicativo. As preferências de tickets também pertencem à conta e não alteram as de outros membros: a atribuição automática fica na aba **Tickets**, e o status dos tickets criados pelo Numo em **IA e Numo** → **Tickets criados pelo Numo**.
 
 ![Seletor de idioma, controles de tema claro, escuro e do sistema, seletores de paleta dos modos claro e escuro e o interruptor de transparência.](/documentation/pt-BR/profile-and-preferences-preferences-workflow.png)
 

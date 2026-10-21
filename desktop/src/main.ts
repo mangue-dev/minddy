@@ -17,14 +17,8 @@ import {
 } from "electron";
 
 import { parseDesktopAuthLink } from "@/lib/desktop/auth-link";
-import { createDesktopChannelSwitch } from "@/lib/desktop/channel-switch";
 import { createDesktopAuthLinkDelivery } from "@/lib/desktop/auth-link-delivery";
 import { discoverLocalModels } from "@/lib/desktop/local-models";
-import {
-  desktopOriginForChannel,
-  parseDesktopChannel,
-  type DesktopChannel,
-} from "@/lib/desktop/channel";
 import {
   DESKTOP_APP_NAME,
   DESKTOP_BUNDLE_ID,
@@ -71,10 +65,6 @@ import { createWindowStallRecovery } from "@/lib/desktop/window-stall-recovery";
 import { loadLocalRecoveryDocument } from "@/lib/desktop/local-recovery-load";
 import { loadDesktopWindow } from "@/lib/desktop/window-load";
 import { createLocalStartupSelection } from "@/lib/desktop/local-startup-selection";
-import {
-  carrySessionCookies,
-  staleSessionCookies,
-} from "@/lib/desktop/session-carry";
 import { routeDisposition } from "@/lib/desktop/window-routes";
 import { parseWnsHelperChannel } from "@/lib/desktop/wns";
 import { parseWindowsStoreUpdateProbe } from "@/lib/desktop/windows-store-update";
@@ -88,7 +78,7 @@ import {
   windowChromeReplacement,
   type RememberedWindowChrome,
 } from "@/lib/desktop/window-frame";
-import { readDesktopChannel, writeDesktopChannel } from "./channel-store";
+import { resetRetiredDesktopChannel } from "./channel-store";
 import {
   disableNativePush,
   nativePushAllowed,
@@ -277,18 +267,15 @@ function startWindowsStoreUpdateChecks(): void {
 }
 
 /**
- * THE CHANNEL, and the origin that results from it (MIN-352).
+ * The origin the window shows: minddy Cloud, or the server the person chose.
  *
- * `DESKTOP_ORIGIN` is no longer a constant for this window: it is the
- * starting point, replaced at startup by what `channel.json` says. Everything
- * that speaks of origin in this file - the navigation guard, the
+ * Everything that speaks of origin in this file - the navigation guard, the
  * loadings, the micro permission - reads `origin`, never the constant, without
- * which half of the app would remain connected to production while the
- * window displays the preview. A navigation guard that compares to the bad
- * origin returns the entire app to the system browser: this is the kind of fault
- * that is only seen on the first click.
+ * which half of the app would stay on minddy Cloud while the window displays a
+ * custom server. A navigation guard that compares to the wrong origin returns
+ * the entire app to the system browser: this is the kind of fault that is only
+ * seen on the first click.
  */
-let channel: DesktopChannel = "stable";
 let origin: string = DESKTOP_ORIGIN;
 let customServerOrigin: string | null = null;
 
@@ -312,7 +299,7 @@ function setNativeNotificationsAvailable(available: boolean): void {
 
 function rebuildAppMenu(): void {
   if (!mainWindow) return;
-  buildAppMenu(mainWindow, channel, onChannelChange, {
+  buildAppMenu(mainWindow, {
     origin,
     isCustom: customServerOrigin !== null,
     choose: openCurrentServerPicker,
@@ -354,7 +341,6 @@ async function selectLocalMinddy(): Promise<{ error?: string }> {
     if (generation !== localRuntimeGeneration || quitting) return { error: "Local startup was canceled." };
     const root = validateLocalRuntimeRoot(selection.filePaths[0]);
     generation = ++localRuntimeGeneration;
-    channelSwitch.cancel();
     showLocalRuntimeStatus("Starting Supabase and the app. The first start can take several minutes.");
     await startLocalRuntime(root);
     if (generation !== localRuntimeGeneration || quitting) return { error: "Local startup was canceled." };
@@ -368,11 +354,10 @@ async function selectLocalMinddy(): Promise<{ error?: string }> {
 }
 
 function applyServerOrigin(next: string | null, entryPath = DESKTOP_ENTRY_PATH): void {
-  channelSwitch.cancel();
   localRuntimeGeneration++;
   if (next !== LOCAL_SELF_HOST_ORIGIN) stopLocalRuntime();
   customServerOrigin = next;
-  const nextOrigin = next ?? desktopOriginForChannel(channel);
+  const nextOrigin = next ?? DESKTOP_ORIGIN;
   if (nextOrigin !== origin) localNotifications.clear();
   origin = nextOrigin;
   trace("server", { origin, custom: next !== null });
@@ -391,98 +376,7 @@ function setCustomServer(next: string): void {
 
 function useMinddyCloud(): void {
   writeDesktopServerOrigin(null);
-  writeDesktopChannel("stable");
-  channel = "stable";
   applyServerOrigin(null);
-}
-
-/**
- * Switches the channel: we take the session, we retain, then we reload.
- *
- * A FULL reload, and not a client navigation: we change origin,
- * therefore document, session and bundle. Nothing that was returned is worth
- * nothing anymore.
- *
- * **The session FOLLOWS, since MIN-353.** The cookies remain by origin — it's
- * the shell which copies them from one jar to another, because it has both
- * on hand and that it knows when the switch takes place (lib/desktop/session-carry.ts).
- * Without that, each round trip would fall back on the connection screen.
- *
- * ⚠ **The carryover comes BEFORE loading, and you have to wait for it.** Set the
- * cookies while the new origin load, it's running against it: the
- * request for `/home` can leave without them, the proxy sends it back to `/login`, and
- * we end up with a perfectly valid session on a login screen.
- * Hence the asynchronous function, and the only place in the file that waits something
- * before acting.
- */
-const channelSwitch = createDesktopChannelSwitch({
-  current: () => channel,
-  unavailable: () => customServerOrigin !== null || quitting || quittingForUpdate,
-  prepare: (next) => carrySession(origin, desktopOriginForChannel(next)),
-  apply: (next) => {
-    localRuntimeGeneration++;
-    stopLocalRuntime();
-    const to = desktopOriginForChannel(next);
-    writeDesktopChannel(next);
-    channel = next;
-    if (to !== origin) localNotifications.clear();
-    origin = to;
-    trace("setChannel", { channel: next, origin });
-    // Refresh both native surfaces that display the selected channel.
-    applyAboutPanel();
-    if (mainWindow) {
-      rebuildAppMenu();
-      goHome(mainWindow);
-      revealWindow(mainWindow);
-    }
-  },
-});
-
-async function setChannel(next: DesktopChannel): Promise<void> {
-  await channelSwitch.select(next);
-}
-
-/**
- * What the menu and bridge call it: the toggle, without its promise.
- *
- * Neither has anything to wait for — a `click` of `MenuItem` and a
- * `ipcMain.on` return immediately.
- */
-function onChannelChange(next: DesktopChannel): void {
-  void setChannel(next).catch(() => {
-    console.error("[channel] switch_failed");
-  });
-}
-
-/**
- * Copies the session cookies from the origin you leave to the one you
- * joins. See lib/desktop/session-carry.ts for what travels and why.
- *
- * **A failure should not hold the toggle.** The worst case is the one before:
- * we arrive at the login screen. Preventing changing channels because the
- * jar refused a write, on the other hand, would leave someone stuck on a broken
- * preview — the only case where you absolutely need to be able to revert.
- */
-async function carrySession(from: string, to: string): Promise<void> {
-  if (from === to) return;
-  try {
-    const jar = session.defaultSession.cookies;
-    const carried = carrySessionCookies(await jar.get({ url: from }), to);
-    if (carried.length === 0) {
-      // No one is connected to the origin we are leaving: there is nothing to
-      // take away, and above all nothing to erase on arrival - the session that is there
-      // maybe find is the only one left.
-      trace("carrySession", { from, to, carried: 0 });
-      return;
-    }
-    for (const name of staleSessionCookies(await jar.get({ url: to }), carried)) {
-      await jar.remove(to, name);
-    }
-    for (const cookie of carried) await jar.set(cookie);
-    trace("carrySession", { from, to, carried: carried.length });
-  } catch {
-    console.error("[channel] session_carry_over_failed");
-  }
 }
 
 /**
@@ -498,7 +392,7 @@ function applyAboutPanel(): void {
     copyright: "© 2026 mangue",
     // `credits` is the only free line that macOS displays; `website` does not
     // does not exist (this is a Linux option). We put the ACTIVE origin there and not the
-    // constant: on the preview channel, it's the only place that says it without
+    // constant: on a custom server, it's the only place that says it without
     // that we have to open a menu.
     credits: origin,
   });
@@ -1198,13 +1092,6 @@ function registerIpc(): void {
     publishWindowButtons(undefined, event.sender)
   );
 
-  // The channel, requested by the settings screen (MIN-352). The renderer does not
-  // that PROPOSE a value: `parseDesktopChannel` returns it to one of the two
-  // channels, and anything that is not `"preview"` returns to production.
-  ipcMain.on("minddy:set-channel", (_event, next: unknown) => {
-    onChannelChange(parseDesktopChannel(next));
-  });
-
   // The update, as the sidebar shows it (MIN-353). Replay
   // TARGETED at the subscriber who requests it, as for the macOS buttons: the page has
   // could be mounted long after the download was completed.
@@ -1568,12 +1455,13 @@ if (!app.requestSingleInstanceLock()) {
       ]);
     }
 
-    // The channel BEFORE the window: it says which origin to load, and
-    // there is no second loading to hope for to catch up.
-    channel = readDesktopChannel();
+    // The origin BEFORE the window: there is no second loading to hope for to
+    // catch up. Installations that had switched to the retired preview channel
+    // come back to stable here (MIN-765).
+    if (resetRetiredDesktopChannel()) trace("channel", { reset: "stable" });
     customServerOrigin = readDesktopServerOrigin();
-    origin = customServerOrigin ?? desktopOriginForChannel(channel);
-    trace("channel", { channel, origin, customServer: customServerOrigin !== null });
+    origin = customServerOrigin ?? DESKTOP_ORIGIN;
+    trace("origin", { origin, customServer: customServerOrigin !== null });
 
     applyAboutPanel();
     hardenSession();

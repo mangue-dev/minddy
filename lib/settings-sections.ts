@@ -390,7 +390,7 @@ export function useSettingsSections(): SettingsSection[] {
           "bureau", "desktop", "application", "app", "mac", "macos",
           "windows", "linux", "télécharger", "telecharger", "download",
           "installer", "install", "version", "mise à jour", "mise a jour",
-          "update", "serveur", "server", "aperçu", "apercu", "preview",
+          "update", "serveur", "server",
         ],
       }),
       account({

@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-21",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -71,10 +71,10 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 15,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-21"
   },
   "related": [
     "choose-an-instance",
@@ -106,7 +106,7 @@
       "src": "/documentation/fr/account-security-workflow.png",
       "alt": "Carte de double authentification avec le bouton Activer.",
       "caption": "Commencez ici, puis vérifiez l’authentificateur et conservez les codes de récupération à l’abri.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -123,7 +123,7 @@
       "src": "/documentation/fr/profile-and-preferences-workflow.png",
       "alt": "En-tête du profil avec l’avatar et son badge de modification, le nom et l’adresse email en lecture seule.",
       "caption": "Sélectionnez l’avatar pour en générer ou en importer un, ou le nom pour le changer ; l’adresse email reste en lecture seule.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -140,7 +140,7 @@
       "src": "/documentation/fr/profile-and-preferences-preferences-workflow.png",
       "alt": "Sélecteur de langue, commandes des thèmes clair, sombre et système, sélecteurs de palette des modes clair et sombre et interrupteur de transparence.",
       "caption": "La langue du compte et celle du site public se règlent séparément.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -157,7 +157,7 @@
       "src": "/documentation/fr/privacy-and-account-deletion-workflow.png",
       "alt": "Aperçu de suppression listant les projets possédés, les tickets et les membres privés d’accès.",
       "caption": "Lisez l’aperçu et exportez les données à conserver avant d’ouvrir la confirmation de suppression.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -252,7 +252,7 @@ Dans les préférences, sélectionnez la langue et le thème puis vérifiez une 
 
 Le thème choisit le mode clair, sombre ou système. **Palette du mode clair** et **Palette du mode sombre** règlent chacune les couleurs d'un mode. Les **couleurs d'accent** (minddy, Bleu, Violet, Vert, Orange, Rose) gardent les couleurs de minddy et ne recolorent que les boutons et l'anneau de focus ; les **palettes complètes** (Solarized, Catppuccin, Nord) recolorent toutes les surfaces ; **Contraste élevé** figure sous Accessibilité. La palette du mode affiché s'applique immédiatement ; l'autre est enregistrée et apparaît dès que son mode redevient actif, y compris quand Système suit un changement du système d'exploitation. Contraste élevé renforce le contraste du texte et des bordures, détoure les champs, menus, dialogues et onglets, marque la page courante et l'élément sélectionné, affiche toujours le focus clavier et garde les menus opaques. Désactivez **Transparence** pour rendre opaques, sans flou, les menus, les pop-overs et la palette de commandes. Palettes et transparence sont enregistrées sur le compte ; un autre appareil les applique au prochain chargement de page.
 
-Choisissez le raccourci d’envoi dans les réglages clavier. Il s’applique aux commentaires et à Numo. Utilisez le bouton d’envoi si la plateforme intercepte le raccourci ; les touches modificatrices diffèrent selon l’OS. Les projets que vous avez masqués sont listés dans leur propre onglet **Projets masqués**, où vous pouvez les réafficher. **Préférences** contient aussi la carte **Application de bureau** : sur le web, elle mène au téléchargement de l’app de bureau ; dans l’app de bureau, elle affiche le serveur connecté, le canal de prévisualisation lorsqu’il est disponible et la version de l’application. Les préférences de tickets appartiennent aussi au compte et ne changent pas celles des autres membres : l’assignation automatique se trouve dans l’onglet **Tickets**, et le statut des tickets créés par Numo dans **IA et Numo** → **Tickets créés par Numo**.
+Choisissez le raccourci d’envoi dans les réglages clavier. Il s’applique aux commentaires et à Numo. Utilisez le bouton d’envoi si la plateforme intercepte le raccourci ; les touches modificatrices diffèrent selon l’OS. Les projets que vous avez masqués sont listés dans leur propre onglet **Projets masqués**, où vous pouvez les réafficher. **Préférences** contient aussi la carte **Application de bureau** : sur le web, elle mène au téléchargement de l’app de bureau ; dans l’app de bureau, elle affiche le serveur connecté et la version de l’application. Les préférences de tickets appartiennent aussi au compte et ne changent pas celles des autres membres : l’assignation automatique se trouve dans l’onglet **Tickets**, et le statut des tickets créés par Numo dans **IA et Numo** → **Tickets créés par Numo**.
 
 ![Sélecteur de langue, commandes des thèmes clair, sombre et système, sélecteurs de palette des modes clair et sombre et interrupteur de transparence.](/documentation/fr/profile-and-preferences-preferences-workflow.png)
 
