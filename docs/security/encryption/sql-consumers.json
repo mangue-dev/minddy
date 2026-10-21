@@ -3528,6 +3528,23 @@
       ],
       "functionReferences": []
     },
+    "reorder_categories(uuid,uuid,uuid[])": {
+      "sha256": "f96551774ad6f9c4d682ad8c6e8a9757620011b3a6525c802432f231c32719e8",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "categories"
+      ],
+      "protectedRelations": [
+        "categories"
+      ],
+      "functionReferences": [
+        "guard_project_actor"
+      ]
+    },
     "rotate_encryption_backfill_attempt()": {
       "sha256": "01fdcf1d63c8a98de8bc5f22eba65166e5cc88206fd37f7263b02581ab357b33",
       "securityDefiner": false,

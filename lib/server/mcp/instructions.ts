@@ -45,7 +45,9 @@ export const MCP_FULL_USAGE_GUIDE =
       "minddy_create_issue takes them at creation, siblings of the same call " +
       "included ('sub:N'). A dependency you noticed and did not record is one " +
       "nobody else can see. minddy_list_members and minddy_list_categories " +
-      "resolve names to ids when you need them. An issue " +
+      "resolve names to ids when you need them; minddy_list_categories gives " +
+      "categories in their display order, which minddy_reorder_categories " +
+      "changes. An issue " +
       "can RECUR: field 'recurrence' (daily, weekly, monthly, yearly) riding on its " +
       "due date — 'every Monday' is the cadence plus the date, so a cadence without " +
       "a due_date is refused. Completing a recurring issue creates the next " +

@@ -961,6 +961,8 @@ export interface Category {
   project_id: string;
   name: string;
   color: string;
+  /** Display order within the project (ascending). */
+  position: number;
   created_at: string;
 }
 

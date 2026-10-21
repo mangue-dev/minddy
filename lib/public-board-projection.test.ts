@@ -110,8 +110,8 @@ describe("publicObjectivesFor", () => {
 
 describe("publicCategoriesFor", () => {
   const categories: Category[] = [
-    { id: "cat-1", project_id: "proj", name: "Bug", color: "#f00", created_at: "x" },
-    { id: "cat-2", project_id: "proj", name: "Inutilisée", color: "#0f0", created_at: "x" },
+    { id: "cat-1", project_id: "proj", name: "Bug", color: "#f00", position: 0, created_at: "x" },
+    { id: "cat-2", project_id: "proj", name: "Inutilisée", color: "#0f0", position: 1, created_at: "x" },
   ];
 
   it("ne garde que les catégories peintes par une carte, sans leur ligne complète", () => {

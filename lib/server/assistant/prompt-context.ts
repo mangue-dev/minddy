@@ -52,7 +52,7 @@ export async function gatherProjectPromptContext({
     categoryStore(supabase)
       .select("id, name")
       .eq("project_id", project.id)
-      .order("name", { ascending: true }),
+      .order("position", { ascending: true }),
     // The WIKI (MIN-273): titles and parents, never the bodies — the map holds
     // in the prompt, the documents are read page by page with get_page.
     supabase

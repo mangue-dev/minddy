@@ -75,6 +75,7 @@ export const MCP_TOOL_CAPABILITIES = {
   minddy_link_issues: "write",
   minddy_create_objective: "write",
   minddy_update_objective: "write",
+  minddy_reorder_categories: "write",
   minddy_add_to_cycle: "write",
   minddy_move_to_cycle: "write",
   minddy_remove_from_cycle: "write",

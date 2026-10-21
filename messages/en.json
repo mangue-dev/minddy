@@ -1427,6 +1427,8 @@
     "rename": "Rename {name}",
     "nameRequired": "Enter a name.",
     "deleteAria": "Delete {name}",
+    "reorderAria": "Move {name}",
+    "reorderHint": "Drag to reorder. Keyboard: Space picks up, Up/Down moves, Space drops, Escape cancels.",
     "addCategory": "Add"
   },
   "Common": {
@@ -3677,6 +3679,9 @@
     "updatingCategory": "Updating category…",
     "categoryUpdated": "Category updated",
     "updateCategoryFailed": "Couldn't update the category",
+    "reorderingCategories": "Reordering categories…",
+    "categoriesReordered": "Categories reordered",
+    "reorderCategoriesFailed": "Couldn't reorder the categories",
     "creatingIntegration": "Creating integration…",
     "integrationCreated": "Integration created",
     "createIntegrationFailed": "Couldn't create the integration",

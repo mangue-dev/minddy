@@ -38,7 +38,7 @@ function readBoardRows(supabase: SupabaseClient, actorId: string, timing: AllSta
   return Promise.all([
     measureAllStartupPhase(timing, "issues", () => loadGlobalBoardIssues(supabase, actorId, timing)),
     measureAllStartupPhase(timing, "projects", () => supabase.from("projects").select("id, owner_id").is("deleted_at", null)),
-    measureAllStartupPhase(timing, "categories", () => categoryStore(supabase, actorId).select("*")),
+    measureAllStartupPhase(timing, "categories", () => categoryStore(supabase, actorId).select("*").order("position")),
     measureAllStartupPhase(timing, "objectives", () => objectiveStore(supabase).select("*")),
     // ALL relation types: `blocks` feeds the cycle reco ordering, and the
     // full set powers the cards' relation chips + the side panel (RLS scopes

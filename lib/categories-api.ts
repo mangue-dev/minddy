@@ -54,6 +54,21 @@ export async function updateCategoryApi(
   );
 }
 
+/** Sends the full display order; returns the categories in that order. */
+export async function reorderCategoriesApi(
+  projectId: string,
+  categoryIds: string[]
+): Promise<Category[]> {
+  trackEvent("category_reordered", {});
+  return parseJson<Category[]>(
+    await fetch(`/api/projects/${projectId}/categories/order`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ category_ids: categoryIds }),
+    })
+  );
+}
+
 export async function deleteCategoryApi(categoryId: string): Promise<void> {
   trackEvent("category_deleted", {});
   const response = await fetch(`/api/categories/${categoryId}`, { method: "DELETE" });

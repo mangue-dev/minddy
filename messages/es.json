@@ -1427,6 +1427,8 @@
     "rename": "Renombrar {name}",
     "nameRequired": "Escribe un nombre.",
     "deleteAria": "Eliminar {name}",
+    "reorderAria": "Mover {name}",
+    "reorderHint": "Arrastra para reordenar. Teclado: Espacio levanta, Arriba/Abajo mueve, Espacio suelta, Escape cancela.",
     "addCategory": "Añadir"
   },
   "Common": {
@@ -3677,6 +3679,9 @@
     "updatingCategory": "Actualización de la categoría...",
     "categoryUpdated": "Categoría actualizada",
     "updateCategoryFailed": "No se pudo actualizar la categoría",
+    "reorderingCategories": "Reordenando las categorías…",
+    "categoriesReordered": "Categorías reordenadas",
+    "reorderCategoriesFailed": "No se pudieron reordenar las categorías",
     "creatingIntegration": "Creación de integración...",
     "integrationCreated": "Integración creada",
     "createIntegrationFailed": "No se pudo crear la integración",

@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
-  "sourceRevision": 14,
+  "revision": 16,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-21",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -50,6 +50,7 @@
       "components/settings/project-identity-header.tsx",
       "components/settings/inline-edit-field.tsx",
       "components/project-categories.tsx",
+      "lib/server/categories.ts",
       "components/settings/project-settings-page.tsx",
       "components/create-project-wizard.tsx",
       "lib/project-draft.ts",
@@ -62,10 +63,10 @@
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 16,
+    "fact": "agent:claude (MIN-760: category reordering paragraph checked against components/project-categories.tsx, the order route and the Numo/MCP tools; existing figures unaffected and kept; no browser walkthrough of the procedure)",
+    "language": "agent:claude (de translation of the added en paragraph, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-21"
   },
   "related": [
     "issues",
@@ -89,7 +90,7 @@
       "src": "/documentation/de/project-general.png",
       "alt": "Projektkopf mit Symbol und Bearbeitungssymbol, Name, Schlüssel sowie den Kennzahlen Vorgänge, Mitglieder, Ziele, Kategorien und Erstellt.",
       "caption": "Wähle Symbol, Namen oder Schlüssel, um sie direkt zu ändern; das Verschieben in den Papierkorb bleibt eine eigene Aktion weiter unten.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -106,7 +107,7 @@
       "src": "/documentation/de/project-members.png",
       "alt": "Karte „Personen einladen“ über der Karte Mitglieder mit drei Demo-Mitgliedern, der Eigentümer ist gekennzeichnet.",
       "caption": "Lade Mitglieder über ihre Konto-E-Mail ein und prüfe den Eigentümer, bevor du einen Zugang entfernst.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -135,7 +136,7 @@ Der Tab **Allgemein** beginnt mit der Identität des Projekts: seinem Symbol, se
 
 Die weiteren Tabs sind **Kategorien**, **Mitglieder**, **Wiederholungen**, **Intelligente Zuweisung**, **Feedback**, **Git**, **Importieren** und **Integrationen**. Lies die jeweilige Aufgabenanleitung, bevor du einen Anbieter oder automatische Arbeit aktivierst. Kontoeinstellungen wie deine Oberflächensprache sind von der Projektkonfiguration getrennt.
 
-Unter **Kategorien** verwalten der Eigentümer und die Mitglieder die Kategorien, mit denen Tickets eingeordnet werden. Wähle **Neue Kategorie** in der Titelzeile der Karte: Oben in der Liste erscheint eine Zeile mit einem Farbpunkt und einem Namensfeld. Drücke Enter oder wähle **Hinzufügen**, um die Kategorie anzulegen; Escape schließt die Zeile, ohne sie anzulegen. Wähle den Farbpunkt einer Kategorie, um eine andere Farbe zu wählen, die sofort gilt (auf dem Telefon öffnen sich die Farben in einem Blatt), oder wähle ihren Namen, um sie direkt umzubenennen. Die Löschschaltfläche fragt nach einer Bestätigung und entfernt die Kategorie dann aus allen Tickets.
+Unter **Kategorien** verwalten der Eigentümer und die Mitglieder die Kategorien, mit denen Tickets eingeordnet werden. Wähle **Neue Kategorie** in der Titelzeile der Karte: Oben in der Liste erscheint eine Zeile mit einem Farbpunkt und einem Namensfeld. Drücke Enter oder wähle **Hinzufügen**, um die Kategorie anzulegen; Escape schließt die Zeile, ohne sie anzulegen. Wähle den Farbpunkt einer Kategorie, um eine andere Farbe zu wählen, die sofort gilt (auf dem Telefon öffnen sich die Farben in einem Blatt), oder wähle ihren Namen, um sie direkt umzubenennen. Die Löschschaltfläche fragt nach einer Bestätigung und entfernt die Kategorie dann aus allen Tickets. Sobald das Projekt mindestens zwei Kategorien hat, trägt jede Zeile links einen Ziehgriff: Ziehe ihn, um die Kategorie nach oben oder unten zu verschieben. Mit der Tastatur setzt du den Fokus auf den Griff, drückst die Leertaste, verschiebst die Kategorie mit den Pfeiltasten nach oben und unten und drückst erneut die Leertaste, um sie abzulegen; Escape bricht ab. Diese Reihenfolge zeigen alle Kategoriemenüs und -filter für alle im Projekt. Numo und Minddy-MCP-Clients können sie ebenfalls lesen und ändern, etwa wenn du Numo bittest, eine Kategorie an den Anfang zu stellen.
 
 
 ![Projektkopf mit Symbol und Bearbeitungssymbol, Name, Schlüssel sowie den Kennzahlen Vorgänge, Mitglieder, Ziele, Kategorien und Erstellt.](/documentation/de/project-general.png)

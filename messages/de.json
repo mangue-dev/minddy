@@ -1427,6 +1427,8 @@
     "rename": "{name} umbenennen",
     "nameRequired": "Gib einen Namen ein.",
     "deleteAria": "{name} löschen",
+    "reorderAria": "{name} verschieben",
+    "reorderHint": "Zum Neuordnen ziehen. Tastatur: Leertaste nimmt auf, Pfeil hoch/runter verschiebt, Leertaste legt ab, Esc bricht ab.",
     "addCategory": "Hinzufügen"
   },
   "Common": {
@@ -3677,6 +3679,9 @@
     "updatingCategory": "Kategorie wird aktualisiert…",
     "categoryUpdated": "Kategorie aktualisiert",
     "updateCategoryFailed": "Kategorie konnte nicht aktualisiert werden",
+    "reorderingCategories": "Kategorien werden neu geordnet…",
+    "categoriesReordered": "Kategorien neu geordnet",
+    "reorderCategoriesFailed": "Kategorien konnten nicht neu geordnet werden",
     "creatingIntegration": "Integration wird erstellt…",
     "integrationCreated": "Integration erstellt",
     "createIntegrationFailed": "Die Integration konnte nicht erstellt werden",

@@ -1,8 +1,26 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, Delete02Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Delete02Icon, DragDropVerticalIcon } from "@hugeicons/core-free-icons";
 import { useState, type KeyboardEvent } from "react";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type Modifier,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
@@ -99,19 +117,50 @@ function ColorButton({
   );
 }
 
+// Rows only move up and down the list.
+const verticalDrag: Modifier = ({ transform }) => ({ ...transform, x: 0 });
+
 function CategoryRow({
   category,
+  sortable,
   onUpdate,
   onDelete,
 }: {
   category: Category;
+  /** False while the list cannot be reordered (a single category). */
+  sortable: boolean;
   onUpdate: (updates: { name?: string; color?: string }) => Promise<unknown>;
   onDelete: () => void;
 }) {
   const t = useTranslations("Categories");
+  const { setNodeRef, setActivatorNodeRef, attributes, listeners, transform, transition, isDragging } =
+    useSortable({ id: category.id, disabled: !sortable });
 
   return (
-    <li className="group/category flex items-center gap-2 py-2">
+    <li
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn(
+        "group/category relative flex items-center gap-2 bg-card py-2",
+        isDragging && "z-10 shadow-sm"
+      )}
+    >
+      {sortable && (
+        <AppTooltip label={t("reorderHint")}>
+          <button
+            ref={setActivatorNodeRef}
+            type="button"
+            aria-label={t("reorderAria", { name: category.name })}
+            {...attributes}
+            {...listeners}
+            // A touch on the handle drags; the rest of the row still scrolls.
+            style={{ touchAction: "none" }}
+            className="-mx-1 flex size-6 shrink-0 cursor-grab items-center justify-center rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
+          >
+            <HugeiconsIcon icon={DragDropVerticalIcon} className="size-4" />
+          </button>
+        </AppTooltip>
+      )}
       <ColorButton
         value={category.color}
         label={t("changeColor", { name: category.name })}
@@ -215,17 +264,30 @@ function NewCategoryRow({
 
 /** Project → Categories (MIN-737): one row per category, edited where it is
     shown — color from its dot, name in place — and a new one added at the
-    top from the card's title line. */
+    top from the card's title line. The handle drags a row to set the order
+    every category picker follows (MIN-760). */
 export function ProjectCategories({ projectId }: { projectId: string }) {
   const t = useTranslations("Categories");
   const tc = useTranslations("Common");
   const tf = useTranslations("Field");
   const tSettings = useTranslations("Settings");
-  const { categories, createCategory, updateCategory, deleteCategory } =
+  const { categories, createCategory, updateCategory, reorderCategories, deleteCategory } =
     useCategoriesQuery(projectId);
 
   const [adding, setAdding] = useState(false);
   const [toDelete, setToDelete] = useState<Category | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  // The order shown here is the order of every category picker and filter.
+  const onDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    const ids = categories.map((category) => category.id);
+    const next = arrayMove(ids, ids.indexOf(String(active.id)), ids.indexOf(String(over.id)));
+    reorderCategories(next).catch((err: unknown) => toast.error((err as Error).message));
+  };
 
   return (
     <SettingsGroup
@@ -243,14 +305,28 @@ export function ProjectCategories({ projectId }: { projectId: string }) {
           {adding && (
             <NewCategoryRow onCreate={createCategory} onDone={() => setAdding(false)} />
           )}
-          {categories.map((c) => (
-            <CategoryRow
-              key={c.id}
-              category={c}
-              onUpdate={(updates) => updateCategory(c.id, updates)}
-              onDelete={() => setToDelete(c)}
-            />
-          ))}
+          <DndContext
+            accessibility={{ screenReaderInstructions: { draggable: t("reorderHint") } }}
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            modifiers={[verticalDrag]}
+            onDragEnd={onDragEnd}
+          >
+            <SortableContext
+              items={categories.map((category) => category.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {categories.map((c) => (
+                <CategoryRow
+                  key={c.id}
+                  category={c}
+                  sortable={categories.length > 1}
+                  onUpdate={(updates) => updateCategory(c.id, updates)}
+                  onDelete={() => setToDelete(c)}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
         </ul>
       ) : (
         <SettingsEmpty>
