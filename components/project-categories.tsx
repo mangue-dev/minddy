@@ -301,10 +301,10 @@ export function ProjectCategories({ projectId }: { projectId: string }) {
       }
     >
       {adding || categories.length > 0 ? (
-        <ul className="flex flex-col divide-y divide-border">
-          {adding && (
-            <NewCategoryRow onCreate={createCategory} onDone={() => setAdding(false)} />
-          )}
+        // One block holds the list and the context's hidden screen-reader
+        // elements. Left as siblings of the rows, or of the list in the card's
+        // divide-y body, they would add a border under the last row.
+        <div>
           <DndContext
             accessibility={{ screenReaderInstructions: { draggable: t("reorderHint") } }}
             sensors={sensors}
@@ -312,22 +312,27 @@ export function ProjectCategories({ projectId }: { projectId: string }) {
             modifiers={[verticalDrag]}
             onDragEnd={onDragEnd}
           >
-            <SortableContext
-              items={categories.map((category) => category.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              {categories.map((c) => (
-                <CategoryRow
-                  key={c.id}
-                  category={c}
-                  sortable={categories.length > 1}
-                  onUpdate={(updates) => updateCategory(c.id, updates)}
-                  onDelete={() => setToDelete(c)}
-                />
-              ))}
-            </SortableContext>
+            <ul className="flex flex-col divide-y divide-border">
+              {adding && (
+                <NewCategoryRow onCreate={createCategory} onDone={() => setAdding(false)} />
+              )}
+              <SortableContext
+                items={categories.map((category) => category.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {categories.map((c) => (
+                  <CategoryRow
+                    key={c.id}
+                    category={c}
+                    sortable={categories.length > 1}
+                    onUpdate={(updates) => updateCategory(c.id, updates)}
+                    onDelete={() => setToDelete(c)}
+                  />
+                ))}
+              </SortableContext>
+            </ul>
           </DndContext>
-        </ul>
+        </div>
       ) : (
         <SettingsEmpty>
           {t("emptyState", { noCategories: tf("noCategories") })}
