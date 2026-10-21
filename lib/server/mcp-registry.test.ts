@@ -113,6 +113,22 @@ describe("normalizeMcpRegistryPayload", () => {
     ]);
   });
 
+  it("reads a required secret Authorization header as a bearer token", () => {
+    const header = (fields: Record<string, unknown>) =>
+      entry({ remotes: [{ type: "streamable-http", url: "https://mcp.acme.dev/mcp", headers: [fields] }] });
+    const [bearer, optional, other, open] = [
+      header({ name: "Authorization", isSecret: true, isRequired: true }),
+      header({ name: "authorization", isSecret: true, isRequired: false }),
+      header({ name: "X-API-Key", isSecret: true, isRequired: true }),
+      entry(),
+    ].map((item) => normalizeMcpRegistryPayload({ servers: [item] })[0]);
+    expect(bearer.auth).toBe("bearer");
+    // Optional, non-Authorization or undeclared: unknown, never "none".
+    expect(optional).not.toHaveProperty("auth");
+    expect(other).not.toHaveProperty("auth");
+    expect(open).not.toHaveProperty("auth");
+  });
+
   it("falls back to the identifier tail when no title exists and dedupes repeats", () => {
     const servers = normalizeMcpRegistryPayload(
       { servers: [entry({ title: undefined }), entry()] },

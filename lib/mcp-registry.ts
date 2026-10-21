@@ -19,6 +19,30 @@ export interface McpRegistryServer {
   url: string;
   /** Registry transport mapped onto minddy's two transports. */
   transport: "http" | "sse";
+  /**
+   * Set only when the entry says how to authenticate: a required secret
+   * `Authorization` header is a token to paste. Absent means unknown, not
+   * "no authentication" — most remote servers declare nothing and use OAuth.
+   */
+  auth?: "bearer";
+}
+
+/** A remote declaring a required secret Authorization header takes a bearer token. */
+function declaresBearerToken(headers: unknown): boolean {
+  if (!Array.isArray(headers)) return false;
+  return headers.some((header) => {
+    const { name, isSecret, isRequired } = (header ?? {}) as {
+      name?: unknown;
+      isSecret?: unknown;
+      isRequired?: unknown;
+    };
+    return (
+      typeof name === "string" &&
+      name.toLowerCase() === "authorization" &&
+      isSecret === true &&
+      isRequired !== false
+    );
+  });
 }
 
 /** The official registry search endpoint, stable public API. */
@@ -143,6 +167,9 @@ const registryEntry = ({
     ...(icon ? { icon } : {}),
     url: remote.url,
     transport: remote.type === "sse" ? ("sse" as const) : ("http" as const),
+    ...(declaresBearerToken((remote as { headers?: unknown }).headers)
+      ? { auth: "bearer" as const }
+      : {}),
   };
 };
 

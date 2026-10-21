@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 12,
+  "revision": 13,
+  "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-21",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -57,10 +57,10 @@
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 13,
+    "fact": "agent:MIN-768 (MCP setup moved to wizards: changed passages checked against components/settings/account-mcp-clients.tsx and mcp-connect-panel.tsx; 1 screenshot recaptured on 2026-10-21 from the local candidate and inspected; earlier evidence retained in git history)",
+    "language": "agent:MIN-768 (it translation of the changed passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-21"
   },
   "related": [
     "numo",
@@ -83,7 +83,7 @@
       "src": "/documentation/it/external-minddy-mcp-workflow.png",
       "alt": "Selettore dei client MCP minddy con Claude, Codex e altri assistenti.",
       "caption": "Scegli il client per visualizzare il comando o la configurazione di installazione.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -98,14 +98,14 @@
       "id": "external-minddy-mcp-install-workflow",
       "kind": "screenshot",
       "src": "/documentation/it/external-minddy-mcp-install-workflow.png",
-      "alt": "Finestra di installazione di Codex con l’endpoint minddy Cloud.",
+      "alt": "Passaggio di installazione di Codex nella procedura di collegamento al MCP di minddy, con l’endpoint minddy Cloud.",
       "caption": "Questo esempio si connette a minddy Cloud. Per un’istanza autogestita, usa l’origine della tua istanza; il comando mostrato non è stato eseguito per questa cattura.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-21",
       "viewport": [
         560,
-        364
+        288
       ],
       "theme": "light",
       "padding": 24,
@@ -127,6 +127,8 @@ Apri la pagina pubblica MCP dell’istanza e scegli le istruzioni del client. Us
 
 Accedi nel browser e verifica l’autorizzazione prima di concederla. La connessione agisce come il tuo account minddy senza accedere a progetti esclusi dai tuoi permessi. Inizia leggendo un ticket già accessibile e controlla il progetto restituito.
 
+Nelle impostazioni dell’account, la sezione MCP di minddy apre una procedura guidata in due passaggi per ogni client: copia il comando di installazione, la configurazione o l’URL del server, poi autorizza l’accesso del client. Il secondo passaggio indica quando minddy riceve questo accesso; fino ad allora, chiuderlo rimanda soltanto l’accesso.
+
 ![Selettore dei client MCP minddy con Claude, Codex e altri assistenti.](/documentation/it/external-minddy-mcp-workflow.png)
 
 ### Disponibilità di MCP e accesso alla rete {#network-access}
@@ -147,7 +149,7 @@ I client esterni usano gli strumenti disponibili per ticket, piani, commenti, pa
 
 minddy MCP nelle impostazioni dell’account elenca accessi esterni e controlli di revoca. Revoca client inutilizzati o non più affidabili. Il riquadro **MCP per Numo** della scheda **IA e Numo** è distinto: collega Numo ad altri servizi. Non incollare token in ticket, feedback pubblici o screenshot.
 
-![Finestra di installazione di Codex con l’endpoint minddy Cloud.](/documentation/it/external-minddy-mcp-install-workflow.png)
+![Passaggio di installazione di Codex nella procedura di collegamento al MCP di minddy, con l’endpoint minddy Cloud.](/documentation/it/external-minddy-mcp-install-workflow.png)
 
 
 ## Usare minddy MCP e scoprire gli strumenti attuali {#mcp-tool-reference}

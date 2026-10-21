@@ -126,14 +126,25 @@ for (const locale of locales) {
         Object.assign(node.style, { color: "transparent", background: "rgb(148 163 184)", borderRadius: "4px" });
       });
     }, { width: 1440, height: 1600 });
-    await capture("external-minddy-mcp-install-workflow", "/settings?tab=mcp", () => page.getByRole("dialog"), async () => {
+    // Both MCP setups are wizards since MIN-768: the agent's install step,
+    // and the sign-in step of a catalog service (Notion opens on it, its
+    // method already known). The
+    // step column is framed, not the large wizard modal around it. A CSS
+    // locator, since the capture hides the dialog itself from the role tree.
+    await capture("external-minddy-mcp-install-workflow", "/settings?tab=mcp", "[role=dialog] form", async () => {
       await page.locator("#settings-section-account-mcp").waitFor();
       await page.getByRole("button", { name: "Codex", exact: true }).click();
+      // The command embeds the page origin; the figure shows the minddy Cloud
+      // endpoint its caption names, whatever runtime was captured.
+      await page.getByRole("dialog").locator("code").evaluate((node, origin) => {
+        node.textContent = node.textContent.replaceAll(origin, "https://www.minddy.app");
+      }, new URL(CAPTURE.baseUrl).origin);
     });
-    await capture("numo-mcp-connections-config-workflow", "/settings?tab=agent", () => page.getByRole("dialog"), async () => {
+    await capture("numo-mcp-connections-config-workflow", "/settings?tab=agent", "[role=dialog] form", async () => {
       await page.locator("#settings-section-account-mcp-clients").waitFor();
-      await page.getByRole("button", { name: messages.McpClients.custom, exact: true }).click();
-      await page.getByRole("dialog").getByRole("button", { name: messages.McpClients.advanced, exact: true }).click();
+      await page.getByRole("button", { name: "Notion", exact: true }).click();
+      // Notion's method comes from the catalog: shown, not asked.
+      await page.getByRole("dialog").getByRole("button", { name: messages.McpClients.authChange, exact: true }).waitFor();
     });
     const importTitles = {
       en: ["Prepare the release", "Verify the attachment", "Demonstration checklist"],
