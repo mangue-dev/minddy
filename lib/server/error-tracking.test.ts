@@ -118,6 +118,30 @@ describe("server error tracking", () => {
     expect(serialized).not.toContain("private-hint");
   });
 
+  it("ignores a client that left mid-response", async () => {
+    stubWorkingConfiguration();
+    const { captureServerException } = await import("./error-tracking");
+    const responseAborted = Object.assign(new Error(), { name: "ResponseAborted" });
+    const abortError = new DOMException("This operation was aborted", "AbortError");
+
+    await captureServerException(new Error("The destination stream closed early."), null, {
+      routePath: "/projects/[id]", routeType: "render", httpMethod: "GET",
+    });
+    await captureServerException(responseAborted, null);
+    await captureServerException(abortError, null);
+
+    expect(posthogMock.captureExceptionImmediate).not.toHaveBeenCalled();
+  });
+
+  it("still reports an error that only mentions a closed stream", async () => {
+    stubWorkingConfiguration();
+    const { captureServerException } = await import("./error-tracking");
+
+    await captureServerException(new Error("Upload failed: the destination stream closed early."), null);
+
+    expect(posthogMock.captureExceptionImmediate).toHaveBeenCalledTimes(1);
+  });
+
   it("parses the distinct id from the raw cookie header only", async () => {
     stubWorkingConfiguration();
     const { parsePostHogDistinctId } = await import("./error-tracking");

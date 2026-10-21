@@ -69,6 +69,9 @@ an optional revalidate reason. `DatabaseOperationError` also supplies
 and an optional HTTP `failure_status`. Its exception message names the operation;
 the wrapper does not retain upstream database messages, hints or row values.
 These fields distinguish a missing migration from a permission error or timeout.
+A client that leaves mid-response (`AbortError`, Next.js `ResponseAborted`, or
+React's generic `The destination stream closed early.`) is not reported: it is
+navigation noise, not a server failure (MIN-763).
 The `distinct_id` comes from the visitor's
 PostHog cookie when present, and no person profile is created for anonymous
 ids. Console output is never captured (`capture_console_errors: false`), and
