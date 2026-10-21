@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Delete02Icon, NoteEditIcon, Target01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
+import { Delete02Icon, NoteEditIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -59,9 +59,19 @@ export function DraftsTray() {
             </TooltipTrigger>
             <TooltipContent side="top" sideOffset={10}>{t("trayTooltip")}</TooltipContent>
           </Tooltip>
-          <PopoverContent side="top" align="end" sideOffset={8} className="w-80 p-1">
-            <p className="px-2 pt-1.5 pb-1 text-xs font-medium text-muted-foreground">{t("tray")}</p>
-            <ul className="flex max-h-80 flex-col overflow-y-auto">
+          {/* Focus goes to the list, not to its first draft: opening the tray
+              must not look like a draft was already picked. */}
+          <PopoverContent
+            side="top"
+            align="end"
+            sideOffset={8}
+            className="w-80 p-1 outline-none"
+            onOpenAutoFocus={(event) => {
+              event.preventDefault();
+              (event.currentTarget as HTMLElement | null)?.focus();
+            }}
+          >
+            <ul className="flex max-h-80 flex-col gap-1 overflow-y-auto">
               {drafts.map((draft) => (
                 <DraftRow
                   key={`${draft.kind}-${draft.id}`}
@@ -103,19 +113,16 @@ function DraftRow({ draft, onOpen, onDelete }: { draft: DraftEntry; onOpen: () =
   const title = draft.title.trim() || t("untitled");
 
   return (
-    <li className="group/draft relative flex items-start rounded-md hover:bg-accent focus-within:bg-accent">
+    // The draft card and its delete button sit side by side, the button as
+    // tall as the card and always visible.
+    <li className="flex items-stretch gap-1">
       <button
         type="button"
         onClick={onOpen}
         aria-label={t("resumeAria", { name: title })}
-        className="flex min-w-0 flex-1 items-start gap-2 rounded-md px-2 py-1.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex min-w-0 flex-1 rounded-md bg-muted/50 px-2.5 py-1.5 text-left outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
       >
-        <HugeiconsIcon
-          icon={draft.kind === "issue" ? TaskEdit01Icon : Target01Icon}
-          className="mt-0.5 size-4 shrink-0 text-muted-foreground"
-          aria-hidden
-        />
-        <span className="flex min-w-0 flex-1 flex-col gap-0.5 pr-7">
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="flex min-w-0 items-baseline gap-1.5">
             <span className="truncate text-sm font-medium">{title}</span>
             {project && (
@@ -129,15 +136,14 @@ function DraftRow({ draft, onOpen, onDelete }: { draft: DraftEntry; onOpen: () =
       </button>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon-sm"
+          <button
+            type="button"
             onClick={onDelete}
             aria-label={t("deleteAria", { name: title })}
-            className="absolute top-1 right-1 size-7 text-muted-foreground opacity-0 hover:text-foreground focus-visible:opacity-100 group-hover/draft:opacity-100 group-focus-within/draft:opacity-100"
+            className="flex w-9 shrink-0 items-center justify-center rounded-md bg-muted/50 text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
           >
             <HugeiconsIcon icon={Delete02Icon} className="size-4" />
-          </Button>
+          </button>
         </TooltipTrigger>
         <TooltipContent>{t("delete")}</TooltipContent>
       </Tooltip>

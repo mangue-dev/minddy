@@ -111,6 +111,8 @@ describe("drafts tray", () => {
     h.store.objective = [objectiveDraft("goal", "writable", 3)];
     await render();
     await openTray(2);
+    // Opening the tray does not focus (and so highlight) its first draft.
+    expect(document.activeElement?.closest("li")).toBeNull();
     const rows = [...document.querySelectorAll("li")].map((row) => row.textContent);
     expect(rows).toEqual([
       expect.stringContaining("Untitled"),
