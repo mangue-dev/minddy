@@ -26,7 +26,7 @@ vi.mock("@/lib/use-mcp-registry-search", () => ({
 }));
 vi.mock("@/components/mcp-service-logo", () => ({ McpServiceLogo: () => null }));
 vi.mock("@/components/settings/settings-ui", () => ({
-  SettingsGroup: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  SettingsGroup: ({ children, action }: { children: ReactNode; action?: ReactNode }) => <div>{action}{children}</div>,
 }));
 // The menu renders its items inline: Radix menus open on pointer events jsdom does not dispatch.
 vi.mock("@/components/ui/dropdown-menu", () => ({
@@ -42,6 +42,11 @@ vi.mock("@/components/ui/tooltip", async (importOriginal) => ({
   Tooltip: ({ children }: { children: ReactNode }) => <>{children}</>,
   TooltipTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
   TooltipContent: () => null,
+}));
+// Steps swap at once: the exit animation of `mode="wait"` never ends in jsdom.
+vi.mock("framer-motion", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  AnimatePresence: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 vi.mock("sonner", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
@@ -79,4 +84,89 @@ it("asks for confirmation before removing a personal MCP connection", async () =
   const confirm = [...dialog.querySelectorAll("button")].find((button) => button.textContent === messages.McpClients.remove)!;
   await act(async () => confirm.click());
   expect(h.fetch).toHaveBeenCalledWith("/api/account/mcp-connections/conn-1", { method: "DELETE" });
+});
+
+function render() {
+  return act(async () => root.render(
+    <NextIntlClientProvider locale="en" messages={messages}><AccountMcpClients /></NextIntlClientProvider>,
+  ));
+}
+// The step title, not the dialog's screen-reader name.
+const heading = () => document.body.querySelector('[role="dialog"] form h2')?.textContent;
+const button = (label: string) =>
+  [...document.body.querySelectorAll<HTMLButtonElement>("button")].find((item) => item.textContent?.includes(label))!;
+async function type(id: string, value: string) {
+  const input = document.body.querySelector<HTMLInputElement>(`[id$="${id}"]`)!;
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+  await act(async () => {
+    setter.call(input, value);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+}
+async function submit() {
+  await act(async () => document.body.querySelector<HTMLButtonElement>("[data-wizard-cta]")!.click());
+}
+
+it("walks a custom server through address, sign-in choice and an automatic check", async () => {
+  h.fetch.mockImplementation(async (path: string) => ({
+    ok: true,
+    json: async () => (path.endsWith("/test") ? { tools: 3 } : { id: "conn-2" }),
+  }));
+  await render();
+  await act(async () => host.querySelector<HTMLButtonElement>(`[aria-label="${messages.McpClients.custom}"]`)!.click());
+  expect(heading()).toBe(messages.McpClients.serverTitle);
+
+  await type("-name", "Docs");
+  await type("-url", "http://docs.example.com/mcp");
+  await submit();
+  // A non-HTTPS address is refused before the sign-in step.
+  expect(document.body.textContent).toContain(messages.McpClients.errorEndpoint);
+  expect(heading()).toBe(messages.McpClients.serverTitle);
+
+  await type("-url", "https://docs.example.com/mcp");
+  await submit();
+  expect(heading()).toBe("How should Numo sign in to Docs?");
+
+  await act(async () => button(messages.McpClients.noAuth).click());
+  await submit();
+  expect(h.fetch).toHaveBeenCalledWith("/api/account/mcp-connections", expect.objectContaining({ method: "POST" }));
+  const body = JSON.parse(h.fetch.mock.calls.find(([path]) => path === "/api/account/mcp-connections")![1].body);
+  expect(body).toMatchObject({ name: "Docs", url: "https://docs.example.com/mcp", auth_mode: "none", token: "" });
+  expect(h.fetch).toHaveBeenCalledWith("/api/account/mcp-connections/conn-2/test", { method: "POST" });
+  expect(heading()).toBe("Connection to Docs");
+  expect(document.body.textContent).toContain("Numo can use Docs: 3 tools found.");
+});
+
+it("opens a curated preset on the sign-in step and edits the saved connection", async () => {
+  h.fetch.mockImplementation(async (path: string) => ({
+    ok: true,
+    json: async () => (path.endsWith("/test") ? { tools: 1 } : {}),
+  }));
+  await render();
+  await act(async () => button(messages.McpClients.edit).click());
+  // A saved connection already has its method: shown, not asked again.
+  expect(heading()).toBe("Edit Linear");
+  expect(document.body.querySelector('[role="radiogroup"]')).toBeNull();
+
+  await submit();
+  expect(h.fetch).toHaveBeenCalledWith("/api/account/mcp-connections/conn-1", expect.objectContaining({ method: "PATCH" }));
+  const body = JSON.parse(h.fetch.mock.calls.find(([path]) => path === "/api/account/mcp-connections/conn-1")![1].body);
+  // An unchanged token field keeps the saved token.
+  expect(body).not.toHaveProperty("token");
+  expect(document.body.textContent).toContain("Numo can use Linear: 1 tool found.");
+});
+
+it("shows a catalog service's sign-in method instead of asking for it", async () => {
+  await render();
+  const github = [...host.querySelectorAll<HTMLButtonElement>("button")].find((item) => item.textContent === "GitHub")!;
+  await act(async () => github.click());
+  expect(heading()).toBe("Connect GitHub");
+  expect(document.body.querySelector('[role="radiogroup"]')).toBeNull();
+  // The catalog says GitHub takes a token: its field is already there.
+  expect(document.body.querySelector('[id$="-token"]')).not.toBeNull();
+
+  await act(async () => button(messages.McpClients.authChange).click());
+  expect(heading()).toBe("How should Numo sign in to GitHub?");
+  const selected = document.body.querySelector('[role="radio"][aria-checked="true"]');
+  expect(selected?.textContent).toContain(messages.McpClients.bearer);
 });

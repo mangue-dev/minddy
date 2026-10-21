@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, Alert01Icon, CheckIcon, Delete02Icon, FlashIcon, MoreHorizontalIcon, PencilEdit02Icon, RefreshIcon, ToggleOffIcon, ToggleOnIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Alert01Icon, CheckIcon, CheckmarkCircle02Icon, Delete02Icon, FlashIcon, Globe02Icon, Key01Icon, Login03Icon, MoreHorizontalIcon, PencilEdit02Icon, RefreshIcon, ToggleOffIcon, ToggleOnIcon } from "@hugeicons/core-free-icons";
 import {useCallback, useEffect, useId, useState} from "react";
 import {useQueryClient} from "@tanstack/react-query";
 import {useSearchParams} from "next/navigation";
@@ -14,10 +14,12 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {Field, FieldLabel} from "@/components/ui/field";
+import { Spinner } from "@/components/ui/spinner";
+import {WizardDialog, type WizardStep} from "@/components/wizard/wizard-dialog";
+import {WizardChoiceCard} from "@/components/wizard/wizard-choice-card";
 import {McpServiceLogo} from "@/components/mcp-service-logo";
 import {SettingsGroup} from "@/components/settings/settings-ui";
 import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
@@ -63,11 +65,25 @@ function registryPreset(server: McpRegistryServer): McpPreset {
     id: server.id,
     name: server.name,
     url: server.url,
-    auth: "oauth",
+    // Unknown unless the registry declared a token: OAuth is what most
+    // remote servers use, and the wizard then lets the user choose.
+    auth: server.auth ?? "oauth",
     setup: "standard",
     docs: "",
   };
 }
+
+/**
+ * The editor's steps. "server" asks for the endpoint only when no curated
+ * preset vouches for it; "access" saves; "check" follows the saved
+ * connection until its sign-in completes and its first test answers.
+ */
+type StepId = "server" | "access" | "check";
+
+type ConnectionCheck =
+  | { status: "idle" | "testing" }
+  | { status: "ok"; tools: number }
+  | { status: "failed"; message: string };
 
 export function AccountMcpClients() {
   const t = useTranslations("McpClients");
@@ -92,6 +108,15 @@ export function AccountMcpClients() {
   const [headers, setHeaders] = useState("");
   const [search, setSearch] = useState("");
   const [preset, setPreset] = useState<McpPreset | null>(null);
+  // Whether the sign-in step asks for the method. A catalog service, a
+  // registry entry that declares it, or a saved connection already knows it:
+  // the step then shows that method, with a way to change it.
+  const [chooseAuth, setChooseAuth] = useState(true);
+  const [stepIndex, setStepIndex] = useState(0);
+  // Set once the access step saved: going back from the check step edits
+  // that connection instead of creating a second one.
+  const [savedId, setSavedId] = useState<string | null>(null);
+  const [check, setCheck] = useState<ConnectionCheck>({ status: "idle" });
   // The public registry search (MIN-586): everything the curated catalog
   // leaves out, found by the same search box.
   const registry = useMcpRegistrySearch(search);
@@ -181,18 +206,25 @@ export function AccountMcpClients() {
     setClientSecret("");
     setHeaders("");
     setError(null);
+    setSavedId(null);
+    setCheck({ status: "idle" });
   };
   const edit = useCallback(
     (
       connection: McpConnection | "new",
       selected: McpPreset | null = null,
+      {
+        authKnown = !!selected?.docs,
+        transport: selectedTransport = "http",
+      }: { authKnown?: boolean; transport?: "http" | "sse" } = {},
     ) => {
       setEditing(connection);
       setName(connection === "new" ? (selected?.name ?? "") : connection.name);
       setUrl(connection === "new" ? (selected?.url ?? "") : connection.url);
       setToken("");
       setClearToken(false);
-      setTransport(connection === "new" ? "http" : connection.transport);
+      setTransport(connection === "new" ? selectedTransport : connection.transport);
+      setChooseAuth(connection === "new" && !authKnown);
       setAuthMode(
         connection === "new" ? (selected?.auth ?? "oauth") : connection.auth_mode,
       );
@@ -206,6 +238,9 @@ export function AccountMcpClients() {
             : (mcpPresetForUrl(connection.url) ?? null)),
       );
       setError(null);
+      setStepIndex(0);
+      setSavedId(null);
+      setCheck({ status: "idle" });
     },
     [],
   );
@@ -313,6 +348,465 @@ export function AccountMcpClients() {
         />
       </Field>
     </>
+  );
+
+  // The connection the wizard works on: the one it just saved, else the one
+  // opened for editing. `null` until a new connection is first saved.
+  const current =
+    (savedId
+      ? data?.connections.find((connection) => connection.id === savedId)
+      : undefined) ?? (editing && editing !== "new" ? editing : null);
+  const targetId = savedId ?? current?.id ?? null;
+  const awaitingSignIn =
+    savedId !== null && authMode === "oauth" && !current?.oauth_connected;
+  const askServer = !preset || !preset.docs;
+  const stepIds: StepId[] = askServer
+    ? ["server", "access", "check"]
+    : ["access", "check"];
+  const stepId = stepIds[Math.min(stepIndex, stepIds.length - 1)];
+
+  const runCheck = async (connectionId: string) => {
+    setCheck({ status: "testing" });
+    try {
+      const result = await request(`${endpoint}/${connectionId}/test`, "POST");
+      setCheck({ status: "ok", tools: Number(result.tools) || 0 });
+    } catch (err) {
+      setCheck({ status: "failed", message: errorText(err) });
+    }
+  };
+
+  // The first test starts by itself as soon as there is something to test:
+  // right after saving, or once the sign-in in the other tab completes and
+  // the refreshed list reports it.
+  useEffect(() => {
+    if (stepId !== "check" || !savedId || awaitingSignIn) return;
+    if (check.status !== "idle") return;
+    void runCheck(savedId);
+  }, [stepId, savedId, awaitingSignIn, check.status, runCheck]);
+
+  const save = async () => {
+    let parsedHeaders;
+    if (headers.trim()) {
+      try {
+        parsedHeaders = JSON.parse(headers);
+      } catch {
+        setError(t("errorHeaders"));
+        return;
+      }
+    }
+    const needsAuthorization =
+      authMode === "oauth" &&
+      (!current ||
+        !current.oauth_connected ||
+        current.url !== url ||
+        !!clientId ||
+        !!clientSecret);
+    // Reserved before any await: a tab opened after one is a blocked pop-up.
+    const authorizationTab = needsAuthorization ? openAuthorizationTab() : null;
+    if (needsAuthorization && !authorizationTab) return;
+    const result = await mutate(
+      targetId ? `${endpoint}/${targetId}` : endpoint,
+      targetId ? "PATCH" : "POST",
+      {
+        name,
+        url,
+        transport,
+        auth_mode: authMode,
+        ...(parsedHeaders !== undefined ? { headers: parsedHeaders } : {}),
+        ...(clientId ? { oauth_client_id: clientId } : {}),
+        ...(clientSecret ? { oauth_client_secret: clientSecret } : {}),
+        // A new connection always states its token; a saved one keeps it
+        // unless a new value or the removal is asked for.
+        ...(token || clearToken || !current
+          ? { token: clearToken ? "" : token }
+          : {}),
+      },
+    );
+    if (!result) {
+      authorizationTab?.close();
+      return;
+    }
+    const connectionId: string = targetId ?? result.id;
+    setSavedId(connectionId);
+    setToken("");
+    setClearToken(false);
+    setClientSecret("");
+    setHeaders("");
+    setCheck({ status: "idle" });
+    setStepIndex(stepIds.indexOf("check"));
+    if (authorizationTab) await authorize(connectionId, authorizationTab);
+  };
+
+  const submitStep = (step: StepId) => {
+    setError(null);
+    if (step === "server") {
+      // The address is checked here rather than after the sign-in choice: a
+      // mistyped URL is easier to fix while it is still on screen.
+      let parsed: URL | null = null;
+      try {
+        parsed = new URL(url.trim());
+      } catch {
+        parsed = null;
+      }
+      if (!parsed || parsed.protocol !== "https:") {
+        setError(t("errorEndpoint"));
+        return;
+      }
+      setStepIndex(stepIds.indexOf("access"));
+      return;
+    }
+    if (step === "access") {
+      void save();
+      return;
+    }
+    if (check.status === "ok") toast.success(t("saved"));
+    closeDialog();
+  };
+
+  // Accidental closes only ask while something typed would be lost; once
+  // saved, the connection waits in the list.
+  const unsaved =
+    stepId !== "check" &&
+    (!!token ||
+      !!clientId ||
+      !!clientSecret ||
+      !!headers.trim() ||
+      (editing === "new" && !preset && (!!name.trim() || !!url.trim())));
+
+  const authOptions = [
+    { mode: "oauth", icon: Login03Icon, label: t("oauth"), description: t("oauthChoice"), known: t("oauthKnown", { name }) },
+    { mode: "bearer", icon: Key01Icon, label: t("bearer"), description: t("bearerChoice"), known: t("bearerKnown", { name }) },
+    { mode: "none", icon: Globe02Icon, label: t("noAuth"), description: t("noAuthChoice"), known: t("noAuthKnown", { name }) },
+  ] as const;
+  const knownAuth =
+    authOptions.find((option) => option.mode === authMode) ?? authOptions[0];
+  const setupNote =
+    preset && preset.setup !== "standard" ? (
+      <>
+        {t(preset.setup)}{" "}
+        <a className="underline" href={preset.docs} target="_blank" rel="noreferrer">
+          {t("setupGuide")}
+        </a>
+      </>
+    ) : null;
+
+  const advancedSettings = (
+    <Accordion type="single" collapsible>
+      <AccordionItem value="advanced" className="border-b-0">
+        <AccordionTrigger className="py-3 text-sm font-medium">
+          {t("advanced")}
+        </AccordionTrigger>
+        <AccordionContent>
+          <div className="space-y-3">
+            {!askServer && (
+              <>
+                <p id={`${id}-support`} className="text-xs text-muted-foreground">
+                  {t("support")}
+                </p>
+                {endpointFields}
+              </>
+            )}
+            <Field>
+              <FieldLabel htmlFor={`${id}-transport`}>{t("transport")}</FieldLabel>
+              <Select
+                value={transport}
+                disabled={busy}
+                onValueChange={(value) => setTransport(value as typeof transport)}
+              >
+                <SelectTrigger id={`${id}-transport`} className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="http">Streamable HTTP</SelectItem>
+                  <SelectItem value="sse">SSE</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor={`${id}-headers`}>{t("headers")}</FieldLabel>
+              <Textarea
+                id={`${id}-headers`}
+                className="min-h-24 font-mono text-sm"
+                value={headers}
+                autoComplete="off"
+                maxLength={64000}
+                disabled={busy}
+                onChange={(event) => setHeaders(event.target.value)}
+                placeholder={'{"X-API-Key": "…"}'}
+              />
+              <p className="text-xs text-muted-foreground">{t("headersHint")}</p>
+            </Field>
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
+  );
+
+  const stepDefs: Record<StepId, WizardStep<StepId>> = {
+    server: {
+      id: "server",
+      title: t("serverTitle"),
+      // A registry match was found by a search, not vouched for: its address
+      // is the one thing worth reading before going further.
+      subtitle: preset ? t("registryCheck") : t("customDescription"),
+      submitDisabled: busy || !name.trim() || !url.trim(),
+      content: (
+        <div className="space-y-4">
+          {endpointFields}
+          <p id={`${id}-support`} className="text-xs text-muted-foreground">
+            {t("support")}
+          </p>
+        </div>
+      ),
+    },
+    access: {
+      id: "access",
+      title: chooseAuth
+        ? t("accessTitle", { name: name || preset?.name || "" })
+        : editing !== "new" && editing
+          ? t("editService", { name })
+          : t("connectService", { name }),
+      subtitle: chooseAuth
+        ? t("accessDescription")
+        : t("connectDescription", { name }),
+      wide: chooseAuth,
+      submitLabel: busy
+        ? t("saving")
+        : authMode === "oauth" && !current?.oauth_connected
+          ? t("saveAndConnect")
+          : t("save"),
+      submitDisabled: busy,
+      content: (
+        <div className="space-y-5">
+          {chooseAuth ? (
+            <>
+              {setupNote && (
+                <p className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+                  {setupNote}
+                </p>
+              )}
+              <div
+                className="grid grid-cols-1 gap-3 sm:grid-cols-3"
+                role="radiogroup"
+                aria-label={t("authentication")}
+              >
+                {authOptions.map((option) => (
+                  <WizardChoiceCard
+                    key={option.mode}
+                    icon={option.icon}
+                    label={option.label}
+                    description={option.description}
+                    selected={authMode === option.mode}
+                    onSelect={() => setAuthMode(option.mode)}
+                  />
+                ))}
+              </div>
+            </>
+          ) : (
+            // The method is known: shown, not asked. Its description is the
+            // provider's own setup note when there is one.
+            <div className="flex items-start gap-3 rounded-lg border border-border p-3">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
+                <HugeiconsIcon icon={knownAuth.icon} className="size-4" aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1 space-y-0.5">
+                <p className="text-sm font-medium">{knownAuth.label}</p>
+                <p className="text-sm text-muted-foreground">
+                  {setupNote ?? knownAuth.known}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="shrink-0"
+                disabled={busy}
+                onClick={() => setChooseAuth(true)}
+              >
+                {t("authChange")}
+              </Button>
+            </div>
+          )}
+          {authMode === "bearer" && (
+            <div className="space-y-2">
+              <Field>
+                <FieldLabel htmlFor={`${id}-token`}>{t("token")}</FieldLabel>
+                <Input
+                  id={`${id}-token`}
+                  type="password"
+                  autoComplete="new-password"
+                  maxLength={4096}
+                  value={token}
+                  onChange={(event) => setToken(event.target.value)}
+                  disabled={busy || clearToken}
+                  aria-describedby={`${id}-token-hint`}
+                />
+              </Field>
+              <p id={`${id}-token-hint`} className="text-xs text-muted-foreground">
+                {t("tokenHint")}
+              </p>
+              {current?.has_token && (
+                <Field orientation="horizontal" className="justify-start">
+                  <Checkbox
+                    id={`${id}-clear-token`}
+                    checked={clearToken}
+                    disabled={busy}
+                    onCheckedChange={(checked) => setClearToken(checked === true)}
+                  />
+                  <FieldLabel htmlFor={`${id}-clear-token`}>
+                    {t("clearToken")}
+                  </FieldLabel>
+                </Field>
+              )}
+            </div>
+          )}
+          <div>
+            {/* A catalog service with a standard sign-in needs no OAuth app of
+                the user's own: the section stays out of the way unless the
+                provider asks for one or the method is being chosen. */}
+            {authMode === "oauth" && (chooseAuth || preset?.setup !== "standard") && (
+              <Accordion type="single" collapsible>
+                <AccordionItem value="oauth-app" className="border-b-0">
+                  <AccordionTrigger className="py-3 text-sm font-medium">
+                    {t("oauthAppSettings")}
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-2">
+                      <Field>
+                        <FieldLabel htmlFor={`${id}-client`}>{t("clientId")}</FieldLabel>
+                        <Input
+                          id={`${id}-client`}
+                          value={clientId}
+                          maxLength={1024}
+                          disabled={busy}
+                          onChange={(event) => setClientId(event.target.value)}
+                        />
+                      </Field>
+                      <Field>
+                        <FieldLabel htmlFor={`${id}-secret`}>
+                          {t("clientSecret")}
+                        </FieldLabel>
+                        <Input
+                          id={`${id}-secret`}
+                          type="password"
+                          autoComplete="new-password"
+                          value={clientSecret}
+                          maxLength={4096}
+                          disabled={busy}
+                          onChange={(event) => setClientSecret(event.target.value)}
+                        />
+                      </Field>
+                      <p className="text-xs text-muted-foreground">
+                        {t("callback")}{" "}
+                        <code className="break-all select-all">
+                          {data?.callback_url}
+                        </code>
+                      </p>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            )}
+            {advancedSettings}
+          </div>
+        </div>
+      ),
+    },
+    check: {
+      id: "check",
+      title: awaitingSignIn ? t("checkSignInTitle") : t("checkTitle", { name }),
+      subtitle: awaitingSignIn ? t("checkSignInDescription", { name }) : undefined,
+      submitLabel: t("finish"),
+      content: awaitingSignIn ? (
+        <div className="flex flex-col items-start gap-3">
+          <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
+            <Spinner />
+            {t("checkWaiting")}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={busy || !savedId}
+            onClick={() => savedId && void authorize(savedId)}
+          >
+            <HugeiconsIcon icon={RefreshIcon} className="size-4" aria-hidden />
+            {t("signInAgain")}
+          </Button>
+        </div>
+      ) : check.status === "ok" ? (
+        <p className="flex items-center gap-2 text-sm" role="status">
+          <HugeiconsIcon
+            icon={CheckmarkCircle02Icon}
+            className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400"
+            aria-hidden
+          />
+          {t("checkSuccess", { name, count: check.tools })}
+        </p>
+      ) : check.status === "failed" ? (
+        <div className="flex flex-col items-start gap-3" role="alert">
+          <p className="flex items-start gap-2 text-sm">
+            <HugeiconsIcon
+              icon={Alert01Icon}
+              className="mt-0.5 size-4 shrink-0 text-orange-500"
+              aria-hidden
+            />
+            <span>
+              {check.message} {t("checkFailedHint")}
+            </span>
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => savedId && void runCheck(savedId)}
+          >
+            <HugeiconsIcon icon={FlashIcon} className="size-4" aria-hidden />
+            {t("test")}
+          </Button>
+        </div>
+      ) : (
+        <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
+          <Spinner />
+          {t("checking")}
+        </p>
+      ),
+    },
+  };
+
+  const wizard = editing && (
+    <WizardDialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !busy) closeDialog();
+      }}
+      label={
+        editing === "new"
+          ? preset
+            ? t("connectService", { name: preset.name })
+            : t("custom")
+          : t("editService", { name: editing.name })
+      }
+      steps={stepIds.map((step) => stepDefs[step])}
+      stepIndex={stepIndex}
+      onStepIndexChange={(index) => {
+        setError(null);
+        setStepIndex(index);
+      }}
+      onSubmit={submitStep}
+      submitting={busy && stepId !== "check"}
+      error={error}
+      dismissConfirm={
+        unsaved
+          ? {
+              title: t("discardTitle"),
+              description: t("discardDescription"),
+              confirmLabel: t("discard"),
+              cancelLabel: t("keepEditing"),
+            }
+          : undefined
+      }
+    />
   );
 
   const content = (
@@ -539,7 +1033,10 @@ export function AccountMcpClients() {
                       const existing = data?.connections.find(
                         (connection) => connection.url === server.url,
                       );
-                      edit(existing ?? "new", registryPreset(server));
+                      edit(existing ?? "new", registryPreset(server), {
+                        authKnown: !!server.auth,
+                        transport: server.transport,
+                      });
                     }}
                     variant="outline"
                     className="h-auto justify-start gap-3 whitespace-normal rounded-lg p-3 text-left"
@@ -579,312 +1076,7 @@ export function AccountMcpClients() {
           {error}
         </p>
       )}
-      <Dialog
-        open={editing !== null}
-        onOpenChange={(open) => {
-          if (!open && !busy) closeDialog();
-        }}
-      >
-        <DialogContent className="overflow-y-auto sm:max-w-lg">
-          {editing && (
-            <form
-              className="space-y-4"
-              onSubmit={async (event) => {
-                event.preventDefault();
-                let parsedHeaders;
-                if (headers.trim()) {
-                  try {
-                    parsedHeaders = JSON.parse(headers);
-                  } catch {
-                    setError(t("errorHeaders"));
-                    return;
-                  }
-                }
-                const needsAuthorization =
-                  authMode === "oauth" &&
-                  (editing === "new" ||
-                    !editing.oauth_connected ||
-                    editing.url !== url ||
-                    !!clientId ||
-                    !!clientSecret);
-                const authorizationTab = needsAuthorization
-                  ? openAuthorizationTab()
-                  : null;
-                if (needsAuthorization && !authorizationTab) return;
-                const result = await mutate(
-                  editing === "new" ? endpoint : `${endpoint}/${editing.id}`,
-                  editing === "new" ? "POST" : "PATCH",
-                  {
-                    name,
-                    url,
-                    transport,
-                    auth_mode: authMode,
-                    ...(parsedHeaders !== undefined
-                      ? { headers: parsedHeaders }
-                      : {}),
-                    ...(clientId ? { oauth_client_id: clientId } : {}),
-                    ...(clientSecret
-                      ? { oauth_client_secret: clientSecret }
-                      : {}),
-                    ...(token || clearToken || editing === "new"
-                      ? { token: clearToken ? "" : token }
-                      : {}),
-                  },
-                );
-                if (result) {
-                  const savedId = editing === "new" ? result.id : editing.id;
-                  setEditing(null);
-                  setToken("");
-                  setClientSecret("");
-                  setHeaders("");
-                  if (authorizationTab)
-                    await authorize(savedId, authorizationTab);
-                  else toast.success(t("saved"));
-                } else {
-                  authorizationTab?.close();
-                }
-              }}
-            >
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-3">
-                  <McpServiceLogo service={preset?.id} />
-                  {editing === "new"
-                    ? preset
-                      ? t("connectService", { name: preset.name })
-                      : t("custom")
-                    : t("editService", { name: editing.name })}
-                </DialogTitle>
-                <DialogDescription>
-                  {preset
-                    ? t("connectDescription", { name: preset.name })
-                    : t("customDescription")}
-                </DialogDescription>
-              </DialogHeader>
-              {preset && preset.setup !== "standard" && (
-                <p className="text-sm text-muted-foreground">
-                  {t(preset.setup)}{" "}
-                  <a
-                    className="underline"
-                    href={preset.docs}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {t("setupGuide")}
-                  </a>
-                </p>
-              )}
-              {!preset && endpointFields}
-              {preset && !preset.docs && endpointFields}
-              {authMode === "bearer" && (
-                <>
-                  <Field>
-                    <FieldLabel htmlFor={`${id}-token`}>
-                      {t("token")}
-                    </FieldLabel>
-                    <Input
-                      id={`${id}-token`}
-                      type="password"
-                      autoComplete="new-password"
-                      maxLength={4096}
-                      value={token}
-                      onChange={(event) => setToken(event.target.value)}
-                      disabled={busy || clearToken}
-                      aria-describedby={`${id}-token-hint`}
-                    />
-                  </Field>
-                  <p
-                    id={`${id}-token-hint`}
-                    className="text-xs text-muted-foreground"
-                  >
-                    {t("tokenHint")}
-                  </p>
-                  {editing !== "new" && editing.has_token && (
-                    <Field orientation="horizontal" className="justify-start">
-                      <Checkbox
-                        id={`${id}-clear-token`}
-                        checked={clearToken}
-                        disabled={busy}
-                        onCheckedChange={(checked) =>
-                          setClearToken(checked === true)
-                        }
-                      />
-                      <FieldLabel htmlFor={`${id}-clear-token`}>
-                        {t("clearToken")}
-                      </FieldLabel>
-                    </Field>
-                  )}
-                </>
-              )}
-              <Accordion type="single" collapsible>
-                <AccordionItem value="advanced" className="border-b-0">
-                  <AccordionTrigger className="py-3 text-sm font-medium">
-                    {t("advanced")}
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="space-y-3">
-                      <p
-                        id={`${id}-support`}
-                        className="text-xs text-muted-foreground"
-                      >
-                        {t("support")}
-                      </p>
-                      {preset && preset.docs && endpointFields}
-                      <Field>
-                        <FieldLabel htmlFor={`${id}-auth`}>
-                          {t("authentication")}
-                        </FieldLabel>
-                        <Select
-                          value={authMode}
-                          disabled={busy}
-                          onValueChange={(value) =>
-                            setAuthMode(value as typeof authMode)
-                          }
-                        >
-                          <SelectTrigger id={`${id}-auth`} className="w-full">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="oauth">{t("oauth")}</SelectItem>
-                            <SelectItem value="bearer">
-                              {t("bearer")}
-                            </SelectItem>
-                            <SelectItem value="none">{t("noAuth")}</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </Field>
-                      {authMode === "oauth" && (
-                        <div className="space-y-3">
-                          <p className="text-xs text-muted-foreground">
-                            {t("oauthHint")}
-                          </p>
-                          <Accordion type="single" collapsible>
-                            <AccordionItem
-                              value="oauth-app"
-                              className="border-b-0"
-                            >
-                              <AccordionTrigger className="py-3 text-sm font-medium">
-                                {t("oauthAppSettings")}
-                              </AccordionTrigger>
-                              <AccordionContent>
-                                <div className="space-y-2">
-                                  <Field>
-                                    <FieldLabel htmlFor={`${id}-client`}>
-                                      {t("clientId")}
-                                    </FieldLabel>
-                                    <Input
-                                      id={`${id}-client`}
-                                      value={clientId}
-                                      maxLength={1024}
-                                      disabled={busy}
-                                      onChange={(event) =>
-                                        setClientId(event.target.value)
-                                      }
-                                    />
-                                  </Field>
-                                  <Field>
-                                    <FieldLabel htmlFor={`${id}-secret`}>
-                                      {t("clientSecret")}
-                                    </FieldLabel>
-                                    <Input
-                                      id={`${id}-secret`}
-                                      type="password"
-                                      autoComplete="new-password"
-                                      value={clientSecret}
-                                      maxLength={4096}
-                                      disabled={busy}
-                                      onChange={(event) =>
-                                        setClientSecret(event.target.value)
-                                      }
-                                    />
-                                  </Field>
-                                  <p className="text-xs text-muted-foreground">
-                                    {t("callback")}{" "}
-                                    <code className="break-all select-all">
-                                      {data?.callback_url}
-                                    </code>
-                                  </p>
-                                </div>
-                              </AccordionContent>
-                            </AccordionItem>
-                          </Accordion>
-                        </div>
-                      )}
-                      <div className="mt-2 space-y-2">
-                        <Field>
-                          <FieldLabel htmlFor={`${id}-transport`}>
-                            {t("transport")}
-                          </FieldLabel>
-                          <Select
-                            value={transport}
-                            disabled={busy}
-                            onValueChange={(value) =>
-                              setTransport(value as typeof transport)
-                            }
-                          >
-                            <SelectTrigger
-                              id={`${id}-transport`}
-                              className="w-full"
-                            >
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="http">
-                                Streamable HTTP
-                              </SelectItem>
-                              <SelectItem value="sse">SSE</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </Field>
-                        <Field>
-                          <FieldLabel htmlFor={`${id}-headers`}>
-                            {t("headers")}
-                          </FieldLabel>
-                          <Textarea
-                            id={`${id}-headers`}
-                            className="min-h-24 font-mono text-sm"
-                            value={headers}
-                            autoComplete="off"
-                            maxLength={64000}
-                            disabled={busy}
-                            onChange={(event) => setHeaders(event.target.value)}
-                            placeholder={'{"X-API-Key": "…"}'}
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            {t("headersHint")}
-                          </p>
-                        </Field>
-                      </div>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-              {error && (
-                <p role="alert" className="text-sm text-destructive">
-                  {error}
-                </p>
-              )}
-              <DialogFooter>
-                <Button type="submit" disabled={busy}>
-                  {busy
-                    ? t("saving")
-                    : authMode === "oauth" &&
-                        (editing === "new" || !editing.oauth_connected)
-                      ? t("signIn")
-                      : t("save")}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={busy}
-                  onClick={closeDialog}
-                >
-                  {t("cancel")}
-                </Button>
-              </DialogFooter>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
+      {wizard}
     </section>
   );
 

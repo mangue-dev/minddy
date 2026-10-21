@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
-  "sourceRevision": 17,
+  "revision": 18,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-21",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -63,10 +63,10 @@
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 3 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 18,
+    "fact": "agent:MIN-768 (MCP setup moved to wizards: changed passages checked against components/settings/account-mcp-clients.tsx and mcp-connect-panel.tsx; 1 screenshot recaptured on 2026-10-21 from the local candidate and inspected; earlier evidence retained in git history)",
+    "language": "agent:MIN-768 (es translation of the changed passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-21"
   },
   "related": [
     "code-work",
@@ -96,7 +96,7 @@
       "src": "/documentation/es/work-with-numo-workflow.png",
       "alt": "Conversación de demostración de Numo con contexto, cambio de prioridad y respuesta guardada.",
       "caption": "Conversación de demostración existente, traducida para mostrarla. La respuesta guardada cita AUR-11 y AUR-7; la captura no acredita una nueva ejecución.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -113,7 +113,7 @@
       "src": "/documentation/es/numo-permissions-and-approvals-workflow.svg",
       "alt": "Matriz de permisos de Numo para acciones del proyecto, conexiones personales y rutinas.",
       "caption": "El acceso al proyecto y las peticiones explícitas limitan las acciones de Numo; el contenido externo no concede permisos.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -174,7 +174,7 @@
       "src": "/documentation/es/numo-execution-model-flow.svg",
       "alt": "Diagrama: Persistir intención, mensaje y UUID. Reclamar turno, guardar herramientas y resultados. Esperar su respuesta cuando haga falta información. Releer eventos y conciliar escrituras inciertas.",
       "caption": "Siga las etapas en este orden. Persistir intención, mensaje y UUID. Reclamar turno, guardar herramientas y resultados. Esperar su respuesta cuando haga falta información. Releer eventos y conciliar escrituras inciertas.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -206,7 +206,7 @@
       "src": "/documentation/es/numo-mcp-connections-workflow.png",
       "alt": "Ajustes MCP personales, lista vacía y botón para añadir otro servidor.",
       "caption": "Las conexiones de Numo son personales; las rutinas usan las del propietario del proyecto.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -221,14 +221,14 @@
       "id": "numo-mcp-connections-config-workflow",
       "kind": "screenshot",
       "src": "/documentation/es/numo-mcp-connections-config-workflow.png",
-      "alt": "Formulario de servidor MCP personalizado con ajustes avanzados de autenticación, transporte y cabeceras.",
-      "caption": "Formulario de servidor MCP personalizado con ajustes avanzados de autenticación, transporte y cabeceras. No se introdujeron credenciales ni se contactó con ningún servidor.",
-      "revision": 17,
+      "alt": "Asistente de conexión de Notion con el método de inicio de sesión conocido por el catálogo.",
+      "caption": "Paso de inicio de sesión de un servicio del catálogo. No se introdujeron credenciales ni se contactó con ningún servidor.",
+      "revision": 18,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-21",
       "viewport": [
         560,
-        920
+        354
       ],
       "theme": "light",
       "padding": 24,
@@ -308,7 +308,7 @@ Detener Numo termina su turno. Una acción externa ya enviada todavía puede fin
 
 En los ajustes de cuenta, abra **IA y Numo** y use la tarjeta **MCP para Numo**. Los enlaces a la antigua pestaña MCP para Numo llevan allí. Elija un servicio del catálogo o añada otro servidor MCP HTTPS público. El catálogo y registro no evitan requisitos de inscripción o aprobación del proveedor. Numo puede preparar la conexión en una conversación interactiva, pero no en una rutina autónoma.
 
-Use OAuth o ajustes avanzados para token bearer, sin autenticación o cabeceras cifradas. Streamable HTTP es el transporte predeterminado; también admite SSE antiguo. Ponga secretos en credenciales o cabeceras, nunca en la URL. No admite comandos locales ni redes privadas. Para una aplicación OAuth existente, registre la URL de retorno mostrada e introduzca ID y secreto. En escritorio OAuth abre el navegador del sistema y vuelve a la aplicación.
+La conexión se hace en un asistente. Un servidor personalizado o del registro pide primero su nombre y su dirección HTTPS; un servicio del catálogo se abre directamente en el paso de inicio de sesión. Un servicio del catálogo, una conexión guardada o una entrada del registro que declara un token ya conoce su método de inicio de sesión: el paso lo muestra y **Usar otro método** permite cambiarlo. Si no, elija **Iniciar sesión con OAuth**, **Token Bearer** o **Sin autenticación**. Las **Opciones avanzadas** contienen el transporte (Streamable HTTP por defecto, también admite SSE antiguo) y las cabeceras cifradas. Ponga secretos en credenciales o cabeceras, nunca en la URL. No admite comandos locales ni redes privadas. Para una aplicación OAuth existente, registre la URL de retorno mostrada e introduzca ID y secreto. Tras guardar, el último paso espera el inicio de sesión, prueba la conexión y muestra cuántas herramientas encontró Numo. En escritorio OAuth abre el navegador del sistema y vuelve a la aplicación.
 
 ![Ajustes MCP personales, lista vacía y botón para añadir otro servidor.](/documentation/es/numo-mcp-connections-workflow.png)
 
@@ -318,7 +318,7 @@ El menú permite probar, editar, reconectar, desactivar o eliminar. Una alerta n
 
 Desactivar bloquea llamadas nuevas, no enviadas. Límites: 30 segundos, 1 MiB de transporte y 64 KB de resultado. Compruebe escrituras agotadas en el destino antes de repetir. Las rutinas usan conexiones del propietario, sin prestarlas a otros miembros.
 
-![Formulario de servidor MCP personalizado con ajustes avanzados de autenticación, transporte y cabeceras.](/documentation/es/numo-mcp-connections-config-workflow.png)
+![Asistente de conexión de Notion con el método de inicio de sesión conocido por el catálogo.](/documentation/es/numo-mcp-connections-config-workflow.png)
 
 ## Recuperar trabajo de Numo detenido o pendiente {#recover-numo-work}
 

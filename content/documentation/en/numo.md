@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
-  "sourceRevision": 17,
+  "revision": 18,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-21",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -63,10 +63,10 @@
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 3 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 18,
+    "fact": "agent:MIN-768 (MCP setup moved to wizards: changed passages checked against components/settings/account-mcp-clients.tsx and mcp-connect-panel.tsx; 1 screenshot recaptured on 2026-10-21 from the local candidate and inspected; earlier evidence retained in git history)",
+    "language": "agent:MIN-768 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-21"
   },
   "related": [
     "code-work",
@@ -96,7 +96,7 @@
       "src": "/documentation/en/work-with-numo-workflow.png",
       "alt": "Numo demonstration conversation with page context, a priority-change request and its saved answer.",
       "caption": "Existing demonstration thread, localized for display. The saved answer names AUR-11 and AUR-7; this capture does not prove a new execution.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -113,7 +113,7 @@
       "src": "/documentation/en/numo-permissions-and-approvals-workflow.svg",
       "alt": "Permission matrix for Numo project actions, personal connections and routines.",
       "caption": "Project access and explicit instructions limit Numo actions; external content cannot grant permission.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -174,7 +174,7 @@
       "src": "/documentation/en/numo-execution-model-flow.svg",
       "alt": "Diagram: Persist the intent, message and request UUID. Claim turn, checkpoint tools and their outcomes. Wait for your answer when input is needed. Replay durable events; reconcile uncertain writes.",
       "caption": "Read the stages in order. Persist the intent, message and request UUID. Claim turn, checkpoint tools and their outcomes. Wait for your answer when input is needed. Replay durable events; reconcile uncertain writes.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -206,7 +206,7 @@
       "src": "/documentation/en/numo-mcp-connections-workflow.png",
       "alt": "Personal MCP settings, empty connection list and Add another MCP server control.",
       "caption": "Numo connections are personal; project routines use the project owner’s connections.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -221,14 +221,14 @@
       "id": "numo-mcp-connections-config-workflow",
       "kind": "screenshot",
       "src": "/documentation/en/numo-mcp-connections-config-workflow.png",
-      "alt": "Custom MCP server form with advanced authentication, transport and header settings.",
-      "caption": "Custom MCP server form with advanced authentication, transport and header settings. No credentials were entered and no server was contacted.",
-      "revision": 17,
+      "alt": "Notion connection wizard showing the sign-in method known from the catalog.",
+      "caption": "Sign-in step for a catalog service. No credentials were entered and no server was contacted.",
+      "revision": 18,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-21",
       "viewport": [
         560,
-        920
+        354
       ],
       "theme": "light",
       "padding": 24,
@@ -308,7 +308,7 @@ Stopping Numo ends its turn. An external action already sent may still complete.
 
 In account settings, open **AI & Numo** and use the **MCP for Numo** card. Links to the former MCP for Numo tab open there. Choose a catalog service or add another public HTTPS MCP server. The catalog and registry search do not bypass provider registration or approval requirements. Numo can prepare a connection in an interactive conversation, but an unattended routine cannot create one.
 
-Use OAuth sign-in, or advanced settings for bearer token, no authentication or encrypted custom headers. Streamable HTTP is the default; legacy SSE is supported. Put secrets in credentials or headers, never the URL. Local commands and private-network endpoints are unsupported. For an existing OAuth app, register the displayed callback URL and enter its client ID and secret. In desktop, OAuth opens the system browser and returns to the app.
+Connecting runs as a wizard. A custom or registry server first asks for its name and HTTPS address; a catalog service opens on the sign-in step. A catalog service, a saved connection or a registry entry that declares a token already knows its sign-in method: the step shows it, and **Use another method** changes it. Otherwise, choose **Sign in with OAuth**, **Bearer token** or **No authentication**. **Advanced settings** hold the transport (Streamable HTTP by default, legacy SSE supported) and encrypted custom headers. Put secrets in credentials or headers, never the URL. Local commands and private-network endpoints are unsupported. For an existing OAuth app, register the displayed callback URL and enter its client ID and secret. After saving, the last step waits for sign-in, then tests the connection and shows how many tools Numo found. In desktop, OAuth opens the system browser and returns to the app.
 
 ![Personal MCP settings, empty connection list and Add another MCP server control.](/documentation/en/numo-mcp-connections-workflow.png)
 
@@ -318,7 +318,7 @@ Use the connection menu to test, edit, reconnect, disable or remove it. An orang
 
 Disabling stops new calls, not requests already sent. Calls have a 30-second deadline, 1 MiB transport limit and 64 KB result limit. Verify timed-out writes remotely before retrying. Project routines use the owner's connections; other members cannot borrow them.
 
-![Custom MCP server form with advanced authentication, transport and header settings.](/documentation/en/numo-mcp-connections-config-workflow.png)
+![Notion connection wizard showing the sign-in method known from the catalog.](/documentation/en/numo-mcp-connections-config-workflow.png)
 
 ## Recover stopped or waiting Numo work {#recover-numo-work}
 
