@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 16,
-  "sourceRevision": 15,
+  "revision": 17,
+  "sourceRevision": 16,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -67,9 +67,9 @@
     ]
   },
   "review": {
-    "revision": 16,
-    "fact": "agent:claude (MIN-760: category reordering paragraph checked against components/project-categories.tsx, the order route and the Numo/MCP tools; existing figures unaffected and kept; no browser walkthrough of the procedure); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of project-settings-steps, project-members-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted)",
-    "language": "agent:claude (pt-BR translation of the added en paragraph, equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 17,
+    "fact": "agent:claude (MIN-760: category reordering paragraph checked against components/project-categories.tsx, the order route and the Numo/MCP tools; existing figures unaffected and kept; no browser walkthrough of the procedure); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of project-settings-steps, project-members-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:claude (pt-BR translation of the added en paragraph, equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -94,7 +94,7 @@
       "src": "/documentation/pt-BR/project-general.png",
       "alt": "Cabeçalho do projeto com o ícone e seu selo de edição, o nome, a chave e os números Tickets, Membros, Objetivos, Categorias e Criado em.",
       "caption": "Selecione o ícone, o nome ou a chave para alterá-los no lugar; mover o projeto para a lixeira continua sendo uma ação separada, mais abaixo.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -111,7 +111,7 @@
       "src": "/documentation/pt-BR/project-members.png",
       "alt": "Cartão “Convidar pessoas” acima do cartão Membros, que lista três membros de demonstração com o proprietário identificado.",
       "caption": "Convide pelo email da conta e identifique o proprietário antes de remover o acesso de um membro.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [

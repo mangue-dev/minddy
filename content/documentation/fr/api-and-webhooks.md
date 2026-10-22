@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -48,10 +48,10 @@
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 10,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "integration-troubleshooting",
@@ -72,7 +72,7 @@
       "src": "/documentation/fr/integration-api-and-webhooks-flow.svg",
       "alt": "Schéma: Le serveur garde la clé d’intégration projet. POST tickets ou feedback avec le bon type. Le propriétaire choisit la destination webhook. Réception : HMAC brut et UUID de livraison.",
       "caption": "Lisez les étapes dans cet ordre. Le serveur garde la clé d’intégration projet. `POST` tickets ou feedback avec le bon type. Le propriétaire choisit la destination webhook. Réception : HMAC brut et UUID de livraison.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +104,7 @@
       "src": "/documentation/fr/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Séquences distinctes d’ingestion backend et de SSO navigateur, avec deux secrets.",
       "caption": "La clé d’ingestion authentifie les appels serveur. Le secret SSO du tableau signe un jeton visiteur court, à usage unique.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

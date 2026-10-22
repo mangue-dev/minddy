@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 10,
+  "revision": 13,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -40,9 +40,9 @@
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label correction: quoted labels aligned on the corrected it catalog; no behavior change, no new captures)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-762 label edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 13,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label correction: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-762 label edit; self-reviewed; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [],
@@ -57,9 +57,9 @@
       "src": "/documentation/it/scheduled-routines-workflow.png",
       "alt": "Modalità Programmato ed Evento, un gruppo di condizioni, icone dell’app e pulsanti informativi discreti.",
       "caption": "Dimostrazione locale dell’editor effettivo degli attivatori. Nessuna routine è stata salvata o eseguita.",
-      "revision": 11,
+      "revision": 13,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         788,
         910
@@ -104,7 +104,7 @@ Una voce senza la proprietà richiesta attende una modifica che soddisfi il filt
 
 Apri la routine per esaminare le attese, modificare istruzioni o attivatore, metterla in pausa o leggere le esecuzioni. Pausa, eliminazione e cambi di configurazione invalidano le attese. La riattivazione ascolta eventi futuri senza riprodurre vecchi arrivi. L’avvio manuale funziona con ogni attivatore senza attendere il suo evento e consuma budget.
 
-Fai clic con il tasto destro su una routine dell’elenco per aprire la sua ultima esecuzione senza selezionarla prima; **Apri l’ultima esecuzione** resta non disponibile se la routine non è mai stata eseguita. Dallo stesso menu il proprietario del progetto può anche scegliere **Correte adesso**, **Metti in pausa** o **Riattiva**, **Modifica** o **Sposta nel cestino**. **Riattiva** non è disponibile quando l’istanza non può pianificare routine. Gli altri membri vedono solo le voci che non modificano la routine. Per creare una routine, fai clic con il tasto destro su **Routine** nella barra laterale e scegli **Nuova routine**.
+Fai clic con il tasto destro su una routine dell’elenco per aprire la sua ultima esecuzione senza selezionarla prima; **Apri l’ultima esecuzione** resta non disponibile se la routine non è mai stata eseguita. Dallo stesso menu il proprietario del progetto può anche scegliere **Esegui ora**, **Metti in pausa** o **Riattiva**, **Modifica** o **Sposta nel cestino**. **Riattiva** non è disponibile quando l’istanza non può pianificare routine. Gli altri membri vedono solo le voci che non modificano la routine. Per creare una routine, fai clic con il tasto destro su **Routine** nella barra laterale e scegli **Nuova routine**.
 
 Ogni esecuzione usa il budget IA del proprietario con un limite predefinito del 15 % del budget mensile, comprendendo ogni chiamata a Numo di quell’esecuzione. Apri la conversazione per leggere origine, risultato e domande. Rispondi nella stessa conversazione quando è necessario il tuo intervento; il budget residuo resta disponibile. Esamina i risultati salvati prima di cambiare il limite o riprovare. Quando la proprietà viene [trasferita](/docs/projects#transfer-ownership), le routine dell’ex proprietario nel progetto vengono sospese e non possono avviare nuovo lavoro; il nuovo proprietario crea le routine che devono proseguire.
 

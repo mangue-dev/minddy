@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -46,10 +46,10 @@
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 10,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "authentication-and-email",
@@ -64,17 +64,18 @@
       "id": "instance-administration-flow",
       "kind": "screenshot",
       "src": "/documentation/en/instance-administration-overview.png",
-      "alt": "Administrator overview with aggregate account, activity, onboarding and plan metrics.",
+      "alt": "Administrator overview with aggregate account, activity, onboarding and content metrics.",
       "caption": "Overview shows aggregate instance indicators; this capture comes from a demonstration instance. Finances appears because a managed OpenRouter key is configured there.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         1488,
         1148
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "instance-administration-models",
@@ -82,15 +83,16 @@
       "src": "/documentation/en/instance-administration-models.png",
       "alt": "Instance AI model and reasoning settings.",
       "caption": "Models configures defaults and dedicated uses. This capture shows the existing configuration; no model or provider setting was changed.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         1488,
         1148
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -104,7 +106,7 @@
 Instance administration is separate from project ownership. Set `ADMIN_EMAILS` to authorized confirmed account addresses in the server environment. Server-signed `app_metadata.role=admin` is another accepted role source. A valid administrator session also requires `aal2`, enrolled verified MFA and current live account/session checks. The server fails closed when those checks fail. Sign in, complete TOTP and open `/admin`. Do not edit database roles to bypass enrollment. The administrator console and its private APIs remain `noindex`.
 
 
-![Administrator overview with aggregate account, activity, onboarding and plan metrics.](/documentation/en/instance-administration-overview.png)
+![Administrator overview with aggregate account, activity, onboarding and content metrics.](/documentation/en/instance-administration-overview.png)
 
 ![Instance AI model and reasoning settings.](/documentation/en/instance-administration-models.png)
 

@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 7,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [],
   "aliases": [],
@@ -53,15 +53,16 @@
       "src": "/documentation/en/repository-skills-workflow.png",
       "alt": "Repository skill preview with its stable name, file path and complete instructions.",
       "caption": "Preview the skill before attaching it to a message. This real demonstration skill requests `npm test` and forbids merging the pull request; previewing it does not run either action.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-22",
       "viewport": [
-        996,
-        888
+        916,
+        868
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [

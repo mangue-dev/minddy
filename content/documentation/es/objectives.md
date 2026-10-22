@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
-  "sourceRevision": 17,
+  "revision": 19,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -54,10 +54,10 @@
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 19,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of objectives-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "issues",
@@ -78,15 +78,16 @@
       "src": "/documentation/es/reader-objectives.png",
       "alt": "Diálogo de creación de objetivo sin enviar en el proyecto Aurora con un nombre de resultado de ejemplo y el botón Crear objetivo.",
       "caption": "Nombra el resultado antes de elegir responsable, fecha objetivo y estado. Este diálogo no ha creado un segundo objetivo.",
-      "revision": 17,
+      "revision": 19,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         720,
         358
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -109,7 +110,7 @@ Abre cada incidencia relevante y elige el objetivo en sus propiedades, o utiliza
 
 ### Leer el progreso antes de cerrar {#objective-progress}
 
-Revisa las incidencias completadas y activas junto con el progreso del objetivo. Un indicador resume el trabajo vinculado; no puede determinar si un resultado del producto es aceptable. Revisa tareas que falten y trabajo cancelado o duplicado antes de marcar el objetivo como completado. El tablero del objetivo muestra primero el trabajo abierto: selecciona **Hecho** y **Cancelado** en su filtro **Estado** para revisar ahí las incidencias cerradas.
+Revisa las incidencias completadas y activas junto con el progreso del objetivo. Un indicador resume el trabajo vinculado; no puede determinar si un resultado del producto es aceptable. Revisa tareas que falten y trabajo cancelado o duplicado antes de marcar el objetivo como completado. El tablero del objetivo muestra primero el trabajo abierto: selecciona **Hecha** y **Cancelada** en su filtro **Estado** para revisar ahí las incidencias cerradas.
 
 Utiliza el ciclo de vida del objetivo para distinguir resultados planificados, en marcha, completados y cancelados. Una fecha objetivo es una meta, mientras que una previsión es una estimación basada en actividad. Si el objetivo parece vacío, comprueba la vinculación de incidencias y los filtros en lugar de recrearlo. Eliminar un objetivo utiliza la papelera recuperable y no es un cambio de estado ordinario.
 

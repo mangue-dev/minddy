@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -50,10 +50,10 @@
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 10,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "authentication-and-email",
@@ -78,7 +78,7 @@
       "src": "/documentation/fr/self-hosted-compatibility-flow.svg",
       "alt": "Schéma: Tag source annoté. Assets et SHA256SUMS. Signature et digest OCI officiels. Profil de compatibilité choisi.",
       "caption": "Lisez les étapes dans cet ordre. Tag source annoté. Assets et `SHA256SUMS`. Signature et digest OCI officiels. Profil de compatibilité choisi.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -110,7 +110,7 @@
       "src": "/documentation/fr/install-a-server-flow.svg",
       "alt": "Schéma: Release vérifiée et environnement protégé. Installateur : profil full de référence. Supabase officiel, app, jobs. Validation compte, fichiers et récupération.",
       "caption": "Lisez les étapes dans cet ordre. Release vérifiée et environnement protégé. Installateur : profil full de référence. Supabase officiel, app, jobs. Validation compte, fichiers et récupération.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -142,7 +142,7 @@
       "src": "/documentation/fr/install-a-server-wizard.png",
       "alt": "Assistant public d’installation avec Supabase sur le même serveur sélectionné.",
       "caption": "Le profil full conserve l’application et Supabase sur votre serveur. Dans cet exemple, leur accès par réseau privé est limité au réseau local.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -159,7 +159,7 @@
       "src": "/documentation/fr/managed-or-source-installation-flow.svg",
       "alt": "Schéma: Votre projet Supabase géré. PostgreSQL, Auth, Storage, Realtime. Profil OCI OU application depuis un tag. Jobs et sauvegarde propres au profil.",
       "caption": "Un backend géré peut servir les deux modes de déploiement, avec une planification et des sauvegardes adaptées au profil choisi.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

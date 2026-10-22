@@ -3,7 +3,7 @@
   "id": "applications",
   "locale": "de",
   "title": "Web-, Mobil- und Desktop-Apps",
-  "summary": "Nutzen Sie minddy im Browser, installieren Sie die Mobil- oder Desktop-App und richten Sie Gerätebenachrichtigungen ein.",
+  "summary": "Nutze minddy im Browser, installiere die Mobil- oder Desktop-App und richte Gerätebenachrichtigungen ein.",
   "topic": "Konto und Apps",
   "type": "guide",
   "audiences": [
@@ -18,8 +18,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
-  "sourceRevision": 14,
+  "revision": 16,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -65,9 +65,9 @@
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; 3 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (MIN-762 recapture of web-and-mobile-workflow, devices-and-notifications-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (de MIN-762 figure update; agent review, not human acceptance)",
+    "revision": 16,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; 3 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (MIN-762 recapture of web-and-mobile-workflow, devices-and-notifications-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (de MIN-762 figure update; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -92,8 +92,8 @@
       "kind": "screenshot",
       "src": "/documentation/de/web-and-mobile-workflow.png",
       "alt": "Mobiles Ticketpanel mit lokalisiertem Titel, Beschreibung, Eigenschaften und Kommentarfeld.",
-      "caption": "Auf einem schmalen Bildschirm erscheinen Ticketdetails in einem angepassten Panel. Schließen Sie es über die Schaltfläche, um zum Projekt zurückzukehren; Numo bleibt über seine schwebende Schaltfläche erreichbar.",
-      "revision": 15,
+      "caption": "Auf einem schmalen Bildschirm erscheinen Ticketdetails in einem angepassten Panel. Schließe es über die Schaltfläche, um zum Projekt zurückzukehren; Numo bleibt über seine schwebende Schaltfläche erreichbar.",
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -110,9 +110,9 @@
       "src": "/documentation/de/install-the-pwa-workflow.png",
       "alt": "Illustrierte Safari-Installationsanleitung von minddy: Teilen, zum Home-Bildschirm hinzufügen und bestätigen.",
       "caption": "Die öffentliche Anleitung illustriert die drei Safari-Schritte und die aktivierte Option Als Web-App öffnen. Die Abbildungen sind von minddy dargestellte Anleitungen und keine Aufnahmen einer abgeschlossenen iOS-Installation.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         1488,
         762
@@ -126,8 +126,8 @@
       "kind": "screenshot",
       "src": "/documentation/de/devices-and-notifications-workflow.png",
       "alt": "Push-Einstellungen mit gesperrter Browserberechtigung und ohne registriertes Gerät.",
-      "caption": "Dieser Browser blockiert Benachrichtigungen. Erlauben Sie sie in den Website-Einstellungen, bevor Sie das Gerät registrieren.",
-      "revision": 15,
+      "caption": "Dieser Browser blockiert Benachrichtigungen. Erlaube sie in den Website-Einstellungen, bevor du das Gerät registrierst.",
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -144,15 +144,16 @@
       "src": "/documentation/de/devices-and-notifications-registered.png",
       "alt": "Aktives, für das Konto registriertes Browser-Gerät mit dem tatsächlichen Datum des letzten Versands.",
       "caption": "Für das Konto ist ein aktives Browser-Gerät registriert. Die Liste zeigt das Registrierungsdatum und den letzten Versand. Ob ein Banner erscheint, hängt weiterhin von der Browserberechtigung und den Betriebssystemeinstellungen ab.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-22",
       "viewport": [
         816,
         208
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "desktop-renderer-recovery",
@@ -160,7 +161,7 @@
       "src": "/documentation/de/desktop-renderer-recovery.png",
       "alt": "Lokale Wiederherstellungsseite nach einem erzwungenen Renderer-Absturz mit Reload window und Check server settings.",
       "caption": "Wiederherstellungsseite in der macOS-Entwicklungsapp mit isoliertem Profil und Demonstrationsserver. Die native Oberfläche verwendet in allen Sprachen englische Beschriftungen.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -182,55 +183,55 @@
 }
 ---
 
-Sie können dieselbe Instanz im Browser, als installierte Web-App oder als Desktop-App öffnen. Folgen Sie der Installationsanleitung für Ihr Gerät und prüfen Sie anschließend Verbindung, Updates und Benachrichtigungsberechtigungen der Plattform.
+Du kannst dieselbe Instanz im Browser, als installierte Web-App oder als Desktop-App öffnen. Folge der Installationsanleitung für dein Gerät und prüfe anschließend Verbindung, Updates und Benachrichtigungsberechtigungen der Plattform.
 
 ## Im Browser und auf kleinen Bildschirmen arbeiten {#web-and-mobile}
 
-Öffnen Sie die Adresse Ihrer Instanz und melden Sie sich dort an. Blenden Sie auf einem schmalen Bildschirm die Seitenleiste ein, wählen Sie ein Projekt und öffnen Sie ein Ticket aus der Liste oder dem Board. Lesen Sie die Details im an die Bildschirmgröße angepassten Panel, ändern Sie das gewünschte Feld oder fügen Sie einen Kommentar hinzu. Warten Sie auf das Ergebnis der Speicherung, bevor Sie das Panel schließen. Schließen Sie das Detailpanel, um zur Liste zurückzukehren; die mobile Darstellung unterscheidet sich von der Darstellung auf einem breiten Bildschirm.
+Öffne die Adresse deiner Instanz und melde dich dort an. Blende auf einem schmalen Bildschirm die Seitenleiste ein, wähle ein Projekt und öffne ein Ticket aus der Liste oder dem Board. Lies die Details im an die Bildschirmgröße angepassten Panel, ändere das gewünschte Feld oder füge einen Kommentar hinzu. Warte auf das Ergebnis der Speicherung, bevor du das Panel schließt. Schließe das Detailpanel, um zur Liste zurückzukehren; die mobile Darstellung unterscheidet sich von der Darstellung auf einem breiten Bildschirm.
 
-Öffnen Sie Numo über die schwebende Schaltfläche oder eine Kontextaktion des Tickets. Prüfen Sie den Ticketkontext im Eingabefeld. Wenn ein Panel den benötigten Inhalt verdeckt, schließen Sie es vor der weiteren Navigation. Verwenden Sie auf Touchgeräten die sichtbaren Schaltflächen und Menüs; setzen Sie weder Aktionen beim Darüberfahren mit der Maus noch Desktop-Tastenkürzel voraus.
+Öffne Numo über die schwebende Schaltfläche oder eine Kontextaktion des Tickets. Prüfe den Ticketkontext im Eingabefeld. Wenn ein Panel den benötigten Inhalt verdeckt, schließe es vor der weiteren Navigation. Verwende auf Touchgeräten die sichtbaren Schaltflächen und Menüs; setze weder Aktionen beim Darüberfahren mit der Maus noch Desktop-Tastenkürzel voraus.
 
 ### Tastatur und Verbindung {#access}
 
-Mit der Tastatur können Sie Steuerelemente fokussieren und die Befehlspalette für die Navigation und häufige Aktionen verwenden. Die sichtbare Sendeschaltfläche bleibt eine Alternative zur Tastatureingabe. Verwenden Sie das Kürzel, das die App für Ihre Plattform anzeigt.
+Mit der Tastatur kannst du Steuerelemente fokussieren und die Befehlspalette für die Navigation und häufige Aktionen verwenden. Die sichtbare Sendeschaltfläche bleibt eine Alternative zur Tastatureingabe. Verwende das Kürzel, das die App für deine Plattform anzeigt.
 
-Browser und installierte Web-App benötigen eine Netzwerkverbindung für Projektdaten und das Speichern von Änderungen. Der Service Worker verarbeitet Push-Mitteilungen und stellt keinen Offline-Datencache bereit. Prüfen Sie nach einem Verbindungsfehler, ob die Änderung gespeichert wurde, bevor Sie sie wiederholen. Die PWA-Installation erstellt kein separates Konto und umgeht keine Instanzberechtigungen.
+Browser und installierte Web-App benötigen eine Netzwerkverbindung für Projektdaten und das Speichern von Änderungen. Der Service Worker verarbeitet Push-Mitteilungen und stellt keinen Offline-Datencache bereit. Prüfe nach einem Verbindungsfehler, ob die Änderung gespeichert wurde, bevor du sie wiederholst. Die PWA-Installation erstellt kein separates Konto und umgeht keine Instanzberechtigungen.
 
 ![Mobiles Ticketpanel mit lokalisiertem Titel, Beschreibung, Eigenschaften und Kommentarfeld.](/documentation/de/web-and-mobile-workflow.png)
 
 ## Die Web-App auf Telefon oder Tablet installieren {#install-the-pwa}
 
-Öffnen Sie die gewünschte minddy-Instanz in Safari auf dem iPhone oder iPad oder in Chrome beziehungsweise einem kompatiblen Android-Browser. Wurde der Link innerhalb einer anderen App geöffnet, öffnen Sie ihn zuerst im vollständigen Browser. Für eine selbst gehostete Instanz verwenden Sie die Adresse Ihres eigenen Servers.
+Öffne die gewünschte minddy-Instanz in Safari auf dem iPhone oder iPad oder in Chrome beziehungsweise einem kompatiblen Android-Browser. Wurde der Link innerhalb einer anderen App geöffnet, öffne ihn zuerst im vollständigen Browser. Für eine selbst gehostete Instanz verwendest du die Adresse deines eigenen Servers.
 
-Wählen Sie unter iOS Teilen und anschließend Zu Home-Bildschirm hinzufügen. Lassen Sie Als Web-App öffnen aktiviert und tippen Sie auf Hinzufügen. Je nach Safari-Oberfläche müssen Sie vor Teilen zunächst Mehr öffnen. Fehlt die Aktion, prüfen Sie Aktionen bearbeiten.
+Wähle unter iOS Teilen und anschließend Zu Home-Bildschirm hinzufügen. Lass Als Web-App öffnen aktiviert und tippe auf Hinzufügen. Je nach Safari-Oberfläche musst du vor Teilen zunächst Mehr öffnen. Fehlt die Aktion, prüfe Aktionen bearbeiten.
 
-Nutzen Sie unter Android die angebotene Installationsaufforderung oder wählen Sie im Browsermenü App installieren beziehungsweise Zum Startbildschirm hinzufügen. Bestätigen Sie anschließend die Installation. Die Beschriftungen hängen vom Browser ab. Öffnen Sie das neue Symbol und melden Sie sich mit dem Konto dieser Instanz an. Es handelt sich um eine im Browser installierte PWA; im iOS App Store oder bei Google Play gibt es keine native minddy-App.
+Nutze unter Android die angebotene Installationsaufforderung oder wähle im Browsermenü App installieren beziehungsweise Zum Startbildschirm hinzufügen. Bestätige anschließend die Installation. Die Beschriftungen hängen vom Browser ab. Öffne das neue Symbol und melde dich mit dem Konto dieser Instanz an. Es handelt sich um eine im Browser installierte PWA; im iOS App Store oder bei Google Play gibt es keine native minddy-App.
 
 ### Updates, Offlinezugriff und Push {#operation}
 
-Durch die Installation entsteht keine Offlinekopie des Projekts. Der Service Worker von minddy verarbeitet nur Push-Benachrichtigungen und speichert keine Anwendungsanfragen im Cache. Verwenden Sie eine Netzwerkverbindung und laden Sie die Seite neu, um aktuelle Webinhalte abzurufen. Benachrichtigungen benötigen außerdem einen unterstützten Browser, dessen Berechtigung und eine serverseitige Push-Konfiguration. Unter iOS verwenden Sie die installierte App, wenn der Ablauf dies verlangt. Fehlt die Installationsoption, öffnen Sie einen unterstützten vollständigen Browser und prüfen Sie, ob die Instanz bereits installiert ist.
+Durch die Installation entsteht keine Offlinekopie des Projekts. Der Service Worker von minddy verarbeitet nur Push-Benachrichtigungen und speichert keine Anwendungsanfragen im Cache. Verwende eine Netzwerkverbindung und lade die Seite neu, um aktuelle Webinhalte abzurufen. Benachrichtigungen benötigen außerdem einen unterstützten Browser, dessen Berechtigung und eine serverseitige Push-Konfiguration. Unter iOS verwendest du die installierte App, wenn der Ablauf dies verlangt. Fehlt die Installationsoption, öffne einen unterstützten vollständigen Browser und prüfe, ob die Instanz bereits installiert ist.
 
 ![Illustrierte Safari-Installationsanleitung von minddy: Teilen, zum Home-Bildschirm hinzufügen und bestätigen.](/documentation/de/install-the-pwa-workflow.png)
 
 ## Desktop-App installieren und verwalten {#desktop-app}
 
-Öffnen Sie die öffentliche Downloadseite. Wählen Sie unter macOS das Paket für Apple silicon oder Intel. Installieren Sie die Anwendung unter Windows über den Microsoft Store. Wählen Sie unter Linux ein AppImage oder ein signiertes `deb`/`rpm`-Paket für x64 oder ARM64. Befolgen Sie die Plattformanleitung und die Hinweise zur Paketprüfung. Für Windows gibt es keinen `exe`-Installer.
+Öffne die öffentliche Downloadseite. Wähle unter macOS das Paket für Apple silicon oder Intel. Installiere die Anwendung unter Windows über den Microsoft Store. Wähle unter Linux ein AppImage oder ein signiertes `deb`/`rpm`-Paket für x64 oder ARM64. Befolge die Plattformanleitung und die Hinweise zur Paketprüfung. Für Windows gibt es keinen `exe`-Installer.
 
-Wählen Sie in der Serverauswahl minddy Cloud, die Origin eines selbst gehosteten Servers oder die verfügbare lokale Laufzeit. Prüfen Sie das Ziel vor der Anmeldung: Jedes Konto gehört zu seiner Instanz. OAuth verwendet den Systembrowser und kehrt anschließend zur Desktop-App zurück.
+Wähle in der Serverauswahl minddy Cloud, die Origin eines selbst gehosteten Servers oder die verfügbare lokale Laufzeit. Prüfe das Ziel vor der Anmeldung: Jedes Konto gehört zu seiner Instanz. OAuth verwendet den Systembrowser und kehrt anschließend zur Desktop-App zurück.
 
 ### Tabs, Schließen und Updates {#desktop-app-operation}
 
-Navigieren Sie mit den Tab-Steuerelementen und der Befehlspalette zwischen Ihren Aufgaben. Verwenden Sie die angezeigten Plattformkürzel. Unter macOS ist es Command, wo Windows und Linux normalerweise Control verwenden. Das Schließen des Fensters blendet es aus; die Anwendung läuft weiter. Verwenden Sie Beenden, um die Anwendung zu stoppen, unter macOS auch Cmd+Q. Hintergrundbenachrichtigungen hängen vom Paket und den Plattformfunktionen ab.
+Navigiere mit den Tab-Steuerelementen und der Befehlspalette zwischen deinen Aufgaben. Verwende die angezeigten Plattformkürzel. Unter macOS ist es Command, wo Windows und Linux normalerweise Control verwenden. Das Schließen des Fensters blendet es aus; die Anwendung läuft weiter. Verwende Beenden, um die Anwendung zu stoppen, unter macOS auch Cmd+Q. Hintergrundbenachrichtigungen hängen vom Paket und den Plattformfunktionen ab.
 
-Unter macOS und mit portablen AppImages sind Updates in der Anwendung verfügbar. Windows aktualisiert sie über den Microsoft Store. Für `deb`/`rpm` installieren Sie das nächste geprüfte Paket. In der Desktop-App zeigt **Kontoeinstellungen** → **Einstellungen** → **Desktop-App** den verbundenen Server und die App-Version, mit einer Update-Prüfung, sofern das Paket sie unterstützt. Im Web führt dieselbe Karte zur Download-Seite. Prüfen Sie nach einem Update die angezeigte Desktop-Version und ob weiterhin die gewünschte Instanz geöffnet wird.
+Unter macOS und mit portablen AppImages sind Updates in der Anwendung verfügbar. Windows aktualisiert sie über den Microsoft Store. Für `deb`/`rpm` installierst du das nächste geprüfte Paket. In der Desktop-App zeigt **Kontoeinstellungen** → **Einstellungen** → **Desktop-App** den verbundenen Server und die App-Version, mit einer Update-Prüfung, sofern das Paket sie unterstützt. Im Web führt dieselbe Karte zur Download-Seite. Prüfe nach einem Update die angezeigte Desktop-Version und ob weiterhin die gewünschte Instanz geöffnet wird.
 
 ### Ein abgestürztes Fenster wiederherstellen {#desktop-renderer-recovery}
 
-Wenn ein Desktop-Fenster abstürzt, bietet eine lokale Wiederherstellungsseite **Reload window** an. Öffnen Sie damit den letzten Bildschirm auf dem aktuell ausgewählten Server erneut. Nicht gespeicherte Änderungen können verloren gehen. Die App wartet auf Ihre Aktion, statt die fehlerhafte Seite wiederholt neu zu laden. Falls auch die Wiederherstellungsseite ausfällt, fordert die native Meldung Sie auf, minddy zu beenden und erneut zu öffnen. Diese nativen Wiederherstellungsfunktionen verwenden derzeit englische Beschriftungen.
+Wenn ein Desktop-Fenster abstürzt, bietet eine lokale Wiederherstellungsseite **Reload window** an. Öffne damit den letzten Bildschirm auf dem aktuell ausgewählten Server erneut. Nicht gespeicherte Änderungen können verloren gehen. Die App wartet auf deine Aktion, statt die fehlerhafte Seite wiederholt neu zu laden. Falls auch die Wiederherstellungsseite ausfällt, fordert die native Meldung dich auf, minddy zu beenden und erneut zu öffnen. Diese nativen Wiederherstellungsfunktionen verwenden derzeit englische Beschriftungen.
 
-Wenn eine Seite nach 30 Sekunden noch lädt oder ein Fenster fünf Sekunden nach Erkennung durch die Desktop-App weiterhin nicht reagiert, bietet ein nativer Dialog **Wait** und **Recover window** an. **Wait** ist die Standardauswahl und lässt Ihre Arbeit sowie die laufende Anfrage unverändert. Der Dialog schließt sich, sobald der Ladevorgang endet oder das Fenster wieder reagiert. Bei der Wiederherstellung können ungespeicherte Änderungen verloren gehen: Wählen Sie **Recover window**, um die lokale Wiederherstellungsseite zu öffnen, und anschließend **Reload window**, um zum letzten Bildschirm zurückzukehren.
+Wenn eine Seite nach 30 Sekunden noch lädt oder ein Fenster fünf Sekunden nach Erkennung durch die Desktop-App weiterhin nicht reagiert, bietet ein nativer Dialog **Wait** und **Recover window** an. **Wait** ist die Standardauswahl und lässt deine Arbeit sowie die laufende Anfrage unverändert. Der Dialog schließt sich, sobald der Ladevorgang endet oder das Fenster wieder reagiert. Bei der Wiederherstellung können ungespeicherte Änderungen verloren gehen: Wähle **Recover window**, um die lokale Wiederherstellungsseite zu öffnen, und anschließend **Reload window**, um zum letzten Bildschirm zurückzukehren.
 
-Der optional gespeicherte Abfragecache ist auf 2 MiB Abfragedaten begrenzt. Ist der gesamte Cache zu groß, speichert minddy vollständige, dafür geeignete Abfrageergebnisse und bevorzugt bei Bedarf die aktuellen Ansichten und die Tabs in der Tableiste. Überschreitet auch diese Auswahl das Limit, wird der vorherige lokale Snapshot entfernt. Daten, die nicht im gespeicherten Cache enthalten sind, bleiben während der Sitzung im Arbeitsspeicher und werden nach einem Neustart bei Bedarf erneut abgerufen. Separat gespeicherte Entwürfe sind davon nicht betroffen. Dieser Cache ist keine Sicherung Ihrer Arbeit.
+Der optional gespeicherte Abfragecache ist auf 2 MiB Abfragedaten begrenzt. Ist der gesamte Cache zu groß, speichert minddy vollständige, dafür geeignete Abfrageergebnisse und bevorzugt bei Bedarf die aktuellen Ansichten und die Tabs in der Tableiste. Überschreitet auch diese Auswahl das Limit, wird der vorherige lokale Snapshot entfernt. Daten, die nicht im gespeicherten Cache enthalten sind, bleiben während der Sitzung im Arbeitsspeicher und werden nach einem Neustart bei Bedarf erneut abgerufen. Separat gespeicherte Entwürfe sind davon nicht betroffen. Dieser Cache ist keine Sicherung deiner Arbeit.
 
 Um den Speicherverbrauch bei langen Sitzungen zu reduzieren, werden inaktive PR-Details, Commit-Diffs und Seiteninhalte nach einer Minute freigegeben und bei Bedarf erneut geladen. Aktive Abfragen bleiben erhalten. Tab-Beschriftungen speichern nur kompakte PR-Informationen; ein geöffneter Tab hält daher keine Patches im Speicher.
 
@@ -238,9 +239,9 @@ Um den Speicherverbrauch bei langen Sitzungen zu reduzieren, werden inaktive PR-
 
 ## Gerätebenachrichtigungen aktivieren {#devices-and-notifications}
 
-Öffnen Sie die Benachrichtigungen in den Kontoeinstellungen auf dem Gerät, das Sie registrieren möchten. Aktivieren Sie sie und erlauben Sie die Anfrage des Browsers oder Betriebssystems. Eine verweigerte Erlaubnis müssen Sie in den Browser- oder Systemeinstellungen ändern; wiederholtes Betätigen des minddy-Schalters kann sie nicht umgehen. Installieren und öffnen Sie unter iOS zuerst die Web-App, wenn die Oberfläche dies verlangt.
+Öffne die Benachrichtigungen in den Kontoeinstellungen auf dem Gerät, das du registrieren möchtest. Aktiviere sie und erlaube die Anfrage des Browsers oder Betriebssystems. Eine verweigerte Erlaubnis musst du in den Browser- oder Systemeinstellungen ändern; wiederholtes Betätigen des minddy-Schalters kann sie nicht umgehen. Installiere und öffne unter iOS zuerst die Web-App, wenn die Oberfläche dies verlangt.
 
-Prüfen Sie, ob das Gerät in der Liste erscheint, und verwenden Sie seinen Testbefehl. Lesen Sie die Angaben zur letzten Zustellung. Sie können einzelne Registrierungen deaktivieren oder entfernen, ohne das Konto zu löschen. Die Kategorien unter **Kontoeinstellungen** → **Benachrichtigungen** bestimmen, welche Ereignisse Sie benachrichtigen. Der Posteingang in der Anwendung bleibt verfügbar, wenn Push nicht verfügbar ist.
+Prüfe, ob das Gerät in der Liste erscheint, und verwende seinen Testbefehl. Lies die Angaben zur letzten Zustellung. Du kannst einzelne Registrierungen deaktivieren oder entfernen, ohne das Konto zu löschen. Die Kategorien unter **Kontoeinstellungen** → **Benachrichtigungen** bestimmen, welche Ereignisse dich benachrichtigen. Der Posteingang in der Anwendung bleibt verfügbar, wenn Push nicht verfügbar ist.
 
 ![Push-Einstellungen mit gesperrter Browserberechtigung und ohne registriertes Gerät.](/documentation/de/devices-and-notifications-workflow.png)
 
@@ -250,6 +251,6 @@ Web-Push erfordert einen unterstützten Browser und einen konfigurierten Push-Di
 
 Wenn auf dem ausgewählten Server APNs oder WNS nicht konfiguriert ist, verwendet die Desktop-App lokale native Benachrichtigungen, solange sie läuft oder ausgeblendet ist. Nach dem Beenden der App werden über diesen Ersatzweg keine Benachrichtigungen mehr zugestellt.
 
-Prüfen Sie die Benachrichtigungserlaubnis des Betriebssystems, den Installationszustand im Browser und die angezeigte Erklärung, falls die Funktion nicht eingerichtet oder nicht unterstützt ist. Ein erfolgreicher Test garantiert keine Zustellung ohne Netz oder unter sämtlichen Hintergrundbeschränkungen des Betriebssystems. Halten Sie die Anwendung oder ihren eingerichteten Hintergrunddienst entsprechend den Anforderungen der Plattform verfügbar.
+Prüfe die Benachrichtigungserlaubnis des Betriebssystems, den Installationszustand im Browser und die angezeigte Erklärung, falls die Funktion nicht eingerichtet oder nicht unterstützt ist. Ein erfolgreicher Test garantiert keine Zustellung ohne Netz oder unter sämtlichen Hintergrundbeschränkungen des Betriebssystems. Halte die Anwendung oder ihren eingerichteten Hintergrunddienst entsprechend den Anforderungen der Plattform verfügbar.
 
 ![Aktives, für das Konto registriertes Browser-Gerät mit dem tatsächlichen Datum des letzten Versands.](/documentation/de/devices-and-notifications-registered.png)

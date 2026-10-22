@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 9,
+  "revision": 11,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -50,9 +50,9 @@
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of install-a-server-wizard on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 11,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of install-a-server-wizard on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -78,7 +78,7 @@
       "src": "/documentation/pt-BR/self-hosted-compatibility-flow.svg",
       "alt": "Diagrama: Tag de código anotada. Arquivos e SHA256SUMS. Assinatura e digest OCI oficiais. Perfil de compatibilidade escolhido.",
       "caption": "Siga as etapas nesta ordem. Tag de código anotada. Arquivos e `SHA256SUMS`. Assinatura e digest OCI oficiais. Perfil de compatibilidade escolhido.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -110,7 +110,7 @@
       "src": "/documentation/pt-BR/install-a-server-flow.svg",
       "alt": "Diagrama: Release verificada e ambiente protegido. Instalador: perfil full de referência. Supabase oficial, app, agendador. Verificação de conta, arquivos e recuperação.",
       "caption": "Siga as etapas nesta ordem. Release verificada e ambiente protegido. Instalador: perfil full de referência. Supabase oficial, app, agendador. Verificação de conta, arquivos e recuperação.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -142,7 +142,7 @@
       "src": "/documentation/pt-BR/install-a-server-wizard.png",
       "alt": "Assistente público de instalação com Supabase no mesmo servidor selecionado.",
       "caption": "O perfil full mantém a aplicação e o Supabase no seu servidor. Neste exemplo, o acesso pela rede privada fica restrito à rede local.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -159,7 +159,7 @@
       "src": "/documentation/pt-BR/managed-or-source-installation-flow.svg",
       "alt": "Diagrama: Seu projeto Supabase gerenciado. PostgreSQL, Auth, Storage, Realtime. Perfil OCI OU aplicação de tag. Tarefas e backup conforme perfil.",
       "caption": "A escolha entre imagem OCI e compilação pelo código-fonte muda a gestão da aplicação, enquanto o provedor gerencia o backend.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

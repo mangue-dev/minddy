@@ -6,14 +6,21 @@ ongoing work. It preserves titles, statuses, assignees, and completion dates,
 creates no records, and uses the shared write guards. The default run only
 describes the change; `--apply` requires explicit user approval.
 
-`016-routines.mjs` seeds three demo agent routines on Aurora (weekly security
-review, monthly dependency inventory, daily issue triage) plus four historical
-runs on the weekly one. Every routine is inserted DISABLED — `enabled: false`,
-`next_run_at: null` — so the scheduler can never claim them and no real agent
-passage is ever billed. Runs are seeded at rest (`completed`/`failed`, never
-`queued`/`running`) with no pull request, for the same reasons as `008-agent.mjs`.
-The default run applies after the plan it prints; relaunching is safe, existing
-routines and runs are left as they are.
+`016-routines.mjs` seeds three demo routines on Aurora (weekly security
+review, monthly dependency inventory, daily issue triage). Every routine is
+inserted DISABLED — `enabled: false`, `next_run_at: null` — so the scheduler can
+never claim them and no real run is ever billed. It no longer seeds run history:
+those rows lived in the coding agent's table removed in MIN-721. The default run
+applies after the plan it prints; relaunching is safe, existing routines are
+left as they are.
+
+`019-manuel-captures.mjs` adds the demo data of the remaining manual
+screenshots: an incoming Aurora ticket in triage created by Alice, one Aurora
+ticket in the trash deleted by Camille, and a short "Feedback guide" page
+published read-only and shown as a tab of Aurora's public feedback board. The
+publication is a public share of that demo page, anchored by the page in the
+guards. The default run only describes the change; `--apply` requires explicit
+user approval.
 
 `017-cycle-recal.mjs` realigns the demo cycle world for the `featureCycle`
 screenshot: AUR-18 — auto-captured into Camille's current fortnight by the

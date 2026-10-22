@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-21",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -65,10 +65,10 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; 3 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-21"
+    "revision": 15,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; 3 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "issues"
@@ -93,7 +93,7 @@
       "src": "/documentation/en/web-and-mobile-workflow.png",
       "alt": "Mobile issue panel with localized title, description, properties and comment composer.",
       "caption": "On a narrow screen, issue details occupy a responsive panel. Use the close button to return to the project; Numo remains reachable through its floating button.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -110,7 +110,7 @@
       "src": "/documentation/en/install-the-pwa-workflow.png",
       "alt": "minddy’s illustrated Safari installation guide: Share, Add to Home Screen and confirm.",
       "caption": "The public guide illustrates the three Safari steps and keeping Open as Web App enabled. These are instructional illustrations rendered by minddy, not screenshots of a completed iOS installation.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -127,7 +127,7 @@
       "src": "/documentation/en/devices-and-notifications-workflow.png",
       "alt": "Push settings showing browser permission blocked and no registered device.",
       "caption": "This browser blocks notifications. Restore site permission before trying to register this device.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -144,15 +144,16 @@
       "src": "/documentation/en/devices-and-notifications-registered.png",
       "alt": "An active browser push device registered to the account, with its actual last-send date.",
       "caption": "The account has an active registered browser device. The list shows its registration and last-send dates. Browser permission and operating-system settings still determine whether a banner appears.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-22",
       "viewport": [
         816,
         208
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "desktop-renderer-recovery",
@@ -160,7 +161,7 @@
       "src": "/documentation/en/desktop-renderer-recovery.png",
       "alt": "Local recovery page after a forced renderer crash, with Reload window and Check server settings controls.",
       "caption": "Recovery page in the macOS development app with an isolated profile and demonstration server. The native shell uses English labels in every language.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [

@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 10,
+  "revision": 11,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -45,10 +45,10 @@
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 11,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "navigation",
@@ -70,7 +70,7 @@
       "src": "/documentation/fr/work-view-filters.png",
       "alt": "Filtres manuels d’une vue et menu de classement.",
       "caption": "Filtrez par propriétés du ticket ou choisissez un ordre. Le champ IA est facultatif pour ces commandes manuelles.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -86,7 +86,7 @@
       "src": "/documentation/fr/work-share-view.png",
       "alt": "Dialogue de partage d’une vue avec l’accès privé sélectionné.",
       "caption": "Les accès privé, protégé par mot de passe et public correspondent à trois choix distincts. Cette vue reste privée sur la capture.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [

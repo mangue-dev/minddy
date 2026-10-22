@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -46,10 +46,10 @@
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 10,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "authentication-and-email",
@@ -64,17 +64,18 @@
       "id": "instance-administration-flow",
       "kind": "screenshot",
       "src": "/documentation/fr/instance-administration-overview.png",
-      "alt": "Vue d’ensemble administrateur avec indicateurs agrégés des comptes, de l’activité, de l’accueil et des plans.",
+      "alt": "Vue d’ensemble administrateur avec indicateurs agrégés des comptes, de l’activité, de l’accueil et du contenu.",
       "caption": "Vue d’ensemble affiche les indicateurs agrégés de l’instance ; la capture provient d’une instance de démonstration. Finances y apparaît, car une clé OpenRouter gérée y est configurée.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         1488,
         1148
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "instance-administration-models",
@@ -82,15 +83,16 @@
       "src": "/documentation/fr/instance-administration-models.png",
       "alt": "Réglages des modèles IA et du raisonnement de l’instance.",
       "caption": "Modèles règle les valeurs par défaut et les usages dédiés. La capture montre la configuration existante ; aucun réglage de modèle ou de fournisseur n’a été modifié.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         1488,
         1148
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -104,7 +106,7 @@
 L’administration de l’instance est distincte de la propriété d’un projet. Définissez `ADMIN_EMAILS` dans l’environnement serveur avec les adresses confirmées des comptes autorisés. Le rôle `app_metadata.role=admin` signé côté serveur est aussi accepté. Une session administrateur exige `aal2`, une MFA inscrite et vérifiée, ainsi que les contrôles courants du compte et de la session. L’accès est refusé si ces contrôles échouent. Connectez-vous, validez le code TOTP et ouvrez `/admin`. Ne modifiez pas les rôles de la base pour contourner l’inscription MFA. La console et ses API privées restent `noindex`.
 
 
-![Vue d’ensemble administrateur avec indicateurs agrégés des comptes, de l’activité, de l’accueil et des plans.](/documentation/fr/instance-administration-overview.png)
+![Vue d’ensemble administrateur avec indicateurs agrégés des comptes, de l’activité, de l’accueil et du contenu.](/documentation/fr/instance-administration-overview.png)
 
 ![Réglages des modèles IA et du raisonnement de l’instance.](/documentation/fr/instance-administration-models.png)
 

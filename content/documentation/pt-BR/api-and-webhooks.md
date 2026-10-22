@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 9,
+  "revision": 11,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -48,9 +48,9 @@
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 11,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -73,7 +73,7 @@
       "src": "/documentation/pt-BR/integration-api-and-webhooks-flow.svg",
       "alt": "Diagrama: Servidor mantém chave da integração. POST tickets ou feedback com tipo correto. Proprietário escolhe destino do webhook. Receptor verifica HMAC bruto e UUID.",
       "caption": "Siga as etapas nesta ordem. Servidor mantém chave da integração. `POST` tickets ou feedback com tipo correto. Proprietário escolhe destino do webhook. Receptor verifica HMAC bruto e UUID.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -105,7 +105,7 @@
       "src": "/documentation/pt-BR/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Sequências separadas de ingestão pelo backend e SSO do navegador, com segredos distintos.",
       "caption": "A chave de ingestão autentica chamadas do servidor. O segredo SSO do mural assina um token de visitante curto e de uso único.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -131,7 +131,7 @@
               "O backend guarda o segredo SSO separado do quadro",
               "Assinar JWT `HS256`: `sub`, `exp`, `jti` único; validade ≤ 600 s",
               "Redirecionar navegador a `/f/<board-token>?sso=<jwt>`",
-              "Token de uso único cria sessão; abrir Meus comentários"
+              "Token de uso único cria sessão; abrir Meu feedback"
             ]
           }
         ],
@@ -177,7 +177,7 @@ curl --fail-with-body --request POST "$MINDDY_ORIGIN/api/v1/issues" \
 
 As integrações `issues` podem enviar `issue.created`, `issue.status_changed` e `issue.updated`. O proprietário precisa escolher qualquer destino novo de webhook com **Configurar o webhook…** no menu ⋯ da integração. Depois que o destino é definido, a linha **Webhook** abaixo da integração mostra a última entrega, aceita ou recusada com a data, ou **Nenhuma entrega ainda**. Agentes podem ajustar eventos e escopo de um destino existente ou desativá-lo, mas não podem abrir um canal novo de saída. O escopo `integration` inclui apenas os tickets criados com aquela chave; `all` inclui todos os tickets do projeto.
 
-`X-minddy-Signature` contém o prefixo `sha256=` e um HMAC-SHA256 calculado sobre os bytes originais. A chave HMAC é o digest SHA-256 da chave API, representado como uma string hexadecimal minúscula. Compare a assinatura em tempo constante antes de confiar no payload, sem analisá-lo e serializá-lo novamente. `X-minddy-Delivery` corresponde a `delivery_id`: use esse UUID para eliminar duplicatas.
+`X-minddy-Signature` contém o prefixo `sha256=` e um HMAC-SHA256 calculado sobre os bytes originais. A chave HMAC é o digest SHA-256 da chave de API, representado como uma string hexadecimal minúscula. Compare a assinatura em tempo constante antes de confiar no payload, sem analisá-lo e serializá-lo novamente. `X-minddy-Delivery` corresponde a `delivery_id`: use esse UUID para eliminar duplicatas.
 
 ### Tratar falhas e limites {#limits}
 
@@ -206,7 +206,7 @@ A criação permite 20 chamadas por minuto por chave; a votação, 60. Respeite 
 
 Como proprietário, ative o mural e configure seu segredo SSO separado. O backend assina um JWT `HS256` com `sub` estável, `exp` obrigatório e `email`/nome opcionais. Use no máximo 600 segundos de validade e um `jti` único; a verificação tolera 60 segundos de diferença entre os relógios. Redirecione imediatamente para `/f/<board-token>?sso=<jwt>`. O token só pode ser consumido uma vez por mural; uma nova tentativa exige outro token assinado. Nunca use a chave de ingestão como segredo SSO. Mantenha os tokens fora de logs e capturas compartilhadas.
 
-Verifique se o visitante abre Meus comentários com a identidade esperada. Um token expirado exige um novo redirecionamento. Se o segredo estiver comprometido, use a confirmação para rotacioná-lo no mural e atualize o backend ao mesmo tempo. O código por email continua disponível como alternativa quando o SSO não estiver acessível.
+Verifique se o visitante abre Meu feedback com a identidade esperada. Um token expirado exige um novo redirecionamento. Se o segredo estiver comprometido, use a confirmação para rotacioná-lo no mural e atualize o backend ao mesmo tempo. O código por email continua disponível como alternativa quando o SSO não estiver acessível.
 
 ![Sequências separadas de ingestão pelo backend e SSO do navegador, com segredos distintos.](/documentation/pt-BR/feedback-ingestion-and-sso-workflow.svg)
 

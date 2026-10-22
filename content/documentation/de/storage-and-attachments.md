@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -38,10 +38,10 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 6,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "backups-and-restoration"
@@ -57,7 +57,7 @@
       "src": "/documentation/de/storage-and-attachments-flow.svg",
       "alt": "Diagramm: Autorisierter Anwendungsdateizugriff. PostgreSQL-Objektmetadaten. Rohbytes im Dateisystem oder S3. Passende Konfiguration und Schlüssel.",
       "caption": "Eine Wiederherstellung braucht zusammengehörige Metadaten, Dateiinhalte und die passende geschützte Konfiguration.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -92,18 +92,18 @@
 
 ## Storage dauerhaft betreiben und Anhänge prüfen {#storage-and-attachments}
 
-PostgreSQL speichert Storage-Objektmetadaten und Anwendungsreferenzen. Das Storage-Backend enthält die Dateibytes. Beide gehören zu derselben Instanz und demselben Sicherungspunkt. Das full-Dateisystemprofil speichert Bytes unter `docker/volumes/storage` im festgelegten Upstream; S3-kompatibler Storage benötigt einen getrennten Rohdaten-Snapshot. Vergängliche Containerdateien sind kein dauerhafter Storage. Überwachen Sie Kapazität für Datenbank, Anhänge und Sicherungen und speichern Sie Backups außerhalb der aktiven Storage-Platte.
+PostgreSQL speichert Storage-Objektmetadaten und Anwendungsreferenzen. Das Storage-Backend enthält die Dateibytes. Beide gehören zu derselben Instanz und demselben Sicherungspunkt. Das full-Dateisystemprofil speichert Bytes unter `docker/volumes/storage` im festgelegten Upstream; S3-kompatibler Storage benötigt einen getrennten Rohdaten-Snapshot. Vergängliche Containerdateien sind kein dauerhafter Storage. Überwache die Kapazität für Datenbank, Anhänge und Sicherungen und speichere Backups außerhalb der aktiven Storage-Platte.
 
 
 ![Diagramm: Autorisierter Anwendungsdateizugriff. PostgreSQL-Objektmetadaten. Rohbytes im Dateisystem oder S3. Passende Konfiguration und Schlüssel.](/documentation/de/storage-and-attachments-flow.svg)
 
 ## Autorisierten Zugriff prüfen {#access}
 
-Private Seiten- und Ticketdateien durchlaufen Anwendungsautorisierung vor erlaubtem Download. Eine veröffentlichte Seite stellt nur Dateien ihres veröffentlichten Satzes über signierte URLs bereit. Sie öffnet weder den privaten Bucket noch die authentifizierte Route. Eine vorhandene Datei beweist nicht korrekte Metadaten, Richtlinien, Schlüssel oder Berechtigungen. Laden Sie mit einem Demokonto eine Datei hoch und herunter und vergleichen Sie SHA-256. Wiederholen Sie dies nach Wiederherstellung für jeden verwendeten Bucket.
+Private Seiten- und Ticketdateien durchlaufen Anwendungsautorisierung vor erlaubtem Download. Eine veröffentlichte Seite stellt nur Dateien ihres veröffentlichten Satzes über signierte URLs bereit. Sie öffnet weder den privaten Bucket noch die authentifizierte Route. Eine vorhandene Datei beweist nicht korrekte Metadaten, Richtlinien, Schlüssel oder Berechtigungen. Lade mit einem Demokonto eine Datei hoch und herunter und vergleiche SHA-256. Wiederhole dies nach Wiederherstellung für jeden verwendeten Bucket.
 
 ## Fehler beheben {#recover}
 
-Führen Sie die Supabase-Prüfung aus, prüfen Sie richtigen Stack und Service-Role-Konfiguration und vergleichen Sie Objektdatensätze, Rohbytes und erhaltene Schlüssel. Beheben Sie Dienst-, Richtlinien- oder Konfigurationsfehler vor Wiederholung. Löschen Sie niemals einen nicht leeren `avatars`-Bucket wegen einer Warnung. SQL-Datensätze allein stellen keine Bytes wieder her. Stellen Sie bei S3 den Rohbackend-Snapshot wieder her, nicht über `/storage/v1/s3`, das widersprüchliche Metadaten erzeugen kann.
+Führe die Supabase-Prüfung aus, prüfe richtigen Stack und Service-Role-Konfiguration und vergleiche Objektdatensätze, Rohbytes und erhaltene Schlüssel. Behebe Dienst-, Richtlinien- oder Konfigurationsfehler vor Wiederholung. Lösche niemals einen nicht leeren `avatars`-Bucket wegen einer Warnung. SQL-Datensätze allein stellen keine Bytes wieder her. Stelle bei S3 den Rohbackend-Snapshot wieder her, nicht über `/storage/v1/s3`, das widersprüchliche Metadaten erzeugen kann.
 
 ```bash
 pnpm verify:supabase --db-url "$SUPABASE_DB_URL" \
@@ -113,7 +113,7 @@ pnpm verify:supabase --db-url "$SUPABASE_DB_URL" \
 
 ## Dateisystem-Storage unter Docker Desktop {#docker-desktop}
 
-Im getesteten macOS-Profil mit Docker Desktop lieferte ein Host-Bind-Mount `ENOTSUP`, als Storage erweiterte Attribute schrieb. Ein neues benanntes Linux-Volume verhinderte diesen Fehler. Bei einer neuen Installation ohne Objektbytes ersetzt der folgende dauerhafte Override nur den Storage-Mount. Behalten Sie `RESTORE_OVERRIDE` im installierten Compose-Kontext bei. Ersetzen Sie keinen bereits befüllten Mount durch ein leeres Volume und überschreiben Sie keinen vorhandenen Restore-Override: Stoppen Sie Schreibzugriffe und sichern Sie zuerst die Bytes mit den Sicherungs- und Wiederherstellungsverfahren.
+Im getesteten macOS-Profil mit Docker Desktop lieferte ein Host-Bind-Mount `ENOTSUP`, als Storage erweiterte Attribute schrieb. Ein neues benanntes Linux-Volume verhinderte diesen Fehler. Bei einer neuen Installation ohne Objektbytes ersetzt der folgende dauerhafte Override nur den Storage-Mount. Behalte `RESTORE_OVERRIDE` im installierten Compose-Kontext bei. Ersetze keinen bereits befüllten Mount durch ein leeres Volume und überschreibe keinen vorhandenen Restore-Override: Stoppe Schreibzugriffe und sichere zuerst die Bytes mit den Sicherungs- und Wiederherstellungsverfahren.
 
 ```bash
 : "${RESTORE_OVERRIDE:=/etc/minddy/storage-volume.yml}"

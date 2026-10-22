@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 10,
+  "revision": 12,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -45,9 +45,9 @@
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of views-and-filters-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 12,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of views-and-filters-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -71,7 +71,7 @@
       "src": "/documentation/pt-BR/work-view-filters.png",
       "alt": "Filtros manuais de uma visualização e menu de ordenação.",
       "caption": "Filtre pelas propriedades dos tickets ou escolha uma ordem. O campo de IA é opcional para esses controles manuais.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -88,7 +88,7 @@
       "src": "/documentation/pt-BR/work-share-view.png",
       "alt": "Janela de compartilhamento de visualização com acesso privado selecionado.",
       "caption": "Acesso privado, protegido por senha e público são escolhas distintas. A visualização continua privada nesta captura.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [

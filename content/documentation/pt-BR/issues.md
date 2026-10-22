@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 35,
-  "sourceRevision": 34,
+  "revision": 36,
+  "sourceRevision": 35,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -120,9 +120,9 @@
     ]
   },
   "review": {
-    "revision": 35,
-    "fact": "agent:/root/min776 (drafts paragraph checked against components/create-issue-dialog.tsx, components/objective-dialog.tsx and lib/use-held-draft.ts: closing keeps the form, reopening resumes it, two minutes after a close it becomes a draft, another context saves it first, and the split menu offers Save as draft; rest of the article unchanged since the MIN-778 review; no figure changed); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of create-an-issue-steps, issue-statuses-steps, sub-issues-steps, implementation-plans-steps, recurring-issues-steps, import-issues-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted)",
-    "language": "agent:/root/min776 (pt-BR drafts paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 36,
+    "fact": "agent:/root/min776 (drafts paragraph checked against components/create-issue-dialog.tsx, components/objective-dialog.tsx and lib/use-held-draft.ts: closing keeps the form, reopening resumes it, two minutes after a close it becomes a draft, another context saves it first, and the split menu offers Save as draft; rest of the article unchanged since the MIN-778 review; no figure changed); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of create-an-issue-steps, issue-statuses-steps, sub-issues-steps, implementation-plans-steps, recurring-issues-steps, import-issues-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min776 (pt-BR drafts paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -169,7 +169,7 @@
       "src": "/documentation/pt-BR/new-issue.png",
       "alt": "Rascunho não enviado no projeto Aurora com título, descrição, propriedades que podem ser escolhidas manualmente e o botão Criar AUR-19.",
       "caption": "Descreva o resultado esperado e escolha as propriedades úteis antes de criar o ticket.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -184,17 +184,18 @@
       "id": "triage-incoming-work-steps",
       "kind": "screenshot",
       "src": "/documentation/pt-BR/triage-incoming.png",
-      "alt": "Ticket recebido de demonstração DOC-11 com relato, propriedades e controles de duplicado, Recusar e Aceitar.",
+      "alt": "Ticket recebido de demonstração AUR-19 com relato, propriedades e controles de duplicado, Recusar e Aceitar.",
       "caption": "Leia o relato recebido antes de aceitar, recusar ou vincular um duplicado.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-22",
       "viewport": [
-        994,
-        866
+        1154,
+        786
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "issue-statuses-steps",
@@ -202,7 +203,7 @@
       "src": "/documentation/pt-BR/issue-statuses.png",
       "alt": "Os oito estados do ticket no seletor, com Backlog selecionado.",
       "caption": "A marca indica o estado atual. Escolha o que representa a situação real do trabalho.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -219,7 +220,7 @@
       "src": "/documentation/pt-BR/work-resources.png",
       "alt": "Janela para adicionar um link com um endereço de contato de exemplo.",
       "caption": "Confira o destino antes de adicionar o recurso. Este link de exemplo não foi enviado.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -235,7 +236,7 @@
       "src": "/documentation/pt-BR/work-dependencies.png",
       "alt": "Busca de um ticket bloqueador pelo identificador.",
       "caption": "Escolha o sentido da relação antes do destino. O seletor é mostrado sem enviar a relação.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -251,7 +252,7 @@
       "src": "/documentation/pt-BR/work-sub-issues.png",
       "alt": "Campo de criação de um subticket em um ticket pai de demonstração.",
       "caption": "O campo cria um filho deste ticket; cada filho mantém seu próprio status e discussão.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -268,7 +269,7 @@
       "src": "/documentation/pt-BR/work-implementation-plan.png",
       "alt": "Plano de demonstração com duas tarefas de trabalho concluídas de seis.",
       "caption": "O plano salvo distingue etapas concluídas, ativas e pendentes. O progresso não comprova a execução da tarefa fictícia de código.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -285,7 +286,7 @@
       "src": "/documentation/pt-BR/issue-date-recurrence.png",
       "alt": "Seletor de prazo no modo recorrente com prévia semanal aos domingos e horário opcional.",
       "caption": "O modo recorrente mostra a frequência semanal. Confirme o primeiro prazo antes de criar o ticket.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -302,7 +303,7 @@
       "src": "/documentation/pt-BR/import-issues-preview-workflow.png",
       "alt": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas.",
       "caption": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas. A importação não foi enviada; o planejamento opcional com IA foi bloqueado para a captura.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -319,7 +320,7 @@
       "src": "/documentation/pt-BR/file-preview.png",
       "alt": "Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar, Renomear e Remover.",
       "caption": "O visualizador compartilhado mantém Fechar abaixo da prévia. O menu Ações do arquivo oferece Baixar e, quando permitido, Renomear e Remover.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -363,7 +364,7 @@ Fechar o formulário mantém o que você escreveu: abra-o de novo para continuar
 
 ![Rascunho não enviado no projeto Aurora com título, descrição, propriedades que podem ser escolhidas manualmente e o botão Criar AUR-19.](/documentation/pt-BR/new-issue.png)
 
-A descrição, os comentários e a janela de novo ticket usam o mesmo editor das páginas do projeto, sem as alças de bloco. Digite `/` para inserir um título, uma lista, uma tarefa, uma citação, um **Destaque**, um bloco de código, um bloco **Alternar** ou um divisor, e `@` para mencionar uma pessoa, um ticket, um objetivo ou uma página. O menu `@` também lista os recursos anexados ao que você está escrevendo: o ticket ou objetivo para a descrição e o plano, um comentário para os próprios arquivos ou uma janela de criação para os arquivos adicionados nela. Uma menção a um recurso anexado em outro lugar aparece como **Indisponível**. Várias pessoas podem editar a mesma descrição ao mesmo tempo: o cursor de cada uma aparece com seu nome e sua cor, e as alterações de Numo ou de um agente conectado aparecem assim que são salvas. Numo, os agentes conectados e as exportações CSV leem o texto em Markdown, que é atualizado alguns segundos depois que a digitação para. Selecione um texto para deixá-lo em negrito, itálico, tachado ou código, ou para adicionar um link. Cole ou solte uma imagem, ou escolha **Imagem** no menu `/`, para inseri-la na descrição; os outros tipos de arquivo ficam nos recursos do ticket. Uma menção aponta para o seu destino, não para o seu nome: ela acompanha uma renomeação e resiste a edições e a copiar e colar em outra descrição, um comentário, uma página ou o compositor do Numo. Quem não pode abrir o destino vê uma menção **Indisponível**, sem o nome nem o projeto.
+A descrição, os comentários e a janela de novo ticket usam o mesmo editor das páginas do projeto, sem as alças de bloco. Digite `/` para inserir um título, uma lista, uma tarefa, uma citação, um **Destaque**, um bloco de código, um **Bloco recolhível** ou um divisor, e `@` para mencionar uma pessoa, um ticket, um objetivo ou uma página. O menu `@` também lista os recursos anexados ao que você está escrevendo: o ticket ou objetivo para a descrição e o plano, um comentário para os próprios arquivos ou uma janela de criação para os arquivos adicionados nela. Uma menção a um recurso anexado em outro lugar aparece como **Indisponível**. Várias pessoas podem editar a mesma descrição ao mesmo tempo: o cursor de cada uma aparece com seu nome e sua cor, e as alterações de Numo ou de um agente conectado aparecem assim que são salvas. Numo, os agentes conectados e as exportações CSV leem o texto em Markdown, que é atualizado alguns segundos depois que a digitação para. Selecione um texto para deixá-lo em negrito, itálico, tachado ou código, ou para adicionar um link. Cole ou solte uma imagem, ou escolha **Imagem** no menu `/`, para inseri-la na descrição; os outros tipos de arquivo ficam nos recursos do ticket. Uma menção aponta para o seu destino, não para o seu nome: ela acompanha uma renomeação e resiste a edições e a copiar e colar em outra descrição, um comentário, uma página ou o compositor do Numo. Quem não pode abrir o destino vê uma menção **Indisponível**, sem o nome nem o projeto.
 
 ### Verificar salvamento e visibilidade {#issue-save}
 
@@ -411,7 +412,7 @@ O Smart Triage não é um modo experimental de triagem com IA. A ordem ajuda a d
 Se o item esperado não aparecer, confira projeto ativo, estado e filtros, depois pesquise seu identificador. Trabalho importado ou sincronizado externamente pode entrar na triagem; inspecione a origem e o mapeamento da integração antes de alterar campos sincronizados. Uma solicitação vinculada pelo feedback continua sendo um objeto de feedback distinto com sua própria discussão pública.
 
 
-![Ticket recebido de demonstração DOC-11 com relato, propriedades e controles de duplicado, Recusar e Aceitar.](/documentation/pt-BR/triage-incoming.png)
+![Ticket recebido de demonstração AUR-19 com relato, propriedades e controles de duplicado, Recusar e Aceitar.](/documentation/pt-BR/triage-incoming.png)
 
 ## Acompanhar o ciclo de vida de um ticket {#issue-statuses}
 

@@ -20,10 +20,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -67,10 +67,10 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 15,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "api-and-webhooks"
@@ -96,12 +96,12 @@
       "src": "/documentation/en/publish-a-feedback-board-workflow.png",
       "alt": "Enabled public feedback board with email-code visitor identity, the Enable SSO action and its URL concealed.",
       "caption": "The owner enables the board and chooses visitor identity. This demo board uses email verification; its URL is concealed.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         816,
-        566
+        596
       ],
       "theme": "light",
       "padding": 24,
@@ -113,7 +113,7 @@
       "src": "/documentation/en/submit-and-follow-feedback-workflow.png",
       "alt": "Visitor feedback form with a title, description and public visibility enabled.",
       "caption": "A signed-in visitor submits a need and chooses whether it appears publicly. The example was actually submitted with automatic review disabled.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -129,7 +129,7 @@
       "src": "/documentation/en/feedback-objective-selection.png",
       "alt": "Component preview of the feedback objective selector and a feedback integration default, both set to Docs.",
       "caption": "Objective selectors with demonstration data. New feedback inherits the integration default.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -146,15 +146,16 @@
       "src": "/documentation/en/feedback-pages-and-views-workflow.png",
       "alt": "Published feedback guide selected in the board navigation and readable without sign-in.",
       "caption": "Publish a page, enable page tabs and select it for the board. This demonstration page was opened anonymously; the opaque URL keeps `noindex`.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-22",
       "viewport": [
-        1148,
-        388
+        1328,
+        668
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [

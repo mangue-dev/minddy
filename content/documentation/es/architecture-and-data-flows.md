@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -39,10 +39,10 @@
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 7,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "instance-configuration",
@@ -60,7 +60,7 @@
       "src": "/documentation/es/architecture-and-data-flows-flow.svg",
       "alt": "Diagrama: Navegador y aplicación autenticada. Supabase: PostgreSQL, Auth, Storage, Realtime. Planificador independiente para tareas en segundo plano. Proveedores opcionales: destinos separados.",
       "caption": "La infraestructura separa las solicitudes interactivas, el trabajo programado y los destinos externos de datos.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -105,4 +105,4 @@ El navegador utiliza las URL de origen públicas de minddy y Supabase. Auth crea
 
 ## Identificar destinos externos {#providers}
 
-IA, email, Git, MCP remoto, push, analytics y almacenamiento externo son destinos separados cuando se activan. Alojar minddy en su servidor no vuelve locales esos servicios. En managed, el proveedor elegido opera el backend; full lo sitúa bajo su control. minddy Cloud opera el servicio y sus proveedores, mientras en self-hosted usted configura las cuentas y opciones. Revise permisos, costes y condiciones de tratamiento de datos. No deduzca el proveedor ni la edición Cloud únicamente del hostname o de la plataforma de despliegue.
+IA, email, Git, MCP remoto, push, analytics y almacenamiento externo son destinos separados cuando se activan. Alojar minddy en tu servidor no vuelve locales esos servicios. En managed, el proveedor elegido opera el backend; full lo sitúa bajo tu control. minddy Cloud opera el servicio y sus proveedores, mientras en self-hosted tú configuras las cuentas y opciones. Revisa permisos, costes y condiciones de tratamiento de datos. No deduzcas el proveedor ni la edición Cloud únicamente del hostname o de la plataforma de despliegue.

@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 18,
-  "sourceRevision": 17,
+  "revision": 20,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -74,9 +74,9 @@
     ]
   },
   "review": {
-    "revision": 18,
-    "fact": "agent:/root/min764 (database archive sentence checked against lib/server/database-export.ts and lib/server/page-database-views.ts: saved views are not exported and are copied by duplication; rest of the article unchanged since the previous review; no figure changed); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of page-editor-steps, page-comments-and-collaboration-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted)",
-    "language": "agent:/root/min764 (pt-BR changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 20,
+    "fact": "agent:/root/min764 (database archive sentence checked against lib/server/database-export.ts and lib/server/page-database-views.ts: saved views are not exported and are copied by duplication; rest of the article unchanged since the previous review; no figure changed); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of page-editor-steps, page-comments-and-collaboration-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (page-comments inline alt aligned with the figure alt and the recaptured image); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min764 (pt-BR changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR alt text edit; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -113,7 +113,7 @@
       "src": "/documentation/pt-BR/page-create-menu.png",
       "alt": "Menu de criação com Nova página e Novo banco de dados.",
       "caption": "Use os controles de páginas do projeto para escolher um documento ou um banco de dados.",
-      "revision": 18,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -129,7 +129,7 @@
       "src": "/documentation/pt-BR/page-editor.png",
       "alt": "Página de demonstração com títulos, parágrafos, caixas de tarefas e menção a um ticket.",
       "caption": "Os títulos, os blocos de tarefas e a menção AUR-2 organizam a página. O conteúdo é um exemplo de demonstração.",
-      "revision": 18,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -146,7 +146,7 @@
       "src": "/documentation/pt-BR/page-comments.png",
       "alt": "Atividade da página ainda sem eventos e campo de comentário vazio.",
       "caption": "Leia a atividade e escreva um comentário no campo. Nenhum comentário foi enviado neste exemplo.",
-      "revision": 18,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -163,7 +163,7 @@
       "src": "/documentation/pt-BR/page-file-states.png",
       "alt": "Página de demonstração com um upload incompleto e um arquivo salvo de 67 bytes com a opção Baixar.",
       "caption": "Confira o estado real do arquivo: o segundo anexo está disponível, mas o primeiro upload incompleto não.",
-      "revision": 18,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -179,7 +179,7 @@
       "src": "/documentation/pt-BR/page-history-preview.png",
       "alt": "Aba Versões com um estado anterior expandido, autor, Restaurar e aviso de retenção por 30 dias.",
       "caption": "Confira a prévia de um estado salvo e compare com a página atual antes de restaurá-lo.",
-      "revision": 18,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -195,7 +195,7 @@
       "src": "/documentation/pt-BR/page-publish.png",
       "alt": "Janela de publicação com Privado selecionado e opções de senha ou link.",
       "caption": "Privado mantém a página no projeto. Confira quem deve ler o conteúdo antes de mudar a publicação.",
-      "revision": 18,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -211,7 +211,7 @@
       "src": "/documentation/pt-BR/page-export.png",
       "alt": "Menu de exportação do documento com Markdown (.md) e Imprimir / PDF.",
       "caption": "Escolha Markdown para baixar o documento ou Imprimir / PDF para abrir a visualização de impressão.",
-      "revision": 18,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -227,7 +227,7 @@
       "src": "/documentation/pt-BR/file-preview.png",
       "alt": "Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar, Renomear e Remover.",
       "caption": "O visualizador compartilhado mantém Fechar abaixo da prévia. O menu Ações do arquivo oferece Baixar e, quando permitido, Renomear e Remover.",
-      "revision": 18,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -306,7 +306,7 @@ Abra uma página do projeto e os controles de comentários. Selecione o conteúd
 Avatares de presença identificam quem está vendo a página. Enquanto alguém edita, o cursor e a seleção dessa pessoa aparecem no corpo e no título, em uma cor própria e identificados com o nome dela. O cursor de um leitor não é exibido. Um cursor mostra onde alguém está trabalhando, não que o texto dessa pessoa esteja salvo: o indicador de salvamento reflete apenas as suas alterações.
 
 
-![Atividade da página com uma edição de demonstração e campo de comentário vazio.](/documentation/pt-BR/page-comments.png)
+![Atividade da página ainda sem eventos e campo de comentário vazio.](/documentation/pt-BR/page-comments.png)
 
 ### Recuperar um conflito de salvamento {#page-conflict}
 

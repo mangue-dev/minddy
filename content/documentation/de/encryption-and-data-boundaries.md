@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -40,10 +40,10 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 6,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "workspace-encryption",
@@ -61,7 +61,7 @@
       "src": "/documentation/de/encryption-and-data-boundaries-flow.svg",
       "alt": "Diagramm: Verschlüsselte Inhalte und umschlossene Schlüssel. Wurzelschlüssel in geschützter Serverkonfiguration. Autorisierte Laufzeit kann entschlüsseln. Exporte und externe Anbieter getrennt schützen.",
       "caption": "Gespeicherte Inhalte sind geschützt, doch die autorisierte Anwendung kann sie entschlüsseln und ausgegebene Daten brauchen eigenen Schutz.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -107,4 +107,4 @@ Auth hält Login-E-Mail als Identität. Routing-IDs, Projekt-/Ticketschlüssel, 
 
 ## Wiederherstellbarkeit erhalten {#recovery}
 
-Schützen Sie `MINDDY_DATA_ROOT_KEY` außerhalb der Datenbank und behalten Sie Wiederherstellungskopien für aktuelle und historische Backups. Restaurieren Sie Datenbank, Storage-Bytes und passende Konfiguration konsistent zusammen. Verschlüsseln Sie die äußere Sicherung, wenn sie Daten und Schlüssel enthält. Ein neuer Wurzelschlüssel ohne Neuverpacken macht Inhalte unlesbar; Abschalten wandelt Geheimtext nicht in Klartext. Erproben Sie Wiederherstellung vor Aktivierung auf Bestandsdaten und prüfen Sie tatsächliche Entschlüsselung und Downloadbytes.
+Schütze `MINDDY_DATA_ROOT_KEY` außerhalb der Datenbank und behalte Wiederherstellungskopien für aktuelle und historische Backups. Stelle Datenbank, Storage-Bytes und passende Konfiguration konsistent zusammen wieder her. Verschlüssele die äußere Sicherung, wenn sie Daten und Schlüssel enthält. Ein neuer Wurzelschlüssel ohne Neuverpacken macht Inhalte unlesbar; Abschalten wandelt Geheimtext nicht in Klartext. Erprobe die Wiederherstellung vor Aktivierung auf Bestandsdaten und prüfe tatsächliche Entschlüsselung und Downloadbytes.

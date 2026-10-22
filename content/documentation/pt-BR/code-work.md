@@ -3,7 +3,7 @@
   "id": "code-work",
   "locale": "pt-BR",
   "title": "Trabalho de código e pull requests",
-  "summary": "Entregue um ticket ao seu próprio agente de código com um prompt copiado e o MCP do minddy, depois revise e faça o merge do pull request vinculado.",
+  "summary": "Entregue um ticket ao seu próprio agente de código com um prompt copiado e o MCP do minddy, depois revise e mescle o pull request vinculado.",
   "topic": "Numo e integrações",
   "type": "guide",
   "audiences": [
@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
-  "sourceRevision": 18,
+  "revision": 20,
+  "sourceRevision": 19,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -52,9 +52,9 @@
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 20,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -77,16 +77,17 @@
       "kind": "screenshot",
       "src": "/documentation/pt-BR/review-pull-requests-workflow.png",
       "alt": "Aba Alterações do PR de demonstração aberto, com o diff de greeting e um aviso de autorização do GitHub indisponível.",
-      "caption": "PR de demonstração que permanece aberto, sem merge. O diff remove os espaços ao redor do nome e usa World quando o valor é vazio. Esta instância não pode solicitar autorização de usuário do GitHub; a indicação de prontidão não concede permissão de merge nem comprova que a CI do provedor passou.",
-      "revision": 19,
+      "caption": "PR de demonstração que permanece aberto, sem mesclagem. O diff remove os espaços ao redor do nome e usa World quando o valor é vazio. Esta instância não pode solicitar autorização de usuário do GitHub; a indicação de prontidão não concede permissão de mesclagem nem comprova que a CI do provedor passou.",
+      "revision": 20,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-22",
       "viewport": [
         1528,
         1148
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -95,7 +96,7 @@
 }
 ---
 
-O Minddy acompanha o trabalho; seu próprio agente de código, como Claude Code, Codex ou Cursor, altera o código. Copie um prompt a partir do ticket, deixe o agente ler e atualizar o ticket pelo MCP do minddy e depois revise o pull request vinculado no Minddy antes do merge. O Numo não escreve código, não abre branches nem executa testes.
+O Minddy acompanha o trabalho; seu próprio agente de código, como Claude Code, Codex ou Cursor, altera o código. Copie um prompt a partir do ticket, deixe o agente ler e atualizar o ticket pelo MCP do minddy e depois revise o pull request vinculado no Minddy antes da mesclagem. O Numo não escreve código, não abre branches nem executa testes.
 
 ## Entregar um ticket a um agente de código externo {#external-coding-agents}
 
@@ -112,7 +113,7 @@ O conteúdo do prompt, a sugestão de branch e as regras de idioma estão descri
 
 Quando o repositório estiver vinculado ao projeto, mantenha o identificador do ticket no nome da branch, no título do pull request ou em uma linha `Fixes MIN-42`. Assim o Minddy anexa o pull request ao ticket, e os prompts seguintes pedem ao agente que continue o pull request aberto na branch dele. Para anexar um ticket manualmente, use **Vincular um ticket** no pull request. A busca aceita um identificador ou palavras do título, e uma descrição também lista tickets do projeto encontrados [pelo sentido](/docs/navigation#search-by-meaning) em **Relacionados pelo sentido**.
 
-Em um quadro, clique com o botão direito em um ticket sem pull request aberto e escolha **Vincular a um pull request** para escolher um dos pull requests abertos do projeto, incluindo rascunhos. A opção só aparece quando esse projeto tem pelo menos um pull request para vincular. Com vários tickets selecionados, **Ações** oferece a mesma opção para toda a seleção, além de **Vincular os outros tickets a #N** quando alguns já têm o pull request N. **Vincular a um pull request** deixa de ser oferecido assim que um ticket selecionado tem algum pull request vinculado; **Desvincular N tickets dos seus pull requests** remove primeiro todos os vínculos da seleção, depois que você confirma. Os vínculos aparecem na hora nos cartões, e um vínculo recusado some quando o quadro é atualizado. Um cartão com um pull request aberto mostra o número dele, colorido conforme o estado, e sua prontidão para merge, o mesmo indicador da **Revisão de código**.
+Em um quadro, clique com o botão direito em um ticket sem pull request aberto e escolha **Vincular a um pull request** para escolher um dos pull requests abertos do projeto, incluindo rascunhos. A opção só aparece quando esse projeto tem pelo menos um pull request para vincular. Com vários tickets selecionados, **Ações** oferece a mesma opção para toda a seleção, além de **Vincular os outros tickets a #N** quando alguns já têm o pull request N. **Vincular a um pull request** deixa de ser oferecido assim que um ticket selecionado tem algum pull request vinculado; **Desvincular N tickets dos seus pull requests** remove primeiro todos os vínculos da seleção, depois que você confirma. Os vínculos aparecem na hora nos cartões, e um vínculo recusado some quando o quadro é atualizado. Um cartão com um pull request aberto mostra o número dele, colorido conforme o estado, e sua prontidão para mesclagem, o mesmo indicador da **Revisão de código**.
 
 Em **Configurações da conta → Tickets → Iniciar um ticket**, **Iniciar o ticket ou tarefa quando eu copiar seu prompt** coloca em andamento um ticket ou uma tarefa do caderno que ainda não foi iniciado quando você copia o prompt. Deixe essa opção desativada se você copia prompts apenas para lê-los.
 
@@ -128,10 +129,10 @@ Mencione `@numo` em um comentário do pull request para pedir ao Numo uma revis�
 
 ![Aba Alterações do PR de demonstração aberto, com o diff de greeting e um aviso de autorização do GitHub indisponível.](/documentation/pt-BR/review-pull-requests-workflow.png)
 
-### Revisão e merge {#decision}
+### Revisão e mesclagem {#decision}
 
-Use **Solicitar revisão** para escolher um revisor quando precisar de uma segunda revisão. Confira o estado de rascunho ou pronto para revisão, as discussões abertas, as revisões solicitadas e a política de merge do provedor.
+Use **Solicitar revisão** para escolher um revisor quando precisar de uma segunda revisão. Confira o estado de rascunho ou pronto para revisão, as discussões abertas, as revisões solicitadas e a política de mesclagem do provedor.
 
-Faça o merge somente depois de satisfazer as verificações e revisões aplicáveis e se sua conta no provedor tiver permissão. **Mesclar com Numo** deixa o Numo redigir o título e a descrição do commit de merge a partir do pull request e faz o merge assim que eles estiverem prontos. O provedor ainda pode rejeitar uma ação visível. Se o estado exibido estiver desatualizado, atualize e confira no provedor antes de repetir uma ação. Uma prévia vinculada depende de uma implantação real no provedor.
+Mescle somente depois de satisfazer as verificações e revisões aplicáveis e se sua conta no provedor tiver permissão. **Mesclar com o Numo** deixa o Numo redigir o título e a descrição do commit de mesclagem a partir do pull request e faz a mesclagem assim que eles estiverem prontos. O provedor ainda pode rejeitar uma ação visível. Se o estado exibido estiver desatualizado, atualize e confira no provedor antes de repetir uma ação. Uma prévia vinculada depende de uma implantação real no provedor.
 
-Clique com o botão direito em um pull request da lista para mudar o estado, mesclá-lo ou pedir uma correção sem abri-lo. Um pull request aberto oferece **Converter em rascunho** e **Fechar pull request**, um rascunho oferece **Pronto para revisão** e **Fechar pull request**, e um fechado oferece **Reabrir**; cada mudança pede confirmação. Um pull request mesclado não oferece mudança de estado. As ações de escrita só aparecem quando sua conta no provedor pode escrever no repositório e ficam indisponíveis até o menu ler o pull request novamente. **Mesclar** aparece quando o pull request está aberto, não é rascunho e pode ser mesclado; ele abre o pull request na confirmação de merge habitual. **Copiar prompt de correção** e **Corrigir com o Numo** aparecem quando uma verificação falha, uma conversa não está resolvida ou o branch tem conflitos ou está desatualizado. **Corrigir com o Numo** envia esse prompt ao Numo com o pull request como contexto. O Numo pode ler o pull request, responder a uma conversa de revisão que não exige alteração no código e resolver as conversas que o branch já atende, mas não altera o código nem faz push de commits; para as alterações de código, use **Copiar prompt de correção** e cole-o no seu agente de código. As permissões e a possibilidade de merge são verificadas novamente quando você confirma.
+Clique com o botão direito em um pull request da lista para mudar o estado, mesclá-lo ou pedir uma correção sem abri-lo. Um pull request aberto oferece **Converter em rascunho** e **Fechar pull request**, um rascunho oferece **Pronto para revisão** e **Fechar pull request**, e um fechado oferece **Reabrir**; cada mudança pede confirmação. Um pull request mesclado não oferece mudança de estado. As ações de escrita só aparecem quando sua conta no provedor pode escrever no repositório e ficam indisponíveis até o menu ler o pull request novamente. **Mesclar** aparece quando o pull request está aberto, não é rascunho e pode ser mesclado; ele abre o pull request na confirmação de mesclagem habitual. **Copiar prompt de correção** e **Corrigir com o Numo** aparecem quando uma verificação falha, uma conversa não está resolvida ou o branch tem conflitos ou está desatualizado. **Corrigir com o Numo** envia esse prompt ao Numo com o pull request como contexto. O Numo pode ler o pull request, responder a uma conversa de revisão que não exige alteração no código e resolver as conversas que o branch já atende, mas não altera o código nem faz push de commits; para as alterações de código, use **Copiar prompt de correção** e cole-o no seu agente de código. As permissões e a possibilidade de mesclagem são verificadas novamente quando você confirma.

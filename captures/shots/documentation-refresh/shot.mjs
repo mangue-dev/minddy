@@ -45,6 +45,9 @@ for (const locale of locales) {
   for (let index = 0; index < numo.original.length; index++) fixture.mapping[numo.original[index]] = numo.translations[locale][index];
   // The demo board's default view is stored under its French name.
   for (const name of ["Toutes", "All", "Alle", "Todos", "Tutti"]) fixture.mapping[name] = messages.Board.defaultViewName;
+  // Demo data seeded for the reader figures (the published "Feedback guide" page…).
+  const reader = JSON.parse(await readFile("captures/shots/documentation-reader/localized-fixture.json", "utf8"));
+  reader.original.forEach((text, index) => { fixture.mapping[text] ??= reader.translations[locale][index]; });
   const routines = JSON.parse(await readFile("captures/shots/documentation-refresh/routine-localized-capture-candidates.json", "utf8"));
   for (let index = 0; index < routines.original.length; index++) fixture.mapping[routines.original[index]] = routines.translations[locale][index];
   const prose = demoProse(fixture.mapping);
@@ -162,8 +165,14 @@ for (const locale of locales) {
       await page.getByText("AUR-1", { exact: true }).first().waitFor();
       await page.keyboard.press("g"); await page.keyboard.press("a");
       const panel = page.getByRole("dialog").first();
-      await panel.getByRole("button", { name: messages.Assistant.conversations, exact: true }).click();
-      await page.getByRole("button", { name: new RegExp(numo.translations[locale][0]) }).dispatchEvent("click");
+      // The history popover ignores clicks while the panel is still opening: retry.
+      const conversation = page.getByRole("button", { name: new RegExp(numo.translations[locale][0]) });
+      for (let attempt = 0; attempt < 8 && !(await conversation.count()); attempt += 1) {
+        await page.waitForTimeout(750);
+        await panel.getByRole("button", { name: messages.Assistant.conversations, exact: true }).click();
+        await page.waitForTimeout(750);
+      }
+      await conversation.first().dispatchEvent("click");
       await panel.getByText(numo.translations[locale][4], { exact: false }).waitFor();
     }, { width: 1200, height: 900 });
     await capture("scheduled-routines-workflow", "/routines", "main", async () => {

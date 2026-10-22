@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 5,
+  "revision": 7,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -40,9 +40,9 @@
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 7,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -61,7 +61,7 @@
       "src": "/documentation/pt-BR/encryption-and-data-boundaries-flow.svg",
       "alt": "Diagrama: Conteúdo cifrado e chaves empacotadas. Raiz na configuração protegida do servidor. Runtime autorizado pode decifrar. Exports e provedores precisam proteção separada.",
       "caption": "A proteção do conteúdo persistente depende das chaves do servidor; exportações e envios a provedores exigem controles separados.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 16,
-  "sourceRevision": 15,
+  "revision": 18,
+  "sourceRevision": 16,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -67,9 +67,9 @@
     ]
   },
   "review": {
-    "revision": 16,
-    "fact": "agent:claude (MIN-760: category reordering paragraph checked against components/project-categories.tsx, the order route and the Numo/MCP tools; existing figures unaffected and kept; no browser walkthrough of the procedure); agent:claude-code (MIN-762 UI label correction: quoted labels aligned on the corrected it catalog; no behavior change, no new captures)",
-    "language": "agent:claude (it translation of the added en paragraph, equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-762 label edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 18,
+    "fact": "agent:claude (MIN-760: category reordering paragraph checked against components/project-categories.tsx, the order route and the Numo/MCP tools; existing figures unaffected and kept; no browser walkthrough of the procedure); agent:claude-code (MIN-762 UI label correction: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of project-settings-steps, project-members-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:claude (it translation of the added en paragraph, equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-762 label edit; self-reviewed; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -94,9 +94,9 @@
       "src": "/documentation/it/project-general.png",
       "alt": "Intestazione del progetto con l’icona e il suo badge di modifica, il nome, la chiave e le cifre Ticket, Membri, Obiettivi, Categorie e Creato.",
       "caption": "Seleziona l’icona, il nome o la chiave per cambiarli sul posto; spostare il progetto nel cestino resta un’azione separata, più in basso.",
-      "revision": 16,
+      "revision": 18,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         816,
         359
@@ -111,9 +111,9 @@
       "src": "/documentation/it/project-members.png",
       "alt": "Scheda «Invita persone» sopra la scheda Membri, che elenca tre membri dimostrativi con il proprietario indicato.",
       "caption": "Invita con l’email dell’account e identifica il proprietario prima di rimuovere l’accesso di un membro.",
-      "revision": 16,
+      "revision": 18,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         816,
         430
@@ -136,9 +136,9 @@ Un progetto raccoglie ticket, obiettivi, pagine e le persone che ci lavorano. Il
 
 Apri il progetto e poi le sue impostazioni. La proprietà del progetto determina l’accesso alle impostazioni amministrative. I membri e i lettori possono consultare la sezione generale, nascondere il progetto per sé e lasciarlo, ma non ottengono i controlli di modifica del proprietario.
 
-La scheda **Generalità** si apre con l’identità del progetto: la sua icona, il nome e la chiave, poi cinque cifre: **Ticket**, **Membri**, **Obiettivi**, **Categorie** e **Creato**. Come proprietario, modifichi icona, nome e chiave dove sono mostrati; non c’è più un pulsante Salva. Seleziona l’icona e scegli **Nuovo orbe** (proposto solo finché nessuna immagine copre l’orbe), **Carica un'immagine**, **Importa da un sito…**, che chiede l’indirizzo del sito e ne importa l’icona quando scegli **Importazione**, oppure, se è impostata un’immagine, **Rimuovi l’immagine**, che chiede prima conferma perché l’immagine viene eliminata. Seleziona il nome o la chiave per modificarli: su un computer diventano un campo in cui Invio o l’uscita dal campo salva ed Esc annulla; su un telefono si apre un pannello con **Salva**. Il nome non può essere vuoto. La chiave viene convertita in maiuscolo e deve avere da 2 a 5 lettere (A–Z); altrimenti compare un errore e la chiave non viene salvata. Dopo averla cambiata, controlla gli identificativi risultanti. L’icona distingue il progetto solo nella navigazione; non cambia l’appartenenza al progetto. Membri e lettori vedono la stessa intestazione senza questi controlli.
+La scheda **Generale** si apre con l’identità del progetto: la sua icona, il nome e la chiave, poi cinque cifre: **Ticket**, **Membri**, **Obiettivi**, **Categorie** e **Creato**. Come proprietario, modifichi icona, nome e chiave dove sono mostrati; non c’è più un pulsante Salva. Seleziona l’icona e scegli **Nuova sfera** (proposto solo finché nessuna immagine copre l’orbe), **Carica un'immagine**, **Importa da un sito…**, che chiede l’indirizzo del sito e ne importa l’icona quando scegli **Importa**, oppure, se è impostata un’immagine, **Rimuovi l’immagine**, che chiede prima conferma perché l’immagine viene eliminata. Seleziona il nome o la chiave per modificarli: su un computer diventano un campo in cui Invio o l’uscita dal campo salva ed Esc annulla; su un telefono si apre un pannello con **Salva**. Il nome non può essere vuoto. La chiave viene convertita in maiuscolo e deve avere da 2 a 5 lettere (A–Z); altrimenti compare un errore e la chiave non viene salvata. Dopo averla cambiata, controlla gli identificativi risultanti. L’icona distingue il progetto solo nella navigazione; non cambia l’appartenenza al progetto. Membri e lettori vedono la stessa intestazione senza questi controlli.
 
-Le altre schede sono **Categorie**, **Membri**, **Ricorrenze**, **Assegna intelligente**, **Feedback**, **Git**, **Importazione** e **Integrazioni**. Segui la guida dell’attività corrispondente prima di abilitare un fornitore o lavoro automatico. Le preferenze dell’account, come la lingua dell’interfaccia, sono separate dalla configurazione del progetto.
+Le altre schede sono **Categorie**, **Membri**, **Ricorrenze**, **Smart Assign**, **Feedback**, **Git**, **Importa** e **Integrazioni**. Segui la guida dell’attività corrispondente prima di abilitare un fornitore o lavoro automatico. Le preferenze dell’account, come la lingua dell’interfaccia, sono separate dalla configurazione del progetto.
 
 In **Categorie**, il proprietario e i membri gestiscono le categorie che classificano i ticket. Scegli **Nuova categoria** sulla riga del titolo della scheda: in cima all’elenco compare una riga con un punto colorato e un campo per il nome. Premi Invio o scegli **Aggiungi** per creare la categoria; Esc chiude la riga senza crearla. Seleziona il punto colorato di una categoria per scegliere un altro colore, applicato subito (su un telefono i colori si aprono in un pannello), oppure seleziona il nome per rinominarla sul posto. Il pulsante di eliminazione chiede conferma, poi rimuove la categoria da tutti i ticket. Quando il progetto ha almeno due categorie, ogni riga mostra una maniglia a sinistra: trascinala per spostare la categoria in su o in giù. Da tastiera, porta il focus sulla maniglia, premi Spazio, sposta la categoria con le frecce Su e Giù e premi di nuovo Spazio per rilasciarla; Esc annulla. Questo ordine è quello mostrato da tutti i menu e i filtri delle categorie, per tutto il progetto. Anche Numo e i client MCP di Minddy possono leggerlo e modificarlo, per esempio quando chiedi a Numo di mettere una categoria per prima.
 
@@ -163,13 +163,13 @@ Il proprietario può anche fare clic con il tasto destro sul progetto nella barr
 
 ## Invitare persone a un progetto {#project-members}
 
-Il proprietario del progetto gestisce l’appartenenza in **Impostazioni del progetto** → **Membri**. Nel riquadro **Invita persone**, cerca un nome o inserisci l’email che la persona usa su questa istanza. Mentre scrivi, **Dai tuoi progetti** propone le persone che sono già entrate in uno dei tuoi altri progetti, come proprietario, membro o lettore, con un’email verificata; chi è stato solo invitato non viene mai proposto, così come i membri attuali e gli inviti in attesa. Scegli una persona per inserirla nel campo con il suo avatar e il suo nome, oppure premi Invio quando il nome corrisponde a una sola persona. Chiunque altro viene invitato per email. Poi scegli il suo ruolo e **Invitare**. Una persona scelta dai tuoi progetti viene invitata tramite il suo account: Minddy verifica di nuovo che sia entrata in uno dei tuoi progetti e altrimenti rifiuta con «Questa persona non fa parte dei tuoi progetti.» L’invito compare nel riquadro **In attesa di inviti** finché non viene accettato; i membri attuali sono elencati nel riquadro **Membri**, il cui titolo ne indica il numero. Scegli **Membro** per chi lavora sul progetto, oppure **Lettore** per chi si limita a seguirlo. Per un lettore, attiva **Può commentare** se deve partecipare alle discussioni. Finché l’invito è in attesa, il proprietario può cambiarne il ruolo e l’opzione di commento. La stessa email su un’altra istanza non dà accesso qui.
+Il proprietario del progetto gestisce l’appartenenza in **Impostazioni del progetto** → **Membri**. Nel riquadro **Invita persone**, cerca un nome o inserisci l’email che la persona usa su questa istanza. Mentre scrivi, **Dai tuoi progetti** propone le persone che sono già entrate in uno dei tuoi altri progetti, come proprietario, membro o lettore, con un’email verificata; chi è stato solo invitato non viene mai proposto, così come i membri attuali e gli inviti in attesa. Scegli una persona per inserirla nel campo con il suo avatar e il suo nome, oppure premi Invio quando il nome corrisponde a una sola persona. Chiunque altro viene invitato per email. Poi scegli il suo ruolo e **Invita**. Una persona scelta dai tuoi progetti viene invitata tramite il suo account: Minddy verifica di nuovo che sia entrata in uno dei tuoi progetti e altrimenti rifiuta con «Questa persona non fa parte dei tuoi progetti.» L’invito compare nel riquadro **Inviti in attesa** finché non viene accettato; i membri attuali sono elencati nel riquadro **Membri**, il cui titolo ne indica il numero. Scegli **Membro** per chi lavora sul progetto, oppure **Lettore** per chi si limita a seguirlo. Per un lettore, attiva **Può commentare** se deve partecipare alle discussioni. Finché l’invito è in attesa, il proprietario può cambiarne il ruolo e l’opzione di commento. La stessa email su un’altra istanza non dà accesso qui.
 
 La persona invitata accede con quell’account e apre la posta in arrivo. Accetta l’invito in attesa per entrare con il ruolo che prevede, oppure rifiutalo se il progetto è inatteso. Il dialogo di ingresso iniziale aiuta a condividere la tua email con il proprietario; non permette di entrare in progetti senza invito.
 
 Puoi anche invitare persone mentre crei il progetto. Nel passaggio **Invita il tuo team** della procedura guidata, cerca un nome o inserisci un’email. Sotto il campo, **Dai tuoi progetti** propone le stesse persone del riquadro **Invita persone**, anche prima che tu scriva, e si filtra mentre scrivi. Scegli una persona, oppure premi Invio quando ne corrisponde una sola; anche digitare l’indirizzo di una di queste persone la aggiunge con il suo nome. Aggiungi chiunque altro per email con **Aggiungi** o Invio. Il limite di ospiti del tuo piano vale come qui, e l’elenco resta salvato nella bozza del progetto se riprendi la creazione più tardi.
 
-Non parte nulla prima che tu scelga **Finitura**: il progetto viene creato per primo, poi ogni persona riceve un invito con il ruolo **Membro**. Le persone scelte dai tuoi progetti vengono invitate tramite il loro account: Minddy verifica di nuovo che siano entrate in uno dei tuoi progetti e usa il loro indirizzo verificato. Le altre vengono invitate per email. Questi inviti compaiono nel riquadro **In attesa di inviti**, dove puoi cambiarne il ruolo, e si accettano nella posta in arrivo come gli altri. Se alcuni vengono rifiutati, per esempio per il limite di ospiti del piano o perché qualcuno nel frattempo ha lasciato il progetto che condividevate («Questa persona non fa parte dei tuoi progetti.»), gli altri partono comunque e una notifica elenca ogni persona non invitata con il motivo. Controlla il riquadro **In attesa di inviti** prima di invitarle di nuovo. Un invito in attesa è registrato, il che non garantisce che la sua email sia stata recapitata.
+Non parte nulla prima che tu scelga **Fine**: il progetto viene creato per primo, poi ogni persona riceve un invito con il ruolo **Membro**. Le persone scelte dai tuoi progetti vengono invitate tramite il loro account: Minddy verifica di nuovo che siano entrate in uno dei tuoi progetti e usa il loro indirizzo verificato. Le altre vengono invitate per email. Questi inviti compaiono nel riquadro **Inviti in attesa**, dove puoi cambiarne il ruolo, e si accettano nella posta in arrivo come gli altri. Se alcuni vengono rifiutati, per esempio per il limite di ospiti del piano o perché qualcuno nel frattempo ha lasciato il progetto che condividevate («Questa persona non fa parte dei tuoi progetti.»), gli altri partono comunque e una notifica elenca ogni persona non invitata con il motivo. Controlla il riquadro **Inviti in attesa** prima di invitarle di nuovo. Un invito in attesa è registrato, il che non garantisce che la sua email sia stata recapitata.
 
 
 ![Scheda «Invita persone» sopra la scheda Membri, che elenca tre membri dimostrativi con il proprietario indicato.](/documentation/it/project-members.png)

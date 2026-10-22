@@ -17,10 +17,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -41,10 +41,10 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 6,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "api-and-webhooks"
@@ -65,7 +65,7 @@
       "src": "/documentation/fr/git-connection-flow.svg",
       "alt": "La connexion du compte personnel et le lien du dépôt au projet sont deux étapes distinctes.",
       "caption": "Autorisez d’abord le compte, puis reliez un dépôt en tant que propriétaire du projet.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -98,7 +98,7 @@
       "src": "/documentation/fr/forge-issue-sync-mapping.svg",
       "alt": "Parcours de synchronisation GitHub : configuration, contrôle des événements, import et états.",
       "caption": "Les événements GitHub préservent les modifications récentes et évitent les doublons de livraison. Les correspondances GitLab se vérifient séparément.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -136,15 +136,16 @@
       "src": "/documentation/fr/forge-issue-sync-workflow.png",
       "alt": "Dépôt GitHub de démonstration lié, avec la synchronisation des issues désactivée.",
       "caption": "Le dépôt de démonstration est lié à GitHub. La synchronisation des issues reste désactivée ; vérifiez la portée et le backlog existant avant de l’activer. Cette capture ne démontre pas un import synchronisé.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-22",
       "viewport": [
         816,
-        278
+        208
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [

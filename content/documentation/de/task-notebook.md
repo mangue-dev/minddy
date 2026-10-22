@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 8,
+  "revision": 10,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -47,9 +47,9 @@
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of task-notebook-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 10,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of task-notebook-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -68,7 +68,7 @@
       "src": "/documentation/de/work-task-notebook.png",
       "alt": "Übersetzte persönliche Demo-Aufgaben im Notizbuch.",
       "caption": "Das Notizbuch hält persönliche Schritte außerhalb der Tickethierarchie des Projekts fest. Die Zustände der Beispielaufgaben bleiben unverändert.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -92,7 +92,7 @@
 
 Um eine Aufgabe wiederzufinden, öffne die Befehlspalette mit Command+K unter macOS beziehungsweise Strg+K unter Windows/Linux und tippe Wörter daraus ein. Noch offene Aufgaben erscheinen unter **Aufgabennotizbuch**, mit ihrem Abschnitt; erledigte und abgebrochene Aufgaben sowie Fragen erscheinen dort nicht. Wähle eine aus, um das Notizbuch bei dieser Aufgabe zu öffnen. Solange du nichts eingibst, listet die Palette keine Aufgaben aus dem Notizbuch auf.
 
-Das Aufgabenheft verwendet denselben Editor wie Projektseiten, mit denselben Blockgriffen: Fahre über einen Block, um ihn zu ziehen, sein Menü zu öffnen oder mit **+** einen Block hinzuzufügen. Tippe `/`, um eine Aufgabe, die zuerst angeboten wird, oder eine Überschrift, Liste, ein Zitat, einen **Hinweis**, einen Codeblock, ein **Umschalten**-Element oder einen Teiler einzufügen, oder wähle **Eine Aufgabe diktieren**, um Aufgaben zu sprechen. Das Heft wird weiterhin als Markdown gespeichert, sodass Numo und verbundene Agenten dieselben Aufgaben und Zustände lesen. Markiere Text, um ihn zu formatieren oder einen Link hinzuzufügen. Füge ein Bild ein, ziehe es hinein oder wähle **Bild** im `/`-Menü, um es in eine Notiz einzufügen. Andere Dateitypen gehören in Seiten.
+Das Aufgabenheft verwendet denselben Editor wie Projektseiten, mit denselben Blockgriffen: Fahre über einen Block, um ihn zu ziehen, sein Menü zu öffnen oder mit **+** einen Block hinzuzufügen. Tippe `/`, um eine Aufgabe, die zuerst angeboten wird, oder eine Überschrift, Liste, ein Zitat, einen **Hinweis**, einen Codeblock, ein Element **Aufklappbarer Bereich** oder einen Teiler einzufügen, oder wähle **Eine Aufgabe diktieren**, um Aufgaben zu sprechen. Das Heft wird weiterhin als Markdown gespeichert, sodass Numo und verbundene Agenten dieselben Aufgaben und Zustände lesen. Markiere Text, um ihn zu formatieren oder einen Link hinzuzufügen. Füge ein Bild ein, ziehe es hinein oder wähle **Bild** im `/`-Menü, um es in eine Notiz einzufügen. Andere Dateitypen gehören in Seiten.
 
 Das Menü **Notizbuchaktionen** (`…`) bietet **Alle als Prompt kopieren**, das das ganze Aufgabenheft für deinen eigenen Coding-Agenten kopiert, und **Erledigte und verworfene Aufgaben entfernen**. Das Entfernen verlangt eine Bestätigung, löscht erledigte und abgebrochene Aufgaben samt der Überschriften, die dadurch leer werden, und behält offene oder laufende Aufgaben. Um weniger zu kopieren, verwende bei einer Überschrift **Abschnitt als Prompt kopieren** oder bei einer Aufgabe **Als Prompt kopieren**. Ist **Ticket oder Aufgabe starten, wenn ich den Prompt kopiere** unter **Kontoeinstellungen** → **Tickets** aktiviert, setzt das Kopieren die kopierten offenen Aufgaben außerdem auf „In Bearbeitung“.
 

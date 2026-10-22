@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 10,
+  "revision": 12,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -45,10 +45,10 @@
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 12,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of views-and-filters-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "navigation",
@@ -70,15 +70,16 @@
       "src": "/documentation/es/work-view-filters.png",
       "alt": "Filtros manuales de una vista y menú de ordenación.",
       "caption": "Filtra por propiedades de las incidencias o elige un orden. El campo de IA es opcional para estos controles manuales.",
-      "revision": 10,
+      "revision": 12,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         288,
         433
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "share-a-view-steps",
@@ -86,7 +87,7 @@
       "src": "/documentation/es/work-share-view.png",
       "alt": "Diálogo para compartir una vista con acceso privado seleccionado.",
       "caption": "El acceso privado, protegido por contraseña y público son opciones distintas. La vista permanece privada en esta captura.",
-      "revision": 10,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -110,15 +111,15 @@ Una vista guarda los filtros y la presentación de las incidencias sin copiarlas
 
 Empieza desde un tablero de proyecto o una superficie personal de incidencias entre proyectos. Utiliza sus filtros y controles de ordenación y visualización para elegir el trabajo que necesitas. Comprueba el alcance antes de guardar: una vista personal y una de proyecto no tienen el mismo límite de acceso.
 
-Filtra por propiedades admitidas, como estado, responsable, prioridad, categorías u objetivo. Ordena el resultado para que la siguiente acción sea clara. En kanban, las incidencias siguen agrupadas por estado; cambiar una vista no modifica su estado ni asignación. Sin un filtro de estado propio, un tablero muestra solo **Registro**, **Pendiente**, **En curso** y **En examen**. Selecciona **Hecho** o **Cancelado** en el filtro **Estado** para mostrar esas columnas; una vista conserva el filtro de estado que guardes con ella.
+Filtra por propiedades admitidas, como estado, responsable, prioridad, categorías u objetivo. Ordena el resultado para que la siguiente acción sea clara. En kanban, las incidencias siguen agrupadas por estado; cambiar una vista no modifica su estado ni asignación. Sin un filtro de estado propio, un tablero muestra solo **Backlog**, **Pendiente**, **En curso** y **En revisión**. Selecciona **Hecha** o **Cancelada** en el filtro **Estado** para mostrar esas columnas; una vista conserva el filtro de estado que guardes con ella.
 
-Guarda la vista con un nombre que describa su propósito, selecciónala de nuevo en la barra de vistas de la parte superior del tablero (un menú en una pantalla estrecha) y verifica sus filtros. Edítala o retírala cuando cambie su propósito. **Borrar vista** pide confirmación, y un tablero conserva siempre al menos una vista propia. Compartir una vista es una publicación aparte con sus propias reglas de permisos y revocación.
+Guarda la vista con un nombre que describa su propósito, selecciónala de nuevo en la barra de vistas de la parte superior del tablero (un menú en una pantalla estrecha) y verifica sus filtros. Edítala o retírala cuando cambie su propósito. **Eliminar vista** pide confirmación, y un tablero conserva siempre al menos una vista propia. Compartir una vista es una publicación aparte con sus propias reglas de permisos y revocación.
 
 ![Filtros manuales de una vista y menú de ordenación.](/documentation/es/work-view-filters.png)
 
 ### Resolver resultados vacíos o inesperados {#view-recovery}
 
-Comprueba todos los filtros, el proyecto activo y tu pertenencia cuando falten incidencias esperadas. Quita los filtros restrictivos antes de suponer que se han eliminado datos. Después de editar una incidencia, es normal que pueda salir de una vista filtrada. Busca su identificador, o selecciona **Hecho** y **Cancelado** en el filtro **Estado** de un tablero de proyecto sin otros filtros, para examinar los valores guardados.
+Comprueba todos los filtros, el proyecto activo y tu pertenencia cuando falten incidencias esperadas. Quita los filtros restrictivos antes de suponer que se han eliminado datos. Después de editar una incidencia, es normal que pueda salir de una vista filtrada. Busca su identificador, o selecciona **Hecha** y **Cancelada** en el filtro **Estado** de un tablero de proyecto sin otros filtros, para examinar los valores guardados.
 
 Una vista guardada no es una copia de sus incidencias. Eliminarla retira su configuración, mientras que eliminar incidencias seleccionadas modifica el trabajo subyacente del proyecto.
 

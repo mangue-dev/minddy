@@ -54,18 +54,21 @@ export async function openPage({
   if (!authState) throw new Error(`captures: unknown session "${session}".`);
   if (authed) await requireAuthStateForUrl(authState, CAPTURE.baseUrl);
 
-  const browser = await chromium.launch({ args: launchArgs });
+  const browserLocale = {
+    en: "en-US",
+    fr: "fr-FR",
+    de: "de-DE",
+    "pt-BR": "pt-BR",
+    it: "it-IT",
+    es: "es-ES",
+  }[locale] ?? "en-US";
+  // Native controls (time inputs) follow the browser's UI language, not the
+  // context locale: without `--lang` they show a 12-hour clock everywhere.
+  const browser = await chromium.launch({ args: [`--lang=${browserLocale}`, ...launchArgs] });
   const context = await browser.newContext({
     viewport,
     deviceScaleFactor: CAPTURE.deviceScaleFactor,
-    locale: {
-      en: "en-US",
-      fr: "fr-FR",
-      de: "de-DE",
-      "pt-BR": "pt-BR",
-      it: "it-IT",
-      es: "es-ES",
-    }[locale] ?? "en-US",
+    locale: browserLocale,
     colorScheme: theme,
     // Cuts CSS animations and Framer Motion transitions at source,
     // instead of waiting for the image to stop moving.

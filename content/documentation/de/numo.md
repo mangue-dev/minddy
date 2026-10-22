@@ -3,7 +3,7 @@
   "id": "numo",
   "locale": "de",
   "title": "Numo",
-  "summary": "Arbeiten Sie mit Numo, verstehen Sie Berechtigungen und Ausführung, verbinden Sie MCP-Dienste und setzen Sie wartende oder unterbrochene Arbeit fort.",
+  "summary": "Arbeite mit Numo, verstehe Berechtigungen und Ausführung, verbinde MCP-Dienste und setze wartende oder unterbrochene Arbeit fort.",
   "topic": "Numo und Integrationen",
   "type": "guide",
   "audiences": [
@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
-  "sourceRevision": 18,
+  "revision": 20,
+  "sourceRevision": 19,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -63,9 +63,9 @@
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:MIN-768 (MCP setup moved to wizards: changed passages checked against components/settings/account-mcp-clients.tsx and mcp-connect-panel.tsx; 1 screenshot recaptured on 2026-10-21 from the local candidate and inspected; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of numo-mcp-connections-config-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted)",
-    "language": "agent:MIN-768 (de translation of the changed passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 20,
+    "fact": "agent:MIN-768 (MCP setup moved to wizards: changed passages checked against components/settings/account-mcp-clients.tsx and mcp-connect-panel.tsx; 1 screenshot recaptured on 2026-10-21 from the local candidate and inspected; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of numo-mcp-connections-config-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:MIN-768 (de translation of the changed passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -96,9 +96,9 @@
       "src": "/documentation/de/work-with-numo-workflow.png",
       "alt": "Numo-Demonstrationsgespräch mit Seitenkontext, Prioritätsänderung und gespeicherter Antwort.",
       "caption": "Vorhandener Demonstrationsverlauf, für die Anzeige übersetzt. Die gespeicherte Antwort nennt AUR-11 und AUR-7. Die Aufnahme belegt keine neue Ausführung.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         498,
         648
@@ -113,7 +113,7 @@
       "src": "/documentation/de/numo-permissions-and-approvals-workflow.svg",
       "alt": "Numo-Berechtigungsmatrix für Projektaktionen, persönliche Verbindungen und Routinen.",
       "caption": "Projektzugriff und ausdrückliche Aufträge begrenzen Numo-Aktionen. Externe Inhalte können keine Berechtigung erteilen.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -172,9 +172,9 @@
       "id": "numo-execution-model-flow",
       "kind": "diagram",
       "src": "/documentation/de/numo-execution-model-flow.svg",
-      "alt": "Diagramm: Absicht, Nachricht und UUID speichern. Turn beanspruchen, Werkzeuge und Ergebnisse sichern. Auf Ihre Antwort warten, wenn eine Eingabe nötig ist. Ereignisse wiedergeben; unklare Writes klären.",
-      "caption": "Lesen Sie die Schritte in dieser Reihenfolge. Absicht, Nachricht und UUID speichern. Turn beanspruchen, Werkzeuge und Ergebnisse sichern. Auf Ihre Antwort warten, wenn eine Eingabe nötig ist. Ereignisse wiedergeben; unklare Writes klären.",
-      "revision": 19,
+      "alt": "Diagramm: Absicht, Nachricht und UUID speichern. Turn beanspruchen, Werkzeuge und Ergebnisse sichern. Auf deine Antwort warten, wenn eine Eingabe nötig ist. Ereignisse wiedergeben; unklare Writes klären.",
+      "caption": "Lies die Schritte in dieser Reihenfolge. Absicht, Nachricht und UUID speichern. Turn beanspruchen, Werkzeuge und Ergebnisse sichern. Auf deine Antwort warten, wenn eine Eingabe nötig ist. Ereignisse wiedergeben; unklare Writes klären.",
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -192,7 +192,7 @@
             "title": "Turn beanspruchen, Werkzeuge und Ergebnisse sichern"
           },
           {
-            "title": "Auf Ihre Antwort warten, wenn eine Eingabe nötig ist"
+            "title": "Auf deine Antwort warten, wenn eine Eingabe nötig ist"
           },
           {
             "title": "Ereignisse wiedergeben; unklare Writes klären"
@@ -206,9 +206,9 @@
       "src": "/documentation/de/numo-mcp-connections-workflow.png",
       "alt": "Persönliche MCP-Einstellungen mit leerer Liste und Schaltfläche zum Hinzufügen eines Servers.",
       "caption": "Numo-Verbindungen sind persönlich. Projektroutinen verwenden die Verbindungen des Projektinhabers.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         816,
         1314
@@ -223,7 +223,7 @@
       "src": "/documentation/de/numo-mcp-connections-config-workflow.png",
       "alt": "Notion-Verbindungsassistent mit der aus dem Katalog bekannten Anmeldemethode.",
       "caption": "Anmeldeschritt eines Katalogdienstes. Es wurden keine Zugangsdaten eingegeben und kein Server kontaktiert.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -245,54 +245,54 @@
 }
 ---
 
-Numo arbeitet mit dem Kontext Ihrer Unterhaltung und den Berechtigungen Ihres Kontos. Formulieren Sie einen begrenzten Auftrag und prüfen Sie das Ergebnis. Die Abschnitte zu Freigaben und Ausführung erklären geplante Arbeit. Prüfen Sie bei wartenden oder fehlgeschlagenen Schritten den gespeicherten Zustand, bevor Sie einen Auftrag wiederholen.
+Numo arbeitet mit dem Kontext deiner Unterhaltung und den Berechtigungen deines Kontos. Formuliere einen begrenzten Auftrag und prüfe das Ergebnis. Die Abschnitte zu Freigaben und Ausführung erklären geplante Arbeit. Prüfe bei wartenden oder fehlgeschlagenen Schritten den gespeicherten Zustand, bevor du einen Auftrag wiederholst.
 
 ## Eine Projektaufgabe mit Numo erledigen {#work-with-numo}
 
-Öffnen Sie das betreffende Ticket oder Projekt und klicken Sie auf die schwebende Numo-Schaltfläche. Die aktuelle Seite wird zum Gesprächskontext. Kontextaktionen, die Arbeit an Numo übergeben, öffnen dasselbe Panel. Sie benötigen Projektzugriff und verfügbares KI-Budget oder einen kompatiblen eigenen Schlüssel.
+Öffne das betreffende Ticket oder Projekt und klicke auf die schwebende Numo-Schaltfläche. Die aktuelle Seite wird zum Gesprächskontext. Kontextaktionen, die Arbeit an Numo übergeben, öffnen dasselbe Panel. Du benötigst Projektzugriff und verfügbares KI-Budget oder einen kompatiblen eigenen Schlüssel.
 
-1. Prüfen Sie den Kontext im Eingabebereich. Nennen Sie das Ticket ausdrücklich, wenn mehrere Einträge relevant sind. Um ein Ticket als Kontext hinzuzufügen, tippen Sie `@` im Eingabebereich oder verwenden Sie **Kontext hinzufügen** → **Ticket**; eine Beschreibung listet auch [inhaltlich gefundene](/docs/navigation#search-by-meaning) Tickets unter **Inhaltlich verwandt** auf.
-2. Wählen Sie Gesprächsmodell und Denkintensität. Diese Auswahl gilt für das Gespräch.
-3. Senden Sie einen begrenzten Auftrag, etwa: „Lies dieses Ticket und schlage Abnahmekriterien vor. Ändere seinen Status nicht.“
-4. Lesen Sie die Antwort und öffnen Sie Ticket- oder Quellenlinks. Prüfen Sie nach einer Änderung das betroffene Objekt.
+1. Prüfe den Kontext im Eingabebereich. Nenne das Ticket ausdrücklich, wenn mehrere Einträge relevant sind. Um ein Ticket als Kontext hinzuzufügen, tippe `@` im Eingabebereich oder verwende **Kontext hinzufügen** → **Ticket**; eine Beschreibung listet auch [inhaltlich gefundene](/docs/navigation#search-by-meaning) Tickets unter **Inhaltlich verwandt** auf.
+2. Wähle Gesprächsmodell und Denkintensität. Diese Auswahl gilt für das Gespräch.
+3. Sende einen begrenzten Auftrag, etwa: „Lies dieses Ticket und schlage Abnahmekriterien vor. Ändere seinen Status nicht.“
+4. Lies die Antwort und öffne Ticket- oder Quellenlinks. Prüfe nach einer Änderung das betroffene Objekt.
 
-In einem neuen, leeren Gespräch schlagen vier Zeilen über dem Eingabefeld Aufträge vor, die zur aktuellen Seite passen, etwa **Dieses Ticket zusammenfassen** oder **Einen Umsetzungsplan schreiben**, wenn ein Ticket im Seitenpanel geöffnet ist. Eine Zeile füllt das Eingabefeld, ohne es abzusenden, sodass Sie den Auftrag zuerst anpassen können. Die Zeilen verschwinden, sobald das Eingabefeld Text enthält, und erscheinen wieder, wenn Sie es leeren. Sie werden im Desktop-Layout angezeigt, nicht auf einem Telefon.
+In einem neuen, leeren Gespräch schlagen vier Zeilen über dem Eingabefeld Aufträge vor, die zur aktuellen Seite passen, etwa **Dieses Ticket zusammenfassen** oder **Einen Umsetzungsplan schreiben**, wenn ein Ticket im Seitenpanel geöffnet ist. Eine Zeile füllt das Eingabefeld, ohne es abzusenden, sodass du den Auftrag zuerst anpassen kannst. Die Zeilen verschwinden, sobald das Eingabefeld Text enthält, und erscheinen wieder, wenn du es leerst. Sie werden im Desktop-Layout angezeigt, nicht auf einem Telefon.
 
 Numo kann sich außerdem die Bilder in einer Ticket- oder Zielbeschreibung, einem Plan, einem Kommentar, einer Seite oder deinem Notizbuch ansehen, wenn das Modell der Unterhaltung Bilder annimmt. Ohne diese Fähigkeit sagt Numo, dass es ein Bild nicht ansehen konnte, statt es zu beschreiben.
 
-Das Standardmodell von Numo stammt aus **Kontoeinstellungen → KI & Numo → Numos Standardmodell**: App-Standard oder ein persönliches Modell für den aktiven Anbieter. Eine ausdrückliche Modellauswahl im Gespräch hat Vorrang. Siehe [KI-Einstellungen und Nutzung](/docs/ai-settings-and-usage#ai-keys-and-models).
+Das Standardmodell von Numo stammt aus **Kontoeinstellungen → KI & Numo → Standardmodell für Numo**: App-Standard oder ein persönliches Modell für den aktiven Anbieter. Eine ausdrückliche Modellauswahl im Gespräch hat Vorrang. Siehe [KI-Einstellungen und Nutzung](/docs/ai-settings-and-usage#ai-keys-and-models).
 
 ![Numo-Demonstrationsgespräch mit Seitenkontext, Prioritätsänderung und gespeicherter Antwort.](/documentation/de/work-with-numo-workflow.png)
 
 ### Ein Gespräch fortsetzen {#continue}
 
-Über die Gesprächsliste bleiben frühere Unterhaltungen erreichbar. Setzen Sie das Gespräch mit den relevanten Entscheidungen fort. Numo organisiert und verfolgt Arbeit: Es liest und aktualisiert Tickets, Pläne, Seiten und andere Minddy-Inhalte und kann verknüpfte Pull Requests lesen. Auf Ihre Bitte kann es außerdem einen Pull Request kommentieren, bereits erledigte Review-Unterhaltungen auflösen und ihn mergen. Wenn Numo Tickets sucht, stehen Textübereinstimmungen und exakte Kennungen zuerst; eine beschreibende Suche kann inhaltlich gefundene Tickets desselben Projekts ergänzen, die Numo prüfen soll, bevor es sich auf sie stützt. Es schreibt keinen Code und pusht keine Commits. Wenn Code geschrieben werden soll, kopieren Sie den Prompt des Tickets für Ihren eigenen Coding-Agenten; siehe [Code-Arbeit und Pull Requests](/docs/code-work#external-coding-agents).
+Über die Gesprächsliste bleiben frühere Unterhaltungen erreichbar. Setze das Gespräch mit den relevanten Entscheidungen fort. Numo organisiert und verfolgt Arbeit: Es liest und aktualisiert Tickets, Pläne, Seiten und andere Minddy-Inhalte und kann verknüpfte Pull Requests lesen. Auf deine Bitte kann es außerdem einen Pull Request kommentieren, bereits erledigte Review-Unterhaltungen auflösen und ihn zusammenführen. Wenn Numo Tickets sucht, stehen Textübereinstimmungen und exakte Kennungen zuerst; eine beschreibende Suche kann inhaltlich gefundene Tickets desselben Projekts ergänzen, die Numo prüfen soll, bevor es sich auf sie stützt. Es schreibt keinen Code und pusht keine Commits. Wenn Code geschrieben werden soll, kopiere den Prompt des Tickets für deinen eigenen Coding-Agenten; siehe [Code-Arbeit und Pull Requests](/docs/code-work#external-coding-agents).
 
-Wenn Numo Eingaben anfordert, senden Sie Ihre Auswahl, bevor abhängige Arbeit weitergehen kann. Eine Verbrauchs- oder Fehlerkarte erklärt den Abbruch. Prüfen Sie externe Schreibaktionen, bevor Sie deren Wiederholung anfordern.
+Wenn Numo Eingaben anfordert, sende deine Auswahl, bevor abhängige Arbeit weitergehen kann. Eine Verbrauchs- oder Fehlerkarte erklärt den Abbruch. Prüfe externe Schreibaktionen, bevor du deren Wiederholung anforderst.
 
 ## Numos Berechtigungen verstehen {#numo-permissions-and-approvals}
 
 Numo handelt innerhalb der Rechte und der Rolle des aktuellen Benutzers. Ein Chat-Auftrag gibt Mitgliedern keinen Zugriff auf Eigentümereinstellungen. Für einen Leser verwendet Numo, im Chat oder über `@Numo` in einem Kommentar, den er verfassen darf, nur Lesewerkzeuge, und die Nutzung wird dem Leser angerechnet. Eigentümer verwalten Mitglieder, Integrationen, Repository-Verknüpfungen und Feedback-Einstellungen. Persönliche Einstellungen gehören zum aktuellen Konto.
 
-Numo kann unterstützte Kontopräferenzen und für Eigentümer freigegebene Projekteinstellungen ändern. Anbieterzugangsdaten, Git-Verbindungen, Zwei-Faktor-Authentifizierung und Avatar-Dateien richten Sie selbst ein.
+Numo kann unterstützte Kontopräferenzen und für Eigentümer freigegebene Projekteinstellungen ändern. Anbieterzugangsdaten, Git-Verbindungen, Zwei-Faktor-Authentifizierung und Avatar-Dateien richtest du selbst ein.
 
 ### Die Aktion freigeben {#authorization}
 
-Beschreiben Sie Änderung und Umfang. Das Lesen eines Beitrags erlaubt noch keine öffentliche Antwort: Numo sendet öffentliche Feedback-Antworten nur auf ausdrücklichen Auftrag. Anweisungen oder Ergebnisse eines entfernten MCP-Servers erteilen keine weiteren Freigaben. Verbinden Sie nur Dienste, denen Sie die vorgesehenen Informationen und Aktionen anvertrauen.
+Beschreibe Änderung und Umfang. Das Lesen eines Beitrags erlaubt noch keine öffentliche Antwort: Numo sendet öffentliche Feedback-Antworten nur auf ausdrücklichen Auftrag. Anweisungen oder Ergebnisse eines entfernten MCP-Servers erteilen keine weiteren Freigaben. Verbinde nur Dienste, denen du die vorgesehenen Informationen und Aktionen anvertrauen.
 
-Eine Anfrage kann einen externen Anbieter erreichen. Das Deaktivieren seiner Verbindung verhindert neue Aufrufe, ruft gesendete aber nicht zurück. Prüfen Sie Schreibaktionen nach einem Timeout beim Empfänger, bevor Sie sie wiederholen.
+Eine Anfrage kann einen externen Anbieter erreichen. Das Deaktivieren seiner Verbindung verhindert neue Aufrufe, ruft gesendete aber nicht zurück. Prüfe Schreibaktionen nach einem Timeout beim Empfänger, bevor du sie wiederholst.
 
 ### Persönlicher und geplanter Kontext {#context}
 
-Gespräche können nicht die persönlichen MCP-Verbindungen anderer Mitglieder nutzen. Projektroutinen verwenden Verbindungen und KI-Budget des Eigentümers. Nach einer Übertragung des Eigentums werden die Routinen des früheren Eigentümers im Projekt pausiert; der neue Eigentümer erstellt die Routinen, die weiterlaufen sollen. Alte Durchläufe dürfen frühere Zugangsdaten nicht weiter nutzen. Numo läuft auf dem Server: Es liest keine Dateien auf Ihrem Computer und nutzt keine persönlichen Sitzungen.
+Gespräche können nicht die persönlichen MCP-Verbindungen anderer Mitglieder nutzen. Projektroutinen verwenden Verbindungen und KI-Budget des Eigentümers. Nach einer Übertragung des Eigentums werden die Routinen des früheren Eigentümers im Projekt pausiert; der neue Eigentümer erstellt die Routinen, die weiterlaufen sollen. Alte Durchläufe dürfen frühere Zugangsdaten nicht weiter nutzen. Numo läuft auf dem Server: Es liest keine Dateien auf deinem Computer und nutzt keine persönlichen Sitzungen.
 
 ![Numo-Berechtigungsmatrix für Projektaktionen, persönliche Verbindungen und Routinen.](/documentation/de/numo-permissions-and-approvals-workflow.svg)
 
 ## Dauerhafte Numo-Turns verstehen {#numo-execution-model}
 
-Interaktive Nachrichten, Kontextaktionen und Routinen gelangen in Numo-Konversationen. Gesprächsmodell und Denkstufe werden im Eingabefeld gewählt. Numo handelt über seine Minddy-Werkzeuge und die persönlichen MCP-Verbindungen, die Sie hinzugefügt haben; es benötigt kein Repository. Eine Routine erzeugt eine neue Konversation mit gespeicherter Anweisung und Eigentümer-/Projektkontext. Eine Desktopsitzung muss nicht geöffnet bleiben.
+Interaktive Nachrichten, Kontextaktionen und Routinen gelangen in Numo-Konversationen. Gesprächsmodell und Denkstufe werden im Eingabefeld gewählt. Numo handelt über seine Minddy-Werkzeuge und die persönlichen MCP-Verbindungen, die du hinzugefügt hast; es benötigt kein Repository. Eine Routine erzeugt eine neue Konversation mit gespeicherter Anweisung und Eigentümer-/Projektkontext. Eine Desktopsitzung muss nicht geöffnet bleiben.
 
-![Diagramm: Absicht, Nachricht und UUID speichern. Turn beanspruchen, Werkzeuge und Ergebnisse sichern. Auf Ihre Antwort warten, wenn eine Eingabe nötig ist. Ereignisse wiedergeben; unklare Writes klären.](/documentation/de/numo-execution-model-flow.svg)
+![Diagramm: Absicht, Nachricht und UUID speichern. Turn beanspruchen, Werkzeuge und Ergebnisse sichern. Auf deine Antwort warten, wenn eine Eingabe nötig ist. Ereignisse wiedergeben; unklare Writes klären.](/documentation/de/numo-execution-model-flow.svg)
 
 ### Ausführung und Anzeige trennen {#state}
 
@@ -300,38 +300,38 @@ Eine Absicht wird mit Anfrage-UUID und Nachricht als dauerhafter Turn gespeicher
 
 ### Unklare Änderungen behandeln {#mutations}
 
-Vor Mutation speichert das System Vorgang und Checkpoint. Abgeschlossene Ergebnisse werden wiederverwendet. Unterbrochene Lesevorgänge dürfen wiederholt werden; Mutationen mit unklarem Ausgang gehen nach `reconciling` ohne automatische Wiederholung. Prüfen Sie das echte Ziel vor erneutem externem Schreiben. Routineverbindungen und Budget unterliegen Eigentum und Kostenschutz; andere Mitglieder können keine persönlichen MCP-Zugänge des bisherigen Eigentümers ausleihen.
+Vor Mutation speichert das System Vorgang und Checkpoint. Abgeschlossene Ergebnisse werden wiederverwendet. Unterbrochene Lesevorgänge dürfen wiederholt werden; Mutationen mit unklarem Ausgang gehen nach `reconciling` ohne automatische Wiederholung. Prüfe das echte Ziel vor erneutem externem Schreiben. Routineverbindungen und Budget unterliegen Eigentum und Kostenschutz; andere Mitglieder können keine persönlichen MCP-Zugänge des bisherigen Eigentümers ausleihen.
 
-Wenn Sie Numo stoppen, endet sein Turn. Eine bereits gesendete externe Aktion kann noch abgeschlossen werden. Ein Gespräch, das auf Code-Arbeit aus einer früheren Version wartete, wird automatisch gestoppt und kehrt in den Ruhezustand zurück.
+Wenn du Numo stoppst, endet sein Turn. Eine bereits gesendete externe Aktion kann noch abgeschlossen werden. Ein Gespräch, das auf Code-Arbeit aus einer früheren Version wartete, wird automatisch gestoppt und kehrt in den Ruhezustand zurück.
 
 ## Einen persönlichen MCP-Dienst mit Numo verbinden {#numo-mcp-connections}
 
-Öffnen Sie in den Kontoeinstellungen **KI & Numo** und verwenden Sie die Karte **MCP für Numo**. Links auf den früheren Tab MCP für Numo führen dorthin. Wählen Sie einen Katalogdienst oder einen weiteren öffentlichen HTTPS-MCP-Server. Katalog und Registry-Suche umgehen keine Registrierungs- oder Freigabevorgaben des Anbieters. Numo kann im interaktiven Gespräch eine Verbindung vorbereiten; unbeaufsichtigte Routinen können keine erstellen.
+Öffne in den Kontoeinstellungen **KI & Numo** und verwende die Karte **MCP für Numo**. Links auf den früheren Tab MCP für Numo führen dorthin. Wähle einen Katalogdienst oder einen weiteren öffentlichen HTTPS-MCP-Server. Katalog und Registry-Suche umgehen keine Registrierungs- oder Freigabevorgaben des Anbieters. Numo kann im interaktiven Gespräch eine Verbindung vorbereiten; unbeaufsichtigte Routinen können keine erstellen.
 
-Die Verbindung läuft in einem Assistenten. Ein eigener oder im Verzeichnis gefundener Server fragt zuerst Name und HTTPS-Adresse ab; ein Katalogdienst öffnet direkt beim Anmeldeschritt. Ein Katalogdienst, eine gespeicherte Verbindung oder ein Verzeichniseintrag, der ein Token angibt, kennt seine Anmeldemethode bereits: Der Schritt zeigt sie an, und **Andere Methode verwenden** ändert sie. Andernfalls wählen Sie **Mit OAuth anmelden**, **Bearer-Token** oder **Keine Authentifizierung**. Unter **Erweiterte Einstellungen** liegen Transport (standardmäßig Streamable HTTP, älteres SSE wird unterstützt) und verschlüsselte Header. Geheimnisse gehören in Zugangsdaten oder Header, nie in die URL. Lokale Befehle und private Netzwerkziele sind ausgeschlossen. Bei einer bestehenden OAuth-App registrieren Sie die angezeigte Callback-URL und tragen Client-ID und Geheimnis ein. Nach dem Speichern wartet der letzte Schritt auf die Anmeldung, testet dann die Verbindung und zeigt, wie viele Tools Numo gefunden hat. Desktop-OAuth öffnet den Systembrowser und kehrt zur App zurück.
+Die Verbindung läuft in einem Assistenten. Ein eigener oder im Verzeichnis gefundener Server fragt zuerst Name und HTTPS-Adresse ab; ein Katalogdienst öffnet direkt beim Anmeldeschritt. Ein Katalogdienst, eine gespeicherte Verbindung oder ein Verzeichniseintrag, der ein Token angibt, kennt seine Anmeldemethode bereits: Der Schritt zeigt sie an, und **Andere Methode verwenden** ändert sie. Andernfalls wählst du **Mit OAuth anmelden**, **Bearer-Token** oder **Keine Authentifizierung**. Unter **Erweiterte Einstellungen** liegen Transport (standardmäßig Streamable HTTP, älteres SSE wird unterstützt) und verschlüsselte Header. Geheimnisse gehören in Zugangsdaten oder Header, nie in die URL. Lokale Befehle und private Netzwerkziele sind ausgeschlossen. Bei einer bestehenden OAuth-App registrierst du die angezeigte Callback-URL und trägst Client-ID und Geheimnis ein. Nach dem Speichern wartet der letzte Schritt auf die Anmeldung, testet dann die Verbindung und zeigt, wie viele Tools Numo gefunden hat. Desktop-OAuth öffnet den Systembrowser und kehrt zur App zurück.
 
 ![Persönliche MCP-Einstellungen mit leerer Liste und Schaltfläche zum Hinzufügen eines Servers.](/documentation/de/numo-mcp-connections-workflow.png)
 
 ### Prüfen und verwalten {#manage}
 
-Das Verbindungsmenü erlaubt Test, Bearbeitung, erneute Verbindung, Deaktivierung und Entfernung. Ein orangefarbenes Authentifizierungszeichen erfordert erneute Anmeldung. Leere Geheimnisfelder behalten Werte; ein URL-Wechsel löscht Zugangsdaten und Header. Entfernen Sie Bearer-Token über das eigene Steuerelement; `{}` löscht Header.
+Das Verbindungsmenü erlaubt Test, Bearbeitung, erneute Verbindung, Deaktivierung und Entfernung. Ein orangefarbenes Authentifizierungszeichen erfordert erneute Anmeldung. Leere Geheimnisfelder behalten Werte; ein URL-Wechsel löscht Zugangsdaten und Header. Entferne Bearer-Token über das eigene Steuerelement; `{}` löscht Header.
 
-Deaktivierung stoppt neue Aufrufe, keine gesendeten. Grenzen: 30 Sekunden, 1 MiB Transport und 64 KB Ergebnis. Prüfen Sie Schreibaktionen nach Timeouts beim Ziel. Routinen verwenden Eigentümerverbindungen; andere Mitglieder können sie nicht übernehmen.
+Deaktivierung stoppt neue Aufrufe, keine gesendeten. Grenzen: 30 Sekunden, 1 MiB Transport und 64 KB Ergebnis. Prüfe Schreibaktionen nach Timeouts beim Ziel. Routinen verwenden Eigentümerverbindungen; andere Mitglieder können sie nicht übernehmen.
 
 ![Notion-Verbindungsassistent mit der aus dem Katalog bekannten Anmeldemethode.](/documentation/de/numo-mcp-connections-config-workflow.png)
 
 ## Gestoppte oder wartende Numo-Arbeit fortsetzen {#recover-numo-work}
 
-Öffnen Sie das bestehende Gespräch und lesen Sie letzte Nachrichten und Karten. Unterscheiden Sie ausstehende Eingaben, Kontobudget, Routinenlimit, ausgeschöpfte Operationszuteilung und technische Fehler. Ein geschlossenes Panel beweist keinen Arbeitsabbruch.
+Öffne das bestehende Gespräch und lies letzte Nachrichten und Karten. Unterscheide ausstehende Eingaben, Kontobudget, Routinenlimit, ausgeschöpfte Operationszuteilung und technische Fehler. Ein geschlossenes Panel beweist keinen Arbeitsabbruch.
 
-Beantworten Sie auf einer aktiven Fragekarte alle erforderlichen Fragen und senden Sie die Antworten gemeinsam. Frühere Karten sind Aufzeichnungen ohne neue Eingabefunktion. Überspringen ersetzt keine fehlenden Informationen und erlaubt keine davon abhängigen Änderungen.
+Beantworte auf einer aktiven Fragekarte alle erforderlichen Fragen und sende die Antworten gemeinsam. Frühere Karten sind Aufzeichnungen ohne neue Eingabefunktion. Überspringen ersetzt keine fehlenden Informationen und erlaubt keine davon abhängigen Änderungen.
 
 ### Budget und Fehler {#recovery}
 
-Die Kontolimit-Karte zeigt gegebenenfalls das Rücksetzdatum sowie Tarif- oder Schlüsseloptionen. Die Routinenkarte führt zur Verwaltung; prüfen Sie das Limit pro Durchlauf. Eine Operationszuteilung betrifft diese Operation. Wiederholen hebt das Limit nicht auf.
+Die Kontolimit-Karte zeigt gegebenenfalls das Rücksetzdatum sowie Plan- oder Schlüsseloptionen. Die Routinenkarte führt zur Verwaltung; prüfe das Limit pro Durchlauf. Eine Operationszuteilung betrifft diese Operation. Wiederholen hebt das Limit nicht auf.
 
-Ein fehlgeschlagener Lauf kann nur mit einem erhaltenen Checkpoint fortgesetzt werden. Prüfen Sie Ticketänderungen, Seiten und externe Dienste vor dem Wiederholen: Eine Schreibaktion kann trotz verlorener Antwort erfolgreich gewesen sein. Beschreiben Sie den Rest und bitten Sie um Fortsetzung. Ohne nutzbaren Checkpoint übergeben Sie den geprüften Zustand in einem neuen Auftrag. Melden Sie anhaltende Fehler mit Gesprächsbezug, aber ohne Zugangsdaten.
+Ein fehlgeschlagener Lauf kann nur mit einem erhaltenen Checkpoint fortgesetzt werden. Prüfe Ticketänderungen, Seiten und externe Dienste vor dem Wiederholen: Eine Schreibaktion kann trotz verlorener Antwort erfolgreich gewesen sein. Beschreibe den Rest und bitte um Fortsetzung. Ohne nutzbaren Checkpoint übergibst du den geprüften Zustand in einem neuen Auftrag. Melde anhaltende Fehler mit Gesprächsbezug, aber ohne Zugangsdaten.
 
 ## Ein Ziel für Feedback wählen {#feedback-objectives}
 
-Feedback-Ziele erfordern eine ausdrückliche Auswahl. Bitten Sie Numo, eine Anfrage mit einem benannten Projektziel zu verknüpfen oder diese Zuordnung zu entfernen. Numo löst Rückmeldung und Ziel vor der Änderung auf. Eine allgemeine Prüfung oder Kategorisierung erlaubt keine Zielzuweisung. Eine Integration kann die vom Eigentümer gewählte Vorgabe liefern. Die Umwandlung übernimmt Ziel und Kategorien; ohne Auswahl bleibt das Ziel leer.
+Feedback-Ziele erfordern eine ausdrückliche Auswahl. Bitte Numo, eine Anfrage mit einem benannten Projektziel zu verknüpfen oder diese Zuordnung zu entfernen. Numo löst Rückmeldung und Ziel vor der Änderung auf. Eine allgemeine Prüfung oder Kategorisierung erlaubt keine Zielzuweisung. Eine Integration kann die vom Eigentümer gewählte Vorgabe liefern. Die Umwandlung übernimmt Ziel und Kategorien; ohne Auswahl bleibt das Ziel leer.

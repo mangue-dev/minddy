@@ -13,11 +13,8 @@
  * passage, even though the demo account is on a plan that includes
  * automations. Never flip these rows to enabled.
  *
- * Runs are plain `agent_runs` rows pointing at the routine (`routine_id`,
- * `triggered_by: 'routine'`, no issue). Like 008, they are seeded at rest:
- * `completed` or `failed`, never `queued` nor `running`. No pull request:
- * the diff is read LIVE at the forge (app/api/agent-runs/[runId]/pr) and
- * none can be manufactured in base.
+ * No run history: routine runs used `agent_runs`, the coding agent's table
+ * removed in MIN-721, which the guards no longer whitelist.
  *
  * Idempotent: an existing Aurora routine with the same title is left as is;
  * runs are only added when the routine has none yet.
@@ -43,7 +40,6 @@ const ROUTINES = [
     title: "Weekly security review",
     prompt:
       "Review the open issues and last week's repository changes for security implications. Flag anything that could expose user data, and propose a concrete fix for each finding.",
-    model: "anthropic/claude-sonnet-4.5",
     frequency: "weekly",
     weekdays: [1],
     hour: 9,
@@ -54,7 +50,6 @@ const ROUTINES = [
     title: "Monthly dependency inventory",
     prompt:
       "List outdated or abandoned dependencies in the repository, note which open issues they affect, and suggest which ones deserve an upgrade ticket this month.",
-    model: null,
     frequency: "monthly",
     weekdays: [],
     hour: 8,
@@ -65,7 +60,6 @@ const ROUTINES = [
     title: "Daily issue triage",
     prompt:
       "Scan newly opened issues, label obvious bugs versus features, and flag the ones that look urgent with a one-line reason.",
-    model: null,
     frequency: "daily",
     weekdays: [],
     hour: 8,
@@ -74,27 +68,6 @@ const ROUTINES = [
   },
 ];
 
-/**
- * History of the weekly security review, read from top to bottom in the
- * runs table (most recent first). `daysAgo` counts back from the capture
- * clock's Sunday (2026-09-06), so every run lands on a MONDAY — the cadence
- * the routine advertises. Durations derive from started_at → completed_at;
- * usage is computed live from cost against the plan.
- */
-const RUNS = [
-  { daysAgo: 6, minuteOffset: 3, status: "completed", minutes: 7, costUsd: 0.38 },
-  { daysAgo: 13, minuteOffset: 7, status: "completed", minutes: 11, costUsd: 0.54 },
-  { daysAgo: 20, minuteOffset: 2, status: "failed", minutes: 3, costUsd: 0.12 },
-  { daysAgo: 27, minuteOffset: 11, status: "completed", minutes: 8, costUsd: 0.41 },
-];
-
-function isoDaysAgo(daysAgo, minuteOffset = 0) {
-  // 07:00 UTC ≈ 09:00 under Paris summer time, so the displayed timestamps
-  // agree with the routine's “every Monday at 09:00” cadence.
-  const base = Date.parse("2026-09-06T00:00:00.000Z") - daysAgo * 86_400_000;
-  return new Date(base + 7 * 3_600_000 + minuteOffset * 60_000).toISOString();
-}
-
 function describeIntent() {
   const lines = [
     `  • Créer ${ROUTINES.length} routines de démo sur ${PROJECT}, toutes EN PAUSE`,
@@ -102,12 +75,6 @@ function describeIntent() {
   ];
   for (const routine of ROUTINES) {
     lines.push(`      - ${routine.title} (${routine.frequency}, ${String(routine.hour).padStart(2, "0")}:${String(routine.minute).padStart(2, "0")} ${TIMEZONE})`);
-  }
-  lines.push(`  • Créer ${RUNS.length} passages historiques sur « ${ROUTINES[0].title} » :`);
-  for (const run of RUNS) {
-    lines.push(
-      `      - il y a ${run.daysAgo} jours — ${run.status}, ${run.minutes} min, ~$${run.costUsd.toFixed(2)}`,
-    );
   }
   return lines.join("\n");
 }
@@ -146,11 +113,10 @@ async function main() {
         title: routine.title,
         prompt: routine.prompt,
         prompt_mentions: [],
-        model: routine.model,
-        reasoning_level: "medium",
-        base_branch: "main",
+        base_branch: null,
+        max_spend_percent: 15,
         // DISABLED, always: the scheduler can never claim these rows.
-        trigger_type: "schedule", trigger: { type: "schedule" },
+        trigger_type: "schedule", trigger: { type: "schedule" }, trigger_revision: 1,
         enabled: false,
         next_run_at: null,
         frequency: routine.frequency,
@@ -167,59 +133,10 @@ async function main() {
     createdRoutines.push(inserted.agent_routines[0]);
   }
 
-  const weekly = createdRoutines.find((r) => r.title === ROUTINES[0].title);
-  if (!weekly) throw new Error("captures: la routine hebdomadaire n'a pas été résolue");
-
-  const { data: existingRuns } = await world.admin
-    .from("agent_runs")
-    .select("id")
-    .eq("routine_id", weekly.id);
-  if ((existingRuns || []).length > 0) {
-    console.log(`  → ${existingRuns.length} passage(s) existent déjà sur la routine, laissés tels quels`);
-    return;
-  }
-
-  const runPlan = createPlan(world);
-  runPlan.insert(
-    "agent_runs",
-    RUNS.map((run) => {
-      const startedAt = isoDaysAgo(run.daysAgo, run.minuteOffset);
-      const completedAt = new Date(Date.parse(startedAt) + run.minutes * 60_000).toISOString();
-      return {
-        project_id: project.id,
-        routine_id: weekly.id,
-        created_by: people[OWNER],
-        // At rest: neither the drain (which only requires `queued`) nor the
-        // sweeper (which only relates to `running`) can take it back.
-        status: run.status,
-        awaiting_input: false,
-        triggered_by: "routine",
-        prompt: ROUTINES[0].prompt,
-        model: ROUTINES[0].model,
-        key_mode: "platform",
-        intent: "implement",
-        base_branch: "main",
-        continuations: 0,
-        attempts: 1,
-        cost_usd: run.costUsd,
-        outcome: run.status === "completed" ? "completed" : "error",
-        error_message: run.status === "failed" ? "The sandbox exited before the review finished." : null,
-        started_at: startedAt,
-        completed_at: run.status === "completed" ? completedAt : null,
-        window_started_at: startedAt,
-        last_activity_at: completedAt,
-        created_at: startedAt,
-        updated_at: completedAt,
-      };
-    }),
-    "passage de routine",
-  );
-  console.log(runPlan.describe());
-  await runPlan.apply({ confirmed: true });
-
-  console.log(
-    `  → ${RUNS.length} passages créés sur « ${weekly.title} » (3 terminés, 1 en erreur)`,
-  );
+  // Run history is no longer seeded: routine runs used `agent_runs`, the
+  // table of the coding agent removed in MIN-721, which the guards no longer
+  // whitelist. The routine list and editor need no run.
+  console.log(`  → ${createdRoutines.length} routine(s) en pause sur ${PROJECT}`);
 }
 
 await main();

@@ -17,6 +17,8 @@ const ignoredPaths = [
   /^content\/documentation\/(?:fr|de|es|it|pt-BR)\/[a-z0-9-]+\.md$/,
   /^public\/documentation\/(?:fr|de|es|it|pt-BR)\//,
   /^messages\/fr\.json$/,
+  // The localization guide quotes every locale's glossary on purpose.
+  /^docs\/localization-and-copy\.md$/,
   /^\.claude\//,
   /(^|\/)(?:LICENSE|NOTICE)(?:\.|$)/,
   /^scripts\/check-owned-english\.mjs$/,

@@ -696,21 +696,21 @@
     "file": "app/api/oauth/token/route.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 163,
+    "line": 168,
     "storage": false
   },
   {
     "file": "app/api/oauth/token/route.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 170,
+    "line": 175,
     "storage": false
   },
   {
     "file": "app/api/oauth/token/route.ts",
     "operation": "from",
     "resource": "api_keys",
-    "line": 171,
+    "line": 176,
     "storage": false
   },
   {
@@ -1382,7 +1382,7 @@
     "file": "captures/world/seed/016-routines.mjs",
     "operation": "from",
     "resource": "agent_routines",
-    "line": 126,
+    "line": 93,
     "storage": false
   },
   {
@@ -1425,6 +1425,34 @@
     "operation": "from",
     "resource": "stat_events",
     "line": 26,
+    "storage": false
+  },
+  {
+    "file": "captures/world/seed/019-manuel-captures.mjs",
+    "operation": "from",
+    "resource": "issues",
+    "line": 91,
+    "storage": false
+  },
+  {
+    "file": "captures/world/seed/019-manuel-captures.mjs",
+    "operation": "from",
+    "resource": "pages",
+    "line": 147,
+    "storage": false
+  },
+  {
+    "file": "captures/world/seed/019-manuel-captures.mjs",
+    "operation": "from",
+    "resource": "view_shares",
+    "line": 176,
+    "storage": false
+  },
+  {
+    "file": "captures/world/seed/019-manuel-captures.mjs",
+    "operation": "from",
+    "resource": "feedback_boards",
+    "line": 195,
     "storage": false
   },
   {

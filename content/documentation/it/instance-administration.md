@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -46,10 +46,10 @@
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 10,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "authentication-and-email",
@@ -64,17 +64,18 @@
       "id": "instance-administration-flow",
       "kind": "screenshot",
       "src": "/documentation/it/instance-administration-overview.png",
-      "alt": "Panoramica amministratore con indicatori aggregati di account, attività, introduzione e piani.",
+      "alt": "Panoramica amministratore con indicatori aggregati di account, attività, introduzione e contenuti.",
       "caption": "Panoramica mostra gli indicatori aggregati dell’istanza; la schermata proviene da un’istanza dimostrativa. Finanze compare perché lì è configurata una chiave OpenRouter gestita.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         1488,
         1148
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "instance-administration-models",
@@ -82,15 +83,16 @@
       "src": "/documentation/it/instance-administration-models.png",
       "alt": "Impostazioni dei modelli IA e del ragionamento dell’istanza.",
       "caption": "Modelli configura valori predefiniti e usi specifici. La schermata mostra la configurazione esistente; nessun modello o provider è stato modificato.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         1488,
         1148
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -104,13 +106,13 @@
 Amministrare l’istanza è diverso da possedere un progetto. `ADMIN_EMAILS` elenca gli account confermati autorizzati lato server; anche `app_metadata.role=admin` firmato è una fonte valida. Sono richiesti `aal2`, MFA verificata e controlli aggiornati su account e sessione. Se questi controlli falliscono, l’accesso viene negato. Accedi, completa TOTP e apri `/admin`. Non alterare i ruoli nel database per aggirare MFA. La console e le API private rimangono `noindex`.
 
 
-![Panoramica amministratore con indicatori aggregati di account, attività, introduzione e piani.](/documentation/it/instance-administration-overview.png)
+![Panoramica amministratore con indicatori aggregati di account, attività, introduzione e contenuti.](/documentation/it/instance-administration-overview.png)
 
 ![Impostazioni dei modelli IA e del ragionamento dell’istanza.](/documentation/it/instance-administration-models.png)
 
 ## Usare i controlli disponibili {#panels}
 
-La console comprende Panoramica, Utenti, Modelli e, quando disponibile, Finanze. Finanze è nascosto senza OpenRouter gestito; l’assegnazione di un piano dipende dalla fatturazione abilitata o da un override già presente. Aprire la console non aggiunge la fatturazione Cloud a un’istanza self-hosted senza provider commerciali. **Utenti** trova un account solo tramite il suo indirizzo email esatto; aprilo per vedere lo stato di conferma dell’email, consultare o azzerare il budget di utilizzo dell’AI, regalare un piano alla condizione indicata sopra o contrassegnarlo come account interno, che lo esclude da tutte le statistiche. Il pannello non mostra l’attività dell’account né i suoi contenuti personali; apri un account solo per un’attività di supporto o di fatturazione. Controlla modelli, valori predefiniti, utenti e quote nella release installata prima di modificare. I cambiamenti interessano tutta l’istanza: verificali con un account demo.
+La console comprende Panoramica, Utenti, Modelli e, quando disponibile, Finanze. Finanze è nascosto senza OpenRouter gestito; l’assegnazione di un piano dipende dalla fatturazione abilitata o da un override già presente. Aprire la console non aggiunge la fatturazione Cloud a un’istanza self-hosted senza provider commerciali. **Utenti** trova un account solo tramite il suo indirizzo email esatto; aprilo per vedere lo stato di conferma dell’email, consultare o azzerare il budget di utilizzo dell’IA, regalare un piano alla condizione indicata sopra o contrassegnarlo come account interno, che lo esclude da tutte le statistiche. Il pannello non mostra l’attività dell’account né i suoi contenuti personali; apri un account solo per un’attività di supporto o di fatturazione. Controlla modelli, valori predefiniti, utenti e quote nella release installata prima di modificare. I cambiamenti interessano tutta l’istanza: verificali con un account demo.
 
 ## Scegliere il modello di decisione IA {#decision-model}
 

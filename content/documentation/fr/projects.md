@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
-  "sourceRevision": 15,
+  "revision": 16,
+  "sourceRevision": 16,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-21",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -67,10 +67,10 @@
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:claude (MIN-760: category reordering paragraph checked against components/project-categories.tsx, the order route and the Numo/MCP tools; existing figures unaffected and kept; no browser walkthrough of the procedure)",
-    "language": "agent:claude (fr translation of the added en paragraph, equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-21"
+    "revision": 16,
+    "fact": "agent:claude (MIN-760: category reordering paragraph checked against components/project-categories.tsx, the order route and the Numo/MCP tools; existing figures unaffected and kept; no browser walkthrough of the procedure); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:claude (fr translation of the added en paragraph, equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "issues",
@@ -94,7 +94,7 @@
       "src": "/documentation/fr/project-general.png",
       "alt": "En-tête du projet avec l’icône et son badge de modification, le nom, la clé et les chiffres Tickets, Membres, Objectifs, Catégories et Créé en.",
       "caption": "Sélectionnez l’icône, le nom ou la clé pour les changer sur place ; la mise à la corbeille reste une action distincte, plus bas.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -111,7 +111,7 @@
       "src": "/documentation/fr/project-members.png",
       "alt": "Carte « Inviter des personnes » au-dessus de la carte Membres, qui liste trois membres de démonstration avec le propriétaire identifié.",
       "caption": "Invitez par l’adresse du compte et identifiez le propriétaire avant de retirer l’accès d’un membre.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [

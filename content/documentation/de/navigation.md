@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 16,
-  "sourceRevision": 15,
+  "revision": 17,
+  "sourceRevision": 16,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -62,9 +62,9 @@
     ]
   },
   "review": {
-    "revision": 16,
-    "fact": "agent:/root/min777 (panel paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of navigation-steps, search-and-shortcuts-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted)",
-    "language": "agent:/root/min777 (de sentence on the page side panel with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 17,
+    "fact": "agent:/root/min777 (panel paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of navigation-steps, search-and-shortcuts-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min777 (de sentence on the page side panel with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -86,7 +86,7 @@
       "src": "/documentation/de/work-navigation.png",
       "alt": "Projektnavigation neben dem Demo-Ticketboard.",
       "caption": "Über die Projektseitenleiste erreichst du Tickets, Ziele, Seiten und Triage.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -103,7 +103,7 @@
       "src": "/documentation/de/work-search.png",
       "alt": "Suchergebnisse für die Kennung eines Demo-Tickets.",
       "caption": "Die Palette findet das Ticket über seine Kennung neben Projektseiten; beim Öffnen bleiben die Zugriffsregeln bestehen.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -138,7 +138,7 @@ Persönliche Zyklen und projektübergreifende Ansichten umfassen Projekte, auf d
 
 Klicke mit der rechten Maustaste auf eine Zeile der Seitenleiste, um auf das dargestellte Element zu wirken, ohne es zuerst zu öffnen. Linkzeilen bieten außerdem **In neuem Tab öffnen** und **Link kopieren**. Eine Aktion, die etwas in den Papierkorb verschiebt, steht immer zuletzt, nach einem Trennstrich.
 
-- Die Zeile **Alle Tickets** bietet **Neues Ticket**, und die Zeile **Routinen** bietet **Neue Routine**, wenn Sie Eigentümer eines Projekts sind.
+- Die Zeile **Alle Tickets** bietet **Neues Ticket**, und die Zeile **Routinen** bietet **Neue Routine**, wenn du Eigentümer eines Projekts bist.
 - Eine Projektzeile oder der Projektname oben im Panel des Projekts bietet **Neu** (ein Ticket, ein Ziel oder eine Seite in diesem Projekt) und **Projekteinstellungen**. Der Projekteigentümer sieht außerdem **In den Papierkorb verschieben**; dabei erscheint dieselbe Bestätigung wie in den Projekteinstellungen. Dasselbe Menü bietet außerdem **Projekt ausblenden** oder, für ein ausgeblendetes Projekt, **Projekt einblenden**; siehe [Ein Projekt für dich ausblenden](/docs/projects#hide-project).
 - Ein Projekt-Tab bietet seinen eigenen Erstellungseintrag: **Neues Ticket** unter Tickets, **Neues Ziel** unter Ziele, **Neue Seite** unter Seiten und **Neues Feedback** unter Feedback, das das interne Feedback-Formular öffnet.
 - Eine Routinezeile bietet **Letzte Ausführung öffnen** und dem Projekteigentümer zusätzlich **Jetzt ausführen**, **Pausieren** oder **Fortsetzen**, **Bearbeiten** und **In den Papierkorb verschieben**. Siehe [Ausführungen verwalten und prüfen](/de/dokumentation/scheduled-routines#runs).
@@ -170,18 +170,18 @@ Lies in der Tastenkürzelhilfe die Befehle für deine Plattform. minddy untersch
 
 ### Reihenfolge der Tickets in der Suche {#issue-search-order}
 
-Jede Ticketsuche listet Tickets in derselben Reihenfolge: die Befehlspalette, `@`-Erwähnungen, die Auswahl für Beziehungen, Duplikate und Pull Requests, der Feedback-Dialog **Link zu einem bestehenden Ticket** und die Suche, die Numo und MCP-Agenten nutzen. Tickets **In Bearbeitung** und **In Überprüfung** kommen zuerst, dann Tickets im **Rückstand** und **Todo**. Tickets in **Triage**, **Fertig**, **Abgebrochen** und **Duplikat** stehen immer am Ende und bleiben auswählbar. Innerhalb jeder Gruppe kommt der beste Texttreffer zuerst. Eine vollständig eingegebene Kennung wie `MIN-42` stellt dieses Ticket an den Anfang, unabhängig von seinem Status.
+Jede Ticketsuche listet Tickets in derselben Reihenfolge: die Befehlspalette, `@`-Erwähnungen, die Auswahl für Beziehungen, Duplikate und Pull Requests, der Feedback-Dialog **Mit bestehendem Ticket verknüpfen** und die Suche, die Numo und MCP-Agenten nutzen. Tickets **In Bearbeitung** und **In Prüfung** kommen zuerst, dann Tickets in **Backlog** und **Zu erledigen**. Tickets in **Triage**, **Erledigt**, **Abgebrochen** und **Duplikat** stehen immer am Ende und bleiben auswählbar. Innerhalb jeder Gruppe kommt der beste Texttreffer zuerst. Eine vollständig eingegebene Kennung wie `MIN-42` stellt dieses Ticket an den Anfang, unabhängig von seinem Status.
 
 ### Tickets inhaltlich suchen {#search-by-meaning}
 
-Beschreibt eine Suchanfrage die Arbeit, statt sie zu benennen, findet die Ticketsuche auch inhaltlich ähnliche Tickets, selbst wenn sie andere Wörter verwenden. So kann „Anmeldung scheitert nach dem Zurücksetzen des Passworts“ ein Ticket mit dem Titel „Sitzung geht bei Passwortänderung verloren“ finden. Das gilt für die Befehlspalette, `@`-Erwähnungen in Beschreibungen, Seiten, Kommentaren und im Eingabefeld von Numo, die Beziehungsauswahl, **Als Duplikat markieren…** in der Triage, **Ein Ticket verknüpfen** an einem Pull Request, das Menü **Kontext hinzufügen** → **Ticket** von Numo und **Link zu einem bestehenden Ticket** bei Feedback.
+Beschreibt eine Suchanfrage die Arbeit, statt sie zu benennen, findet die Ticketsuche auch inhaltlich ähnliche Tickets, selbst wenn sie andere Wörter verwenden. So kann „Anmeldung scheitert nach dem Zurücksetzen des Passworts“ ein Ticket mit dem Titel „Sitzung geht bei Passwortänderung verloren“ finden. Das gilt für die Befehlspalette, `@`-Erwähnungen in Beschreibungen, Seiten, Kommentaren und im Eingabefeld von Numo, die Beziehungsauswahl, **Als Duplikat markieren…** in der Triage, **Ein Ticket verknüpfen** an einem Pull Request, das Menü **Kontext hinzufügen** → **Ticket** von Numo und **Mit bestehendem Ticket verknüpfen** bei Feedback.
 
 Textübereinstimmungen und exakte Kennungen stehen immer zuerst und behalten ihre Reihenfolge. Kurz nachdem du aufgehört hast zu tippen, werden höchstens fünf inhaltlich gefundene Tickets unter **Inhaltlich verwandt** dahinter angefügt. Ein bereits angezeigtes Ticket wird nicht wiederholt, und die hervorgehobene Zeile verschiebt sich nicht. Jede Auswahl behält ihre eigenen Regeln, daher erscheinen nur Tickets, die sie ohnehin anbieten konnte: Die Beziehungsauswahl bietet zum Beispiel weiterhin nur noch nicht verknüpfte Tickets desselben Projekts an. Die Befehlspalette durchsucht die Projekte, die du lesen kannst, bis zu den 25 zuletzt aktualisierten; ihre Aktionen für Mehrfachauswahl nutzen die inhaltliche Suche nicht.
 
 Für die inhaltliche Suche gelten diese Grenzen:
 
 - Die Suchanfrage braucht mindestens zwei Wörter oder ein Wort mit mindestens sechs Buchstaben. Kennungen wie `MIN-42`, `#42` oder `42` sowie sehr kurze Anfragen nutzen nur die Textsuche.
-- Sie stützt sich auf den Index, den Smart-Fill aus Titel und Beschreibung der Tickets aufbaut. Ein noch nicht indexiertes Ticket oder eines, dessen Autor [**Tickets indexieren**](/docs/issues#smart-fill-preferences) ausgeschaltet hat, wird nur über seine Wörter gefunden. Tickets im Papierkorb erscheinen nie.
+- Sie stützt sich auf den Index, den Smart Fill aus Titel und Beschreibung der Tickets aufbaut. Ein noch nicht indexiertes Ticket oder eines, dessen Autor [**Tickets indexieren**](/docs/issues#smart-fill-preferences) ausgeschaltet hat, wird nur über seine Wörter gefunden. Tickets im Papierkorb erscheinen nie.
 - Hast du **Tickets indexieren** unter **Kontoeinstellungen** → **Smart Fill** → **Ticketindexierung** ausgeschaltet, vergleichen deine Suchen nur Wörter. Dasselbe gilt, wenn dein KI-Budget erschöpft ist oder wenn der Anbieter nicht innerhalb weniger Sekunden antwortet. Die Textergebnisse bleiben, und es wird kein Fehler angezeigt.
 - Eine `@`-Suche, deren Text bereits zu einer Person, einem Projekt oder einer Seite passt, wird nicht inhaltlich gesucht. In einem Projekt mit mehr als 3.000 indexierten Tickets werden nur die 3.000 zuletzt indexierten verglichen; die übrigen werden über ihre Wörter gefunden.
 

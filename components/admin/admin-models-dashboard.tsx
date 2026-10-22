@@ -613,7 +613,7 @@ function SuffixSelect({
       disabled={busy}
       onValueChange={(next) => void select(next)}
     >
-      <SelectTrigger className="w-full shrink-0 sm:w-36" aria-label={t("suffix.label")}>
+      <SelectTrigger className="w-full shrink-0 sm:w-auto sm:min-w-36" aria-label={t("suffix.label")}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

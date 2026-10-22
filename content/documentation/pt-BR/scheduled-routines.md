@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 10,
+  "revision": 11,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -40,10 +40,10 @@
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 11,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [],
   "aliases": [],
@@ -57,9 +57,9 @@
       "src": "/documentation/pt-BR/scheduled-routines-workflow.png",
       "alt": "Modos Agendado e Evento, um grupo de condições, ícones do aplicativo e botões de informação discretos.",
       "caption": "Demonstração local do editor real de gatilhos. Nenhuma rotina foi salva ou executada.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         788,
         910
@@ -102,9 +102,9 @@ Uma entrada sem a propriedade exigida aguarda uma edição que satisfaça o filt
 
 ## Gerenciar e verificar execuções {#runs}
 
-Abra a rotina para consultar as esperas, mudar instruções ou gatilho, pausar ou ler as execuções. Pausar, excluir ou mudar a configuração invalida as esperas. Reativar passa a ouvir eventos futuros sem repetir chegadas antigas. A execução manual funciona com qualquer gatilho sem aguardar seu evento e também consome orçamento.
+Abra a rotina para consultar as esperas, mudar instruções ou gatilho, pausar ou ler as execuções. Pausar, excluir ou mudar a configuração invalida as esperas. Retomar passa a ouvir eventos futuros sem repetir chegadas antigas. A execução manual funciona com qualquer gatilho sem aguardar seu evento e também consome orçamento.
 
-Clique com o botão direito em uma rotina da lista para abrir a última execução sem selecioná-la primeiro; **Abrir a última execução** fica indisponível até a rotina ter sido executada. O proprietário do projeto também pode escolher **Executar agora**, **Pausar** ou **Reativar**, **Editar** ou **Mover para a lixeira** no mesmo menu. **Reativar** fica indisponível quando a instância não pode agendar rotinas. Os outros membros só veem entradas que não alteram a rotina. Para criar uma rotina, clique com o botão direito em **Rotinas** na barra lateral e escolha **Nova rotina**.
+Clique com o botão direito em uma rotina da lista para abrir a última execução sem selecioná-la primeiro; **Abrir a última execução** fica indisponível até a rotina ter sido executada. O proprietário do projeto também pode escolher **Executar agora**, **Pausar** ou **Retomar**, **Editar** ou **Mover para a lixeira** no mesmo menu. **Retomar** fica indisponível quando a instância não pode agendar rotinas. Os outros membros só veem entradas que não alteram a rotina. Para criar uma rotina, clique com o botão direito em **Rotinas** na barra lateral e escolha **Nova rotina**.
 
 Cada execução usa o orçamento de IA do proprietário com limite padrão de 15 % do orçamento mensal, incluindo todas as chamadas ao Numo dessa execução. Abra a conversa para ver origem, resultado e perguntas. Quando sua resposta for necessária, responda nessa conversa; o orçamento restante é mantido. Consulte os resultados salvos antes de mudar o limite ou tentar novamente. Quando a propriedade é [transferida](/docs/projects#transfer-ownership), as rotinas do antigo proprietário no projeto são pausadas e não podem iniciar novo trabalho; o novo proprietário cria as rotinas que devem continuar.
 

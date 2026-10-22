@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 10,
+  "revision": 11,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-21",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review); MIN-750 Smart Fill re-evaluation schedule",
     "editions": [
@@ -46,10 +46,10 @@
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/min750 (schedule table and release delta sentence checked against vercel.json and deploy/self-hosted/scheduler.mjs after adding smart-fill-reevaluation; rest of the article unchanged since the 0.20.0 release review; no screenshot in scope)",
-    "language": "agent:/root/min750 (it table row and release delta sentence; agent review, not human acceptance)",
-    "date": "2026-10-21"
+    "revision": 11,
+    "fact": "agent:/root/min750 (schedule table and release delta sentence checked against vercel.json and deploy/self-hosted/scheduler.mjs after adding smart-fill-reevaluation; rest of the article unchanged since the 0.20.0 release review; no screenshot in scope); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min750 (it table row and release delta sentence; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "workspace-encryption",
@@ -74,7 +74,7 @@
       "src": "/documentation/it/optional-providers-flow.svg",
       "alt": "Schema: Operatore sceglie capacità opzionale. Credenziali complete e condizioni. Destinazione dati esterna esplicita. Verificare comportamento e costi.",
       "caption": "Prima di attivare un’integrazione, verifica le credenziali, le condizioni e la destinazione dei dati.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -106,7 +106,7 @@
       "src": "/documentation/it/proxy-network-and-jobs-flow.svg",
       "alt": "Schema: Proxy HTTPS pubblico. Origini app e Supabase pubbliche. Database e porte interne private. Job autenticati; fermi in manutenzione.",
       "caption": "Il proxy espone le origini pubbliche e mantiene privati i servizi interni; durante la manutenzione ferma anche i job.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

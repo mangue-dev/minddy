@@ -3,7 +3,7 @@
   "id": "ai-settings-and-usage",
   "locale": "es",
   "title": "Ajustes y consumo de IA",
-  "summary": "Configure sus claves personales de IA y los modelos predeterminados y comprenda los límites de los planes Cloud y el registro del consumo.",
+  "summary": "Configura tus claves personales de IA y los modelos predeterminados y comprenda los límites de los planes Cloud y el registro del consumo.",
   "topic": "Cuenta y aplicaciones",
   "type": "guide",
   "audiences": [
@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
-  "sourceRevision": 19,
+  "revision": 21,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -61,9 +61,9 @@
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:claude/min773 (dictation pill, discard confirmation, cleanup preference and vocabulary checked against the changed source and the running app; earlier evidence retained in git history)",
-    "language": "agent:claude/min773 (es translation of the MIN-773 passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 21,
+    "fact": "agent:claude/min773 (dictation pill, discard confirmation, cleanup preference and vocabulary checked against the changed source and the running app; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:claude/min773 (es translation of the MIN-773 passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -85,7 +85,7 @@
       "src": "/documentation/es/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Las conexiones, la asignación por capacidad y el modelo personal de Numo son ajustes separados.",
       "caption": "Pueden permanecer conectados varios proveedores. La asignación elige por capacidad; el valor de Numo se guarda por cuenta y proveedor.",
-      "revision": 19,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -99,15 +99,15 @@
         "items": [
           {
             "title": "Proveedores conectados",
-            "detail": "Mantenga varios proveedores API conectados; añadir uno conserva los demás."
+            "detail": "Mantén varios proveedores API conectados; añadir uno conserva los demás."
           },
           {
             "title": "Proveedor por capacidad",
-            "detail": "Asigne texto, transcripción y embeddings por separado y active los usos necesarios."
+            "detail": "Asigna texto, transcripción y embeddings por separado y activa los usos necesarios."
           },
           {
             "title": "Modelo predeterminado de Numo",
-            "detail": "Use el valor de la app o guarde un modelo personal. Una conversación puede elegir otro."
+            "detail": "Usa el valor de la app o guarda un modelo personal. Una conversación puede elegir otro."
           }
         ]
       }
@@ -119,17 +119,17 @@
 }
 ---
 
-Los ajustes de IA de la cuenta determinan los proveedores, las claves personales y los valores predeterminados de las funciones compatibles. Antes de empezar, compruebe la asignación de modelos. En el consumo Cloud, distinga la facturación del proveedor, la cuota de IA incluida y los límites de las rutinas.
+Los ajustes de IA de la cuenta determinan los proveedores, las claves personales y los valores predeterminados de las funciones compatibles. Antes de empezar, comprueba la asignación de modelos. En el consumo Cloud, distingue la facturación del proveedor, la cuota de IA incluida y los límites de las rutinas.
 
-La sección **IA de Minddy** de los ajustes de IA de la cuenta configura los proveedores API que usan las conversaciones de Numo, las rutinas, las automatizaciones, la voz y el feedback. Los agentes de código que usted ejecuta por su cuenta, conectados mediante minddy MCP, usan su propia suscripción o cuenta API y no consumen uso de IA de Minddy.
+La sección **IA de Minddy** de los ajustes de IA de la cuenta configura los proveedores API que usan las conversaciones de Numo, las rutinas, las automatizaciones, la voz y el feedback. Los agentes de código que ejecutas por tu cuenta, conectados mediante minddy MCP, usan su propia suscripción o cuenta API y no consumen uso de IA de Minddy.
 
 ## Configurar claves personales de IA y modelos {#ai-keys-and-models}
 
-En los ajustes de IA de la cuenta, **Proveedor de IA** selecciona el proveedor de modelos de texto entre Minddy Cloud y los proveedores compatibles conectados. **Proveedores conectados** muestra la lista completa. Elija **Añadir proveedor**, selecciónelo, introduzca su clave API y la URL base si es necesaria y guarde. Puede conectar varios proveedores; añadir o seleccionar uno no elimina los demás. Nunca pegue una clave en una conversación o captura de pantalla.
+En los ajustes de IA de la cuenta, **Proveedor de IA** selecciona el proveedor de modelos de texto entre Minddy Cloud y los proveedores compatibles conectados. **Proveedores conectados** muestra la lista completa. Elige **Añadir proveedor**, selecciónalo, introduce su clave API y la URL base si es necesaria y guarda. Puedes conectar varios proveedores; añadir o seleccionar uno no elimina los demás. Nunca pegues una clave en una conversación o captura de pantalla.
 
-Asigne por separado texto, transcripción y embeddings. Cada familia usa un proveedor a la vez. Los interruptores de uso de cada proveedor determinan si Numo, las automatizaciones, la voz y el feedback usan su clave o la cuota de Minddy. Por ejemplo, puede mantener el texto en OpenRouter y la transcripción en OpenAI. Seleccionar un proveedor de texto no reactiva un uso de Numo previamente desactivado.
+Asigna por separado texto, transcripción y embeddings. Cada familia usa un proveedor a la vez. Los interruptores de uso de cada proveedor determinan si Numo, las automatizaciones, la voz y el feedback usan su clave o la cuota de Minddy. Por ejemplo, puedes mantener el texto en OpenRouter y la transcripción en OpenAI. Seleccionar un proveedor de texto no reactiva un uso de Numo previamente desactivado.
 
-En **Modelo predeterminado de Numo**, elija **Predeterminado de la app** o un modelo concreto del proveedor activo de Numo. Se guarda para su cuenta y por separado para cada proveedor, tras recargas y en nuevas sesiones. El valor de la app sigue el modelo configurado por la aplicación para ese proveedor. Un modelo elegido explícitamente en una conversación tiene prioridad; las conversaciones que siguen su valor predeterminado recogen los cambios posteriores de la cuenta. Los turnos ya admitidos conservan su modelo fijado. Se rechaza un modelo que deja de estar disponible o supera su plan: elija otro modelo o el predeterminado de la app. La exportación e importación de la cuenta incluyen estas preferencias, sin credenciales de proveedores.
+En **Modelo predeterminado de Numo**, elige **Predeterminado de la app** o un modelo concreto del proveedor activo de Numo. Se guarda para tu cuenta y por separado para cada proveedor, tras recargas y en nuevas sesiones. El valor de la app sigue el modelo configurado por la aplicación para ese proveedor. Un modelo elegido explícitamente en una conversación tiene prioridad; las conversaciones que siguen su valor predeterminado recogen los cambios posteriores de la cuenta. Los turnos ya admitidos conservan su modelo fijado. Se rechaza un modelo que deja de estar disponible o supera tu plan: elige otro modelo o el predeterminado de la app. La exportación e importación de la cuenta incluyen estas preferencias, sin credenciales de proveedores.
 
 Una clave sin confirmar o inaccesible puede dejar las llamadas generales de IA compatibles en la cuota de Minddy cuando la IA gestionada está configurada. Tu proveedor factura las llamadas realizadas con su clave. Las claves personales validadas y el trabajo financiado por Minddy siguen las [reglas de presupuesto siguientes](#consumption).
 
@@ -137,24 +137,24 @@ Una clave sin confirmar o inaccesible puede dejar las llamadas generales de IA c
 
 ### Modelos locales {#models}
 
-Minddy llama a los modelos de IA desde el servidor, por lo que no puede usar un modelo que se ejecute en su ordenador. **Añadir proveedor** no ofrece Ollama local ni endpoints locales compatibles con OpenAI. Un endpoint local guardado en una versión anterior sigue apareciendo en **Proveedores conectados**, pero no puede atender conversaciones de Numo, rutinas ni otras funciones. Elimínelo y asigne en su lugar un proveedor accesible desde el servidor. Cuando deje de necesitar un proveedor, elimínelo mediante su control de confirmación y compruebe las asignaciones resultantes antes de la siguiente ejecución.
+Minddy llama a los modelos de IA desde el servidor, por lo que no puede usar un modelo que se ejecute en tu ordenador. **Añadir proveedor** no ofrece Ollama local ni endpoints locales compatibles con OpenAI. Un endpoint local guardado en una versión anterior sigue apareciendo en **Proveedores conectados**, pero no puede atender conversaciones de Numo, rutinas ni otras funciones. Elimínalo y asigna en su lugar un proveedor accesible desde el servidor. Cuando dejes de necesitar un proveedor, elimínalo mediante su control de confirmación y comprueba las asignaciones resultantes antes de la siguiente ejecución.
 
 
 ## Entender planes Cloud y consumo de IA {#plans-and-ai-usage}
 
-Cloud ofrece los planes Free, Go y Pro. Todos incluyen MCP, conversaciones de Numo, acciones contextuales y rutinas. Se diferencian en capacidad, IA incluida, modelos y almacenamiento. Abra la sección de facturación para consultar el presupuesto y el uso actuales de su cuenta, y compare la página pública de precios antes de elegir un plan; las cifras que aparecen allí son la referencia vigente.
+Cloud ofrece los planes Free, Go y Pro. Todos incluyen MCP, conversaciones de Numo, acciones contextuales y rutinas. Se diferencian en capacidad, IA incluida, modelos y almacenamiento. Abre la sección de facturación para consultar el presupuesto y el uso actuales de tu cuenta, y compara la página pública de precios antes de elegir un plan; las cifras que aparecen allí son la referencia vigente.
 
-Use el proceso de compra o la gestión de suscripciones que se ofrece para su cuenta. Antes de aceptar, revise el importe, el periodo de facturación y la confirmación del proveedor. Después, compruebe que el plan actualizado aparece en la facturación de la cuenta; cerrar la ventana de compra no demuestra que el cambio se haya completado.
+Usa el proceso de compra o la gestión de suscripciones que se ofrece para tu cuenta. Antes de aceptar, revisa el importe, el periodo de facturación y la confirmación del proveedor. Después, comprueba que el plan actualizado aparece en la facturación de la cuenta; cerrar la ventana de compra no demuestra que el cambio se haya completado.
 
 ### Qué consume el presupuesto {#consumption}
 
-El uso de IA incluido cubre el razonamiento y las llamadas a herramientas de Numo, las rutinas, las automatizaciones, el dictado por voz y el procesamiento del feedback. El límite mensual de IA incluida se aplica al trabajo financiado por minddy. El límite por ejecución de una rutina es independiente y puede pausar esa ejecución; el trabajo ya terminado permanece en la conversación. Estos límites no autorizan cargos automáticos por exceso. Consulte la tarjeta de límite y la fecha de restablecimiento del presupuesto cuando esté disponible.
+El uso de IA incluido cubre el razonamiento y las llamadas a herramientas de Numo, las rutinas, las automatizaciones, el dictado por voz y el procesamiento del feedback. El límite mensual de IA incluida se aplica al trabajo financiado por minddy. El límite por ejecución de una rutina es independiente y puede pausar esa ejecución; el trabajo ya terminado permanece en la conversación. Estos límites no autorizan cargos automáticos por exceso. Consulta la tarjeta de límite y la fecha de restablecimiento del presupuesto cuando esté disponible.
 
 Las claves personales compatibles hacen que el proveedor facture las llamadas al modelo en lugar de consumir la IA incluida. Las familias o funciones sin asignación cuyas llamadas financia minddy siguen sujetas a su asignación de minddy. Una instalación self-hosted tiene los costes de infraestructura y de proveedores opcionales que determine su configuración; ejecutar el mismo núcleo no crea una suscripción Cloud.
 
 ### Capacidad de los planes {#plan-capacities}
 
-Estos valores predeterminados corresponden a Minddy 0.20.0. Compruebe la página vigente de precios y su cuenta antes de comprar: los precios configurados en el proceso de compra y las excepciones de cada cuenta pueden variar. El número de invitados no incluye al propietario del proyecto, pero sí a los miembros, los lectores y las invitaciones pendientes; no hay facturación por puesto. El almacenamiento se carga al propietario del proyecto que recibe los archivos. Cuando se transfiere la propiedad, estos límites, el almacenamiento y la IA en segundo plano, como Smart Assign y la revisión de feedback, usan el plan del nuevo propietario.
+Estos valores predeterminados corresponden a Minddy 0.20.0. Comprueba la página vigente de precios y tu cuenta antes de comprar: los precios configurados en el proceso de compra y las excepciones de cada cuenta pueden variar. El número de invitados no incluye al propietario del proyecto, pero sí a los miembros, los lectores y las invitaciones pendientes; no hay facturación por puesto. El almacenamiento se carga al propietario del proyecto que recibe los archivos. Cuando se transfiere la propiedad, estos límites, el almacenamiento y la IA en segundo plano, como Smart Assign y la revisión de feedback, usan el plan del nuevo propietario.
 
 | Plan | Proyectos | Tickets por proyecto | Invitados por proyecto | Almacenamiento | IA mensual incluida (USD) |
 | --- | --- | --- | --- | --- | --- |
@@ -174,7 +174,7 @@ Usa el micrófono junto a un campo compatible para dictar una incidencia, un obj
 
 ### Consumo y límites de grabación {#voice-limits}
 
-El audio se envía al servicio de transcripción configurado y después un modelo de IA puede corregirlo o interpretarlo. La limpieza corrige la puntuación, las muletillas y las autocorrecciones; para insertar las palabras tal como se oyeron, desactiva **Limpiar los dictados** en **Configuración de la cuenta** > **Preferencias** > **Dictado por voz**, y no se llama a ningún modelo de limpieza para tus dictados. El feedback público mantiene su propio procesamiento. En **Vocabulario**, justo debajo, añade hasta 50 nombres y términos que el dictado debe escribir a tu manera; rellena **Se oye como** para sustituir esa palabra en cada dictado, incluso sin limpieza. El consumo sigue las reglas del proveedor y del presupuesto de la cuenta; la grabación y su interpretación pueden generar consumos separados. El feedback público tiene sus propias reglas de disponibilidad y facturación, descritas en la [guía de feedback](/docs/feedback). La demo de la página de inicio tiene un límite independiente y no es una cuota de dictado de la cuenta.
+El audio se envía al servicio de transcripción configurado y después un modelo de IA puede corregirlo o interpretarlo. La limpieza corrige la puntuación, las muletillas y las autocorrecciones; para insertar las palabras tal como se oyeron, desactiva **Limpiar los dictados** en **Ajustes de la cuenta** > **Preferencias** > **Dictado por voz**, y no se llama a ningún modelo de limpieza para tus dictados. El feedback público mantiene su propio procesamiento. En **Vocabulario**, justo debajo, añade hasta 50 nombres y términos que el dictado debe escribir a tu manera; rellena **Se oye como** para sustituir esa palabra en cada dictado, incluso sin limpieza. El consumo sigue las reglas del proveedor y del presupuesto de la cuenta; la grabación y su interpretación pueden generar consumos separados. El feedback público tiene sus propias reglas de disponibilidad y facturación, descritas en la [guía de feedback](/docs/feedback). La demo de la página de inicio tiene un límite independiente y no es una cuota de dictado de la cuenta.
 
 El servicio de transcripción para usuarios conectados acepta hasta 10 MiB de audio y 30 solicitudes por cuenta y hora. El grabador compartido se detiene a los 20 minutos como precaución. Usa grabaciones cortas para revisar cada resultado. Conserva el texto existente hasta verificarlo; el grabador no es una copia de seguridad de audio.
 
