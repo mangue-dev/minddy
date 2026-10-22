@@ -98,12 +98,16 @@ export function usePageDatabaseViews(projectId: string, pageId: string, canWrite
   // Writes run one after another, so a first change creating the default
   // view is never doubled by the next one.
   const chain = useRef<Promise<unknown>>(Promise.resolve());
-  const enqueue = useCallback((work: () => Promise<void>) => {
+  // A background save reports its own failure; `rethrow` leaves the report to
+  // a caller that shows it, such as the view name dialog.
+  const enqueue = useCallback((work: () => Promise<void>, { rethrow = false } = {}) => {
     const next = chain.current.then(work).catch((error) => {
-      toast.error(error instanceof Error ? error.message : t("saveFailed"));
       void queryClient.invalidateQueries({ queryKey: pageDatabaseViewsKey(projectId, pageId) });
+      if (rethrow) throw error;
+      toast.error(error instanceof Error ? error.message : t("saveFailed"));
     });
-    chain.current = next;
+    // The chain itself never rejects, so the next write still runs.
+    chain.current = next.catch(() => undefined);
     return next;
   }, [queryClient, projectId, pageId, t]);
 
@@ -121,7 +125,7 @@ export function usePageDatabaseViews(projectId: string, pageId: string, canWrite
   /** Save a configuration on the view it was made on, or as the first view. */
   const persist = useCallback((viewId: string | null, next: DatabaseView, entryKey: string) =>
     enqueue(async () => {
-      const target = viewId ?? cached()[0]?.id ?? null;
+      let target = viewId ?? cached()[0]?.id ?? null;
       if (target) {
         await request(`${base}/${target}`, { method: "PATCH",
           body: JSON.stringify({ view: next }) }, t("saveFailed"));
@@ -130,11 +134,18 @@ export function usePageDatabaseViews(projectId: string, pageId: string, canWrite
       } else {
         const body = await request<{ view: SavedDatabaseView }>(base, { method: "POST",
           body: JSON.stringify({ name: t("defaultView"), view: next }) }, t("saveFailed"));
+        target = body.view.id;
         setCached((views) => [...views, body.view]);
       }
-      setLocal((current) => current?.key === entryKey &&
-        sameDatabaseView(current.view, next) ? null : current);
-    }), [enqueue, cached, setCached, base, t]);
+      // Changes made on the default view before it was saved now belong to
+      // the saved one, so the screen does not fall back while they are sent.
+      const savedKey = `${pageId}:${target}`;
+      setLocal((current) => {
+        if (!current || (current.key !== entryKey && current.key !== savedKey)) return current;
+        if (sameDatabaseView(current.view, next)) return null;
+        return { key: savedKey, view: current.view };
+      });
+    }), [enqueue, cached, setCached, base, pageId, t]);
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const queued = useRef<(() => void) | null>(null);
@@ -176,9 +187,8 @@ export function usePageDatabaseViews(projectId: string, pageId: string, canWrite
         body: JSON.stringify({ name, view: current }) }, t("saveFailed"));
       setCached((views) => [...views, body.view]);
       created = body.view;
-    });
-    if (!created) throw new Error(t("saveFailed"));
-    select((created as SavedDatabaseView).id);
+    }, { rethrow: true });
+    if (created) select((created as SavedDatabaseView).id);
   }, [flush, enqueue, cached, setCached, base, t, select]);
 
   const rename = useCallback(async (viewId: string, name: string) => {

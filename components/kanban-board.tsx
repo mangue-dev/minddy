@@ -340,14 +340,15 @@ export const KanbanBoard = memo(function KanbanBoard({
     [dragBoundsModifier],
   );
 
-  // MouseSensor (not PointerSensor) so drag-and-drop is mouse-only: on touch the
-  // board is a swipeable stack of full-width columns and DnD would fight the
+  // Screen readers hear issue titles and column names, not their IDs.
   const tStatus = useTranslations("Status");
   const dragAnnouncements = useDragAnnouncements((id) => {
     const issue = issueMap.get(String(id));
     if (issue) return issue.title;
     return Object.hasOwn(STATUS_MAP, id) ? tStatus(id as IssueStatus) : null;
   });
+  // MouseSensor (not PointerSensor) so drag-and-drop is mouse-only: on touch the
+  // board is a swipeable stack of full-width columns and DnD would fight the
   // scroll, so touch never starts a drag (status changes go through the card →
   // side panel instead). Desktop mouse drag is unchanged.
   const sensors = useSensors(

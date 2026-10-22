@@ -11,7 +11,8 @@ import {
 import { EncryptedRowCodec, type StoredRow } from "./encryption/row-codec";
 import { getEncryptedStore } from "./encryption/registry";
 import { shouldProtectPages } from "./page-content";
-import { getStoredPage, pageWriteRefusal, type PageResult } from "./pages";
+import { pageWriteRefusal, type PageResult } from "./pages";
+import { getProjectAccess } from "./project-access";
 
 /**
  * Saved views of a page database (MIN-764): named sort, filter and hidden
@@ -22,7 +23,9 @@ import { getStoredPage, pageWriteRefusal, type PageResult } from "./pages";
  */
 
 const TABLE = "page_database_views";
-const COLUMNS = "id, page_id, project_id, name, view, position, encrypted_content, encryption_version";
+const COLUMNS = "id, page_id, project_id, name, view, position, encrypted_content, encryption_version, updated_at";
+/** A concurrent edit of the same view is retried this many times before failing. */
+const UPDATE_ATTEMPTS = 3;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 type Row = Record<string, unknown>;
 
@@ -49,14 +52,36 @@ async function encodeRow(service: SupabaseClient, row: Row & { project_id: strin
     { table: TABLE, scope: rowScope(row.project_id) });
 }
 
-/** The page must be a live database of the project, visible to the actor. */
-async function databasePage(projectId: string, pageId: string, actorId: string):
-  Promise<PageResult<null>> {
-  const loaded = await getStoredPage(pageId, actorId);
-  if (!loaded.ok) return loaded;
-  if (loaded.page.project_id !== projectId || !loaded.page.database_schema)
-    return { ok: false, status: 404, errorKey: "pageNotFound" };
-  return { ok: true, page: null };
+const failure = (error: unknown): PageResult<never> => {
+  console.error("[page-database-views]", error instanceof Error ? error.message : error);
+  return { ok: false, status: 500, errorKey: "databaseError" };
+};
+const invalid = { ok: false, status: 400, errorKey: "pageDatabaseInvalid" } as const;
+const notFound = { ok: false, status: 404, errorKey: "pageNotFound" } as const;
+
+/**
+ * The page must be a live database of the project. Reads only its clear
+ * routing metadata: the page content is never needed to authorize a view.
+ */
+async function databasePage(service: SupabaseClient, projectId: string,
+  pageId: string): Promise<PageResult<null>> {
+  if (!UUID.test(pageId)) return notFound;
+  const { data, error } = await service.from("pages").select("id")
+    .eq("id", pageId).eq("project_id", projectId).eq("page_is_database", true)
+    .is("deleted_at", null).maybeSingle();
+  if (error) return failure(error);
+  return data ? { ok: true, page: null } : notFound;
+}
+
+/** Project members read the views; `pageWriteRefusal` also gates writers. */
+async function readable(projectId: string, pageId: string, actorId: string) {
+  if (!await getProjectAccess(actorId, projectId)) return notFound;
+  return databasePage(getServiceClient(), projectId, pageId);
+}
+
+async function writable(projectId: string, pageId: string, actorId: string) {
+  return await pageWriteRefusal(actorId, projectId, "pageNotFound") ??
+    await databasePage(getServiceClient(), projectId, pageId);
 }
 
 async function readRows(service: SupabaseClient, projectId: string, pageId: string) {
@@ -67,17 +92,10 @@ async function readRows(service: SupabaseClient, projectId: string, pageId: stri
   return (data ?? []) as Row[];
 }
 
-const failure = (error: unknown): PageResult<never> => {
-  console.error("[page-database-views]", error instanceof Error ? error.message : error);
-  return { ok: false, status: 500, errorKey: "databaseError" };
-};
-const invalid = { ok: false, status: 400, errorKey: "pageDatabaseInvalid" } as const;
-const notFound = { ok: false, status: 404, errorKey: "pageNotFound" } as const;
-
 /** The views of a database, in strip order; empty for the default view. */
 export async function listPageDatabaseViews(projectId: string, pageId: string,
   actorId: string): Promise<PageResult<SavedDatabaseView[]>> {
-  const allowed = await databasePage(projectId, pageId, actorId);
+  const allowed = await readable(projectId, pageId, actorId);
   if (!allowed.ok) return allowed;
   try {
     const rows = await readRows(getServiceClient(), projectId, pageId);
@@ -88,19 +106,13 @@ export async function listPageDatabaseViews(projectId: string, pageId: string,
   }
 }
 
-async function writable(projectId: string, pageId: string, actorId: string) {
-  return await pageWriteRefusal(actorId, projectId, "pageNotFound") ??
-    await databasePage(projectId, pageId, actorId);
-}
-
 /** Add a view at the end of the strip, or at `position` when given. */
 export async function createPageDatabaseView(projectId: string, pageId: string,
   actorId: string, input: unknown): Promise<PageResult<SavedDatabaseView>> {
   const body = input && typeof input === "object" ? input as Row : {};
   const name = normalizeDatabaseViewName(body.name);
   const view = normalizeDatabaseView(body.view);
-  if (!name || !view || (body.id !== undefined &&
-      (typeof body.id !== "string" || !UUID.test(body.id)))) return invalid;
+  if (!name || !view) return invalid;
   const allowed = await writable(projectId, pageId, actorId);
   if (!allowed.ok) return allowed;
   const service = getServiceClient();
@@ -110,7 +122,7 @@ export async function createPageDatabaseView(projectId: string, pageId: string,
     const last = rows.at(-1)?.position as number | undefined;
     const position = typeof body.position === "number" && Number.isFinite(body.position)
       ? body.position : (last ?? 0) + 1;
-    const id = (body.id as string | undefined) ?? crypto.randomUUID();
+    const id = crypto.randomUUID();
     const row = await encodeRow(service, { id, page_id: pageId, project_id: projectId,
       name, view, position, created_by: actorId, updated_by: actorId });
     const { error } = await service.from("page_database_views").insert(row);
@@ -137,22 +149,28 @@ export async function updatePageDatabaseView(projectId: string, pageId: string,
   if (!allowed.ok) return allowed;
   const service = getServiceClient();
   try {
-    const { data, error } = await service.from("page_database_views").select(COLUMNS)
-      .eq("id", viewId).eq("page_id", pageId).eq("project_id", projectId).maybeSingle();
-    if (error) throw new Error(error.message);
-    const current = data ? await decodeRow(data as Row, actorId) : null;
-    if (!current) return notFound;
-    const next = { ...current, ...(name !== undefined && { name }),
-      ...(view !== undefined && { view }), ...(position !== undefined && { position }) };
-    const row = await encodeRow(service, { page_id: pageId, project_id: projectId,
-      id: viewId, name: next.name, view: next.view, position: next.position,
-      updated_by: actorId });
-    const { data: updated, error: updateError } = await service
-      .from("page_database_views").update(row)
-      .eq("id", viewId).eq("page_id", pageId).select("id");
-    if (updateError) throw new Error(updateError.message);
-    if (!updated?.length) return notFound;
-    return { ok: true, page: next };
+    // The row is rewritten whole (its content is one sealed envelope), so the
+    // write only applies if nobody changed the view since it was read; a
+    // concurrent rename and filter change then both survive.
+    for (let attempt = 0; attempt < UPDATE_ATTEMPTS; attempt += 1) {
+      const { data, error } = await service.from("page_database_views").select(COLUMNS)
+        .eq("id", viewId).eq("page_id", pageId).eq("project_id", projectId).maybeSingle();
+      if (error) throw new Error(error.message);
+      const current = data ? await decodeRow(data as Row, actorId) : null;
+      if (!current) return notFound;
+      const next = { ...current, ...(name !== undefined && { name }),
+        ...(view !== undefined && { view }), ...(position !== undefined && { position }) };
+      const row = await encodeRow(service, { page_id: pageId, project_id: projectId,
+        id: viewId, name: next.name, view: next.view, position: next.position,
+        updated_by: actorId });
+      const { data: updated, error: updateError } = await service
+        .from("page_database_views").update(row)
+        .eq("id", viewId).eq("page_id", pageId).eq("updated_at", (data as Row).updated_at as string)
+        .select("id");
+      if (updateError) throw new Error(updateError.message);
+      if (updated?.length) return { ok: true, page: next };
+    }
+    return { ok: false, status: 409, errorKey: "pageDatabaseStale" };
   } catch (error) {
     return failure(error);
   }
@@ -163,7 +181,16 @@ export async function deletePageDatabaseView(projectId: string, pageId: string,
   if (!UUID.test(viewId)) return invalid;
   const allowed = await writable(projectId, pageId, actorId);
   if (!allowed.ok) return allowed;
-  const { data, error } = await getServiceClient().from("page_database_views")
+  const service = getServiceClient();
+  try {
+    // A database keeps at least one view: the manual and the strip promise it.
+    const rows = await readRows(service, projectId, pageId);
+    if (!rows.some((row) => row.id === viewId)) return notFound;
+    if (rows.length <= 1) return invalid;
+  } catch (error) {
+    return failure(error);
+  }
+  const { data, error } = await service.from("page_database_views")
     .delete().eq("id", viewId).eq("page_id", pageId).eq("project_id", projectId)
     .select("id");
   if (error) return failure(error);

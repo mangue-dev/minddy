@@ -386,13 +386,14 @@ export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
     [dragBoundsModifier],
   );
 
-  // Mouse-only drag (touch scrolls the swipeable columns) — mirrors KanbanBoard.
+  // Screen readers hear issue titles and column names, not their IDs.
   const tStatus = useTranslations("Status");
   const dragAnnouncements = useDragAnnouncements((id) => {
     const issue = issueMap.get(String(id));
     if (issue) return issue.title;
     return Object.hasOwn(STATUS_MAP, id) ? tStatus(id as IssueStatus) : null;
   });
+  // Mouse-only drag (touch scrolls the swipeable columns) — mirrors KanbanBoard.
   // Read-only boards (past/future cycles) get a huge activation distance so the
   // sensor never fires — hooks must run unconditionally.
   const sensors = useSensors(

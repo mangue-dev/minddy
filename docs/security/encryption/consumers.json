@@ -8437,29 +8437,29 @@
   {
     "file": "lib/server/page-database-views.ts",
     "operation": "from",
-    "resource": "page_database_views",
-    "line": 63,
+    "resource": "pages",
+    "line": 69,
     "storage": false
   },
   {
     "file": "lib/server/page-database-views.ts",
     "operation": "from",
     "resource": "page_database_views",
-    "line": 116,
+    "line": 88,
     "storage": false
   },
   {
     "file": "lib/server/page-database-views.ts",
     "operation": "from",
     "resource": "page_database_views",
-    "line": 140,
+    "line": 128,
     "storage": false
   },
   {
     "file": "lib/server/page-database-views.ts",
     "operation": "from",
     "resource": "page_database_views",
-    "line": 150,
+    "line": 156,
     "storage": false
   },
   {
@@ -8473,14 +8473,21 @@
     "file": "lib/server/page-database-views.ts",
     "operation": "from",
     "resource": "page_database_views",
-    "line": 179,
+    "line": 193,
     "storage": false
   },
   {
     "file": "lib/server/page-database-views.ts",
     "operation": "from",
     "resource": "page_database_views",
-    "line": 192,
+    "line": 206,
+    "storage": false
+  },
+  {
+    "file": "lib/server/page-database-views.ts",
+    "operation": "from",
+    "resource": "page_database_views",
+    "line": 219,
     "storage": false
   },
   {
