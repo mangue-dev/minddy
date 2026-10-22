@@ -44,6 +44,7 @@ import { projectOrbBaseColor } from "@/lib/project-orb-colors";
 import { UserAvatar } from "@/components/user-avatar";
 import { NUMO_MENTION_ID } from "@/lib/mention-attributes";
 import { StatusIndicator } from "@/components/issue-indicators";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 import type { IssueStatus } from "@/lib/issue-constants";
 
 /** The id of the pseudo-entity “Numo” in the mention lists: the assistant
@@ -68,7 +69,29 @@ export type MentionChipType =
    figure of its own, no link — the label is the neutral one it is given. */
   | "unavailable";
 
+/**
+ * A mention pill. With a `tooltip` (a ticket's title, which its identifier
+ * does not say), the pill shows it on hover; the wrapper is a plain inline
+ * span so the tooltip has a box to anchor to.
+ */
 export function MentionChip({
+  tooltip,
+  ...props
+}: MentionChipProps & {
+  tooltip?: string | null;
+}) {
+  const chip = <MentionChipBody {...props} />;
+  if (!tooltip) return chip;
+  return (
+    <AppTooltip label={tooltip}>
+      <span>{chip}</span>
+    </AppTooltip>
+  );
+}
+
+type MentionChipProps = Parameters<typeof MentionChipBody>[0];
+
+function MentionChipBody({
   type,
   id,
   label,

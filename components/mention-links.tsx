@@ -23,6 +23,9 @@ export interface MentionLinks {
   href: (type: MentionTargetType, id: string) => string | null;
   /** Current issue state when this mention source has resolved the ticket. */
   issueStatus: (id: string) => IssueStatus | null;
+  /** The ticket's title when this source holds it: an issue pill names the
+      ticket by its identifier, and shows its title on hover. */
+  issueTitle?: (id: string) => string | null;
   /**
  * Handle an ordinary click. Issues open in the app-wide side panel without
  * leaving the current page; other linked entities use client-side routing.

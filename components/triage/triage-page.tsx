@@ -589,7 +589,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
                     onKeyDown={(e) => {
                       titleBody.onTitleKeyDown(e);
                     }}
-                    className="w-full overflow-hidden bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
+                    className="w-full title-field bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
                     placeholder={tIssueUI("titlePlaceholder")}
                   />
                   <div ref={titleBody.bodyRef}>

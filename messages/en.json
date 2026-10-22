@@ -520,6 +520,7 @@
     "retry": "Try again",
     "newConversation": "New conversation",
     "unreadConversation": "Unread conversation",
+    "unreadQuestion": "Waiting for your answer",
     "conversations": "Conversations",
     "noConversations": "No conversations yet",
     "loadMore": "Load more",

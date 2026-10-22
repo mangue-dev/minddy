@@ -106,6 +106,7 @@ export function useResourceMentions<T extends DocumentEditorMentions | undefined
         return resource ? resourceMentionHref(resource) : null;
       },
       issueStatus: (id) => inner?.issueStatus(id) ?? null,
+      issueTitle: (id) => inner?.issueTitle?.(id) ?? null,
       label: (type, id) => {
         if (type !== "resource") return inner?.label?.(type, id) ?? null;
         const resource = byId.get(id);

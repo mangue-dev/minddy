@@ -1592,7 +1592,7 @@ function FeedbackDetail({
             onKeyDown={(e) => {
               titleBody.onTitleKeyDown(e);
             }}
-            className="w-full overflow-hidden bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
+            className="w-full title-field bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
             maxLength={200}
           />
           <div ref={titleBody.bodyRef}>
@@ -2763,7 +2763,7 @@ function InternalFeedbackDialog({
           }}
           placeholder={t("postTitlePlaceholder")}
           maxLength={200}
-          className="w-full overflow-hidden bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
+          className="w-full title-field bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
         />
         <div ref={titleBody.bodyRef}>
         <LazyDocumentEditor

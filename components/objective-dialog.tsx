@@ -616,6 +616,7 @@ export function ObjectiveDialog({
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent
           ref={contentRef}
+          onKeyDownCapture={submitShortcut.onKeyDownCapture}
           aria-describedby={undefined}
           // In creation, the extra top padding clears the "Create in" pill and
           // the close button.
@@ -639,7 +640,7 @@ export function ObjectiveDialog({
           {!mobile && showProjectSelect && projectSelect("dialog")}
 
           <form
-            {...submitShortcut}
+            ref={submitShortcut.ref}
             onSubmit={handleSubmit}
             className="creation-form relative flex flex-col rounded-lg"
             {...(composerEnabled
@@ -678,7 +679,7 @@ export function ObjectiveDialog({
                   titleBody.onTitleKeyDown(e, { submit: () => void submit(), mobile });
                 }}
                 placeholder={t("namePlaceholder")}
-                className="creation-title w-full overflow-hidden bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50 sm:text-2xl"
+                className="creation-title w-full title-field bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50 sm:text-2xl"
               />
               <div className="creation-field-label">{tField("description")}</div>
               <div ref={titleBody.bodyRef}>

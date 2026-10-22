@@ -123,7 +123,9 @@ export function ConversationSettings() {
             variant="ghost"
             aria-label={t("sectionTitle")}
             aria-expanded={open}
-            className="h-8 min-w-0 gap-1.5 rounded-full border border-transparent bg-transparent px-1.5 text-xs font-medium hover:bg-muted/50"
+            // `shrink`: the Button primitive is `shrink-0`, so a long model name
+            // never truncated and widened the composer on a phone.
+            className="h-8 min-w-0 shrink gap-1.5 rounded-full border border-transparent bg-transparent px-1.5 text-xs font-medium hover:bg-muted/50"
           >
             {resolvedModel ? logoFor(resolvedModel) : null}
             <span className="max-w-[9rem] truncate text-foreground/80">
@@ -160,7 +162,7 @@ export function ConversationSettings() {
                 triggerClassName="group/model-trigger h-auto min-w-0 flex-col gap-0 rounded-md px-3 py-0.5 hover:bg-transparent"
                 triggerContent={(
                   <span className="flex min-w-0 flex-col items-center leading-tight">
-                    <span className="text-sm font-medium text-blue-500">
+                    <span className="text-sm font-medium text-primary">
                       {t(REASONING_LABEL_KEYS[displayedReasoning])}
                     </span>
                     <span className="flex min-w-0 max-w-[13rem] items-center gap-0.5 text-sm font-normal text-muted-foreground transition-colors group-hover/model-trigger:text-foreground">
@@ -200,7 +202,6 @@ export function ConversationSettings() {
               max={Math.max(0, reasoningLevels.length - 1)}
               step={1}
               aria-label={t("reasoning")}
-              className="[&_[data-slot=slider-range]]:bg-blue-500"
               onValueChange={(values) => {
                 selectReasoningIndex(values[0] ?? 0);
               }}

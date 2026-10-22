@@ -9,7 +9,11 @@ import { AgentBeam } from "@/components/agent-beam";
 import { ScratchpadTrigger } from "@/components/scratchpad/scratchpad-trigger";
 import { DraftsTray } from "@/components/drafts-tray";
 import { useAssistantPanelActions, useAssistantPanel } from "@/lib/assistant-panel-context";
-import { useAssistantBusy, useAssistantUnreadResponseConversationId } from "@/lib/assistant-chat-context";
+import {
+  useAssistantBusy,
+  useAssistantUnreadAwaitsAnswer,
+  useAssistantUnreadResponseConversationId,
+} from "@/lib/assistant-chat-context";
 import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
 import { transitions } from "@/lib/motion";
 import {
@@ -25,7 +29,8 @@ import {
  * Closing the panel during a turn no longer stops Numo (the conversation lives in
  * AssistantChatProvider): the Numo button then carries the shared animated border of the app
  * while it works. A completed, unread response adds a static blue dot to the
- * icon until the conversation is displayed again.
+ * icon until the conversation is displayed again — orange when that response
+ * is a question Numo is waiting on.
  */
 
 export function AssistantFab() {
@@ -41,10 +46,13 @@ export function AssistantFab() {
   // the border would only re-signal what the user is watching.
   const beamActive = chatBusy && !isOpen;
   const unread = !!unreadConversationId && !isOpen && !beamActive;
+  const question = useAssistantUnreadAwaitsAnswer() && unread;
   const chordArmed = useChordPrefix() === CHORD_PREFIX;
   const t = useTranslations("Assistant");
   const tk = useTranslations("Keyboard");
-  const label = unread ? `${t("title")} — ${t("unreadConversation")}` : t("title");
+  const label = unread
+    ? `${t("title")} — ${t(question ? "unreadQuestion" : "unreadConversation")}`
+    : t("title");
 
   return (
     <AnimatePresence>
@@ -70,7 +78,11 @@ export function AssistantFab() {
             "pb-[env(safe-area-inset-bottom)]",
           )}
         >
-          <div className="relative">
+          {/* Flex wrappers, down to the beam's own: an inline-flex button in a
+              block box sits on that box's text line, which put Numo higher
+              than the drafts and notebook pills beside it (and its tooltip
+              with it). */}
+          <div className="relative flex">
             {/* `keepMounted`: the button must not be raised when the border
  turns on or off — otherwise its entry animation would replay
  each toggle. */}
@@ -78,7 +90,7 @@ export function AssistantFab() {
               active={beamActive}
               size="sm"
               keepMounted
-              className="rounded-full"
+              className="flex rounded-full"
             >
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -104,7 +116,7 @@ export function AssistantFab() {
  SVG attributes loop, including masking in mobile layout
  (`app-mobile:hidden` mask without unmounting). The activity signal
  already passes through the `AgentBeam` above. */}
-                    <NumoLauncherIcon unread={unread} className="size-4" />
+                    <NumoLauncherIcon unread={unread} question={question} className="size-4" />
                     <span className="text-[13px] font-medium leading-none">Numo</span>
                   </motion.button>
                 </TooltipTrigger>

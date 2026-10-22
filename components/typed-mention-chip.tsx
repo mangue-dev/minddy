@@ -61,6 +61,7 @@ export function TypedMentionChip({
         href={href}
         onNavigate={href ? () => links?.navigate(type, id) : undefined}
         status={type === "issue" ? links?.issueStatus(id) ?? undefined : undefined}
+        tooltip={type === "issue" && label !== undefined ? links?.issueTitle?.(id) ?? null : null}
         avatarSeed={label === undefined ? null : appearance?.seed ?? null}
         color={label === undefined ? null : appearance?.color ?? null}
         iconUrl={label !== undefined && type === "project" ? appearance?.icon ?? null : null}

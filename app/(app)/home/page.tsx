@@ -52,7 +52,10 @@ export default function HomePage() {
   return (
     <section
       className={cn(
-        "grid min-h-full grid-rows-[1fr_auto_1fr] px-6",
+        // `minmax(0,1fr)`: the implicit column is `auto`, which never shrinks
+        // below its content's min-content width — a long model name in the
+        // composer widened the whole column past a phone's screen.
+        "grid min-h-full grid-cols-[minmax(0,1fr)] grid-rows-[1fr_auto_1fr] px-6",
         HEADER_OFFSET,
       )}
     >

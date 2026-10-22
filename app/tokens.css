@@ -506,6 +506,11 @@ html {
   from { height: var(--radix-collapsible-content-height); opacity: 1; }
   to { height: 0; opacity: 0; }
 }
+/* The drawn caret of the one-time-code boxes (components/otp-input.tsx). */
+@keyframes caret-blink {
+  0%, 70%, 100% { opacity: 1; }
+  20%, 50% { opacity: 0; }
+}
 
 /* Text shimmer — the "this is running" signal of the AI surfaces (ToolCallList's
    in-flight action, WorkAccordion's header). A bright band sweeps across dimmed

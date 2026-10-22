@@ -578,6 +578,7 @@ function MarkdownRenderer({
                         (p["data-mention-status"] as import("@/lib/issue-constants").IssueStatus | undefined)
                       : undefined
                   }
+                  tooltip={type === "issue" ? links?.issueTitle?.(id) ?? null : null}
                   href={links?.href(type, id) ?? null}
                   onNavigate={() => links?.navigate(type, id)}
                 />

@@ -20,7 +20,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { CheckIcon, ColorPickerIcon, Copy01Icon, Delete02Icon, Link02Icon, MessageAdd01Icon, RepeatOne02Icon } from "@hugeicons/core-free-icons";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Editor } from "@tiptap/core";
 import {
@@ -147,6 +147,17 @@ function ColorItems({
   );
 }
 
+/**
+ * What the menu read from the selection at its last opening, kept while it
+ * closes. Recomputing on close made a reduced menu (an image, a subpage)
+ * repopulate with its hidden entries during the exit animation.
+ */
+function useHeldWhileClosed<T>(open: boolean, value: T): T {
+  const held = useRef(value);
+  if (open) held.current = value;
+  return held.current;
+}
+
 export function BlockMenu({
   editor,
   open,
@@ -173,7 +184,10 @@ export function BlockMenu({
   // Recalculated at each OPENING: the selection has moved between two, and one
   // “transform to” which checks the block before is worse than no check.
   const items = useMemo(() => (open ? turnIntoItems(editor) : []), [open, editor]);
-  const count = useMemo(() => (open ? selectedBlockCount(editor) : 0), [open, editor]);
+  const count = useHeldWhileClosed(
+    open,
+    useMemo(() => (open ? selectedBlockCount(editor) : 0), [open, editor])
+  );
 
   /**
  * A single subpage block in selection: the menu changes VOCABULARY
@@ -189,9 +203,9 @@ export function BlockMenu({
  * subpages; delete puts it in the trash — hence the wording of the
  * sidebar, word for word, because it's the same gesture.
  */
-  const subpageId = useMemo(
-    () => (open ? selectedSubpageId(editor) : null),
-    [open, editor]
+  const subpageId = useHeldWhileClosed(
+    open,
+    useMemo(() => (open ? selectedSubpageId(editor) : null), [open, editor])
   );
 
   /**
@@ -204,11 +218,15 @@ export function BlockMenu({
  * more, what the subpage keeps: duplicating a subpage really copies the
  * page, whereas duplicating an image does not copy any bytes — it sets a second reference to the same file, which reads as a copy without being one, and deleting one side does not release any the other.
  */
-  const mediaOnly = useMemo(
-    () => (open ? selectionIsMediaOnly(editor) : false),
-    [open, editor]
+  const mediaOnly = useHeldWhileClosed(
+    open,
+    useMemo(() => (open ? selectionIsMediaOnly(editor) : false), [open, editor])
   );
   const plain = !subpageId && !mediaOnly;
+  const canComment = Boolean(onComment) && count === 1;
+  // The separator divides the actions from Delete: with nothing above it (an
+  // image or a file without a block link), it would underline nothing.
+  const hasActionsAbove = plain || !mediaOnly || blockLinks || canComment;
 
   const duplicateSubpage = async (pageId: string) => {
     const duplicate = editor.storage.subpage?.duplicate;
@@ -349,7 +367,7 @@ export function BlockMenu({
           </DropdownMenuItem>
         )}
 
-        {onComment && count === 1 ? (
+        {onComment && canComment ? (
           <DropdownMenuItem
             onSelect={() => {
               const blockId = selectedBlockId(editor);
@@ -362,7 +380,7 @@ export function BlockMenu({
           </DropdownMenuItem>
         ) : null}
 
-        <DropdownMenuSeparator />
+        {hasActionsAbove && <DropdownMenuSeparator />}
 
         <DropdownMenuItem
           variant="destructive"

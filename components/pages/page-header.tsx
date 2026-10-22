@@ -186,7 +186,8 @@ export function PageHeader({
             onDown(caretLeft(event.currentTarget));
           }
         }}
-        className="w-full border-0 bg-transparent p-0 font-display text-4xl font-semibold tracking-tight outline-none placeholder:text-muted-foreground/50"
+        // `title-field` (app/globals.css): descenders neither scroll nor clip.
+        className="title-field w-full border-0 bg-transparent px-0 font-display text-4xl font-semibold tracking-tight outline-none placeholder:text-muted-foreground/50"
       />
       {live && live.carets.length > 0 && (
         <PageTitleCarets fieldRef={measuredRef} carets={live.carets} value={value} />

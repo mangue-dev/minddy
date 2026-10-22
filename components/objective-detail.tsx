@@ -588,7 +588,7 @@ export function ObjectiveDetail({
             onKeyDown={(e) => {
               titleBody.onTitleKeyDown(e);
             }}
-            className="w-full shrink-0 overflow-hidden bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
+            className="w-full shrink-0 title-field bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
             placeholder={t("namePlaceholder")}
           />
 

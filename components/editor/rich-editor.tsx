@@ -164,8 +164,16 @@ const PROSE: Record<RichEditorSize, string> = {
 function editorPropsFor(size: RichEditorSize) {
   return {
     attributes: { class: PROSE[size] },
-    scrollMargin: { top: 0, right: 0, bottom: 160, left: 0 },
-    scrollThreshold: { top: 0, right: 0, bottom: 160, left: 0 },
+    // The page keeps room under the caret while it writes at the foot of the
+    // window. Compact surfaces (comments, composers, panel descriptions) keep
+    // ProseMirror's defaults: they sit at the foot of panels, so a 160 px band
+    // put the caret inside it at all times, and ProseMirror scrolled every
+    // ancestor — overflow-hidden ones included — on focus and on each keystroke,
+    // lifting the panel and making it jump while typing.
+    ...(size === "page" && {
+      scrollMargin: { top: 0, right: 0, bottom: 160, left: 0 },
+      scrollThreshold: { top: 0, right: 0, bottom: 160, left: 0 },
+    }),
     // Clicking on the anchor of a node view does not belong to the Link extension:
     // the why, and the two navigations that he avoided, are in
     // components/editor-node-link.ts.
