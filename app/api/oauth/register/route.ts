@@ -5,7 +5,12 @@ import {
   isAllowedRedirectUri,
   registerClient,
 } from "@/lib/server/oauth/clients";
-import { OAUTH_CORS_HEADERS, NO_STORE_HEADERS, corsPreflight } from "@/lib/server/oauth/cors";
+import {
+  OAUTH_CORS_HEADERS,
+  NO_STORE_HEADERS,
+  corsPreflight,
+  methodNotAllowed,
+} from "@/lib/server/oauth/cors";
 import { getClientIp } from "@/lib/server/request-ip";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 
@@ -133,3 +138,9 @@ export async function POST(request: NextRequest) {
 }
 
 export const OPTIONS = corsPreflight;
+export {
+  methodNotAllowed as GET,
+  methodNotAllowed as PUT,
+  methodNotAllowed as PATCH,
+  methodNotAllowed as DELETE,
+};
