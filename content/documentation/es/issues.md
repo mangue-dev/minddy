@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 33,
-  "sourceRevision": 33,
+  "revision": 34,
+  "sourceRevision": 34,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -115,13 +115,14 @@
       "lib/keyboard/shortcuts.ts",
       "lib/server/assistant/prompt.ts",
       "components/drafts-tray.tsx",
-      "lib/use-all-drafts.ts"
+      "lib/use-all-drafts.ts",
+      "lib/use-held-draft.ts"
     ]
   },
   "review": {
-    "revision": 33,
-    "fact": "agent:/root/min778 (resources paragraph checked against components/resources.tsx, lib/use-pages-query.ts, lib/use-attachment-uploads.ts and components/global-page-panel.tsx: the page picker creates a page, titled by the search when one is typed, attaches it and opens it in the side panel with Expand; rest of the article unchanged since the MIN-777 review; no figure changed)",
-    "language": "agent:/root/min778 (es sentences on creating a page from the page picker with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 34,
+    "fact": "agent:/root/min776 (drafts paragraph checked against components/create-issue-dialog.tsx, components/objective-dialog.tsx and lib/use-held-draft.ts: closing keeps the form, reopening resumes it, two minutes after a close it becomes a draft, another context saves it first, and the split menu offers Save as draft; rest of the article unchanged since the MIN-778 review; no figure changed)",
+    "language": "agent:/root/min776 (es drafts paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -167,7 +168,7 @@
       "src": "/documentation/es/new-issue.png",
       "alt": "Borrador sin enviar en el proyecto Aurora con título, descripción, propiedades que se pueden elegir manualmente y el botón Crear AUR-19.",
       "caption": "Describe el resultado esperado y elige las propiedades útiles antes de crear el ticket.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -183,7 +184,7 @@
       "src": "/documentation/es/triage-incoming.png",
       "alt": "Incidencia entrante de demostración DOC-11 con informe, propiedades y controles de duplicado, Rechazar y Aceptar.",
       "caption": "Lee el informe recibido antes de aceptarlo, rechazarlo o enlazar un duplicado.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -199,7 +200,7 @@
       "src": "/documentation/es/issue-statuses.png",
       "alt": "Los ocho estados del ticket en el selector, con el estado de backlog seleccionado.",
       "caption": "La marca indica el estado actual. Elige el que corresponda al estado real del trabajo.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -215,7 +216,7 @@
       "src": "/documentation/es/work-resources.png",
       "alt": "Diálogo para añadir un enlace con una dirección de contacto de ejemplo.",
       "caption": "Revisa el destino antes de añadir el recurso. Este enlace de ejemplo no se ha enviado.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -231,7 +232,7 @@
       "src": "/documentation/es/work-dependencies.png",
       "alt": "Búsqueda de una incidencia bloqueante por identificador.",
       "caption": "Elige el sentido de la relación antes de su destino. El selector se muestra sin enviar la relación.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -247,7 +248,7 @@
       "src": "/documentation/es/work-sub-issues.png",
       "alt": "Campo para crear una subincidencia en una incidencia principal de demostración.",
       "caption": "El campo crea una hija de esta incidencia; cada hija conserva su estado y conversación.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -263,7 +264,7 @@
       "src": "/documentation/es/work-implementation-plan.png",
       "alt": "Plan de demostración con dos tareas de trabajo completadas de seis.",
       "caption": "El plan guardado distingue pasos completados, activos y pendientes. Su progreso no demuestra que se ejecutara la tarea de código ficticia.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -279,7 +280,7 @@
       "src": "/documentation/es/issue-date-recurrence.png",
       "alt": "Selector de fecha en modo recurrente con vista previa semanal los domingos y hora opcional.",
       "caption": "El modo recurrente muestra la frecuencia semanal. Confirma la primera fecha antes de crear el ticket.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -295,7 +296,7 @@
       "src": "/documentation/es/import-issues-preview-workflow.png",
       "alt": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas.",
       "caption": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas. No se envió la importación; la planificación opcional con IA se bloqueó para la captura.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -312,7 +313,7 @@
       "src": "/documentation/es/file-preview.png",
       "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.",
       "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Cambiar nombre y Eliminar.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -351,7 +352,7 @@ Configura las propiedades útiles antes de confirmar: estado, prioridad, esfuerz
 
 Confirma la creación y abre la nueva incidencia. Comprueba su identificador y proyecto. Vuelve a abrir los selectores de propiedades para cambiar valores conforme la tarea quede más clara. La descripción explica el trabajo; el plan de implementación se mantiene por separado en la pestaña del plan.
 
-Al cerrar el formulario con texto, se te pregunta si quieres conservarlo: **Guardar** lo conserva como borrador, **Desechar** lo descarta y **Volver** regresa al formulario. Los borradores guardados de incidencias y objetivos se reúnen en **Borradores**, abajo a la derecha de la ventana, entre Numo y el cuaderno de tareas; el botón solo aparece mientras tienes un borrador e indica cuántos hay. Su lista muestra el título y la primera línea de la descripción de cada borrador. Elige un borrador para reabrirlo en su formulario de creación y terminarlo; crear la incidencia elimina el borrador. El botón de eliminar junto a un borrador pide confirmación antes, y la eliminación no se puede deshacer. En un teléfono, abre la paleta de comandos y busca el título del borrador. Los borradores se guardan en este dispositivo durante 30 días, diez de cada tipo como máximo; la lista solo muestra los de proyectos en los que todavía puedes crear incidencias.
+Al cerrar el formulario se conserva lo que escribiste: vuelve a abrirlo para seguir donde lo dejaste. Si no lo reabres en dos minutos, su contenido se guarda como borrador y el siguiente formulario empieza vacío; hasta entonces solo existe en esta ventana, así que recargar o cerrar la ventana lo pierde. Abrir un borrador o un formulario rellenado desde otro lugar guarda antes como borrador lo que habías dejado. Para guardarlo tú mismo, abre el menú junto al botón de crear y elige **Guardar como borrador**. Los borradores guardados de incidencias y objetivos se reúnen en **Borradores**, abajo a la derecha de la ventana, entre Numo y el cuaderno de tareas; el botón solo aparece mientras tienes un borrador e indica cuántos hay. Su lista muestra el título y la primera línea de la descripción de cada borrador. Elige un borrador para reabrirlo en su formulario de creación y terminarlo; crear la incidencia elimina el borrador. El botón de eliminar junto a un borrador pide confirmación antes, y la eliminación no se puede deshacer. En un teléfono, abre la paleta de comandos y busca el título del borrador. Los borradores se guardan en este dispositivo durante 30 días, diez de cada tipo como máximo; la lista solo muestra los de proyectos en los que todavía puedes crear incidencias.
 
 
 ![Borrador sin enviar en el proyecto Aurora con título, descripción, propiedades que se pueden elegir manualmente y el botón Crear AUR-19.](/documentation/es/new-issue.png)

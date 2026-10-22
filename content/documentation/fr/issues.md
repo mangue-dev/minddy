@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 33,
-  "sourceRevision": 33,
+  "revision": 34,
+  "sourceRevision": 34,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -115,13 +115,14 @@
       "lib/keyboard/shortcuts.ts",
       "lib/server/assistant/prompt.ts",
       "components/drafts-tray.tsx",
-      "lib/use-all-drafts.ts"
+      "lib/use-all-drafts.ts",
+      "lib/use-held-draft.ts"
     ]
   },
   "review": {
-    "revision": 33,
-    "fact": "agent:/root/min778 (resources paragraph checked against components/resources.tsx, lib/use-pages-query.ts, lib/use-attachment-uploads.ts and components/global-page-panel.tsx: the page picker creates a page, titled by the search when one is typed, attaches it and opens it in the side panel with Expand; rest of the article unchanged since the MIN-777 review; no figure changed)",
-    "language": "agent:/root/min778 (fr sentences on creating a page from the page picker with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 34,
+    "fact": "agent:/root/min776 (drafts paragraph checked against components/create-issue-dialog.tsx, components/objective-dialog.tsx and lib/use-held-draft.ts: closing keeps the form, reopening resumes it, two minutes after a close it becomes a draft, another context saves it first, and the split menu offers Save as draft; rest of the article unchanged since the MIN-778 review; no figure changed)",
+    "language": "agent:/root/min776 (fr drafts paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -167,7 +168,7 @@
       "src": "/documentation/fr/new-issue.png",
       "alt": "Brouillon de ticket non envoyé dans le projet Aurora, avec titre, description, propriétés manuelles et le bouton Créer AUR-19.",
       "caption": "Décrivez le résultat attendu, puis choisissez les propriétés utiles avant de créer le ticket.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -183,7 +184,7 @@
       "src": "/documentation/fr/triage-incoming.png",
       "alt": "Ticket de démonstration DOC-11 reçu dans le triage, avec son signalement, ses propriétés et les commandes Doublon, Refuser et Accepter.",
       "caption": "Lisez le signalement reçu avant de l’accepter, de le refuser ou de le relier à un doublon.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -199,7 +200,7 @@
       "src": "/documentation/fr/issue-statuses.png",
       "alt": "Les huit statuts du ticket dans le sélecteur, avec Backlog sélectionné.",
       "caption": "La coche indique le statut actuel. Choisissez celui qui reflète l’état réel du travail.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -215,7 +216,7 @@
       "src": "/documentation/fr/work-resources.png",
       "alt": "Dialogue d’ajout de lien avec une adresse de contact d’exemple.",
       "caption": "Vérifiez la destination avant d’ajouter la ressource. Ce lien d’exemple n’a pas été envoyé.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -231,7 +232,7 @@
       "src": "/documentation/fr/work-dependencies.png",
       "alt": "Recherche d’un préalable par identifiant de ticket.",
       "caption": "Choisissez le sens de la relation avant sa destination. Aucune relation n’a été envoyée dans ce sélecteur.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -247,7 +248,7 @@
       "src": "/documentation/fr/work-sub-issues.png",
       "alt": "Champ de création d’un sous-ticket dans un parent de démonstration.",
       "caption": "Ce champ crée un enfant sous le parent ; chaque enfant conserve son état et sa discussion.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -263,7 +264,7 @@
       "src": "/documentation/fr/work-implementation-plan.png",
       "alt": "Plan de démonstration avec deux tâches de travail terminées sur six.",
       "caption": "Le plan enregistré distingue les étapes terminées, actives et en attente. Sa progression ne prouve pas l’exécution de la tâche de code fictive.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -279,7 +280,7 @@
       "src": "/documentation/fr/issue-date-recurrence.png",
       "alt": "Sélecteur d’échéance en mode récurrent avec aperçu hebdomadaire le dimanche et heure optionnelle.",
       "caption": "Le mode récurrent prévisualise la cadence hebdomadaire. Confirmez la première échéance avant de créer le ticket.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -295,7 +296,7 @@
       "src": "/documentation/fr/import-issues-preview-workflow.png",
       "alt": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées.",
       "caption": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées. Aucun import n’a été lancé ; la préparation IA optionnelle a été bloquée pour la capture.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -312,7 +313,7 @@
       "src": "/documentation/fr/file-preview.png",
       "alt": "Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger, Renommer et Retirer.",
       "caption": "Le lecteur commun place Fermer sous l’aperçu. Le menu Actions du fichier propose Télécharger et, si les droits le permettent, Renommer et Retirer.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -351,7 +352,7 @@ Définissez les propriétés utiles avant de confirmer : état, priorité, effor
 
 Confirmez la création et ouvrez le ticket. Vérifiez son identifiant et son projet. Modifiez ses propriétés à mesure que la tâche se précise. La description explique le travail ; le plan d’implémentation est séparé, dans l’onglet Plan.
 
-Fermer le formulaire alors qu’il contient du texte demande s’il faut le garder : **Enregistrer** le conserve comme brouillon, **Abandonner** l’efface, **Revenir** rouvre le formulaire. Les brouillons de tickets et d’objectifs enregistrés se retrouvent dans **Brouillons**, en bas à droite de la fenêtre, entre Numo et le carnet de tâches ; le bouton n’apparaît que si vous avez un brouillon et en indique le nombre. Sa liste donne le titre et la première ligne de description de chaque brouillon. Choisissez un brouillon pour le rouvrir dans son formulaire de création et le terminer ; créer le ticket supprime le brouillon. Le bouton de suppression à côté d’un brouillon demande d’abord une confirmation, et la suppression est irréversible. Sur un téléphone, ouvrez la palette de commandes et cherchez le titre du brouillon. Les brouillons sont conservés sur cet appareil pendant 30 jours, dix de chaque type au plus ; la liste ne montre que ceux des projets où vous pouvez encore créer des tickets.
+Fermer le formulaire conserve ce que vous avez écrit : rouvrez-le pour reprendre là où vous en étiez. Si vous ne le rouvrez pas dans les deux minutes, son contenu est enregistré comme brouillon et le formulaire suivant s’ouvre vide ; jusque-là, il n’existe que dans cette fenêtre, et recharger ou fermer la fenêtre le fait perdre. Ouvrir un brouillon ou un formulaire prérempli depuis un autre endroit enregistre d’abord ce que vous aviez laissé comme brouillon. Pour l’enregistrer vous-même, ouvrez le menu à côté du bouton de création et choisissez **Enregistrer en brouillon**. Les brouillons de tickets et d’objectifs enregistrés se retrouvent dans **Brouillons**, en bas à droite de la fenêtre, entre Numo et le carnet de tâches ; le bouton n’apparaît que si vous avez un brouillon et en indique le nombre. Sa liste donne le titre et la première ligne de description de chaque brouillon. Choisissez un brouillon pour le rouvrir dans son formulaire de création et le terminer ; créer le ticket supprime le brouillon. Le bouton de suppression à côté d’un brouillon demande d’abord une confirmation, et la suppression est irréversible. Sur un téléphone, ouvrez la palette de commandes et cherchez le titre du brouillon. Les brouillons sont conservés sur cet appareil pendant 30 jours, dix de chaque type au plus ; la liste ne montre que ceux des projets où vous pouvez encore créer des tickets.
 
 
 ![Brouillon de ticket non envoyé dans le projet Aurora, avec titre, description, propriétés manuelles et le bouton Créer AUR-19.](/documentation/fr/new-issue.png)

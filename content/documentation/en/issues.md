@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 33,
-  "sourceRevision": 33,
+  "revision": 34,
+  "sourceRevision": 34,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -115,13 +115,14 @@
       "lib/keyboard/shortcuts.ts",
       "lib/server/assistant/prompt.ts",
       "components/drafts-tray.tsx",
-      "lib/use-all-drafts.ts"
+      "lib/use-all-drafts.ts",
+      "lib/use-held-draft.ts"
     ]
   },
   "review": {
-    "revision": 33,
-    "fact": "agent:/root/min778 (resources paragraph checked against components/resources.tsx, lib/use-pages-query.ts, lib/use-attachment-uploads.ts and components/global-page-panel.tsx: the page picker creates a page, titled by the search when one is typed, attaches it and opens it in the side panel with Expand; rest of the article unchanged since the MIN-777 review; no figure changed)",
-    "language": "agent:/root/min778 (en sentences on creating a page from the page picker with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 34,
+    "fact": "agent:/root/min776 (drafts paragraph checked against components/create-issue-dialog.tsx, components/objective-dialog.tsx and lib/use-held-draft.ts: closing keeps the form, reopening resumes it, two minutes after a close it becomes a draft, another context saves it first, and the split menu offers Save as draft; rest of the article unchanged since the MIN-778 review; no figure changed)",
+    "language": "agent:/root/min776 (en drafts paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -167,7 +168,7 @@
       "src": "/documentation/en/new-issue.png",
       "alt": "Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-19 button.",
       "caption": "Describe the expected result, then choose the useful properties before creating the issue.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -183,7 +184,7 @@
       "src": "/documentation/en/triage-incoming.png",
       "alt": "Incoming demonstration issue DOC-11 with its report, properties and duplicate, Decline and Accept controls.",
       "caption": "Read the incoming report before accepting it, declining it or linking a duplicate.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -199,7 +200,7 @@
       "src": "/documentation/en/issue-statuses.png",
       "alt": "Eight issue statuses in the picker, with backlog currently selected.",
       "caption": "The check marks the current status. Choose the status that reflects the work’s actual state.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -215,7 +216,7 @@
       "src": "/documentation/en/work-resources.png",
       "alt": "Add-link dialog with an example contact URL.",
       "caption": "Review the destination before adding a resource. This example link has not been submitted.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -231,7 +232,7 @@
       "src": "/documentation/en/work-dependencies.png",
       "alt": "Search for a blocker by issue identifier.",
       "caption": "Choose the relation direction before selecting its endpoint. The picker is shown without submitting a relation.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -247,7 +248,7 @@
       "src": "/documentation/en/work-sub-issues.png",
       "alt": "Sub-issue creation field in a demonstration parent issue.",
       "caption": "The inline field creates a child under this parent; a child keeps its own status and discussion.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -263,7 +264,7 @@
       "src": "/documentation/en/work-implementation-plan.png",
       "alt": "Demonstration plan showing two of six work tasks complete.",
       "caption": "The saved demonstration plan separates completed, active and pending steps. Its progress does not prove the fictional code task was executed.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -279,7 +280,7 @@
       "src": "/documentation/en/issue-date-recurrence.png",
       "alt": "Due-date picker in recurring mode with a weekly Sunday preview and optional time.",
       "caption": "Recurring mode previews the weekly cadence. Confirm the first due date before creating the issue.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -295,7 +296,7 @@
       "src": "/documentation/en/import-issues-preview-workflow.png",
       "alt": "CSV preview with two localized demonstration rows and detected column mappings.",
       "caption": "CSV preview with two localized demonstration rows and detected column mappings. No import was submitted; optional AI planning was blocked for the capture.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -312,7 +313,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -351,7 +352,7 @@ Set the useful properties before confirming: status, priority, effort, assignee,
 
 Confirm creation and open the new issue. Check its identifier and project. Reopen its property pickers to change values as the task becomes clearer. The description explains the work; an implementation plan is maintained separately in the Plan tab.
 
-Closing the form with text in it asks whether to keep it: **Save** keeps it as a draft, **Discard** drops it, **Back** returns to the form. Saved issue and objective drafts gather in **Drafts**, at the bottom right of the window between Numo and the task notebook; the button appears only while you have a draft and shows how many. Its list gives each draft's title and first description line. Choose a draft to reopen it in its creation form and finish it; creating the issue removes the draft. The delete button beside a draft asks for confirmation first, and the deletion cannot be undone. On a phone, open the command palette and search for the draft's title. Drafts are kept on this device for 30 days, ten of each kind at most; the list shows only drafts of projects where you can still create issues.
+Closing the form keeps what you wrote: open it again to continue where you left off. If you do not reopen it within two minutes, its content is saved as a draft and the next form starts empty; until then it exists only in this window, so reloading or closing the window loses it. Opening a draft or a form prefilled from elsewhere first saves what you left as a draft. To save it yourself, open the menu beside the create button and choose **Save as draft**. Saved issue and objective drafts gather in **Drafts**, at the bottom right of the window between Numo and the task notebook; the button appears only while you have a draft and shows how many. Its list gives each draft's title and first description line. Choose a draft to reopen it in its creation form and finish it; creating the issue removes the draft. The delete button beside a draft asks for confirmation first, and the deletion cannot be undone. On a phone, open the command palette and search for the draft's title. Drafts are kept on this device for 30 days, ten of each kind at most; the list shows only drafts of projects where you can still create issues.
 
 
 ![Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-19 button.](/documentation/en/new-issue.png)

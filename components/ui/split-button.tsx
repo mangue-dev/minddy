@@ -42,6 +42,9 @@ export interface SplitButtonProps
   menuAlign?: "start" | "center" | "end"
   /** Extra props forwarded to `DropdownMenuContent`. */
   menuContentProps?: React.ComponentProps<typeof DropdownMenuContent>
+  /** Disables the chevron alone; defaults to `disabled`. Lets the menu offer
+      an item the primary action cannot run yet. */
+  menuDisabled?: boolean
   /** Controlled open state for the dropdown. */
   menuOpen?: boolean
   onMenuOpenChange?: (open: boolean) => void
@@ -75,6 +78,7 @@ export function SplitButton({
   actionClassName,
   triggerClassName,
   disabled,
+  menuDisabled = disabled,
   children,
   ...actionProps
 }: SplitButtonProps) {
@@ -103,7 +107,7 @@ export function SplitButton({
           <Button
             variant={resolvedVariant}
             size={TRIGGER_SIZE[size]}
-            disabled={disabled}
+            disabled={menuDisabled}
             aria-label={menuLabel}
             className={cn(
               triggerClassName,

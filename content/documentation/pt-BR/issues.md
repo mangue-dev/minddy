@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 33,
-  "sourceRevision": 33,
+  "revision": 34,
+  "sourceRevision": 34,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -115,13 +115,14 @@
       "lib/keyboard/shortcuts.ts",
       "lib/server/assistant/prompt.ts",
       "components/drafts-tray.tsx",
-      "lib/use-all-drafts.ts"
+      "lib/use-all-drafts.ts",
+      "lib/use-held-draft.ts"
     ]
   },
   "review": {
-    "revision": 33,
-    "fact": "agent:/root/min778 (resources paragraph checked against components/resources.tsx, lib/use-pages-query.ts, lib/use-attachment-uploads.ts and components/global-page-panel.tsx: the page picker creates a page, titled by the search when one is typed, attaches it and opens it in the side panel with Expand; rest of the article unchanged since the MIN-777 review; no figure changed)",
-    "language": "agent:/root/min778 (pt-BR sentences on creating a page from the page picker with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 34,
+    "fact": "agent:/root/min776 (drafts paragraph checked against components/create-issue-dialog.tsx, components/objective-dialog.tsx and lib/use-held-draft.ts: closing keeps the form, reopening resumes it, two minutes after a close it becomes a draft, another context saves it first, and the split menu offers Save as draft; rest of the article unchanged since the MIN-778 review; no figure changed)",
+    "language": "agent:/root/min776 (pt-BR drafts paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -168,7 +169,7 @@
       "src": "/documentation/pt-BR/new-issue.png",
       "alt": "Rascunho não enviado no projeto Aurora com título, descrição, propriedades que podem ser escolhidas manualmente e o botão Criar AUR-19.",
       "caption": "Descreva o resultado esperado e escolha as propriedades úteis antes de criar o ticket.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -184,7 +185,7 @@
       "src": "/documentation/pt-BR/triage-incoming.png",
       "alt": "Problema recebido de demonstração DOC-11 com relato, propriedades e controles de duplicado, Recusar e Aceitar.",
       "caption": "Leia o relato recebido antes de aceitar, recusar ou vincular um duplicado.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -200,7 +201,7 @@
       "src": "/documentation/pt-BR/issue-statuses.png",
       "alt": "Os oito estados do ticket no seletor, com Backlog selecionado.",
       "caption": "A marca indica o estado atual. Escolha o que representa a situação real do trabalho.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -216,7 +217,7 @@
       "src": "/documentation/pt-BR/work-resources.png",
       "alt": "Janela para adicionar um link com um endereço de contato de exemplo.",
       "caption": "Confira o destino antes de adicionar o recurso. Este link de exemplo não foi enviado.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -232,7 +233,7 @@
       "src": "/documentation/pt-BR/work-dependencies.png",
       "alt": "Busca de um ticket bloqueador pelo identificador.",
       "caption": "Escolha o sentido da relação antes do destino. O seletor é mostrado sem enviar a relação.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -248,7 +249,7 @@
       "src": "/documentation/pt-BR/work-sub-issues.png",
       "alt": "Campo de criação de um subticket em um ticket pai de demonstração.",
       "caption": "O campo cria um filho deste ticket; cada filho mantém seu próprio status e discussão.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -264,7 +265,7 @@
       "src": "/documentation/pt-BR/work-implementation-plan.png",
       "alt": "Plano de demonstração com duas tarefas de trabalho concluídas de seis.",
       "caption": "O plano salvo distingue etapas concluídas, ativas e pendentes. O progresso não comprova a execução da tarefa fictícia de código.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -280,7 +281,7 @@
       "src": "/documentation/pt-BR/issue-date-recurrence.png",
       "alt": "Seletor de prazo no modo recorrente com prévia semanal aos domingos e horário opcional.",
       "caption": "O modo recorrente mostra a frequência semanal. Confirme o primeiro prazo antes de criar o ticket.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -296,7 +297,7 @@
       "src": "/documentation/pt-BR/import-issues-preview-workflow.png",
       "alt": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas.",
       "caption": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas. A importação não foi enviada; o planejamento opcional com IA foi bloqueado para a captura.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -313,7 +314,7 @@
       "src": "/documentation/pt-BR/file-preview.png",
       "alt": "Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar, Renomear e Remover.",
       "caption": "O visualizador compartilhado mantém Fechar abaixo da prévia. O menu Ações do arquivo oferece Baixar e, quando permitido, Renomear e Remover.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -352,7 +353,7 @@ Defina as propriedades úteis antes de confirmar: estado, prioridade, esforço, 
 
 Confirme a criação e abra a nova tarefa. Confira seu identificador e projeto. Abra novamente os seletores de propriedades para mudar valores conforme a tarefa ficar mais clara. A descrição explica o trabalho; o plano de implementação é mantido separadamente na aba do plano.
 
-Ao fechar o formulário com texto, você escolhe se quer mantê-lo: **Salvar** guarda como rascunho, **Descartar** apaga e **Voltar** retorna ao formulário. Os rascunhos salvos de problemas e objetivos ficam em **Rascunhos**, no canto inferior direito da janela, entre Numo e o caderno de tarefas; o botão só aparece enquanto você tem um rascunho e mostra quantos são. A lista mostra o título e a primeira linha da descrição de cada rascunho. Escolha um rascunho para reabri-lo no formulário de criação e terminá-lo; criar o problema remove o rascunho. O botão de excluir ao lado de um rascunho pede confirmação antes, e a exclusão não pode ser desfeita. Em um telefone, abra a paleta de comandos e pesquise o título do rascunho. Os rascunhos ficam neste dispositivo por 30 dias, no máximo dez de cada tipo; a lista mostra apenas os de projetos em que você ainda pode criar problemas.
+Fechar o formulário mantém o que você escreveu: abra-o de novo para continuar de onde parou. Se você não o reabrir em dois minutos, o conteúdo é salvo como rascunho e o próximo formulário começa vazio; até lá ele existe só nesta janela, então recarregar ou fechar a janela faz perdê-lo. Abrir um rascunho ou um formulário preenchido a partir de outro lugar salva antes como rascunho o que você havia deixado. Para salvá-lo você mesmo, abra o menu ao lado do botão de criar e escolha **Salvar como rascunho**. Os rascunhos salvos de problemas e objetivos ficam em **Rascunhos**, no canto inferior direito da janela, entre Numo e o caderno de tarefas; o botão só aparece enquanto você tem um rascunho e mostra quantos são. A lista mostra o título e a primeira linha da descrição de cada rascunho. Escolha um rascunho para reabri-lo no formulário de criação e terminá-lo; criar o problema remove o rascunho. O botão de excluir ao lado de um rascunho pede confirmação antes, e a exclusão não pode ser desfeita. Em um telefone, abra a paleta de comandos e pesquise o título do rascunho. Os rascunhos ficam neste dispositivo por 30 dias, no máximo dez de cada tipo; a lista mostra apenas os de projetos em que você ainda pode criar problemas.
 
 
 ![Rascunho não enviado no projeto Aurora com título, descrição, propriedades que podem ser escolhidas manualmente e o botão Criar AUR-19.](/documentation/pt-BR/new-issue.png)

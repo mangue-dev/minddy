@@ -7,13 +7,14 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import en from "@/messages/en.json";
 import type { IssueDraft, ObjectiveDraft } from "./drafts";
+import { HELD_DRAFT_DELAY_MS } from "./use-held-draft";
 import type { Issue, Objective, PendingRelationInput, Project } from "./types";
 
 const fixture = vi.hoisted(() => ({
   issues: [] as Issue[], objectives: [] as Objective[],
   drafts: [] as (IssueDraft | ObjectiveDraft)[], save: vi.fn(), remove: vi.fn(),
   mobile: false, smartFill: true, smartFillCreated: true, smartFillRelations: true, queryProjects: [] as (string | null)[],
-  editorDocuments: [] as unknown[],
+  editorDocuments: [] as unknown[], editorAutoFocus: [] as boolean[],
 }));
 vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => fixture.mobile }));
 vi.mock("next-intl", () => ({ useTranslations: (namespace: string) =>
@@ -134,8 +135,9 @@ vi.mock("@/components/auto-textarea", () => ({ AutoTextarea: "textarea" }));
 vi.mock("@/lib/use-rich-document", () => ({
   useRichDocument: () => ({ document: null, remember: () => {} }),
 }));
-vi.mock("@/components/editor/document-editor-lazy", () => ({ LazyDocumentEditor: ({ className, document }: { className: string; document?: unknown }) => {
+vi.mock("@/components/editor/document-editor-lazy", () => ({ LazyDocumentEditor: ({ className, document, autoFocus }: { className: string; document?: unknown; autoFocus?: boolean }) => {
   fixture.editorDocuments.push(document ?? null);
+  fixture.editorAutoFocus.push(autoFocus === true);
   return React.createElement("div", { className }, React.createElement("div", { contentEditable: true, suppressContentEditableWarning: true, tabIndex: 0 }, ""));
 }, useIdleDocumentEditorPreload: vi.fn() }));
 vi.mock("@/components/resources", () => ({ AddResourceButton: () => null, ResourcePills: () => null, ComposerResourcePills: () => null, DropOverlay: () => null, pasteFileHandler: () => undefined, useFileDrop: () => ({ handlers: {} }) }));
@@ -164,9 +166,6 @@ vi.mock("@/components/numo-icon", () => ({ NumoIcon: () => null }));
 vi.mock("@/components/agent-beam", () => ({ AgentBeamOverlay: () => null }));
 vi.mock("@/components/ai-elements/dictate-button", () => ({ DictateButton: ({ showLabel = false }: { showLabel?: boolean }) => React.createElement("button", { type: "button", "data-prominent-dictation": String(showLabel) }, "Dictate") }));
 vi.mock("@/components/send-shortcut", () => ({ SendShortcutTooltip: ({ children }: { children: React.ReactNode }) => children }));
-vi.mock("@/components/close-draft-dialog", () => ({ CloseDraftDialog: ({ open, onConfirm, onDiscard }: { open: boolean; onConfirm: () => void; onDiscard: () => void }) => open &&
-  React.createElement("div", null, React.createElement("button", { onClick: onConfirm }, "Save draft"), React.createElement("button", { onClick: onDiscard }, "Discard draft")),
-}));
 
 import { CreateIssueDialog } from "@/components/create-issue-dialog";
 import { ObjectiveDialog } from "@/components/objective-dialog";
@@ -187,7 +186,7 @@ beforeEach(() => {
   fixture.issues = [issue, { ...issue, id: "closed", title: "Closed issue", status: "done" }, { ...issue, id: "foreign", project_id: "other", title: "Foreign issue" }];
   fixture.objectives = [objective, { ...objective, id: "closed-goal", name: "Closed objective", status: "done" }, { ...objective, id: "foreign-goal", name: "Foreign objective", project_id: "other" }];
   fixture.mobile = false;
-  fixture.drafts = []; fixture.editorDocuments = []; fixture.smartFill = true; fixture.smartFillCreated = true; fixture.smartFillRelations = true; fixture.queryProjects = [];
+  fixture.drafts = []; fixture.editorDocuments = []; fixture.editorAutoFocus = []; fixture.smartFill = true; fixture.smartFillCreated = true; fixture.smartFillRelations = true; fixture.queryProjects = [];
   fixture.save.mockImplementation(async (draft) => { fixture.drafts = [draft]; });
   fixture.remove.mockImplementation(async (id) => { fixture.drafts = fixture.drafts.filter((draft) => draft.id !== id); return true; });
   host = document.createElement("div"); document.body.append(host); root = createRoot(host);
@@ -397,21 +396,99 @@ describe("creation relation controls", () => {
     expect(host.textContent).toContain("Target objective");
   });
 
-  it.each(["issue", "objective"] as const)("saves and restores a %s draft with only relations", async (kind) => {
+  it.each(["issue", "objective"] as const)("keeps a closed %s form and saves it as a draft on demand", async (kind) => {
     // Smart Fill owns relations while it is on (MIN-717): pick them by hand.
     if (kind === "issue") fixture.smartFillCreated = false;
     const dialog = await mountDialog(kind);
     await addRelation("related", "objective");
+    // Closing asks nothing and keeps the form for the next opening (MIN-776).
     await click("Close creation");
-    await click("Save draft");
-    expect(fixture.save).toHaveBeenCalledWith(expect.objectContaining({ relations: [expect.objectContaining({ target_id: objective.id })] }));
-    await dialog.reopen(fixture.drafts[0].id);
+    expect(fixture.save).not.toHaveBeenCalled();
+    await dialog.reopen();
     expect(host.textContent).toContain("Target objective");
-    await click("Close creation");
-    await click("Discard draft");
-    expect(fixture.remove).toHaveBeenCalledWith(fixture.save.mock.calls[0][0].id);
+    await click(en.Drafts.saveAsDraft);
+    expect(fixture.save).toHaveBeenCalledWith(expect.objectContaining({ relations: [expect.objectContaining({ target_id: objective.id })] }));
+    expect(host.querySelector("form")).toBeNull();
     await dialog.reopen();
     expect(host.querySelector(`[aria-label="${en.Relations.related}: Target objective"]`)).toBeNull();
+    // Reopened from the drafts tray, the saved form comes back.
+    await act(() => dialog.close());
+    await dialog.reopen(fixture.drafts[0].id);
+    expect(host.textContent).toContain("Target objective");
+  });
+
+  it.each(["issue", "objective"] as const)("saves a %s form left closed for two minutes as a draft", async (kind) => {
+    vi.useFakeTimers();
+    try {
+      const dialog = await mountDialog(kind);
+      await typeTitle("Unfinished thought");
+      await click("Close creation");
+      await act(async () => { vi.advanceTimersByTime(HELD_DRAFT_DELAY_MS - 1); });
+      expect(fixture.save).not.toHaveBeenCalled();
+      await act(async () => { vi.advanceTimersByTime(1); });
+      expect(fixture.save).toHaveBeenCalledWith(expect.objectContaining(kind === "issue" ? { title: "Unfinished thought" } : { name: "Unfinished thought" }));
+      // The draft took over the content: the next opening starts blank.
+      await dialog.reopen();
+      expect(host.querySelector("textarea")!.value).toBe("");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each(["issue", "objective"] as const)("resumes a %s form reopened within two minutes without saving it", async (kind) => {
+    vi.useFakeTimers();
+    try {
+      const dialog = await mountDialog(kind);
+      await typeTitle("Still writing");
+      await click("Close creation");
+      await act(async () => { vi.advanceTimersByTime(HELD_DRAFT_DELAY_MS / 2); });
+      await dialog.reopen();
+      await act(async () => { vi.advanceTimersByTime(HELD_DRAFT_DELAY_MS); });
+      expect(fixture.save).not.toHaveBeenCalled();
+      expect(host.querySelector("textarea")!.value).toBe("Still writing");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each(["issue", "objective"] as const)("resumes a %s form with the caret in its description", async (kind) => {
+    const dialog = await mountDialog(kind);
+    // A fresh form starts in the title.
+    expect(document.activeElement).toBe(host.querySelector("textarea"));
+    expect(fixture.editorAutoFocus.at(-1)).toBe(false);
+    await typeTitle("Half-written");
+    await click("Close creation");
+    await dialog.reopen();
+    expect(fixture.editorAutoFocus.at(-1)).toBe(true);
+    expect(host.querySelector("textarea")!.value).toBe("Half-written");
+    // Saving it hands the content to the drafts; the next form starts in the title again.
+    await click(en.Drafts.saveAsDraft);
+    await dialog.reopen();
+    expect(fixture.editorAutoFocus.at(-1)).toBe(false);
+    expect(document.activeElement).toBe(host.querySelector("textarea"));
+  });
+
+  it.each(["issue", "objective"] as const)("saves a held %s form when its dialog unmounts", async (kind) => {
+    await mountDialog(kind);
+    await typeTitle("Left behind");
+    await click("Close creation");
+    // Leaving the route that mounts the dialog.
+    await act(() => root.render(null));
+    expect(fixture.save).toHaveBeenCalledWith(expect.objectContaining(kind === "issue" ? { title: "Left behind" } : { name: "Left behind" }));
+  });
+
+  it.each(["issue", "objective"] as const)("saves a held %s form before opening a tray draft", async (kind) => {
+    const base = { id: "stored", projectId: project.id, updatedAt: Date.now(), description: "", relations: [] };
+    fixture.drafts = [kind === "issue"
+      ? { ...base, title: "Stored draft", status: "todo", priority: "none", effort: null, assignee_id: null, objective_id: null, due_date: null, category_ids: [], resources: [] } as IssueDraft
+      : { ...base, name: "Stored draft", status: "planned", lead_user_id: null, target_date: null, color: null } as ObjectiveDraft];
+    fixture.save.mockImplementation(async (draft) => { fixture.drafts = [...fixture.drafts, draft]; });
+    const dialog = await mountDialog(kind);
+    await typeTitle("Held form");
+    await click("Close creation");
+    await dialog.reopen("stored");
+    expect(fixture.save).toHaveBeenCalledWith(expect.objectContaining(kind === "issue" ? { title: "Held form" } : { name: "Held form" }));
+    expect(host.querySelector("textarea")!.value).toBe("Stored draft");
   });
 
   it.each(["issue", "objective"] as const)("reopens a %s draft's description from its stored document", async (kind) => {
