@@ -61,6 +61,20 @@ const issueMention = (issue) => ({
   },
 });
 
+/** The pill of a page, as the editor stores it (lib/mention-attributes.ts). */
+const pageMention = (page) => ({
+  type: "mention",
+  attrs: {
+    mentionType: "page",
+    mentionId: page.id,
+    mentionLabel: page.title,
+    seed: null,
+    color: null,
+    icon: page.icon,
+    status: null,
+  },
+});
+
 const paragraph = (...inline) => ({
   type: "paragraph",
   attrs: blockId(),
@@ -251,12 +265,19 @@ const TREE = [
     updated: "2026-07-11T09:30:00.000Z",
     icon: "🧭",
     title: "Aurora 2.0 launch",
-    body: () =>
+    /** Cites the release page: the pill a MIN-777 capture clicks to open the
+     page side panel. */
+    body: (_issue, pages) =>
       doc(
         paragraph(
           text(
             "The plan for the September release: what goes in, what waits, and the two things we say on the landing page.",
           ),
+        ),
+        paragraph(
+          text("It ships like any other Thursday release — see "),
+          pageMention(pages.release),
+          text(" for the checklist."),
         ),
       ),
   },
@@ -297,11 +318,26 @@ function buildRows({ projectId, authorId, issue, existingByTitle }) {
   const rows = [];
   const ids = new Set();
 
+  // Ids are settled before any body is written, so a page can cite another
+  // one of the tree whatever their order.
+  const pages = {};
+  const settle = (nodes) => {
+    for (const node of nodes) {
+      pages[node.key] = {
+        id: existingByTitle.get(node.title)?.id ?? randomUUID(),
+        title: node.title,
+        icon: node.icon,
+      };
+      if (node.children) settle(node.children);
+    }
+  };
+  settle(TREE);
+
   const walk = (nodes, parentId) => {
     nodes.forEach((node, index) => {
-      const id = existingByTitle.get(node.title)?.id ?? randomUUID();
+      const id = pages[node.key].id;
       ids.add(id);
-      const content = node.body(issue);
+      const content = node.body(issue, pages);
       rows.push({
         id,
         project_id: projectId,
@@ -349,7 +385,8 @@ async function main() {
     console.log(
       "\n    La page « Release process » porte un paragraphe, un sous-titre,\n" +
         "    5 cases à cocher (2 cochées) et une pilule vers le ticket\n" +
-        `    « ${MENTIONED_ISSUE} ».`,
+        `    « ${MENTIONED_ISSUE} ». La page « Aurora 2.0 launch » cite\n` +
+        "    « Release process » par une pilule de page.",
     );
     return;
   }

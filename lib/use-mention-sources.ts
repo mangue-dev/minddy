@@ -34,6 +34,7 @@ import { usePagesQuery } from "@/lib/use-pages-query";
 import { useSearchIndex } from "@/lib/use-search-index";
 import { useOfferedProject } from "@/lib/use-offered-projects";
 import { useIssuePanelActions } from "@/lib/issue-panel-context";
+import { useOptionalPagePanelActions } from "@/lib/page-panel-context";
 import { pagesHref, pushPagesHistory } from "@/lib/pages-navigation";
 import type { DocumentEditorMentions } from "@/components/editor/document-editor";
 import type { MentionLinks } from "@/components/mention-links";
@@ -240,6 +241,7 @@ export function useMentionLinksFor(
   const openDestination = useAppNavigation();
   const pathname = usePathname();
   const { openIssue, closeIssue } = useIssuePanelActions();
+  const pagePanel = useOptionalPagePanelActions();
   const { issues, objectives, pages, references } = sources;
   const members = sources.members ?? NO_MEMBERS;
   const projects = sources.projects ?? NO_PROJECTS;
@@ -271,7 +273,12 @@ export function useMentionLinksFor(
         const target = mentionNavigationTarget(type, id, projectOf(type, id));
         if (!target) return;
         if (target.kind === "issue-panel") {
+          // An issue opened from a page panel replaces it: the issue panel
+          // lies beneath, and would otherwise open out of sight.
+          pagePanel?.closePage();
           (onOpenIssue ?? openIssue)(target.projectId, target.issueId);
+        } else if (target.kind === "page-panel" && pagePanel) {
+          pagePanel.openPage(target.projectId, target.pageId);
         } else {
           closeIssue();
           const targetProjectId = projectOf(type, id);
@@ -288,7 +295,7 @@ export function useMentionLinksFor(
         }
       },
     };
-  }, [projectOf, issues, objectives, pages, members, projects, router, openDestination, pathname, onOpenIssue, openIssue, closeIssue]);
+  }, [projectOf, issues, objectives, pages, members, projects, router, openDestination, pathname, onOpenIssue, openIssue, closeIssue, pagePanel]);
 }
 
 /**

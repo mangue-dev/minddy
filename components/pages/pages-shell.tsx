@@ -5,7 +5,7 @@ import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 // The persistent page tree and document surfaces for the project.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, Cancel01Icon, ExpandIcon, File02Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, File02Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAppNavigation } from "@/lib/use-app-router";
@@ -15,13 +15,12 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { SidePanel, SidePanelContent, SidePanelTitle } from "@/components/ui/side-panel";
+import { PagePeekPanel } from "@/components/pages/page-peek-panel";
 import { CollectionSidebar, type SidebarBrowseTarget } from "@/components/secondary-sidebar";
 import { PageTree } from "@/components/pages/page-tree";
 import { EmptyScene } from "@/components/empty-scene";
 import { PageCreateMenu } from "@/components/pages/page-create-menu";
 import { markDatabaseSetup } from "@/lib/page-database-setup";
-import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { PageView } from "@/components/pages/page-view";
 import { RetainedPageDocuments } from "./retained-page-documents";
 import { retainedPageDocumentCost } from "@/lib/retained-page-documents";
@@ -287,23 +286,15 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
           } />
       </div>
     </div>
-    <SidePanel open={!!validPreview} onOpenChange={(open) => { if (!open) void leavePreview(); }}>
-      <SidePanelContent
-        className="flex w-[min(760px,calc(100vw-2rem))] flex-col overflow-hidden p-0 data-[vaul-drawer-direction=bottom]:w-full"
-        onInteractOutside={keepOverlayOpenForPopper}
-        onEscapeKeyDown={(event) => {
-          if (event.target instanceof HTMLElement && event.target.closest("[data-database-cell-editor]"))
-            event.preventDefault();
-        }}
-      >
-        <div className="flex shrink-0 items-center gap-2 px-4 pt-3">
-          <SidePanelTitle className="sr-only">{validPreview?.title || tDatabase("newEntry")}</SidePanelTitle><div className="flex-1" />
-          <Button variant="ghost" size="sm" onClick={() => void leavePreview(true)}><HugeiconsIcon icon={ExpandIcon} className="size-3.5" />{tDatabase("extend")}</Button>
-          <Button variant="ghost" size="icon-sm" aria-label={tCommon("close")} shortcut={["Esc"]} onClick={() => void leavePreview()}><HugeiconsIcon icon={Cancel01Icon} className="size-4" /></Button>
-        </div>
-        {validPreview && <PageView panel key={validPreview.id} projectId={projectId} pageId={validPreview.id} onNavigate={openPage} onNavigationReady={registerPreviewFlush} />}
-      </SidePanelContent>
-    </SidePanel>
+    <PagePeekPanel
+      open={!!validPreview}
+      title={validPreview?.title || tDatabase("newEntry")}
+      expandLabel={tDatabase("extend")}
+      onExpand={() => void leavePreview(true)}
+      onClose={() => void leavePreview()}
+    >
+      {validPreview && <PageView panel key={validPreview.id} projectId={projectId} pageId={validPreview.id} onNavigate={openPage} onNavigationReady={registerPreviewFlush} />}
+    </PagePeekPanel>
     </PagePromotionProvider>
     </PagePresenceProvider>
   );

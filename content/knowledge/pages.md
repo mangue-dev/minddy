@@ -5,10 +5,10 @@ summary: A nested wiki for specifications, decisions, and durable project knowle
 category: collaboration
 audience: end-user
 tags: [wiki, page, documentation, spec, notes, markdown]
-lastReviewed: 2026-10-20
+lastReviewed: 2026-10-22
 ---
 
-Every project can have a nested wiki of pages. Pages are for durable context: specifications, decisions, conventions, runbooks, onboarding, and the reasoning a ticket depends on. Issues remain the right place for work to be done. Pages support markdown, subpages, attachments, threaded comments, backlinks from pages that link to them, read-only sharing, export, and history. Favorite pages surface for the whole project at the top of the page tree, and avatars show who is viewing a page live.
+Every project can have a nested wiki of pages. Pages are for durable context: specifications, decisions, conventions, runbooks, onboarding, and the reasoning a ticket depends on. Issues remain the right place for work to be done. Pages support markdown, subpages, attachments, threaded comments, backlinks from pages that link to them, read-only sharing, export, and history. Favorite pages surface for the whole project at the top of the page tree, and avatars show who is viewing a page live. A page opened from a mention, a backlink, a page resource of an issue or objective, or a page link in a comment or a Numo answer opens in a side panel over the current screen; **Expand** opens the full page. Database pages always open as full pages.
 
 Several people can edit the same page at the same time, including the same paragraph and the title: changes merge character by character and appear for the others as they are typed, with each editor's caret shown in their color and labeled with their name. A page saves as it is typed; unsaved changes survive a dropped connection and moving to another page while minddy stays open, and the browser warns before closing with unsaved changes. A change the server refuses is undone with a message.
 

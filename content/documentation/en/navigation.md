@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -62,10 +62,10 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 15,
+    "fact": "agent:/root/min777 (panel paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed)",
+    "language": "agent:/root/min777 (en sentence on the page side panel with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "views",
@@ -86,7 +86,7 @@
       "src": "/documentation/en/work-navigation.png",
       "alt": "Project navigation beside the demonstration issue board.",
       "caption": "Use the project sidebar to switch between issues, objectives, pages and triage.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -102,7 +102,7 @@
       "src": "/documentation/en/work-search.png",
       "alt": "Search results for a demonstration issue identifier.",
       "caption": "The palette finds the issue by identifier alongside project pages; opening a result preserves its access rules.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -146,7 +146,7 @@ The action applies to the row you clicked, even when another project or item is 
 
 ### Panels and mobile navigation {#panels}
 
-An issue opens in a detail panel so the underlying board remains available. Numo opens from its floating button in a shared conversation panel. Inbox opens as a navigation popover with notifications and invitations. Older dedicated Inbox and Numo links lead to the current entry points; they do not establish separate current screens.
+An issue opens in a detail panel so the underlying board remains available. A page opened from a mention or a link opens the same way, in a side panel with **Expand** to reach the full page. Numo opens from its floating button in a shared conversation panel. Inbox opens as a navigation popover with notifications and invitations. Older dedicated Inbox and Numo links lead to the current entry points; they do not establish separate current screens.
 
 On mobile, open the navigation drawer to choose the same destinations. A loading bar at the top indicates that navigation is in progress, including while pending page saves finish. Panels use the available screen width, so close or return from the current panel to see the list again. Use visible buttons when a keyboard shortcut is unavailable.
 

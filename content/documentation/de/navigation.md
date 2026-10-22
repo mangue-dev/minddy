@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -62,10 +62,10 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 15,
+    "fact": "agent:/root/min777 (panel paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed)",
+    "language": "agent:/root/min777 (de sentence on the page side panel with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "views",
@@ -86,7 +86,7 @@
       "src": "/documentation/de/work-navigation.png",
       "alt": "Projektnavigation neben dem Demo-Ticketboard.",
       "caption": "Über die Projektseitenleiste erreichst du Tickets, Ziele, Seiten und Triage.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -102,7 +102,7 @@
       "src": "/documentation/de/work-search.png",
       "alt": "Suchergebnisse für die Kennung eines Demo-Tickets.",
       "caption": "Die Palette findet das Ticket über seine Kennung neben Projektseiten; beim Öffnen bleiben die Zugriffsregeln bestehen.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -146,7 +146,7 @@ Die Aktion gilt für die Zeile, auf die du geklickt hast, auch wenn gerade ein a
 
 ### Panels und mobile Navigation {#panels}
 
-Ein Problem öffnet sich in einem Detailpanel, damit das darunterliegende Board verfügbar bleibt. Numo öffnet über seine schwebende Schaltfläche ein gemeinsames Gesprächspanel. Der Posteingang öffnet sich als Navigations-Popover mit Benachrichtigungen und Einladungen. Ältere eigene Posteingangs- und Numo-Links führen zu den aktuellen Einstiegspunkten; sie bezeichnen keine gesonderten aktuellen Bildschirme.
+Ein Problem öffnet sich in einem Detailpanel, damit das darunterliegende Board verfügbar bleibt. Eine Seite, die über eine Erwähnung oder einen Link geöffnet wird, erscheint ebenso in einem Seitenpanel; **Vergrößern** führt zur ganzen Seite. Numo öffnet über seine schwebende Schaltfläche ein gemeinsames Gesprächspanel. Der Posteingang öffnet sich als Navigations-Popover mit Benachrichtigungen und Einladungen. Ältere eigene Posteingangs- und Numo-Links führen zu den aktuellen Einstiegspunkten; sie bezeichnen keine gesonderten aktuellen Bildschirme.
 
 Öffne auf dem Smartphone die Navigationsleiste, um dieselben Ziele auszuwählen. Eine Ladeleiste am oberen Rand zeigt die laufende Navigation an, auch während ausstehende Seitenspeicherungen abgeschlossen werden. Panels nutzen die verfügbare Bildschirmbreite. Schließe das aktuelle Panel oder gehe zurück, um wieder die Liste zu sehen. Verwende sichtbare Schaltflächen, wenn ein Tastenkürzel nicht verfügbar ist.
 

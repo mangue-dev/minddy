@@ -18,6 +18,7 @@ import { EntityPill, PillIcon, PILL_INNER_RADIUS } from "@/components/entity-pil
 import { ObjectiveIconBadge } from "@/components/objective-icon";
 import { isPlainNavigationClick } from "@/components/editor-node-link";
 import { useIssuePanelActions } from "@/lib/issue-panel-context";
+import { useOptionalPagePanelActions } from "@/lib/page-panel-context";
 import type { PageBacklink } from "@/lib/types";
 import {
   PAGE_ACTIVITY_FRESH_MS,
@@ -81,6 +82,7 @@ function BacklinkPill({
 }) {
   const t = useTranslations("Pages");
   const { openIssue } = useIssuePanelActions();
+  const pagePanel = useOptionalPagePanelActions();
   const openDestination = useAppNavigation();
   const target = mentionNavigationTarget(item.kind, item.id, projectId);
   const href = target?.href ?? "#";
@@ -94,7 +96,11 @@ function BacklinkPill({
         if (!isPlainNavigationClick(event)) return;
         if (target?.kind === "issue-panel") {
           event.preventDefault();
+          pagePanel?.closePage();
           openIssue(target.projectId, target.issueId);
+        } else if (target?.kind === "page-panel" && pagePanel) {
+          event.preventDefault();
+          pagePanel.openPage(target.projectId, target.pageId);
         } else if (item.kind === "page" && target) {
           event.preventDefault();
           openDestination(target.href, () => pushPagesHistory(target.href));

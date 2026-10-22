@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useTranslations } from "next-intl";
+import { pageLinkTarget } from "@/lib/page-link";
+import { useOptionalPagePanelActions } from "@/lib/page-panel-context";
 
 function shouldShowLinkMenu({ editor }: { editor: Editor }): boolean {
   // A delayed menu update can run while the view is not mounted (an editor
@@ -158,6 +160,7 @@ export function MarkdownLinkMenu({ editor }: { editor: Editor | null }) {
   const t = useTranslations("Pages");
   const tResources = useTranslations("Resources");
   const [editOpen, setEditOpen] = useState(false);
+  const pagePanel = useOptionalPagePanelActions();
   if (!editor) return null;
 
   const currentHref = () => {
@@ -167,7 +170,11 @@ export function MarkdownLinkMenu({ editor }: { editor: Editor | null }) {
 
   const openLink = () => {
     const href = currentHref();
-    if (href) window.open(href, "_blank", "noopener,noreferrer");
+    if (!href) return;
+    // A link to a page of the app is read in the page panel (MIN-777).
+    const page = pagePanel ? pageLinkTarget(href, window.location.origin) : null;
+    if (page && pagePanel) pagePanel.openPage(page.projectId, page.pageId);
+    else window.open(href, "_blank", "noopener,noreferrer");
   };
 
   return (

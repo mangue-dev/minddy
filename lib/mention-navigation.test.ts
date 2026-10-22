@@ -11,14 +11,19 @@ describe("mention navigation", () => {
     });
   });
 
-  it("keeps objectives and pages as regular route navigation", () => {
+  it("opens a page in the page panel while retaining its canonical link (MIN-777)", () => {
+    expect(mentionNavigationTarget("page", "page-1", "project-1")).toEqual({
+      kind: "page-panel",
+      projectId: "project-1",
+      pageId: "page-1",
+      href: "/projects/project-1/pages/page-1",
+    });
+  });
+
+  it("keeps objectives as regular route navigation", () => {
     expect(mentionNavigationTarget("objective", "objective-1", "project-1")).toEqual({
       kind: "route",
       href: "/projects/project-1/objectives?open=objective-1",
-    });
-    expect(mentionNavigationTarget("page", "page-1", "project-1")).toEqual({
-      kind: "route",
-      href: "/projects/project-1/pages/page-1",
     });
   });
 

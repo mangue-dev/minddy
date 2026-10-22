@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 31,
-  "sourceRevision": 31,
+  "revision": 32,
+  "sourceRevision": 32,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-21",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation",
     "editions": [
@@ -119,9 +119,9 @@
     ]
   },
   "review": {
-    "revision": 31,
-    "fact": "agent:/root/min775 (Smart-fill relations paragraph checked against lib/server/issue-relation-decision.ts and lib/server/issue-relation-inference.ts: stricter related bar and two-relation cap; rest of the article unchanged since the MIN-750 review; no figure changed)",
-    "language": "agent:/root/min775 (pt-BR sentences on the related-link bar and the two-relation cap; agent review, not human acceptance)",
+    "revision": 32,
+    "fact": "agent:/root/min777 (resources paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed)",
+    "language": "agent:/root/min777 (pt-BR sentence on the page side panel with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -168,7 +168,7 @@
       "src": "/documentation/pt-BR/new-issue.png",
       "alt": "Rascunho não enviado no projeto Aurora com título, descrição, propriedades que podem ser escolhidas manualmente e o botão Criar AUR-19.",
       "caption": "Descreva o resultado esperado e escolha as propriedades úteis antes de criar o ticket.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -184,7 +184,7 @@
       "src": "/documentation/pt-BR/triage-incoming.png",
       "alt": "Problema recebido de demonstração DOC-11 com relato, propriedades e controles de duplicado, Recusar e Aceitar.",
       "caption": "Leia o relato recebido antes de aceitar, recusar ou vincular um duplicado.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -200,7 +200,7 @@
       "src": "/documentation/pt-BR/issue-statuses.png",
       "alt": "Os oito estados do ticket no seletor, com Backlog selecionado.",
       "caption": "A marca indica o estado atual. Escolha o que representa a situação real do trabalho.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -216,7 +216,7 @@
       "src": "/documentation/pt-BR/work-resources.png",
       "alt": "Janela para adicionar um link com um endereço de contato de exemplo.",
       "caption": "Confira o destino antes de adicionar o recurso. Este link de exemplo não foi enviado.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -232,7 +232,7 @@
       "src": "/documentation/pt-BR/work-dependencies.png",
       "alt": "Busca de um ticket bloqueador pelo identificador.",
       "caption": "Escolha o sentido da relação antes do destino. O seletor é mostrado sem enviar a relação.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -248,7 +248,7 @@
       "src": "/documentation/pt-BR/work-sub-issues.png",
       "alt": "Campo de criação de um subticket em um ticket pai de demonstração.",
       "caption": "O campo cria um filho deste ticket; cada filho mantém seu próprio status e discussão.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -264,7 +264,7 @@
       "src": "/documentation/pt-BR/work-implementation-plan.png",
       "alt": "Plano de demonstração com duas tarefas de trabalho concluídas de seis.",
       "caption": "O plano salvo distingue etapas concluídas, ativas e pendentes. O progresso não comprova a execução da tarefa fictícia de código.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -280,7 +280,7 @@
       "src": "/documentation/pt-BR/issue-date-recurrence.png",
       "alt": "Seletor de prazo no modo recorrente com prévia semanal aos domingos e horário opcional.",
       "caption": "O modo recorrente mostra a frequência semanal. Confirme o primeiro prazo antes de criar o ticket.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -296,7 +296,7 @@
       "src": "/documentation/pt-BR/import-issues-preview-workflow.png",
       "alt": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas.",
       "caption": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas. A importação não foi enviada; o planejamento opcional com IA foi bloqueado para a captura.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -313,7 +313,7 @@
       "src": "/documentation/pt-BR/file-preview.png",
       "alt": "Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar, Renomear e Remover.",
       "caption": "O visualizador compartilhado mantém Fechar abaixo da prévia. O menu Ações do arquivo oferece Baixar e, quando permitido, Renomear e Remover.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -439,7 +439,7 @@ Abra a linha do tempo da discussão do problema para adicionar um comentário. E
 
 Anexe uma página relevante do projeto, um arquivo ou um link pelos controles de recursos. Uma página vinculada é um recurso atualizado: seu título acompanha renomeações e o conteúdo pode evoluir. Um arquivo é um anexo armazenado, não uma garantia de que uma URL externa continuará disponível.
 
-Os recursos aparecem como cartões: a própria imagem ou o ícone do tipo de arquivo, o nome e o tamanho. Um link mostra a imagem de prévia da página quando o site oferece uma; caso contrário, o favicon. Clique ou clique com o botão direito em um cartão para abrir o menu: Visualização, Abrir link ou Abrir página, depois Renomear, Baixar e Remover quando se aplicam. Visualização abre um arquivo compatível em toda a janela. Imagens, PDF, Markdown (`.md`), texto simples (`.txt`, `.text`), CSV e formatos de áudio ou vídeo compatíveis usam o mesmo visualizador. O Markdown recebe formatação, o texto permanece literal e o CSV abre como tabela com rolagem. Use Fechar ou Escape para voltar ao ticket. O menu Ações do arquivo (`…`) oferece Baixar e, quando você pode alterar esse recurso, Renomear e Remover. Clicar na menção de um arquivo em um texto abre o mesmo visualizador. O Minddy pede confirmação antes de remover um recurso, que então é desvinculado deste contexto. Um recurso de página mantém o título da página e não pode ser renomeado. Os formatos não compatíveis mantêm a ação de download.
+Os recursos aparecem como cartões: a própria imagem ou o ícone do tipo de arquivo, o nome e o tamanho. Um link mostra a imagem de prévia da página quando o site oferece uma; caso contrário, o favicon. Clique ou clique com o botão direito em um cartão para abrir o menu: Visualização, Abrir link ou Abrir página, depois Renomear, Baixar e Remover quando se aplicam. Visualização abre um arquivo compatível em toda a janela. Imagens, PDF, Markdown (`.md`), texto simples (`.txt`, `.text`), CSV e formatos de áudio ou vídeo compatíveis usam o mesmo visualizador. O Markdown recebe formatação, o texto permanece literal e o CSV abre como tabela com rolagem. Use Fechar ou Escape para voltar ao ticket. O menu Ações do arquivo (`…`) oferece Baixar e, quando você pode alterar esse recurso, Renomear e Remover. Clicar na menção de um arquivo em um texto abre o mesmo visualizador. O Minddy pede confirmação antes de remover um recurso, que então é desvinculado deste contexto. Um recurso de página mantém o título da página e não pode ser renomeado. Os formatos não compatíveis mantêm a ação de download. **Abrir página** mostra a página em um painel lateral, onde **Expandir** abre a página inteira; um banco de dados abre diretamente como página inteira.
 
 ![Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar, Renomear e Remover.](/documentation/pt-BR/file-preview.png)
 

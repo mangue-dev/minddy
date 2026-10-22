@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
-  "sourceRevision": 15,
+  "revision": 16,
+  "sourceRevision": 16,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -73,10 +73,10 @@
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 5 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 3 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 16,
+    "fact": "agent:/root/min777 (page editor mentions paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed)",
+    "language": "agent:/root/min777 (en sentence on the page side panel with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "notifications-and-inbox",
@@ -111,7 +111,7 @@
       "src": "/documentation/en/page-create-menu.png",
       "alt": "Page creation menu offering New page and New database.",
       "caption": "Use the project page controls to choose a document or a database.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -127,7 +127,7 @@
       "src": "/documentation/en/page-editor.png",
       "alt": "Demonstration page with headings, paragraphs, task checkboxes and an issue mention.",
       "caption": "Headings, task blocks and the AUR-2 mention keep the page structured. This is demonstration content.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -143,7 +143,7 @@
       "src": "/documentation/en/page-comments.png",
       "alt": "Page activity dialog with a demonstration edit event and an empty comment composer.",
       "caption": "Read page activity and write a comment in the composer. No comment has been submitted in this example.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -159,7 +159,7 @@
       "src": "/documentation/en/page-file-states.png",
       "alt": "Demo page with an unfinished upload and a saved 67-byte file offering Download.",
       "caption": "Check the actual file state: the second attachment is available, while the first unfinished upload is not.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -175,7 +175,7 @@
       "src": "/documentation/en/page-history-preview.png",
       "alt": "Versions tab with an expanded earlier state, its author, Restore and the 30-day retention notice.",
       "caption": "Preview a saved state and compare it with the current page before restoring.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -191,7 +191,7 @@
       "src": "/documentation/en/page-publish.png",
       "alt": "Page publication dialog with Private selected and password or bearer-link alternatives.",
       "caption": "Private keeps the page within the project. Review the intended audience before changing publication.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -207,7 +207,7 @@
       "src": "/documentation/en/page-export.png",
       "alt": "Document export menu with Markdown (.md) and Print / PDF.",
       "caption": "Choose Markdown to download the document, or Print / PDF to open the printable view.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -223,7 +223,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -281,6 +281,8 @@ Unlike a promoted notebook task, the page is not removed: it stays in its place 
 Open the page and edit its title or body as the owner or a Member. Readers can open and read pages, but cannot edit, import, duplicate, favorite or publish them, or restore a version. Use the slash-command menu and formatting controls to insert headings, text, bullet, numbered and task lists, quotes, callouts, code blocks, dividers, toggles (collapsible sections), sub-pages, images and files. A callout can have an emoji icon and palette color; choose them to distinguish useful information rather than as the only way to communicate a warning.
 
 Use mentions to link relevant issues, objectives, people or pages. Type `@` followed by an identifier, title words or a short description; a descriptive query also lists issues found [by meaning](/docs/navigation#search-by-meaning) under **Related by meaning**, after the text matches. Backlinks help readers find pages that reference the current one. A link supplies context rather than granting a reader access to another project's private object.
+
+Clicking a page mention, a backlink, a page attached to an issue or objective, or a link to a page in a comment or a Numo answer opens that page in a side panel above what you were reading. Read or edit it there, choose **Expand** to open the full page, or close the panel to return. A database does not open in the panel: it opens as a full page.
 
 
 ![Demonstration page with headings, paragraphs, task checkboxes and an issue mention.](/documentation/en/page-editor.png)

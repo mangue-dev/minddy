@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 31,
-  "sourceRevision": 31,
+  "revision": 32,
+  "sourceRevision": 32,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-21",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation",
     "editions": [
@@ -119,9 +119,9 @@
     ]
   },
   "review": {
-    "revision": 31,
-    "fact": "agent:/root/min775 (Smart-fill relations paragraph checked against lib/server/issue-relation-decision.ts and lib/server/issue-relation-inference.ts: stricter related bar and two-relation cap; rest of the article unchanged since the MIN-750 review; no figure changed)",
-    "language": "agent:/root/min775 (en sentences on the related-link bar and the two-relation cap; agent review, not human acceptance)",
+    "revision": 32,
+    "fact": "agent:/root/min777 (resources paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed)",
+    "language": "agent:/root/min777 (en sentence on the page side panel with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -167,7 +167,7 @@
       "src": "/documentation/en/new-issue.png",
       "alt": "Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-19 button.",
       "caption": "Describe the expected result, then choose the useful properties before creating the issue.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -183,7 +183,7 @@
       "src": "/documentation/en/triage-incoming.png",
       "alt": "Incoming demonstration issue DOC-11 with its report, properties and duplicate, Decline and Accept controls.",
       "caption": "Read the incoming report before accepting it, declining it or linking a duplicate.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -199,7 +199,7 @@
       "src": "/documentation/en/issue-statuses.png",
       "alt": "Eight issue statuses in the picker, with backlog currently selected.",
       "caption": "The check marks the current status. Choose the status that reflects the work’s actual state.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -215,7 +215,7 @@
       "src": "/documentation/en/work-resources.png",
       "alt": "Add-link dialog with an example contact URL.",
       "caption": "Review the destination before adding a resource. This example link has not been submitted.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -231,7 +231,7 @@
       "src": "/documentation/en/work-dependencies.png",
       "alt": "Search for a blocker by issue identifier.",
       "caption": "Choose the relation direction before selecting its endpoint. The picker is shown without submitting a relation.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -247,7 +247,7 @@
       "src": "/documentation/en/work-sub-issues.png",
       "alt": "Sub-issue creation field in a demonstration parent issue.",
       "caption": "The inline field creates a child under this parent; a child keeps its own status and discussion.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -263,7 +263,7 @@
       "src": "/documentation/en/work-implementation-plan.png",
       "alt": "Demonstration plan showing two of six work tasks complete.",
       "caption": "The saved demonstration plan separates completed, active and pending steps. Its progress does not prove the fictional code task was executed.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -279,7 +279,7 @@
       "src": "/documentation/en/issue-date-recurrence.png",
       "alt": "Due-date picker in recurring mode with a weekly Sunday preview and optional time.",
       "caption": "Recurring mode previews the weekly cadence. Confirm the first due date before creating the issue.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -295,7 +295,7 @@
       "src": "/documentation/en/import-issues-preview-workflow.png",
       "alt": "CSV preview with two localized demonstration rows and detected column mappings.",
       "caption": "CSV preview with two localized demonstration rows and detected column mappings. No import was submitted; optional AI planning was blocked for the capture.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -312,7 +312,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -441,7 +441,7 @@ Open the issue's discussion timeline to add a comment. Explain a decision, quest
 
 Attach a relevant project page, file or link through the resources controls. A linked page is a live resource: its title follows page renaming and its content can evolve. A file is a stored attachment rather than a guarantee that an external URL remains available.
 
-Resources appear as cards: the image itself or the file type's icon, the name and the size. A link shows its page's preview image when the site provides one, otherwise its favicon. Click or right-click a card to open its menu: Preview, Open link or Open page, then Rename, Download and Remove when they apply. Preview opens a supported file across the whole window. Images, PDF files, Markdown (`.md`), plain text (`.txt`, `.text`), CSV files and supported audio or video use the same reader. Markdown is formatted, text stays literal, and CSV opens as a scrollable table. Use Close or Escape to return to the issue. The File actions (`…`) menu offers Download and, when you can change this resource, Rename and Remove. Clicking a file mention in a text opens the same reader. Minddy asks for confirmation before removing a resource, which then detaches from this context. A page resource keeps its page's title and cannot be renamed. Unsupported formats keep their download action.
+Resources appear as cards: the image itself or the file type's icon, the name and the size. A link shows its page's preview image when the site provides one, otherwise its favicon. Click or right-click a card to open its menu: Preview, Open link or Open page, then Rename, Download and Remove when they apply. Preview opens a supported file across the whole window. Images, PDF files, Markdown (`.md`), plain text (`.txt`, `.text`), CSV files and supported audio or video use the same reader. Markdown is formatted, text stays literal, and CSV opens as a scrollable table. Use Close or Escape to return to the issue. The File actions (`…`) menu offers Download and, when you can change this resource, Rename and Remove. Clicking a file mention in a text opens the same reader. Minddy asks for confirmation before removing a resource, which then detaches from this context. A page resource keeps its page's title and cannot be renamed. Unsupported formats keep their download action. **Open page** reads the page in a side panel, where **Expand** opens the full page; a database opens as a full page directly.
 
 ![Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.](/documentation/en/file-preview.png)
 

@@ -2525,6 +2525,7 @@
     "blocksSelected": "{count} blocks selected",
     "title": "Pages",
     "untitled": "Untitled",
+    "expand": "Expand",
     "newPage": "New page",
     "newSubpage": "Add a sub-page",
     "deletePage": "Move to trash",

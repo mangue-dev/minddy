@@ -31,3 +31,9 @@ date, and one "issue completed" event per completed issue assigned to it, at
 its completion date. It invents nothing, copies no title or project name, and
 never adds an event twice. The default run only describes the change;
 `--apply` requires explicit user approval.
+
+`014-pages-aurora.mjs` also gives the "Aurora 2.0 launch" page a page mention
+of "Release process" (MIN-777), so a capture can open that page in the side
+panel from a mention. The seed rewrites the seven Aurora pages with their
+existing ids and fixed dates; run `--dry-run` first, and the write requires
+explicit user approval.

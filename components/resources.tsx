@@ -6,6 +6,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, AttachmentIcon, Cancel01Icon, Delete02Icon, Download01Icon, Edit04Icon, File02Icon, Link02Icon, LinkSquare02Icon, ViewIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState } from "react";
 import Link from "@/components/app-link";
+import { isPlainNavigationClick } from "@/components/editor-node-link";
+import { useOptionalPagePanelActions } from "@/lib/page-panel-context";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
@@ -702,7 +704,7 @@ function ResourceFigure({ children }: { children: React.ReactNode }) {
  * It uses the exact same envelope as Numo's context pills. The leading slot has
  * the same geometry too, while keeping the colored file icon free of any tile.
  * Clicking previews a browser-compatible file, downloads an unsupported one,
- * opens a link in a tab, or opens a page in the app.
+ * opens a link in a tab, or opens a page in the page panel (MIN-777).
  *
  * `pending` renders the in-flight entries of a composer as spinner pills.
  */
@@ -758,6 +760,7 @@ export function ResourcePills({
   ) => string;
 }) {
   const t = useTranslations("Resources");
+  const pagePanel = useOptionalPagePanelActions();
   const tCommon = useTranslations("Common");
   const locale = useLocale();
   const [preview, setPreview] = useState<ResourceLike | null>(null);
@@ -820,6 +823,11 @@ export function ResourcePills({
         const pageHref =
           pageId && a.project_id && a.page
             ? pageResourceHref(a.project_id, pageId)
+            : null;
+        const pageProjectId = a.project_id ?? null;
+        const openPageInPanel =
+          pagePanel && pageId && pageProjectId && pageHref
+            ? () => pagePanel.openPage(pageProjectId, pageId)
             : null;
         const path = a.storage_path ?? null;
         const mime = a.mime_type ?? "application/octet-stream";
@@ -928,7 +936,10 @@ export function ResourcePills({
           // A click or a right-click on the card opens these (MIN-742).
           const items: ResourceCardItem[] = [
             ...(pageHref
-              ? [{ key: "open", label: t("openPage"), icon: <HugeiconsIcon icon={File02Icon} />, href: pageHref, internal: true }]
+              ? [{
+                  key: "open", label: t("openPage"), icon: <HugeiconsIcon icon={File02Icon} />, href: pageHref, internal: true,
+                  ...(openPageInPanel ? { onSelect: openPageInPanel } : {}),
+                }]
               : url
                 ? [{ key: "open", label: t("openLink"), icon: <HugeiconsIcon icon={LinkSquare02Icon} />, href: url, external: true }]
                 : previewKind && path
@@ -967,11 +978,17 @@ export function ResourcePills({
             {pageHref ? (
               // INTERNAL navigation — a wiki page is not a link to
               // the outside, and opening it in a tab would lose the context of the
-              // ticket we are currently reading.
+              // ticket we are currently reading. A plain click reads it in the
+              // page panel, beside that ticket (MIN-777).
               <AppTooltip label={label}>
                 <Link
                   href={pageHref}
                   aria-label={label}
+                  onClick={(event) => {
+                    if (!openPageInPanel || !isPlainNavigationClick(event)) return;
+                    event.preventDefault();
+                    openPageInPanel();
+                  }}
                   className="flex min-w-0 items-center gap-[inherit] no-underline"
                 >
                   {body}

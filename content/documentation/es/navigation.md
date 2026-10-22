@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -62,10 +62,10 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 15,
+    "fact": "agent:/root/min777 (panel paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed)",
+    "language": "agent:/root/min777 (es sentence on the page side panel with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "views",
@@ -86,7 +86,7 @@
       "src": "/documentation/es/work-navigation.png",
       "alt": "Navegación del proyecto junto al tablero de incidencias de demostración.",
       "caption": "La barra del proyecto da acceso a incidencias, objetivos, páginas y clasificación de entradas.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -102,7 +102,7 @@
       "src": "/documentation/es/work-search.png",
       "alt": "Resultados de búsqueda del identificador de una incidencia de demostración.",
       "caption": "La paleta encuentra la incidencia por identificador junto a las páginas del proyecto; abrir un resultado conserva sus reglas de acceso.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -146,7 +146,7 @@ La acción se aplica a la fila en la que hiciste clic, aunque haya otro proyecto
 
 ### Paneles y navegación móvil {#panels}
 
-Una incidencia se abre en un panel de detalle para mantener disponible el tablero que hay debajo. Numo se abre desde su botón flotante en un panel de conversación compartido. La bandeja de entrada se abre como un panel emergente de navegación con notificaciones e invitaciones. Los antiguos enlaces a pantallas propias de la bandeja de entrada y Numo llevan a los accesos actuales; no representan pantallas independientes actuales.
+Una incidencia se abre en un panel de detalle para mantener disponible el tablero que hay debajo. Una página abierta desde una mención o un enlace se abre del mismo modo, en un panel lateral con **Ampliar** para llegar a la página completa. Numo se abre desde su botón flotante en un panel de conversación compartido. La bandeja de entrada se abre como un panel emergente de navegación con notificaciones e invitaciones. Los antiguos enlaces a pantallas propias de la bandeja de entrada y Numo llevan a los accesos actuales; no representan pantallas independientes actuales.
 
 En el móvil, abre el menú lateral de navegación para elegir los mismos destinos. Una barra de carga en la parte superior indica que la navegación está en curso, también mientras terminan los guardados pendientes de la página. Los paneles usan el ancho disponible, así que ciérralos o vuelve desde el panel actual para ver de nuevo la lista. Utiliza los botones visibles cuando no haya un atajo de teclado disponible.
 

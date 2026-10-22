@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 31,
-  "sourceRevision": 31,
+  "revision": 32,
+  "sourceRevision": 32,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-21",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation",
     "editions": [
@@ -119,9 +119,9 @@
     ]
   },
   "review": {
-    "revision": 31,
-    "fact": "agent:/root/min775 (Smart-fill relations paragraph checked against lib/server/issue-relation-decision.ts and lib/server/issue-relation-inference.ts: stricter related bar and two-relation cap; rest of the article unchanged since the MIN-750 review; no figure changed)",
-    "language": "agent:/root/min775 (fr sentences on the related-link bar and the two-relation cap; agent review, not human acceptance)",
+    "revision": 32,
+    "fact": "agent:/root/min777 (resources paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed)",
+    "language": "agent:/root/min777 (fr sentence on the page side panel with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -167,7 +167,7 @@
       "src": "/documentation/fr/new-issue.png",
       "alt": "Brouillon de ticket non envoyé dans le projet Aurora, avec titre, description, propriétés manuelles et le bouton Créer AUR-19.",
       "caption": "Décrivez le résultat attendu, puis choisissez les propriétés utiles avant de créer le ticket.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -183,7 +183,7 @@
       "src": "/documentation/fr/triage-incoming.png",
       "alt": "Ticket de démonstration DOC-11 reçu dans le triage, avec son signalement, ses propriétés et les commandes Doublon, Refuser et Accepter.",
       "caption": "Lisez le signalement reçu avant de l’accepter, de le refuser ou de le relier à un doublon.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -199,7 +199,7 @@
       "src": "/documentation/fr/issue-statuses.png",
       "alt": "Les huit statuts du ticket dans le sélecteur, avec Backlog sélectionné.",
       "caption": "La coche indique le statut actuel. Choisissez celui qui reflète l’état réel du travail.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -215,7 +215,7 @@
       "src": "/documentation/fr/work-resources.png",
       "alt": "Dialogue d’ajout de lien avec une adresse de contact d’exemple.",
       "caption": "Vérifiez la destination avant d’ajouter la ressource. Ce lien d’exemple n’a pas été envoyé.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -231,7 +231,7 @@
       "src": "/documentation/fr/work-dependencies.png",
       "alt": "Recherche d’un préalable par identifiant de ticket.",
       "caption": "Choisissez le sens de la relation avant sa destination. Aucune relation n’a été envoyée dans ce sélecteur.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -247,7 +247,7 @@
       "src": "/documentation/fr/work-sub-issues.png",
       "alt": "Champ de création d’un sous-ticket dans un parent de démonstration.",
       "caption": "Ce champ crée un enfant sous le parent ; chaque enfant conserve son état et sa discussion.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -263,7 +263,7 @@
       "src": "/documentation/fr/work-implementation-plan.png",
       "alt": "Plan de démonstration avec deux tâches de travail terminées sur six.",
       "caption": "Le plan enregistré distingue les étapes terminées, actives et en attente. Sa progression ne prouve pas l’exécution de la tâche de code fictive.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -279,7 +279,7 @@
       "src": "/documentation/fr/issue-date-recurrence.png",
       "alt": "Sélecteur d’échéance en mode récurrent avec aperçu hebdomadaire le dimanche et heure optionnelle.",
       "caption": "Le mode récurrent prévisualise la cadence hebdomadaire. Confirmez la première échéance avant de créer le ticket.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -295,7 +295,7 @@
       "src": "/documentation/fr/import-issues-preview-workflow.png",
       "alt": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées.",
       "caption": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées. Aucun import n’a été lancé ; la préparation IA optionnelle a été bloquée pour la capture.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -312,7 +312,7 @@
       "src": "/documentation/fr/file-preview.png",
       "alt": "Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger, Renommer et Retirer.",
       "caption": "Le lecteur commun place Fermer sous l’aperçu. Le menu Actions du fichier propose Télécharger et, si les droits le permettent, Renommer et Retirer.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -441,7 +441,7 @@ Ouvrez le fil du ticket pour ajouter un commentaire. Expliquez une décision, po
 
 Joignez une page du projet, un fichier ou un lien depuis les ressources. Une page liée est une ressource vivante : son titre suit les renommages et son contenu évolue. Un fichier est une pièce jointe stockée, pas la garantie qu’une URL externe restera disponible.
 
-Les ressources s’affichent en cartes : l’image elle-même ou l’icône du type de fichier, le nom et le poids. Un lien affiche l’image d’aperçu de sa page quand le site en fournit une, sinon son favicon. Cliquez ou faites un clic droit sur une carte pour ouvrir son menu : Aperçu, Ouvrir le lien ou Ouvrir la page, puis Renommer, Télécharger et Retirer quand ils s’appliquent. Aperçu ouvre un fichier pris en charge sur toute la fenêtre. Images, PDF, Markdown (`.md`), texte brut (`.txt`, `.text`), CSV et formats audio ou vidéo compatibles utilisent le même lecteur. Le Markdown est mis en forme, le texte reste littéral et le CSV s’ouvre dans un tableau défilant. Utilisez Fermer ou Échap pour revenir au ticket. Le menu Actions du fichier (`…`) propose Télécharger et, si vous pouvez modifier cette ressource, Renommer et Retirer. Un clic sur la mention d’un fichier dans un texte ouvre le même lecteur. Minddy demande une confirmation avant de retirer une ressource, qui est alors détachée de ce contexte. Une ressource page garde le titre de sa page et ne se renomme pas. Les formats non pris en charge conservent leur action de téléchargement.
+Les ressources s’affichent en cartes : l’image elle-même ou l’icône du type de fichier, le nom et le poids. Un lien affiche l’image d’aperçu de sa page quand le site en fournit une, sinon son favicon. Cliquez ou faites un clic droit sur une carte pour ouvrir son menu : Aperçu, Ouvrir le lien ou Ouvrir la page, puis Renommer, Télécharger et Retirer quand ils s’appliquent. Aperçu ouvre un fichier pris en charge sur toute la fenêtre. Images, PDF, Markdown (`.md`), texte brut (`.txt`, `.text`), CSV et formats audio ou vidéo compatibles utilisent le même lecteur. Le Markdown est mis en forme, le texte reste littéral et le CSV s’ouvre dans un tableau défilant. Utilisez Fermer ou Échap pour revenir au ticket. Le menu Actions du fichier (`…`) propose Télécharger et, si vous pouvez modifier cette ressource, Renommer et Retirer. Un clic sur la mention d’un fichier dans un texte ouvre le même lecteur. Minddy demande une confirmation avant de retirer une ressource, qui est alors détachée de ce contexte. Une ressource page garde le titre de sa page et ne se renomme pas. Les formats non pris en charge conservent leur action de téléchargement. **Ouvrir la page** l’affiche dans un panneau latéral, où **Agrandir** ouvre la page entière ; une base de données s’ouvre directement en page entière.
 
 ![Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger, Renommer et Retirer.](/documentation/fr/file-preview.png)
 
