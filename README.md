@@ -60,7 +60,7 @@ its public status follows the work through delivery.
 
 ## Run locally
 
-Requirements: Node.js 24 and pnpm 10 (the versions used by CI), plus a Supabase
+Requirements: Node.js 24.22.1 or a later 24.x and pnpm 10 (the versions used by CI), plus a Supabase
 project for an interactive application.
 
 ```bash

@@ -24,7 +24,7 @@ in [self-hosting.md](self-hosting.md) when starting it; changing a
 
 ## Verify a published image
 
-Before executing a release, install Git, curl, Node.js 24, pnpm 10.28.0 and
+Before executing a release, install Git, curl, Node.js 24.22.1 or a later 24.x, pnpm 10.28.0 and
 [Cosign](https://docs.sigstore.dev/cosign/installation/) using their official
 installation instructions. Start in the root of the public checkout for the
 annotated release tag you selected. If you do not have one yet:

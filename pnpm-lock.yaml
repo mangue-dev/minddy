@@ -203,7 +203,7 @@ importers:
         specifier: ^2.3.0
         version: 2.3.0(@modelcontextprotocol/server@2.3.1)(next@16.4.2(@types/node@25.9.9)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))
       next:
-        specifier: ^16.4.0
+        specifier: ^16.4.2
         version: 16.4.2(@types/node@25.9.9)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       next-intl:
         specifier: ^4.14.9

@@ -66,7 +66,7 @@ instruction by editing the release checkout.
 
 ## 1. Prepare the disposable host
 
-Install Node.js 24, pnpm 10.28.0, Docker, the Supabase CLI, PostgreSQL client
+Install Node.js 24.22.1 or a later 24.x, pnpm 10.28.0, Docker, the Supabase CLI, PostgreSQL client
 tools, Git, curl, and Cosign. Then open a shell that has no inherited minddy or provider
 configuration:
 
