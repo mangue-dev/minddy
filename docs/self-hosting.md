@@ -67,7 +67,7 @@ integration stays disabled; it does not fall back to Minddy infrastructure.
 
 ## Prerequisites
 
-- Node.js 24 and pnpm 10.28.0;
+- Node.js 24.22.1 or a later 24.x and pnpm 10.28.0;
 - Git and the [Supabase CLI](https://supabase.com/docs/guides/local-development);
 - `psql` for remote-stack verification;
 - Docker for the local Supabase topology, or an already-running managed or

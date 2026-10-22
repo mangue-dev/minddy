@@ -1,10 +1,15 @@
 // @vitest-environment jsdom
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, notifyManager } from "@tanstack/react-query";
 import { afterEach, expect, it, vi } from "vitest";
 import type { MyNotification } from "./types";
 import { useNotifications } from "./use-notifications";
+
+// TanStack Query notifies observers on a setTimeout(0) by default, which a busy
+// runner can fire after act() returns, leaving the hook one render behind the
+// cache. Microtasks are drained inside act(), so assertions see the final render.
+notifyManager.setScheduler(queueMicrotask);
 
 const api = vi.hoisted(() => ({
   fetch: vi.fn(),
@@ -128,6 +133,7 @@ it("rolls back a failed mark-all-read without touching rows read in the meantime
       failedAll = view.hook().markAllRead().catch(() => {});
       await view.hook().markUnread(["b"]);
     });
+    expect(view.hook().unreadCount).toBe(1);
     await act(async () => {
       slowAll.reject(new Error("HTTP 500"));
       await failedAll;
