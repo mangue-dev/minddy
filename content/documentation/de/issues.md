@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 30,
-  "sourceRevision": 30,
+  "revision": 31,
+  "sourceRevision": 31,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-21",
   "compatibility": {
@@ -119,10 +119,10 @@
     ]
   },
   "review": {
-    "revision": 30,
-    "fact": "agent:/root/min750 (Smart Fill re-evaluation bullet and section checked against lib/server/smart-fill-reevaluation.ts, lib/server/smart-fill-ownership.ts, lib/server/update-issue.ts, lib/server/set-issue-categories.ts and components/settings/account-smart-fill-section.tsx; rest of the article unchanged since the MIN-753 review; no figure changed)",
-    "language": "agent:/root/min750 (de translation of the re-evaluation bullet and section with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-21"
+    "revision": 31,
+    "fact": "agent:/root/min775 (Smart-fill relations paragraph checked against lib/server/issue-relation-decision.ts and lib/server/issue-relation-inference.ts: stricter related bar and two-relation cap; rest of the article unchanged since the MIN-750 review; no figure changed)",
+    "language": "agent:/root/min775 (de sentences on the related-link bar and the two-relation cap; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "feedback",
@@ -167,7 +167,7 @@
       "src": "/documentation/de/new-issue.png",
       "alt": "Noch nicht abgesendeter Ticketentwurf im Projekt Aurora mit Titel, Beschreibung, manuell wählbaren Eigenschaften und der Schaltfläche AUR-19 erstellen.",
       "caption": "Beschreibe das erwartete Ergebnis und wähle vor der Erstellung die passenden Eigenschaften.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -183,7 +183,7 @@
       "src": "/documentation/de/triage-incoming.png",
       "alt": "Eingegangenes Demoproblem DOC-11 mit Bericht, Eigenschaften und Funktionen für Duplikat, Ablehnen und Akzeptieren.",
       "caption": "Lies den eingegangenen Bericht, bevor du ihn akzeptierst, ablehnst oder mit einem Duplikat verknüpfst.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -199,7 +199,7 @@
       "src": "/documentation/de/issue-statuses.png",
       "alt": "Die acht Ticketstatus im Auswahlmenü, mit ausgewähltem Backlog-Status.",
       "caption": "Das Häkchen zeigt den aktuellen Status. Wähle den Status, der dem tatsächlichen Arbeitsstand entspricht.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -215,7 +215,7 @@
       "src": "/documentation/de/work-resources.png",
       "alt": "Dialog zum Hinzufügen eines Links mit einer Beispiel-Kontaktadresse.",
       "caption": "Prüfe das Ziel, bevor du die Ressource hinzufügst. Dieser Beispiellink wurde nicht gesendet.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -231,7 +231,7 @@
       "src": "/documentation/de/work-dependencies.png",
       "alt": "Suche nach einem blockierenden Ticket anhand seiner Kennung.",
       "caption": "Wähle zuerst die Richtung der Beziehung und dann ihr Ziel. Hier wurde keine Beziehung gespeichert.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -247,7 +247,7 @@
       "src": "/documentation/de/work-sub-issues.png",
       "alt": "Eingabefeld für ein Unterticket in einem Demo-Elternticket.",
       "caption": "Das Feld erstellt ein Kind dieses Elterntickets; jedes Kind behält seinen eigenen Status und Diskussionsverlauf.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -263,7 +263,7 @@
       "src": "/documentation/de/work-implementation-plan.png",
       "alt": "Demo-Plan mit zwei von sechs abgeschlossenen Arbeitsschritten.",
       "caption": "Der gespeicherte Demo-Plan unterscheidet abgeschlossene, laufende und ausstehende Schritte. Der Fortschritt belegt nicht, dass die fiktive Codeaufgabe ausgeführt wurde.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -279,7 +279,7 @@
       "src": "/documentation/de/issue-date-recurrence.png",
       "alt": "Fälligkeitsauswahl im wiederkehrenden Modus mit Sonntagsvorschau und optionaler Uhrzeit.",
       "caption": "Der wiederkehrende Modus zeigt die wöchentliche Folge. Bestätige die erste Fälligkeit vor der Ticketerstellung.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -295,7 +295,7 @@
       "src": "/documentation/de/import-issues-preview-workflow.png",
       "alt": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen.",
       "caption": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen. Es wurde nichts importiert; die optionale KI-Planung war für die Aufnahme gesperrt.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -312,7 +312,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Umbenennen und Entfernen.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -468,7 +468,7 @@ Findet die Beziehungsauswahl ein Problem nicht, prüfe Projektzugriff und Kennun
 
 Ist **Verwandte Vorgänge verknüpfen** eingeschaltet, sucht Smart-Fill nach verwandten Problemen, sobald ein Problem erstellt oder sein Titel oder seine Beschreibung geändert wurde. Das geschieht im Hintergrund nach dem Speichern: Erstellen und Bearbeiten warten nie darauf, und Verknüpfungen können einige Sekunden später erscheinen. Bei einem neuen Problem folgt es denselben Einstellungen wie die übrigen Felder; es läuft also nicht, wenn du Smart-Fill für dieses Problem ausgeschaltet hast. Es läuft nicht für Probleme, die aus einem verknüpften Repository importiert wurden, nicht für wiederkehrende Kopien und nicht für Änderungen, die aus dem Repository synchronisiert werden.
 
-Smart-Fill vergleicht das Problem mit höchstens fünf Kandidaten aus demselben Projekt; abgebrochene, doppelte und gelöschte Probleme bleiben außen vor. Eine Entscheidung ordnet dann jeden Kandidaten ein: verwandt, blockierend, blockiert durch oder ohne Beziehung. Ähnlichkeit allein erzeugt nie eine Verknüpfung, eine Abhängigkeit braucht stärkere Anhaltspunkte als eine verwandte Beziehung, und im Zweifel fügt Smart-Fill nichts hinzu. Ein einzelner Durchlauf fügt höchstens drei Beziehungen hinzu. Er rührt kein Paar an, das bereits eine Beziehung hat, fügt nie eine Blockade hinzu, die einen Zyklus schließen würde, und verwirft sein Ergebnis, wenn sich der Text des Problems während der Entscheidung geändert hat. Er markiert nie ein Duplikat und ändert nie einen Status.
+Smart-Fill vergleicht das Problem mit höchstens fünf Kandidaten aus demselben Projekt; abgebrochene, doppelte und gelöschte Probleme bleiben außen vor. Eine Entscheidung ordnet dann jeden Kandidaten ein: verwandt, blockierend, blockiert durch oder ohne Beziehung. Ähnlichkeit allein erzeugt nie eine Verknüpfung, eine Abhängigkeit braucht stärkere Anhaltspunkte als eine verwandte Beziehung, und im Zweifel fügt Smart-Fill nichts hinzu. Eine verwandte Beziehung braucht einen offensichtlichen Zusammenhang, etwa denselben Fehler, eine direkte Fortsetzung oder eine Rücknahme: Zwei Probleme, die nur eine Funktion oder ein Thema teilen, bleiben unverknüpft. Die meisten Probleme erhalten daher keine Verknüpfung. Ein einzelner Durchlauf fügt höchstens zwei Beziehungen hinzu. Er rührt kein Paar an, das bereits eine Beziehung hat, fügt nie eine Blockade hinzu, die einen Zyklus schließen würde, und verwirft sein Ergebnis, wenn sich der Text des Problems während der Entscheidung geändert hat. Er markiert nie ein Duplikat und ändert nie einen Status.
 
 So hinzugefügte Verknüpfungen erscheinen wie alle anderen in den Beziehungen des Problems, und der Verlauf nennt Smart-Fill als Urheber. Prüfe die Richtung einer Abhängigkeit wie bei deinen eigenen. Entferne eine Verknüpfung über die Beziehungssteuerelemente: Smart-Fill fügt eine entfernte Verknüpfung für dieses Paar nicht erneut hinzu. Um keine neuen Verknüpfungen mehr zu erhalten, schalte **Verwandte Vorgänge verknüpfen** in [deinen Einstellungen](#smart-fill-preferences) aus. Probleme, die vor dieser Funktion erstellt, importiert oder aus einem Repository synchronisiert wurden, werden nach und nach im Hintergrund indexiert, erhalten aber nie automatisch Verknüpfungen.
 

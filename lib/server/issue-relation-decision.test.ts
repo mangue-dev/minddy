@@ -39,6 +39,17 @@ describe("buildRelationSpec", () => {
       required: ["candidate_1", "candidate_2", "candidate_3", "candidate_4", "candidate_5"],
     });
   });
+
+  it("offers a \"same area only\" answer to both engines, so a shared topic has somewhere to go", () => {
+    const spec = buildRelationSpec({ projectName: "Minddy", subject, candidates: candidates.slice(0, 1) });
+    const [question] = spec.questions;
+    expect(question.kind === "single_choice" && question.options.map((o) => o.value)).toEqual([
+      "none", "same_area", "related", "blocks", "blocked_by",
+    ]);
+    expect(spec.llm.parameters).toMatchObject({
+      properties: { candidate_1: { enum: ["none", "same_area", "related", "blocks", "blocked_by"] } },
+    });
+  });
 });
 
 describe("relationVerdicts", () => {
@@ -61,8 +72,8 @@ describe("relationVerdicts", () => {
   it("downgrades a decision-model dependency under its stricter floor to an abstention", () => {
     const verdicts = relationVerdicts(
       {
-        candidate_1: { value: "blocked_by", probability: 0.9, confidence: 0.7 },
-        candidate_2: { value: "related", probability: 0.9, confidence: 0.7 },
+        candidate_1: { value: "blocked_by", probability: 0.9, confidence: 0.85 },
+        candidate_2: { value: "related", probability: 0.9, confidence: 0.85 },
         candidate_3: { value: "blocks", probability: 0.95, confidence: 0.92 },
       },
       five,
@@ -70,6 +81,27 @@ describe("relationVerdicts", () => {
     expect(verdicts.get(five[0].id)).toBe("none");
     expect(verdicts.get(five[1].id)).toBe("related");
     expect(verdicts.get(five[2].id)).toBe("blocks");
+  });
+
+  it("does not link on a hesitant decision-model \"related\"", () => {
+    const verdicts = relationVerdicts(
+      { candidate_1: { value: "related", probability: 0.9, confidence: 0.7 } },
+      five,
+    );
+    expect(verdicts.get(five[0].id)).toBe("none");
+  });
+
+  it("stores \"same area only\" as an abstention, whatever its confidence", () => {
+    const spec = buildRelationSpec({ projectName: "Minddy", subject, candidates: five });
+    const verdicts = relationVerdicts(
+      {
+        ...mapLlmAnswers(spec, { candidate_1: "same_area" }),
+        candidate_2: { value: "same_area", probability: 0.99, confidence: 0.99 },
+      },
+      five,
+    );
+    expect(verdicts.get(five[0].id)).toBe("none");
+    expect(verdicts.get(five[1].id)).toBe("none");
   });
 });
 

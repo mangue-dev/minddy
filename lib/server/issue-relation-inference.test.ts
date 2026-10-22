@@ -214,6 +214,8 @@ describe("pure helpers", () => {
       { issue_id: "self", embedding: [1, 0] },
       { issue_id: "close", embedding: [0.9, 0.1] },
       { issue_id: "far", embedding: [0, 1] },
+      // Cosine 0.4: a neighbour of the same area, not a candidate.
+      { issue_id: "same-area", embedding: [0.4, Math.sqrt(1 - 0.16)] },
     ], "self");
     expect(ranked.map((r) => r.id)).toEqual(["close"]);
   });
@@ -434,7 +436,7 @@ describe("runIssueAiPass", () => {
     expect(h.upserts[0][0].candidate_version).not.toBe("v-c2");
   });
 
-  it("applies at most three relations in one pass", async () => {
+  it("applies at most two relations in one pass", async () => {
     const decision: Record<string, { value: string; probability: null; confidence: null }> = {};
     for (let i = 0; i < 5; i++) {
       issue(`c${i + 10}`, `SSO variant ${i}`);
@@ -443,8 +445,8 @@ describe("runIssueAiPass", () => {
     }
     h.decision = decision;
     const result = await pass();
-    expect(result).toMatchObject({ candidates: 5, applied: 3 });
-    expect(h.addIssueRelation).toHaveBeenCalledTimes(3);
+    expect(result).toMatchObject({ candidates: 5, applied: 2 });
+    expect(h.addIssueRelation).toHaveBeenCalledTimes(2);
     expect(h.upserts[0]).toHaveLength(5);
   });
 });

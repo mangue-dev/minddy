@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 30,
-  "sourceRevision": 30,
+  "revision": 31,
+  "sourceRevision": 31,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-21",
   "compatibility": {
@@ -119,10 +119,10 @@
     ]
   },
   "review": {
-    "revision": 30,
-    "fact": "agent:/root/min750 (Smart Fill re-evaluation bullet and section checked against lib/server/smart-fill-reevaluation.ts, lib/server/smart-fill-ownership.ts, lib/server/update-issue.ts, lib/server/set-issue-categories.ts and components/settings/account-smart-fill-section.tsx; rest of the article unchanged since the MIN-753 review; no figure changed)",
-    "language": "agent:/root/min750 (pt-BR translation of the re-evaluation bullet and section with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-21"
+    "revision": 31,
+    "fact": "agent:/root/min775 (Smart-fill relations paragraph checked against lib/server/issue-relation-decision.ts and lib/server/issue-relation-inference.ts: stricter related bar and two-relation cap; rest of the article unchanged since the MIN-750 review; no figure changed)",
+    "language": "agent:/root/min775 (pt-BR sentences on the related-link bar and the two-relation cap; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "feedback",
@@ -168,7 +168,7 @@
       "src": "/documentation/pt-BR/new-issue.png",
       "alt": "Rascunho não enviado no projeto Aurora com título, descrição, propriedades que podem ser escolhidas manualmente e o botão Criar AUR-19.",
       "caption": "Descreva o resultado esperado e escolha as propriedades úteis antes de criar o ticket.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -184,7 +184,7 @@
       "src": "/documentation/pt-BR/triage-incoming.png",
       "alt": "Problema recebido de demonstração DOC-11 com relato, propriedades e controles de duplicado, Recusar e Aceitar.",
       "caption": "Leia o relato recebido antes de aceitar, recusar ou vincular um duplicado.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -200,7 +200,7 @@
       "src": "/documentation/pt-BR/issue-statuses.png",
       "alt": "Os oito estados do ticket no seletor, com Backlog selecionado.",
       "caption": "A marca indica o estado atual. Escolha o que representa a situação real do trabalho.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -216,7 +216,7 @@
       "src": "/documentation/pt-BR/work-resources.png",
       "alt": "Janela para adicionar um link com um endereço de contato de exemplo.",
       "caption": "Confira o destino antes de adicionar o recurso. Este link de exemplo não foi enviado.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -232,7 +232,7 @@
       "src": "/documentation/pt-BR/work-dependencies.png",
       "alt": "Busca de um ticket bloqueador pelo identificador.",
       "caption": "Escolha o sentido da relação antes do destino. O seletor é mostrado sem enviar a relação.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -248,7 +248,7 @@
       "src": "/documentation/pt-BR/work-sub-issues.png",
       "alt": "Campo de criação de um subticket em um ticket pai de demonstração.",
       "caption": "O campo cria um filho deste ticket; cada filho mantém seu próprio status e discussão.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -264,7 +264,7 @@
       "src": "/documentation/pt-BR/work-implementation-plan.png",
       "alt": "Plano de demonstração com duas tarefas de trabalho concluídas de seis.",
       "caption": "O plano salvo distingue etapas concluídas, ativas e pendentes. O progresso não comprova a execução da tarefa fictícia de código.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -280,7 +280,7 @@
       "src": "/documentation/pt-BR/issue-date-recurrence.png",
       "alt": "Seletor de prazo no modo recorrente com prévia semanal aos domingos e horário opcional.",
       "caption": "O modo recorrente mostra a frequência semanal. Confirme o primeiro prazo antes de criar o ticket.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -296,7 +296,7 @@
       "src": "/documentation/pt-BR/import-issues-preview-workflow.png",
       "alt": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas.",
       "caption": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas. A importação não foi enviada; o planejamento opcional com IA foi bloqueado para a captura.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -313,7 +313,7 @@
       "src": "/documentation/pt-BR/file-preview.png",
       "alt": "Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar, Renomear e Remover.",
       "caption": "O visualizador compartilhado mantém Fechar abaixo da prévia. O menu Ações do arquivo oferece Baixar e, quando permitido, Renomear e Remover.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -473,7 +473,7 @@ Se o seletor de relações não encontrar um problema, confira o acesso ao proje
 
 Com **Vincular tickets relacionados** ativado, o Preenchimento inteligente procura problemas relacionados depois que um problema é criado ou que seu título ou sua descrição muda. O trabalho acontece em segundo plano após o salvamento: a criação e a edição nunca esperam por ele, e os vínculos podem aparecer alguns segundos depois. Para um problema novo, ele segue as mesmas escolhas dos outros campos, então não é executado se você desativou o Preenchimento inteligente para esse problema. Ele não é executado para problemas importados de um repositório vinculado, para cópias recorrentes nem para alterações sincronizadas a partir do repositório.
 
-O Preenchimento inteligente compara o problema com no máximo cinco candidatos do mesmo projeto, deixando de fora problemas cancelados, duplicados ou excluídos. Em seguida, uma decisão classifica cada candidato como relacionado, bloqueador, bloqueado por ou sem relação. A semelhança sozinha nunca cria um vínculo, uma dependência exige indícios mais fortes que uma relação simples e, na dúvida, o Preenchimento inteligente não adiciona nada. Uma única execução adiciona no máximo três relações. Ela nunca mexe em um par que já tem uma relação, nunca adiciona um bloqueio que fecharia um ciclo e descarta o resultado se o texto do problema mudou durante a decisão. Ela nunca marca uma duplicata e nunca muda um estado.
+O Preenchimento inteligente compara o problema com no máximo cinco candidatos do mesmo projeto, deixando de fora problemas cancelados, duplicados ou excluídos. Em seguida, uma decisão classifica cada candidato como relacionado, bloqueador, bloqueado por ou sem relação. A semelhança sozinha nunca cria um vínculo, uma dependência exige indícios mais fortes que uma relação simples e, na dúvida, o Preenchimento inteligente não adiciona nada. Uma relação exige um vínculo evidente, como o mesmo bug, uma continuação direta ou uma reversão: dois problemas que só compartilham um recurso ou um assunto ficam sem vínculo. Por isso, a maioria dos problemas não recebe nenhum vínculo. Uma única execução adiciona no máximo duas relações. Ela nunca mexe em um par que já tem uma relação, nunca adiciona um bloqueio que fecharia um ciclo e descarta o resultado se o texto do problema mudou durante a decisão. Ela nunca marca uma duplicata e nunca muda um estado.
 
 Os vínculos adicionados assim aparecem nas relações do problema como qualquer outro, e o histórico indica Smart-fill como autor. Confira a direção de uma dependência como faria com as suas. Para remover um vínculo, use os controles de relações: o Preenchimento inteligente não adiciona de novo um vínculo removido para esse par. Para deixar de receber vínculos novos, desative **Vincular tickets relacionados** nas [suas preferências](#smart-fill-preferences). Problemas criados antes deste recurso, problemas importados e problemas sincronizados de um repositório são indexados aos poucos em segundo plano, mas nunca recebem vínculos automáticos.
 

@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 30,
-  "sourceRevision": 30,
+  "revision": 31,
+  "sourceRevision": 31,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-21",
   "compatibility": {
@@ -119,10 +119,10 @@
     ]
   },
   "review": {
-    "revision": 30,
-    "fact": "agent:/root/min750 (Smart Fill re-evaluation bullet and section checked against lib/server/smart-fill-reevaluation.ts, lib/server/smart-fill-ownership.ts, lib/server/update-issue.ts, lib/server/set-issue-categories.ts and components/settings/account-smart-fill-section.tsx; rest of the article unchanged since the MIN-753 review; no figure changed)",
-    "language": "agent:/root/min750 (fr translation of the re-evaluation bullet and section with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-21"
+    "revision": 31,
+    "fact": "agent:/root/min775 (Smart-fill relations paragraph checked against lib/server/issue-relation-decision.ts and lib/server/issue-relation-inference.ts: stricter related bar and two-relation cap; rest of the article unchanged since the MIN-750 review; no figure changed)",
+    "language": "agent:/root/min775 (fr sentences on the related-link bar and the two-relation cap; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "feedback",
@@ -167,7 +167,7 @@
       "src": "/documentation/fr/new-issue.png",
       "alt": "Brouillon de ticket non envoyé dans le projet Aurora, avec titre, description, propriétés manuelles et le bouton Créer AUR-19.",
       "caption": "Décrivez le résultat attendu, puis choisissez les propriétés utiles avant de créer le ticket.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -183,7 +183,7 @@
       "src": "/documentation/fr/triage-incoming.png",
       "alt": "Ticket de démonstration DOC-11 reçu dans le triage, avec son signalement, ses propriétés et les commandes Doublon, Refuser et Accepter.",
       "caption": "Lisez le signalement reçu avant de l’accepter, de le refuser ou de le relier à un doublon.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -199,7 +199,7 @@
       "src": "/documentation/fr/issue-statuses.png",
       "alt": "Les huit statuts du ticket dans le sélecteur, avec Backlog sélectionné.",
       "caption": "La coche indique le statut actuel. Choisissez celui qui reflète l’état réel du travail.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -215,7 +215,7 @@
       "src": "/documentation/fr/work-resources.png",
       "alt": "Dialogue d’ajout de lien avec une adresse de contact d’exemple.",
       "caption": "Vérifiez la destination avant d’ajouter la ressource. Ce lien d’exemple n’a pas été envoyé.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -231,7 +231,7 @@
       "src": "/documentation/fr/work-dependencies.png",
       "alt": "Recherche d’un préalable par identifiant de ticket.",
       "caption": "Choisissez le sens de la relation avant sa destination. Aucune relation n’a été envoyée dans ce sélecteur.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -247,7 +247,7 @@
       "src": "/documentation/fr/work-sub-issues.png",
       "alt": "Champ de création d’un sous-ticket dans un parent de démonstration.",
       "caption": "Ce champ crée un enfant sous le parent ; chaque enfant conserve son état et sa discussion.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -263,7 +263,7 @@
       "src": "/documentation/fr/work-implementation-plan.png",
       "alt": "Plan de démonstration avec deux tâches de travail terminées sur six.",
       "caption": "Le plan enregistré distingue les étapes terminées, actives et en attente. Sa progression ne prouve pas l’exécution de la tâche de code fictive.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -279,7 +279,7 @@
       "src": "/documentation/fr/issue-date-recurrence.png",
       "alt": "Sélecteur d’échéance en mode récurrent avec aperçu hebdomadaire le dimanche et heure optionnelle.",
       "caption": "Le mode récurrent prévisualise la cadence hebdomadaire. Confirmez la première échéance avant de créer le ticket.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -295,7 +295,7 @@
       "src": "/documentation/fr/import-issues-preview-workflow.png",
       "alt": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées.",
       "caption": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées. Aucun import n’a été lancé ; la préparation IA optionnelle a été bloquée pour la capture.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -312,7 +312,7 @@
       "src": "/documentation/fr/file-preview.png",
       "alt": "Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger, Renommer et Retirer.",
       "caption": "Le lecteur commun place Fermer sous l’aperçu. Le menu Actions du fichier propose Télécharger et, si les droits le permettent, Renommer et Retirer.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -475,7 +475,7 @@ Si le sélecteur ne trouve pas un ticket, vérifiez son identifiant et l’accè
 
 Lorsque **Relier les tickets liés** est activé, Smart-fill cherche les tickets liés après la création d’un ticket ou la modification de son titre ou de sa description. Ce travail se fait en arrière-plan après l’enregistrement : la création et la modification ne l’attendent jamais, et les liens peuvent apparaître quelques secondes plus tard. Pour un nouveau ticket, il suit les mêmes choix que les autres champs : il ne s’exécute donc pas si vous avez désactivé Smart-fill pour ce ticket. Il ne s’exécute pas pour les tickets importés d’un dépôt lié, pour les copies récurrentes ni pour les modifications synchronisées depuis le dépôt.
 
-Smart-fill compare le ticket à cinq candidats au plus du même projet, en écartant les tickets annulés, en doublon ou supprimés. Une décision classe ensuite chaque candidat : lié, bloque, bloqué par ou aucune relation. La similarité seule ne crée jamais de lien, une dépendance exige des indices plus forts qu’un simple lien, et Smart-fill n’ajoute rien en cas de doute. Une même passe ajoute au plus trois relations. Elle ne touche jamais une paire qui a déjà une relation, n’ajoute jamais un blocage qui fermerait un cycle, et abandonne son résultat si le texte du ticket a changé pendant la décision. Elle ne marque jamais un doublon et ne change jamais un état.
+Smart-fill compare le ticket à cinq candidats au plus du même projet, en écartant les tickets annulés, en doublon ou supprimés. Une décision classe ensuite chaque candidat : lié, bloque, bloqué par ou aucune relation. La similarité seule ne crée jamais de lien, une dépendance exige des indices plus forts qu’un simple lien, et Smart-fill n’ajoute rien en cas de doute. Un lien exige un rapport évident, comme le même bug, une suite directe ou un retour en arrière : deux tickets qui partagent seulement une fonctionnalité ou un sujet restent sans lien. La plupart des tickets ne reçoivent donc aucun lien. Une même passe ajoute au plus deux relations. Elle ne touche jamais une paire qui a déjà une relation, n’ajoute jamais un blocage qui fermerait un cycle, et abandonne son résultat si le texte du ticket a changé pendant la décision. Elle ne marque jamais un doublon et ne change jamais un état.
 
 Les liens ajoutés ainsi apparaissent dans les relations du ticket comme les autres, et l’historique indique Smart-fill comme auteur. Vérifiez le sens d’une dépendance comme pour les vôtres. Pour retirer un lien, utilisez les commandes de relations : Smart-fill ne rajoute pas un lien retiré pour cette paire. Pour ne plus recevoir de nouveaux liens, désactivez **Relier les tickets liés** dans [vos préférences](#smart-fill-preferences). Les tickets créés avant cette fonctionnalité, les tickets importés et ceux synchronisés depuis un dépôt sont indexés progressivement en arrière-plan, mais ne reçoivent jamais de liens automatiques.
 
