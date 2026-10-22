@@ -21,7 +21,7 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
+  "revision": 18,
   "sourceRevision": 17,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
@@ -74,9 +74,9 @@
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:/root/min764 (database archive sentence checked against lib/server/database-export.ts and lib/server/page-database-views.ts: saved views are not exported and are copied by duplication; rest of the article unchanged since the previous review; no figure changed)",
-    "language": "agent:/root/min764 (pt-BR changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 18,
+    "fact": "agent:/root/min764 (database archive sentence checked against lib/server/database-export.ts and lib/server/page-database-views.ts: saved views are not exported and are copied by duplication; rest of the article unchanged since the previous review; no figure changed); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures)",
+    "language": "agent:/root/min764 (pt-BR changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -113,7 +113,7 @@
       "src": "/documentation/pt-BR/page-create-menu.png",
       "alt": "Menu de criação com Nova página e Novo banco de dados.",
       "caption": "Use os controles de páginas do projeto para escolher um documento ou um banco de dados.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -129,7 +129,7 @@
       "src": "/documentation/pt-BR/page-editor.png",
       "alt": "Página de demonstração com títulos, parágrafos, caixas de tarefas e menção a um ticket.",
       "caption": "Os títulos, os blocos de tarefas e a menção AUR-2 organizam a página. O conteúdo é um exemplo de demonstração.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -145,7 +145,7 @@
       "src": "/documentation/pt-BR/page-comments.png",
       "alt": "Atividade da página com uma edição de demonstração e campo de comentário vazio.",
       "caption": "Leia a atividade e escreva um comentário no campo. Nenhum comentário foi enviado neste exemplo.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -161,7 +161,7 @@
       "src": "/documentation/pt-BR/page-file-states.png",
       "alt": "Página de demonstração com um upload incompleto e um arquivo salvo de 67 bytes com a opção Baixar.",
       "caption": "Confira o estado real do arquivo: o segundo anexo está disponível, mas o primeiro upload incompleto não.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -177,7 +177,7 @@
       "src": "/documentation/pt-BR/page-history-preview.png",
       "alt": "Aba Versões com um estado anterior expandido, autor, Restaurar e aviso de retenção por 30 dias.",
       "caption": "Confira a prévia de um estado salvo e compare com a página atual antes de restaurá-lo.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -193,7 +193,7 @@
       "src": "/documentation/pt-BR/page-publish.png",
       "alt": "Janela de publicação com Privado selecionado e opções de senha ou link.",
       "caption": "Privado mantém a página no projeto. Confira quem deve ler o conteúdo antes de mudar a publicação.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -209,7 +209,7 @@
       "src": "/documentation/pt-BR/page-export.png",
       "alt": "Menu de exportação do documento com Markdown (.md) e Imprimir / PDF.",
       "caption": "Escolha Markdown para baixar o documento ou Imprimir / PDF para abrir a visualização de impressão.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -225,7 +225,7 @@
       "src": "/documentation/pt-BR/file-preview.png",
       "alt": "Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar, Renomear e Remover.",
       "caption": "O visualizador compartilhado mantém Fechar abaixo da prévia. O menu Ações do arquivo oferece Baixar e, quando permitido, Renomear e Remover.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -260,31 +260,31 @@ Crie subpáginas para documentos relacionados e use os controles da árvore para
 
 ### Favoritos e exclusão {#page-tree}
 
-Marque uma página como favorita para destacá-la no topo da árvore do projeto. Esses favoritos são compartilhados no projeto, ao contrário de uma nota privada do caderno. Vincule uma página a uma tarefa quando o documento atual for contexto da tarefa; o título do recurso acompanha renomeações da página.
+Marque uma página como favorita para destacá-la no topo da árvore do projeto. Esses favoritos são compartilhados no projeto, ao contrário de uma nota privada do caderno. Vincule uma página a um ticket quando o documento atual for contexto do ticket; o título do recurso acompanha renomeações da página.
 
 A exclusão envia para a lixeira as páginas que permitem recuperação. Em um menu de página, **Mover para a lixeira** pede confirmação antes, com o nome da página e quantas subpáginas vão junto; elas podem ser restauradas da lixeira por 30 dias. Confira a ramificação selecionada antes de excluir e use a recuperação em vez de recriar uma página perdida quando o conteúdo precisa ser mantido. Entradas com valores de banco de dados armazenados podem ser reordenadas dentro do banco, mas não movidas para fora. Se um movimento for rejeitado, inspecione hierarquia e tipo de entrada em vez de forçar por tentativas repetidas.
 
 
 ![Menu de criação com Nova página e Novo banco de dados.](/documentation/pt-BR/page-create-menu.png)
 
-## Promover uma página a problema {#promote-page-to-issue}
+## Promover uma página a ticket {#promote-page-to-issue}
 
-Quando uma página descreve trabalho a fazer, o proprietário ou um Membro pode transformá-la em um problema com o Numo. Os leitores não veem essa ação. É necessário ter uso de IA disponível ou uma chave pessoal compatível.
+Quando uma página descreve trabalho a fazer, o proprietário ou um Membro pode transformá-la em um ticket com o Numo. Os leitores não veem essa ação. É necessário ter uso de IA disponível ou uma chave pessoal compatível.
 
-1. Escolha **Promover a problema** no menu da página na árvore (`…` ou clique com o botão direito na linha) ou no menu `…` da página aberta (**Opções de página**). A mesma ação aparece para uma entrada de banco de dados aberta no painel lateral e no menu da alça de uma única entrada, como explica o [guia de bancos de dados](/pt-br/documentacao/databases#entry-actions).
+1. Escolha **Promover a ticket** no menu da página na árvore (`…` ou clique com o botão direito na linha) ou no menu `…` da página aberta (**Opções de página**). A mesma ação aparece para uma entrada de banco de dados aberta no painel lateral e no menu da alça de uma única entrada, como explica o [guia de bancos de dados](/pt-br/documentacao/databases#entry-actions).
 2. Se a página aberta tiver alterações não salvas, o minddy as salva primeiro. Se esse salvamento falhar, o minddy informa que não foi possível salvar a página e o Numo não abre. Promova a página novamente depois que ela for salva.
-3. O Numo abre no projeto da página, com a página como contexto, e recebe uma solicitação para ler o título, o conteúdo e, no caso de uma entrada de banco de dados, as propriedades dela. Se a página não estiver clara, ou se um banco de dados deixar ambíguo o escopo do problema, o Numo faz perguntas antes de criar qualquer coisa. Responda na conversa.
-4. O Numo cria um único problema e anexa a página a ele. Abra o problema e confira o identificador, o escopo, as propriedades e a página anexada.
+3. O Numo abre no projeto da página, com a página como contexto, e recebe uma solicitação para ler o título, o conteúdo e, no caso de uma entrada de banco de dados, as propriedades dela. Se a página não estiver clara, ou se um banco de dados deixar ambíguo o escopo do ticket, o Numo faz perguntas antes de criar qualquer coisa. Responda na conversa.
+4. O Numo cria um único ticket e anexa a página a ele. Abra o ticket e confira o identificador, o escopo, as propriedades e a página anexada.
 
-Diferentemente de uma tarefa do caderno levada para o projeto, a página não é removida: ela continua no mesmo lugar da árvore, com o conteúdo e as subpáginas. Se a criação falhar ou o resultado ficar incerto após um erro de rede, procure o problema antes de promover a página novamente.
+Diferentemente de uma tarefa do caderno levada para o projeto, a página não é removida: ela continua no mesmo lugar da árvore, com o conteúdo e as subpáginas. Se a criação falhar ou o resultado ficar incerto após um erro de rede, procure o ticket antes de promover a página novamente.
 
 ## Escrever uma página com blocos e menções {#page-editor}
 
 Abra a página e edite título ou corpo como proprietário ou Membro. Os leitores podem abrir e ler páginas, mas não podem editá-las, importá-las, duplicá-las, marcá-las como favoritas nem publicá-las, nem restaurar uma versão. Use o menu de comandos de barra e os controles de formatação para inserir títulos, texto, listas de marcadores, numeradas e de tarefas, citações, avisos, blocos de código, divisores, seções recolhíveis, subpáginas, imagens e arquivos. Um aviso pode ter ícone emoji e cor da paleta; escolha-os para distinguir informação útil, não como a única forma de comunicar uma advertência.
 
-Use menções para vincular problemas, objetivos, pessoas ou páginas relevantes. Digite `@` seguido de um identificador, palavras do título ou uma breve descrição; uma busca descritiva também lista problemas encontrados [pelo sentido](/docs/navigation#search-by-meaning) em **Relacionados pelo sentido**, depois das correspondências de texto. Referências inversas ajudam leitores a encontrar páginas que apontam para a atual. Um link fornece contexto, não acesso a um objeto privado de outro projeto.
+Use menções para vincular tickets, objetivos, pessoas ou páginas relevantes. Digite `@` seguido de um identificador, palavras do título ou uma breve descrição; uma busca descritiva também lista tickets encontrados [pelo sentido](/docs/navigation#search-by-meaning) em **Relacionados pelo sentido**, depois das correspondências de texto. Referências inversas ajudam leitores a encontrar páginas que apontam para a atual. Um link fornece contexto, não acesso a um objeto privado de outro projeto.
 
-Clicar na menção de uma página, em uma referência inversa, em uma página anexada a um problema ou objetivo, ou em um link para uma página em um comentário ou resposta do Numo abre essa página em um painel lateral sobre o que você estava lendo. Leia ou edite ali, escolha **Expandir** para abrir a página inteira ou feche o painel para voltar. Um banco de dados não abre no painel: ele abre como página inteira.
+Clicar na menção de uma página, em uma referência inversa, em uma página anexada a um ticket ou objetivo, ou em um link para uma página em um comentário ou resposta do Numo abre essa página em um painel lateral sobre o que você estava lendo. Leia ou edite ali, escolha **Expandir** para abrir a página inteira ou feche o painel para voltar. Um banco de dados não abre no painel: ele abre como página inteira.
 
 
 ![Página de demonstração com títulos, parágrafos, caixas de tarefas e menção a um ticket.](/documentation/pt-BR/page-editor.png)

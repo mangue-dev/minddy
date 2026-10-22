@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
+  "revision": 9,
   "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -47,10 +47,10 @@
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 9,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "issues",
@@ -68,7 +68,7 @@
       "src": "/documentation/pt-BR/work-task-notebook.png",
       "alt": "Tarefas pessoais de demonstração traduzidas no caderno.",
       "caption": "O caderno acompanha etapas pessoais fora da hierarquia de tickets do projeto. Os status das tarefas de exemplo permanecem iguais.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -93,7 +93,7 @@ Para reencontrar uma tarefa, abra a paleta de comandos com Command+K no macOS ou
 
 O caderno usa o mesmo editor das páginas do projeto, com as mesmas alças de bloco: passe o cursor sobre um bloco para arrastá-lo, abrir seu menu ou adicionar um bloco com **+**. Digite `/` para inserir uma tarefa, oferecida primeiro, ou um título, uma lista, uma citação, um **Destaque**, um bloco de código, um bloco **Alternar** ou um divisor, ou escolha **Ditar uma tarefa** para falar as tarefas em voz alta. O caderno continua salvo em Markdown, então Numo e os agentes conectados leem as mesmas tarefas e estados. Selecione um texto para formatá-lo ou adicionar um link. Cole ou solte uma imagem, ou escolha **Imagem** no menu `/`, para inseri-la em uma nota. Os outros tipos de arquivo ficam nas páginas.
 
-O menu **Ações do caderno** (`…`) oferece **Copiar tudo como prompt**, que copia o caderno inteiro para o seu próprio agente de código, e **Remover tarefas concluídas e descartadas**. A remoção pede confirmação, exclui as tarefas concluídas e canceladas junto com os títulos que ficam vazios e mantém as tarefas a fazer ou em andamento. Para copiar menos, use **Copiar seção como prompt** em um título ou **Copiar como prompt** em uma tarefa. Se **Iniciar o problema ou tarefa quando eu copiar seu prompt** estiver ativado em **Configurações da conta** → **Tickets**, copiar também passa para em andamento as tarefas pendentes copiadas.
+O menu **Ações do caderno** (`…`) oferece **Copiar tudo como prompt**, que copia o caderno inteiro para o seu próprio agente de código, e **Remover tarefas concluídas e descartadas**. A remoção pede confirmação, exclui as tarefas concluídas e canceladas junto com os títulos que ficam vazios e mantém as tarefas a fazer ou em andamento. Para copiar menos, use **Copiar seção como prompt** em um título ou **Copiar como prompt** em uma tarefa. Se **Iniciar o ticket ou tarefa quando eu copiar seu prompt** estiver ativado em **Configurações da conta** → **Tickets**, copiar também passa para em andamento as tarefas pendentes copiadas.
 
 O caderno é privado. Use uma página do projeto para informações que seus colegas precisam compartilhar. O Numo pode ler ou atualizar o caderno quando você pedir, mas a participação de outra pessoa no seu projeto não transforma suas anotações em um documento compartilhado.
 
@@ -101,6 +101,6 @@ O caderno é privado. Use uma página do projeto para informações que seus col
 
 ## Levar uma tarefa para o projeto {#promote-note}
 
-Abra o menu da tarefa e escolha **Promover para o problema** quando a anotação se tornar trabalho do projeto. O caderno fecha e o Numo abre com uma solicitação preparada que contém a tarefa e suas subtarefas. Se você estiver em um projeto, esse projeto será usado; em uma tela global, informe o projeto de destino na conversa. Confira a solicitação antes de enviá-la. É necessário ter uso de IA disponível ou uma chave pessoal compatível. Abrir essa opção ainda não criou um ticket. Depois que o Numo confirmar a criação, abra o ticket para verificar o identificador, o escopo e as propriedades. Acrescente as condições de aceitação que faltarem para preservar o contexto necessário. A solicitação preparada também pede ao Numo que remova a tarefa do caderno quando o ticket existir; procure-a, portanto, no ticket e não no caderno.
+Abra o menu da tarefa e escolha **Promover a ticket** quando a anotação se tornar trabalho do projeto. O caderno fecha e o Numo abre com uma solicitação preparada que contém a tarefa e suas subtarefas. Se você estiver em um projeto, esse projeto será usado; em uma tela global, informe o projeto de destino na conversa. Confira a solicitação antes de enviá-la. É necessário ter uso de IA disponível ou uma chave pessoal compatível. Abrir essa opção ainda não criou um ticket. Depois que o Numo confirmar a criação, abra o ticket para verificar o identificador, o escopo e as propriedades. Acrescente as condições de aceitação que faltarem para preservar o contexto necessário. A solicitação preparada também pede ao Numo que remova a tarefa do caderno quando o ticket existir; procure-a, portanto, no ticket e não no caderno.
 
 Se a criação falhar ou o resultado ficar incerto após um erro de rede, procure o ticket antes de repetir a operação. Mantenha as outras seções intactas ao pedir que o Numo altere uma tarefa. Confira se ele mudou a caixa de seleção pretendida sem substituir o caderno inteiro.

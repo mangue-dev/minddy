@@ -20,10 +20,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
+  "revision": 15,
   "sourceRevision": 14,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -67,10 +67,10 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 15,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "api-and-webhooks"
@@ -96,7 +96,7 @@
       "src": "/documentation/pt-BR/publish-a-feedback-board-workflow.png",
       "alt": "Mural público de feedback ativado, com identidade dos visitantes por código de e-mail, a ação Ativar SSO e URL oculta.",
       "caption": "O proprietário ativa o mural e escolhe a identidade dos visitantes. Este mural de demonstração usa a verificação por e-mail; sua URL está oculta.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -113,7 +113,7 @@
       "src": "/documentation/pt-BR/submit-and-follow-feedback-workflow.png",
       "alt": "Formulário de feedback do visitante com título, descrição e visibilidade pública ativada.",
       "caption": "Um visitante identificado envia uma necessidade e escolhe sua visibilidade. O exemplo foi realmente enviado com a revisão automática desativada.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -129,7 +129,7 @@
       "src": "/documentation/pt-BR/feedback-objective-selection.png",
       "alt": "Prévia dos componentes de seleção de objetivo para um feedback e uma integração, ambos definidos como Docs.",
       "caption": "Seletores de objetivo com dados de demonstração. Novos feedbacks herdam a configuração da integração.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -146,7 +146,7 @@
       "src": "/documentation/pt-BR/feedback-pages-and-views-workflow.png",
       "alt": "Guia de feedback publicado e selecionado na navegação do mural, legível sem entrar na conta.",
       "caption": "Publique uma página, ative as guias de páginas e selecione-a para o mural. Esta página de demonstração foi aberta anonimamente; seu URL opaco mantém `noindex`.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -166,7 +166,7 @@
 }
 ---
 
-O feedback conecta as solicitações dos visitantes ao trabalho de revisão e entrega da equipe. O proprietário configura o mural público; os visitantes enviam e acompanham solicitações, enquanto os membros as moderam ou vinculam a problemas. Gerencie separadamente respostas públicas, notas internas e compartilhamentos de páginas ou visualizações.
+O feedback conecta as solicitações dos visitantes ao trabalho de revisão e entrega da equipe. O proprietário configura o mural público; os visitantes enviam e acompanham solicitações, enquanto os membros as moderam ou vinculam a tickets. Gerencie separadamente respostas públicas, notas internas e compartilhamentos de páginas ou visualizações.
 
 ## Publicar um quadro de feedback {#publish-a-feedback-board}
 
@@ -178,7 +178,7 @@ Escolha se os visitantes se identificam por código de email ou pelo SSO configu
 
 Desativar o mural torna suas páginas indisponíveis para os visitantes. A recepção entre servidores usa uma chave de integração de feedback separada e pode continuar sem mural público. A escolha de visibilidade de um feedback, seu estado de revisão e seu status de spam também controlam sua exibição; ativar o mural não publica, por si só, todos os feedbacks.
 
-O proprietário ativa ou desativa a **Numo revisão** nas configurações de Feedback do projeto; não existe um interruptor separado na instância. Com a revisão ativa, os envios do quadro público e das integrações aguardam revisão antes da publicação, enquanto os feedbacks criados pela equipe não ficam retidos. O que é marcado como sensível, como uma vulnerabilidade ou dados pessoais, passa a ser privado e aguarda em **Para revisar**. A revisão usa o provedor de IA da instância e o orçamento de IA do proprietário do projeto: quando o orçamento acaba, os feedbacks aguardam, visíveis apenas para a equipe, a menos que o proprietário ative **Publique sem revisão quando o orçamento de IA acabar**. Com a revisão desativada, os feedbacks são publicados como enviados, sem categorias automáticas, filtro de brincadeiras nem verificação de privacidade. Confira a fila depois de enviar um exemplo de demonstração. O Numo só envia respostas públicas quando solicitado explicitamente.
+O proprietário ativa ou desativa a **Revisão do Numo** nas configurações de Feedback do projeto; não existe um interruptor separado na instância. Com a revisão ativa, os envios do quadro público e das integrações aguardam revisão antes da publicação, enquanto os feedbacks criados pela equipe não ficam retidos. O que é marcado como sensível, como uma vulnerabilidade ou dados pessoais, passa a ser privado e aguarda em **Para revisar**. A revisão usa o provedor de IA da instância e o orçamento de IA do proprietário do projeto: quando o orçamento acaba, os feedbacks aguardam, visíveis apenas para a equipe, a menos que o proprietário ative **Publique sem revisão quando o orçamento de IA acabar**. Com a revisão desativada, os feedbacks são publicados como enviados, sem categorias automáticas, filtro de brincadeiras nem verificação de privacidade. Confira a fila depois de enviar um exemplo de demonstração. O Numo só envia respostas públicas quando solicitado explicitamente.
 
 ![Mural público de feedback ativado, com identidade dos visitantes por código de e-mail, a ação Ativar SSO e URL oculta.](/documentation/pt-BR/publish-a-feedback-board-workflow.png)
 
@@ -206,7 +206,7 @@ Os filtros da lista combinam status, objetivo, categorias, autor, origem e estad
 
 O proprietário do projeto e os Membros abrem Feedback no projeto e selecionam uma solicitação da fila de revisão ou da lista. Os leitores podem ler as solicitações, mas não moderá-las. Leia o envio original, a escolha pública ou privada, o estado de revisão e as sugestões de moderação ou duplicatas. É possível esclarecer o título e o corpo canônicos sem perder os textos originais enviados. Atribua categorias e um status público adequado; spam nunca aparece no mural público. Uma solicitação privada continua distinta de uma solicitação pública que apenas está pendente.
 
-A tradução opcional aparece ao lado do texto original para a equipe; o mural público mantém o feedback como foi escrito. Confira as classificações de IA antes de confiar nelas. Se um feedback estiver vinculado a uma tarefa, seu status será controlado por essa tarefa e não poderá ser editado de forma independente.
+A tradução opcional aparece ao lado do texto original para a equipe; o mural público mantém o feedback como foi escrito. Confira as classificações de IA antes de confiar nelas. Se um feedback estiver vinculado a um ticket, seu status será controlado por esse ticket e não poderá ser editado de forma independente.
 
 ### Notas e respostas públicas {#responses}
 
@@ -234,11 +234,11 @@ Como proprietário ou Membro, abra a solicitação e escolha uni-la a uma solici
 
 ### Criar ou vincular trabalho {#work}
 
-Transforme a solicitação em uma nova tarefa quando o trabalho ainda não estiver registrado. Confira os campos de criação antes de confirmar; sem campos fornecidos, a promoção cria por padrão trabalho no `backlog`. Se já existir uma tarefa, use a ação de vincular. **Link para um problema existente** busca entre as tarefas do projeto, exceto as canceladas e duplicadas. Descrever a necessidade também lista tarefas encontradas [pelo sentido](/docs/navigation#search-by-meaning) em **Relacionados pelo sentido**, depois das correspondências de texto, o que ajuda quando a solicitação não usa as palavras da tarefa. Um feedback já vinculado não pode ser promovido novamente. Desvincular pede confirmação antes; depois mantém o último status público e encerra a relação com a tarefa.
+Transforme a solicitação em um novo ticket quando o trabalho ainda não estiver registrado. Confira os campos de criação antes de confirmar; sem campos fornecidos, a promoção cria por padrão trabalho no `backlog`. Se já existir um ticket, use a ação de vincular. **Link para um ticket existente** busca entre os tickets do projeto, exceto os cancelados e duplicados. Descrever a necessidade também lista tickets encontrados [pelo sentido](/docs/navigation#search-by-meaning) em **Relacionados pelo sentido**, depois das correspondências de texto, o que ajuda quando a solicitação não usa as palavras do ticket. Um feedback já vinculado não pode ser promovido novamente. Desvincular pede confirmação antes; depois mantém o último status público e encerra a relação com o ticket.
 
-O status vinculado acompanha a tarefa: `triage`/`backlog`/`duplicate` → `open`; `todo` → `planned`; `in_progress`/`in_review` → `in_progress`; `done` → `shipped`; `canceled` → `declined`. Devolver o trabalho ao `backlog` também reabre o status do feedback. Depois de alterar um estado, confira a tarefa vinculada e a solicitação sem sessão.
+O status vinculado acompanha o ticket: `triage`/`backlog`/`duplicate` → `open`; `todo` → `planned`; `in_progress`/`in_review` → `in_progress`; `done` → `shipped`; `canceled` → `declined`. Devolver o trabalho ao `backlog` também reabre o status do feedback. Depois de alterar um estado, confira o ticket vinculado e a solicitação sem sessão.
 
-As notificações à equipe por novo feedback dependem da origem e da transição de revisão. Não prometa ao votante um email automático a cada união ou atualização de tarefa; ele pode consultar o status público e as respostas em Meus comentários. O vínculo mostra o progresso sem expor a tarefa privada.
+As notificações à equipe por novo feedback dependem da origem e da transição de revisão. Não prometa ao votante um email automático a cada união ou atualização de ticket; ele pode consultar o status público e as respostas em Meus comentários. O vínculo mostra o progresso sem expor o ticket privado.
 
 
 ## Adicionar páginas e visualizações públicas ao quadro {#feedback-pages-and-views}

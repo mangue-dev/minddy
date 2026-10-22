@@ -3,7 +3,7 @@
   "id": "api-and-webhooks",
   "locale": "pt-BR",
   "title": "API, webhooks e SSO do feedback",
-  "summary": "Crie problemas ou feedback pela API de integração, verifique webhooks assinados e autentique visitantes do feedback com SSO.",
+  "summary": "Crie tickets ou feedback pela API de integração, verifique webhooks assinados e autentique visitantes do feedback com SSO.",
   "topic": "Conceitos técnicos",
   "type": "guide",
   "audiences": [
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
+  "revision": 10,
   "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -48,10 +48,10 @@
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 10,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "integration-troubleshooting",
@@ -62,7 +62,7 @@
     "feedback-ingestion-and-sso"
   ],
   "tags": [
-    "Criar problemas ou feedback e receber webhooks assinados",
+    "Criar tickets ou feedback e receber webhooks assinados",
     "Conectar a ingestão de feedback e a identificação por SSO",
     "Criar issues ou feedback e receber webhooks assinados"
   ],
@@ -71,9 +71,9 @@
       "id": "integration-api-and-webhooks-flow",
       "kind": "diagram",
       "src": "/documentation/pt-BR/integration-api-and-webhooks-flow.svg",
-      "alt": "Diagrama: Servidor mantém chave da integração. POST issues ou feedback com tipo correto. Proprietário escolhe destino do webhook. Receptor verifica HMAC bruto e UUID.",
-      "caption": "Siga as etapas nesta ordem. Servidor mantém chave da integração. `POST` issues ou feedback com tipo correto. Proprietário escolhe destino do webhook. Receptor verifica HMAC bruto e UUID.",
-      "revision": 9,
+      "alt": "Diagrama: Servidor mantém chave da integração. POST tickets ou feedback com tipo correto. Proprietário escolhe destino do webhook. Receptor verifica HMAC bruto e UUID.",
+      "caption": "Siga as etapas nesta ordem. Servidor mantém chave da integração. `POST` tickets ou feedback com tipo correto. Proprietário escolhe destino do webhook. Receptor verifica HMAC bruto e UUID.",
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -88,7 +88,7 @@
             "title": "Servidor mantém chave da integração"
           },
           {
-            "title": "`POST` issues ou feedback com tipo correto"
+            "title": "`POST` tickets ou feedback com tipo correto"
           },
           {
             "title": "Proprietário escolhe destino do webhook"
@@ -105,7 +105,7 @@
       "src": "/documentation/pt-BR/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Sequências separadas de ingestão pelo backend e SSO do navegador, com segredos distintos.",
       "caption": "A chave de ingestão autentica chamadas do servidor. O segredo SSO do mural assina um token de visitante curto e de uso único.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -146,13 +146,13 @@
 }
 ---
 
-A API de integração recebe problemas e feedback por chaves do projeto; os webhooks notificam eventos com uma assinatura que precisa ser verificada. O proprietário configura chaves e destinos. O SSO identifica os visitantes do quadro de feedback pelo seu backend, sem expor segredos ao navegador.
+A API de integração recebe tickets e feedback por chaves do projeto; os webhooks notificam eventos com uma assinatura que precisa ser verificada. O proprietário configura chaves e destinos. O SSO identifica os visitantes do quadro de feedback pelo seu backend, sem expor segredos ao navegador.
 
-## Criar problemas ou feedback e receber webhooks assinados {#integration-api-and-webhooks}
+## Criar tickets ou feedback e receber webhooks assinados {#integration-api-and-webhooks}
 
-O proprietário cria uma integração com **Nova integração** na linha de título de **Configurações do projeto** → **Integrações**. Uma integração `issues` envia trabalho para a triagem; uma integração `feedback` coleta necessidades com votos e status público. A chave `mdy_` aparece uma única vez. Guarde-a somente no servidor em `MINDDY_API_KEY` ou `MINDDY_FEEDBACK_KEY`, nunca no navegador, no Git ou em logs. Cada integração aparece com o nome, o prefixo da chave, a data de criação, o último uso e um selo **Problemas** ou **Feedback**. Para revogar uma, o proprietário escolhe **Revogar** no menu ⋯ dela e confirma; ela passa a ter o selo **Revogada** e vai para o fim da lista, esmaecida. A revogação é permanente; uma chave desconhecida ou revogada retorna 401 `invalid_api_key`. Cada chave pertence a um projeto e a um tipo: usá-la no endpoint errado retorna 403 `wrong_key_kind`. Uma integração não é uma pessoa: não tem papel no projeto e mantém as permissões fixas do seu tipo quando os papéis dos membros mudam. Os leitores não veem as integrações.
+O proprietário cria uma integração com **Nova integração** na linha de título de **Configurações do projeto** → **Integrações**. Uma integração `issues` envia trabalho para a triagem; uma integração `feedback` coleta necessidades com votos e status público. A chave `mdy_` aparece uma única vez. Guarde-a somente no servidor em `MINDDY_API_KEY` ou `MINDDY_FEEDBACK_KEY`, nunca no navegador, no Git ou em logs. Cada integração aparece com o nome, o prefixo da chave, a data de criação, o último uso e um selo **Tickets** ou **Feedback**. Para revogar uma, o proprietário escolhe **Revogar** no menu ⋯ dela e confirma; ela passa a ter o selo **Revogada** e vai para o fim da lista, esmaecida. A revogação é permanente; uma chave desconhecida ou revogada retorna 401 `invalid_api_key`. Cada chave pertence a um projeto e a um tipo: usá-la no endpoint errado retorna 403 `wrong_key_kind`. Uma integração não é uma pessoa: não tem papel no projeto e mantém as permissões fixas do seu tipo quando os papéis dos membros mudam. Os leitores não veem as integrações.
 
-![Diagrama: Servidor mantém chave da integração. POST issues ou feedback com tipo correto. Proprietário escolhe destino do webhook. Receptor verifica HMAC bruto e UUID.](/documentation/pt-BR/integration-api-and-webhooks-flow.svg)
+![Diagrama: Servidor mantém chave da integração. POST tickets ou feedback com tipo correto. Proprietário escolhe destino do webhook. Receptor verifica HMAC bruto e UUID.](/documentation/pt-BR/integration-api-and-webhooks-flow.svg)
 
 ### Enviar os campos corretos {#send}
 
@@ -164,7 +164,7 @@ O proprietário cria uma integração com **Nova integração** na linha de tít
 | Descrição | 65.536 caracteres |
 | Categorias | 50 identificadores |
 
-A issue sempre entra na triagem; externamente não é possível escolher status, responsável ou `parent`. A resposta 201 contém `id`, `number`, `identifier` e `status`. Para os campos do feedback, a identidade do autor e a moderação, siga o [procedimento de ingestão de feedback](#feedback-ingestion-and-sso).
+O ticket sempre entra na triagem; externamente não é possível escolher status, responsável ou `parent`. A resposta 201 contém `id`, `number`, `identifier` e `status`. Para os campos do feedback, a identidade do autor e a moderação, siga o [procedimento de ingestão de feedback](#feedback-ingestion-and-sso).
 
 ```bash
 curl --fail-with-body --request POST "$MINDDY_ORIGIN/api/v1/issues" \
@@ -175,7 +175,7 @@ curl --fail-with-body --request POST "$MINDDY_ORIGIN/api/v1/issues" \
 
 ### Verificar e deduplicar eventos {#receive}
 
-As integrações issues podem enviar `issue.created`, `issue.status_changed` e `issue.updated`. O proprietário precisa escolher qualquer destino novo de webhook com **Configurar o webhook…** no menu ⋯ da integração. Depois que o destino é definido, a linha **Webhook** abaixo da integração mostra a última entrega, aceita ou recusada com a data, ou **Nenhuma entrega ainda**. Agentes podem ajustar eventos e escopo de um destino existente ou desativá-lo, mas não podem abrir um canal novo de saída. O escopo `integration` inclui apenas issues criadas com aquela chave; `all` inclui o projeto inteiro.
+As integrações `issues` podem enviar `issue.created`, `issue.status_changed` e `issue.updated`. O proprietário precisa escolher qualquer destino novo de webhook com **Configurar o webhook…** no menu ⋯ da integração. Depois que o destino é definido, a linha **Webhook** abaixo da integração mostra a última entrega, aceita ou recusada com a data, ou **Nenhuma entrega ainda**. Agentes podem ajustar eventos e escopo de um destino existente ou desativá-lo, mas não podem abrir um canal novo de saída. O escopo `integration` inclui apenas os tickets criados com aquela chave; `all` inclui todos os tickets do projeto.
 
 `X-minddy-Signature` contém o prefixo `sha256=` e um HMAC-SHA256 calculado sobre os bytes originais. A chave HMAC é o digest SHA-256 da chave API, representado como uma string hexadecimal minúscula. Compare a assinatura em tempo constante antes de confiar no payload, sem analisá-lo e serializá-lo novamente. `X-minddy-Delivery` corresponde a `delivery_id`: use esse UUID para eliminar duplicatas.
 
@@ -200,7 +200,7 @@ Informe um título não vazio, com até 200 caracteres, um corpo opcional de at�
 
 Envie `{"user":{"external_id":"demo-user-1"}}` por `POST` a `/api/v1/feedback/<id>/vote`, com os mesmos cabeçalhos. Cada identidade recebe um voto; repetir a votação é idempotente. Um post unido a outro retorna 409 `post_merged`, indicando o destino canônico.
 
-A criação permite 20 chamadas por minuto por chave; a votação, 60. Respeite `Retry-After` ao receber 429. Verifique 401 `invalid_api_key`, 403 `wrong_key_kind`, 400 `invalid_json` e os erros de campos 422 antes de tentar novamente. A criação não é uma atualização idempotente: se a resposta se perder, confira a caixa de feedback da equipe antes de repetir. As chaves de feedback não oferecem webhook de tarefas de saída. Uma integração de tarefas configurada separadamente oferece esse canal, com assinatura própria e entrega sem garantia.
+A criação permite 20 chamadas por minuto por chave; a votação, 60. Respeite `Retry-After` ao receber 429. Verifique 401 `invalid_api_key`, 403 `wrong_key_kind`, 400 `invalid_json` e os erros de campos 422 antes de tentar novamente. A criação não é uma atualização idempotente: se a resposta se perder, confira a caixa de feedback da equipe antes de repetir. As chaves de feedback não oferecem webhook de tickets de saída. Uma integração `issues` configurada separadamente oferece esse canal, com assinatura própria e entrega sem garantia.
 
 ### Identificar visitantes por SSO {#sso}
 

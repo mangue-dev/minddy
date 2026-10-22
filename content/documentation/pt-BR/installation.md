@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
+  "revision": 10,
   "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -50,10 +50,10 @@
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 10,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "authentication-and-email",
@@ -78,7 +78,7 @@
       "src": "/documentation/pt-BR/self-hosted-compatibility-flow.svg",
       "alt": "Diagrama: Tag de código anotada. Arquivos e SHA256SUMS. Assinatura e digest OCI oficiais. Perfil de compatibilidade escolhido.",
       "caption": "Siga as etapas nesta ordem. Tag de código anotada. Arquivos e `SHA256SUMS`. Assinatura e digest OCI oficiais. Perfil de compatibilidade escolhido.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -110,7 +110,7 @@
       "src": "/documentation/pt-BR/install-a-server-flow.svg",
       "alt": "Diagrama: Release verificada e ambiente protegido. Instalador: perfil full de referência. Supabase oficial, app, agendador. Verificação de conta, arquivos e recuperação.",
       "caption": "Siga as etapas nesta ordem. Release verificada e ambiente protegido. Instalador: perfil full de referência. Supabase oficial, app, agendador. Verificação de conta, arquivos e recuperação.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -142,7 +142,7 @@
       "src": "/documentation/pt-BR/install-a-server-wizard.png",
       "alt": "Assistente público de instalação com Supabase no mesmo servidor selecionado.",
       "caption": "O perfil full mantém a aplicação e o Supabase no seu servidor. Neste exemplo, o acesso pela rede privada fica restrito à rede local.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -159,7 +159,7 @@
       "src": "/documentation/pt-BR/managed-or-source-installation-flow.svg",
       "alt": "Diagrama: Seu projeto Supabase gerenciado. PostgreSQL, Auth, Storage, Realtime. Perfil OCI OU aplicação de tag. Tarefas e backup conforme perfil.",
       "caption": "A escolha entre imagem OCI e compilação pelo código-fonte muda a gestão da aplicação, enquanto o provedor gerencia o backend.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -295,7 +295,7 @@ Se você executar este perfil full no macOS com Docker Desktop, aplique o [overr
 
 ### Verificar antes de receber usuários {#accept}
 
-Os perfis de referência incluem o agendador; eles não contêm nenhum runner de código nem montam o socket do Docker. Não exponha o PostgreSQL nem as portas dos serviços internos à Internet. Execute o doctor com o arquivo de ambiente da instância e o arquivo Compose upstream do perfil full. Verifique a confirmação da conta, o login, a autenticação MFA, a redefinição da senha, a criação de projetos e issues, o envio e o download de anexos e o Realtime em duas sessões. Uma resposta 200 de `/api/health` comprova apenas que a aplicação está ativa. Se a instalação for interrompida, execute novamente o instalador com o mesmo contexto Compose e o arquivo de ambiente protegido; não apague os dados. Antes de receber uma equipe, prepare um backup em outro host e verifique a restauração em um destino vazio.
+Os perfis de referência incluem o agendador; eles não contêm nenhum runner de código nem montam o socket do Docker. Não exponha o PostgreSQL nem as portas dos serviços internos à Internet. Execute o doctor com o arquivo de ambiente da instância e o arquivo Compose upstream do perfil full. Verifique a confirmação da conta, o login, a autenticação MFA, a redefinição da senha, a criação de projetos e tickets, o envio e o download de anexos e o Realtime em duas sessões. Uma resposta 200 de `/api/health` comprova apenas que a aplicação está ativa. Se a instalação for interrompida, execute novamente o instalador com o mesmo contexto Compose e o arquivo de ambiente protegido; não apague os dados. Antes de receber uma equipe, prepare um backup em outro host e verifique a restauração em um destino vazio.
 
 
 
@@ -322,7 +322,7 @@ pnpm self-host:install -- --non-interactive --mode managed \
 
 ### Concluir implantação pelo código-fonte {#source}
 
-Para instalar a partir do código, instale as dependências fixadas da tag, forneça o ambiente minddy e Supabase, execute bootstrap e build e inicie o servidor de produção atrás de um proxy. Defina `MINDDY_PUBLIC_*` antes de iniciar. Você precisa fornecer um agendador persistente com as chamadas autenticadas descritas no artigo de rede: um build não executa jobs. Verifique migrações e Storage, depois Auth, issues, bytes dos anexos e Realtime. Use o procedimento lógico ou do provedor para backup. Um servidor de código não valida a instalação OCI.
+Para instalar a partir do código, instale as dependências fixadas da tag, forneça o ambiente minddy e Supabase, execute bootstrap e build e inicie o servidor de produção atrás de um proxy. Defina `MINDDY_PUBLIC_*` antes de iniciar. Você precisa fornecer um agendador persistente com as chamadas autenticadas descritas no artigo de rede: um build não executa jobs. Verifique migrações e Storage, depois Auth, tickets, bytes dos anexos e Realtime. Use o procedimento lógico ou do provedor para backup. Um servidor de código não valida a instalação OCI.
 
 ```bash
 pnpm install --frozen-lockfile

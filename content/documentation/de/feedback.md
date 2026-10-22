@@ -20,10 +20,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
+  "revision": 15,
   "sourceRevision": 14,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -67,10 +67,10 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 15,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "api-and-webhooks"
@@ -96,7 +96,7 @@
       "src": "/documentation/de/publish-a-feedback-board-workflow.png",
       "alt": "Aktiviertes öffentliches Feedback-Board mit Besucheridentität per E-Mail-Code, der Aktion SSO aktivieren und ausgeblendeter URL.",
       "caption": "Der Eigentümer aktiviert das Board und wählt die Besucheridentität. Dieses Demo-Board nutzt die E-Mail-Bestätigung; seine URL ist ausgeblendet.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -113,7 +113,7 @@
       "src": "/documentation/de/submit-and-follow-feedback-workflow.png",
       "alt": "Feedback-Formular für Besucher mit Titel, Beschreibung und aktivierter öffentlicher Sichtbarkeit.",
       "caption": "Ein angemeldeter Besucher reicht einen Bedarf ein und bestimmt die Sichtbarkeit. Das Beispiel wurde tatsächlich bei deaktivierter automatischer Prüfung eingereicht.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -129,7 +129,7 @@
       "src": "/documentation/de/feedback-objective-selection.png",
       "alt": "Komponentenvorschau der Zielauswahl für Feedback und einer Feedback-Integration, beide auf Docs eingestellt.",
       "caption": "Zielauswahl mit Demonstrationsdaten. Neues Feedback übernimmt die Integrationsvorgabe.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -146,7 +146,7 @@
       "src": "/documentation/de/feedback-pages-and-views-workflow.png",
       "alt": "Veröffentlichter Feedback-Leitfaden als ausgewählter Board-Tab, ohne Anmeldung lesbar.",
       "caption": "Veröffentlichen Sie eine Seite, aktivieren Sie Seitentabs und wählen Sie die Seite für das Board aus. Die Demoseite wurde anonym geöffnet; ihre undurchsichtige URL behält `noindex`.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -206,7 +206,7 @@ Die Listenfilter kombinieren Status, Ziel, Kategorien, Autor, Quelle und Prüfst
 
 Der Projekteigentümer und Mitglieder öffnen den Feedback-Bereich des Projekts und wählen eine Anfrage aus der Prüfliste oder Übersicht. Leser können Anfragen lesen, aber nicht moderieren. Lesen Sie den ursprünglichen Beitrag, seine öffentliche oder private Sichtbarkeit, den Prüfstatus und mögliche Moderations- oder Duplikatvorschläge. Sie können den kanonischen Titel und Text präzisieren; die ursprünglich eingereichten Texte bleiben erhalten. Weisen Sie Kategorien und einen geeigneten öffentlichen Status zu. Spam erscheint niemals auf dem öffentlichen Board. Eine private Anfrage bleibt etwas anderes als eine öffentliche Anfrage, die nur auf Prüfung wartet.
 
-Eine optionale Übersetzung steht für das Team neben dem Ausgangstext; das öffentliche Board behält das Feedback in seiner ursprünglichen Sprache. Prüfen Sie KI-Klassifizierungen, bevor Sie sich darauf verlassen. Ist ein Beitrag mit einem Issue verknüpft, bestimmt dieses Issue seinen Status; der Status lässt sich dann nicht unabhängig ändern.
+Eine optionale Übersetzung steht für das Team neben dem Ausgangstext; das öffentliche Board behält das Feedback in seiner ursprünglichen Sprache. Prüfen Sie KI-Klassifizierungen, bevor Sie sich darauf verlassen. Ist ein Beitrag mit einem Ticket verknüpft, bestimmt dieses Ticket seinen Status; der Status lässt sich dann nicht unabhängig ändern.
 
 ### Notizen und öffentliche Antworten {#responses}
 
@@ -234,11 +234,11 @@ Eine zusammengeführte Gruppe teilt ein Ziel. Wenn du das Ziel der Hauptanfrage 
 
 ### Arbeit erstellen oder verknüpfen {#work}
 
-Erstellen Sie aus einer Anfrage ein neues Issue, wenn die Arbeit noch nicht erfasst ist. Prüfen Sie die Erstellungsfelder vor der Bestätigung. Ohne mitgelieferte Felder erstellt die Umwandlung standardmäßig ein Issue im Backlog. Existiert bereits ein Issue, verwenden Sie stattdessen die Verknüpfung. **Link zu einem bestehenden Problem** durchsucht die Issues des Projekts außer abgebrochenen und doppelten. Wenn Sie den Bedarf beschreiben, erscheinen nach den Textübereinstimmungen auch [inhaltlich gefundene](/docs/navigation#search-by-meaning) Issues unter **Inhaltlich verwandt**. Das hilft, wenn die Anfrage andere Wörter als das Issue verwendet. Ein bereits verknüpfter Beitrag kann nicht erneut umgewandelt werden. Das Entfernen der Verknüpfung fragt zuerst nach; danach bleibt der letzte öffentliche Status erhalten, und die Beziehung zum Issue endet.
+Erstellen Sie aus einer Anfrage ein neues Ticket, wenn die Arbeit noch nicht erfasst ist. Prüfen Sie die Erstellungsfelder vor der Bestätigung. Ohne mitgelieferte Felder erstellt die Umwandlung standardmäßig ein Ticket im Backlog. Existiert bereits ein Ticket, verwenden Sie stattdessen die Verknüpfung. **Link zu einem bestehenden Ticket** durchsucht die Tickets des Projekts außer abgebrochenen und doppelten. Wenn Sie den Bedarf beschreiben, erscheinen nach den Textübereinstimmungen auch [inhaltlich gefundene](/docs/navigation#search-by-meaning) Tickets unter **Inhaltlich verwandt**. Das hilft, wenn die Anfrage andere Wörter als das Ticket verwendet. Ein bereits verknüpfter Beitrag kann nicht erneut umgewandelt werden. Das Entfernen der Verknüpfung fragt zuerst nach; danach bleibt der letzte öffentliche Status erhalten, und die Beziehung zum Ticket endet.
 
-Der verknüpfte Status folgt dem Issue: `triage`/`backlog`/`duplicate` → `open`; `todo` → `planned`; `in_progress`/`in_review` → `in_progress`; `done` → `shipped`; `canceled` → `declined`. Wird die Arbeit zurück ins Backlog verschoben, wird auch der Feedback-Status wieder geöffnet. Prüfen Sie nach einer Statusänderung das verknüpfte Issue und die Anfrage im abgemeldeten Browser.
+Der verknüpfte Status folgt dem Ticket: `triage`/`backlog`/`duplicate` → `open`; `todo` → `planned`; `in_progress`/`in_review` → `in_progress`; `done` → `shipped`; `canceled` → `declined`. Wird die Arbeit zurück ins Backlog verschoben, wird auch der Feedback-Status wieder geöffnet. Prüfen Sie nach einer Statusänderung das verknüpfte Ticket und die Anfrage im abgemeldeten Browser.
 
-Teambenachrichtigungen bei neuem Feedback hängen von dessen Quelle und Prüfstatuswechsel ab. Versprechen Sie einem Abstimmenden keine automatische E-Mail zu jeder Zusammenführung oder Issue-Aktualisierung. Öffentlicher Status und Antworten stehen in Mein Feedback. Eine Verknüpfung macht den Fortschritt sichtbar, ohne das private Issue selbst offenzulegen.
+Teambenachrichtigungen bei neuem Feedback hängen von dessen Quelle und Prüfstatuswechsel ab. Versprechen Sie einem Abstimmenden keine automatische E-Mail zu jeder Zusammenführung oder Ticketaktualisierung. Öffentlicher Status und Antworten stehen in Mein Feedback. Eine Verknüpfung macht den Fortschritt sichtbar, ohne das private Ticket selbst offenzulegen.
 
 
 ## Öffentliche Seiten und Ansichten zum Board hinzufügen {#feedback-pages-and-views}

@@ -2,8 +2,8 @@
 {
   "id": "git",
   "locale": "pt-BR",
-  "title": "Repositórios Git e sincronização de problemas",
-  "summary": "Conecte uma conta Git, vincule um repositório ao projeto e configure a sincronização de problemas com o provedor.",
+  "title": "Repositórios Git e sincronização de issues",
+  "summary": "Conecte uma conta Git, vincule um repositório ao projeto e configure a sincronização de issues com o provedor.",
   "topic": "Numo e integrações",
   "type": "guide",
   "audiences": [
@@ -17,10 +17,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
+  "revision": 6,
   "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -41,10 +41,10 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 6,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "api-and-webhooks"
@@ -56,8 +56,8 @@
   ],
   "tags": [
     "Conectar Git e vincular um repositório ao projeto",
-    "Sincronizar problemas da plataforma Git",
-    "Sincronizar tarefas da plataforma Git"
+    "Sincronizar issues da plataforma Git",
+    "Sincronizar tickets da plataforma Git"
   ],
   "figures": [
     {
@@ -66,7 +66,7 @@
       "src": "/documentation/pt-BR/git-connection-flow.svg",
       "alt": "Conectar a conta pessoal e vincular um repositório ao projeto são etapas distintas.",
       "caption": "Autorize primeiro a conta e depois vincule um repositório como proprietário do projeto.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -99,7 +99,7 @@
       "src": "/documentation/pt-BR/forge-issue-sync-mapping.svg",
       "alt": "Fluxo de sincronização do GitHub com configuração, verificação de eventos, importação e estados.",
       "caption": "Eventos do GitHub preservam alterações recentes e evitam entregas duplicadas. O mapeamento do GitLab exige verificação separada.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -109,7 +109,7 @@
       "theme": "neutral",
       "diagram": {
         "layout": "sequence",
-        "title": "Sincronização de tickets do GitHub",
+        "title": "Sincronização de issues do GitHub",
         "items": [
           {
             "title": "Configuração do proprietário",
@@ -137,7 +137,7 @@
       "src": "/documentation/pt-BR/forge-issue-sync-workflow.png",
       "alt": "Repositório de demonstração do GitHub vinculado, com a sincronização de issues desativada.",
       "caption": "O repositório de demonstração está vinculado ao GitHub. A sincronização de issues continua desativada; confira o escopo e o backlog existente antes de ativá-la. Esta captura não comprova uma importação sincronizada.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -156,28 +156,28 @@
 }
 ---
 
-A conexão Git pessoal autoriza o acesso ao provedor; o vínculo do repositório e a sincronização de problemas são configurações do projeto. O proprietário as configura para GitHub.com ou GitLab.com. Confira separadamente acesso, direção da sincronização e conflitos.
+A conexão Git pessoal autoriza o acesso ao provedor; o vínculo do repositório e a sincronização de issues são configurações do projeto. O proprietário as configura para GitHub.com ou GitLab.com. Confira separadamente acesso, direção da sincronização e conflitos.
 
 ## Conectar Git e vincular um repositório ao projeto {#git-accounts-and-repositories}
 
 Conecte GitHub ou GitLab nas configurações Git da conta e conclua a autorização pelo navegador. Conceda somente repositórios necessários. No desktop retorne ao app depois. A conexão pode ser reutilizada em projetos, sem vincular todos os repositórios automaticamente.
 
-O proprietário abre Git nas configurações do projeto, escolhe um repositório disponível e confirma. Confira provedor, nome completo e conta que atuará. Membros não podem substituir esse vínculo exclusivo. Ele permite o contexto do repositório, o acompanhamento de pull requests e as skills do repositório; a sincronização de tarefas é um botão separado.
+O proprietário abre Git nas configurações do projeto, escolhe um repositório disponível e confirma. Confira provedor, nome completo e conta que atuará. Membros não podem substituir esse vínculo exclusivo. Ele permite o contexto do repositório, o acompanhamento de pull requests e as skills do repositório; a sincronização de issues é um botão separado.
 
 ![Conectar a conta pessoal e vincular um repositório ao projeto são etapas distintas.](/documentation/pt-BR/git-connection-flow.svg)
 
 ### Repositório ausente ou acesso expirado {#recovery}
 
-Se a lista estiver vazia, confira permissões e autorização da organização ou repositório. Reconecte contas expiradas em vez de colar tokens nas tarefas. Desvincular exige o proprietário; leia a confirmação.
+Se a lista estiver vazia, confira permissões e autorização da organização ou repositório. Reconecte contas expiradas em vez de colar tokens no texto dos tickets. Desvincular exige o proprietário; leia a confirmação.
 
 Self-hosted pode usar um relay gerenciado configurado ou apps próprios do operador. A conexão com o relay é explícita e não torna a plataforma Git local. Disponibilidade depende da configuração. Confira a política do operador antes de autorizar.
 
 
-## Sincronizar problemas da plataforma Git {#forge-issue-sync}
+## Sincronizar issues da plataforma Git {#forge-issue-sync}
 
-Como proprietário, abra Git após vincular o repositório. Ative sincronização com as permissões de escrita necessárias. Tarefas importadas chegam à triagem. Confira a carga inicial informada e título, descrição e status de uma tarefa remota conhecida.
+Como proprietário, abra Git após vincular o repositório. Ative a sincronização de issues somente com as permissões de escrita necessárias. As issues importadas chegam à triagem como tickets. Confira a carga inicial informada e o título, a descrição e o status de uma issue remota conhecida.
 
-Aberto e fechado são espelhados nos dois sentidos. No GitHub, título e corpo viram título e descrição; labels fornecem categorias e prioridade ou esforço reconhecidos; usa-se o primeiro responsável vinculado e a data do milestone como prazo. Comentários preservam autor, identidade, URL e datas remotos. Bloqueios exigem ambas as tarefas no mesmo projeto importado. URLs de anexos permanecem; bytes e campos GitHub Projects não têm equivalente nativo.
+Aberto e fechado são espelhados nos dois sentidos. No GitHub, título e corpo viram título e descrição; labels fornecem categorias e prioridade ou esforço reconhecidos; usa-se o primeiro responsável vinculado e a data do milestone como prazo. Comentários preservam autor, identidade, URL e datas remotos. Bloqueios exigem que as duas issues estejam no mesmo projeto importado. URLs de anexos permanecem; bytes e campos GitHub Projects não têm equivalente nativo.
 
 ### Permissões, conflitos e desativação {#forge-issue-sync-recovery}
 

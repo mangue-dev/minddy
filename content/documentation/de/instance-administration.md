@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
+  "revision": 10,
   "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -46,10 +46,10 @@
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 10,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "authentication-and-email",
@@ -66,7 +66,7 @@
       "src": "/documentation/de/instance-administration-overview.png",
       "alt": "Admin-Übersicht mit zusammengefassten Konto-, Aktivitäts-, Einführungs- und Tarifkennzahlen.",
       "caption": "Übersicht zeigt zusammengefasste Kennzahlen der Instanz; die Aufnahme stammt aus einer Demo-Instanz. Finanzen erscheint, weil dort ein verwalteter OpenRouter-Schlüssel eingerichtet ist.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -82,7 +82,7 @@
       "src": "/documentation/de/instance-administration-models.png",
       "alt": "KI-Modell- und Reasoning-Einstellungen der Instanz.",
       "caption": "Modelle legt Standardwerte und besondere Verwendungszwecke fest. Die Aufnahme zeigt die vorhandene Konfiguration; keine Modell- oder Anbietereinstellung wurde geändert.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -120,9 +120,9 @@ Neue Entscheidungen verwenden das gespeicherte Modell nach etwa einer Minute auf
 
 ## Smart-Fill-Beziehungen konfigurieren {#smart-fill-relations}
 
-Nach dem Speichern eines Problems kann Smart Fill es indexieren und mit verwandten Problemen verknüpfen. Zwei Felder unter **Modelle**, Abschnitt **Automatisierungen**, steuern diese Arbeit:
+Nach dem Speichern eines Tickets kann Smart Fill es indexieren und mit verwandten Tickets verknüpfen. Zwei Felder unter **Modelle**, Abschnitt **Automatisierungen**, steuern diese Arbeit:
 
-- **Problem-Embeddings** wählt das Modell, das Titel und Beschreibung von Problemen in Vektoren umwandelt. Standard ist `openai/text-embedding-3-small`. Ein Wechsel startet eine neue Indexversion: Alte und neue Vektoren werden nie verglichen. Der stündliche Job `/api/cron/issue-index` indexiert danach bestehende Probleme, 100 pro Lauf, und belastet den Eigentümer des jeweiligen Projekts; er legt nie Beziehungen an. Dasselbe Modell wandelt jede Anfrage der inhaltlichen Suche mit den KI-Anbietereinstellungen des suchenden Mitglieds in einen Vektor um; Anfragen werden nur mit Vektoren der aktuellen Indexversion verglichen. Bis ein Problem neu indexiert ist, finden die Suche nach verwandten Problemen und die inhaltliche Suche es nur über seine Wörter. Derselbe Job wandelt unverschlüsselt gespeicherte Vektoren in verschlüsselte um, sobald ihr Projekt verschlüsselt wird.
+- **Ticket-Embeddings** wählt das Modell, das Titel und Beschreibung von Tickets in Vektoren umwandelt. Standard ist `openai/text-embedding-3-small`. Ein Wechsel startet eine neue Indexversion: Alte und neue Vektoren werden nie verglichen. Der stündliche Job `/api/cron/issue-index` indexiert danach bestehende Tickets, 100 pro Lauf, und belastet den Eigentümer des jeweiligen Projekts; er legt nie Beziehungen an. Dasselbe Modell wandelt jede Anfrage der inhaltlichen Suche mit den KI-Anbietereinstellungen des suchenden Mitglieds in einen Vektor um; Anfragen werden nur mit Vektoren der aktuellen Indexversion verglichen. Bis ein Ticket neu indexiert ist, finden die Suche nach verwandten Tickets und die inhaltliche Suche es nur über seine Wörter. Derselbe Job wandelt unverschlüsselt gespeicherte Vektoren in verschlüsselte um, sobald ihr Projekt verschlüsselt wird.
 - **Modell für Beziehungsentscheidungen** ist das LLM-Ausweichmodell, das Beziehungsentscheidungen beantwortet, wenn das [Entscheidungsmodell](#decision-model) scheitert oder unsicher ist, wie das eigene LLM-Modell jeder Funktion. Standard ist `deepseek/deepseek-v4-flash`.
 
 Embedding- und Transkriptionsfelder lehnen beim Speichern ein Modell der falschen Familie ab, etwa ein Chat-Modell in einem Embedding-Feld, und das aktuelle Modell bleibt in Gebrauch. Diese Prüfung braucht den Plattformkatalog: Lässt er sich nicht laden, etwa auf einer selbst gehosteten Instanz ohne verwaltete KI, kann die Auswahl nicht geprüft werden und wird angenommen. Für Mitglieder, die Automatisierungen mit ihrem eigenen Schlüssel ausführen, enthalten die Standardwerte pro Anbieter `issue_embedding_model`: `text-embedding-3-small` für OpenAI und `gemini-embedding-001` für Google.

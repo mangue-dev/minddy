@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
+  "revision": 8,
   "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -37,10 +37,10 @@
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 8,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [],
   "aliases": [],
@@ -54,7 +54,7 @@
       "src": "/documentation/pt-BR/transfer-between-instances-workflow.png",
       "alt": "Configurações de transferência com botão para importar um arquivo.",
       "caption": "Escolha o JSON íntegro exportado da conta de origem; confira o resultado antes de fechar.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -71,7 +71,7 @@
       "src": "/documentation/pt-BR/transfer-between-instances-export-workflow.png",
       "alt": "Controle de exportação da conta.",
       "caption": "Controle de exportação da conta. O arquivo exclui chaves e tokens; a captura mostra o botão antes do download.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -94,7 +94,7 @@
 
 Entre na instância de origem e abra a aba **Privacidade e dados** nas configurações da conta. Escolha **Baixar meus dados** e guarde o arquivo JSON de forma privada: ele contém dados da conta e dos projetos, incluindo os bytes dos arquivos. Crie sua conta na instância de destino ou entre na conta existente, confira o endereço, abra a mesma aba e escolha **Importar um arquivo de transferência**. Selecione o arquivo exportado sem modificá-lo e aguarde o resultado antes de fechar a página.
 
-A importação acrescenta dados sem substituir os que já existem no destino. Os identificadores são mantidos quando podem ser reutilizados com segurança; os conflitos recebem novos identificadores. O resultado informa os identificadores remapeados e as associações a projetos ignoradas. As referências de associação a projetos existentes só são restauradas quando o projeto de destino já existe e a referência é autorizada. Após o recarregamento da página, confira projetos, tarefas, páginas e dados pessoais.
+A importação acrescenta dados sem substituir os que já existem no destino. Os identificadores são mantidos quando podem ser reutilizados com segurança; os conflitos recebem novos identificadores. O resultado informa os identificadores remapeados e as associações a projetos ignoradas. As referências de associação a projetos existentes só são restauradas quando o projeto de destino já existe e a referência é autorizada. Após o recarregamento da página, confira projetos, tickets, páginas e dados pessoais.
 
 ![Configurações de transferência com botão para importar um arquivo.](/documentation/pt-BR/transfer-between-instances-workflow.png)
 

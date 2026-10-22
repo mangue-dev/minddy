@@ -3,7 +3,7 @@
   "id": "api-and-webhooks",
   "locale": "de",
   "title": "API, Webhooks und Feedback-SSO",
-  "summary": "Erstellen Sie Probleme oder Feedback über die Integrations-API, prüfen Sie signierte Webhooks und authentifizieren Sie Feedback-Besucher mit SSO.",
+  "summary": "Erstellen Sie Tickets oder Feedback über die Integrations-API, prüfen Sie signierte Webhooks und authentifizieren Sie Feedback-Besucher mit SSO.",
   "topic": "Technische Grundlagen",
   "type": "guide",
   "audiences": [
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
+  "revision": 10,
   "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -48,10 +48,10 @@
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 10,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "integration-troubleshooting",
@@ -72,7 +72,7 @@
       "src": "/documentation/de/integration-api-and-webhooks-flow.svg",
       "alt": "Diagramm: Server hält Projektintegrationsschlüssel. POST Tickets oder Feedback mit passender Art. Eigentümer wählt Webhookziel für Tickets. Empfänger prüft Rohkörper-HMAC und Zustell-UUID.",
       "caption": "Lesen Sie die Schritte in dieser Reihenfolge. Server hält Projektintegrationsschlüssel. `POST` Tickets oder Feedback mit passender Art. Eigentümer wählt Webhookziel für Tickets. Empfänger prüft Rohkörper-HMAC und Zustell-UUID.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +104,7 @@
       "src": "/documentation/de/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Getrennte Abläufe für Backend-Erfassung und Browser-SSO mit unterschiedlichen Geheimnissen.",
       "caption": "Der Erfassungsschlüssel authentifiziert Serveraufrufe. Das Board-SSO-Geheimnis signiert ein kurzlebiges, einmaliges Besuchertoken.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -149,7 +149,7 @@ Die Integrations-API nimmt Tickets oder Feedback über projektgebundene Schlüss
 
 ## Tickets oder Feedback erstellen und signierte Webhooks empfangen {#integration-api-and-webhooks}
 
-Eigentümer erstellen Integrationen mit **Neue Integration** in der Titelzeile von **Projekteinstellungen** → **Integrationen**. `issues` erzeugt interne Arbeit in Triage, `feedback` Nutzerbedarfe mit Stimmen/öffentlichem Status. Der Klartextschlüssel `mdy_` erscheint einmal. Speichern Sie ihn nur serverseitig als `MINDDY_API_KEY` beziehungsweise `MINDDY_FEEDBACK_KEY`, nie im Browser, Git oder geteilten Logs. Jede Integration wird mit Name, Schlüsselpräfix, Erstellungsdatum, letzter Nutzung und einem Badge **Probleme** oder **Feedback** aufgeführt. Zum Widerrufen wählt der Eigentümer **Autorisierung widerrufen** im ⋯-Menü der Integration und bestätigt; sie trägt dann das Badge **Widerrufen** und rückt abgeblendet ans Ende der Liste. Widerruf ist endgültig; unbekannte und widerrufene Schlüssel ergeben 401 `invalid_api_key`. Schlüssel gehören zum Projekt und können die andere Endpunktfamilie nicht aufrufen (403 `wrong_key_kind`). Eine Integration ist keine Person: Sie hat keine Projektrolle und behält die festen Berechtigungen ihrer Art, wenn sich die Rollen der Mitglieder ändern. Leser sehen keine Integrationen.
+Eigentümer erstellen Integrationen mit **Neue Integration** in der Titelzeile von **Projekteinstellungen** → **Integrationen**. `issues` erzeugt interne Arbeit in Triage, `feedback` Nutzerbedarfe mit Stimmen/öffentlichem Status. Der Klartextschlüssel `mdy_` erscheint einmal. Speichern Sie ihn nur serverseitig als `MINDDY_API_KEY` beziehungsweise `MINDDY_FEEDBACK_KEY`, nie im Browser, Git oder geteilten Logs. Jede Integration wird mit Name, Schlüsselpräfix, Erstellungsdatum, letzter Nutzung und einem Badge **Tickets** oder **Feedback** aufgeführt. Zum Widerrufen wählt der Eigentümer **Autorisierung widerrufen** im ⋯-Menü der Integration und bestätigt; sie trägt dann das Badge **Widerrufen** und rückt abgeblendet ans Ende der Liste. Widerruf ist endgültig; unbekannte und widerrufene Schlüssel ergeben 401 `invalid_api_key`. Schlüssel gehören zum Projekt und können die andere Endpunktfamilie nicht aufrufen (403 `wrong_key_kind`). Eine Integration ist keine Person: Sie hat keine Projektrolle und behält die festen Berechtigungen ihrer Art, wenn sich die Rollen der Mitglieder ändern. Leser sehen keine Integrationen.
 
 
 ![Diagramm: Server hält Projektintegrationsschlüssel. POST Tickets oder Feedback mit passender Art. Eigentümer wählt Webhookziel für Tickets. Empfänger prüft Rohkörper-HMAC und Zustell-UUID.](/documentation/de/integration-api-and-webhooks-flow.svg)
@@ -195,7 +195,7 @@ Geben Sie einen nicht leeren Titel mit höchstens 200 Zeichen, einen optionalen 
 
 Senden Sie `{"user":{"external_id":"demo-user-1"}}` per `POST` an `/api/v1/feedback/<id>/vote` mit denselben Headern. Eine Identität erhält eine Stimme; eine wiederholte Abstimmung ist idempotent. Ein zusammengeführter Beitrag liefert 409 `post_merged` mit seinem kanonischen Ziel.
 
-Für die Erstellung sind 20 Aufrufe pro Minute und Schlüssel erlaubt, für Stimmen 60. Beachten Sie `Retry-After` bei 429. Prüfen Sie vor einem neuen Versuch 401 `invalid_api_key`, 403 `wrong_key_kind`, 400 `invalid_json` und Feldfehler mit 422. Die Erstellung ist keine idempotente Aktualisierung: Kontrollieren Sie bei verlorener Antwort zunächst den Feedback-Eingang des Teams. Feedback-Schlüssel bieten keinen ausgehenden Issue-Webhook. Eine separat konfigurierte Issue-Integration unterstützt diesen Kanal mit eigener Signatur und einem Zustellvertrag ohne Garantie.
+Für die Erstellung sind 20 Aufrufe pro Minute und Schlüssel erlaubt, für Stimmen 60. Beachten Sie `Retry-After` bei 429. Prüfen Sie vor einem neuen Versuch 401 `invalid_api_key`, 403 `wrong_key_kind`, 400 `invalid_json` und Feldfehler mit 422. Die Erstellung ist keine idempotente Aktualisierung: Kontrollieren Sie bei verlorener Antwort zunächst den Feedback-Eingang des Teams. Feedback-Schlüssel bieten keinen ausgehenden Ticket-Webhook. Eine separat konfigurierte Ticketintegration unterstützt diesen Kanal mit eigener Signatur und einem Zustellvertrag ohne Garantie.
 
 ### Besucher per SSO identifizieren {#sso}
 

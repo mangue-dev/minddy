@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
+  "revision": 9,
   "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -42,10 +42,10 @@
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 9,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "workspace-encryption",
@@ -62,7 +62,7 @@
       "src": "/documentation/pt-BR/install-locally-flow.svg",
       "alt": "Diagrama: Aplicativo desktop seleciona clone. Aplicação loopback: porta 6463. Supabase mínimo e dados duráveis. Sair encerra o aplicativo e o backend.",
       "caption": "O aplicativo desktop controla o início e o encerramento da instância local; os dados precisam ser preservados entre as execuções.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -94,7 +94,7 @@
       "src": "/documentation/pt-BR/install-locally-wizard.png",
       "alt": "Assistente público de instalação com o perfil deste computador selecionado.",
       "caption": "Escolha a instalação pessoal quando o aplicativo de desktop for gerenciar os serviços locais.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -153,4 +153,4 @@ Fechar uma janela mantém o aplicativo desktop ativo; use o comando para sair do
 
 `pnpm self-host:local` é uma alternativa de diagnóstico no terminal. Pare com Ctrl+C antes de devolver o controle ao aplicativo, que não assume processos alheios. Sair do aplicativo normalmente também para Supabase; `--keep-backend` muda isso explicitamente.
 
-Nunca use `supabase db reset --local` para recuperar dados: ele apaga os dados de avaliação. Teste conta nova, projeto, issue e anexo antes de confiar na instância.
+Nunca use `supabase db reset --local` para recuperar dados: ele apaga os dados de avaliação. Teste conta nova, projeto, ticket e anexo antes de confiar na instância.

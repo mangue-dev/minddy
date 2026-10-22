@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 18,
+  "revision": 19,
   "sourceRevision": 18,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-21",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -63,10 +63,10 @@
     ]
   },
   "review": {
-    "revision": 18,
-    "fact": "agent:MIN-768 (MCP setup moved to wizards: changed passages checked against components/settings/account-mcp-clients.tsx and mcp-connect-panel.tsx; 1 screenshot recaptured on 2026-10-21 from the local candidate and inspected; earlier evidence retained in git history)",
-    "language": "agent:MIN-768 (pt-BR translation of the changed passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-21"
+    "revision": 19,
+    "fact": "agent:MIN-768 (MCP setup moved to wizards: changed passages checked against components/settings/account-mcp-clients.tsx and mcp-connect-panel.tsx; 1 screenshot recaptured on 2026-10-21 from the local candidate and inspected; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures)",
+    "language": "agent:MIN-768 (pt-BR translation of the changed passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "code-work",
@@ -97,7 +97,7 @@
       "src": "/documentation/pt-BR/work-with-numo-workflow.png",
       "alt": "Conversa de demonstração Numo com contexto, mudança de prioridade e resposta salva.",
       "caption": "Conversa de demonstração existente, traduzida para exibição. A resposta salva cita AUR-11 e AUR-7; a captura não comprova uma nova execução.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -114,7 +114,7 @@
       "src": "/documentation/pt-BR/numo-permissions-and-approvals-workflow.svg",
       "alt": "Matriz de permissões do Numo para ações do projeto, conexões pessoais e rotinas.",
       "caption": "O acesso ao projeto e os pedidos explícitos limitam as ações do Numo; conteúdo externo não concede permissões.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -175,7 +175,7 @@
       "src": "/documentation/pt-BR/numo-execution-model-flow.svg",
       "alt": "Diagrama: Persistir intenção, mensagem e UUID. Assumir turno, gravar ferramentas e resultados. Aguardar sua resposta se necessário. Rever eventos e reconciliar escritas incertas.",
       "caption": "Siga as etapas nesta ordem. Persistir intenção, mensagem e UUID. Assumir turno, gravar ferramentas e resultados. Aguardar sua resposta se necessário. Rever eventos e reconciliar escritas incertas.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -207,7 +207,7 @@
       "src": "/documentation/pt-BR/numo-mcp-connections-workflow.png",
       "alt": "Configurações MCP pessoais, lista vazia e botão para adicionar outro servidor.",
       "caption": "As conexões de Numo são pessoais; as rotinas usam as do proprietário do projeto.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -224,7 +224,7 @@
       "src": "/documentation/pt-BR/numo-mcp-connections-config-workflow.png",
       "alt": "Assistente de conexão do Notion mostrando o método de login conhecido pelo catálogo.",
       "caption": "Etapa de login de um serviço do catálogo. Nenhuma credencial foi inserida e nenhum servidor foi contatado.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-21",
       "viewport": [
@@ -250,16 +250,16 @@ O Numo usa o contexto da conversa e as permissões da sua conta. Comece com uma 
 
 ## Concluir uma tarefa do projeto com o Numo {#work-with-numo}
 
-Abra a tarefa ou o projeto e use o botão flutuante do Numo. A página atual vira contexto da conversa. As ações contextuais que passam trabalho ao Numo abrem o mesmo painel. Você precisa de acesso ao projeto e uso de IA disponível ou uma chave pessoal compatível.
+Abra o ticket ou o projeto e use o botão flutuante do Numo. A página atual vira contexto da conversa. As ações contextuais que passam trabalho ao Numo abrem o mesmo painel. Você precisa de acesso ao projeto e uso de IA disponível ou uma chave pessoal compatível.
 
-1. Confira o contexto na área de mensagem. Identifique a tarefa quando houver vários itens relevantes. Para adicionar uma tarefa como contexto, digite `@` na área de mensagem ou use **Adicionar contexto** → **Problema**; uma descrição também lista tarefas encontradas [pelo sentido](/docs/navigation#search-by-meaning) em **Relacionados pelo sentido**.
+1. Confira o contexto na área de mensagem. Identifique o ticket quando houver vários itens relevantes. Para adicionar um ticket como contexto, digite `@` na área de mensagem ou use **Adicionar contexto** → **Ticket**; uma descrição também lista tickets encontrados [pelo sentido](/docs/navigation#search-by-meaning) em **Relacionados pelo sentido**.
 2. Escolha o modelo e o nível de raciocínio da conversa. Essas escolhas valem para a conversa.
-3. Envie um pedido delimitado, por exemplo: “Leia esta tarefa e proponha critérios de aceitação. Não altere o status”.
-4. Leia a resposta e abra os links de tarefas ou fontes. Para uma alteração, confira o objeto atualizado.
+3. Envie um pedido delimitado, por exemplo: “Leia este ticket e proponha critérios de aceitação. Não altere o status”.
+4. Leia a resposta e abra os links de tickets ou fontes. Para uma alteração, confira o objeto atualizado.
 
-Em uma conversa nova e vazia, quatro linhas de sugestões acima do campo de mensagem propõem pedidos adequados à página atual, por exemplo **Resumir este problema** ou **Escrever um plano de implementação** quando um problema está aberto no painel lateral. Escolher uma linha preenche o campo sem enviá-lo, para que você possa ajustar o pedido antes. As linhas somem assim que o campo tem texto e voltam quando você o esvazia. Elas aparecem no layout de desktop, não em um celular.
+Em uma conversa nova e vazia, quatro linhas de sugestões acima do campo de mensagem propõem pedidos adequados à página atual, por exemplo **Resumir este ticket** ou **Escrever um plano de implementação** quando um ticket está aberto no painel lateral. Escolher uma linha preenche o campo sem enviá-lo, para que você possa ajustar o pedido antes. As linhas somem assim que o campo tem texto e voltam quando você o esvazia. Elas aparecem no layout de desktop, não em um celular.
 
-O Numo também pode ver as imagens da descrição de um problema ou objetivo, de um plano, de um comentário, de uma página ou do seu caderno quando o modelo da conversa aceita imagens. Sem essa capacidade, o Numo informa que não conseguiu ver a imagem em vez de descrevê-la.
+O Numo também pode ver as imagens da descrição de um ticket ou objetivo, de um plano, de um comentário, de uma página ou do seu caderno quando o modelo da conversa aceita imagens. Sem essa capacidade, o Numo informa que não conseguiu ver a imagem em vez de descrevê-la.
 
 O modelo padrão do Numo vem de **Configurações da conta → IA e Numo → Modelo padrão do Numo**: o padrão do app ou um modelo pessoal do provedor ativo. Uma escolha explícita na conversa tem prioridade. Consulte [configurações de IA e uso](/docs/ai-settings-and-usage#ai-keys-and-models).
 
@@ -267,7 +267,7 @@ O modelo padrão do Numo vem de **Configurações da conta → IA e Numo → Mod
 
 ### Continuar uma conversa {#continue}
 
-A lista mantém as conversas anteriores acessíveis. Continue a conversa com as decisões necessárias. O Numo organiza e acompanha o trabalho: lê e atualiza problemas, planos, páginas e outros conteúdos do Minddy e pode ler as pull requests vinculadas. Quando você pede, ele também pode comentar uma pull request, resolver as conversas de revisão já atendidas e fazer o merge dela. Quando o Numo busca problemas, correspondências de texto e identificadores exatos vêm primeiro; uma busca descritiva pode acrescentar problemas do mesmo projeto encontrados pelo sentido, que o Numo deve conferir antes de se basear neles. Ele não escreve código nem faz push de commits. Para que o código seja escrito, copie o prompt do problema para seu próprio agente de código; consulte [Trabalho de código e pull requests](/docs/code-work#external-coding-agents).
+A lista mantém as conversas anteriores acessíveis. Continue a conversa com as decisões necessárias. O Numo organiza e acompanha o trabalho: lê e atualiza tickets, planos, páginas e outros conteúdos do Minddy e pode ler os pull requests vinculados. Quando você pede, ele também pode comentar um pull request, resolver as conversas de revisão já atendidas e fazer o merge dele. Quando o Numo busca tickets, correspondências de texto e identificadores exatos vêm primeiro; uma busca descritiva pode acrescentar tickets do mesmo projeto encontrados pelo sentido, que o Numo deve conferir antes de se basear neles. Ele não escreve código nem faz push de commits. Para que o código seja escrito, copie o prompt do ticket para seu próprio agente de código; consulte [Trabalho de código e pull requests](/docs/code-work#external-coding-agents).
 
 Se o Numo pedir informações, envie sua escolha antes de esperar a continuação das ações dependentes. Um cartão de consumo ou erro explica a interrupção. Confira qualquer gravação externa antes de pedir para repetir a ação.
 
@@ -331,7 +331,7 @@ Em um cartão ativo, responda todas as perguntas obrigatórias e envie o conjunt
 
 O cartão de limite da conta mostra a data de redefinição do limite, quando conhecida, e pode oferecer plano ou chave pessoal. O da rotina leva à gestão: confira o teto por execução. A alocação corresponde àquela operação. Repetir o pedido não elimina o limite.
 
-Só é possível retomar de um checkpoint se ele tiver sido preservado. Confira tarefas, páginas e serviços externos antes de repetir: uma gravação pode ter funcionado mesmo com a resposta perdida. Informe o que falta e peça para continuar. Sem checkpoint recuperável, forneça o estado verificado em um novo pedido. Ao relatar falhas persistentes, identifique a conversa sem incluir credenciais.
+Só é possível retomar de um checkpoint se ele tiver sido preservado. Confira alterações nos tickets, páginas e serviços externos antes de repetir: uma gravação pode ter funcionado mesmo com a resposta perdida. Informe o que falta e peça para continuar. Sem checkpoint recuperável, forneça o estado verificado em um novo pedido. Ao relatar falhas persistentes, identifique a conversa sem incluir credenciais.
 
 ## Escolher um objetivo para um feedback {#feedback-objectives}
 

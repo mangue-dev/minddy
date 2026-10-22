@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
+  "revision": 16,
   "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-21",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -71,10 +71,10 @@
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-21"
+    "revision": 16,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "choose-an-instance",
@@ -106,7 +106,7 @@
       "src": "/documentation/de/account-security-workflow.png",
       "alt": "Karte zur Zwei-Faktor-Authentifizierung mit Aktivieren-Schaltfläche.",
       "caption": "Beginne hier, bestätige anschließend den Authenticator und bewahre die Wiederherstellungscodes sicher auf.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -123,7 +123,7 @@
       "src": "/documentation/de/profile-and-preferences-workflow.png",
       "alt": "Profilkopf mit Avatar und Bearbeitungssymbol, Name und schreibgeschützter E-Mail-Adresse.",
       "caption": "Wähle den Avatar, um einen zu erzeugen oder hochzuladen, oder den Namen, um ihn zu ändern; die E-Mail-Adresse bleibt schreibgeschützt.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -140,7 +140,7 @@
       "src": "/documentation/de/profile-and-preferences-preferences-workflow.png",
       "alt": "Sprachauswahl, Schalter für helles, dunkles und Systemdesign, Palettenauswahl für hellen und dunklen Modus und Transparenzschalter.",
       "caption": "Die Kontosprache und die Sprache der öffentlichen Website werden getrennt eingestellt.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -157,7 +157,7 @@
       "src": "/documentation/de/privacy-and-account-deletion-workflow.png",
       "alt": "Löschvorschau mit eigenen Projekten, Tickets und Mitgliedern, die Zugriff verlieren.",
       "caption": "Lies die Vorschau und exportiere gewünschte Daten, bevor du die Löschbestätigung öffnest.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -246,7 +246,7 @@ Wähle in den Präferenzen Sprache und Design und prüfe eine andere Seite. Die 
 
 Das Design wählt den hellen, dunklen oder System-Modus. **Palette für hellen Modus** und **Palette für dunklen Modus** legen jeweils die Farben eines Modus fest. **Akzentfarben** (minddy, Blau, Violett, Grün, Orange, Rosé) behalten die Farben von minddy und färben nur Schaltflächen und den Fokusring um; **Vollständige Paletten** (Solarized, Catppuccin, Nord) färben alle Flächen um; **Hoher Kontrast** steht unter Barrierefreiheit. Die Palette des angezeigten Modus gilt sofort; die andere wird gespeichert und erscheint, sobald ihr Modus aktiv wird, auch wenn System einem Wechsel des Betriebssystems folgt. Hoher Kontrast verstärkt den Kontrast von Text und Rahmen, umrandet Felder, Menüs, Dialoge und Tabs, markiert die aktuelle Seite und das ausgewählte Element, zeigt den Tastaturfokus immer an und hält Menüs deckend. Schalte **Transparenz** aus, damit Menüs, Popover und die Befehlspalette deckend und ohne Unschärfe erscheinen. Paletten und Transparenz werden im Konto gespeichert; ein anderes Gerät übernimmt sie beim nächsten Laden einer Seite.
 
-Wähle das Sendetastenkürzel unter Tastatur. Es gilt für Kommentare, Numo und die Eingabetaste im Titel eines Erstellungsformulars; eine Beschreibung behält Command/Strg+Eingabetaste, und Umschalt+Eingabetaste in einem Titel wechselt immer zur Beschreibung. Nutze die Sendeschaltfläche, wenn das Betriebssystem das Kürzel abfängt; Modifikatortasten unterscheiden sich je Plattform. Projekte, die du ausgeblendet hast, stehen in einem eigenen Tab **Ausgeblendete Projekte**, wo du sie wieder einblenden kannst. Der Tab **Einstellungen** enthält außerdem die Karte **Desktop-App**: Im Web führt sie zum Download der Desktop-App, in der Desktop-App zeigt sie den verbundenen Server und die App-Version. Ticketpräferenzen gehören ebenfalls zum Konto und ändern keine Einstellungen anderer Mitglieder: Die automatische Zuweisung liegt im Tab **Vorgänge**, der Status von Tickets, die Numo erstellt, unter **KI & Numo** → **Von Numo erstellte Vorgänge**.
+Wähle das Sendetastenkürzel unter Tastatur. Es gilt für Kommentare, Numo und die Eingabetaste im Titel eines Erstellungsformulars; eine Beschreibung behält Command/Strg+Eingabetaste, und Umschalt+Eingabetaste in einem Titel wechselt immer zur Beschreibung. Nutze die Sendeschaltfläche, wenn das Betriebssystem das Kürzel abfängt; Modifikatortasten unterscheiden sich je Plattform. Projekte, die du ausgeblendet hast, stehen in einem eigenen Tab **Ausgeblendete Projekte**, wo du sie wieder einblenden kannst. Der Tab **Einstellungen** enthält außerdem die Karte **Desktop-App**: Im Web führt sie zum Download der Desktop-App, in der Desktop-App zeigt sie den verbundenen Server und die App-Version. Ticketpräferenzen gehören ebenfalls zum Konto und ändern keine Einstellungen anderer Mitglieder: Die automatische Zuweisung liegt im Tab **Tickets**, der Status von Tickets, die Numo erstellt, unter **KI & Numo** → **Von Numo erstellte Tickets**.
 
 ![Sprachauswahl, Schalter für helles, dunkles und Systemdesign, Palettenauswahl für hellen und dunklen Modus und Transparenzschalter.](/documentation/de/profile-and-preferences-preferences-workflow.png)
 

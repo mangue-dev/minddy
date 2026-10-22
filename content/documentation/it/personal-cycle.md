@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
+  "revision": 7,
   "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -43,10 +43,10 @@
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 7,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label correction: quoted labels aligned on the corrected it catalog; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-762 label edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "views",
@@ -63,7 +63,7 @@
       "src": "/documentation/it/reader-cycle.png",
       "alt": "Ticket dimostrativo nel backlog del ciclo personale.",
       "caption": "L’aggiunta ha assegnato il ticket al titolare del ciclo e mantenuto lo stato backlog.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -92,6 +92,6 @@ Il ciclo attuale viene riempito automaticamente una volta con il lavoro idoneo. 
 
 ## Concludere o adattare il periodo {#cycle-results}
 
-Aggiorna gli stati durante il lavoro e confronta quanto è completato con quanto rimane. Al cambio di periodo, i ticket idonei non completati dei cicli passati vengono trasferiti automaticamente al ciclo attuale; l’assegnazione rimane invariata. Il trasferimento non li segna come completati. Quando tutti i ticket del ciclo attuale sono chiusi, un avviso **Ciclo completato** offre **Ciclo di riempimento** per aggiungere lavoro idoneo; il ciclo non viene riempito automaticamente durante il periodo. Usa il selettore delle date per consultare i cicli passati e futuri. Queste viste sono in sola lettura; il ciclo attuale permette modifiche.
+Aggiorna gli stati durante il lavoro e confronta quanto è completato con quanto rimane. Al cambio di periodo, i ticket idonei non completati dei cicli passati vengono trasferiti automaticamente al ciclo attuale; l’assegnazione rimane invariata. Il trasferimento non li segna come completati. Quando tutti i ticket del ciclo attuale sono chiusi, un avviso **Ciclo completato** offre **Riempi il ciclo** per aggiungere lavoro idoneo; il ciclo non viene riempito automaticamente durante il periodo. Usa il selettore delle date per consultare i cicli passati e futuri. Queste viste sono in sola lettura; il ciclo attuale permette modifiche.
 
 Se un prerequisito viene aggiunto al ciclo attuale per mantenere coerenti le dipendenze, controlla il motivo prima di rimuoverlo. Un ticket che scompare dopo il completamento può essere ancora visibile nel lavoro completato del ciclo o reperibile tramite identificativo. Le impostazioni dei cicli dell’account riguardano la tua pianificazione, non il ciclo personale di un altro membro.

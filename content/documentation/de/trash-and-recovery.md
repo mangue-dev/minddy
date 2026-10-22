@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
+  "revision": 7,
   "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -38,10 +38,10 @@
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 7,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "pages",
@@ -59,7 +59,7 @@
       "src": "/documentation/de/reader-trash.png",
       "alt": "Wiederherstellbares Demo-Ticket mit dreißig verbleibenden Tagen im Papierkorb.",
       "caption": "Über die Zeilenaktionen stellst du das Ticket wieder her. Das Leeren des Papierkorbs ist ein eigener endgültiger Vorgang.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -78,7 +78,7 @@
 
 ## Einen Eintrag finden und wiederherstellen {#trash-and-recovery}
 
-Öffne den Papierkorb über das Kontomenü. Er enthält wiederherstellbare gelöschte Arbeit, darunter unterstützte Probleme, Ziele, Feedback, Routinen, Projekte und Seiten. Prüfe Objekttyp, Löschzeitpunkt und angezeigte verbleibende Aufbewahrungsdauer, bevor du die Wiederherstellung wählst.
+Öffne den Papierkorb über das Kontomenü. Er enthält wiederherstellbare gelöschte Arbeit, darunter unterstützte Tickets, Ziele, Feedback, Routinen, Projekte und Seiten. Prüfe Objekttyp, Löschzeitpunkt und angezeigte verbleibende Aufbewahrungsdauer, bevor du die Wiederherstellung wählst.
 
 Stelle zuerst das erforderliche übergeordnete Objekt oder den Container wieder her, falls der Eintrag davon abhängt. Stelle beispielsweise eine gelöschte Datenbank vor einem separat gelöschten Eintrag wieder her. Öffne das wiederhergestellte Ziel und prüfe Inhalt und Eigenschaften. Gelöschte Einträge bleiben 30 Tage wiederherstellbar, bevor die Aufbewahrungsroutine sie endgültig entfernt. Nur der Projekteigentümer darf ein Projekt oder eine Routine wiederherstellen oder endgültig löschen. Der Eigentümer und Mitglieder können andere unterstützte Projektobjekte wiederherstellen oder entfernen, solange sie Zugriff haben. Ein Leser kann ein Projekt nicht ändern, daher erscheinen Einträge aus einem Projekt, das du nur liest, nicht in deinem Papierkorb.
 

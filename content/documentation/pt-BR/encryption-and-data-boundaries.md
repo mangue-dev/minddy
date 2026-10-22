@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
+  "revision": 6,
   "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -40,10 +40,10 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 6,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "workspace-encryption",
@@ -61,7 +61,7 @@
       "src": "/documentation/pt-BR/encryption-and-data-boundaries-flow.svg",
       "alt": "Diagrama: Conteúdo cifrado e chaves empacotadas. Raiz na configuração protegida do servidor. Runtime autorizado pode decifrar. Exports e provedores precisam proteção separada.",
       "caption": "A proteção do conteúdo persistente depende das chaves do servidor; exportações e envios a provedores exigem controles separados.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -102,7 +102,7 @@ Após a configuração e a migração previstas, o minddy cifra conteúdos e arq
 
 ## Reconhecer dados legíveis e exportados {#exceptions}
 
-O Auth mantém o email de login. Identificadores, chaves de projeto e issue, status, prioridades, datas e metadados permitidos continuam consultáveis. Publicações ficam legíveis por escolha de quem publica. Exporte, baixe e envie dados a provedores externos de IA, email, Git ou MCP com os controles adequados; os dados no navegador também precisam de proteção. Uma flag não comprova que o histórico foi convertido ou removido de cópias, logs e provedores. A leitura do código não demonstra que a migração de criptografia foi executada no minddy Cloud em produção.
+O Auth mantém o email de login. Identificadores, chaves de projeto e de ticket, status, prioridades, datas e metadados permitidos continuam consultáveis. Publicações ficam legíveis por escolha de quem publica. Exporte, baixe e envie dados a provedores externos de IA, email, Git ou MCP com os controles adequados; os dados no navegador também precisam de proteção. Uma flag não comprova que o histórico foi convertido ou removido de cópias, logs e provedores. A leitura do código não demonstra que a migração de criptografia foi executada no minddy Cloud em produção.
 
 ## Preservar a recuperação {#recovery}
 

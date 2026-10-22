@@ -15,7 +15,7 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
+  "revision": 16,
   "sourceRevision": 15,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
@@ -62,9 +62,9 @@
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:/root/min777 (panel paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed)",
-    "language": "agent:/root/min777 (it sentence on the page side panel with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 16,
+    "fact": "agent:/root/min777 (panel paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed); agent:claude-code (MIN-762 UI label correction: quoted labels aligned on the corrected it catalog; no behavior change, no new captures)",
+    "language": "agent:/root/min777 (it sentence on the page side panel with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-762 label edit; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -86,7 +86,7 @@
       "src": "/documentation/it/work-navigation.png",
       "alt": "Navigazione del progetto accanto alla bacheca dei ticket dimostrativi.",
       "caption": "La barra del progetto permette di aprire ticket, obiettivi, pagine e triage.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -102,7 +102,7 @@
       "src": "/documentation/it/work-search.png",
       "alt": "Risultati della ricerca dell’identificativo di un ticket dimostrativo.",
       "caption": "La palette trova il ticket tramite identificativo insieme alle pagine del progetto; aprire un risultato conserva le sue regole di accesso.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -126,7 +126,7 @@ La navigazione distingue lavoro personale e contenuti di ogni progetto. Ricerca,
 
 La navigazione principale permette di raggiungere il lavoro personale e i tuoi progetti. Seleziona un progetto per vedere i suoi ticket e le destinazioni secondarie, tra cui triage, obiettivi, pagine e impostazioni del progetto. La riga per tornare indietro sale di un livello nella navigazione; può cambiare il contenuto della barra laterale mentre la pagina principale resta aperta. Seleziona una destinazione per aprirla.
 
-Contatori e avvisi ti seguono da un livello all’altro. Il controllo che riporta alla **Home** mostra il totale da smistare nei progetti elencati nella **Home**, compreso quello attuale, e l’avviso di Smart Assign quando a uno dei tuoi progetti mancano regole. Una riga di ritorno mostra il contatore del livello a cui riporta. All’interno di un progetto, **Triaggio** e **Feedback** mantengono i contatori di quel progetto. Le schede dell’app desktop portano lo stesso badge della loro voce nella barra laterale: l’avviso sulla **Home** e i contatori su **Invio**, **Revisione del codice** e su **Triaggio** e **Feedback** di un progetto, aggiornati anche quando la scheda è in secondo piano.
+Contatori e avvisi ti seguono da un livello all’altro. Il controllo che riporta alla **Home** mostra il totale da smistare nei progetti elencati nella **Home**, compreso quello attuale, e l’avviso di Smart Assign quando a uno dei tuoi progetti mancano regole. Una riga di ritorno mostra il contatore del livello a cui riporta. All’interno di un progetto, **Triaggio** e **Feedback** mantengono i contatori di quel progetto. Le schede dell’app desktop portano lo stesso badge della loro voce nella barra laterale: l’avviso sulla **Home** e i contatori su **Posta in arrivo**, **Revisione del codice** e su **Triaggio** e **Feedback** di un progetto, aggiornati anche quando la scheda è in secondo piano.
 
 I cicli personali e le viste tra progetti comprendono i progetti a cui hai accesso. Obiettivi, pagine e feedback appartengono a un singolo progetto. Controlla il progetto attivo prima di creare lavoro o cambiare impostazioni.
 
@@ -137,9 +137,9 @@ I cicli personali e le viste tra progetti comprendono i progetti a cui hai acces
 Fai clic con il tasto destro su una riga della barra laterale per agire su ciò che rappresenta senza aprirlo prima. Le righe di collegamento offrono anche **Apri in una nuova scheda** e **Copia link**. Un’azione che sposta qualcosa nel cestino compare sempre per ultima, dopo un separatore.
 
 - La riga **Tutti i ticket** offre **Nuovo ticket** e la riga **Routine** offre **Nuova routine** se sei proprietario di un progetto.
-- Una riga di progetto, o il nome del progetto in cima al suo pannello, offre **Nuovo** (un ticket, un obiettivo o una pagina in quel progetto) e **Impostazioni del progetto**. Il proprietario del progetto vede anche **Spostati nel cestino**, che chiede la stessa conferma delle impostazioni del progetto. Lo stesso menu offre anche **Nascondi progetto**, oppure **Mostra progetto** per un progetto che hai nascosto; vedi [Nascondere un progetto per te](/docs/projects#hide-project).
+- Una riga di progetto, o il nome del progetto in cima al suo pannello, offre **Nuovo** (un ticket, un obiettivo o una pagina in quel progetto) e **Impostazioni del progetto**. Il proprietario del progetto vede anche **Sposta nel cestino**, che chiede la stessa conferma delle impostazioni del progetto. Lo stesso menu offre anche **Nascondi progetto**, oppure **Mostra progetto** per un progetto che hai nascosto; vedi [Nascondere un progetto per te](/docs/projects#hide-project).
 - Una scheda di progetto offre la propria creazione: **Nuovo ticket** su Ticket, **Nuovo obiettivo** su Obiettivi, **Nuova pagina** su Pagine e **Nuovi commenti** su Feedback, che apre il modulo interno per i feedback.
-- Una riga di routine offre **Apri l’ultima esecuzione** e, al proprietario del progetto, **Correte adesso**, **Metti in pausa** o **Riattiva**, **Modifica** e **Spostati nel cestino**. Vedi [Gestire e verificare le esecuzioni](/it/documentazione/scheduled-routines#runs).
+- Una riga di routine offre **Apri l’ultima esecuzione** e, al proprietario del progetto, **Correte adesso**, **Metti in pausa** o **Riattiva**, **Modifica** e **Sposta nel cestino**. Vedi [Gestire e verificare le esecuzioni](/it/documentazione/scheduled-routines#runs).
 - Una riga di pull request offre i cambi consentiti dal suo stato attuale, **Unisci** quando è pronta e azioni di correzione quando qualcosa la blocca. Vedi [Revisione e merge](/it/documentazione/code-work#decision).
 
 L’azione si applica alla riga su cui hai fatto clic, anche quando è aperto un altro progetto o elemento.

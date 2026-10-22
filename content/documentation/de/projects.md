@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 16,
+  "revision": 17,
   "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-21",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -67,10 +67,10 @@
     ]
   },
   "review": {
-    "revision": 16,
-    "fact": "agent:claude (MIN-760: category reordering paragraph checked against components/project-categories.tsx, the order route and the Numo/MCP tools; existing figures unaffected and kept; no browser walkthrough of the procedure)",
-    "language": "agent:claude (de translation of the added en paragraph, equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-21"
+    "revision": 17,
+    "fact": "agent:claude (MIN-760: category reordering paragraph checked against components/project-categories.tsx, the order route and the Numo/MCP tools; existing figures unaffected and kept; no browser walkthrough of the procedure); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures)",
+    "language": "agent:claude (de translation of the added en paragraph, equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "issues",
@@ -92,9 +92,9 @@
       "id": "project-settings-steps",
       "kind": "screenshot",
       "src": "/documentation/de/project-general.png",
-      "alt": "Projektkopf mit Symbol und Bearbeitungssymbol, Name, Schlüssel sowie den Kennzahlen Vorgänge, Mitglieder, Ziele, Kategorien und Erstellt.",
+      "alt": "Projektkopf mit Symbol und Bearbeitungssymbol, Name, Schlüssel sowie den Kennzahlen Tickets, Mitglieder, Ziele, Kategorien und Erstellt.",
       "caption": "Wähle Symbol, Namen oder Schlüssel, um sie direkt zu ändern; das Verschieben in den Papierkorb bleibt eine eigene Aktion weiter unten.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -111,7 +111,7 @@
       "src": "/documentation/de/project-members.png",
       "alt": "Karte „Personen einladen“ über der Karte Mitglieder mit drei Demo-Mitgliedern, der Eigentümer ist gekennzeichnet.",
       "caption": "Lade Mitglieder über ihre Konto-E-Mail ein und prüfe den Eigentümer, bevor du einen Zugang entfernst.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -130,26 +130,26 @@
 }
 ---
 
-Ein Projekt verbindet Probleme, Ziele, Seiten und die Personen, die daran arbeiten. Sein einziger Eigentümer verwaltet Einstellungen, Einladungen und Rollen. Mitglieder bearbeiten Inhalte, Leser verfolgen sie; beide können das Projekt verlassen. Wähle den passenden Abschnitt, um das Projekt einzurichten, festzulegen, wer was tun darf, das Eigentum zu übertragen oder ein Einladungsproblem zu lösen.
+Ein Projekt verbindet Tickets, Ziele, Seiten und die Personen, die daran arbeiten. Sein einziger Eigentümer verwaltet Einstellungen, Einladungen und Rollen. Mitglieder bearbeiten Inhalte, Leser verfolgen sie; beide können das Projekt verlassen. Wähle den passenden Abschnitt, um das Projekt einzurichten, festzulegen, wer was tun darf, das Eigentum zu übertragen oder ein Einladungsproblem zu lösen.
 
 ## Ein Projekt einrichten {#project-settings}
 
 Öffne das Projekt und anschließend seine Einstellungen. Administrative Einstellungen unterliegen der Projekteigentümerschaft. Mitglieder und Leser können den allgemeinen Bereich ansehen, das Projekt für sich ausblenden und es verlassen, erhalten aber nicht die Bearbeitungsfunktionen des Eigentümers.
 
-Der Tab **Allgemein** beginnt mit der Identität des Projekts: seinem Symbol, seinem Namen und Schlüssel und darunter fünf Kennzahlen: **Vorgänge**, **Mitglieder**, **Ziele**, **Kategorien** und **Erstellt**. Als Eigentümer änderst du Symbol, Name und Schlüssel direkt dort, wo sie angezeigt werden; eine Speichern-Schaltfläche gibt es nicht mehr. Wähle das Symbol und dann **Neue Kugel** (nur angeboten, solange kein Bild die Kugel verdeckt), **Bild hochladen**, **Von einer Website importieren…**, das nach der Adresse der Website fragt und ihr Symbol übernimmt, sobald du **Importieren** wählst, oder, wenn ein Bild gesetzt ist, **Bild entfernen**, das zuerst nachfragt, weil das Bild gelöscht wird. Wähle den Namen oder den Schlüssel, um ihn zu bearbeiten: Am Computer wird daraus ein Feld, in dem Enter oder das Verlassen des Felds speichert und Escape abbricht; auf dem Telefon öffnet sich ein Blatt mit **Speichern**. Der Name darf nicht leer sein. Der Schlüssel wird in Großbuchstaben umgewandelt und muss aus 2 bis 5 Buchstaben (A–Z) bestehen; andernfalls erscheint ein Fehler und der Schlüssel wird nicht gespeichert. Prüfe nach einer Änderung die entstandenen Kennungen. Das Symbol unterscheidet das Projekt nur in der Navigation; die Mitgliedschaft ändert es nicht. Mitglieder und Leser sehen denselben Kopfbereich ohne diese Bedienelemente.
+Der Tab **Allgemein** beginnt mit der Identität des Projekts: seinem Symbol, seinem Namen und Schlüssel und darunter fünf Kennzahlen: **Tickets**, **Mitglieder**, **Ziele**, **Kategorien** und **Erstellt**. Als Eigentümer änderst du Symbol, Name und Schlüssel direkt dort, wo sie angezeigt werden; eine Speichern-Schaltfläche gibt es nicht mehr. Wähle das Symbol und dann **Neue Kugel** (nur angeboten, solange kein Bild die Kugel verdeckt), **Bild hochladen**, **Von einer Website importieren…**, das nach der Adresse der Website fragt und ihr Symbol übernimmt, sobald du **Importieren** wählst, oder, wenn ein Bild gesetzt ist, **Bild entfernen**, das zuerst nachfragt, weil das Bild gelöscht wird. Wähle den Namen oder den Schlüssel, um ihn zu bearbeiten: Am Computer wird daraus ein Feld, in dem Enter oder das Verlassen des Felds speichert und Escape abbricht; auf dem Telefon öffnet sich ein Blatt mit **Speichern**. Der Name darf nicht leer sein. Der Schlüssel wird in Großbuchstaben umgewandelt und muss aus 2 bis 5 Buchstaben (A–Z) bestehen; andernfalls erscheint ein Fehler und der Schlüssel wird nicht gespeichert. Prüfe nach einer Änderung die entstandenen Kennungen. Das Symbol unterscheidet das Projekt nur in der Navigation; die Mitgliedschaft ändert es nicht. Mitglieder und Leser sehen denselben Kopfbereich ohne diese Bedienelemente.
 
 Die weiteren Tabs sind **Kategorien**, **Mitglieder**, **Wiederholungen**, **Intelligente Zuweisung**, **Feedback**, **Git**, **Importieren** und **Integrationen**. Lies die jeweilige Aufgabenanleitung, bevor du einen Anbieter oder automatische Arbeit aktivierst. Kontoeinstellungen wie deine Oberflächensprache sind von der Projektkonfiguration getrennt.
 
 Unter **Kategorien** verwalten der Eigentümer und die Mitglieder die Kategorien, mit denen Tickets eingeordnet werden. Wähle **Neue Kategorie** in der Titelzeile der Karte: Oben in der Liste erscheint eine Zeile mit einem Farbpunkt und einem Namensfeld. Drücke Enter oder wähle **Hinzufügen**, um die Kategorie anzulegen; Escape schließt die Zeile, ohne sie anzulegen. Wähle den Farbpunkt einer Kategorie, um eine andere Farbe zu wählen, die sofort gilt (auf dem Telefon öffnen sich die Farben in einem Blatt), oder wähle ihren Namen, um sie direkt umzubenennen. Die Löschschaltfläche fragt nach einer Bestätigung und entfernt die Kategorie dann aus allen Tickets. Sobald das Projekt mindestens zwei Kategorien hat, trägt jede Zeile links einen Ziehgriff: Ziehe ihn, um die Kategorie nach oben oder unten zu verschieben. Mit der Tastatur setzt du den Fokus auf den Griff, drückst die Leertaste, verschiebst die Kategorie mit den Pfeiltasten nach oben und unten und drückst erneut die Leertaste, um sie abzulegen; Escape bricht ab. Diese Reihenfolge zeigen alle Kategoriemenüs und -filter für alle im Projekt. Numo und Minddy-MCP-Clients können sie ebenfalls lesen und ändern, etwa wenn du Numo bittest, eine Kategorie an den Anfang zu stellen.
 
 
-![Projektkopf mit Symbol und Bearbeitungssymbol, Name, Schlüssel sowie den Kennzahlen Vorgänge, Mitglieder, Ziele, Kategorien und Erstellt.](/documentation/de/project-general.png)
+![Projektkopf mit Symbol und Bearbeitungssymbol, Name, Schlüssel sowie den Kennzahlen Tickets, Mitglieder, Ziele, Kategorien und Erstellt.](/documentation/de/project-general.png)
 
 ### Ein Projekt für dich ausblenden {#hide-project}
 
 Blende ein Projekt aus, das du nicht mehr täglich verfolgst, damit es aus deiner Seitenleiste und deiner Startseite verschwindet, ohne dass du es verlässt. Wähle in den allgemeinen Projekteinstellungen in der **Gefahrenzone** die Option **Ausblenden**, oder klicke das Projekt in der Seitenleiste mit der rechten Maustaste an und wähle **Projekt ausblenden** und bestätige. In beiden Fällen fragt zuerst ein Dialog mit dem Projektnamen nach, weil das Projekt aus deiner Navigation verschwindet; das Wiedereinblenden braucht keine Bestätigung. Alle Personen im Projekt können es ausblenden, auch der Eigentümer und Leser.
 
-Das Ausblenden ändert nur deine eigene Navigation. Außerhalb des Projekts selbst bietet Minddy weder das Projekt noch seine Tickets, Ziele und Seiten mehr an, wo du etwas auswählst: in der Befehlspalette, in den Erwähnungsvorschlägen nach @, im Numo-Kontext und bei der Projektwahl beim Erstellen eines Tickets, Ziels oder einer Routine. Bereits geschriebene Erwähnungen und Links zeigen weiterhin ihren Namen und lassen sich öffnen. Seine Tickets verschwinden außerdem aus der Ansicht **Alle Probleme** und ihren Filtern, aus dem CSV-Export aller deiner Projekte und aus dem automatischen Befüllen deines Zyklus; wählst du das Projekt im Export ausdrücklich aus, wird es weiterhin exportiert. Die Einstellung wird in deinem Konto gespeichert und gilt daher auch nach einer erneuten Anmeldung und auf deinen anderen Geräten. Du behältst deinen Zugriff und kannst das Projekt weiterhin über einen direkten Link oder über den Tab **Ausgeblendete Projekte** der **Kontoeinstellungen** öffnen und bearbeiten. Andere Mitglieder sehen das Projekt weiterhin, und seine Routinen, Integrationen und Benachrichtigungen laufen weiter. Das Öffnen eines ausgeblendeten Projekts bringt es nicht in deine Seitenleiste zurück.
+Das Ausblenden ändert nur deine eigene Navigation. Außerhalb des Projekts selbst bietet Minddy weder das Projekt noch seine Tickets, Ziele und Seiten mehr an, wo du etwas auswählst: in der Befehlspalette, in den Erwähnungsvorschlägen nach @, im Numo-Kontext und bei der Projektwahl beim Erstellen eines Tickets, Ziels oder einer Routine. Bereits geschriebene Erwähnungen und Links zeigen weiterhin ihren Namen und lassen sich öffnen. Seine Tickets verschwinden außerdem aus der Ansicht **Alle Tickets** und ihren Filtern, aus dem CSV-Export aller deiner Projekte und aus dem automatischen Befüllen deines Zyklus; wählst du das Projekt im Export ausdrücklich aus, wird es weiterhin exportiert. Die Einstellung wird in deinem Konto gespeichert und gilt daher auch nach einer erneuten Anmeldung und auf deinen anderen Geräten. Du behältst deinen Zugriff und kannst das Projekt weiterhin über einen direkten Link oder über den Tab **Ausgeblendete Projekte** der **Kontoeinstellungen** öffnen und bearbeiten. Andere Mitglieder sehen das Projekt weiterhin, und seine Routinen, Integrationen und Benachrichtigungen laufen weiter. Das Öffnen eines ausgeblendeten Projekts bringt es nicht in deine Seitenleiste zurück.
 
 Um es wieder anzuzeigen, wähle **Einblenden** unter **Ausgeblendete Projekte** oder in den allgemeinen Projekteinstellungen, oder wähle **Projekt einblenden** im Menü der Seitenleiste. Kann die Änderung nicht gespeichert werden, erscheint ein Fehler und das Projekt kehrt in seinen vorherigen Zustand zurück; versuche es erneut. Anders als Verlassen oder In den Papierkorb verschieben entfernt das Ausblenden nie Zugriff oder Inhalte.
 
@@ -157,7 +157,7 @@ Um es wieder anzuzeigen, wähle **Einblenden** unter **Ausgeblendete Projekte** 
 
 Ein Mitglied oder Leser kann in der Gefahrenzone **Verlassen** wählen und damit seinen eigenen Zugriff entfernen; zuerst fragt ein Dialog mit dem Projektnamen nach. Bitte den Eigentümer um eine erneute Einladung, wenn du später wieder Zugriff brauchst. Das Verlassen löscht das Projekt nicht für alle. Der Eigentümer kann das Projekt nicht verlassen: [Übertrage das Eigentum](#transfer-ownership) zuerst an ein Mitglied.
 
-Das Entfernen eines Projekts ist eine Eigentümeraktion: Wähle in der Gefahrenzone **In den Papierkorb verschieben** neben **Projekt in den Papierkorb verschieben**. Die Bestätigung nennt das Projekt und sagt, dass seine Probleme, Ziele und Feedbacks mit verschoben werden; das Projekt bleibt 30 Tage lang im [Papierkorb](/de/dokumentation/trash-and-recovery) wiederherstellbar, und sein Schlüssel wird sofort frei. Lies die Bestätigung, bevor du die Aktion ausführst, besonders wenn das Projekt Probleme, Seiten, Dateien oder Integrationen enthält. Schlägt ein normales Speichern fehl, bewahre die gewünschten Werte auf, lies die Fehlermeldung und aktualisiere das Projekt vor einem neuen Versuch. Sende eine destruktive Aktion nicht wiederholt ab, solange ihr erstes Ergebnis unklar ist.
+Das Entfernen eines Projekts ist eine Eigentümeraktion: Wähle in der Gefahrenzone **In den Papierkorb verschieben** neben **Projekt in den Papierkorb verschieben**. Die Bestätigung nennt das Projekt und sagt, dass seine Tickets, Ziele und Feedbacks mit verschoben werden; das Projekt bleibt 30 Tage lang im [Papierkorb](/de/dokumentation/trash-and-recovery) wiederherstellbar, und sein Schlüssel wird sofort frei. Lies die Bestätigung, bevor du die Aktion ausführst, besonders wenn das Projekt Tickets, Seiten, Dateien oder Integrationen enthält. Schlägt ein normales Speichern fehl, bewahre die gewünschten Werte auf, lies die Fehlermeldung und aktualisiere das Projekt vor einem neuen Versuch. Sende eine destruktive Aktion nicht wiederholt ab, solange ihr erstes Ergebnis unklar ist.
 
 Der Eigentümer kann das Projekt auch in der Seitenleiste mit der rechten Maustaste anklicken und **In den Papierkorb verschieben** wählen. Es erscheint dieselbe Bestätigung, und nur das angeklickte Projekt ist betroffen.
 
@@ -179,9 +179,9 @@ Verschickt wird nichts, bevor du **Fertig stellen** wählst: Zuerst wird das Pro
 | Rolle | Projektzugriff |
 | --- | --- |
 | Eigentümer | Genau einer pro Projekt. Alles, was ein Mitglied tun kann, dazu Projekteinstellungen, Einladungen und Rollen, Integrationen, die Git-Verknüpfung, Routinen, die Übertragung des Eigentums und das Löschen des Projekts. |
-| Mitglied | Die gesamte Arbeit an Inhalten: Probleme, Pläne, Ziele, Feedback, Seiten und Datenbanken, Kommentare, Dateien, geteilte Ansichten und Veröffentlichungslinks, Git- und Pull-Request-Aktionen, Numo und MCP. Kann das Projekt verlassen. |
+| Mitglied | Die gesamte Arbeit an Inhalten: Tickets, Pläne, Ziele, Feedback, Seiten und Datenbanken, Kommentare, Dateien, geteilte Ansichten und Veröffentlichungslinks, Git- und Pull-Request-Aktionen, Numo und MCP. Kann das Projekt verlassen. |
 | Leser | Liest die Inhalte, Mitglieder und Routinen des Projekts. Kann das Projekt ausblenden, unter den Betrachtern einer Seite erscheinen, persönliche Ansichten und Benachrichtigungen nutzen und das Projekt verlassen. Kann keine Inhalte bearbeiten, keine Zuweisungen erhalten, kein Ziel verantworten und keine Links veröffentlichen; sieht weder Integrationen noch Freigabe- und Board-Tokens. |
-| Leser mit **Darf kommentieren** | Lesezugriff sowie Kommentare zu Problemen, Zielen, internen Feedback-Threads und Seiten: Antworten, Erwähnungen, Dateien an eigenen Kommentaren sowie das Bearbeiten und Löschen eigener Kommentare. Öffentliche Antworten auf dem Feedback-Board sowie Kommentare oder Reaktionen in Pull Requests bleiben nicht verfügbar. |
+| Leser mit **Darf kommentieren** | Lesezugriff sowie Kommentare zu Tickets, Zielen, internen Feedback-Threads und Seiten: Antworten, Erwähnungen, Dateien an eigenen Kommentaren sowie das Bearbeiten und Löschen eigener Kommentare. Öffentliche Antworten auf dem Feedback-Board sowie Kommentare oder Reaktionen in Pull Requests bleiben nicht verfügbar. |
 | Besucher über einen öffentlichen Link | Nur die ausdrücklich über diesen Link veröffentlichten Inhalte; keine Projektmitgliedschaft. |
 
 Leser zählen wie Mitglieder zum Limit des Tarifs für Gäste pro Projekt, ebenso ausstehende Einladungen. Eine Abrechnung pro Platz gibt es nicht.
@@ -192,7 +192,7 @@ Prüfe die Mitgliederliste, bevor du jemanden entfernst. Die Eigentümerzeile bi
 
 Öffne als Eigentümer **Projekteinstellungen** → **Mitglieder** und wähle die neue Rolle der Person: **Mitglied** oder **Leser**. Lege bei einem Leser fest, ob **Darf kommentieren** aktiviert ist. Diese Option ist standardmäßig deaktiviert und wird jedes Mal ausgeschaltet, wenn jemand zum Leser wird. Prüfe sie daher, nachdem du ein Mitglied zum Leser gemacht hast. Deine eigene Rolle als Eigentümer ändert sich nur durch eine Übertragung.
 
-Wird ein Mitglied zum Leser, verliert es außerdem die Zuweisung seiner offenen Probleme und die Verantwortung für seine Ziele; diese Probleme verschwinden damit aus seinem persönlichen Zyklus. Weise diese Arbeit neu zu, wenn sie weitergehen soll.
+Wird ein Mitglied zum Leser, verliert es außerdem die Zuweisung seiner offenen Tickets und die Verantwortung für seine Ziele; diese Tickets verschwinden damit aus seinem persönlichen Zyklus. Weise diese Arbeit neu zu, wenn sie weitergehen soll.
 
 Eine Rollenänderung gilt ab der nächsten Anfrage der Person, in der Anwendung, in Numo und über MCP. Bereits geladene oder heruntergeladene Inhalte werden nicht zurückgeholt, und ein bereits geöffneter signierter Dateilink kann noch einige Minuten gültig bleiben.
 
@@ -207,7 +207,7 @@ Ein Projekt hat genau einen Eigentümer. Um es abzugeben, öffne als Eigentümer
 ### Was mit dem Eigentum übergeht {#transfer-effects}
 
 - Deine Routinen in diesem Projekt werden pausiert und können keine neue Arbeit starten. Der neue Eigentümer legt die Routinen an, die mit seinem eigenen Budget weiterlaufen sollen.
-- Die Tariflimits für Probleme und Gäste pro Projekt, der Speicher und Hintergrund-KI wie Smart Assign und die Feedback-Prüfung richten sich nun nach Tarif und Budget des neuen Eigentümers. Bestehende Probleme und Mitglieder bleiben erhalten.
+- Die Tariflimits für Tickets und Gäste pro Projekt, der Speicher und Hintergrund-KI wie Smart Assign und die Feedback-Prüfung richten sich nun nach Tarif und Budget des neuen Eigentümers. Bestehende Tickets und Mitglieder bleiben erhalten.
 - Abonnements, Zahlungsmethoden sowie persönliche Schlüssel und Verbindungen bleiben beim jeweiligen Konto.
 - Ausstehende Einladungen bleiben gültig.
 

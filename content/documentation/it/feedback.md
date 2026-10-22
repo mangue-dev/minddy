@@ -20,10 +20,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
+  "revision": 15,
   "sourceRevision": 14,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -67,10 +67,10 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 15,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label correction: quoted labels aligned on the corrected it catalog; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-762 label edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "api-and-webhooks"
@@ -96,7 +96,7 @@
       "src": "/documentation/it/publish-a-feedback-board-workflow.png",
       "alt": "Bacheca pubblica dei feedback attiva, con identità dei visitatori tramite codice email, l’azione Abilita SSO e URL nascosto.",
       "caption": "Il proprietario attiva la bacheca e sceglie l’identità dei visitatori. Questa bacheca dimostrativa usa la verifica email; il suo URL è nascosto.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -113,7 +113,7 @@
       "src": "/documentation/it/submit-and-follow-feedback-workflow.png",
       "alt": "Modulo di feedback del visitatore con titolo, descrizione e visibilità pubblica attivata.",
       "caption": "Un visitatore identificato invia un’esigenza e ne sceglie la visibilità. L’esempio è stato realmente inviato con la revisione automatica disattivata.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -129,7 +129,7 @@
       "src": "/documentation/it/feedback-objective-selection.png",
       "alt": "Anteprima dei componenti di selezione dell’obiettivo per un feedback e un’integrazione, entrambi impostati su Docs.",
       "caption": "Selettori dell’obiettivo con dati dimostrativi. I nuovi feedback ereditano l’impostazione dell’integrazione.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -146,7 +146,7 @@
       "src": "/documentation/it/feedback-pages-and-views-workflow.png",
       "alt": "Guida ai feedback pubblicata e selezionata nella navigazione della bacheca, leggibile senza accesso.",
       "caption": "Pubblica una pagina, attiva le schede delle pagine e selezionala per la bacheca. Questa pagina dimostrativa è stata aperta anonimamente; il suo URL opaco mantiene `noindex`.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -178,7 +178,7 @@ Scegli se i visitatori si identificano con un codice email o tramite il SSO conf
 
 Disattivare la bacheca rende le sue pagine inaccessibili ai visitatori. L’acquisizione da server a server usa una chiave di integrazione feedback separata e può continuare senza una bacheca pubblica. La scelta di visibilità di un feedback, lo stato di revisione e lo stato di spam ne determinano anche la visibilità: attivare la bacheca da solo non pubblica ogni feedback.
 
-Il proprietario attiva o disattiva la **Revisione di Numo** nelle impostazioni Feedback del progetto; non esiste un interruttore separato a livello di istanza. Con la revisione attiva, gli invii dalla bacheca pubblica e dalle integrazioni attendono la revisione prima della pubblicazione, mentre il feedback creato dal team non viene trattenuto. Ciò che viene segnalato come sensibile, come una vulnerabilità o dati personali, diventa privato e attende in **Riesame**. La revisione usa il provider IA dell’istanza e il budget IA del proprietario del progetto: quando il budget si esaurisce, il feedback resta in attesa, visibile solo al team, a meno che il proprietario non attivi **Pubblicare senza revisione quando il bilancio dell'AI si esaurisce**. Con la revisione disattivata, il feedback viene pubblicato così come è stato inviato, senza categorie automatiche, filtro degli scherzi né controllo della riservatezza. Controlla la coda dopo un invio dimostrativo. Numo invia risposte pubbliche solo su richiesta esplicita.
+Il proprietario attiva o disattiva la **Revisione di Numo** nelle impostazioni Feedback del progetto; non esiste un interruttore separato a livello di istanza. Con la revisione attiva, gli invii dalla bacheca pubblica e dalle integrazioni attendono la revisione prima della pubblicazione, mentre il feedback creato dal team non viene trattenuto. Ciò che viene segnalato come sensibile, come una vulnerabilità o dati personali, diventa privato e attende in **Da revisionare**. La revisione usa il provider IA dell’istanza e il budget IA del proprietario del progetto: quando il budget si esaurisce, il feedback resta in attesa, visibile solo al team, a meno che il proprietario non attivi **Pubblica senza revisione quando il budget IA è esaurito**. Con la revisione disattivata, il feedback viene pubblicato così come è stato inviato, senza categorie automatiche, filtro degli scherzi né controllo della riservatezza. Controlla la coda dopo un invio dimostrativo. Numo invia risposte pubbliche solo su richiesta esplicita.
 
 ![Bacheca pubblica dei feedback attiva, con identità dei visitatori tramite codice email, l’azione Abilita SSO e URL nascosto.](/documentation/it/publish-a-feedback-board-workflow.png)
 

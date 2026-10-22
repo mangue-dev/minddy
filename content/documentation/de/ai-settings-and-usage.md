@@ -16,7 +16,7 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
+  "revision": 20,
   "sourceRevision": 19,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
@@ -61,9 +61,9 @@
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:claude/min773 (dictation pill, discard confirmation, cleanup preference and vocabulary checked against the changed source and the running app; earlier evidence retained in git history)",
-    "language": "agent:claude/min773 (de translation of the MIN-773 passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 20,
+    "fact": "agent:claude/min773 (dictation pill, discard confirmation, cleanup preference and vocabulary checked against the changed source and the running app; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures)",
+    "language": "agent:claude/min773 (de translation of the MIN-773 passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -85,7 +85,7 @@
       "src": "/documentation/de/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Verbundene Anbieter, Fähigkeitszuordnung und persönliches Numo-Modell sind getrennte Einstellungen.",
       "caption": "Mehrere Anbieter bleiben verbunden. Die Zuordnung wählt je Fähigkeit; Numos Standard wird je Konto und Anbieter gespeichert.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -166,11 +166,11 @@ Die Abrechnung zeigt das verbleibende KI-Budget und die nächste Zurücksetzung,
 
 ## Text und Änderungen diktieren {#voice-dictation}
 
-Mit dem Mikrofon neben einem unterstützten Feld können Sie Issues, Ziele, Kommentare, Numo-Nachrichten, Feedback oder Routine-Anweisungen diktieren. Sie benötigen Schreibrechte an dieser Stelle, ein funktionierendes Mikrofon und einen Browser mit Aufnahmeunterstützung. Erlauben Sie den Mikrofonzugriff für die Website im Browser und im Betriebssystem. Verwenden Sie für eine entfernte Instanz HTTPS. In der Cloud muss KI-Budget verfügbar sein; selbst gehostete Instanzen benötigen zusätzlich funktionierende Anbieter für Transkription und Diktat. Persönliche Sprachschlüssel und Modellzuweisungen richten Sie [weiter oben](#ai-keys-and-models) ein.
+Mit dem Mikrofon neben einem unterstützten Feld können Sie Tickets, Ziele, Kommentare, Numo-Nachrichten, Feedback oder Routine-Anweisungen diktieren. Sie benötigen Schreibrechte an dieser Stelle, ein funktionierendes Mikrofon und einen Browser mit Aufnahmeunterstützung. Erlauben Sie den Mikrofonzugriff für die Website im Browser und im Betriebssystem. Verwenden Sie für eine entfernte Instanz HTTPS. In der Cloud muss KI-Budget verfügbar sein; selbst gehostete Instanzen benötigen zusätzlich funktionierende Anbieter für Transkription und Diktat. Persönliche Sprachschlüssel und Modellzuweisungen richten Sie [weiter oben](#ai-keys-and-models) ein.
 
-1. Öffnen Sie das gewünschte Formular oder Issue und wählen Sie dessen Mikrofon. In einem geöffneten Issue schaltet Command+Umschalt+D unter macOS beziehungsweise Strg+Umschalt+D auf anderen Systemen die Sprachbearbeitung um. Unten am Bildschirm öffnet sich eine Diktierleiste, auf dem Telefon als Panel, mit der Aufnahmezeit und einer Welle, die Ihrer Stimme folgt. Der Rest der Oberfläche wartet, bis die Aufnahme endet.
+1. Öffnen Sie das gewünschte Formular oder Ticket und wählen Sie dessen Mikrofon. In einem geöffneten Ticket schaltet Command+Umschalt+D unter macOS beziehungsweise Strg+Umschalt+D auf anderen Systemen die Sprachbearbeitung um. Unten am Bildschirm öffnet sich eine Diktierleiste, auf dem Telefon als Panel, mit der Aufnahmezeit und einer Welle, die Ihrer Stimme folgt. Der Rest der Oberfläche wartet, bis die Aufnahme endet.
 2. Sprechen Sie in der Oberflächensprache, die der Transkription als Hinweis dient. Benennen Sie Änderungen deutlich, etwa „Setze die Priorität auf hoch“. Wählen Sie **Transkribieren** (✓), drücken Sie Command+Eingabe unter macOS beziehungsweise Strg+Eingabe auf anderen Systemen (die Eingabetaste allein funktioniert ebenfalls) oder wiederholen Sie das Tastenkürzel und warten Sie dann auf Transkription und Numo-Verarbeitung. Um die Aufnahme zu verwerfen, wählen Sie **Aufnahme verwerfen** (✕) oder drücken Sie Esc, dann **Verwerfen**: Es wird nichts gesendet.
-3. Prüfen Sie das Ergebnis. Numo-Nachrichten, Kommentare und Routine-Anweisungen erhalten bearbeitbaren Text; lesen Sie ihn vor dem Senden oder Speichern. Erstellungsformulare erhalten Entwurfsfelder, die Sie noch bestätigen müssen. Die Sprachbearbeitung eines bestehenden Issues übernimmt Änderungen sofort: prüfen Sie danach die Felder und korrigieren Sie Fehler mit den üblichen Bedienelementen. Diktieren gewährt keine zusätzlichen Rechte.
+3. Prüfen Sie das Ergebnis. Numo-Nachrichten, Kommentare und Routine-Anweisungen erhalten bearbeitbaren Text; lesen Sie ihn vor dem Senden oder Speichern. Erstellungsformulare erhalten Entwurfsfelder, die Sie noch bestätigen müssen. Die Sprachbearbeitung eines bestehenden Tickets übernimmt Änderungen sofort: prüfen Sie danach die Felder und korrigieren Sie Fehler mit den üblichen Bedienelementen. Diktieren gewährt keine zusätzlichen Rechte.
 
 ### Verbrauch und Aufnahmegrenzen {#voice-limits}
 
@@ -182,4 +182,4 @@ Der Transkriptionsendpunkt für angemeldete Nutzer akzeptiert bis zu 10 MiB Audi
 
 Bei verweigertem Zugriff aktivieren Sie die Mikrofonberechtigung für die Website und für den Browser oder die Desktop-App im Betriebssystem. Wird kein Gerät gefunden, schließen Sie ein Mikrofon an oder wählen Sie es aus; ist es belegt, schließen Sie die Anwendung, die es verwendet. Bei fehlender Aufnahmeunterstützung verwenden Sie einen kompatiblen Browser oder tippen den Text.
 
-Bei Stille oder leerem Ergebnis prüfen Sie das Eingabegerät und machen eine kurze hörbare Aufnahme. Teilen Sie zu große Aufnahmen auf. Eine Meldung zum Anfragelimit nennt eine Wartezeit; warten Sie vor dem nächsten Versuch. Bei Budget- oder Anbieterfehlern prüfen Sie KI-Verbrauch, Sprachzuweisungen und Instanzkonfiguration. Schlägt die Überarbeitung fehl, wird aber erkannter Text zurückgegeben, prüfen und bearbeiten Sie diesen Text. Prüfen Sie vor der Wiederholung einer fehlgeschlagenen Issue-Änderung die aktuellen Felder, damit Sie die Änderung nicht doppelt ausführen.
+Bei Stille oder leerem Ergebnis prüfen Sie das Eingabegerät und machen eine kurze hörbare Aufnahme. Teilen Sie zu große Aufnahmen auf. Eine Meldung zum Anfragelimit nennt eine Wartezeit; warten Sie vor dem nächsten Versuch. Bei Budget- oder Anbieterfehlern prüfen Sie KI-Verbrauch, Sprachzuweisungen und Instanzkonfiguration. Schlägt die Überarbeitung fehl, wird aber erkannter Text zurückgegeben, prüfen und bearbeiten Sie diesen Text. Prüfen Sie vor der Wiederholung einer fehlgeschlagenen Ticketänderung die aktuellen Felder, damit Sie die Änderung nicht doppelt ausführen.

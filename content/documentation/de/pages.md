@@ -21,7 +21,7 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
+  "revision": 18,
   "sourceRevision": 17,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
@@ -74,9 +74,9 @@
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:/root/min764 (database archive sentence checked against lib/server/database-export.ts and lib/server/page-database-views.ts: saved views are not exported and are copied by duplication; rest of the article unchanged since the previous review; no figure changed)",
-    "language": "agent:/root/min764 (de changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 18,
+    "fact": "agent:/root/min764 (database archive sentence checked against lib/server/database-export.ts and lib/server/page-database-views.ts: saved views are not exported and are copied by duplication; rest of the article unchanged since the previous review; no figure changed); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures)",
+    "language": "agent:/root/min764 (de changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -112,7 +112,7 @@
       "src": "/documentation/de/page-create-menu.png",
       "alt": "Erstellungsmenü mit Neue Seite und Neue Datenbank.",
       "caption": "Wähle über die Seitenfunktionen des Projekts ein Dokument oder eine Datenbank.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -128,7 +128,7 @@
       "src": "/documentation/de/page-editor.png",
       "alt": "Demoseite mit Überschriften, Absätzen, Aufgaben mit Kontrollkästchen und einer Ticketreferenz.",
       "caption": "Überschriften, Aufgabenblöcke und die Referenz AUR-2 gliedern die Seite. Der Inhalt dient als Demobeispiel.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -144,7 +144,7 @@
       "src": "/documentation/de/page-comments.png",
       "alt": "Seitenaktivität mit einer Demoänderung und einem leeren Kommentarfeld.",
       "caption": "Lies die Seitenaktivität und verfasse einen Kommentar im Eingabefeld. In diesem Beispiel wurde keiner abgesendet.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -160,7 +160,7 @@
       "src": "/documentation/de/page-file-states.png",
       "alt": "Demoseite mit einem unvollständigen Upload und einer gespeicherten Datei von 67 Byte mit Downloadfunktion.",
       "caption": "Prüfe den tatsächlichen Dateizustand: Der zweite Anhang ist verfügbar, der erste unvollständige Upload nicht.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -176,7 +176,7 @@
       "src": "/documentation/de/page-history-preview.png",
       "alt": "Versionen-Tab mit aufgeklapptem früherem Zustand, Autor, Wiederherstellen und Hinweis auf 30 Tage Aufbewahrung.",
       "caption": "Prüfe einen gespeicherten Zustand in der Vorschau und vergleiche ihn vor dem Wiederherstellen mit der aktuellen Seite.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -192,7 +192,7 @@
       "src": "/documentation/de/page-publish.png",
       "alt": "Veröffentlichungsdialog mit ausgewähltem Privat und Alternativen für Passwort oder Link.",
       "caption": "Privat hält die Seite im Projekt. Prüfe die vorgesehene Zielgruppe vor einer Änderung der Freigabe.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -208,7 +208,7 @@
       "src": "/documentation/de/page-export.png",
       "alt": "Exportmenü des Dokuments mit Markdown (.md) und Drucken / PDF.",
       "caption": "Wähle Markdown zum Herunterladen oder Drucken / PDF für die Druckansicht.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -224,7 +224,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Umbenennen und Entfernen.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -259,31 +259,31 @@ Erstelle Unterseiten für zusammengehörige Dokumente und verschiebe oder ordne 
 
 ### Favoriten und Löschen {#page-tree}
 
-Markiere eine Seite als Favorit, damit sie oben im Seitenbaum des Projekts erscheint. Diese Favoriten werden im Projekt geteilt, anders als eine private Notiz im Aufgabenheft. Verknüpfe eine Seite mit einem Ticket, wenn das aktuelle Dokument den Aufgabenkontext liefert; der Ressourcentitel folgt einer Umbenennung der Seite.
+Markiere eine Seite als Favorit, damit sie oben im Seitenbaum des Projekts erscheint. Diese Favoriten werden im Projekt geteilt, anders als eine private Notiz im Aufgabennotizbuch. Verknüpfe eine Seite mit einem Ticket, wenn das aktuelle Dokument den Aufgabenkontext liefert; der Ressourcentitel folgt einer Umbenennung der Seite.
 
 Das Löschen verschiebt Seiten, für die eine Wiederherstellung vorgesehen ist, in den Papierkorb. In einem Seitenmenü fragt **In den Papierkorb verschieben** zuerst nach und nennt die Seite und wie viele Unterseiten mitgehen; sie lassen sich 30 Tage lang aus dem Papierkorb wiederherstellen. Prüfe den ausgewählten Zweig vor dem Löschen und verwende die Wiederherstellung statt einer Neuerstellung, wenn der Inhalt einer verlorenen Seite erhalten bleiben soll. Einträge mit gespeicherten Datenbankwerten lassen sich innerhalb ihrer Datenbank umordnen, aber nicht aus ihr heraus verschieben. Prüfe bei einem abgewiesenen Verschieben Hierarchie und Eintragstyp, statt es wiederholt zu erzwingen.
 
 
 ![Erstellungsmenü mit Neue Seite und Neue Datenbank.](/documentation/de/page-create-menu.png)
 
-## Eine Seite zum Problem hochstufen {#promote-page-to-issue}
+## Eine Seite zum Ticket hochstufen {#promote-page-to-issue}
 
-Wenn eine Seite anstehende Arbeit beschreibt, kann der Eigentümer oder ein Mitglied sie mit Numo in ein Problem umwandeln. Leser sehen diese Aktion nicht. Dafür benötigst du verfügbares KI-Kontingent oder einen kompatiblen persönlichen Schlüssel.
+Wenn eine Seite anstehende Arbeit beschreibt, kann der Eigentümer oder ein Mitglied sie mit Numo in ein Ticket umwandeln. Leser sehen diese Aktion nicht. Dafür benötigst du verfügbares KI-Kontingent oder einen kompatiblen persönlichen Schlüssel.
 
-1. Wähle **Zu Problem hochstufen** im Menü der Seite im Seitenbaum (`…` oder Rechtsklick auf die Zeile) oder im `…`-Menü der geöffneten Seite (**Seitenoptionen**). Dieselbe Aktion gibt es für einen Datenbankeintrag, der im Seitenpanel geöffnet ist, und im Griffmenü eines einzelnen Eintrags, wie in der [Datenbankanleitung](/de/dokumentation/databases#entry-actions) beschrieben.
+1. Wähle **Zu Ticket hochstufen** im Menü der Seite im Seitenbaum (`…` oder Rechtsklick auf die Zeile) oder im `…`-Menü der geöffneten Seite (**Seitenoptionen**). Dieselbe Aktion gibt es für einen Datenbankeintrag, der im Seitenpanel geöffnet ist, und im Griffmenü eines einzelnen Eintrags, wie in der [Datenbankanleitung](/de/dokumentation/databases#entry-actions) beschrieben.
 2. Hat die geöffnete Seite ungespeicherte Änderungen, speichert minddy sie zuerst. Schlägt das Speichern fehl, meldet minddy, dass die Seite nicht gespeichert werden konnte, und Numo öffnet sich nicht. Stufe die Seite erneut hoch, sobald sie gespeichert ist.
-3. Numo öffnet sich im Projekt der Seite mit der Seite als Kontext und erhält die Anfrage, ihren Titel, ihren Inhalt und bei einem Datenbankeintrag dessen Eigenschaften zu lesen. Ist die Seite unklar oder lässt eine Datenbank offen, was das Problem umfassen soll, stellt Numo zuerst Fragen. Beantworte sie im Gespräch.
-4. Numo erstellt ein einziges Problem und hängt die Seite daran an. Öffne das Problem und prüfe Kennung, Umfang, Eigenschaften und die angehängte Seite.
+3. Numo öffnet sich im Projekt der Seite mit der Seite als Kontext und erhält die Anfrage, ihren Titel, ihren Inhalt und bei einem Datenbankeintrag dessen Eigenschaften zu lesen. Ist die Seite unklar oder lässt eine Datenbank offen, was das Ticket umfassen soll, stellt Numo zuerst Fragen. Beantworte sie im Gespräch.
+4. Numo erstellt ein einziges Ticket und hängt die Seite daran an. Öffne das Ticket und prüfe Kennung, Umfang, Eigenschaften und die angehängte Seite.
 
-Anders als eine übernommene Aufgabe aus dem Aufgabenheft wird die Seite nicht entfernt: Sie bleibt mit Inhalt und Unterseiten an ihrem Platz im Baum. Wenn die Erstellung fehlschlägt oder das Ergebnis nach einem Netzwerkfehler unklar bleibt, suche nach dem Problem, bevor du die Seite erneut hochstufst.
+Anders als eine übernommene Aufgabe aus dem Aufgabennotizbuch wird die Seite nicht entfernt: Sie bleibt mit Inhalt und Unterseiten an ihrem Platz im Baum. Wenn die Erstellung fehlschlägt oder das Ergebnis nach einem Netzwerkfehler unklar bleibt, suche nach dem Ticket, bevor du die Seite erneut hochstufst.
 
 ## Eine Seite mit Blöcken und Erwähnungen schreiben {#page-editor}
 
 Öffne die Seite und bearbeite als Eigentümer oder Mitglied Titel oder Inhalt. Leser können Seiten öffnen und lesen, sie aber weder bearbeiten, importieren, duplizieren, zu Favoriten hinzufügen oder veröffentlichen noch eine Version wiederherstellen. Verwende das Slash-Befehlsmenü und die Formatierungsfunktionen für Überschriften, Text, Aufzählungs-, nummerierte und Aufgabenlisten, Zitate, Hinweisblöcke, Codeblöcke, Teiler, Umschalter (aufklappbare Abschnitte), Unterseiten, Bilder und Dateien. Ein Hinweisblock kann ein Emoji-Symbol und eine Palettenfarbe haben. Unterscheide damit hilfreiche Informationen, ohne eine Warnung allein durch Symbol oder Farbe auszudrücken.
 
-Verwende Erwähnungen, um passende Probleme, Ziele, Personen oder Seiten zu verknüpfen. Tippe `@` gefolgt von einer Kennung, Wörtern aus dem Titel oder einer kurzen Beschreibung; eine beschreibende Anfrage listet nach den Textübereinstimmungen auch [inhaltlich gefundene](/docs/navigation#search-by-meaning) Probleme unter **Inhaltlich verwandt** auf. Rückverweise helfen Lesern, Seiten zu finden, die auf die aktuelle Seite verweisen. Ein Link liefert Kontext, gewährt aber keinen Zugriff auf private Objekte eines anderen Projekts.
+Verwende Erwähnungen, um passende Tickets, Ziele, Personen oder Seiten zu verknüpfen. Tippe `@` gefolgt von einer Kennung, Wörtern aus dem Titel oder einer kurzen Beschreibung; eine beschreibende Anfrage listet nach den Textübereinstimmungen auch [inhaltlich gefundene](/docs/navigation#search-by-meaning) Tickets unter **Inhaltlich verwandt** auf. Rückverweise helfen Lesern, Seiten zu finden, die auf die aktuelle Seite verweisen. Ein Link liefert Kontext, gewährt aber keinen Zugriff auf private Objekte eines anderen Projekts.
 
-Ein Klick auf die Erwähnung einer Seite, einen Rückverweis, eine an ein Problem oder Ziel angehängte Seite oder einen Link auf eine Seite in einem Kommentar oder einer Antwort von Numo öffnet diese Seite in einem Seitenpanel über dem, was du gerade gelesen hast. Lies oder bearbeite sie dort, wähle **Vergrößern**, um die ganze Seite zu öffnen, oder schließe das Panel, um zurückzukehren. Eine Datenbank öffnet sich nicht im Panel, sondern als ganze Seite.
+Ein Klick auf die Erwähnung einer Seite, einen Rückverweis, eine an ein Ticket oder Ziel angehängte Seite oder einen Link auf eine Seite in einem Kommentar oder einer Antwort von Numo öffnet diese Seite in einem Seitenpanel über dem, was du gerade gelesen hast. Lies oder bearbeite sie dort, wähle **Vergrößern**, um die ganze Seite zu öffnen, oder schließe das Panel, um zurückzukehren. Eine Datenbank öffnet sich nicht im Panel, sondern als ganze Seite.
 
 
 ![Demoseite mit Überschriften, Absätzen, Aufgaben mit Kontrollkästchen und einer Ticketreferenz.](/documentation/de/page-editor.png)

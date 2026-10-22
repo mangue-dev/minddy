@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
+  "revision": 11,
   "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -45,10 +45,10 @@
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 11,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "navigation",
@@ -71,7 +71,7 @@
       "src": "/documentation/pt-BR/work-view-filters.png",
       "alt": "Filtros manuais de uma visualização e menu de ordenação.",
       "caption": "Filtre pelas propriedades dos tickets ou escolha uma ordem. O campo de IA é opcional para esses controles manuais.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -87,7 +87,7 @@
       "src": "/documentation/pt-BR/work-share-view.png",
       "alt": "Janela de compartilhamento de visualização com acesso privado selecionado.",
       "caption": "Acesso privado, protegido por senha e público são escolhas distintas. A visualização continua privada nesta captura.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -105,13 +105,13 @@
 }
 ---
 
-Uma visualização salva filtros e ordenação do trabalho ao qual você tem acesso, sem criar uma cópia dos problemas. Compartilhá-la é uma ação separada: visualizações globais entre projetos não podem ser compartilhadas. Para uma visualização elegível do projeto, confira o conteúdo visível ao visitante antes de distribuir o link.
+Uma visualização salva filtros e ordenação do trabalho ao qual você tem acesso, sem criar uma cópia dos tickets. Compartilhá-la é uma ação separada: visualizações globais entre projetos não podem ser compartilhadas. Para uma visualização elegível do projeto, confira o conteúdo visível ao visitante antes de distribuir o link.
 
 ## Salvar uma visualização do seu trabalho {#views-and-filters}
 
-Comece no quadro de um projeto ou em uma lista pessoal de problemas entre projetos. Use filtros, ordenação e controles de exibição para escolher o trabalho necessário. Confira o escopo antes de salvar: uma visualização pessoal e uma de projeto não representam o mesmo limite de acesso.
+Comece no quadro de um projeto ou em uma lista pessoal de tickets entre projetos. Use filtros, ordenação e controles de exibição para escolher o trabalho necessário. Confira o escopo antes de salvar: uma visualização pessoal e uma de projeto não representam o mesmo limite de acesso.
 
-Filtre por propriedades disponíveis, como estado, responsável, prioridade, categorias ou objetivo. Ordene o resultado para deixar clara a próxima ação. No kanban, os problemas continuam agrupados por estado; mudar uma visualização não altera estado nem atribuição. Sem um filtro de estado próprio, um quadro mostra apenas **Backlog**, **A fazer**, **Em andamento** e **Em revisão**. Selecione **Concluído** ou **Cancelada** no filtro **Status** para mostrar essas colunas; uma visualização mantém o filtro de estado salvo com ela.
+Filtre por propriedades disponíveis, como estado, responsável, prioridade, categorias ou objetivo. Ordene o resultado para deixar clara a próxima ação. No kanban, os tickets continuam agrupados por estado; mudar uma visualização não altera estado nem atribuição. Sem um filtro de estado próprio, um quadro mostra apenas **Backlog**, **A fazer**, **Em andamento** e **Em revisão**. Selecione **Concluído** ou **Cancelado** no filtro **Status** para mostrar essas colunas; uma visualização mantém o filtro de estado salvo com ela.
 
 Salve a visualização com um nome que descreva seu propósito, selecione-a novamente na barra de visualizações no topo do quadro (um menu em uma tela estreita) e verifique os filtros. Edite ou remova a visualização salva quando o propósito mudar. **Excluir visualização** pede confirmação, e um quadro sempre mantém pelo menos uma visualização própria. Compartilhá-la é uma operação de publicação separada com regras próprias de permissão e revogação.
 
@@ -119,17 +119,17 @@ Salve a visualização com um nome que descreva seu propósito, selecione-a nova
 
 ### Resolver resultados vazios ou inesperados {#view-recovery}
 
-Confira todos os filtros, o projeto ativo e sua participação quando problemas esperados não aparecerem. Limpe filtros restritivos antes de supor que dados foram excluídos. Após uma edição, um problema pode legitimamente sair de uma visualização filtrada. Pesquise seu identificador, ou selecione **Concluído** e **Cancelada** no filtro **Status** de um quadro de projeto sem outros filtros, para inspecionar os valores salvos.
+Confira todos os filtros, o projeto ativo e sua participação quando tickets esperados não aparecerem. Limpe filtros restritivos antes de supor que dados foram excluídos. Após uma edição, um ticket pode legitimamente sair de uma visualização filtrada. Pesquise seu identificador, ou selecione **Concluído** e **Cancelado** no filtro **Status** de um quadro de projeto sem outros filtros, para inspecionar os valores salvos.
 
-Uma visualização salva não é uma cópia de seus problemas. Excluir a visualização remove sua configuração, enquanto excluir problemas selecionados muda o trabalho subjacente do projeto.
+Uma visualização salva não é uma cópia de seus tickets. Excluir a visualização remove sua configuração, enquanto excluir tickets selecionados muda o trabalho subjacente do projeto.
 
 ## Compartilhar e revogar uma visualização em modo somente leitura {#share-a-view}
 
 Abra o menu de uma visualização elegível em um quadro do projeto e escolha a ação de compartilhamento. Você precisa ser o proprietário ou um Membro; os leitores mantêm suas visualizações pessoais, mas não podem compartilhar visualizações. Uma visualização pessoal dentro do projeto só pode ser compartilhada pelo próprio usuário. Visualizações globais entre projetos não podem ser compartilhadas. Confira filtros e conteúdo visível antes de publicar. Escolha um link público secreto ou proteção por senha, quando disponíveis; a senha exige pelo menos oito caracteres. Copie o link gerado somente depois que a alteração for salva com sucesso.
 
-Abra o link em outra sessão do navegador, sem sua conta. Confira o subconjunto de problemas, os campos e os conteúdos vinculados que um visitante pode ver. O link público concede acesso somente leitura à visualização, não participação nem permissão de edição no projeto.
+Abra o link em outra sessão do navegador, sem sua conta. Confira o subconjunto de tickets, os campos e os conteúdos vinculados que um visitante pode ver. O link público concede acesso somente leitura à visualização, não participação nem permissão de edição no projeto.
 
-Os cartões compartilhados expõem títulos, descrições e propriedades exibidas, incluindo nomes dos responsáveis, categorias, nomes dos objetivos, prazos, recorrência e eventuais links para plataformas Git remotas. A projeção pública exclui o conteúdo dos planos de implementação e os e-mails dos membros. As etiquetas do problema pai e das relações podem mostrar identificadores de problemas do projeto fora do filtro da visualização. Confira essas descrições, nomes e identificadores, além das colunas visíveis; ocultar uma propriedade do cartão não é uma ferramenta geral para censurar conteúdo sensível.
+Os cartões compartilhados expõem títulos, descrições e propriedades exibidas, incluindo nomes dos responsáveis, categorias, nomes dos objetivos, prazos, recorrência e eventuais links para plataformas Git remotas. A projeção pública exclui o conteúdo dos planos de implementação e os e-mails dos membros. As etiquetas do ticket pai e das relações podem mostrar identificadores de tickets do projeto fora do filtro da visualização. Confira essas descrições, nomes e identificadores, além das colunas visíveis; ocultar uma propriedade do cartão não é uma ferramenta geral para censurar conteúdo sensível.
 
 ![Janela de compartilhamento de visualização com acesso privado selecionado.](/documentation/pt-BR/work-share-view.png)
 
