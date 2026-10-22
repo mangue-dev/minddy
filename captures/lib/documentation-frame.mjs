@@ -30,6 +30,12 @@ export async function captureDocumentationControl(page, control, output, padding
   // A listbox can sit inside the popover surface that paints its background and border.
   const popover = control.locator('xpath=ancestor-or-self::*[@data-radix-popper-content-wrapper][1]');
   if (await popover.count()) control = popover;
+  // A dialog that still loads its data shows a spinner: wait for its real content.
+  const spinner = control.locator(".animate-spin");
+  if (await spinner.count()) {
+    await spinner.first().waitFor({ state: "detached", timeout: 20000 }).catch(() => {});
+    if (await spinner.count()) throw new Error("The documentation control is still loading.");
+  }
   await control.scrollIntoViewIfNeeded();
   const bounds = await control.boundingBox();
   if (!bounds || bounds.width < 100 || bounds.height < 40) throw new Error("The documentation control is not visible.");
