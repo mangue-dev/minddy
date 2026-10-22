@@ -3122,7 +3122,7 @@
     "wizardIconDesc": "Trascina un'immagine sull'anteprima o importa la favicon del tuo sito. Altrimenti il progetto mantiene il suo gradiente.",
     "wizardGitDesc": "minddy collega le sue pull request ai tuoi ticket, così puoi rivederle e unirle qui. Facoltativo: puoi collegarlo in seguito.",
     "wizardNoRepo": "nessun repository",
-    "wizardSmartAssignLabel": "Assegna intelligente",
+    "wizardSmartAssignLabel": "Smart Assign",
     "wizardSmartAssignDesc": "Assegna automaticamente qualsiasi ticket che supera il triage senza assegnatario.",
     "wizardAutoAssignLabel": "Assegnazione automatica",
     "wizardAutoAssignDesc": "Ti assegna i ticket che crei in questo progetto.",

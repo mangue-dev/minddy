@@ -199,6 +199,30 @@ Angle-bracket syntax such as `<word>` is a rich-text tag in ICU messages. Use
 plain notation such as `HMAC-SHA256(body)` for technical text unless a rich-text
 formatter is intended.
 
+## Interface copy and translations
+
+[docs/localization-and-copy.md](docs/localization-and-copy.md) is the contract
+for every visible string: how to write the English source, the per-locale
+register and glossary (issue term, statuses, product names), translation rules,
+and how the manual and its screenshots follow a label change. Read it before
+changing `messages/*.json`, `lib/command-palette/i18n.ts` or quoted labels in
+`content/documentation/`.
+
+- Review every translated string key by key against `messages/en.json`; never
+  ship unreviewed machine translation. Check meaning, grammar, register and the
+  glossary, and keep the ICU structure exactly.
+- Use one term per concept per locale (issue → ticket, Ticket, incidencia,
+  ticket, ticket) and never translate product names (minddy, Numo, Smart
+  Assign, Smart Fill). Forge objects keep their own names.
+- Address the user in the register the guide sets for each locale (formal
+  in French, informal in the other languages), in the UI and the manual alike.
+- When a label changes, update it in all six catalogs, then every article that
+  quotes it, its figure alt and caption, the diagram SVG fallback, and recapture
+  the screenshots that show it with the scripts listed in the guide.
+- Run `npx vitest run lib/i18n-contract.test.ts lib/i18n-glossary.test.ts`
+  after a catalog change, plus `lib/seo-surface.test.ts` when page metadata
+  changes.
+
 ## Public routes and sitemap dates
 
 `lib/public-routes.ts` defines public route metadata and explicit localized URLs.
