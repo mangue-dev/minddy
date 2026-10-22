@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 32,
-  "sourceRevision": 32,
+  "revision": 33,
+  "sourceRevision": 33,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -119,9 +119,9 @@
     ]
   },
   "review": {
-    "revision": 32,
-    "fact": "agent:/root/min777 (resources paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed)",
-    "language": "agent:/root/min777 (es sentence on the page side panel with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 33,
+    "fact": "agent:/root/min778 (resources paragraph checked against components/resources.tsx, lib/use-pages-query.ts, lib/use-attachment-uploads.ts and components/global-page-panel.tsx: the page picker creates a page, titled by the search when one is typed, attaches it and opens it in the side panel with Expand; rest of the article unchanged since the MIN-777 review; no figure changed)",
+    "language": "agent:/root/min778 (es sentences on creating a page from the page picker with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -167,7 +167,7 @@
       "src": "/documentation/es/new-issue.png",
       "alt": "Borrador sin enviar en el proyecto Aurora con título, descripción, propiedades que se pueden elegir manualmente y el botón Crear AUR-19.",
       "caption": "Describe el resultado esperado y elige las propiedades útiles antes de crear el ticket.",
-      "revision": 32,
+      "revision": 33,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -183,7 +183,7 @@
       "src": "/documentation/es/triage-incoming.png",
       "alt": "Incidencia entrante de demostración DOC-11 con informe, propiedades y controles de duplicado, Rechazar y Aceptar.",
       "caption": "Lee el informe recibido antes de aceptarlo, rechazarlo o enlazar un duplicado.",
-      "revision": 32,
+      "revision": 33,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -199,7 +199,7 @@
       "src": "/documentation/es/issue-statuses.png",
       "alt": "Los ocho estados del ticket en el selector, con el estado de backlog seleccionado.",
       "caption": "La marca indica el estado actual. Elige el que corresponda al estado real del trabajo.",
-      "revision": 32,
+      "revision": 33,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -215,7 +215,7 @@
       "src": "/documentation/es/work-resources.png",
       "alt": "Diálogo para añadir un enlace con una dirección de contacto de ejemplo.",
       "caption": "Revisa el destino antes de añadir el recurso. Este enlace de ejemplo no se ha enviado.",
-      "revision": 32,
+      "revision": 33,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -231,7 +231,7 @@
       "src": "/documentation/es/work-dependencies.png",
       "alt": "Búsqueda de una incidencia bloqueante por identificador.",
       "caption": "Elige el sentido de la relación antes de su destino. El selector se muestra sin enviar la relación.",
-      "revision": 32,
+      "revision": 33,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -247,7 +247,7 @@
       "src": "/documentation/es/work-sub-issues.png",
       "alt": "Campo para crear una subincidencia en una incidencia principal de demostración.",
       "caption": "El campo crea una hija de esta incidencia; cada hija conserva su estado y conversación.",
-      "revision": 32,
+      "revision": 33,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -263,7 +263,7 @@
       "src": "/documentation/es/work-implementation-plan.png",
       "alt": "Plan de demostración con dos tareas de trabajo completadas de seis.",
       "caption": "El plan guardado distingue pasos completados, activos y pendientes. Su progreso no demuestra que se ejecutara la tarea de código ficticia.",
-      "revision": 32,
+      "revision": 33,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -279,7 +279,7 @@
       "src": "/documentation/es/issue-date-recurrence.png",
       "alt": "Selector de fecha en modo recurrente con vista previa semanal los domingos y hora opcional.",
       "caption": "El modo recurrente muestra la frecuencia semanal. Confirma la primera fecha antes de crear el ticket.",
-      "revision": 32,
+      "revision": 33,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -295,7 +295,7 @@
       "src": "/documentation/es/import-issues-preview-workflow.png",
       "alt": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas.",
       "caption": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas. No se envió la importación; la planificación opcional con IA se bloqueó para la captura.",
-      "revision": 32,
+      "revision": 33,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -312,7 +312,7 @@
       "src": "/documentation/es/file-preview.png",
       "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.",
       "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Cambiar nombre y Eliminar.",
-      "revision": 32,
+      "revision": 33,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -432,7 +432,7 @@ Comprueba los filtros si una incidencia desaparece después de cerrarla. Ábrela
 
 Abre la cronología de discusión de la incidencia para añadir un comentario. Explica una decisión, pregunta o resultado de verificación para que otro miembro comprenda qué cambió. Usa menciones cuando necesites una persona o un objeto vinculado en el contexto; las notificaciones siguen dependiendo de las preferencias del destinatario y de la entrega en su dispositivo. Un lector solo puede comentar si el propietario le ha activado **Puede comentar**. Entonces puede responder, mencionar a personas, adjuntar archivos a sus propios comentarios, y editar o eliminar sus propios comentarios.
 
-Adjunta una página relevante del proyecto, un archivo o un enlace mediante los controles de recursos. Una página vinculada es un recurso actualizado: su título sigue los cambios de nombre y su contenido puede evolucionar. Un archivo es un adjunto almacenado, no una garantía de que una URL externa seguirá disponible.
+Adjunta una página relevante del proyecto, un archivo o un enlace mediante los controles de recursos. Una página vinculada es un recurso actualizado: su título sigue los cambios de nombre y su contenido puede evolucionar. Un archivo es un adjunto almacenado, no una garantía de que una URL externa seguirá disponible. Para redactar una página que aún no existe, elige **Página** y luego **Nueva página** al final de la lista; un título escrito antes en la búsqueda se convierte en su título. La página se crea en el proyecto, se adjunta a la incidencia y se abre en un panel lateral, donde **Ampliar** abre la página completa.
 
 Los recursos aparecen como tarjetas: la propia imagen o el icono del tipo de archivo, el nombre y el tamaño. Un enlace muestra la imagen de vista previa de su página cuando el sitio la ofrece; si no, su favicon. Haz clic o clic derecho en una tarjeta para abrir su menú: Vista previa, Abrir enlace o Abrir la página, y después Cambiar nombre, Descargar y Eliminar cuando correspondan. Vista previa abre un archivo compatible en toda la ventana. Las imágenes, los PDF, Markdown (`.md`), el texto sin formato (`.txt`, `.text`), los CSV y los formatos de audio o vídeo compatibles usan el mismo visor. Markdown se muestra con formato, el texto se mantiene literal y el CSV se abre como una tabla desplazable. Usa Cerrar o Escape para volver al ticket. El menú Acciones del archivo (`…`) ofrece Descargar y, si puedes modificar ese recurso, Cambiar nombre y Eliminar. Al hacer clic en la mención de un archivo en un texto se abre el mismo visor. Minddy pide confirmación antes de quitar un recurso, que entonces se desvincula de este contexto. Un recurso de página conserva el título de su página y no se puede renombrar. Los formatos no compatibles conservan su acción de descarga. **Abrir la página** la muestra en un panel lateral, donde **Ampliar** abre la página completa; una base de datos se abre directamente como página completa.
 

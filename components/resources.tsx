@@ -9,8 +9,9 @@ import Link from "@/components/app-link";
 import { isPlainNavigationClick } from "@/components/editor-node-link";
 import { useOptionalPagePanelActions } from "@/lib/page-panel-context";
 import { useLocale, useTranslations } from "next-intl";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
+import { CommandEmpty, CommandGroup, CommandItem, CommandSeparator } from "@/components/ui/command";
 import { SearchMenu } from "@/components/search-menu";
 import {
   DropdownMenu,
@@ -30,7 +31,7 @@ import {
 import { FileViewer } from "@/components/file-viewer";
 import type { ResourceKind } from "@/lib/types";
 import { normalizeWebUrl } from "@/lib/url-normalize";
-import { usePagesQuery } from "@/lib/use-pages-query";
+import { useCreatePage, usePagesQuery } from "@/lib/use-pages-query";
 import { flattenPageTree } from "@/lib/pages";
 import {
   landedResources,
@@ -144,7 +145,8 @@ export function AttachButton({
  * The « + » of a surface that takes BOTH halves of a resource (MIN-184):
  * a dropdown with *Attachment* — the same hidden file input as AttachButton —
  * and *Link*, which opens {@link AddLinkDialog}. With a project, *Page* opens
- * the searchable page picker under the same button.
+ * the searchable page picker under the same button, which can also create the
+ * page to cite (MIN-778).
  *
  * One button rather than two: the two gestures produce the same thing, and the
  * sidebar row has one slot for « add something here ».
@@ -180,6 +182,7 @@ export function AddResourceButton({
   const pagePendingRef = useRef(false);
   const [pageAnchor, setPageAnchor] = useState<{ x: number; y: number } | null>(null);
   const pages = !!onPage && !!projectId;
+  const createContextPage = useCreateContextPage();
 
   return (
     <>
@@ -249,10 +252,46 @@ export function AddResourceButton({
           onClose={() => setPageAnchor(null)}
           projectId={projectId as string}
           onSelect={onPage as (page: PickedPage) => void}
+          onCreate={(title) =>
+            createContextPage(projectId as string, title, onPage as (page: PickedPage) => void)
+          }
         />
       )}
     </>
   );
+}
+
+/**
+ * "New page" from the page picker (MIN-778): the page is created in the
+ * project, read at once in the page panel beside the ticket or objective, and
+ * cited through the surface's own `onPage` once the server holds it, since a
+ * saved resource row needs its page to exist.
+ *
+ * Not a draft (lib/pages-draft.ts): the page is cited, so leaving it empty
+ * must not destroy it under the resource. Outside the app shell, where there
+ * is no page panel, the page is only cited.
+ */
+function useCreateContextPage(): (
+  projectId: string,
+  title: string,
+  onPage: (page: PickedPage) => void,
+) => void {
+  const tPages = useTranslations("Pages");
+  const createPage = useCreatePage();
+  const pagePanel = useOptionalPagePanelActions();
+  return (projectId, title, onPage) => {
+    void (async () => {
+      try {
+        const page = await createPage(projectId, title ? { title } : {});
+        pagePanel?.openPage(projectId, page.id);
+        await page.settled;
+        onPage({ id: page.id, title: page.title, icon: page.icon });
+      } catch (err) {
+        pagePanel?.closePage();
+        toast.error(err instanceof Error ? err.message : tPages("createFailed"));
+      }
+    })();
+  };
 }
 
 /** What a page selector does: enough to write the resource and display it
@@ -275,40 +314,74 @@ export interface PickedPage {
  * request. The cache is only requested when the menu OPENS (the options mount
  * with it) — the sidebar of a ticket does not have to load the wiki to display
  * a button.
+ *
+ * Its last line creates a page instead (MIN-778), titled with the search text
+ * when there is one.
  */
 function PagePickerMenu({
   anchor,
   onClose,
   projectId,
   onSelect,
+  onCreate,
 }: {
   anchor: { x: number; y: number } | null;
   onClose: () => void;
   projectId: string;
   onSelect: (page: PickedPage) => void;
+  onCreate: (title: string) => void;
 }) {
   const t = useTranslations("Resources");
+  const [query, setQuery] = useState("");
+  const close = () => {
+    setQuery("");
+    onClose();
+  };
+  const title = query.trim();
   return (
     <SearchMenu
       open={anchor !== null}
       onOpenChange={(next) => {
-        if (!next) onClose();
+        if (!next) close();
       }}
       position={anchor}
       align="end"
       modal
       hideEmpty
       searchPlaceholder={t("pageSearchPlaceholder")}
+      searchValue={query}
+      onSearchValueChange={setQuery}
       contentClassName="w-72"
     >
       {anchor && (
-        <PageOptions
-          projectId={projectId}
-          onSelect={(page) => {
-            onClose();
-            onSelect(page);
-          }}
-        />
+        <>
+          <PageOptions
+            projectId={projectId}
+            onSelect={(page) => {
+              close();
+              onSelect(page);
+            }}
+          />
+          {/* forceMount on the group and the item: cmdk would hide both
+              exactly when the search matches no page, which is when this
+              line matters most. */}
+          <CommandSeparator alwaysRender className="my-1" />
+          <CommandGroup forceMount>
+            <CommandItem
+              forceMount
+              value="__new_page__"
+              onSelect={() => {
+                close();
+                onCreate(title);
+              }}
+            >
+              <HugeiconsIcon icon={Add01Icon} className="size-4 shrink-0 text-muted-foreground" />
+              <span className="truncate">
+                {title ? t("newPageNamed", { title }) : t("newPage")}
+              </span>
+            </CommandItem>
+          </CommandGroup>
+        </>
       )}
     </SearchMenu>
   );
@@ -344,7 +417,9 @@ function PageOptions({
 
   return (
     <CommandGroup>
-      <CommandEmpty>{t("noPages")}</CommandEmpty>
+      {/* Only an empty wiki says so: a search that matches nothing is
+          answered by the creation line below. */}
+      {rows.length === 0 && <CommandEmpty>{t("noPages")}</CommandEmpty>}
       {rows.map((page) => (
         <CommandItem
           key={page.id}
