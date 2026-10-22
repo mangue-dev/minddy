@@ -338,6 +338,8 @@
     "pageSearchPlaceholder": "Cerca una pagina...",
     "noPages": "Nessuna pagina in questo progetto.",
     "untitledPage": "Pagina senza titolo",
+    "newPage": "Nuova pagina",
+    "newPageNamed": "Nuova pagina «{title}»",
     "openPage": "Apri pagina",
     "pageUnavailable": "Questa pagina non esiste più",
     "sectionTitle": "Risorse",

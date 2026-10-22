@@ -26,18 +26,27 @@ vi.mock("@/components/ui/tooltip", () => ({
   useTooltipScope: () => ({ provided: false, insideTrigger: false }),
 }));
 vi.mock("@/components/search-menu", () => ({
-  SearchMenu: ({ open, position, searchPlaceholder, children }: { open: boolean; position: { x: number; y: number } | null; searchPlaceholder: string; children: ReactNode }) =>
-    open ? <div data-search-menu data-x={position?.x} data-y={position?.y}><input placeholder={searchPlaceholder} />{children}</div> : null,
+  SearchMenu: ({ open, position, searchPlaceholder, searchValue, onSearchValueChange, children }: { open: boolean; position: { x: number; y: number } | null; searchPlaceholder: string; searchValue?: string; onSearchValueChange?: (value: string) => void; children: ReactNode }) =>
+    open ? <div data-search-menu data-x={position?.x} data-y={position?.y}><input placeholder={searchPlaceholder} value={searchValue} onChange={(e) => onSearchValueChange?.(e.target.value)} />{children}</div> : null,
 }));
 vi.mock("@/components/ui/command", () => ({
   CommandGroup: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   CommandEmpty: () => null,
+  CommandSeparator: () => null,
   CommandItem: ({ children, onSelect }: { children: ReactNode; onSelect: () => void }) => <button type="button" onClick={onSelect}>{children}</button>,
 }));
-vi.mock("@/lib/use-pages-query", () => ({ usePagesQuery: () => ({ tree: [], loading: false }) }));
+const pages = vi.hoisted(() => ({ create: vi.fn() }));
+vi.mock("@/lib/use-pages-query", () => ({ usePagesQuery: () => ({ tree: [], loading: false }), useCreatePage: () => pages.create }));
 vi.mock("@/lib/pages", () => ({ flattenPageTree: () => [{ id: "spec", title: "Specification", icon: null }] }));
+const panel = vi.hoisted(() => ({ openPage: vi.fn(), closePage: vi.fn() }));
+vi.mock("@/lib/page-panel-context", () => ({ useOptionalPagePanelActions: () => panel }));
+const toastError = vi.hoisted(() => vi.fn());
+vi.mock("sonner", () => ({ toast: { error: toastError } }));
 
-const messages = { Resources: { add: "Add", addFile: "File", addLink: "Link", addPage: "Page", pageSearchPlaceholder: "Search a page…", noPages: "No pages", untitledPage: "Untitled" } };
+const messages = {
+  Resources: { add: "Add", addFile: "File", addLink: "Link", addPage: "Page", pageSearchPlaceholder: "Search a page…", noPages: "No pages", untitledPage: "Untitled", newPage: "New page", newPageNamed: "New page “{title}”" },
+  Pages: { createFailed: "Could not create the page." },
+};
 let root: Root;
 let host: HTMLDivElement;
 
@@ -53,6 +62,7 @@ afterEach(async () => {
   await act(() => root.unmount());
   host.remove();
   vi.unstubAllGlobals();
+  vi.clearAllMocks();
 });
 
 const button = (label: string) => [...host.querySelectorAll("button")].find((b) => b.textContent === label || b.getAttribute("aria-label") === label)!;
@@ -90,4 +100,75 @@ it("leaves the trigger's focus alone for the file and link items", async () => {
   menu.closeAutoFocus?.({ preventDefault });
   expect(preventDefault).not.toHaveBeenCalled();
   expect(host.querySelector("[data-search-menu]")).toBeNull();
+});
+
+/** A creation whose server answer the test settles by hand. */
+function pendingCreation(id: string, title: string) {
+  let settle!: () => void;
+  let fail!: (error: Error) => void;
+  const settled = new Promise((resolve, reject) => {
+    settle = () => resolve({ id });
+    fail = reject;
+  });
+  pages.create.mockResolvedValueOnce({ id, title, icon: null, settled });
+  return { settle, fail };
+}
+
+async function openPicker(onPage: (page: { id: string; title: string; icon: string | null }) => void) {
+  await act(() => root.render(
+    <NextIntlClientProvider locale="en" messages={messages}>
+      <AddResourceButton onFiles={vi.fn()} onLink={vi.fn()} onPage={onPage} projectId="project" />
+    </NextIntlClientProvider>,
+  ));
+  await act(() => button("Page").click());
+}
+
+function typeSearch(value: string) {
+  const input = host.querySelector<HTMLInputElement>("[data-search-menu] input")!;
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+  setter.call(input, value);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+it("creates a page titled by the search, opens it in the panel, then cites it once saved", async () => {
+  const onPage = vi.fn();
+  const creation = pendingCreation("fresh", "Launch notes");
+  await openPicker(onPage);
+
+  await act(() => typeSearch("  Launch notes "));
+  await act(() => button("New page “Launch notes”").click());
+
+  expect(pages.create).toHaveBeenCalledWith("project", { title: "Launch notes" });
+  expect(panel.openPage).toHaveBeenCalledWith("project", "fresh");
+  expect(host.querySelector("[data-search-menu]")).toBeNull();
+  // The resource row needs the page on the server: nothing is cited before.
+  expect(onPage).not.toHaveBeenCalled();
+
+  await act(async () => creation.settle());
+  expect(onPage).toHaveBeenCalledWith({ id: "fresh", title: "Launch notes", icon: null });
+});
+
+it("creates an untitled page when nothing is typed", async () => {
+  const onPage = vi.fn();
+  const creation = pendingCreation("blank", "");
+  await openPicker(onPage);
+
+  await act(() => button("New page").click());
+  await act(async () => creation.settle());
+
+  expect(pages.create).toHaveBeenCalledWith("project", {});
+  expect(onPage).toHaveBeenCalledWith({ id: "blank", title: "", icon: null });
+});
+
+it("closes the panel and cites nothing when the creation fails", async () => {
+  const onPage = vi.fn();
+  const creation = pendingCreation("lost", "");
+  await openPicker(onPage);
+
+  await act(() => button("New page").click());
+  await act(async () => creation.fail(new Error("Quota reached")));
+
+  expect(onPage).not.toHaveBeenCalled();
+  expect(panel.closePage).toHaveBeenCalled();
+  expect(toastError).toHaveBeenCalledWith("Quota reached");
 });

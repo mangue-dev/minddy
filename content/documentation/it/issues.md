@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 32,
-  "sourceRevision": 32,
+  "revision": 33,
+  "sourceRevision": 33,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -119,9 +119,9 @@
     ]
   },
   "review": {
-    "revision": 32,
-    "fact": "agent:/root/min777 (resources paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed)",
-    "language": "agent:/root/min777 (it sentence on the page side panel with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 33,
+    "fact": "agent:/root/min778 (resources paragraph checked against components/resources.tsx, lib/use-pages-query.ts, lib/use-attachment-uploads.ts and components/global-page-panel.tsx: the page picker creates a page, titled by the search when one is typed, attaches it and opens it in the side panel with Expand; rest of the article unchanged since the MIN-777 review; no figure changed)",
+    "language": "agent:/root/min778 (it sentences on creating a page from the page picker with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -167,7 +167,7 @@
       "src": "/documentation/it/new-issue.png",
       "alt": "Bozza non inviata nel progetto Aurora con titolo, descrizione, proprietà selezionabili manualmente e il pulsante Crea AUR-19.",
       "caption": "Descrivi il risultato atteso e scegli le proprietà utili prima di creare il ticket.",
-      "revision": 32,
+      "revision": 33,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -183,7 +183,7 @@
       "src": "/documentation/it/triage-incoming.png",
       "alt": "Ticket dimostrativo DOC-11 in arrivo con segnalazione, proprietà e comandi per duplicato, Rifiuta e Accetta.",
       "caption": "Leggi la segnalazione ricevuta prima di accettarla, rifiutarla o collegare un duplicato.",
-      "revision": 32,
+      "revision": 33,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -199,7 +199,7 @@
       "src": "/documentation/it/issue-statuses.png",
       "alt": "Gli otto stati del ticket nel selettore, con Backlog selezionato.",
       "caption": "La spunta indica lo stato attuale. Scegli quello che rispecchia lo stato effettivo del lavoro.",
-      "revision": 32,
+      "revision": 33,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -215,7 +215,7 @@
       "src": "/documentation/it/work-resources.png",
       "alt": "Finestra di aggiunta di un link con un indirizzo di contatto d’esempio.",
       "caption": "Controlla la destinazione prima di aggiungere la risorsa. Questo link d’esempio non è stato inviato.",
-      "revision": 32,
+      "revision": 33,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -231,7 +231,7 @@
       "src": "/documentation/it/work-dependencies.png",
       "alt": "Ricerca di un ticket bloccante tramite identificativo.",
       "caption": "Scegli la direzione della relazione prima della destinazione. Il selettore è mostrato senza inviare la relazione.",
-      "revision": 32,
+      "revision": 33,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -247,7 +247,7 @@
       "src": "/documentation/it/work-sub-issues.png",
       "alt": "Campo per creare un sotto-ticket in un ticket principale dimostrativo.",
       "caption": "Il campo crea un figlio di questo ticket; ogni figlio conserva stato e discussione propri.",
-      "revision": 32,
+      "revision": 33,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -263,7 +263,7 @@
       "src": "/documentation/it/work-implementation-plan.png",
       "alt": "Piano dimostrativo con due attività di lavoro completate su sei.",
       "caption": "Il piano salvato distingue passaggi completati, attivi e in attesa. L’avanzamento non dimostra l’esecuzione dell’attività di codice fittizia.",
-      "revision": 32,
+      "revision": 33,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -279,7 +279,7 @@
       "src": "/documentation/it/issue-date-recurrence.png",
       "alt": "Selettore di scadenza ricorrente con anteprima settimanale la domenica e orario facoltativo.",
       "caption": "La modalità ricorrente mostra la cadenza settimanale. Conferma la prima scadenza prima di creare il ticket.",
-      "revision": 32,
+      "revision": 33,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -295,7 +295,7 @@
       "src": "/documentation/it/import-issues-preview-workflow.png",
       "alt": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate.",
       "caption": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate. L’importazione non è stata inviata; la pianificazione IA facoltativa è stata bloccata per la cattura.",
-      "revision": 32,
+      "revision": 33,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -312,7 +312,7 @@
       "src": "/documentation/it/file-preview.png",
       "alt": "Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica, Rinomina e Rimuovi.",
       "caption": "Il visualizzatore condiviso colloca Chiudi sotto l’anteprima. Il menu Azioni del file offre Scarica e, con i permessi necessari, Rinomina e Rimuovi.",
-      "revision": 32,
+      "revision": 33,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -436,7 +436,7 @@ Controlla i filtri se un ticket scompare dopo la chiusura. Riaprilo tramite iden
 
 Apri la cronologia di discussione del ticket per aggiungere un commento. Spiega una decisione, una domanda o un risultato di verifica perché un altro membro possa capire cosa è cambiato. Usa le menzioni quando serve una persona o un oggetto collegato nel contesto; le notifiche dipendono comunque dalle preferenze del destinatario e dalla consegna sul suo dispositivo. Un lettore può commentare solo se il proprietario ha attivato **Può commentare** per lui. In quel caso può rispondere, menzionare persone, allegare file ai propri commenti e modificare o eliminare i propri commenti.
 
-Allega una pagina pertinente del progetto, un file o un collegamento attraverso i controlli delle risorse. Una pagina collegata è una risorsa aggiornata: il suo titolo segue le rinominazioni e il contenuto può evolvere. Un file è un allegato memorizzato, non una garanzia che un URL esterno resti disponibile.
+Allega una pagina pertinente del progetto, un file o un collegamento attraverso i controlli delle risorse. Una pagina collegata è una risorsa aggiornata: il suo titolo segue le rinominazioni e il contenuto può evolvere. Un file è un allegato memorizzato, non una garanzia che un URL esterno resti disponibile. Per scrivere una pagina che non esiste ancora, scegli **Pagina** e poi **Nuova pagina** in fondo all’elenco; un titolo digitato prima nella ricerca diventa il suo titolo. La pagina viene creata nel progetto, allegata al ticket e aperta in un pannello laterale, dove **Espansione** apre la pagina intera.
 
 Le risorse appaiono come schede: l’immagine stessa o l’icona del tipo di file, il nome e la dimensione. Un link mostra l’immagine di anteprima della sua pagina quando il sito ne fornisce una, altrimenti la sua favicon. Fai clic o clic destro su una scheda per aprirne il menu: Anteprima, Apri collegamento o Apri pagina, poi Rinomina, Scarica e Rimuovi quando si applicano. Anteprima apre un file supportato su tutta la finestra. Immagini, PDF, Markdown (`.md`), testo semplice (`.txt`, `.text`), CSV e formati audio o video supportati usano lo stesso visualizzatore. Il Markdown viene formattato, il testo resta letterale e il CSV si apre come tabella scorrevole. Usa Chiudi o Escape per tornare al ticket. Il menu Azioni del file (`…`) offre Scarica e, se puoi modificare quella risorsa, Rinomina e Rimuovi. Un clic sulla menzione di un file in un testo apre lo stesso visualizzatore. Minddy chiede una conferma prima di rimuovere una risorsa, che viene poi scollegata da questo contesto. Una risorsa pagina mantiene il titolo della sua pagina e non si può rinominare. I formati non supportati mantengono l’azione di download. **Apri pagina** la mostra in un pannello laterale, dove **Espandi** apre la pagina intera; un database si apre direttamente come pagina intera.
 
