@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 30,
-  "sourceRevision": 30,
+  "revision": 31,
+  "sourceRevision": 31,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-21",
   "compatibility": {
@@ -119,10 +119,10 @@
     ]
   },
   "review": {
-    "revision": 30,
-    "fact": "agent:/root/min750 (Smart Fill re-evaluation bullet and section checked against lib/server/smart-fill-reevaluation.ts, lib/server/smart-fill-ownership.ts, lib/server/update-issue.ts, lib/server/set-issue-categories.ts and components/settings/account-smart-fill-section.tsx; rest of the article unchanged since the MIN-753 review; no figure changed)",
-    "language": "agent:/root/min750 (en paragraphs with catalog UI labels; agent review, not human acceptance)",
-    "date": "2026-10-21"
+    "revision": 31,
+    "fact": "agent:/root/min775 (Smart-fill relations paragraph checked against lib/server/issue-relation-decision.ts and lib/server/issue-relation-inference.ts: stricter related bar and two-relation cap; rest of the article unchanged since the MIN-750 review; no figure changed)",
+    "language": "agent:/root/min775 (en sentences on the related-link bar and the two-relation cap; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "feedback",
@@ -167,7 +167,7 @@
       "src": "/documentation/en/new-issue.png",
       "alt": "Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-19 button.",
       "caption": "Describe the expected result, then choose the useful properties before creating the issue.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -183,7 +183,7 @@
       "src": "/documentation/en/triage-incoming.png",
       "alt": "Incoming demonstration issue DOC-11 with its report, properties and duplicate, Decline and Accept controls.",
       "caption": "Read the incoming report before accepting it, declining it or linking a duplicate.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -199,7 +199,7 @@
       "src": "/documentation/en/issue-statuses.png",
       "alt": "Eight issue statuses in the picker, with backlog currently selected.",
       "caption": "The check marks the current status. Choose the status that reflects the work’s actual state.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -215,7 +215,7 @@
       "src": "/documentation/en/work-resources.png",
       "alt": "Add-link dialog with an example contact URL.",
       "caption": "Review the destination before adding a resource. This example link has not been submitted.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -231,7 +231,7 @@
       "src": "/documentation/en/work-dependencies.png",
       "alt": "Search for a blocker by issue identifier.",
       "caption": "Choose the relation direction before selecting its endpoint. The picker is shown without submitting a relation.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -247,7 +247,7 @@
       "src": "/documentation/en/work-sub-issues.png",
       "alt": "Sub-issue creation field in a demonstration parent issue.",
       "caption": "The inline field creates a child under this parent; a child keeps its own status and discussion.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -263,7 +263,7 @@
       "src": "/documentation/en/work-implementation-plan.png",
       "alt": "Demonstration plan showing two of six work tasks complete.",
       "caption": "The saved demonstration plan separates completed, active and pending steps. Its progress does not prove the fictional code task was executed.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -279,7 +279,7 @@
       "src": "/documentation/en/issue-date-recurrence.png",
       "alt": "Due-date picker in recurring mode with a weekly Sunday preview and optional time.",
       "caption": "Recurring mode previews the weekly cadence. Confirm the first due date before creating the issue.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -295,7 +295,7 @@
       "src": "/documentation/en/import-issues-preview-workflow.png",
       "alt": "CSV preview with two localized demonstration rows and detected column mappings.",
       "caption": "CSV preview with two localized demonstration rows and detected column mappings. No import was submitted; optional AI planning was blocked for the capture.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -312,7 +312,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -475,7 +475,7 @@ If the relation picker cannot find an issue, check project access and the identi
 
 With **Link related issues** on, Smart-fill looks for related issues after an issue is created or its title or description changes. The work runs in the background after the save: creating or editing never waits for it, and links can appear a few seconds later. For a new issue, it follows the same choices as the other fields, so it does not run when you switched Smart-fill off for that issue. It does not run for issues imported from a linked repository, for recurring copies or for changes synced from the repository.
 
-Smart-fill compares the issue with at most five candidates from the same project, leaving out canceled, duplicate and deleted issues. One decision then classifies each candidate as related, blocks, blocked by or no relation. Similarity alone never creates a link, a dependency needs stronger evidence than a related link, and Smart-fill adds nothing when in doubt. A single pass adds at most three relations. It never touches a pair that already has a relation, never adds a blocking relation that would close a cycle, and discards its result if the issue's text changed during the decision. It never marks a duplicate and never changes a status.
+Smart-fill compares the issue with at most five candidates from the same project, leaving out canceled, duplicate and deleted issues. One decision then classifies each candidate as related, blocks, blocked by or no relation. Similarity alone never creates a link, a dependency needs stronger evidence than a related link, and Smart-fill adds nothing when in doubt. A related link needs an obvious connection, such as the same bug, a direct follow-up or a reversal: two issues that only share a feature or a topic stay unlinked. Most issues therefore receive no link. A single pass adds at most two relations. It never touches a pair that already has a relation, never adds a blocking relation that would close a cycle, and discards its result if the issue's text changed during the decision. It never marks a duplicate and never changes a status.
 
 Links added this way appear in the issue's relations like any other, and the timeline names Smart-fill as their author. Check the direction of a dependency as you would for your own. To remove a link, use the relations controls: Smart-fill does not add a removed link back for that pair. To stop new links, turn off **Link related issues** in [your preferences](#smart-fill-preferences). Issues created before this feature, imported issues and issues synced from a repository are indexed gradually in the background, but they never receive links automatically.
 

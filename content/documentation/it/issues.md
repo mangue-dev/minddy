@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 30,
-  "sourceRevision": 30,
+  "revision": 31,
+  "sourceRevision": 31,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-21",
   "compatibility": {
@@ -119,10 +119,10 @@
     ]
   },
   "review": {
-    "revision": 30,
-    "fact": "agent:/root/min750 (Smart Fill re-evaluation bullet and section checked against lib/server/smart-fill-reevaluation.ts, lib/server/smart-fill-ownership.ts, lib/server/update-issue.ts, lib/server/set-issue-categories.ts and components/settings/account-smart-fill-section.tsx; rest of the article unchanged since the MIN-753 review; no figure changed)",
-    "language": "agent:/root/min750 (it translation of the re-evaluation bullet and section with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-21"
+    "revision": 31,
+    "fact": "agent:/root/min775 (Smart-fill relations paragraph checked against lib/server/issue-relation-decision.ts and lib/server/issue-relation-inference.ts: stricter related bar and two-relation cap; rest of the article unchanged since the MIN-750 review; no figure changed)",
+    "language": "agent:/root/min775 (it sentences on the related-link bar and the two-relation cap; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "feedback",
@@ -167,7 +167,7 @@
       "src": "/documentation/it/new-issue.png",
       "alt": "Bozza non inviata nel progetto Aurora con titolo, descrizione, proprietà selezionabili manualmente e il pulsante Crea AUR-19.",
       "caption": "Descrivi il risultato atteso e scegli le proprietà utili prima di creare il ticket.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -183,7 +183,7 @@
       "src": "/documentation/it/triage-incoming.png",
       "alt": "Ticket dimostrativo DOC-11 in arrivo con segnalazione, proprietà e comandi per duplicato, Rifiuta e Accetta.",
       "caption": "Leggi la segnalazione ricevuta prima di accettarla, rifiutarla o collegare un duplicato.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -199,7 +199,7 @@
       "src": "/documentation/it/issue-statuses.png",
       "alt": "Gli otto stati del ticket nel selettore, con Backlog selezionato.",
       "caption": "La spunta indica lo stato attuale. Scegli quello che rispecchia lo stato effettivo del lavoro.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -215,7 +215,7 @@
       "src": "/documentation/it/work-resources.png",
       "alt": "Finestra di aggiunta di un link con un indirizzo di contatto d’esempio.",
       "caption": "Controlla la destinazione prima di aggiungere la risorsa. Questo link d’esempio non è stato inviato.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -231,7 +231,7 @@
       "src": "/documentation/it/work-dependencies.png",
       "alt": "Ricerca di un ticket bloccante tramite identificativo.",
       "caption": "Scegli la direzione della relazione prima della destinazione. Il selettore è mostrato senza inviare la relazione.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -247,7 +247,7 @@
       "src": "/documentation/it/work-sub-issues.png",
       "alt": "Campo per creare un sotto-ticket in un ticket principale dimostrativo.",
       "caption": "Il campo crea un figlio di questo ticket; ogni figlio conserva stato e discussione propri.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -263,7 +263,7 @@
       "src": "/documentation/it/work-implementation-plan.png",
       "alt": "Piano dimostrativo con due attività di lavoro completate su sei.",
       "caption": "Il piano salvato distingue passaggi completati, attivi e in attesa. L’avanzamento non dimostra l’esecuzione dell’attività di codice fittizia.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -279,7 +279,7 @@
       "src": "/documentation/it/issue-date-recurrence.png",
       "alt": "Selettore di scadenza ricorrente con anteprima settimanale la domenica e orario facoltativo.",
       "caption": "La modalità ricorrente mostra la cadenza settimanale. Conferma la prima scadenza prima di creare il ticket.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -295,7 +295,7 @@
       "src": "/documentation/it/import-issues-preview-workflow.png",
       "alt": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate.",
       "caption": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate. L’importazione non è stata inviata; la pianificazione IA facoltativa è stata bloccata per la cattura.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -312,7 +312,7 @@
       "src": "/documentation/it/file-preview.png",
       "alt": "Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica, Rinomina e Rimuovi.",
       "caption": "Il visualizzatore condiviso colloca Chiudi sotto l’anteprima. Il menu Azioni del file offre Scarica e, con i permessi necessari, Rinomina e Rimuovi.",
-      "revision": 30,
+      "revision": 31,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -472,7 +472,7 @@ Se il selettore di relazione non trova un ticket, controlla accesso al progetto 
 
 Con **Collega i ticket correlati** attivo, Riempimento intelligente cerca i ticket correlati dopo la creazione di un ticket o la modifica del suo titolo o della sua descrizione. Il lavoro avviene in background dopo il salvataggio: creazione e modifica non lo attendono mai, e i collegamenti possono comparire qualche secondo dopo. Per un nuovo ticket segue le stesse scelte degli altri campi, quindi non viene eseguito se hai disattivato Riempimento intelligente per quel ticket. Non viene eseguito per i ticket importati da un repository collegato, per le copie ricorrenti né per le modifiche sincronizzate dal repository.
 
-Riempimento intelligente confronta il ticket con al massimo cinque candidati dello stesso progetto, escludendo i ticket annullati, duplicati o eliminati. Una decisione classifica poi ogni candidato come correlato, bloccante, bloccato da o senza relazione. La sola somiglianza non crea mai un collegamento, una dipendenza richiede indizi più solidi di una semplice correlazione e, nel dubbio, Riempimento intelligente non aggiunge nulla. Un singolo passaggio aggiunge al massimo tre relazioni. Non tocca mai una coppia che ha già una relazione, non aggiunge mai un blocco che chiuderebbe un ciclo e scarta il risultato se il testo del ticket è cambiato durante la decisione. Non segna mai un duplicato e non cambia mai uno stato.
+Riempimento intelligente confronta il ticket con al massimo cinque candidati dello stesso progetto, escludendo i ticket annullati, duplicati o eliminati. Una decisione classifica poi ogni candidato come correlato, bloccante, bloccato da o senza relazione. La sola somiglianza non crea mai un collegamento, una dipendenza richiede indizi più solidi di una semplice correlazione e, nel dubbio, Riempimento intelligente non aggiunge nulla. Una correlazione richiede un legame evidente, come lo stesso bug, un seguito diretto o un annullamento: due ticket che condividono solo una funzionalità o un argomento restano scollegati. La maggior parte dei ticket non riceve quindi alcun collegamento. Un singolo passaggio aggiunge al massimo due relazioni. Non tocca mai una coppia che ha già una relazione, non aggiunge mai un blocco che chiuderebbe un ciclo e scarta il risultato se il testo del ticket è cambiato durante la decisione. Non segna mai un duplicato e non cambia mai uno stato.
 
 I collegamenti aggiunti in questo modo compaiono nelle relazioni del ticket come gli altri, e la cronologia indica Smart-fill come autore. Verifica la direzione di una dipendenza come faresti per le tue. Per rimuovere un collegamento usa i controlli delle relazioni: Riempimento intelligente non aggiunge di nuovo un collegamento rimosso per quella coppia. Per non ricevere nuovi collegamenti, disattiva **Collega i ticket correlati** nelle [tue preferenze](#smart-fill-preferences). I ticket creati prima di questa funzione, quelli importati e quelli sincronizzati da un repository vengono indicizzati gradualmente in background, ma non ricevono mai collegamenti automatici.
 

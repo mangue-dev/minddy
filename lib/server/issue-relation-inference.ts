@@ -67,16 +67,20 @@ import {
  * history at once is not something anyone asked for.
  */
 
-/** Below this cosine similarity, a vector neighbour is not even a candidate. */
-export const MIN_CANDIDATE_SIMILARITY = 0.35;
+/**
+ * Below this cosine similarity, a vector neighbour is not even a candidate.
+ * Issues of one project share their vocabulary, so a low floor fed the
+ * decision with mere neighbours of the same area (MIN-775).
+ */
+export const MIN_CANDIDATE_SIMILARITY = 0.45;
 /** Relations a single pass may apply. */
-export const MAX_APPLIED_RELATIONS = 3;
+export const MAX_APPLIED_RELATIONS = 2;
 /** Neighbours considered before dismissed, linked and closed ones are filtered out. */
 const NEIGHBOUR_POOL = 30;
 /** Recent issues the lexical fallback reads, at most. */
 const LEXICAL_POOL = 300;
 /** Below this overlap score, a lexical neighbour is not a candidate. */
-export const MIN_LEXICAL_SCORE = 0.2;
+export const MIN_LEXICAL_SCORE = 0.3;
 const MAX_EMBEDDED_CHARS = 6_000;
 const CLOSED_STATUSES = new Set(["canceled", "duplicate"]);
 
