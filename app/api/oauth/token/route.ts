@@ -13,7 +13,12 @@ import {
 import { pkceS256Challenge } from "@/lib/server/oauth/crypto";
 import { isValidResource } from "@/lib/server/oauth/authorize-validation";
 import { oauthIssuer } from "@/lib/server/oauth/issuer";
-import { OAUTH_CORS_HEADERS, NO_STORE_HEADERS, corsPreflight } from "@/lib/server/oauth/cors";
+import {
+  OAUTH_CORS_HEADERS,
+  NO_STORE_HEADERS,
+  corsPreflight,
+  methodNotAllowed,
+} from "@/lib/server/oauth/cors";
 import { getClientIp } from "@/lib/server/request-ip";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -222,3 +227,9 @@ async function handleRefreshToken(
 }
 
 export const OPTIONS = corsPreflight;
+export {
+  methodNotAllowed as GET,
+  methodNotAllowed as PUT,
+  methodNotAllowed as PATCH,
+  methodNotAllowed as DELETE,
+};
