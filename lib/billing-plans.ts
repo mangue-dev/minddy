@@ -31,14 +31,14 @@ export interface BillingPlan {
    * throw, in the picker, next to each model.
    *
    * This applies only to the Minddy quota. BYOK users pay for their own
-   * tokens, so the entire catalog is available. `PRICING_BASELINE_MODEL`
-   * is only the pricing baseline, not an account model selection.
+   * tokens, so the entire catalog is available. The pricing baseline (Numo's
+   * admin model, `PRICING_BASELINE_CONFIG_KEY`) is not an account model selection.
    *
    * These values ​​are HOOKED to the current default. Propped on
    * deepseek-v4-flash (~$0.21/Mtok), they give each plane a boundary
    * which is called: Go goes up to Claude Haiku 4.5 (×14), Pro up to Sonnet 5
-   * (×29) and GPT-5.2 (×38), Opus 5 (×71) remains BYOK. Changing
-   * `PRICING_BASELINE_MODEL` moves the WHOLE scale — a default twice as expensive divides
+   * (×29) and GPT-5.2 (×38), Opus 5 (×71) remains BYOK. Changing Numo's
+   * model in the admin dashboard moves the WHOLE scale — a default twice as expensive divides
    * all multipliers by two and opens the caps by that much. The day
    * where it happens, these three numbers are replayed against the new baseline.
    */
