@@ -17,8 +17,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
-  "sourceRevision": 17,
+  "revision": 18,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -56,9 +56,9 @@
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:/root/min764 (database views section checked against components/pages/database-view-strip.tsx, components/pages/page-database-view.tsx, lib/use-page-database-views.ts and lib/server/page-database-views.ts: named views shared by the project, each with its own sort, filter and hidden columns, managed and reordered by writers, adjusted locally by readers; insertion clears the active view's filter; rest of the article unchanged since the MIN-747 review; no figure changed)",
-    "language": "agent:/root/min764 (en changed passages on shared database views with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 18,
+    "fact": "agent:/root/min764 (database views section checked against components/pages/database-view-strip.tsx, components/pages/page-database-view.tsx, lib/use-page-database-views.ts and lib/server/page-database-views.ts: named views shared by the project, each with its own sort, filter and hidden columns, managed and reordered by writers, adjusted locally by readers; insertion clears the active view's filter; rest of the article unchanged since the MIN-747 review; no figure changed); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min764 (en changed passages on shared database views with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -83,7 +83,7 @@
       "src": "/documentation/en/database-setup-cards.png",
       "alt": "Component preview of the new-database cards for Numo setup and importing an existing database.",
       "caption": "New-database suggestions, shown with demonstration data. Choose Numo setup or import, or dismiss the cards to continue manually.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -100,7 +100,7 @@
       "src": "/documentation/en/database-property-types.png",
       "alt": "Database column type picker with a search field, then text, number, selections, dates, people and checkbox.",
       "caption": "Choose a column type that matches the values to store.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -117,7 +117,7 @@
       "src": "/documentation/en/database-entry.png",
       "alt": "Demonstration entry with a text description, duration 2.5, a checked checkbox and an empty selection.",
       "caption": "Open an entry to read its complete text and edit typed values.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -133,7 +133,7 @@
       "src": "/documentation/en/database-conversion-warning.png",
       "alt": "Conversion warning: changing Text to Number clears one incompatible cell, with Cancel and confirmation buttons.",
       "caption": "Review the real incompatible-cell count before confirming a type change. Cancel preserves the current values.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -149,7 +149,7 @@
       "src": "/documentation/en/database-import-review.png",
       "alt": "Import review for a local CSV: two entry pages and two property columns, with the Import database button.",
       "caption": "Review the parsed entries and column count before importing into the empty database.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -165,7 +165,7 @@
       "src": "/documentation/en/database-options.png",
       "alt": "Component preview of Edit options with localized status options, up and down buttons, trash buttons and the deletion explanation.",
       "caption": "Edit option names, colors and order together. The trash button removes an option from the draft; Save applies the changes. Shown with demonstration data.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -180,14 +180,14 @@
       "id": "database-date-time-preview",
       "kind": "screenshot",
       "src": "/documentation/en/database-date-time.png",
-      "alt": "Component preview of the date picker with October 12, 2026 selected, Add a time enabled and Time set to 14:30.",
+      "alt": "Component preview of the date picker with July 24, 2026 selected, Add a time enabled and Time set to 02:00 AM.",
       "caption": "Turn on Add a time to enter an hour. This component preview uses demonstration data and the device time zone.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
-      "capturedAt": "2026-10-12",
+      "capturedAt": "2026-10-22",
       "viewport": [
         324,
-        444
+        498
       ],
       "deviceScaleFactor": 2,
       "theme": "light",
@@ -243,7 +243,7 @@ Choose a day in Date. To include a time, turn on Add a time and fill Time. The v
 
 ![Component preview of Edit options with localized status options, up and down buttons, trash buttons and the deletion explanation.](/documentation/en/database-options.png)
 
-![Component preview of the date picker with October 12, 2026 selected, Add a time enabled and Time set to 14:30.](/documentation/en/database-date-time.png)
+![Component preview of the date picker with July 24, 2026 selected, Add a time enabled and Time set to 02:00 AM.](/documentation/en/database-date-time.png)
 
 ### Open, select and insert entries {#entry-actions}
 

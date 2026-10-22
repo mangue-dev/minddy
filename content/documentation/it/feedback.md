@@ -20,8 +20,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
-  "sourceRevision": 14,
+  "revision": 17,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -67,9 +67,9 @@
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label correction: quoted labels aligned on the corrected it catalog; no behavior change, no new captures)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-762 label edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 17,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label correction: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of publish-a-feedback-board-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-762 label edit; self-reviewed; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -96,12 +96,12 @@
       "src": "/documentation/it/publish-a-feedback-board-workflow.png",
       "alt": "Bacheca pubblica dei feedback attiva, con identità dei visitatori tramite codice email, l’azione Abilita SSO e URL nascosto.",
       "caption": "Il proprietario attiva la bacheca e sceglie l’identità dei visitatori. Questa bacheca dimostrativa usa la verifica email; il suo URL è nascosto.",
-      "revision": 15,
+      "revision": 17,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         816,
-        566
+        596
       ],
       "theme": "light",
       "padding": 24,
@@ -113,15 +113,16 @@
       "src": "/documentation/it/submit-and-follow-feedback-workflow.png",
       "alt": "Modulo di feedback del visitatore con titolo, descrizione e visibilità pubblica attivata.",
       "caption": "Un visitatore identificato invia un’esigenza e ne sceglie la visibilità. L’esempio è stato realmente inviato con la revisione automatica disattivata.",
-      "revision": 15,
+      "revision": 17,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         624,
         394
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "feedback-objective-selection",
@@ -129,7 +130,7 @@
       "src": "/documentation/it/feedback-objective-selection.png",
       "alt": "Anteprima dei componenti di selezione dell’obiettivo per un feedback e un’integrazione, entrambi impostati su Docs.",
       "caption": "Selettori dell’obiettivo con dati dimostrativi. I nuovi feedback ereditano l’impostazione dell’integrazione.",
-      "revision": 15,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -146,15 +147,16 @@
       "src": "/documentation/it/feedback-pages-and-views-workflow.png",
       "alt": "Guida ai feedback pubblicata e selezionata nella navigazione della bacheca, leggibile senza accesso.",
       "caption": "Pubblica una pagina, attiva le schede delle pagine e selezionala per la bacheca. Questa pagina dimostrativa è stata aperta anonimamente; il suo URL opaco mantiene `noindex`.",
-      "revision": 15,
+      "revision": 17,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-22",
       "viewport": [
-        1148,
-        388
+        1328,
+        668
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -206,7 +208,7 @@ I filtri dell’elenco combinano stato, obiettivo, categorie, autore, origine e 
 
 Il proprietario del progetto e i Membri aprono Feedback nel progetto e scelgono una richiesta dalla coda di revisione o dall’elenco. I lettori possono leggere le richieste ma non moderarle. Leggi l’invio originale, la scelta pubblica o privata, lo stato di revisione e gli eventuali suggerimenti di moderazione o duplicati. Puoi chiarire titolo e corpo canonici conservando i testi originali inviati. Assegna categorie e uno stato pubblico adatto; lo spam non appare mai sulla bacheca pubblica. Una richiesta privata resta distinta da una richiesta pubblica soltanto in attesa.
 
-La traduzione facoltativa compare accanto al testo originale per il team; la bacheca pubblica conserva il feedback così com’è stato scritto. Verifica le classificazioni IA prima di farvi affidamento. Se un feedback è collegato a una issue, il suo stato dipende da quella issue e non può essere modificato autonomamente.
+La traduzione facoltativa compare accanto al testo originale per il team; la bacheca pubblica conserva il feedback così com’è stato scritto. Verifica le classificazioni IA prima di farvi affidamento. Se un feedback è collegato a un ticket, il suo stato dipende da quel ticket e non può essere modificato autonomamente.
 
 ### Note e risposte pubbliche {#responses}
 
@@ -234,11 +236,11 @@ Come proprietario o Membro, apri la richiesta e scegli di unirla a una richiesta
 
 ### Creare o collegare lavoro {#work}
 
-Trasforma la richiesta in una nuova issue se il lavoro non è già tracciato. Controlla i campi di creazione prima di confermare; senza campi forniti, la promozione crea per impostazione predefinita lavoro nel `backlog`. Se esiste già una issue, usa invece il collegamento. **Collegamento a un ticket esistente** cerca tra le issue del progetto, escluse quelle annullate o duplicate. Descrivendo l’esigenza compaiono anche issue trovate [per significato](/docs/navigation#search-by-meaning) sotto **Correlati per significato**, dopo le corrispondenze testuali: è utile quando la richiesta non riprende le parole della issue. Un feedback già collegato non può essere promosso di nuovo. Rimuovere il collegamento chiede prima conferma; conserva l’ultimo stato pubblico e interrompe la relazione con la issue.
+Trasforma la richiesta in un nuovo ticket se il lavoro non è già tracciato. Controlla i campi di creazione prima di confermare; senza campi forniti, la promozione crea per impostazione predefinita lavoro nel `backlog`. Se esiste già un ticket, usa invece il collegamento. **Collega a un ticket esistente** cerca tra i ticket del progetto, esclusi quelli annullati o duplicati. Descrivendo l’esigenza compaiono anche ticket trovati [per significato](/docs/navigation#search-by-meaning) sotto **Correlati per significato**, dopo le corrispondenze testuali: è utile quando la richiesta non riprende le parole del ticket. Un feedback già collegato non può essere promosso di nuovo. Rimuovere il collegamento chiede prima conferma; conserva l’ultimo stato pubblico e interrompe la relazione con il ticket.
 
-Lo stato collegato segue quello della issue: `triage`/`backlog`/`duplicate` → `open`; `todo` → `planned`; `in_progress`/`in_review` → `in_progress`; `done` → `shipped`; `canceled` → `declined`. Spostare il lavoro nel `backlog` riapre anche lo stato del feedback. Dopo una modifica, controlla la issue collegata e la richiesta senza sessione.
+Lo stato collegato segue quello del ticket: `triage`/`backlog`/`duplicate` → `open`; `todo` → `planned`; `in_progress`/`in_review` → `in_progress`; `done` → `shipped`; `canceled` → `declined`. Spostare il lavoro nel `backlog` riapre anche lo stato del feedback. Dopo una modifica, controlla il ticket collegato e la richiesta senza sessione.
 
-Le notifiche al team per nuovo feedback dipendono dalla fonte e dal passaggio di revisione. Non promettere a chi vota un’email automatica per ogni unione o aggiornamento della issue; può consultare stato pubblico e risposte in Il mio feedback. Il collegamento mostra l’avanzamento senza esporre la issue privata.
+Le notifiche al team per nuovo feedback dipendono dalla fonte e dal passaggio di revisione. Non promettere a chi vota un’email automatica per ogni unione o aggiornamento del ticket; può consultare stato pubblico e risposte in Il mio feedback. Il collegamento mostra l’avanzamento senza esporre il ticket privato.
 
 
 ## Aggiungere pagine e viste pubbliche alla bacheca {#feedback-pages-and-views}

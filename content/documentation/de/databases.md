@@ -17,8 +17,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 18,
-  "sourceRevision": 17,
+  "revision": 19,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -56,9 +56,9 @@
     ]
   },
   "review": {
-    "revision": 18,
-    "fact": "agent:/root/min764 (database views section checked against components/pages/database-view-strip.tsx, components/pages/page-database-view.tsx, lib/use-page-database-views.ts and lib/server/page-database-views.ts: named views shared by the project, each with its own sort, filter and hidden columns, managed and reordered by writers, adjusted locally by readers; insertion clears the active view's filter; rest of the article unchanged since the MIN-747 review; no figure changed); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures)",
-    "language": "agent:/root/min764 (de changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 19,
+    "fact": "agent:/root/min764 (database views section checked against components/pages/database-view-strip.tsx, components/pages/page-database-view.tsx, lib/use-page-database-views.ts and lib/server/page-database-views.ts: named views shared by the project, each with its own sort, filter and hidden columns, managed and reordered by writers, adjusted locally by readers; insertion clears the active view's filter; rest of the article unchanged since the MIN-747 review; no figure changed); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min764 (de changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -82,8 +82,8 @@
       "kind": "screenshot",
       "src": "/documentation/de/database-setup-cards.png",
       "alt": "Komponentenvorschau der Karten zur Einrichtung einer neuen Datenbank mit Numo oder zum Import einer vorhandenen Datenbank.",
-      "caption": "Vorschläge für eine neue Datenbank mit Demonstrationsdaten. Wählen Sie Numo oder Import, oder schließen Sie die Karten, um manuell fortzufahren.",
-      "revision": 18,
+      "caption": "Vorschläge für eine neue Datenbank mit Demonstrationsdaten. Wähle Numo oder Import, oder schließe die Karten, um manuell fortzufahren.",
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -100,7 +100,7 @@
       "src": "/documentation/de/database-property-types.png",
       "alt": "Auswahl des Spaltentyps mit Suchfeld sowie Text, Zahl, Auswahl, Datum, Personen und Kontrollkästchen.",
       "caption": "Wähle einen Typ, der zu den gespeicherten Werten passt.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -117,7 +117,7 @@
       "src": "/documentation/de/database-entry.png",
       "alt": "Demoeintrag mit Beschreibung, Dauer 2.5, aktiviertem Kontrollkästchen und leerer Auswahl.",
       "caption": "Öffne einen Eintrag, um den vollständigen Text zu lesen und typisierte Werte zu bearbeiten.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -133,7 +133,7 @@
       "src": "/documentation/de/database-conversion-warning.png",
       "alt": "Umwandlungswarnung: Der Wechsel von Text zu Zahl leert eine inkompatible Zelle; Abbrechen und Bestätigen sind verfügbar.",
       "caption": "Prüfe die tatsächliche Zahl inkompatibler Zellen vor der Bestätigung. Abbrechen erhält die bisherigen Werte.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -149,7 +149,7 @@
       "src": "/documentation/de/database-import-review.png",
       "alt": "Importprüfung einer lokalen CSV-Datei: zwei Eintragsseiten und zwei Eigenschaftsspalten mit der Importschaltfläche.",
       "caption": "Prüfe die eingelesenen Einträge und die Spaltenzahl vor dem Import in die leere Datenbank.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -165,7 +165,7 @@
       "src": "/documentation/de/database-options.png",
       "alt": "Komponentenvorschau von Optionen bearbeiten mit deutschen Statusoptionen, Pfeilen nach oben und unten, Papierkörben und einer Erklärung zum Löschen.",
       "caption": "Bearbeite Namen, Farben und Reihenfolge der Optionen gemeinsam. Der Papierkorb entfernt eine Option aus dem Entwurf; Speichern übernimmt die Änderungen. Mit Demonstrationsdaten.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -180,14 +180,14 @@
       "id": "database-date-time-preview",
       "kind": "screenshot",
       "src": "/documentation/de/database-date-time.png",
-      "alt": "Komponentenvorschau der Datumsauswahl mit dem ausgewählten 12. Oktober 2026, aktivierter Uhrzeit und Zeit auf 14:30.",
+      "alt": "Komponentenvorschau der Datumsauswahl mit dem ausgewählten 24. Juli 2026, aktivierter Uhrzeit und Zeit auf 02:00 AM.",
       "caption": "Aktiviere „Uhrzeit hinzufügen“, um eine Uhrzeit einzugeben. Diese Komponentenvorschau verwendet Demonstrationsdaten und die Zeitzone des Geräts.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
-      "capturedAt": "2026-10-12",
+      "capturedAt": "2026-10-22",
       "viewport": [
         324,
-        444
+        498
       ],
       "deviceScaleFactor": 2,
       "theme": "light",
@@ -229,7 +229,7 @@ Erweiterte Formeln sind nicht verfügbar. Wähle eine Texteigenschaft oder ein v
 
 ## Datenbankwerte und Eintragsseiten bearbeiten {#database-cells-and-entries}
 
-Fügen Sie im Optionseditor unter den vorhandenen Zeilen eine Option hinzu, auch bei leerer Liste. Geben Sie jeder Option einen eindeutigen, nicht leeren Namen und speichern Sie. Das funktioniert für Auswahl und Mehrfachauswahl.
+Füge im Optionseditor unter den vorhandenen Zeilen eine Option hinzu, auch bei leerer Liste. Gib jeder Option einen eindeutigen, nicht leeren Namen und speichere. Das funktioniert für Auswahl und Mehrfachauswahl.
 
 Klicke eine Tabellenzelle oder die Eigenschaft über dem Inhalt einer Eintragsseite an. Enter speichert, Escape bricht ab und Shift+Enter fügt eine Textzeile ein. Das Verlassen des Editors speichert. Eine ungültige Zahl hält den Editor bis zur Korrektur offen; bei einem Speicherfehler wird der Wert zurückgesetzt und ein Fehler angezeigt.
 
@@ -243,11 +243,11 @@ Wähle unter Datum einen Tag. Aktiviere „Uhrzeit hinzufügen“ und fülle Zei
 
 ![Komponentenvorschau von Optionen bearbeiten mit deutschen Statusoptionen, Pfeilen nach oben und unten, Papierkörben und einer Erklärung zum Löschen.](/documentation/de/database-options.png)
 
-![Komponentenvorschau der Datumsauswahl mit dem ausgewählten 12. Oktober 2026, aktivierter Uhrzeit und Zeit auf 14:30.](/documentation/de/database-date-time.png)
+![Komponentenvorschau der Datumsauswahl mit dem ausgewählten 24. Juli 2026, aktivierter Uhrzeit und Zeit auf 02:00 AM.](/documentation/de/database-date-time.png)
 
 ### Einträge öffnen, auswählen und einfügen {#entry-actions}
 
-Ein leerer Eintrag zeigt im Inhalt einen Platzhalter für den Schreibbereich. Beim Duplizieren über die Zeilenaktionen oder eine Mehrfachauswahl müssen Sie die Erstellung der Kopien bestätigen. Auch das Verschieben in den Papierkorb erfordert eine Bestätigung und bleibt wiederherstellbar; es löscht die Einträge nicht endgültig.
+Ein leerer Eintrag zeigt im Inhalt einen Platzhalter für den Schreibbereich. Beim Duplizieren über die Zeilenaktionen oder eine Mehrfachauswahl musst du die Erstellung der Kopien bestätigen. Auch das Verschieben in den Papierkorb erfordert eine Bestätigung und bleibt wiederherstellbar; es löscht die Einträge nicht endgültig.
 
 Öffne einen Eintrag, um seine vollständige Seite in einem schwebenden Panel zu bearbeiten. „Vergrößern“ öffnet ihn als vollständige Seite, nachdem ausstehendes Speichern des Dokuments beendet ist. Schlägt Speichern fehl, bleibt das Panel zur Fehlerbehebung offen. Ein leerer Eintrag bleibt bis zum Löschen in der Datenbank.
 
@@ -264,7 +264,7 @@ Eine Datenbank zeigt ihre Einträge in Ansichten, die über der Tabelle aufgelis
 
 ## Das Datenbankschema sicher ändern {#change-a-database-schema}
 
-Das Verschieben einer Spalte beginnt nach einer Zeigerbewegung und bleibt horizontal. Der Greifcursor erscheint nur während des Ziehens; ein normaler Klick öffnet weiterhin die Spaltenaktionen. Wenn eine Spaltenüberschrift fokussiert ist, öffnet Eingabe oder Leertaste ihre Aktionen. Starten Sie das Umordnen mit F8, verwenden Sie Links oder Rechts und bestätigen Sie mit Eingabe oder brechen Sie mit Escape ab.
+Das Verschieben einer Spalte beginnt nach einer Zeigerbewegung und bleibt horizontal. Der Greifcursor erscheint nur während des Ziehens; ein normaler Klick öffnet weiterhin die Spaltenaktionen. Wenn eine Spaltenüberschrift fokussiert ist, öffnet Eingabe oder Leertaste ihre Aktionen. Starte das Umordnen mit F8, verwende Links oder Rechts und bestätige mit Eingabe oder brich mit Escape ab.
 
 Unter Spalten kannst du Eigenschaften mit dem Augensymbol ein- oder ausblenden. Klicke auf eine Spaltenüberschrift, um sie umzubenennen, oder ziehe die Überschriften, um ihre Reihenfolge zu ändern. Die Namensspalte der Einträge bleibt an erster Stelle. Optionen für Auswahl und Mehrfachauswahl lassen sich im Zellenmenü oder unter Spalten bearbeiten. Namen und Farben werden zusammen gespeichert.
 

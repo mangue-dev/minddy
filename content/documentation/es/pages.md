@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
-  "sourceRevision": 17,
+  "revision": 19,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -74,9 +74,9 @@
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:/root/min764 (database archive sentence checked against lib/server/database-export.ts and lib/server/page-database-views.ts: saved views are not exported and are copied by duplication; rest of the article unchanged since the previous review; no figure changed)",
-    "language": "agent:/root/min764 (es changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 19,
+    "fact": "agent:/root/min764 (database archive sentence checked against lib/server/database-export.ts and lib/server/page-database-views.ts: saved views are not exported and are copied by duplication; rest of the article unchanged since the previous review; no figure changed); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of page-editor-steps, page-comments-and-collaboration-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min764 (es changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -112,7 +112,7 @@
       "src": "/documentation/es/page-create-menu.png",
       "alt": "Menú de creación con Nueva página y Nueva base de datos.",
       "caption": "Utiliza los controles de páginas del proyecto para elegir un documento o una base de datos.",
-      "revision": 17,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -128,31 +128,33 @@
       "src": "/documentation/es/page-editor.png",
       "alt": "Página de demostración con títulos, párrafos, casillas de tareas y una mención a un ticket.",
       "caption": "Los títulos, las tareas y la mención AUR-2 estructuran la página. El contenido es un ejemplo de demostración.",
-      "revision": 17,
+      "revision": 19,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         1154,
         1046
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "page-comments-and-collaboration-steps",
       "kind": "screenshot",
       "src": "/documentation/es/page-comments.png",
-      "alt": "Actividad de la página con una edición de demostración y el campo de comentario vacío.",
+      "alt": "Actividad de la página todavía sin eventos y el campo de comentario vacío.",
       "caption": "Consulta la actividad y escribe un comentario en el campo. En este ejemplo no se ha enviado ninguno.",
-      "revision": 17,
+      "revision": 19,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         608,
         616
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "page-files-steps",
@@ -160,7 +162,7 @@
       "src": "/documentation/es/page-file-states.png",
       "alt": "Página de demostración con una carga incompleta y un archivo guardado de 67 bytes que ofrece Descargar.",
       "caption": "Comprueba el estado real del archivo: el segundo adjunto está disponible y la primera carga incompleta no.",
-      "revision": 17,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -176,7 +178,7 @@
       "src": "/documentation/es/page-history-preview.png",
       "alt": "Pestaña Versiones con un estado anterior desplegado, su autor, Restaurar y el aviso de conservación durante 30 días.",
       "caption": "Previsualiza un estado guardado y compáralo con la página actual antes de restaurarlo.",
-      "revision": 17,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -192,7 +194,7 @@
       "src": "/documentation/es/page-publish.png",
       "alt": "Diálogo de publicación con Privado seleccionado y opciones de contraseña o enlace.",
       "caption": "Privado mantiene la página dentro del proyecto. Revisa quién debe verla antes de cambiar la publicación.",
-      "revision": 17,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -208,7 +210,7 @@
       "src": "/documentation/es/page-export.png",
       "alt": "Menú de exportación del documento con Markdown (.md) e Imprimir / PDF.",
       "caption": "Elige Markdown para descargar el documento o Imprimir / PDF para abrir la vista de impresión.",
-      "revision": 17,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -224,7 +226,7 @@
       "src": "/documentation/es/file-preview.png",
       "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.",
       "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Cambiar nombre y Eliminar.",
-      "revision": 17,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -281,7 +283,7 @@ A diferencia de una tarea del cuaderno llevada al proyecto, la página no se eli
 
 Abre la página y edita su título o cuerpo como propietario o como Miembro. Los lectores pueden abrir y leer las páginas, pero no pueden editarlas, importarlas, duplicarlas, añadirlas a favoritos ni publicarlas, ni restaurar una versión. Usa el menú de comandos de barra y los controles de formato para insertar encabezados, texto, listas con viñetas, numeradas y de tareas, citas, avisos, bloques de código, divisores, desplegables (secciones plegables), subpáginas, imágenes y archivos. Un aviso puede tener un icono emoji y un color de la paleta; elígelos para distinguir información útil, no como única forma de comunicar una advertencia.
 
-Utiliza menciones para enlazar incidencias, objetivos, personas o páginas relevantes. Escribe `@` seguido de un identificador, palabras del título o una breve descripción; una búsqueda descriptiva también muestra incidencias encontradas [por el sentido](/docs/navigation#search-by-meaning) bajo **Relacionadas por el sentido**, después de las coincidencias de texto. Los enlaces inversos ayudan a encontrar páginas que hacen referencia a la actual. Un enlace aporta contexto, no acceso a un objeto privado de otro proyecto.
+Utiliza menciones para enlazar incidencias, objetivos, personas o páginas relevantes. Escribe `@` seguido de un identificador, palabras del título o una breve descripción; una búsqueda descriptiva también muestra incidencias encontradas [por el sentido](/docs/navigation#search-by-meaning) bajo **Relacionadas por significado**, después de las coincidencias de texto. Los enlaces inversos ayudan a encontrar páginas que hacen referencia a la actual. Un enlace aporta contexto, no acceso a un objeto privado de otro proyecto.
 
 Al hacer clic en la mención de una página, un enlace inverso, una página adjunta a una incidencia o a un objetivo, o un enlace a una página en un comentario o una respuesta de Numo, esa página se abre en un panel lateral sobre lo que estabas leyendo. Léela o edítala ahí, elige **Ampliar** para abrir la página completa o cierra el panel para volver. Una base de datos no se abre en el panel: se abre como página completa.
 
@@ -303,7 +305,7 @@ Abre una página del proyecto y sus controles de comentarios. Selecciona el cont
 Los avatares de presencia identifican a las personas que ven la página. Mientras alguien edita, su cursor y su selección aparecen en el cuerpo y en el título, con un color propio y una etiqueta con su nombre. El cursor de un lector no se muestra. Un cursor indica dónde está trabajando alguien, no que su texto esté guardado: el indicador de guardado solo refleja tus propios cambios.
 
 
-![Actividad de la página con una edición de demostración y el campo de comentario vacío.](/documentation/es/page-comments.png)
+![Actividad de la página todavía sin eventos y el campo de comentario vacío.](/documentation/es/page-comments.png)
 
 ### Recuperarte de un conflicto de guardado {#page-conflict}
 

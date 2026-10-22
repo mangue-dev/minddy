@@ -108,6 +108,8 @@ const rules = [
       "captures/world/seed/017-cycle-recal.mjs", "captures/world/seed/_issues.mjs",
       // Statistics seed (MIN-737): ids, statuses, people and dates, no content.
       "captures/world/seed/018-statistiques.mjs",
+      // Manual screenshots seed: reads demo ids, titles and positions to stay idempotent.
+      "captures/world/seed/019-manuel-captures.mjs",
     ]),
   },
   {

@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
-  "sourceRevision": 15,
+  "revision": 18,
+  "sourceRevision": 16,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -67,9 +67,9 @@
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:claude (MIN-760: category reordering paragraph checked against components/project-categories.tsx, the order route and the Numo/MCP tools; existing figures unaffected and kept; no browser walkthrough of the procedure); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of project-settings-steps, project-members-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted)",
-    "language": "agent:claude (de translation of the added en paragraph, equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 18,
+    "fact": "agent:claude (MIN-760: category reordering paragraph checked against components/project-categories.tsx, the order route and the Numo/MCP tools; existing figures unaffected and kept; no browser walkthrough of the procedure); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of project-settings-steps, project-members-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:claude (de translation of the added en paragraph, equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -94,7 +94,7 @@
       "src": "/documentation/de/project-general.png",
       "alt": "Projektkopf mit Symbol und Bearbeitungssymbol, Name, Schlüssel sowie den Kennzahlen Tickets, Mitglieder, Ziele, Kategorien und Erstellt.",
       "caption": "Wähle Symbol, Namen oder Schlüssel, um sie direkt zu ändern; das Verschieben in den Papierkorb bleibt eine eigene Aktion weiter unten.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -111,7 +111,7 @@
       "src": "/documentation/de/project-members.png",
       "alt": "Karte „Personen einladen“ über der Karte Mitglieder mit drei Demo-Mitgliedern, der Eigentümer ist gekennzeichnet.",
       "caption": "Lade Mitglieder über ihre Konto-E-Mail ein und prüfe den Eigentümer, bevor du einen Zugang entfernst.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -138,7 +138,7 @@ Ein Projekt verbindet Tickets, Ziele, Seiten und die Personen, die daran arbeite
 
 Der Tab **Allgemein** beginnt mit der Identität des Projekts: seinem Symbol, seinem Namen und Schlüssel und darunter fünf Kennzahlen: **Tickets**, **Mitglieder**, **Ziele**, **Kategorien** und **Erstellt**. Als Eigentümer änderst du Symbol, Name und Schlüssel direkt dort, wo sie angezeigt werden; eine Speichern-Schaltfläche gibt es nicht mehr. Wähle das Symbol und dann **Neue Kugel** (nur angeboten, solange kein Bild die Kugel verdeckt), **Bild hochladen**, **Von einer Website importieren…**, das nach der Adresse der Website fragt und ihr Symbol übernimmt, sobald du **Importieren** wählst, oder, wenn ein Bild gesetzt ist, **Bild entfernen**, das zuerst nachfragt, weil das Bild gelöscht wird. Wähle den Namen oder den Schlüssel, um ihn zu bearbeiten: Am Computer wird daraus ein Feld, in dem Enter oder das Verlassen des Felds speichert und Escape abbricht; auf dem Telefon öffnet sich ein Blatt mit **Speichern**. Der Name darf nicht leer sein. Der Schlüssel wird in Großbuchstaben umgewandelt und muss aus 2 bis 5 Buchstaben (A–Z) bestehen; andernfalls erscheint ein Fehler und der Schlüssel wird nicht gespeichert. Prüfe nach einer Änderung die entstandenen Kennungen. Das Symbol unterscheidet das Projekt nur in der Navigation; die Mitgliedschaft ändert es nicht. Mitglieder und Leser sehen denselben Kopfbereich ohne diese Bedienelemente.
 
-Die weiteren Tabs sind **Kategorien**, **Mitglieder**, **Wiederholungen**, **Intelligente Zuweisung**, **Feedback**, **Git**, **Importieren** und **Integrationen**. Lies die jeweilige Aufgabenanleitung, bevor du einen Anbieter oder automatische Arbeit aktivierst. Kontoeinstellungen wie deine Oberflächensprache sind von der Projektkonfiguration getrennt.
+Die weiteren Tabs sind **Kategorien**, **Mitglieder**, **Wiederholungen**, **Smart Assign**, **Feedback**, **Git**, **Importieren** und **Integrationen**. Lies die jeweilige Aufgabenanleitung, bevor du einen Anbieter oder automatische Arbeit aktivierst. Kontoeinstellungen wie deine Oberflächensprache sind von der Projektkonfiguration getrennt.
 
 Unter **Kategorien** verwalten der Eigentümer und die Mitglieder die Kategorien, mit denen Tickets eingeordnet werden. Wähle **Neue Kategorie** in der Titelzeile der Karte: Oben in der Liste erscheint eine Zeile mit einem Farbpunkt und einem Namensfeld. Drücke Enter oder wähle **Hinzufügen**, um die Kategorie anzulegen; Escape schließt die Zeile, ohne sie anzulegen. Wähle den Farbpunkt einer Kategorie, um eine andere Farbe zu wählen, die sofort gilt (auf dem Telefon öffnen sich die Farben in einem Blatt), oder wähle ihren Namen, um sie direkt umzubenennen. Die Löschschaltfläche fragt nach einer Bestätigung und entfernt die Kategorie dann aus allen Tickets. Sobald das Projekt mindestens zwei Kategorien hat, trägt jede Zeile links einen Ziehgriff: Ziehe ihn, um die Kategorie nach oben oder unten zu verschieben. Mit der Tastatur setzt du den Fokus auf den Griff, drückst die Leertaste, verschiebst die Kategorie mit den Pfeiltasten nach oben und unten und drückst erneut die Leertaste, um sie abzulegen; Escape bricht ab. Diese Reihenfolge zeigen alle Kategoriemenüs und -filter für alle im Projekt. Numo und Minddy-MCP-Clients können sie ebenfalls lesen und ändern, etwa wenn du Numo bittest, eine Kategorie an den Anfang zu stellen.
 
@@ -163,13 +163,13 @@ Der Eigentümer kann das Projekt auch in der Seitenleiste mit der rechten Mausta
 
 ## Personen zu einem Projekt einladen {#project-members}
 
-Der Projekteigentümer verwaltet die Mitgliedschaft unter **Projekteinstellungen** → **Mitglieder**. Suche in der Karte **Personen einladen** nach einem Namen oder gib die E-Mail-Adresse ein, die die Person auf dieser Instanz verwendet. Beim Tippen schlägt **Aus Ihren Projekten** Personen vor, die bereits einem deiner anderen Projekte beigetreten sind, als Eigentümer, Mitglied oder Leser, und eine bestätigte E-Mail-Adresse haben; wer nur eingeladen wurde, wird nie vorgeschlagen, ebenso wenig aktuelle Mitglieder und ausstehende Einladungen. Wähle eine Person, um sie mit Avatar und Namen ins Feld zu übernehmen, oder drücke Enter, wenn der Name nur auf eine Person passt. Alle anderen werden per E-Mail eingeladen. Wähle dann ihre Rolle und **Einladen**. Eine aus deinen Projekten gewählte Person wird über ihr Konto eingeladen: Minddy prüft erneut, dass sie einem deiner Projekte beigetreten ist, und lehnt sonst mit „Diese Person gehört zu keinem Ihrer Projekte.“ ab. Die Einladung steht in der Karte **Ausstehende Einladungen**, bis sie angenommen wird; die aktuellen Mitglieder stehen in der Karte **Mitglieder**, deren Titel ihre Anzahl zeigt. Wähle **Mitglied** für jemanden, der am Projekt arbeitet, oder **Leser** für jemanden, der es nur verfolgt. Aktiviere bei einem Leser **Darf kommentieren**, wenn er sich an Diskussionen beteiligen soll. Solange die Einladung aussteht, kann der Eigentümer ihre Rolle und die Kommentaroption ändern. Dieselbe E-Mail-Adresse auf einer anderen Instanz gewährt hier keinen Zugriff.
+Der Projekteigentümer verwaltet die Mitgliedschaft unter **Projekteinstellungen** → **Mitglieder**. Suche in der Karte **Personen einladen** nach einem Namen oder gib die E-Mail-Adresse ein, die die Person auf dieser Instanz verwendet. Beim Tippen schlägt **Aus deinen Projekten** Personen vor, die bereits einem deiner anderen Projekte beigetreten sind, als Eigentümer, Mitglied oder Leser, und eine bestätigte E-Mail-Adresse haben; wer nur eingeladen wurde, wird nie vorgeschlagen, ebenso wenig aktuelle Mitglieder und ausstehende Einladungen. Wähle eine Person, um sie mit Avatar und Namen ins Feld zu übernehmen, oder drücke Enter, wenn der Name nur auf eine Person passt. Alle anderen werden per E-Mail eingeladen. Wähle dann ihre Rolle und **Einladen**. Eine aus deinen Projekten gewählte Person wird über ihr Konto eingeladen: Minddy prüft erneut, dass sie einem deiner Projekte beigetreten ist, und lehnt sonst mit „Diese Person gehört zu keinem deiner Projekte.“ ab. Die Einladung steht in der Karte **Ausstehende Einladungen**, bis sie angenommen wird; die aktuellen Mitglieder stehen in der Karte **Mitglieder**, deren Titel ihre Anzahl zeigt. Wähle **Mitglied** für jemanden, der am Projekt arbeitet, oder **Leser** für jemanden, der es nur verfolgt. Aktiviere bei einem Leser **Darf kommentieren**, wenn er sich an Diskussionen beteiligen soll. Solange die Einladung aussteht, kann der Eigentümer ihre Rolle und die Kommentaroption ändern. Dieselbe E-Mail-Adresse auf einer anderen Instanz gewährt hier keinen Zugriff.
 
 Die eingeladene Person meldet sich mit diesem Konto an und öffnet den Posteingang. Nimm die ausstehende Einladung an, um mit der darin festgelegten Rolle beizutreten, oder lehne sie ab, wenn das Projekt unerwartet ist. Der Beitrittsdialog beim ersten Einstieg hilft, deine E-Mail-Adresse an den Eigentümer weiterzugeben; ohne Einladung kannst du damit keinem Projekt beitreten.
 
-Du kannst Personen auch schon beim Erstellen des Projekts einladen. Suche im Schritt **Laden Sie Ihr Team ein** des Assistenten nach einem Namen oder gib eine E-Mail-Adresse ein. Unter dem Feld schlägt **Aus Ihren Projekten** dieselben Personen vor wie die Karte **Personen einladen**, schon bevor du tippst, und filtert beim Tippen. Wähle eine Person aus oder drücke Enter, wenn nur eine passt; gibst du die Adresse einer solchen Person ein, wird sie ebenfalls mit ihrem Namen hinzugefügt. Alle anderen fügst du per E-Mail mit **Hinzufügen** oder Enter hinzu. Das Gästelimit deines Plans gilt wie hier, und die Liste wird mit dem Projektentwurf gespeichert, falls du die Erstellung später fortsetzt.
+Du kannst Personen auch schon beim Erstellen des Projekts einladen. Suche im Schritt **Lade dein Team ein** des Assistenten nach einem Namen oder gib eine E-Mail-Adresse ein. Unter dem Feld schlägt **Aus deinen Projekten** dieselben Personen vor wie die Karte **Personen einladen**, schon bevor du tippst, und filtert beim Tippen. Wähle eine Person aus oder drücke Enter, wenn nur eine passt; gibst du die Adresse einer solchen Person ein, wird sie ebenfalls mit ihrem Namen hinzugefügt. Alle anderen fügst du per E-Mail mit **Hinzufügen** oder Enter hinzu. Das Gästelimit deines Plans gilt wie hier, und die Liste wird mit dem Projektentwurf gespeichert, falls du die Erstellung später fortsetzt.
 
-Verschickt wird nichts, bevor du **Fertig stellen** wählst: Zuerst wird das Projekt erstellt, dann erhält jede Person eine Einladung mit der Rolle **Mitglied**. Aus deinen Projekten gewählte Personen werden über ihr Konto eingeladen: Minddy prüft erneut, dass sie einem deiner Projekte beigetreten sind, und verwendet ihre bestätigte Adresse. Die übrigen werden per E-Mail eingeladen. Diese Einladungen stehen in der Karte **Ausstehende Einladungen**, wo du ihre Rolle ändern kannst, und werden wie alle anderen im Posteingang angenommen. Werden einige abgelehnt, etwa wegen des Gästelimits des Plans oder weil jemand das gemeinsame Projekt inzwischen verlassen hat („Diese Person gehört zu keinem Ihrer Projekte.“), gehen die übrigen trotzdem hinaus, und eine Benachrichtigung nennt jede nicht eingeladene Person mit dem Grund. Prüfe die Karte **Ausstehende Einladungen**, bevor du sie erneut einlädst. Eine ausstehende Einladung ist gespeichert; das beweist nicht, dass ihre E-Mail zugestellt wurde.
+Verschickt wird nichts, bevor du **Fertig stellen** wählst: Zuerst wird das Projekt erstellt, dann erhält jede Person eine Einladung mit der Rolle **Mitglied**. Aus deinen Projekten gewählte Personen werden über ihr Konto eingeladen: Minddy prüft erneut, dass sie einem deiner Projekte beigetreten sind, und verwendet ihre bestätigte Adresse. Die übrigen werden per E-Mail eingeladen. Diese Einladungen stehen in der Karte **Ausstehende Einladungen**, wo du ihre Rolle ändern kannst, und werden wie alle anderen im Posteingang angenommen. Werden einige abgelehnt, etwa wegen des Gästelimits des Plans oder weil jemand das gemeinsame Projekt inzwischen verlassen hat („Diese Person gehört zu keinem deiner Projekte.“), gehen die übrigen trotzdem hinaus, und eine Benachrichtigung nennt jede nicht eingeladene Person mit dem Grund. Prüfe die Karte **Ausstehende Einladungen**, bevor du sie erneut einlädst. Eine ausstehende Einladung ist gespeichert; das beweist nicht, dass ihre E-Mail zugestellt wurde.
 
 
 ![Karte „Personen einladen“ über der Karte Mitglieder mit drei Demo-Mitgliedern, der Eigentümer ist gekennzeichnet.](/documentation/de/project-members.png)
@@ -184,7 +184,7 @@ Verschickt wird nichts, bevor du **Fertig stellen** wählst: Zuerst wird das Pro
 | Leser mit **Darf kommentieren** | Lesezugriff sowie Kommentare zu Tickets, Zielen, internen Feedback-Threads und Seiten: Antworten, Erwähnungen, Dateien an eigenen Kommentaren sowie das Bearbeiten und Löschen eigener Kommentare. Öffentliche Antworten auf dem Feedback-Board sowie Kommentare oder Reaktionen in Pull Requests bleiben nicht verfügbar. |
 | Besucher über einen öffentlichen Link | Nur die ausdrücklich über diesen Link veröffentlichten Inhalte; keine Projektmitgliedschaft. |
 
-Leser zählen wie Mitglieder zum Limit des Tarifs für Gäste pro Projekt, ebenso ausstehende Einladungen. Eine Abrechnung pro Platz gibt es nicht.
+Leser zählen wie Mitglieder zum Limit des Plans für Gäste pro Projekt, ebenso ausstehende Einladungen. Eine Abrechnung pro Platz gibt es nicht.
 
 Prüfe die Mitgliederliste, bevor du jemanden entfernst. Die Eigentümerzeile bietet keine Entfernung an; nur eine [Übertragung](#transfer-ownership) ändert den Eigentümer. Der Eigentümer kann eine ausstehende Einladung vor ihrer Annahme zurückziehen, nachdem er in einem Dialog mit der eingeladenen Adresse bestätigt hat; der Link in der E-Mail funktioniert dann nicht mehr, und die Person kann später erneut eingeladen werden. Der ausstehende Zustand verrät nicht, ob diese Adresse bereits ein Konto hat. Das Entfernen beendet den Zugriff über die Mitgliedschaft; bereits empfangene Exporte, Bildschirmaufnahmen oder Kopien lassen sich damit nicht zurückholen. Persönliche Git-, KI- und MCP-Zugangsdaten gehören weiterhin zum Konto und werden durch einen Eigentümerwechsel nicht übertragen.
 
@@ -207,7 +207,7 @@ Ein Projekt hat genau einen Eigentümer. Um es abzugeben, öffne als Eigentümer
 ### Was mit dem Eigentum übergeht {#transfer-effects}
 
 - Deine Routinen in diesem Projekt werden pausiert und können keine neue Arbeit starten. Der neue Eigentümer legt die Routinen an, die mit seinem eigenen Budget weiterlaufen sollen.
-- Die Tariflimits für Tickets und Gäste pro Projekt, der Speicher und Hintergrund-KI wie Smart Assign und die Feedback-Prüfung richten sich nun nach Tarif und Budget des neuen Eigentümers. Bestehende Tickets und Mitglieder bleiben erhalten.
+- Die Planlimits für Tickets und Gäste pro Projekt, der Speicher und Hintergrund-KI wie Smart Assign und die Feedback-Prüfung richten sich nun nach Plan und Budget des neuen Eigentümers. Bestehende Tickets und Mitglieder bleiben erhalten.
 - Abonnements, Zahlungsmethoden sowie persönliche Schlüssel und Verbindungen bleiben beim jeweiligen Konto.
 - Ausstehende Einladungen bleiben gültig.
 

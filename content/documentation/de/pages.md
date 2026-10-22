@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 18,
-  "sourceRevision": 17,
+  "revision": 20,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -74,9 +74,9 @@
     ]
   },
   "review": {
-    "revision": 18,
-    "fact": "agent:/root/min764 (database archive sentence checked against lib/server/database-export.ts and lib/server/page-database-views.ts: saved views are not exported and are copied by duplication; rest of the article unchanged since the previous review; no figure changed); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of page-editor-steps, page-comments-and-collaboration-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted)",
-    "language": "agent:/root/min764 (de changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 20,
+    "fact": "agent:/root/min764 (database archive sentence checked against lib/server/database-export.ts and lib/server/page-database-views.ts: saved views are not exported and are copied by duplication; rest of the article unchanged since the previous review; no figure changed); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of page-editor-steps, page-comments-and-collaboration-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (page-comments inline alt aligned with the figure alt and the recaptured image); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min764 (de changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (de alt text edit; self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -112,7 +112,7 @@
       "src": "/documentation/de/page-create-menu.png",
       "alt": "Erstellungsmenü mit Neue Seite und Neue Datenbank.",
       "caption": "Wähle über die Seitenfunktionen des Projekts ein Dokument oder eine Datenbank.",
-      "revision": 18,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -128,7 +128,7 @@
       "src": "/documentation/de/page-editor.png",
       "alt": "Demoseite mit Überschriften, Absätzen, Aufgaben mit Kontrollkästchen und einer Ticketreferenz.",
       "caption": "Überschriften, Aufgabenblöcke und die Referenz AUR-2 gliedern die Seite. Der Inhalt dient als Demobeispiel.",
-      "revision": 18,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -145,7 +145,7 @@
       "src": "/documentation/de/page-comments.png",
       "alt": "Seitenaktivität ohne bisherige Einträge und ein leeres Kommentarfeld.",
       "caption": "Lies die Seitenaktivität und verfasse einen Kommentar im Eingabefeld. In diesem Beispiel wurde keiner abgesendet.",
-      "revision": 18,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -162,7 +162,7 @@
       "src": "/documentation/de/page-file-states.png",
       "alt": "Demoseite mit einem unvollständigen Upload und einer gespeicherten Datei von 67 Byte mit Downloadfunktion.",
       "caption": "Prüfe den tatsächlichen Dateizustand: Der zweite Anhang ist verfügbar, der erste unvollständige Upload nicht.",
-      "revision": 18,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -178,7 +178,7 @@
       "src": "/documentation/de/page-history-preview.png",
       "alt": "Versionen-Tab mit aufgeklapptem früherem Zustand, Autor, Wiederherstellen und Hinweis auf 30 Tage Aufbewahrung.",
       "caption": "Prüfe einen gespeicherten Zustand in der Vorschau und vergleiche ihn vor dem Wiederherstellen mit der aktuellen Seite.",
-      "revision": 18,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -194,7 +194,7 @@
       "src": "/documentation/de/page-publish.png",
       "alt": "Veröffentlichungsdialog mit ausgewähltem Privat und Alternativen für Passwort oder Link.",
       "caption": "Privat hält die Seite im Projekt. Prüfe die vorgesehene Zielgruppe vor einer Änderung der Freigabe.",
-      "revision": 18,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -210,7 +210,7 @@
       "src": "/documentation/de/page-export.png",
       "alt": "Exportmenü des Dokuments mit Markdown (.md) und Drucken / PDF.",
       "caption": "Wähle Markdown zum Herunterladen oder Drucken / PDF für die Druckansicht.",
-      "revision": 18,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -226,7 +226,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Umbenennen und Entfernen.",
-      "revision": 18,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -305,7 +305,7 @@ Markdown-Exporte und Seitenzugriffe durch Agenten erhalten Symbole und Farben vo
 Anwesenheitsavatare zeigen Personen, die die Seite ansehen. Während jemand bearbeitet, erscheinen sein Cursor und seine Auswahl im Inhalt und im Titel, in einer eigenen Farbe und mit seinem Namen beschriftet. Der Cursor eines Lesers wird nicht angezeigt. Ein Cursor zeigt, wo jemand arbeitet, nicht dass sein Text gespeichert ist: Die Speicheranzeige spiegelt nur deine eigenen Änderungen wider.
 
 
-![Seitenaktivität mit einer Demoänderung und einem leeren Kommentarfeld.](/documentation/de/page-comments.png)
+![Seitenaktivität ohne bisherige Einträge und ein leeres Kommentarfeld.](/documentation/de/page-comments.png)
 
 ### Einen Speicherkonflikt lösen {#page-conflict}
 
@@ -321,7 +321,7 @@ Ein fehlender Kommentaranker kann durch Dokumentänderungen entstehen. Lies die 
 
 Bilder lassen sich als Bildblöcke einfügen, andere Dokumente als Dateiblöcke anhängen. Der Server ermittelt den gespeicherten Medientyp aus den Dateibytes, statt dem Dateinamen oder der Browserangabe zu vertrauen. Eine akzeptierte Datei hat nicht zwingend eine Vorschau innerhalb der Seite. Lade sie herunter, wenn keine Vorschau verfügbar ist.
 
-Klicken Sie im Projekteditor auf ein Bild oder den Namen eines unterstützten Dateiblocks. Es öffnet sich derselbe fensterfüllende Betrachter wie für Ticketanhänge. Markdown (`.md`), Klartext (`.txt`, `.text`), CSV, PDF sowie unterstützte Audio- und Videoformate werden in eigenen Bereichen angezeigt. Mit Schließen oder Escape kehren Sie zur Seite zurück. Das Menü Dateiaktionen (`…`) bietet Herunterladen. Auf einer bearbeitbaren Seite bietet ein Dateiblock außerdem Umbenennen, das den auf der Seite angezeigten Namen ändert, und Bilder wie Dateien bieten Entfernen: Nach einer Bestätigung wird der Block aus dem Dokument entfernt, und Sie können das im Editor rückgängig machen. Der Dateiblock behält außerdem seine direkte Schaltfläche Herunterladen. Nicht unterstützte Formate, externe Dateilinks und Dateiblöcke auf veröffentlichten Seiten behalten ihr Download-Verhalten. Veröffentlichte Bilder verwenden den Betrachter ohne Entfernen-Aktion.
+Klicke im Projekteditor auf ein Bild oder den Namen eines unterstützten Dateiblocks. Es öffnet sich derselbe fensterfüllende Betrachter wie für Ticketanhänge. Markdown (`.md`), Klartext (`.txt`, `.text`), CSV, PDF sowie unterstützte Audio- und Videoformate werden in eigenen Bereichen angezeigt. Mit Schließen oder Escape kehrst du zur Seite zurück. Das Menü Dateiaktionen (`…`) bietet Herunterladen. Auf einer bearbeitbaren Seite bietet ein Dateiblock außerdem Umbenennen, das den auf der Seite angezeigten Namen ändert, und Bilder wie Dateien bieten Entfernen: Nach einer Bestätigung wird der Block aus dem Dokument entfernt, und du kannst das im Editor rückgängig machen. Der Dateiblock behält außerdem seine direkte Schaltfläche Herunterladen. Nicht unterstützte Formate, externe Dateilinks und Dateiblöcke auf veröffentlichten Seiten behalten ihr Download-Verhalten. Veröffentlichte Bilder verwenden den Betrachter ohne Entfernen-Aktion.
 
 ![Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.](/documentation/de/file-preview.png)
 

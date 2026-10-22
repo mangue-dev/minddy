@@ -18,8 +18,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 16,
-  "sourceRevision": 15,
+  "revision": 17,
+  "sourceRevision": 16,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -71,9 +71,9 @@
     ]
   },
   "review": {
-    "revision": 16,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of account-security-workflow, profile-and-preferences-workflow, profile-and-preferences-preferences-workflow, privacy-and-account-deletion-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 17,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of account-security-workflow, profile-and-preferences-workflow, profile-and-preferences-preferences-workflow, privacy-and-account-deletion-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -106,7 +106,7 @@
       "src": "/documentation/de/account-security-workflow.png",
       "alt": "Karte zur Zwei-Faktor-Authentifizierung mit Aktivieren-Schaltfläche.",
       "caption": "Beginne hier, bestätige anschließend den Authenticator und bewahre die Wiederherstellungscodes sicher auf.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -123,7 +123,7 @@
       "src": "/documentation/de/profile-and-preferences-workflow.png",
       "alt": "Profilkopf mit Avatar und Bearbeitungssymbol, Name und schreibgeschützter E-Mail-Adresse.",
       "caption": "Wähle den Avatar, um einen zu erzeugen oder hochzuladen, oder den Namen, um ihn zu ändern; die E-Mail-Adresse bleibt schreibgeschützt.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -140,7 +140,7 @@
       "src": "/documentation/de/profile-and-preferences-preferences-workflow.png",
       "alt": "Sprachauswahl, Schalter für helles, dunkles und Systemdesign, Palettenauswahl für hellen und dunklen Modus und Transparenzschalter.",
       "caption": "Die Kontosprache und die Sprache der öffentlichen Website werden getrennt eingestellt.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -157,7 +157,7 @@
       "src": "/documentation/de/privacy-and-account-deletion-workflow.png",
       "alt": "Löschvorschau mit eigenen Projekten, Tickets und Mitgliedern, die Zugriff verlieren.",
       "caption": "Lies die Vorschau und exportiere gewünschte Daten, bevor du die Löschbestätigung öffnest.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -267,4 +267,4 @@ Exportiere vor der Kontolöschung benötigte Daten im Tab **Datenschutz & Daten*
 
 ## Routinen konfigurieren {#routines}
 
-Automatische Projektarbeit wird in [Routinen](/docs/scheduled-routines) konfiguriert. Der Eigentümer wählt Zeitplan, Produktereignis oder Datenbankeingang. Automatisierungsvoreinstellungen des Kontos und ihre Projektschalter sind entfernt. Lesen Sie vor der Aktivierung eines archivierten Vorschlags den [Übergangsleitfaden](/docs/automation-settings).
+Automatische Projektarbeit wird in [Routinen](/docs/scheduled-routines) konfiguriert. Der Eigentümer wählt Zeitplan, Produktereignis oder Datenbankeingang. Automatisierungsvoreinstellungen des Kontos und ihre Projektschalter sind entfernt. Lies vor der Aktivierung eines archivierten Vorschlags den [Übergangsleitfaden](/docs/automation-settings).

@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -43,10 +43,10 @@
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 7,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "views",
@@ -61,17 +61,18 @@
       "id": "personal-cycle-steps",
       "kind": "screenshot",
       "src": "/documentation/en/reader-cycle.png",
-      "alt": "A demonstration issue in the personal cycle’s backlog.",
-      "caption": "Adding the issue to this cycle assigned its owner while preserving backlog status.",
-      "revision": 6,
+      "alt": "Personal cycle for Oct 12 – 25 with an empty Backlog and Aurora and Beacon issues in Todo and In progress.",
+      "caption": "The cycle gathers issues assigned to you across projects. Adding an issue assigns it to the cycle owner without changing its status.",
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-22",
       "viewport": [
-        994,
+        1314,
         1046
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -88,7 +89,7 @@ Choose a duration of one or two weeks, the starting weekday, one to four upcomin
 
 The current cycle is filled automatically once from eligible work. To add an issue manually, use its menu’s cycle action and choose the current or next period when available. Adding an issue assigns it to the cycle owner without changing its status. Triage, done, canceled and duplicate issues cannot be added through this action. Inspect the assignee and blockers after adding work; removing an issue from the cycle keeps the issue in its project.
 
-![A demonstration issue in the personal cycle’s backlog.](/documentation/en/reader-cycle.png)
+![Personal cycle for Oct 12 – 25 with an empty Backlog and Aurora and Beacon issues in Todo and In progress.](/documentation/en/reader-cycle.png)
 
 ## Finish or adjust the period {#cycle-results}
 

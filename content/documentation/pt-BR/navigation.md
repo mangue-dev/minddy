@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 16,
-  "sourceRevision": 15,
+  "revision": 17,
+  "sourceRevision": 16,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -62,9 +62,9 @@
     ]
   },
   "review": {
-    "revision": 16,
-    "fact": "agent:/root/min777 (panel paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of navigation-steps, search-and-shortcuts-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted)",
-    "language": "agent:/root/min777 (pt-BR sentence on the page side panel with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 17,
+    "fact": "agent:/root/min777 (panel paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of navigation-steps, search-and-shortcuts-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min777 (pt-BR sentence on the page side panel with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -86,7 +86,7 @@
       "src": "/documentation/pt-BR/work-navigation.png",
       "alt": "Navegação do projeto ao lado do quadro de tickets de demonstração.",
       "caption": "A barra do projeto dá acesso aos tickets, objetivos, páginas e triagem.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -103,7 +103,7 @@
       "src": "/documentation/pt-BR/work-search.png",
       "alt": "Resultados de busca do identificador de um ticket de demonstração.",
       "caption": "A paleta encontra o ticket pelo identificador junto às páginas do projeto; abrir um resultado preserva suas regras de acesso.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -141,8 +141,8 @@ Clique com o botão direito em uma linha da barra lateral para agir sobre o que 
 - A linha **Todos os tickets** oferece **Novo ticket**, e a linha **Rotinas** oferece **Nova rotina** quando você é proprietário de um projeto.
 - Uma linha de projeto, ou o nome do projeto no topo do painel dele, oferece **Novo** (um ticket, objetivo ou página nesse projeto) e **Configurações do projeto**. O proprietário do projeto também vê **Mover para a lixeira**, que pede a mesma confirmação das configurações do projeto. O mesmo menu também oferece **Ocultar projeto**, ou **Mostrar projeto** para um projeto que você ocultou; consulte [Ocultar um projeto para você](/docs/projects#hide-project).
 - Uma aba de projeto oferece sua própria criação: **Novo ticket** em Tickets, **Novo objetivo** em Objetivos, **Nova página** em Páginas e **Novo feedback** em Feedback, que abre o formulário interno de feedback.
-- Uma linha de rotina oferece **Abrir a última execução** e, ao proprietário do projeto, **Executar agora**, **Pausar** ou **Reativar**, **Editar** e **Mover para a lixeira**. Veja [Gerenciar e verificar execuções](/pt-br/documentacao/scheduled-routines#runs).
-- Uma linha de pull request oferece as mudanças que o estado atual permite, **Mesclar** quando ela está pronta e ações de correção quando algo a bloqueia. Veja [Revisão e merge](/pt-br/documentacao/code-work#decision).
+- Uma linha de rotina oferece **Abrir a última execução** e, ao proprietário do projeto, **Executar agora**, **Pausar** ou **Retomar**, **Editar** e **Mover para a lixeira**. Veja [Gerenciar e verificar execuções](/pt-br/documentacao/scheduled-routines#runs).
+- Uma linha de pull request oferece as mudanças que o estado atual permite, **Mesclar** quando ela está pronta e ações de correção quando algo a bloqueia. Veja [Revisão e mesclagem](/pt-br/documentacao/code-work#decision).
 
 A ação se aplica à linha em que você clicou, mesmo quando outro projeto ou item está aberto.
 

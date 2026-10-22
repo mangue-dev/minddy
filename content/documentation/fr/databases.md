@@ -17,8 +17,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
-  "sourceRevision": 17,
+  "revision": 18,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -56,9 +56,9 @@
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:/root/min764 (database views section checked against components/pages/database-view-strip.tsx, components/pages/page-database-view.tsx, lib/use-page-database-views.ts and lib/server/page-database-views.ts: named views shared by the project, each with its own sort, filter and hidden columns, managed and reordered by writers, adjusted locally by readers; insertion clears the active view's filter; rest of the article unchanged since the MIN-747 review; no figure changed)",
-    "language": "agent:/root/min764 (fr changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 18,
+    "fact": "agent:/root/min764 (database views section checked against components/pages/database-view-strip.tsx, components/pages/page-database-view.tsx, lib/use-page-database-views.ts and lib/server/page-database-views.ts: named views shared by the project, each with its own sort, filter and hidden columns, managed and reordered by writers, adjusted locally by readers; insertion clears the active view's filter; rest of the article unchanged since the MIN-747 review; no figure changed); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min764 (fr changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -83,7 +83,7 @@
       "src": "/documentation/fr/database-setup-cards.png",
       "alt": "Aperçu du composant proposant la création d’une base avec Numo ou l’import d’une base existante.",
       "caption": "Suggestions pour une nouvelle base, présentées avec des données de démonstration. Choisissez Numo ou l’import, ou masquez les cartes pour continuer manuellement.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -100,7 +100,7 @@
       "src": "/documentation/fr/database-property-types.png",
       "alt": "Sélecteur de type de colonne avec un champ de recherche : texte, nombre, sélections, dates, personnes et case à cocher.",
       "caption": "Choisissez un type adapté aux valeurs à conserver.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -117,7 +117,7 @@
       "src": "/documentation/fr/database-entry.png",
       "alt": "Entrée de démonstration avec description, durée 2.5, case cochée et sélection vide.",
       "caption": "Ouvrez une entrée pour lire son texte complet et modifier les valeurs typées.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -133,7 +133,7 @@
       "src": "/documentation/fr/database-conversion-warning.png",
       "alt": "Avertissement de conversion : passer de Texte à Nombre efface une cellule incompatible, avec boutons Annuler et confirmation.",
       "caption": "Vérifiez le nombre réel de cellules incompatibles avant de confirmer. Annuler conserve les valeurs actuelles.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -149,7 +149,7 @@
       "src": "/documentation/fr/database-import-review.png",
       "alt": "Vérification d’un CSV local : deux pages d’entrées et deux colonnes, avec le bouton Importer la base.",
       "caption": "Vérifiez les entrées analysées et le nombre de colonnes avant l’import dans la base vide.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -165,7 +165,7 @@
       "src": "/documentation/fr/database-options.png",
       "alt": "Aperçu du composant Modifier les options avec des statuts en français, des flèches vers le haut et le bas, des corbeilles et l’explication de la suppression.",
       "caption": "Modifiez ensemble les noms, les couleurs et l’ordre des options. La corbeille retire une option des modifications en cours ; Enregistrer applique les changements. Données de démonstration.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -180,14 +180,14 @@
       "id": "database-date-time-preview",
       "kind": "screenshot",
       "src": "/documentation/fr/database-date-time.png",
-      "alt": "Aperçu du sélecteur de date avec le 12 octobre 2026 sélectionné, Préciser l’heure activé et Heure réglée sur 14:30.",
+      "alt": "Aperçu du sélecteur de date avec le 24 juillet 2026 sélectionné, Préciser l’heure activé et Heure réglée sur 02:00 AM.",
       "caption": "Activez Préciser l’heure pour saisir une heure. Cet aperçu du composant utilise des données de démonstration et le fuseau horaire de l’appareil.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
-      "capturedAt": "2026-10-12",
+      "capturedAt": "2026-10-22",
       "viewport": [
         324,
-        444
+        498
       ],
       "deviceScaleFactor": 2,
       "theme": "light",
@@ -243,7 +243,7 @@ Choisissez un jour dans Date. Pour ajouter une heure, activez Préciser l’heur
 
 ![Aperçu du composant Modifier les options avec des statuts en français, des flèches vers le haut et le bas, des corbeilles et l’explication de la suppression.](/documentation/fr/database-options.png)
 
-![Aperçu du sélecteur de date avec le 12 octobre 2026 sélectionné, Préciser l’heure activé et Heure réglée sur 14:30.](/documentation/fr/database-date-time.png)
+![Aperçu du sélecteur de date avec le 24 juillet 2026 sélectionné, Préciser l’heure activé et Heure réglée sur 02:00 AM.](/documentation/fr/database-date-time.png)
 
 ### Ouvrir, sélectionner et insérer {#entry-actions}
 

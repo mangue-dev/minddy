@@ -3,7 +3,7 @@
   "id": "install-locally",
   "locale": "de",
   "title": "Lokale Instanzen",
-  "summary": "Nutzen Sie einen eigenen Klon zur Erprobung mit Node.js 24, pnpm 10.28.0, Git, Supabase CLI und laufendem Docker-Daemon.",
+  "summary": "Nutze einen eigenen Klon zur Erprobung mit Node.js 24, pnpm 10.28.0, Git, Supabase CLI und laufendem Docker-Daemon.",
   "topic": "Instanz betreiben",
   "type": "tutorial",
   "audiences": [
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -42,10 +42,10 @@
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 8,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "workspace-encryption",
@@ -62,7 +62,7 @@
       "src": "/documentation/de/install-locally-flow.svg",
       "alt": "Diagramm: Desktop-App wählt den Klon. Loopback-Anwendung: Port 6463. Minimales Supabase und dauerhafte Daten. Beenden stoppt App und Backend.",
       "caption": "Die Desktop-App steuert die lokalen Dienste des gewählten Klons, während ihre Daten dauerhaft gespeichert bleiben.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -93,8 +93,8 @@
       "kind": "screenshot",
       "src": "/documentation/de/install-locally-wizard.png",
       "alt": "Öffentlicher Installationsassistent mit ausgewähltem Profil für diesen Computer.",
-      "caption": "Wählen Sie die persönliche Installation, wenn die Desktop-App die lokalen Dienste verwalten soll.",
-      "revision": 7,
+      "caption": "Wähle die persönliche Installation, wenn die Desktop-App die lokalen Dienste verwalten soll.",
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -114,7 +114,7 @@
 
 ## Eine lokale Instanz aus der Desktop-App starten {#install-locally}
 
-Nutzen Sie einen eigenen Klon zur Erprobung mit Node.js 24, `pnpm` 10.28.0, Git, Supabase CLI und laufendem Docker-Daemon. Planen Sie mindestens 4 GB freien RAM, zwei CPU-Kerne und 10 GB freien SSD-Speicher ein; empfohlen sind 8 GB, vier Kerne und 20 GB. Installieren Sie zuerst die signierte Desktop-App von der Downloadseite. Windows verwendet den Microsoft Store; macOS und Linux haben eigene Downloads. Wählen Sie im Klon die zu erprobende Version, bevor Sie Abhängigkeiten installieren.
+Nutze einen eigenen Klon zur Erprobung mit Node.js 24, `pnpm` 10.28.0, Git, Supabase CLI und laufendem Docker-Daemon. Plane mindestens 4 GB freien RAM, zwei CPU-Kerne und 10 GB freien SSD-Speicher ein; empfohlen sind 8 GB, vier Kerne und 20 GB. Installiere zuerst die signierte Desktop-App von der Downloadseite. Windows verwendet den Microsoft Store; macOS und Linux haben eigene Downloads. Wähle im Klon die zu erprobende Version, bevor du Abhängigkeiten installierst.
 
 ```bash
 git clone https://github.com/mangue-dev/minddy.git
@@ -131,22 +131,22 @@ pnpm install --frozen-lockfile
 
 ![Öffentlicher Installationsassistent mit ausgewähltem Profil für diesen Computer.](/documentation/de/install-locally-wizard.png)
 
-Neue lokale Installationen verschlüsseln Inhalte des Arbeitsbereichs standardmäßig. Um eine ausdrückliche Wahl festzuhalten, führen Sie im Klon `pnpm bootstrap:supabase -- --minimal --app-url http://localhost:6463 --encryption enabled` (oder `--encryption disabled`) aus, bevor Sie ihn in der App öffnen; spätere Starts behalten die gespeicherte Wahl bei. Siehe [Arbeitsbereichsverschlüsselung](/de/dokumentation/workspace-encryption#workspace-encryption).
+Neue lokale Installationen verschlüsseln Inhalte des Arbeitsbereichs standardmäßig. Um eine ausdrückliche Wahl festzuhalten, führe im Klon `pnpm bootstrap:supabase -- --minimal --app-url http://localhost:6463 --encryption enabled` (oder `--encryption disabled`) aus, bevor du ihn in der App öffnest; spätere Starts behalten die gespeicherte Wahl bei. Siehe [Arbeitsbereichsverschlüsselung](/de/dokumentation/workspace-encryption#workspace-encryption).
 
 ## Lokale Dienste durch die App steuern {#launch}
 
-Öffnen Sie das native Menü minddy. Unter Windows und Linux blendet Alt die Menüleiste ein; macOS verwendet die globale Menüleiste. Öffnen Sie den Serververbindungsdialog, wählen Sie dort die lokale Instanz und den Stammordner des Klons. Die App startet `self-host:local --no-open`, bereitet minimales Supabase vor, führt Migrationen und Storage-Konfiguration aus, erstellt bei Bedarf den Build und wartet auf `/api/health`, bevor sie die Registrierung öffnet. Sie lauscht ausschließlich auf Loopback-Port 6463, merkt sich den Ordner und steuert Start und Beenden beider Dienste.
+Öffne das native Menü minddy. Unter Windows und Linux blendet Alt die Menüleiste ein; macOS verwendet die globale Menüleiste. Öffne den Serververbindungsdialog, wähle dort die lokale Instanz und den Stammordner des Klons. Die App startet `self-host:local --no-open`, bereitet minimales Supabase vor, führt Migrationen und Storage-Konfiguration aus, erstellt bei Bedarf den Build und wartet auf `/api/health`, bevor sie die Registrierung öffnet. Sie lauscht ausschließlich auf Loopback-Port 6463, merkt sich den Ordner und steuert Start und Beenden beider Dienste.
 
 ## MCP-Verfügbarkeit und Netzwerkzugriff {#mcp-network-access}
 
-MCP ist in selbst gehostetem minddy enthalten und startet mit der Anwendung. Es funktioniert sofort unter `/api/mcp` an der mit `MINDDY_PUBLIC_APP_URL` konfigurierten Instanzadresse. OAuth-Erkennung und dynamische Client-Registrierung sind enthalten: Ein separater MCP-Server, eine eigene OAuth-Anwendung oder ein minddy-Cloud-Proxy ist nicht erforderlich. Verbinden Sie Ihren MCP-Client mit dem Endpunkt Ihrer Instanz, melden Sie sich an und erteilen Sie den Zugriff im Browser.
+MCP ist in selbst gehostetem minddy enthalten und startet mit der Anwendung. Es funktioniert sofort unter `/api/mcp` an der mit `MINDDY_PUBLIC_APP_URL` konfigurierten Instanzadresse. OAuth-Erkennung und dynamische Client-Registrierung sind enthalten: Ein separater MCP-Server, eine eigene OAuth-Anwendung oder ein minddy-Cloud-Proxy ist nicht erforderlich. Verbinde deinen MCP-Client mit dem Endpunkt deiner Instanz, melde dich an und erteile den Zugriff im Browser.
 
-Die Verfügbarkeit des Dienstes garantiert keine Erreichbarkeit im Netzwerk. Sowohl der MCP-Client als auch der Browser für die Autorisierung müssen die bekannt gegebenen MCP- und OAuth-URLs erreichen können. Wenn Sie `OAUTH_ISSUER` ausdrücklich überschreiben, muss auch diese Adresse erreichbar sein. Der Client muss die Verbindung, den OAuth-Ablauf und den gewählten Netzwerkweg unterstützen; manche Clients verlangen auch in privaten Netzwerken HTTPS.
+Die Verfügbarkeit des Dienstes garantiert keine Erreichbarkeit im Netzwerk. Sowohl der MCP-Client als auch der Browser für die Autorisierung müssen die bekannt gegebenen MCP- und OAuth-URLs erreichen können. Wenn du `OAUTH_ISSUER` ausdrücklich überschreibst, muss auch diese Adresse erreichbar sein. Der Client muss die Verbindung, den OAuth-Ablauf und den gewählten Netzwerkweg unterstützen; manche Clients verlangen auch in privaten Netzwerken HTTPS.
 
-Dieses von der Desktop-App verwaltete Profil bindet nur an die Loopback-Schnittstelle. Ein kompatibler MCP-Client auf demselben Computer kann `http://localhost:6463/api/mcp` verwenden; `localhost` und `127.0.0.1` bezeichnen den Computer, der die Verbindung aufbaut. Ein anderer Computer oder ein gehosteter Cloud-Agent kann dieses Profil nicht direkt erreichen. Nutzen Sie für LAN/VPN-Zugriff eine Serverinstallation mit erreichbarer konfigurierter Adresse, etwa `http://192.168.1.50`, und erlauben Sie den Anwendungsport über Bindungsadresse, Firewall und Routing. Außerhalb dieses Netzwerks benötigt der Client eine erreichbare HTTPS-Adresse wie `https://tickets.example.com` oder einen anderen unterstützten Netzwerkweg. Eine lokale Installation ermöglicht nicht automatisch den Zugriff aus dem Internet.
+Dieses von der Desktop-App verwaltete Profil bindet nur an die Loopback-Schnittstelle. Ein kompatibler MCP-Client auf demselben Computer kann `http://localhost:6463/api/mcp` verwenden; `localhost` und `127.0.0.1` bezeichnen den Computer, der die Verbindung aufbaut. Ein anderer Computer oder ein gehosteter Cloud-Agent kann dieses Profil nicht direkt erreichen. Nutze für LAN/VPN-Zugriff eine Serverinstallation mit erreichbarer konfigurierter Adresse, etwa `http://192.168.1.50`, und erlaube den Anwendungsport über Bindungsadresse, Firewall und Routing. Außerhalb dieses Netzwerks benötigt der Client eine erreichbare HTTPS-Adresse wie `https://tickets.example.com` oder einen anderen unterstützten Netzwerkweg. Eine lokale Installation ermöglicht nicht automatisch den Zugriff aus dem Internet.
 
-[Lesen Sie die Hinweise zum MCP-Netzwerkzugriff, bevor Sie einen entfernten Client verbinden](/docs/minddy-mcp#network-access).
+[Lies die Hinweise zum MCP-Netzwerkzugriff, bevor du einen entfernten Client verbindest](/docs/minddy-mcp#network-access).
 
 ## Fehler beheben {#recover}
 
-Wenn Sie ein Fenster schließen, läuft die Desktop-App weiter; verwenden Sie den Befehl zum Beenden der Anwendung, um auch die lokalen Dienste zu stoppen. Prüfen Sie Docker, CLI, freien Speicher und andere Prozesse auf Port 6463. `pnpm self-host:local` ist eine Diagnosealternative im Terminal. Beenden Sie sie mit Strg+C, bevor die App übernimmt; sie beansprucht keinen fremden Prozess. Beim Beenden der App stoppt normalerweise auch Supabase. `--keep-backend` ändert dies ausdrücklich. Verwenden Sie `supabase db reset --local` niemals zur Wiederherstellung: Es löscht Erprobungsdaten. Prüfen Sie neues Konto, Projekt, Ticket und Anhang, bevor Sie sich auf die Instanz verlassen.
+Wenn du ein Fenster schließt, läuft die Desktop-App weiter; verwende den Befehl zum Beenden der Anwendung, um auch die lokalen Dienste zu stoppen. Prüfe Docker, CLI, freien Speicher und andere Prozesse auf Port 6463. `pnpm self-host:local` ist eine Diagnosealternative im Terminal. Beende sie mit Strg+C, bevor die App übernimmt; sie beansprucht keinen fremden Prozess. Beim Beenden der App stoppt normalerweise auch Supabase. `--keep-backend` ändert dies ausdrücklich. Verwende `supabase db reset --local` niemals zur Wiederherstellung: Es löscht Erprobungsdaten. Prüfe neues Konto, Projekt, Ticket und Anhang, bevor du dich auf die Instanz verlässt.

@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 7,
+  "revision": 9,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -40,9 +40,9 @@
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of notifications-and-inbox-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 9,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of notifications-and-inbox-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -60,8 +60,8 @@
       "kind": "screenshot",
       "src": "/documentation/pt-BR/work-inbox.png",
       "alt": "Caixa de entrada com menções, atribuições e comentários de demonstração, lidos e não lidos.",
-      "caption": "A atividade de exemplo mostra o autor, o ticket e o estado de leitura. Todos inclui notificações lidas e não lidas.",
-      "revision": 8,
+      "caption": "A atividade de exemplo mostra o autor, o ticket e o estado de leitura. Todas inclui notificações lidas e não lidas.",
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -83,11 +83,11 @@
 
 Abra a caixa de entrada pelo ícone na barra superior, pela linha dela na barra lateral no celular ou pressionando G e depois I fora de um campo de texto. Um contador vermelho no ícone soma as notificações não lidas e os convites pendentes; um PWA instalado mostra o mesmo número no ícone do aplicativo. A caixa de entrada abre em um popover, ou em uma folha no celular, e agrupa as notificações em Hoje, Ontem e Anteriormente.
 
-Ela abre no filtro Não lidos. Todos mostra também as notificações lidas, e Menções mantém apenas as menções em comentários e páginas. Selecione um item para abrir o ticket, a página ou o pull request correspondente. Abrir uma notificação marca-a como lida. A linha também oferece Marcar como lido ou Marcar como não lido, e Marcar tudo como lido, no cabeçalho da caixa de entrada, remove todos os indicadores de não lido. Marcar como não lida muda apenas o indicador: não desfaz a alteração no ticket ou na página. Abra o conteúdo vinculado para consultar seu estado atual.
+Ela abre no filtro Não lidas. Todas mostra também as notificações lidas, e Menções mantém apenas as menções em comentários e páginas. Selecione um item para abrir o ticket, a página ou o pull request correspondente. Abrir uma notificação marca-a como lida. A linha também oferece Marcar como lida ou Marcar como não lida, e Marcar tudo como lido, no cabeçalho da caixa de entrada, remove todos os indicadores de não lido. Marcar como não lida muda apenas o indicador: não desfaz a alteração no ticket ou na página. Abra o conteúdo vinculado para consultar seu estado atual.
 
 Excluir, em uma linha, remove essa notificação após uma confirmação, e Excluir lidas, no cabeçalho, remove todas as notificações lidas após uma confirmação. As duas exclusões são definitivas; as notificações não lidas permanecem, e o ticket, a página ou o pull request para o qual uma notificação aponta não é afetado.
 
-Convites pendentes para projetos aparecem em Convites nos filtros Não lidos e Todos. Aceite ou recuse depois de conferir o projeto e quem convidou você. Links antigos abrem o ponto de acesso atual, não uma página separada.
+Convites pendentes para projetos aparecem em Convites nos filtros Não lidas e Todas. Aceite ou recuse depois de conferir o projeto e quem convidou você. Links antigos abrem o ponto de acesso atual, não uma página separada.
 
 ![Caixa de entrada com menções, atribuições e comentários de demonstração, lidos e não lidos.](/documentation/pt-BR/work-inbox.png)
 

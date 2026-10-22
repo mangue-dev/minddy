@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 10,
+  "revision": 12,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -45,9 +45,9 @@
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of views-and-filters-steps, share-a-view-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 12,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of views-and-filters-steps, share-a-view-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -70,7 +70,7 @@
       "src": "/documentation/de/work-view-filters.png",
       "alt": "Manuelle Ansichtsfilter und Sortiermenü.",
       "caption": "Filtere nach Ticketeigenschaften oder wähle eine Reihenfolge. Für diese manuellen Bedienelemente ist das KI-Feld optional.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -87,7 +87,7 @@
       "src": "/documentation/de/work-share-view.png",
       "alt": "Freigabedialog einer Ansicht mit ausgewähltem privatem Zugriff.",
       "caption": "Privater, passwortgeschützter und öffentlicher Zugriff sind unterschiedliche Optionen. Die Ansicht bleibt hier privat.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -112,7 +112,7 @@ Eine Ansicht speichert Filter und Darstellung von Tickets, ohne diese zu kopiere
 
 Beginne in einem Projektboard oder einer persönlichen projektübergreifenden Ticketansicht. Wähle die benötigte Arbeit mit Filtern, Sortierung und Darstellungsfunktionen aus. Prüfe vor dem Speichern den Umfang: Eine persönliche Ansicht und eine Projektansicht haben nicht dieselbe Zugriffsgrenze.
 
-Filtere nach unterstützten Eigenschaften wie Status, zuständiger Person, Priorität, Kategorien oder Ziel. Sortiere die Ergebnisse so, dass die nächste Aktion klar wird. Im Kanban bleiben Tickets nach Status gruppiert; eine geänderte Ansicht bearbeitet weder Status noch Zuweisung. Ohne eigenen Statusfilter zeigt ein Board nur **Rückstand**, **Todo**, **In Bearbeitung** und **In Überprüfung**. Wähle **Fertig** oder **Abgebrochen** im Filter **Status**, um diese Spalten anzuzeigen; eine Ansicht behält den Statusfilter, den du mit ihr speicherst.
+Filtere nach unterstützten Eigenschaften wie Status, zuständiger Person, Priorität, Kategorien oder Ziel. Sortiere die Ergebnisse so, dass die nächste Aktion klar wird. Im Kanban bleiben Tickets nach Status gruppiert; eine geänderte Ansicht bearbeitet weder Status noch Zuweisung. Ohne eigenen Statusfilter zeigt ein Board nur **Backlog**, **Zu erledigen**, **In Bearbeitung** und **In Prüfung**. Wähle **Erledigt** oder **Abgebrochen** im Filter **Status**, um diese Spalten anzuzeigen; eine Ansicht behält den Statusfilter, den du mit ihr speicherst.
 
 Speichere die Ansicht unter einem Namen, der ihren Zweck beschreibt, wähle sie erneut in der Ansichtsleiste oben auf dem Board (auf einem schmalen Bildschirm in einem Menü) und prüfe ihre Filter. Bearbeite oder entferne die gespeicherte Ansicht, wenn sich ihr Zweck ändert. **Ansicht löschen** verlangt eine Bestätigung, und ein Board behält immer mindestens eine eigene Ansicht. Das Teilen ist eine gesonderte Veröffentlichung mit eigenen Berechtigungen und Widerrufsregeln.
 
@@ -120,7 +120,7 @@ Speichere die Ansicht unter einem Namen, der ihren Zweck beschreibt, wähle sie 
 
 ### Leere oder unerwartete Ergebnisse klären {#view-recovery}
 
-Prüfe alle Filter, das aktive Projekt und deine Mitgliedschaft, wenn erwartete Tickets fehlen. Entferne einschränkende Filter, bevor du von gelöschten Daten ausgehst. Nach der Bearbeitung kann ein Ticket berechtigterweise aus einer gefilterten Ansicht verschwinden. Suche seine Kennung oder wähle auf einem sonst ungefilterten Projektboard **Fertig** und **Abgebrochen** im Filter **Status**, um die gespeicherten Werte zu prüfen.
+Prüfe alle Filter, das aktive Projekt und deine Mitgliedschaft, wenn erwartete Tickets fehlen. Entferne einschränkende Filter, bevor du von gelöschten Daten ausgehst. Nach der Bearbeitung kann ein Ticket berechtigterweise aus einer gefilterten Ansicht verschwinden. Suche seine Kennung oder wähle auf einem sonst ungefilterten Projektboard **Erledigt** und **Abgebrochen** im Filter **Status**, um die gespeicherten Werte zu prüfen.
 
 Eine gespeicherte Ansicht ist keine Kopie ihrer Tickets. Das Löschen der Ansicht entfernt ihre Konfiguration; das Löschen ausgewählter Tickets verändert dagegen die zugrunde liegende Projektarbeit.
 

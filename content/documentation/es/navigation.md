@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
-  "sourceRevision": 15,
+  "revision": 17,
+  "sourceRevision": 16,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -62,9 +62,9 @@
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:/root/min777 (panel paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed)",
-    "language": "agent:/root/min777 (es sentence on the page side panel with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 17,
+    "fact": "agent:/root/min777 (panel paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of navigation-steps, search-and-shortcuts-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min777 (es sentence on the page side panel with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -86,15 +86,16 @@
       "src": "/documentation/es/work-navigation.png",
       "alt": "Navegación del proyecto junto al tablero de incidencias de demostración.",
       "caption": "La barra del proyecto da acceso a incidencias, objetivos, páginas y clasificación de entradas.",
-      "revision": 15,
+      "revision": 17,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
-        1488,
-        1128
+        1440,
+        1080
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 0,
+      "deviceScaleFactor": 2
     },
     {
       "id": "search-and-shortcuts-steps",
@@ -102,15 +103,16 @@
       "src": "/documentation/es/work-search.png",
       "alt": "Resultados de búsqueda del identificador de una incidencia de demostración.",
       "caption": "La paleta encuentra la incidencia por identificador junto a las páginas del proyecto; abrir un resultado conserva sus reglas de acceso.",
-      "revision": 15,
+      "revision": 17,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         788,
         320
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -126,7 +128,7 @@ La navegación permite acceder a tu trabajo personal o a un proyecto. La paleta 
 
 La navegación principal da acceso a tu trabajo personal y a tus proyectos. Selecciona un proyecto para ver sus incidencias y destinos secundarios, como clasificación, objetivos, páginas y ajustes del proyecto. La fila de regreso sube un nivel de navegación; puede cambiar el contenido de la barra lateral mientras la página principal permanece abierta. Selecciona un destino para abrirlo.
 
-Los contadores y las alertas te acompañan entre niveles. El control que vuelve a **Inicio** muestra el total por clasificar en los proyectos que lista **Inicio**, incluido el actual, y la alerta de Smart Assign cuando a uno de tus proyectos le faltan reglas. Una fila de retorno muestra el contador del nivel al que regresa. Dentro de un proyecto, **Clasificación** y **Sugerencias** conservan los contadores de ese proyecto. Las pestañas de la app de escritorio llevan la misma insignia que su entrada de la barra lateral: la alerta en **Inicio** y los contadores en **Caja de entrada**, **Revisión de código** y en **Clasificación** y **Sugerencias** de un proyecto, actualizados aunque la pestaña esté en segundo plano.
+Los contadores y las alertas te acompañan entre niveles. El control que vuelve a **Inicio** muestra el total por clasificar en los proyectos que lista **Inicio**, incluido el actual, y la alerta de Smart Assign cuando a uno de tus proyectos le faltan reglas. Una fila de retorno muestra el contador del nivel al que regresa. Dentro de un proyecto, **Clasificación** y **Sugerencias** conservan los contadores de ese proyecto. Las pestañas de la app de escritorio llevan la misma insignia que su entrada de la barra lateral: la alerta en **Inicio** y los contadores en **Bandeja de entrada**, **Revisión de código** y en **Clasificación** y **Sugerencias** de un proyecto, actualizados aunque la pestaña esté en segundo plano.
 
 Los ciclos personales y las vistas entre proyectos abarcan los proyectos a los que tienes acceso. Los objetivos, las páginas y las sugerencias de un proyecto pertenecen a un único proyecto. Comprueba el proyecto activo antes de crear trabajo o modificar ajustes.
 
@@ -137,9 +139,9 @@ Los ciclos personales y las vistas entre proyectos abarcan los proyectos a los q
 Haz clic derecho en una fila de la barra lateral para actuar sobre lo que representa sin abrirlo primero. Las filas de enlace también ofrecen **Abrir en una pestaña nueva** y **Copiar enlace**. Una acción que mueve algo a la papelera siempre aparece al final, tras un separador.
 
 - La fila **Todas las incidencias** ofrece **Nueva incidencia**, y la fila **Rutinas** ofrece **Nueva rutina** si eres propietario de un proyecto.
-- Una fila de proyecto, o el nombre del proyecto en la parte superior de su panel, ofrece **Nuevo** (una incidencia, un objetivo o una página en ese proyecto) y **Configuración del proyecto**. El propietario del proyecto también ve **Mover a la papelera**, que pide la misma confirmación que la configuración del proyecto. El mismo menú también ofrece **Ocultar proyecto**, o **Mostrar proyecto** para un proyecto que ocultaste; consulta [Ocultar un proyecto para ti](/docs/projects#hide-project).
+- Una fila de proyecto, o el nombre del proyecto en la parte superior de su panel, ofrece **Nuevo** (una incidencia, un objetivo o una página en ese proyecto) y **Ajustes del proyecto**. El propietario del proyecto también ve **Mover a la papelera**, que pide la misma confirmación que los ajustes del proyecto. El mismo menú también ofrece **Ocultar proyecto**, o **Mostrar proyecto** para un proyecto que ocultaste; consulta [Ocultar un proyecto para ti](/docs/projects#hide-project).
 - Una pestaña de proyecto ofrece su propia creación: **Nueva incidencia** en Incidencias, **Nuevo objetivo** en Objetivos, **Nueva página** en Páginas y **Nueva sugerencia** en Sugerencias, que abre el formulario interno de sugerencias.
-- Una fila de rutina ofrece **Abrir la última ejecución** y, al propietario del proyecto, **Ejecutar ahora**, **Pausar** o **Reactivar**, **Editar** y **Mover a la papelera**. Consulta [Gestionar y comprobar ejecuciones](/es/documentacion/scheduled-routines#runs).
+- Una fila de rutina ofrece **Abrir la última ejecución** y, al propietario del proyecto, **Ejecutar ahora**, **Pausar** o **Reanudar**, **Editar** y **Mover a la papelera**. Consulta [Gestionar y comprobar ejecuciones](/es/documentacion/scheduled-routines#runs).
 - Una fila de pull request ofrece los cambios que permite su estado actual, **Fusionar** cuando está lista y acciones de corrección cuando algo la bloquea. Consulta [Revisión y fusión](/es/documentacion/code-work#decision).
 
 La acción se aplica a la fila en la que hiciste clic, aunque haya otro proyecto o elemento abierto.
@@ -168,19 +170,19 @@ Utiliza la ayuda de atajos para consultar los comandos disponibles en tu platafo
 
 ### Orden de las incidencias en la búsqueda {#issue-search-order}
 
-Todas las búsquedas de incidencias muestran las incidencias en el mismo orden: la paleta, las menciones `@`, los selectores de relaciones, duplicados y pull requests, el diálogo **Vincular a una incidencia existente** de los comentarios y la búsqueda que usan Numo y los agentes MCP. Las incidencias **En curso** y **En examen** van primero, luego las de **Registro** y **Pendiente**. Las incidencias en **Clasificación**, **Hecho**, **Cancelado** y **Duplicado** siempre van al final y siguen siendo seleccionables. Dentro de cada grupo, la mejor coincidencia de texto va primero. Un identificador escrito completo, como `MIN-42`, pone esa incidencia primero, sea cual sea su estado.
+Todas las búsquedas de incidencias muestran las incidencias en el mismo orden: la paleta, las menciones `@`, los selectores de relaciones, duplicados y pull requests, el diálogo **Vincular a una incidencia existente** de los comentarios y la búsqueda que usan Numo y los agentes MCP. Las incidencias **En curso** y **En revisión** van primero, luego las de **Backlog** y **Pendiente**. Las incidencias en **Clasificación**, **Hecha**, **Cancelada** y **Duplicada** siempre van al final y siguen siendo seleccionables. Dentro de cada grupo, la mejor coincidencia de texto va primero. Un identificador escrito completo, como `MIN-42`, pone esa incidencia primero, sea cual sea su estado.
 
 ### Buscar incidencias por el sentido {#search-by-meaning}
 
-Cuando una búsqueda describe el trabajo en lugar de nombrarlo, la búsqueda de incidencias también encuentra incidencias de sentido parecido, aunque usen otras palabras. Por ejemplo, «el inicio de sesión falla tras restablecer la contraseña» puede encontrar una incidencia titulada «Sesión perdida al cambiar la contraseña». Esto se aplica a la paleta de comandos, las menciones `@` en descripciones, páginas, comentarios y el compositor de Numo, los selectores de relaciones, **Marcar como duplicado...** en el triaje, **Vincular una incidencia** en una pull request, el menú **Añadir contexto** → **Incidencia** de Numo y **Vincular a una incidencia existente** en el feedback.
+Cuando una búsqueda describe el trabajo en lugar de nombrarlo, la búsqueda de incidencias también encuentra incidencias de sentido parecido, aunque usen otras palabras. Por ejemplo, «el inicio de sesión falla tras restablecer la contraseña» puede encontrar una incidencia titulada «Sesión perdida al cambiar la contraseña». Esto se aplica a la paleta de comandos, las menciones `@` en descripciones, páginas, comentarios y el compositor de Numo, los selectores de relaciones, **Marcar como duplicada…** en el triaje, **Vincular una incidencia** en una pull request, el menú **Añadir contexto** → **Incidencia** de Numo y **Vincular a una incidencia existente** en el feedback.
 
-Las coincidencias de texto y los identificadores exactos aparecen siempre primero y conservan su orden. Poco después de que dejes de escribir, se añaden detrás, bajo **Relacionadas por el sentido**, como máximo cinco incidencias encontradas por el sentido. Una incidencia ya mostrada no se repite y la fila resaltada no se mueve. Cada selector conserva sus propias reglas, así que solo aparecen incidencias que ya podía ofrecer: un selector de relaciones, por ejemplo, sigue ofreciendo solo incidencias del mismo proyecto que aún no están vinculadas. La paleta de comandos busca en los proyectos que puedes leer, hasta los 25 actualizados más recientemente; sus acciones de selección múltiple no usan la búsqueda por el sentido.
+Las coincidencias de texto y los identificadores exactos aparecen siempre primero y conservan su orden. Poco después de que dejes de escribir, se añaden detrás, bajo **Relacionadas por significado**, como máximo cinco incidencias encontradas por el sentido. Una incidencia ya mostrada no se repite y la fila resaltada no se mueve. Cada selector conserva sus propias reglas, así que solo aparecen incidencias que ya podía ofrecer: un selector de relaciones, por ejemplo, sigue ofreciendo solo incidencias del mismo proyecto que aún no están vinculadas. La paleta de comandos busca en los proyectos que puedes leer, hasta los 25 actualizados más recientemente; sus acciones de selección múltiple no usan la búsqueda por el sentido.
 
 La búsqueda por el sentido tiene estos límites:
 
 - La búsqueda necesita al menos dos palabras, o una palabra de al menos seis letras. Los identificadores como `MIN-42`, `#42` o `42`, y las búsquedas muy cortas, solo usan la búsqueda de texto.
-- Se basa en el índice que Rellenado inteligente construye con el título y la descripción de las incidencias. Una incidencia aún no indexada, o cuyo autor desactivó [**Indexar incidencias**](/docs/issues#smart-fill-preferences), solo se encuentra por sus palabras. Las incidencias de la papelera nunca aparecen.
-- Si desactivaste **Indexar incidencias** en **Configuración de la cuenta** → **Smart Fill** → **Indexación de incidencias**, tus búsquedas solo comparan palabras. Lo mismo ocurre cuando tu presupuesto de IA está agotado o cuando el proveedor no responde en pocos segundos. Los resultados de texto se mantienen y no se muestra ningún error.
+- Se basa en el índice que Smart Fill construye con el título y la descripción de las incidencias. Una incidencia aún no indexada, o cuyo autor desactivó [**Indexar incidencias**](/docs/issues#smart-fill-preferences), solo se encuentra por sus palabras. Las incidencias de la papelera nunca aparecen.
+- Si desactivaste **Indexar incidencias** en **Ajustes de la cuenta** → **Smart Fill** → **Indexación de incidencias**, tus búsquedas solo comparan palabras. Lo mismo ocurre cuando tu presupuesto de IA está agotado o cuando el proveedor no responde en pocos segundos. Los resultados de texto se mantienen y no se muestra ningún error.
 - Una consulta `@` cuyo texto ya coincide con una persona, un proyecto o una página no se busca por el sentido. En un proyecto con más de 3000 incidencias indexadas, solo se comparan las 3000 indexadas más recientemente; las demás se encuentran por sus palabras.
 
 Cada búsqueda nueva usa una llamada de IA, que cuenta en tu parte **Automatizaciones** y aparece en el historial de uso como **Búsqueda de incidencias**. Una búsqueda repetida en unos 15 minutos normalmente no se cobra de nuevo.

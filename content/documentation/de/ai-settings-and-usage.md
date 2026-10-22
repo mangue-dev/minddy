@@ -3,7 +3,7 @@
   "id": "ai-settings-and-usage",
   "locale": "de",
   "title": "KI-Einstellungen und Verbrauch",
-  "summary": "Konfigurieren Sie persönliche KI-Schlüssel und Standardmodelle und verstehen Sie Cloud-Tariflimits und Verbrauchserfassung.",
+  "summary": "Konfiguriere persönliche KI-Schlüssel und Standardmodelle und verstehe Cloud-Planlimits und Verbrauchserfassung.",
   "topic": "Konto und Apps",
   "type": "guide",
   "audiences": [
@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 20,
-  "sourceRevision": 19,
+  "revision": 21,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -61,9 +61,9 @@
     ]
   },
   "review": {
-    "revision": 20,
-    "fact": "agent:claude/min773 (dictation pill, discard confirmation, cleanup preference and vocabulary checked against the changed source and the running app; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures)",
-    "language": "agent:claude/min773 (de translation of the MIN-773 passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 21,
+    "fact": "agent:claude/min773 (dictation pill, discard confirmation, cleanup preference and vocabulary checked against the changed source and the running app; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:claude/min773 (de translation of the MIN-773 passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -76,7 +76,7 @@
   ],
   "tags": [
     "Eigene KI-Schlüssel und Modelle konfigurieren",
-    "Cloud-Tarife und KI-Verbrauch verstehen"
+    "Cloud-Pläne und KI-Verbrauch verstehen"
   ],
   "figures": [
     {
@@ -85,7 +85,7 @@
       "src": "/documentation/de/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Verbundene Anbieter, Fähigkeitszuordnung und persönliches Numo-Modell sind getrennte Einstellungen.",
       "caption": "Mehrere Anbieter bleiben verbunden. Die Zuordnung wählt je Fähigkeit; Numos Standard wird je Konto und Anbieter gespeichert.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -103,10 +103,10 @@
           },
           {
             "title": "Anbieter je Fähigkeit",
-            "detail": "Ordnen Sie Text, Transkription und Embeddings getrennt zu und aktivieren Sie die Nutzungen."
+            "detail": "Ordne Text, Transkription und Embeddings getrennt zu und aktiviere die Nutzungen."
           },
           {
-            "title": "Numos Standardmodell",
+            "title": "Standardmodell für Numo",
             "detail": "App-Standard oder persönliches Modell. Eine ausdrückliche Gesprächsauswahl hat Vorrang."
           }
         ]
@@ -119,44 +119,44 @@
 }
 ---
 
-Die KI-Kontoeinstellungen legen Anbieter, persönliche Schlüssel und Standardwerte für die unterstützten Funktionen fest. Prüfen Sie vor Arbeitsbeginn die Modellzuordnung. Unterscheiden Sie beim Cloud-Verbrauch zwischen Anbieterabrechnung, enthaltenem KI-Kontingent und Routinenlimits.
+Die KI-Kontoeinstellungen legen Anbieter, persönliche Schlüssel und Standardwerte für die unterstützten Funktionen fest. Prüfe vor Arbeitsbeginn die Modellzuordnung. Unterscheide beim Cloud-Verbrauch zwischen Anbieterabrechnung, enthaltenem KI-Kontingent und Routinenlimits.
 
-Der Abschnitt **Minddy-KI** der KI-Kontoeinstellungen konfiguriert die API-Anbieter für Numo-Gespräche, Routinen, Automatisierungen, Sprache und Feedback. Coding-Agenten, die Sie selbst ausführen und über minddy MCP verbinden, nutzen ihr eigenes Abonnement oder API-Konto und verbrauchen keine Minddy-KI-Nutzung.
+Der Abschnitt **Minddy-KI** der KI-Kontoeinstellungen konfiguriert die API-Anbieter für Numo-Gespräche, Routinen, Automatisierungen, Sprache und Feedback. Coding-Agenten, die du selbst ausführst und über minddy MCP verbinden, nutzen ihr eigenes Abonnement oder API-Konto und verbrauchen keine Minddy-KI-Nutzung.
 
 ## Eigene KI-Schlüssel und Modelle konfigurieren {#ai-keys-and-models}
 
-In den KI-Kontoeinstellungen wählt **KI-Anbieter** den Textmodell-Anbieter aus Minddy Cloud und Ihren verbundenen kompatiblen Anbietern. **Verbundene Anbieter** zeigt die vollständige Liste. Wählen Sie **Anbieter hinzufügen**, wählen Sie den Anbieter, geben Sie seinen API-Schlüssel und gegebenenfalls die Basis-URL ein und speichern Sie. Sie können mehrere Anbieter verbinden; das Hinzufügen oder Auswählen eines Anbieters löscht die anderen nicht. Fügen Sie Schlüssel niemals in Unterhaltungen oder Screenshots ein.
+In den KI-Kontoeinstellungen wählt **KI-Anbieter** den Textmodell-Anbieter aus Minddy Cloud und deinen verbundenen kompatiblen Anbietern. **Verbundene Anbieter** zeigt die vollständige Liste. Wähle **Anbieter hinzufügen**, wähle den Anbieter, gib seinen API-Schlüssel und gegebenenfalls die Basis-URL ein und speichere. Du kannst mehrere Anbieter verbinden; das Hinzufügen oder Auswählen eines Anbieters löscht die anderen nicht. Füge Schlüssel niemals in Unterhaltungen oder Screenshots ein.
 
-Ordnen Sie Text, Transkription und Embeddings unabhängig zu. Jede Modellfamilie verwendet jeweils einen Anbieter. Die Nutzungsschalter pro Anbieter bestimmen, ob Numo, Automatisierungen, Sprache und Feedback dessen Schlüssel oder das Minddy-Kontingent verwenden. Beispielsweise kann Text über OpenRouter und Transkription über OpenAI laufen. Die Auswahl eines Textanbieters aktiviert einen zuvor deaktivierten Numo-Nutzungsschalter nicht erneut.
+Ordne Text, Transkription und Embeddings unabhängig zu. Jede Modellfamilie verwendet jeweils einen Anbieter. Die Nutzungsschalter pro Anbieter bestimmen, ob Numo, Automatisierungen, Sprache und Feedback dessen Schlüssel oder das Minddy-Kontingent verwenden. Beispielsweise kann Text über OpenRouter und Transkription über OpenAI laufen. Die Auswahl eines Textanbieters aktiviert einen zuvor deaktivierten Numo-Nutzungsschalter nicht erneut.
 
-Wählen Sie unter **Numos Standardmodell** den **App-Standard** oder ein bestimmtes Modell des aktiven Numo-Anbieters. Die Auswahl wird für Ihr Konto und getrennt je Anbieter gespeichert, auch nach Neuladen und in neuen Sitzungen. Der App-Standard folgt dem für diesen Anbieter konfigurierten Anwendungsmodell. Ein ausdrücklich gewähltes Unterhaltungsmodell hat Vorrang; Unterhaltungen mit Ihrem Standard übernehmen spätere Kontoänderungen. Bereits zugelassene Ausführungen behalten ihr festgelegtes Modell. Ein nicht mehr verfügbares Modell oder eines außerhalb Ihrer Tarifgrenzen wird abgelehnt: Wählen Sie ein anderes Modell oder den App-Standard. Kontoexport und -import enthalten diese Einstellungen, ohne Anbieter-Zugangsdaten.
+Wähle unter **Standardmodell für Numo** den **App-Standard** oder ein bestimmtes Modell des aktiven Numo-Anbieters. Die Auswahl wird für dein Konto und getrennt je Anbieter gespeichert, auch nach Neuladen und in neuen Sitzungen. Der App-Standard folgt dem für diesen Anbieter konfigurierten Anwendungsmodell. Ein ausdrücklich gewähltes Unterhaltungsmodell hat Vorrang; Unterhaltungen mit deinem Standard übernehmen spätere Kontoänderungen. Bereits zugelassene Ausführungen behalten ihr festgelegtes Modell. Ein nicht mehr verfügbares Modell oder eines außerhalb deiner Plangrenzen wird abgelehnt: Wähle ein anderes Modell oder den App-Standard. Kontoexport und -import enthalten diese Einstellungen, ohne Anbieter-Zugangsdaten.
 
-Ein unbestätigter oder nicht erreichbarer Schlüssel kann unterstützte allgemeine KI-Aufrufe über das Minddy-Kontingent laufen lassen, wenn verwaltete KI eingerichtet ist. Ihr Anbieter berechnet Aufrufe mit seinem Schlüssel. Validierte persönliche Schlüssel und von Minddy finanzierte Arbeit folgen den [Budgetregeln unten](#consumption).
+Ein unbestätigter oder nicht erreichbarer Schlüssel kann unterstützte allgemeine KI-Aufrufe über das Minddy-Kontingent laufen lassen, wenn verwaltete KI eingerichtet ist. Dein Anbieter berechnet Aufrufe mit seinem Schlüssel. Validierte persönliche Schlüssel und von Minddy finanzierte Arbeit folgen den [Budgetregeln unten](#consumption).
 
 ![Verbundene Anbieter, Fähigkeitszuordnung und persönliches Numo-Modell sind getrennte Einstellungen.](/documentation/de/ai-providers-and-numo-defaults-flow.svg)
 
 ### Lokale Modelle {#models}
 
-Minddy ruft KI-Modelle vom Server aus auf und kann daher kein Modell nutzen, das auf Ihrem Computer läuft. **Anbieter hinzufügen** bietet weder lokales Ollama noch lokale OpenAI-kompatible Endpunkte an. Ein in einer früheren Version gespeicherter lokaler Endpunkt erscheint weiterhin unter **Verbundene Anbieter**, kann aber weder Numo-Konversationen noch Routinen oder andere Funktionen bedienen. Entfernen Sie ihn und weisen Sie stattdessen einen vom Server erreichbaren Anbieter zu. Entfernen Sie einen nicht mehr benötigten Anbieter über seine Bestätigung und prüfen Sie vor dem nächsten Lauf die neue Zuordnung.
+Minddy ruft KI-Modelle vom Server aus auf und kann daher kein Modell nutzen, das auf deinem Computer läuft. **Anbieter hinzufügen** bietet weder lokales Ollama noch lokale OpenAI-kompatible Endpunkte an. Ein in einer früheren Version gespeicherter lokaler Endpunkt erscheint weiterhin unter **Verbundene Anbieter**, kann aber weder Numo-Konversationen noch Routinen oder andere Funktionen bedienen. Entferne ihn und weise stattdessen einen vom Server erreichbaren Anbieter zu. Entferne einen nicht mehr benötigten Anbieter über seine Bestätigung und prüfe vor dem nächsten Lauf die neue Zuordnung.
 
 
-## Cloud-Tarife und KI-Verbrauch verstehen {#plans-and-ai-usage}
+## Cloud-Pläne und KI-Verbrauch verstehen {#plans-and-ai-usage}
 
-Cloud bietet Free, Go und Pro. Alle enthalten MCP, Numo-Konversationen, Kontextaktionen und Routinen. Kapazität, enthaltene KI, Modelle und Speicher unterscheiden sich. Öffnen Sie Abrechnung für Ihr aktuelles Kontingent und den Verbrauch. Vergleichen Sie vor der Tarifwahl die öffentliche Preisseite; ihre Angaben bilden die aktuelle Referenz.
+Cloud bietet Free, Go und Pro. Alle enthalten MCP, Numo-Konversationen, Kontextaktionen und Routinen. Kapazität, enthaltene KI, Modelle und Speicher unterscheiden sich. Öffne Abrechnung für dein aktuelles Kontingent und den Verbrauch. Vergleiche vor der Planwahl die öffentliche Preisseite; ihre Angaben bilden die aktuelle Referenz.
 
-Verwenden Sie den Ihrem Konto angebotenen Zahlungs- oder Abonnementverwaltungsbefehl. Prüfen Sie Betrag, Abrechnungszeitraum und Anbieterbestätigung, bevor Sie zustimmen. Ein erfolgreicher Tarifwechsel sollte in der Kontoabrechnung erscheinen. Prüfen Sie dies, statt ein geschlossenes Zahlungsfenster als Nachweis zu betrachten.
+Verwende den deinem Konto angebotenen Zahlungs- oder Abonnementverwaltungsbefehl. Prüfe Betrag, Abrechnungszeitraum und Anbieterbestätigung, bevor du zustimmst. Ein erfolgreicher Planwechsel sollte in der Kontoabrechnung erscheinen. Prüfe dies, statt ein geschlossenes Zahlungsfenster als Nachweis zu betrachten.
 
 ### Budgetverbrauch {#consumption}
 
-Das enthaltene KI-Kontingent umfasst Numos Reasoning und Werkzeugaufrufe, Routinen, Automatisierungen, Sprachdiktat und Feedback-Verarbeitung. Die monatliche Grenze des enthaltenen KI-Kontingents gilt für Arbeit, die minddy finanziert. Das Limit pro Routinenlauf ist eine eigene Grenze, die den Lauf pausieren kann; abgeschlossene Arbeit bleibt in der Konversation erhalten. Diese Grenzen erlauben keine automatische Abrechnung von Überschreitungen. Prüfen Sie die Limitkarte und das Datum der Budgetzurücksetzung, sofern es verfügbar ist.
+Das enthaltene KI-Kontingent umfasst Numos Reasoning und Werkzeugaufrufe, Routinen, Automatisierungen, Sprachdiktat und Feedback-Verarbeitung. Die monatliche Grenze des enthaltenen KI-Kontingents gilt für Arbeit, die minddy finanziert. Das Limit pro Routinenlauf ist eine eigene Grenze, die den Lauf pausieren kann; abgeschlossene Arbeit bleibt in der Konversation erhalten. Diese Grenzen erlauben keine automatische Abrechnung von Überschreitungen. Prüfe die Limitkarte und das Datum der Budgetzurücksetzung, sofern es verfügbar ist.
 
 Kompatible persönliche Schlüssel lassen Modellaufrufe beim Anbieter abrechnen, statt das enthaltene KI-Kontingent zu verbrauchen. Nicht zugeordnete Familien oder Bereiche, deren Aufrufe minddy finanziert, bleiben an ihr minddy-Kontingent gebunden. Self-Hosting hat von der Installation abhängige Infrastruktur- und optionale Anbieterkosten. Derselbe Anwendungskern macht daraus kein Cloud-Abonnement.
 
-### Kapazitäten der Tarife {#plan-capacities}
+### Kapazitäten der Pläne {#plan-capacities}
 
-Diese Standardwerte beschreiben Minddy 0.20.0. Prüfen Sie vor einem Kauf die tatsächliche Preisseite und Ihr Konto. Konfigurierte Zahlungspreise und Kontoausnahmen können abweichen. Die Gästezahl schließt den Projekteigentümer aus und umfasst Mitglieder, Leser und ausstehende Einladungen; eine Abrechnung pro Platz gibt es nicht. Speicher wird dem Eigentümer des Projekts angerechnet, das die Dateien erhält. Wird das Eigentum übertragen, richten sich diese Limits, der Speicher und Hintergrund-KI wie Smart Assign und die Feedback-Prüfung nach dem Tarif des neuen Eigentümers.
+Diese Standardwerte beschreiben Minddy 0.20.0. Prüfe vor einem Kauf die tatsächliche Preisseite und dein Konto. Konfigurierte Zahlungspreise und Kontoausnahmen können abweichen. Die Gästezahl schließt den Projekteigentümer aus und umfasst Mitglieder, Leser und ausstehende Einladungen; eine Abrechnung pro Platz gibt es nicht. Speicher wird dem Eigentümer des Projekts angerechnet, das die Dateien erhält. Wird das Eigentum übertragen, richten sich diese Limits, der Speicher und Hintergrund-KI wie Smart Assign und die Feedback-Prüfung nach dem Plan des neuen Eigentümers.
 
-| Tarif | Projekte | Tickets pro Projekt | Gäste pro Projekt | Speicher | Enthaltene monatliche KI (USD) |
+| Plan | Projekte | Tickets pro Projekt | Gäste pro Projekt | Speicher | Enthaltene monatliche KI (USD) |
 | --- | --- | --- | --- | --- | --- |
 | Free | 2 | 300 | 3 | 1 GiB | 0.50 |
 | Go | Unbegrenzt | Unbegrenzt | Unbegrenzt | 20 GiB | 5 |
@@ -166,20 +166,20 @@ Die Abrechnung zeigt das verbleibende KI-Budget und die nächste Zurücksetzung,
 
 ## Text und Änderungen diktieren {#voice-dictation}
 
-Mit dem Mikrofon neben einem unterstützten Feld können Sie Tickets, Ziele, Kommentare, Numo-Nachrichten, Feedback oder Routine-Anweisungen diktieren. Sie benötigen Schreibrechte an dieser Stelle, ein funktionierendes Mikrofon und einen Browser mit Aufnahmeunterstützung. Erlauben Sie den Mikrofonzugriff für die Website im Browser und im Betriebssystem. Verwenden Sie für eine entfernte Instanz HTTPS. In der Cloud muss KI-Budget verfügbar sein; selbst gehostete Instanzen benötigen zusätzlich funktionierende Anbieter für Transkription und Diktat. Persönliche Sprachschlüssel und Modellzuweisungen richten Sie [weiter oben](#ai-keys-and-models) ein.
+Mit dem Mikrofon neben einem unterstützten Feld kannst du Tickets, Ziele, Kommentare, Numo-Nachrichten, Feedback oder Routine-Anweisungen diktieren. Du benötigst Schreibrechte an dieser Stelle, ein funktionierendes Mikrofon und einen Browser mit Aufnahmeunterstützung. Erlaube den Mikrofonzugriff für die Website im Browser und im Betriebssystem. Verwende für eine entfernte Instanz HTTPS. In der Cloud muss KI-Budget verfügbar sein; selbst gehostete Instanzen benötigen zusätzlich funktionierende Anbieter für Transkription und Diktat. Persönliche Sprachschlüssel und Modellzuweisungen richtest du [weiter oben](#ai-keys-and-models) ein.
 
-1. Öffnen Sie das gewünschte Formular oder Ticket und wählen Sie dessen Mikrofon. In einem geöffneten Ticket schaltet Command+Umschalt+D unter macOS beziehungsweise Strg+Umschalt+D auf anderen Systemen die Sprachbearbeitung um. Unten am Bildschirm öffnet sich eine Diktierleiste, auf dem Telefon als Panel, mit der Aufnahmezeit und einer Welle, die Ihrer Stimme folgt. Der Rest der Oberfläche wartet, bis die Aufnahme endet.
-2. Sprechen Sie in der Oberflächensprache, die der Transkription als Hinweis dient. Benennen Sie Änderungen deutlich, etwa „Setze die Priorität auf hoch“. Wählen Sie **Transkribieren** (✓), drücken Sie Command+Eingabe unter macOS beziehungsweise Strg+Eingabe auf anderen Systemen (die Eingabetaste allein funktioniert ebenfalls) oder wiederholen Sie das Tastenkürzel und warten Sie dann auf Transkription und Numo-Verarbeitung. Um die Aufnahme zu verwerfen, wählen Sie **Aufnahme verwerfen** (✕) oder drücken Sie Esc, dann **Verwerfen**: Es wird nichts gesendet.
-3. Prüfen Sie das Ergebnis. Numo-Nachrichten, Kommentare und Routine-Anweisungen erhalten bearbeitbaren Text; lesen Sie ihn vor dem Senden oder Speichern. Erstellungsformulare erhalten Entwurfsfelder, die Sie noch bestätigen müssen. Die Sprachbearbeitung eines bestehenden Tickets übernimmt Änderungen sofort: prüfen Sie danach die Felder und korrigieren Sie Fehler mit den üblichen Bedienelementen. Diktieren gewährt keine zusätzlichen Rechte.
+1. Öffne das gewünschte Formular oder Ticket und wähle dessen Mikrofon. In einem geöffneten Ticket schaltet Command+Umschalt+D unter macOS beziehungsweise Strg+Umschalt+D auf anderen Systemen die Sprachbearbeitung um. Unten am Bildschirm öffnet sich eine Diktierleiste, auf dem Telefon als Panel, mit der Aufnahmezeit und einer Welle, die deiner Stimme folgt. Der Rest der Oberfläche wartet, bis die Aufnahme endet.
+2. Sprich in der Oberflächensprache, die der Transkription als Hinweis dient. Benenne Änderungen deutlich, etwa „Setze die Priorität auf hoch“. Wähle **Transkribieren** (✓), drücke Command+Eingabe unter macOS beziehungsweise Strg+Eingabe auf anderen Systemen (die Eingabetaste allein funktioniert ebenfalls) oder wiederhole das Tastenkürzel und warte dann auf Transkription und Numo-Verarbeitung. Um die Aufnahme zu verwerfen, wähle **Aufnahme verwerfen** (✕) oder drücke Esc, dann **Verwerfen**: Es wird nichts gesendet.
+3. Prüfe das Ergebnis. Numo-Nachrichten, Kommentare und Routine-Anweisungen erhalten bearbeitbaren Text; lies ihn vor dem Senden oder Speichern. Erstellungsformulare erhalten Entwurfsfelder, die du noch bestätigen musst. Die Sprachbearbeitung eines bestehenden Tickets übernimmt Änderungen sofort: prüfe danach die Felder und korrigiere Fehler mit den üblichen Bedienelementen. Diktieren gewährt keine zusätzlichen Rechte.
 
 ### Verbrauch und Aufnahmegrenzen {#voice-limits}
 
-Die Audiodaten werden an den konfigurierten Transkriptionsdienst gesendet und können anschließend von einem KI-Modell überarbeitet oder interpretiert werden. Die Bereinigung korrigiert Zeichensetzung, Füllwörter und Selbstkorrekturen; um die Wörter so einzufügen, wie sie gehört wurden, deaktivieren Sie **Diktate bereinigen** unter **Kontoeinstellungen** > **Einstellungen** > **Spracheingabe**. Dann wird für Ihre Diktate kein Bereinigungsmodell aufgerufen. Öffentliches Feedback behält seine eigene Verarbeitung. Unter **Wortschatz**, direkt darunter, fügen Sie bis zu 50 Namen und Begriffe hinzu, die das Diktat in Ihrer Schreibweise schreiben soll; füllen Sie **Gehört als** aus, um dieses Wort in jedem Diktat zu ersetzen, auch ohne Bereinigung. Es gelten die Anbieter- und Budgetregeln des Kontos; Aufnahme und anschließende Interpretation können getrennten Verbrauch verursachen. Öffentliches Feedback hat eigene Verfügbarkeits- und Abrechnungsregeln im [Feedback-Leitfaden](/docs/feedback). Die Demo auf der Startseite besitzt ein separates Limit und ist kein Diktatkontingent des Kontos.
+Die Audiodaten werden an den konfigurierten Transkriptionsdienst gesendet und können anschließend von einem KI-Modell überarbeitet oder interpretiert werden. Die Bereinigung korrigiert Zeichensetzung, Füllwörter und Selbstkorrekturen; um die Wörter so einzufügen, wie sie gehört wurden, deaktiviere **Diktate bereinigen** unter **Kontoeinstellungen** > **Einstellungen** > **Spracheingabe**. Dann wird für deine Diktate kein Bereinigungsmodell aufgerufen. Öffentliches Feedback behält seine eigene Verarbeitung. Unter **Wortschatz**, direkt darunter, fügst du bis zu 50 Namen und Begriffe hinzu, die das Diktat in deiner Schreibweise schreiben soll; fülle **Gehört als** aus, um dieses Wort in jedem Diktat zu ersetzen, auch ohne Bereinigung. Es gelten die Anbieter- und Budgetregeln des Kontos; Aufnahme und anschließende Interpretation können getrennten Verbrauch verursachen. Öffentliches Feedback hat eigene Verfügbarkeits- und Abrechnungsregeln im [Feedback-Leitfaden](/docs/feedback). Die Demo auf der Startseite besitzt ein separates Limit und ist kein Diktatkontingent des Kontos.
 
-Der Transkriptionsendpunkt für angemeldete Nutzer akzeptiert bis zu 10 MiB Audio und 30 Anfragen pro Konto und Stunde. Der gemeinsame Recorder stoppt nach 20 Minuten als Schutzmaßnahme. Kürzere Aufnahmen erleichtern die Prüfung. Behalten Sie vorhandenen Text, bis das Ergebnis geprüft ist; der Recorder ist keine Audiosicherung.
+Der Transkriptionsendpunkt für angemeldete Nutzer akzeptiert bis zu 10 MiB Audio und 30 Anfragen pro Konto und Stunde. Der gemeinsame Recorder stoppt nach 20 Minuten als Schutzmaßnahme. Kürzere Aufnahmen erleichtern die Prüfung. Behalte vorhandenen Text, bis das Ergebnis geprüft ist; der Recorder ist keine Audiosicherung.
 
 ### Nach einem fehlgeschlagenen Diktat fortfahren {#voice-recovery}
 
-Bei verweigertem Zugriff aktivieren Sie die Mikrofonberechtigung für die Website und für den Browser oder die Desktop-App im Betriebssystem. Wird kein Gerät gefunden, schließen Sie ein Mikrofon an oder wählen Sie es aus; ist es belegt, schließen Sie die Anwendung, die es verwendet. Bei fehlender Aufnahmeunterstützung verwenden Sie einen kompatiblen Browser oder tippen den Text.
+Bei verweigertem Zugriff aktiviere die Mikrofonberechtigung für die Website und für den Browser oder die Desktop-App im Betriebssystem. Wird kein Gerät gefunden, schließe ein Mikrofon an oder wähle es aus; ist es belegt, schließe die Anwendung, die es verwendet. Bei fehlender Aufnahmeunterstützung verwende einen kompatiblen Browser oder tippe den Text.
 
-Bei Stille oder leerem Ergebnis prüfen Sie das Eingabegerät und machen eine kurze hörbare Aufnahme. Teilen Sie zu große Aufnahmen auf. Eine Meldung zum Anfragelimit nennt eine Wartezeit; warten Sie vor dem nächsten Versuch. Bei Budget- oder Anbieterfehlern prüfen Sie KI-Verbrauch, Sprachzuweisungen und Instanzkonfiguration. Schlägt die Überarbeitung fehl, wird aber erkannter Text zurückgegeben, prüfen und bearbeiten Sie diesen Text. Prüfen Sie vor der Wiederholung einer fehlgeschlagenen Ticketänderung die aktuellen Felder, damit Sie die Änderung nicht doppelt ausführen.
+Bei Stille oder leerem Ergebnis prüfe das Eingabegerät und mache eine kurze hörbare Aufnahme. Teile zu große Aufnahmen auf. Eine Meldung zum Anfragelimit nennt eine Wartezeit; warte vor dem nächsten Versuch. Bei Budget- oder Anbieterfehlern prüfe KI-Verbrauch, Sprachzuweisungen und Instanzkonfiguration. Schlägt die Überarbeitung fehl, wird aber erkannter Text zurückgegeben, prüfe und bearbeite diesen Text. Prüfe vor der Wiederholung einer fehlgeschlagenen Ticketänderung die aktuellen Felder, damit du die Änderung nicht doppelt ausführst.

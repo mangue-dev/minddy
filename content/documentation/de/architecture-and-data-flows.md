@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -39,10 +39,10 @@
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 7,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "instance-configuration",
@@ -60,7 +60,7 @@
       "src": "/documentation/de/architecture-and-data-flows-flow.svg",
       "alt": "Diagramm: Browser und authentifizierte Anwendung. Supabase: PostgreSQL, Auth, Storage, Realtime. Unabhängiger Scheduler für Hintergrundjobs. Optionale Anbieter: getrennte Datenziele.",
       "caption": "Die Infrastruktur trennt interaktive Anfragen, geplante Arbeit und externe Datenziele.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -106,4 +106,4 @@ Der Browser verwendet öffentliche Anwendungs- und Supabase-Origins. Auth etabli
 
 ## Externe Ziele erkennen {#providers}
 
-KI, E-Mail, Git, entferntes MCP, Push, Analytics und externe Objektbackends sind getrennte Ziele bei Aktivierung. Selbstbetrieb der App macht sie nicht lokal. Managed Supabase betreibt das ausgewählte Backend, full stellt den festgelegten Stack unter Ihre Kontrolle. Cloud betreibt Dienst und konfigurierte Anbieter; Selbsthosting liefert eigene Konten und Entscheidungen. Prüfen Sie Rechte, Kosten und Datenbedingungen jeder Integration. Leiten Sie Anbieter oder Cloud-Edition nie aus Hostname oder Plattform ab.
+KI, E-Mail, Git, entferntes MCP, Push, Analytics und externe Objektbackends sind getrennte Ziele bei Aktivierung. Selbstbetrieb der App macht sie nicht lokal. Managed Supabase betreibt das ausgewählte Backend, full stellt den festgelegten Stack unter deine Kontrolle. Cloud betreibt Dienst und konfigurierte Anbieter; Selbsthosting liefert eigene Konten und Entscheidungen. Prüfe Rechte, Kosten und Datenbedingungen jeder Integration. Leite Anbieter oder Cloud-Edition nie aus Hostname oder Plattform ab.

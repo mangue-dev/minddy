@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 16,
-  "sourceRevision": 15,
+  "revision": 18,
+  "sourceRevision": 16,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -62,9 +62,9 @@
     ]
   },
   "review": {
-    "revision": 16,
-    "fact": "agent:/root/min777 (panel paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed); agent:claude-code (MIN-762 UI label correction: quoted labels aligned on the corrected it catalog; no behavior change, no new captures)",
-    "language": "agent:/root/min777 (it sentence on the page side panel with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-762 label edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 18,
+    "fact": "agent:/root/min777 (panel paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed); agent:claude-code (MIN-762 UI label correction: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of navigation-steps, search-and-shortcuts-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min777 (it sentence on the page side panel with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-762 label edit; self-reviewed; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -86,15 +86,16 @@
       "src": "/documentation/it/work-navigation.png",
       "alt": "Navigazione del progetto accanto alla bacheca dei ticket dimostrativi.",
       "caption": "La barra del progetto permette di aprire ticket, obiettivi, pagine e triage.",
-      "revision": 16,
+      "revision": 18,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
-        1488,
-        1128
+        1440,
+        1080
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 0,
+      "deviceScaleFactor": 2
     },
     {
       "id": "search-and-shortcuts-steps",
@@ -102,15 +103,16 @@
       "src": "/documentation/it/work-search.png",
       "alt": "Risultati della ricerca dell’identificativo di un ticket dimostrativo.",
       "caption": "La palette trova il ticket tramite identificativo insieme alle pagine del progetto; aprire un risultato conserva le sue regole di accesso.",
-      "revision": 16,
+      "revision": 18,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         788,
         320
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -126,7 +128,7 @@ La navigazione distingue lavoro personale e contenuti di ogni progetto. Ricerca,
 
 La navigazione principale permette di raggiungere il lavoro personale e i tuoi progetti. Seleziona un progetto per vedere i suoi ticket e le destinazioni secondarie, tra cui triage, obiettivi, pagine e impostazioni del progetto. La riga per tornare indietro sale di un livello nella navigazione; può cambiare il contenuto della barra laterale mentre la pagina principale resta aperta. Seleziona una destinazione per aprirla.
 
-Contatori e avvisi ti seguono da un livello all’altro. Il controllo che riporta alla **Home** mostra il totale da smistare nei progetti elencati nella **Home**, compreso quello attuale, e l’avviso di Smart Assign quando a uno dei tuoi progetti mancano regole. Una riga di ritorno mostra il contatore del livello a cui riporta. All’interno di un progetto, **Triaggio** e **Feedback** mantengono i contatori di quel progetto. Le schede dell’app desktop portano lo stesso badge della loro voce nella barra laterale: l’avviso sulla **Home** e i contatori su **Posta in arrivo**, **Revisione del codice** e su **Triaggio** e **Feedback** di un progetto, aggiornati anche quando la scheda è in secondo piano.
+Contatori e avvisi ti seguono da un livello all’altro. Il controllo che riporta alla **Home** mostra il totale da smistare nei progetti elencati nella **Home**, compreso quello attuale, e l’avviso di Smart Assign quando a uno dei tuoi progetti mancano regole. Una riga di ritorno mostra il contatore del livello a cui riporta. All’interno di un progetto, **Triage** e **Feedback** mantengono i contatori di quel progetto. Le schede dell’app desktop portano lo stesso badge della loro voce nella barra laterale: l’avviso sulla **Home** e i contatori su **Posta in arrivo**, **Revisione del codice** e su **Triage** e **Feedback** di un progetto, aggiornati anche quando la scheda è in secondo piano.
 
 I cicli personali e le viste tra progetti comprendono i progetti a cui hai accesso. Obiettivi, pagine e feedback appartengono a un singolo progetto. Controlla il progetto attivo prima di creare lavoro o cambiare impostazioni.
 
@@ -138,9 +140,9 @@ Fai clic con il tasto destro su una riga della barra laterale per agire su ciò 
 
 - La riga **Tutti i ticket** offre **Nuovo ticket** e la riga **Routine** offre **Nuova routine** se sei proprietario di un progetto.
 - Una riga di progetto, o il nome del progetto in cima al suo pannello, offre **Nuovo** (un ticket, un obiettivo o una pagina in quel progetto) e **Impostazioni del progetto**. Il proprietario del progetto vede anche **Sposta nel cestino**, che chiede la stessa conferma delle impostazioni del progetto. Lo stesso menu offre anche **Nascondi progetto**, oppure **Mostra progetto** per un progetto che hai nascosto; vedi [Nascondere un progetto per te](/docs/projects#hide-project).
-- Una scheda di progetto offre la propria creazione: **Nuovo ticket** su Ticket, **Nuovo obiettivo** su Obiettivi, **Nuova pagina** su Pagine e **Nuovi commenti** su Feedback, che apre il modulo interno per i feedback.
-- Una riga di routine offre **Apri l’ultima esecuzione** e, al proprietario del progetto, **Correte adesso**, **Metti in pausa** o **Riattiva**, **Modifica** e **Sposta nel cestino**. Vedi [Gestire e verificare le esecuzioni](/it/documentazione/scheduled-routines#runs).
-- Una riga di pull request offre i cambi consentiti dal suo stato attuale, **Unisci** quando è pronta e azioni di correzione quando qualcosa la blocca. Vedi [Revisione e merge](/it/documentazione/code-work#decision).
+- Una scheda di progetto offre la propria creazione: **Nuovo ticket** su Ticket, **Nuovo obiettivo** su Obiettivi, **Nuova pagina** su Pagine e **Nuovo feedback** su Feedback, che apre il modulo interno per i feedback.
+- Una riga di routine offre **Apri l’ultima esecuzione** e, al proprietario del progetto, **Esegui ora**, **Metti in pausa** o **Riattiva**, **Modifica** e **Sposta nel cestino**. Vedi [Gestire e verificare le esecuzioni](/it/documentazione/scheduled-routines#runs).
+- Una riga di pull request offre i cambi consentiti dal suo stato attuale, **Unisci** quando è pronta e azioni di correzione quando qualcosa la blocca. Vedi [Revisione e unione](/it/documentazione/code-work#decision).
 
 L’azione si applica alla riga su cui hai fatto clic, anche quando è aperto un altro progetto o elemento.
 
@@ -168,11 +170,11 @@ Usa la guida delle scorciatoie per esaminare i comandi disponibili sulla tua pia
 
 ### Ordine dei ticket nella ricerca {#issue-search-order}
 
-Ogni ricerca di ticket elenca i ticket nello stesso ordine: la palette, le menzioni `@`, i selettori di relazioni, duplicati e pull request, la finestra **Collegamento a un ticket esistente** dei feedback e la ricerca usata da Numo e dagli agenti MCP. I ticket **In corso** e **In revisione** vengono per primi, poi quelli in **Backlog** e **Da fare**. I ticket in **Triaggio**, **Fatto**, **Annullata** e **Duplicato** vengono sempre per ultimi e restano selezionabili. In ogni gruppo, la corrispondenza di testo migliore viene per prima. Un identificativo digitato per intero, come `MIN-42`, mette quel ticket in cima, qualunque sia il suo stato.
+Ogni ricerca di ticket elenca i ticket nello stesso ordine: la palette, le menzioni `@`, i selettori di relazioni, duplicati e pull request, la finestra **Collega a un ticket esistente** dei feedback e la ricerca usata da Numo e dagli agenti MCP. I ticket **In corso** e **In revisione** vengono per primi, poi quelli in **Backlog** e **Da fare**. I ticket in **Triage**, **Completato**, **Annullato** e **Duplicato** vengono sempre per ultimi e restano selezionabili. In ogni gruppo, la corrispondenza di testo migliore viene per prima. Un identificativo digitato per intero, come `MIN-42`, mette quel ticket in cima, qualunque sia il suo stato.
 
 ### Cercare i ticket per significato {#search-by-meaning}
 
-Quando una ricerca descrive il lavoro invece di nominarlo, la ricerca dei ticket trova anche ticket di significato vicino, anche se usano altre parole. Per esempio, «l’accesso non riesce dopo il ripristino della password» può trovare un ticket intitolato «Sessione persa al cambio della password». Vale per la palette dei comandi, le menzioni `@` nelle descrizioni, nelle pagine, nei commenti e nel compositore di Numo, i selettori delle relazioni, **Segna come duplicato...** nel triage, **Collega un ticket** su una pull request, il menu **Aggiungi contesto** → **Ticket** di Numo e **Collegamento a un ticket esistente** sui feedback.
+Quando una ricerca descrive il lavoro invece di nominarlo, la ricerca dei ticket trova anche ticket di significato vicino, anche se usano altre parole. Per esempio, «l’accesso non riesce dopo il ripristino della password» può trovare un ticket intitolato «Sessione persa al cambio della password». Vale per la palette dei comandi, le menzioni `@` nelle descrizioni, nelle pagine, nei commenti e nel compositore di Numo, i selettori delle relazioni, **Segna come duplicato...** nel triage, **Collega un ticket** su una pull request, il menu **Aggiungi contesto** → **Ticket** di Numo e **Collega a un ticket esistente** sui feedback.
 
 Le corrispondenze testuali e gli identificativi esatti vengono sempre per primi e mantengono il loro ordine. Poco dopo che hai smesso di scrivere, al massimo cinque ticket trovati per significato si aggiungono dopo di essi sotto **Correlati per significato**. Un ticket già mostrato non viene ripetuto e la riga evidenziata non si sposta. Ogni selettore mantiene le proprie regole, quindi compaiono solo ticket che poteva già proporre: un selettore delle relazioni, per esempio, continua a proporre solo ticket dello stesso progetto non ancora collegati. La palette dei comandi cerca nei progetti che puoi leggere, fino ai 25 aggiornati più di recente; le sue azioni di selezione multipla non usano la ricerca per significato.
 

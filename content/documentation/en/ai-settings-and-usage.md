@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
-  "sourceRevision": 19,
+  "revision": 20,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -61,9 +61,9 @@
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:claude/min773 (dictation pill, discard confirmation, cleanup preference and vocabulary checked against the changed source and the running app; earlier evidence retained in git history)",
-    "language": "agent:claude/min773 (en changed passages with catalog UI labels; agent review, not human acceptance)",
+    "revision": 20,
+    "fact": "agent:claude/min773 (dictation pill, discard confirmation, cleanup preference and vocabulary checked against the changed source and the running app; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:claude/min773 (en changed passages with catalog UI labels; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -85,7 +85,7 @@
       "src": "/documentation/en/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Connected providers, capability routing and a personal Numo model are separate settings.",
       "caption": "Several providers can stay connected. Routing chooses the provider for each capability; the Numo default is saved per account and provider.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [

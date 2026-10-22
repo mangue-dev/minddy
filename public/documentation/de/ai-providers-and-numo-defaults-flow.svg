@@ -7,8 +7,8 @@
 <text x="42" y="107" font-family="Arial,sans-serif" font-size="14" fill="#475569">Mehrere API-Anbieter bleiben verbunden; neue Verbindungen ersetzen die anderen nicht.</text>
 <rect x="24" y="161" width="768" height="94" rx="12" fill="#fff" stroke="#cbd5e1"/>
 <text x="42" y="188" font-family="Arial,sans-serif" font-size="17" font-weight="bold" fill="#0f172a">2. Anbieter je Fähigkeit</text>
-<text x="42" y="212" font-family="Arial,sans-serif" font-size="14" fill="#475569">Ordnen Sie Text, Transkription und Embeddings getrennt zu und aktivieren Sie die Nutzungen.</text>
+<text x="42" y="212" font-family="Arial,sans-serif" font-size="14" fill="#475569">Ordne Text, Transkription und Embeddings getrennt zu und aktiviere die Nutzungen.</text>
 <rect x="24" y="266" width="768" height="94" rx="12" fill="#fff" stroke="#cbd5e1"/>
-<text x="42" y="293" font-family="Arial,sans-serif" font-size="17" font-weight="bold" fill="#0f172a">3. Numos Standardmodell</text>
+<text x="42" y="293" font-family="Arial,sans-serif" font-size="17" font-weight="bold" fill="#0f172a">3. Standardmodell für Numo</text>
 <text x="42" y="317" font-family="Arial,sans-serif" font-size="14" fill="#475569">App-Standard oder persönliches Modell. Eine ausdrückliche Gesprächsauswahl hat Vorrang.</text>
 </svg>

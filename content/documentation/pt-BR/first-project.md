@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 8,
+  "revision": 11,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -42,9 +42,9 @@
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 11,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -63,17 +63,18 @@
       "id": "first-project-steps",
       "kind": "screenshot",
       "src": "/documentation/pt-BR/reader-first-project.png",
-      "alt": "Ticket de demonstração concluído com descrição e comentário salvo.",
-      "caption": "O status concluído registra a verificação do percurso no aplicativo. Não afirma que o link de e-mail do site de exemplo foi testado.",
-      "revision": 10,
+      "alt": "Ticket AUR-3 em andamento, com descrição, responsável, esforço e categoria.",
+      "caption": "O ticket mostra identificador, status e propriedades. Marque-o como concluído só depois de verificar o resultado esperado.",
+      "revision": 11,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-22",
       "viewport": [
         508,
         1096
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -94,7 +95,7 @@ Se a equipe já tiver um projeto, informe ao proprietário o email da sua conta 
 4. Mude o estado para “Em andamento” quando começar o trabalho. Faça a verificação e registre o resultado em um comentário. Use “Em revisão” se alguém ainda precisar analisar o resultado.
 5. Mude o estado para “Concluído” depois de verificar o resultado esperado. Os quadros ocultam a coluna **Concluído** por padrão: selecione **Concluído** no filtro **Status** do quadro, ou pesquise o identificador do ticket, para confirmar a mudança.
 
-![Ticket de demonstração concluído com descrição e comentário salvo.](/documentation/pt-BR/reader-first-project.png)
+![Ticket AUR-3 em andamento, com descrição, responsável, esforço e categoria.](/documentation/pt-BR/reader-first-project.png)
 
 ## Resolver um resultado inesperado {#first-use-recovery}
 
