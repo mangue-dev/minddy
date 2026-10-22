@@ -121,7 +121,7 @@
   },
   "review": {
     "revision": 35,
-    "fact": "agent:/root/min776 (drafts paragraph checked against components/create-issue-dialog.tsx, components/objective-dialog.tsx and lib/use-held-draft.ts: closing keeps the form, reopening resumes it, two minutes after a close it becomes a draft, another context saves it first, and the split menu offers Save as draft; rest of the article unchanged since the MIN-778 review; no figure changed); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures)",
+    "fact": "agent:/root/min776 (drafts paragraph checked against components/create-issue-dialog.tsx, components/objective-dialog.tsx and lib/use-held-draft.ts: closing keeps the form, reopening resumes it, two minutes after a close it becomes a draft, another context saves it first, and the split menu offers Save as draft; rest of the article unchanged since the MIN-778 review; no figure changed); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of create-an-issue-steps, issue-statuses-steps, sub-issues-steps, implementation-plans-steps, recurring-issues-steps, import-issues-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted)",
     "language": "agent:/root/min776 (it drafts paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
@@ -170,13 +170,14 @@
       "caption": "Descrivi il risultato atteso e scegli le proprietà utili prima di creare il ticket.",
       "revision": 35,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         720,
         396
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "triage-incoming-work-steps",
@@ -202,13 +203,14 @@
       "caption": "La spunta indica lo stato attuale. Scegli quello che rispecchia lo stato effettivo del lavoro.",
       "revision": 35,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         288,
         358
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "issue-discussion-and-resources-steps",
@@ -246,17 +248,18 @@
       "id": "sub-issues-steps",
       "kind": "screenshot",
       "src": "/documentation/it/work-sub-issues.png",
-      "alt": "Campo per creare un sotto-ticket in un ticket principale dimostrativo.",
+      "alt": "Campo per creare un sottoticket in un ticket principale dimostrativo.",
       "caption": "Il campo crea un figlio di questo ticket; ogni figlio conserva stato e discussione propri.",
       "revision": 35,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         508,
         1096
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "implementation-plans-steps",
@@ -266,13 +269,14 @@
       "caption": "Il piano salvato distingue passaggi completati, attivi e in attesa. L’avanzamento non dimostra l’esecuzione dell’attività di codice fittizia.",
       "revision": 35,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         508,
         1416
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "recurring-issues-steps",
@@ -282,13 +286,14 @@
       "caption": "La modalità ricorrente mostra la cadenza settimanale. Conferma la prima scadenza prima di creare il ticket.",
       "revision": 35,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         324,
         540
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "import-issues-workflow",
@@ -298,7 +303,7 @@
       "caption": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate. L’importazione non è stata inviata; la pianificazione IA facoltativa è stata bloccata per la cattura.",
       "revision": 35,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         816,
         977
@@ -487,7 +492,7 @@ La gerarchia consente un solo livello: il padre deve essere un ticket di primo l
 
 Un figlio resta un ticket con un proprio stato e una propria discussione. L’indicatore di progresso del padre è ponderato in base all’impegno dei figli e alla quota di completamento attribuita al loro stato. Il contatore completati/totale nell’elenco dei sottoticket è invece un conteggio separato, non ponderato. Leggi gli stati dei figli insieme a entrambe le misure. Usa una dipendenza per dire «deve terminare prima» e un padre per dire «fa parte di questa attività più grande».
 
-![Campo per creare un sotto-ticket in un ticket principale dimostrativo.](/documentation/it/work-sub-issues.png)
+![Campo per creare un sottoticket in un ticket principale dimostrativo.](/documentation/it/work-sub-issues.png)
 
 ### Aprire o rimuovere la relazione con il padre {#change-parent}
 
