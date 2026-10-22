@@ -537,13 +537,21 @@ async function reconcileDriftedPr(
  * repositories would be expensive for this one catch-up alone. We therefore resynchronize at the
  * reading, and not more often than that.
  *
- * Five minutes (MIN-595): the sweep IS the light background sync — it is
- * stamped per repository, so all the readers of a window coalesce into ONE
- * paginated forge read, whoever triggers it. The badge and the list poll
- * lightly on the client side; this TTL is what bounds how old a
- * webhook-less fact (dev, self-hosted relay) can get.
+ * The sweep IS the light background sync (MIN-595): it is stamped per
+ * repository, so all the readers of a window coalesce into ONE paginated
+ * forge read, whoever triggers it. The Pull Requests pages use one minute
+ * (MIN-643); this TTL is what bounds how old a webhook-less fact (dev,
+ * self-hosted relay) can get there.
  */
 export const REPO_SYNC_TTL_MS = 60_000;
+
+/**
+ * The badge is read on every page and polled every minute, so with the page
+ * window it swept every repository at the forge each minute a tab was open,
+ * for a number webhooks already keep current (MIN-782). It catches up every
+ * five minutes; opening the Pull Requests page still applies one minute.
+ */
+export const BADGE_REPO_SYNC_TTL_MS = 5 * 60_000;
 
 export interface RepoSyncState {
   provider: string;
@@ -584,10 +592,13 @@ export function repoSyncKey(
 }
 
 /** Does the repository need a catch-up? (never swept, or too old). */
-export function needsRepoSync(state: RepoSyncState | undefined): boolean {
+export function needsRepoSync(
+  state: RepoSyncState | undefined,
+  ttlMs = REPO_SYNC_TTL_MS,
+): boolean {
   if (!state) return true;
   const syncedAt = Date.parse(state.synced_at);
-  return !Number.isFinite(syncedAt) || Date.now() - syncedAt >= REPO_SYNC_TTL_MS;
+  return !Number.isFinite(syncedAt) || Date.now() - syncedAt >= ttlMs;
 }
 
 /**

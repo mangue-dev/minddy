@@ -12,7 +12,7 @@ vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => ({ rpc: mocks
 vi.mock("@/lib/server/git/repository-name-content", () => ({ repositoryStorageName: async (_provider: string, name: string) => name, decodeRepositoryName: async (_provider: string, name: string) => name }));
 vi.mock("./pull-request-url-content", () => ({ shouldEncryptPullRequestUrl: () => false, decodePullRequestUrlRow: async (row: unknown) => row }));
 vi.mock("./pull-request-content", () => ({ shouldEncryptPullRequestContent: () => false, decodePullRequestContentRow: async (row: unknown) => row }));
-import { needsRepoSync, syncRepoPullRequests } from "./pull-requests";
+import { BADGE_REPO_SYNC_TTL_MS, needsRepoSync, syncRepoPullRequests } from "./pull-requests";
 
 const options = { provider: "github" as const, repoFullName: "acme/app", token: "reader" };
 const pull = { number: 1, url: "https://example.test/pull/1", state: "open", headSha: "old", updatedAt: "2026-10-04T12:00:00Z" };
@@ -38,4 +38,11 @@ it("recovers invalid sync stamps and catches up after one minute", () => {
   expect(needsRepoSync({ synced_at: "invalid" } as never)).toBe(true);
   expect(needsRepoSync({ synced_at: new Date(Date.now() - 60_000).toISOString() } as never)).toBe(true);
   expect(needsRepoSync({ synced_at: new Date().toISOString() } as never)).toBe(false);
+});
+
+it("lets the badge wait five minutes before catching up", () => {
+  const syncedAgo = (ms: number) => ({ synced_at: new Date(Date.now() - ms).toISOString() }) as never;
+  expect(needsRepoSync(syncedAgo(2 * 60_000), BADGE_REPO_SYNC_TTL_MS)).toBe(false);
+  expect(needsRepoSync(syncedAgo(5 * 60_000), BADGE_REPO_SYNC_TTL_MS)).toBe(true);
+  expect(needsRepoSync(undefined, BADGE_REPO_SYNC_TTL_MS)).toBe(true);
 });
