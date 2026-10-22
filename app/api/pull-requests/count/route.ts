@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { afterOrNow } from "@/lib/server/after-safe";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import {
+  BADGE_REPO_SYNC_TTL_MS,
   countPullRequestsForUser,
   listVisibleRepos,
   needsRepoSync,
@@ -18,10 +19,11 @@ import { sweepRepo } from "@/lib/server/agent/pull-requests-sweep";
  * The count itself is a `head: true` aggregate — nothing to sweep before
  * answering, the response is instant. The out-of-band work is what makes the
  * badge self-healing: after the response, repositories whose `synced_at` left
- * the TTL window get swept, the same out-of-band catch-up the Pull Requests page
- * runs. A PR opened (or merged) at the forge without a webhook therefore
- * enters the count within a TTL window, WITHOUT the user visiting the PR page —
- * the exact complaint MIN-595 records. The row write then broadcasts on the
+ * the badge window (five minutes, MIN-782) get swept, the same out-of-band
+ * catch-up the Pull Requests page runs every minute. A PR opened (or merged)
+ * at the forge without a webhook therefore enters the count within that
+ * window, WITHOUT the user visiting the PR page — the exact complaint MIN-595
+ * records. The row write then broadcasts on the
  * project topic and the realtime bridge refreshes this very cache.
  */
 export const runtime = "nodejs";
@@ -50,7 +52,7 @@ export async function GET(request: NextRequest) {
         const key = repoSyncKey(repo.provider, repo.repoFullName);
         if (seen.has(key)) continue;
         seen.add(key);
-        if (!needsRepoSync(syncs.get(key))) continue;
+        if (!needsRepoSync(syncs.get(key), BADGE_REPO_SYNC_TTL_MS)) continue;
         sweeps.push(sweepRepo(userId, repo));
       }
       // Every sweep keeps the invocation alive; a failure is still reported.

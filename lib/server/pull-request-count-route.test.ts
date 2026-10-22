@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   after: vi.fn(),
   readRepoSyncStates: vi.fn(),
   sweepRepo: vi.fn(),
+  needsRepoSync: vi.fn((state?: { fresh: boolean }, _ttlMs?: number) => !state?.fresh),
 }));
 
 vi.mock("next/server", async (original) => ({
@@ -31,7 +32,8 @@ vi.mock("@/lib/server/agent/pull-requests", () => ({
   countPullRequestsForUser: async () => 7,
   readRepoSyncStates: mocks.readRepoSyncStates,
   repoSyncKey: (provider: string, name: string) => `${provider}:${name}`,
-  needsRepoSync: (state?: { fresh: boolean }) => !state?.fresh,
+  needsRepoSync: mocks.needsRepoSync,
+  BADGE_REPO_SYNC_TTL_MS: 300_000,
 }));
 vi.mock("@/lib/server/agent/pull-requests-sweep", () => ({ sweepRepo: mocks.sweepRepo }));
 
@@ -69,6 +71,9 @@ describe("GET /api/pull-requests/count", () => {
     expect(mocks.readRepoSyncStates).toHaveBeenCalledTimes(1);
     expect(mocks.sweepRepo.mock.calls.map(([, repo]) => repo.repoFullName))
       .toEqual(["acme/stale", "acme/never"]);
+    // The badge checks freshness against its own window, not the page's.
+    expect(mocks.needsRepoSync.mock.calls.map(([, ttl]) => ttl))
+      .toEqual([300_000, 300_000, 300_000]);
   });
 
   it("keeps the count when the sync stamps cannot be read", async () => {

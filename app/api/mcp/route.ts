@@ -1,7 +1,7 @@
 import { createMcpHandler, withMcpAuth } from "mcp-handler";
 import { registerMinddyTools } from "@/lib/server/mcp/tools";
 import { verifyMcpToken } from "@/lib/server/mcp/auth";
-import { MCP_DISCOVERY_INSTRUCTIONS } from "@/lib/server/mcp/instructions";
+import { MCP_HANDLER_OPTIONS } from "@/lib/server/mcp/handler-options";
 import { withPrivateNoStore } from "@/lib/server/private-response";
 
 /**
@@ -18,10 +18,7 @@ import { withPrivateNoStore } from "@/lib/server/private-response";
 
 const handler = createMcpHandler(
   (server) => registerMinddyTools(server),
-  {
-    serverInfo: { name: "minddy", version: "1.0.0" },
-    instructions: MCP_DISCOVERY_INSTRUCTIONS,
-  }
+  MCP_HANDLER_OPTIONS,
 );
 
 const authedHandler = withMcpAuth(handler, verifyMcpToken, { required: true });
