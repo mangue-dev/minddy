@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -62,10 +62,10 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 15,
+    "fact": "agent:/root/min777 (panel paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed)",
+    "language": "agent:/root/min777 (pt-BR sentence on the page side panel with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "views",
@@ -86,7 +86,7 @@
       "src": "/documentation/pt-BR/work-navigation.png",
       "alt": "Navegação do projeto ao lado do quadro de tickets de demonstração.",
       "caption": "A barra do projeto dá acesso aos tickets, objetivos, páginas e triagem.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -102,7 +102,7 @@
       "src": "/documentation/pt-BR/work-search.png",
       "alt": "Resultados de busca do identificador de um ticket de demonstração.",
       "caption": "A paleta encontra o ticket pelo identificador junto às páginas do projeto; abrir um resultado preserva suas regras de acesso.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -146,7 +146,7 @@ A ação se aplica à linha em que você clicou, mesmo quando outro projeto ou i
 
 ### Painéis e navegação no celular {#panels}
 
-Um problema abre em um painel de detalhes para manter o quadro disponível ao fundo. O Numo abre pelo botão flutuante em um painel de conversa compartilhado. A caixa de entrada abre como um painel popover da navegação com notificações e convites. Os antigos links para telas da caixa de entrada e do Numo levam aos pontos de acesso atuais; essas telas separadas não existem mais.
+Um problema abre em um painel de detalhes para manter o quadro disponível ao fundo. Uma página aberta por uma menção ou um link abre da mesma forma, em um painel lateral com **Expandir** para chegar à página inteira. O Numo abre pelo botão flutuante em um painel de conversa compartilhado. A caixa de entrada abre como um painel popover da navegação com notificações e convites. Os antigos links para telas da caixa de entrada e do Numo levam aos pontos de acesso atuais; essas telas separadas não existem mais.
 
 No celular, abra o menu lateral de navegação para escolher os mesmos destinos. Uma barra de carregamento na parte superior indica que a navegação está em andamento, inclusive enquanto os salvamentos pendentes da página são concluídos. Os painéis usam a largura disponível, então feche ou volte do painel atual para ver a lista novamente. Use os botões visíveis quando um atalho de teclado não estiver disponível.
 

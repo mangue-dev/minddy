@@ -14,6 +14,7 @@
 
 import { useMemo } from "react";
 import { useAppRouter } from "@/lib/use-app-router";
+import { useOptionalPagePanelActions } from "@/lib/page-panel-context";
 import type { ResourceLike } from "@/components/resources";
 import { attachmentPreviewKind } from "@/lib/attachment-preview";
 import { openResourcePreview } from "@/lib/resource-preview";
@@ -74,6 +75,7 @@ export function useResourceMentions<T extends DocumentEditorMentions | undefined
   resources: readonly ResourceLike[] | null | undefined,
 ): T {
   const router = useAppRouter();
+  const pagePanel = useOptionalPagePanelActions();
   const mentionable = useMemo(
     () => (resources ?? []).filter((resource): resource is MentionableResource => !!resource.id),
     [resources],
@@ -120,10 +122,15 @@ export function useResourceMentions<T extends DocumentEditorMentions | undefined
         const resource = byId.get(id);
         const href = resource ? resourceMentionHref(resource) : null;
         if (!resource || !href) return;
-        // A page stays in the app and a link opens beside it. A file opens
-        // the same reader as its card, over the text being read; a format the
-        // reader cannot show downloads, as its card does.
-        if (resource.kind === "page") router.push(href);
+        // A page stays in the app, read in the page panel (MIN-777), and a
+        // link opens beside it. A file opens the same reader as its card, over
+        // the text being read; a format the reader cannot show downloads, as
+        // its card does.
+        if (resource.kind === "page") {
+          if (pagePanel && resource.project_id && resource.page_id) {
+            pagePanel.openPage(resource.project_id, resource.page_id);
+          } else router.push(href);
+        }
         else if (resource.kind === "link") window.open(href, "_blank", "noopener,noreferrer");
         else if (resource.storage_path && attachmentPreviewKind(resource.mime_type ?? "", resource.file_name)) {
           openResourcePreview({
@@ -139,5 +146,5 @@ export function useResourceMentions<T extends DocumentEditorMentions | undefined
     return { ...base, options, links } as T;
     // `signature` stands for `mentionable`'s content: a new array of the same
     // rows must not rebuild the editor.
-  }, [base, signature, router]);
+  }, [base, signature, router, pagePanel]);
 }

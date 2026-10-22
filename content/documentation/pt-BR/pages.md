@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
-  "sourceRevision": 15,
+  "revision": 16,
+  "sourceRevision": 16,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -73,10 +73,10 @@
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 5 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 3 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 16,
+    "fact": "agent:/root/min777 (page editor mentions paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed)",
+    "language": "agent:/root/min777 (pt-BR sentence on the page side panel with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "notifications-and-inbox",
@@ -112,7 +112,7 @@
       "src": "/documentation/pt-BR/page-create-menu.png",
       "alt": "Menu de criação com Nova página e Novo banco de dados.",
       "caption": "Use os controles de páginas do projeto para escolher um documento ou um banco de dados.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -128,7 +128,7 @@
       "src": "/documentation/pt-BR/page-editor.png",
       "alt": "Página de demonstração com títulos, parágrafos, caixas de tarefas e menção a um ticket.",
       "caption": "Os títulos, os blocos de tarefas e a menção AUR-2 organizam a página. O conteúdo é um exemplo de demonstração.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -144,7 +144,7 @@
       "src": "/documentation/pt-BR/page-comments.png",
       "alt": "Atividade da página com uma edição de demonstração e campo de comentário vazio.",
       "caption": "Leia a atividade e escreva um comentário no campo. Nenhum comentário foi enviado neste exemplo.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -160,7 +160,7 @@
       "src": "/documentation/pt-BR/page-file-states.png",
       "alt": "Página de demonstração com um upload incompleto e um arquivo salvo de 67 bytes com a opção Baixar.",
       "caption": "Confira o estado real do arquivo: o segundo anexo está disponível, mas o primeiro upload incompleto não.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -176,7 +176,7 @@
       "src": "/documentation/pt-BR/page-history-preview.png",
       "alt": "Aba Versões com um estado anterior expandido, autor, Restaurar e aviso de retenção por 30 dias.",
       "caption": "Confira a prévia de um estado salvo e compare com a página atual antes de restaurá-lo.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -192,7 +192,7 @@
       "src": "/documentation/pt-BR/page-publish.png",
       "alt": "Janela de publicação com Privado selecionado e opções de senha ou link.",
       "caption": "Privado mantém a página no projeto. Confira quem deve ler o conteúdo antes de mudar a publicação.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -208,7 +208,7 @@
       "src": "/documentation/pt-BR/page-export.png",
       "alt": "Menu de exportação do documento com Markdown (.md) e Imprimir / PDF.",
       "caption": "Escolha Markdown para baixar o documento ou Imprimir / PDF para abrir a visualização de impressão.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -224,7 +224,7 @@
       "src": "/documentation/pt-BR/file-preview.png",
       "alt": "Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar, Renomear e Remover.",
       "caption": "O visualizador compartilhado mantém Fechar abaixo da prévia. O menu Ações do arquivo oferece Baixar e, quando permitido, Renomear e Remover.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -282,6 +282,8 @@ Diferentemente de uma tarefa do caderno levada para o projeto, a página não é
 Abra a página e edite título ou corpo como proprietário ou Membro. Os leitores podem abrir e ler páginas, mas não podem editá-las, importá-las, duplicá-las, marcá-las como favoritas nem publicá-las, nem restaurar uma versão. Use o menu de comandos de barra e os controles de formatação para inserir títulos, texto, listas de marcadores, numeradas e de tarefas, citações, avisos, blocos de código, divisores, seções recolhíveis, subpáginas, imagens e arquivos. Um aviso pode ter ícone emoji e cor da paleta; escolha-os para distinguir informação útil, não como a única forma de comunicar uma advertência.
 
 Use menções para vincular problemas, objetivos, pessoas ou páginas relevantes. Digite `@` seguido de um identificador, palavras do título ou uma breve descrição; uma busca descritiva também lista problemas encontrados [pelo sentido](/docs/navigation#search-by-meaning) em **Relacionados pelo sentido**, depois das correspondências de texto. Referências inversas ajudam leitores a encontrar páginas que apontam para a atual. Um link fornece contexto, não acesso a um objeto privado de outro projeto.
+
+Clicar na menção de uma página, em uma referência inversa, em uma página anexada a um problema ou objetivo, ou em um link para uma página em um comentário ou resposta do Numo abre essa página em um painel lateral sobre o que você estava lendo. Leia ou edite ali, escolha **Expandir** para abrir a página inteira ou feche o painel para voltar. Um banco de dados não abre no painel: ele abre como página inteira.
 
 
 ![Página de demonstração com títulos, parágrafos, caixas de tarefas e menção a um ticket.](/documentation/pt-BR/page-editor.png)

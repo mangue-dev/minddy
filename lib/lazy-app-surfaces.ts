@@ -4,6 +4,9 @@ export const loadCommandPalette = () => import("@/components/command-palette");
 export const loadGlobalIssuePanel = () =>
   import("@/components/global-issue-panel");
 
+export const loadGlobalPagePanel = () =>
+  import("@/components/global-page-panel");
+
 export const loadIssueSidePanel = () => import("@/components/issue-side-panel");
 
 export const loadScratchpadModal = () =>

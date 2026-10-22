@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -62,10 +62,10 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 15,
+    "fact": "agent:/root/min777 (panel paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed)",
+    "language": "agent:/root/min777 (it sentence on the page side panel with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "views",
@@ -86,7 +86,7 @@
       "src": "/documentation/it/work-navigation.png",
       "alt": "Navigazione del progetto accanto alla bacheca dei ticket dimostrativi.",
       "caption": "La barra del progetto permette di aprire ticket, obiettivi, pagine e triage.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -102,7 +102,7 @@
       "src": "/documentation/it/work-search.png",
       "alt": "Risultati della ricerca dell’identificativo di un ticket dimostrativo.",
       "caption": "La palette trova il ticket tramite identificativo insieme alle pagine del progetto; aprire un risultato conserva le sue regole di accesso.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -146,7 +146,7 @@ L’azione si applica alla riga su cui hai fatto clic, anche quando è aperto un
 
 ### Pannelli e navigazione mobile {#panels}
 
-Un ticket si apre in un pannello di dettaglio, lasciando disponibile il tabellone sottostante. Numo si apre dal pulsante flottante in un pannello di conversazione condiviso. La posta in arrivo si apre come pannello a comparsa della navigazione, con notifiche e inviti. I vecchi collegamenti alle schermate dedicate della posta in arrivo e di Numo portano ai punti di accesso attuali; non indicano schermate separate ancora presenti.
+Un ticket si apre in un pannello di dettaglio, lasciando disponibile il tabellone sottostante. Una pagina aperta da una menzione o da un collegamento si apre allo stesso modo, in un pannello laterale con **Espandi** per raggiungere la pagina intera. Numo si apre dal pulsante flottante in un pannello di conversazione condiviso. La posta in arrivo si apre come pannello a comparsa della navigazione, con notifiche e inviti. I vecchi collegamenti alle schermate dedicate della posta in arrivo e di Numo portano ai punti di accesso attuali; non indicano schermate separate ancora presenti.
 
 Sul telefono, apri il menu laterale di navigazione per scegliere le stesse destinazioni. Una barra di caricamento in alto indica che la navigazione è in corso, anche mentre vengono completati i salvataggi della pagina in sospeso. I pannelli usano la larghezza disponibile: chiudi il pannello attuale o torna indietro per rivedere l’elenco. Usa i pulsanti visibili quando una scorciatoia da tastiera non è disponibile.
 

@@ -12,6 +12,7 @@ import { Fragment, useLayoutEffect, useRef, useState, type ReactNode } from "rea
 import { cn } from "@/lib/utils";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import Link from "@/components/app-link";
+import { isPlainNavigationClick } from "@/components/editor-node-link";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -137,7 +138,9 @@ export function tileExtension(name: string): string | null {
 /**
  * One entry of a card's menu. An `href` renders a real anchor (a download, a
  * link opened beside the app, or in-app navigation with `internal`), so
- * modified clicks keep working; otherwise `onSelect` runs.
+ * modified clicks keep working; otherwise `onSelect` runs. An internal link
+ * may carry `onSelect` too: a plain click runs it instead of navigating (a
+ * page opened in the page panel, MIN-777).
  */
 export interface ResourceCardItem {
   key: string;
@@ -256,7 +259,19 @@ export function ResourceCard({
             if (item.href && item.internal) {
               return (
                 <DropdownMenuItem variant={variant} asChild>
-                  <Link href={item.href}>{content}</Link>
+                  <Link
+                    href={item.href}
+                    onClick={item.onSelect ? (event) => {
+                      if (!isPlainNavigationClick(event)) return;
+                      // Holding the navigation also holds the menu's own
+                      // close, so the menu is closed here.
+                      event.preventDefault();
+                      setOpen(false);
+                      item.onSelect?.();
+                    } : undefined}
+                  >
+                    {content}
+                  </Link>
                 </DropdownMenuItem>
               );
             }

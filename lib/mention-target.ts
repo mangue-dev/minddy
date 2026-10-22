@@ -1,9 +1,11 @@
 // Central destination rules for mentions.
 //
 // A mention can retain a canonical URL for modified clicks and browser menus
-// while using a different ordinary-click interaction. Issues open in the
-// app-wide side panel; objectives and pages continue to navigate to their own
-// screens. People have no profile destination and therefore remain plain text.
+// while using a different ordinary-click interaction. Issues and pages open in
+// their app-wide side panels (pages since MIN-777; the page panel itself sends
+// a database page to its full screen); objectives continue to navigate to
+// their screen. People have no profile destination and therefore remain plain
+// text.
 //
 // This module is intentionally pure so every mention surface can share and
 // test the same decision without mounting React.
@@ -61,9 +63,15 @@ export type MentionNavigationTarget =
       issueId: string;
       href: string;
     }
+  | {
+      kind: "page-panel";
+      projectId: string;
+      pageId: string;
+      href: string;
+    }
   | { kind: "route"; href: string };
 
-/** Separates in-place issue opening from mentions that navigate to a screen. */
+/** Separates in-place issue and page opening from mentions that navigate to a screen. */
 export function mentionNavigationTarget(
   type: MentionTargetType,
   id: string,
@@ -73,6 +81,9 @@ export function mentionNavigationTarget(
   if (!href) return null;
   if (type === "issue" && projectId) {
     return { kind: "issue-panel", projectId, issueId: id, href };
+  }
+  if (type === "page" && projectId) {
+    return { kind: "page-panel", projectId, pageId: id, href };
   }
   return { kind: "route", href };
 }

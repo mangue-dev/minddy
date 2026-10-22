@@ -99,8 +99,13 @@ import {
   useIssuePanelTarget,
 } from "@/lib/issue-panel-context";
 import {
+  usePagePanelActions,
+  usePagePanelTarget,
+} from "@/lib/page-panel-context";
+import {
   loadCommandPalette,
   loadGlobalIssuePanel,
+  loadGlobalPagePanel,
   loadIssueSidePanel,
   loadScratchpadModal,
   preloadSurface,
@@ -124,6 +129,11 @@ const GlobalIssuePanel = dynamic(
   { ssr: false },
 );
 
+const GlobalPagePanel = dynamic(
+  () => loadGlobalPagePanel().then((module) => module.GlobalPagePanel),
+  { ssr: false },
+);
+
 /** Keeps panel state updates out of the large app-shell render path. */
 function GlobalIssuePanelHost() {
   const target = useIssuePanelTarget();
@@ -135,6 +145,22 @@ function GlobalIssuePanelHost() {
       projectId={target.projectId}
       issueId={target.issueId}
       onClose={closeIssue}
+    />
+  );
+}
+
+/** The page panel (MIN-777), mounted after the issue panel so a page opened
+ * from an issue lies above it. */
+function GlobalPagePanelHost() {
+  const target = usePagePanelTarget();
+  const { closePage } = usePagePanelActions();
+  if (!target) return null;
+  return (
+    <GlobalPagePanel
+      key={`${target.projectId}:${target.pageId}`}
+      projectId={target.projectId}
+      pageId={target.pageId}
+      onClose={closePage}
     />
   );
 }
@@ -300,11 +326,16 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     openIssue: openIssuePanel,
     closeIssue: closeIssuePanel,
   } = useIssuePanelActions();
+  const { closePage: closePagePanel } = usePagePanelActions();
+  const closeTransientPanels = useCallback(() => {
+    closeIssuePanel();
+    closePagePanel();
+  }, [closeIssuePanel, closePagePanel]);
   const previousPathname = useRef(pathname);
   useEffect(() => {
-    if (previousPathname.current !== pathname) closeIssuePanel();
+    if (previousPathname.current !== pathname) closeTransientPanels();
     previousPathname.current = pathname;
-  }, [pathname, closeIssuePanel]);
+  }, [pathname, closeTransientPanels]);
   // The inbox badge also counts pending invitations: they are there
   // display, and nothing else reports them once you leave the home.
   const { invitations } = useMyInvitations();
@@ -1595,7 +1626,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         />
       }
     >
-      <AppTabChangeEffect onChange={closeIssuePanel} />
+      <AppTabChangeEffect onChange={closeTransientPanels} />
       <AppTabPanel>{children}</AppTabPanel>
       <ContentToaster />
       {/* Command palette (⌘K / ⌘P, sidebar search) — same groups as
@@ -1617,6 +1648,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       ) : null}
       <InboxPopover open={inboxOpen} onOpenChange={setInboxOpen} />
       <GlobalIssuePanelHost />
+      <GlobalPagePanelHost />
       {/* CSV export opened from the palette — mounted here for the same reason:
  it starts from any page, and takes the tickets from any
  any of my projects. The draft page is just a blemish. */}

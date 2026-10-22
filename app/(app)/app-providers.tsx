@@ -24,6 +24,7 @@ import { BulkActionsProvider } from "@/lib/bulk-actions-context";
 import { CurrentViewProvider } from "@/lib/current-view-context";
 import { AppTabsProvider } from "@/lib/app-tabs-context";
 import { IssuePanelProvider } from "@/lib/issue-panel-context";
+import { PagePanelProvider } from "@/lib/page-panel-context";
 import { ResourcePreviewHost } from "@/components/resource-preview-host";
 import { PrUnlinkConfirmationProvider } from "@/components/pull-requests/pr-unlink-confirmation";
 import { AppShellChrome } from "@/components/app-shell-chrome";
@@ -81,6 +82,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
           <RealtimeProvider>
             <ProjectsProvider>
               <IssuePanelProvider>
+              <PagePanelProvider>
               {/* Reopens the creation wizard when returning from a git redirect
  (?setup=git): the project does not yet exist, the restart cannot therefore live in the layout of a project. */}
               <Suspense fallback={null}>
@@ -147,6 +149,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
               </AssistantPanelProvider>
               </AppTabsProvider>
               </CurrentViewProvider>
+              </PagePanelProvider>
               </IssuePanelProvider>
             </ProjectsProvider>
           </RealtimeProvider>

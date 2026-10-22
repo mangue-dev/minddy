@@ -9,6 +9,9 @@ import {
 } from "react";
 import type { ExtraProps } from "react-markdown";
 import { cn } from "@/lib/utils";
+import { isPlainNavigationClick } from "@/components/editor-node-link";
+import { pageLinkTarget } from "@/lib/page-link";
+import { useOptionalPagePanelActions } from "@/lib/page-panel-context";
 import {
   isVercelAgentReviewUrl,
   MARKDOWN_LINK_CLASS,
@@ -64,14 +67,20 @@ function VercelAgentReviewLink({
   );
 }
 
-/** The common visual treatment for links rendered from Markdown. */
+/**
+ * The common visual treatment for links rendered from Markdown. A link to a
+ * page of the app (a comment, a Numo answer) opens it in the page panel on a
+ * plain click (MIN-777); a modified click keeps the browser's behavior.
+ */
 export function MarkdownLink({
   node: _node,
   href,
   className,
   style,
+  onClick,
   ...props
 }: MarkdownLinkProps) {
+  const pagePanel = useOptionalPagePanelActions();
   const iconUrl = markdownLinkIconUrl(href);
   const iconStyle = iconUrl
     ? ({ "--markdown-link-icon": `url(${JSON.stringify(iconUrl)})` } as CSSProperties)
@@ -82,6 +91,14 @@ export function MarkdownLink({
       href={href}
       className={cn(MARKDOWN_LINK_CLASS, className)}
       style={{ ...style, ...iconStyle }}
+      onClick={(event) => {
+        onClick?.(event);
+        if (event.defaultPrevented || !pagePanel || !isPlainNavigationClick(event)) return;
+        const page = pageLinkTarget(href, window.location.origin);
+        if (!page) return;
+        event.preventDefault();
+        pagePanel.openPage(page.projectId, page.pageId);
+      }}
       {...props}
     />
   );
