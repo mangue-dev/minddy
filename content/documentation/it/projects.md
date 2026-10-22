@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
+  "revision": 16,
   "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-21",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -67,10 +67,10 @@
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:claude (MIN-760: category reordering paragraph checked against components/project-categories.tsx, the order route and the Numo/MCP tools; existing figures unaffected and kept; no browser walkthrough of the procedure)",
-    "language": "agent:claude (it translation of the added en paragraph, equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-21"
+    "revision": 16,
+    "fact": "agent:claude (MIN-760: category reordering paragraph checked against components/project-categories.tsx, the order route and the Numo/MCP tools; existing figures unaffected and kept; no browser walkthrough of the procedure); agent:claude-code (MIN-762 UI label correction: quoted labels aligned on the corrected it catalog; no behavior change, no new captures)",
+    "language": "agent:claude (it translation of the added en paragraph, equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-762 label edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "issues",
@@ -94,7 +94,7 @@
       "src": "/documentation/it/project-general.png",
       "alt": "Intestazione del progetto con l’icona e il suo badge di modifica, il nome, la chiave e le cifre Ticket, Membri, Obiettivi, Categorie e Creato.",
       "caption": "Seleziona l’icona, il nome o la chiave per cambiarli sul posto; spostare il progetto nel cestino resta un’azione separata, più in basso.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -111,7 +111,7 @@
       "src": "/documentation/it/project-members.png",
       "alt": "Scheda «Invita persone» sopra la scheda Membri, che elenca tre membri dimostrativi con il proprietario indicato.",
       "caption": "Invita con l’email dell’account e identifica il proprietario prima di rimuovere l’accesso di un membro.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -147,7 +147,7 @@ In **Categorie**, il proprietario e i membri gestiscono le categorie che classif
 
 ### Nascondere un progetto per te {#hide-project}
 
-Nascondi un progetto che non segui più ogni giorno per toglierlo dalla tua barra laterale e dalla tua home senza lasciarlo. Nelle impostazioni generali del progetto, scegli **Nascondi** nella **Zona pericolosa**, oppure fai clic con il tasto destro sul progetto nella barra laterale e scegli **Nascondi progetto**, poi conferma. In entrambi i casi una finestra che nomina il progetto chiede prima conferma, perché esce dalla tua navigazione; mostrarlo di nuovo non richiede conferma. Chiunque faccia parte del progetto può nasconderlo, compresi il proprietario e i lettori.
+Nascondi un progetto che non segui più ogni giorno per toglierlo dalla tua barra laterale e dalla tua home senza lasciarlo. Nelle impostazioni generali del progetto, scegli **Nascondi** nella **Zona critica**, oppure fai clic con il tasto destro sul progetto nella barra laterale e scegli **Nascondi progetto**, poi conferma. In entrambi i casi una finestra che nomina il progetto chiede prima conferma, perché esce dalla tua navigazione; mostrarlo di nuovo non richiede conferma. Chiunque faccia parte del progetto può nasconderlo, compresi il proprietario e i lettori.
 
 Nascondere cambia solo la tua navigazione. Fuori dal progetto stesso, Minddy non propone più il progetto né i suoi ticket, obiettivi e pagine ovunque tu scelga qualcosa: la palette dei comandi, i suggerimenti di menzione dopo @, il contesto di Numo e la scelta del progetto quando crei un ticket, un obiettivo o una routine. Le menzioni e i link già scritti mantengono il loro nome e si aprono ancora. I suoi ticket escono anche dalla bacheca **Tutti i ticket** e dai suoi filtri, dall’esportazione CSV di tutti i tuoi progetti e dal riempimento automatico del tuo ciclo; se scegli esplicitamente il progetto nell’esportazione, viene ancora incluso. La preferenza è salvata nel tuo account, quindi resta dopo un nuovo accesso e sugli altri tuoi dispositivi. Mantieni il tuo accesso e puoi ancora aprire e modificare il progetto da un link diretto o dalla scheda **Progetti nascosti** delle **Impostazioni account**. Gli altri membri continuano a vedere il progetto, e le sue routine, integrazioni e notifiche continuano a funzionare. Aprire un progetto nascosto non lo riporta nella tua barra laterale.
 
@@ -155,11 +155,11 @@ Per ritrovarlo, scegli **Mostra** in **Progetti nascosti** o nelle impostazioni 
 
 ### Lasciare ed eliminare {#project-removal}
 
-Un membro o un lettore può scegliere **Lascia** nella zona pericolosa per rimuovere il proprio accesso; prima una finestra che nomina il progetto chiede conferma. Chiedi al proprietario un nuovo invito se ti servirà di nuovo. Lasciare un progetto non lo elimina per tutti. Il proprietario non può lasciare il progetto: prima [trasferisci la proprietà](#transfer-ownership) a un membro.
+Un membro o un lettore può scegliere **Lascia** nella zona critica per rimuovere il proprio accesso; prima una finestra che nomina il progetto chiede conferma. Chiedi al proprietario un nuovo invito se ti servirà di nuovo. Lasciare un progetto non lo elimina per tutti. Il proprietario non può lasciare il progetto: prima [trasferisci la proprietà](#transfer-ownership) a un membro.
 
-Rimuovere il progetto è un’azione del proprietario: nella zona pericolosa scegli **Spostati nel cestino** accanto a **Sposta il progetto nel cestino**. La conferma nomina il progetto e indica che i suoi ticket, obiettivi e feedback vanno con esso; il progetto resta ripristinabile dal [cestino](/it/documentazione/trash-and-recovery) per 30 giorni e la sua chiave si libera subito. Leggi la conferma prima di usarla, soprattutto se il progetto contiene ticket, pagine, file o integrazioni. Se un normale salvataggio fallisce, conserva i valori desiderati, leggi l’errore e aggiorna il progetto prima di riprovare. Evita di inviare più volte un’azione distruttiva quando il suo primo risultato è incerto.
+Rimuovere il progetto è un’azione del proprietario: nella zona critica scegli **Sposta nel cestino** accanto a **Sposta il progetto nel cestino**. La conferma nomina il progetto e indica che i suoi ticket, obiettivi e feedback vanno con esso; il progetto resta ripristinabile dal [cestino](/it/documentazione/trash-and-recovery) per 30 giorni e la sua chiave si libera subito. Leggi la conferma prima di usarla, soprattutto se il progetto contiene ticket, pagine, file o integrazioni. Se un normale salvataggio fallisce, conserva i valori desiderati, leggi l’errore e aggiorna il progetto prima di riprovare. Evita di inviare più volte un’azione distruttiva quando il suo primo risultato è incerto.
 
-Il proprietario può anche fare clic con il tasto destro sul progetto nella barra laterale e scegliere **Spostati nel cestino**. Compare la stessa conferma e viene interessato solo il progetto su cui hai fatto clic.
+Il proprietario può anche fare clic con il tasto destro sul progetto nella barra laterale e scegliere **Sposta nel cestino**. Compare la stessa conferma e viene interessato solo il progetto su cui hai fatto clic.
 
 ## Invitare persone a un progetto {#project-members}
 

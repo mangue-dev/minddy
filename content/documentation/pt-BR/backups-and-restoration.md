@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
+  "revision": 8,
   "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -38,10 +38,10 @@
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 8,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "update-an-instance"
@@ -65,7 +65,7 @@
       "src": "/documentation/pt-BR/restore-and-roll-back-flow.svg",
       "alt": "Diagrama: Backup externo completo verificado. Alvo vazio isolado com versões iguais. Restaurar banco, bytes e chaves juntos. Verificar conta, conteúdo e arquivos antes de abrir.",
       "caption": "Siga as etapas nesta ordem. Backup externo completo verificado. Alvo vazio isolado com versões iguais. Restaurar banco, bytes e chaves juntos. Verificar conta, conteúdo e arquivos antes de abrir.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -177,7 +177,7 @@ sudo chown "$(id -u):$(id -g)" "$BACKUP_DIR/supabase-docker.tar.gz"
 
 ### Verificar o resultado {#verify}
 
-Copie o conjunto selado para um disco ou host independente e verifique `SHA256SUMS` no destino. Uma segunda cópia no mesmo host não protege contra a perda desse host. Conserve certificados TLS separadamente se sua política exigir. Se a operação for apenas backup, retome com `compose up -d --wait` depois de verificar. Antes de confiar na cópia, restaure-a em um destino vazio e isolado, entre com MFA e confira issues e anexos com os mesmos SHA-256. Preserve também as chaves históricas.
+Copie o conjunto selado para um disco ou host independente e verifique `SHA256SUMS` no destino. Uma segunda cópia no mesmo host não protege contra a perda desse host. Conserve certificados TLS separadamente se sua política exigir. Se a operação for apenas backup, retome com `compose up -d --wait` depois de verificar. Antes de confiar na cópia, restaure-a em um destino vazio e isolado, entre com MFA e confira tickets e anexos com os mesmos SHA-256. Preserve também as chaves históricas.
 
 
 O comando de backup a frio também detecta um volume nomeado do Storage em sistema de arquivos e arquiva seus bytes separadamente. Uma montagem por bind continua coberta por `supabase-docker.tar.gz`. Nenhum dos casos cobre um backend S3 ou de um provedor.
@@ -499,4 +499,4 @@ Após o build de código e a verificação acima, inicie a aplicação recuperad
 
 ### Verificar o resultado {#restore-and-roll-back-verify}
 
-Compare contagens, entre com contas e MFA restauradas, leia projeto, issue e página cifrados e baixe uma amostra de cada bucket conferindo o SHA-256. Teste integrações, revogações, Realtime, jobs, OAuth, MCP e callbacks. Registre caminhos, volumes, versões, duração e janela observada de perda de dados. Após erro de migração, use o conjunto anterior. Gravações posteriores à cópia podem se perder no rollback. Não invente SQL inverso nem considere containers saudáveis uma prova de restauração.
+Compare contagens, entre com contas e MFA restauradas, leia projeto, ticket e página cifrados e baixe uma amostra de cada bucket conferindo o SHA-256. Teste integrações, revogações, Realtime, jobs, OAuth, MCP e callbacks. Registre caminhos, volumes, versões, duração e janela observada de perda de dados. Após erro de migração, use o conjunto anterior. Gravações posteriores à cópia podem se perder no rollback. Não invente SQL inverso nem considere containers saudáveis uma prova de restauração.

@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
+  "revision": 16,
   "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-21",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -71,10 +71,10 @@
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-21"
+    "revision": 16,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (MIN-762 UI label correction: quoted labels aligned on the corrected fr catalog; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (fr MIN-762 label edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "choose-an-instance",
@@ -106,7 +106,7 @@
       "src": "/documentation/fr/account-security-workflow.png",
       "alt": "Carte de double authentification avec le bouton Activer.",
       "caption": "Commencez ici, puis vérifiez l’authentificateur et conservez les codes de récupération à l’abri.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -123,7 +123,7 @@
       "src": "/documentation/fr/profile-and-preferences-workflow.png",
       "alt": "En-tête du profil avec l’avatar et son badge de modification, le nom et l’adresse email en lecture seule.",
       "caption": "Sélectionnez l’avatar pour en générer ou en importer un, ou le nom pour le changer ; l’adresse email reste en lecture seule.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -140,7 +140,7 @@
       "src": "/documentation/fr/profile-and-preferences-preferences-workflow.png",
       "alt": "Sélecteur de langue, commandes des thèmes clair, sombre et système, sélecteurs de palette des modes clair et sombre et interrupteur de transparence.",
       "caption": "La langue du compte et celle du site public se règlent séparément.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -157,7 +157,7 @@
       "src": "/documentation/fr/privacy-and-account-deletion-workflow.png",
       "alt": "Aperçu de suppression listant les projets possédés, les tickets et les membres privés d’accès.",
       "caption": "Lisez l’aperçu et exportez les données à conserver avant d’ouvrir la confirmation de suppression.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -201,14 +201,14 @@ Ouvrez le menu du compte, choisissez la déconnexion et confirmez. Dans l’appl
 
 Une session reste connectée tant que vous utilisez minddy, jusqu’à un an, et se termine après 30 jours sans utilisation. Quand elle se termine, ou qu’elle est fermée depuis un autre appareil, minddy revient à l’écran de connexion avec un message indiquant que votre session a expiré. Reconnectez-vous pour reprendre là où vous étiez.
 
-Le groupe **Sessions** de l’onglet **Sécurité** des réglages du compte liste les navigateurs et applications desktop connectés à votre compte, signale l’appareil que vous utilisez et indique la dernière activité de chacun des autres. Pour fermer toutes les autres sessions, par exemple sur un ordinateur perdu ou partagé, choisissez **Tout déconnecter** sur la ligne **Déconnecter les autres appareils**, puis confirmez : chaque autre navigateur et chaque application desktop connectés à votre compte reviennent à l’écran de connexion. Pour fermer une seule session, choisissez **Déconnecter** sur sa ligne, puis confirmez ; seul cet appareil revient à l’écran de connexion. Dans les deux cas, l’appareil que vous utilisez reste connecté. Les applications autorisées dans **MCP minddy** → **Applications connectées** gardent leur accès jusqu’à ce que vous le révoquiez à cet endroit.
+Le groupe **Sessions** de l’onglet **Sécurité** des paramètres du compte liste les navigateurs et applications desktop connectés à votre compte, signale l’appareil que vous utilisez et indique la dernière activité de chacun des autres. Pour fermer toutes les autres sessions, par exemple sur un ordinateur perdu ou partagé, choisissez **Tout déconnecter** sur la ligne **Déconnecter les autres appareils**, puis confirmez : chaque autre navigateur et chaque application desktop connectés à votre compte reviennent à l’écran de connexion. Pour fermer une seule session, choisissez **Déconnecter** sur sa ligne, puis confirmez ; seul cet appareil revient à l’écran de connexion. Dans les deux cas, l’appareil que vous utilisez reste connecté. Les applications autorisées dans **MCP minddy** → **Applications connectées** gardent leur accès jusqu’à ce que vous le révoquiez à cet endroit.
 
 Si le message n’arrive pas, vérifiez l’adresse, les indésirables et l’instance. En auto-hébergement, l’opérateur doit configurer l’envoi des messages Auth ; les notifications optionnelles de l’application sont un service distinct. Une confirmation expirée propose de revenir à la connexion pour demander un nouveau lien. Ne transmettez pas de lien de confirmation ou de récupération dans un diagnostic : il autorise l’accès au compte.
 
 
 ## Protéger son compte avec un second facteur {#account-security}
 
-Ouvrez la section Sécurité des réglages du compte et activez l’authentification à deux facteurs. Ce second facteur s’applique aussi aux connexions par Google ou GitHub ; l’authentification du fournisseur ne le remplace pas.
+Ouvrez la section Sécurité des paramètres du compte et activez l’authentification à deux facteurs. Ce second facteur s’applique aussi aux connexions par Google ou GitHub ; l’authentification du fournisseur ne le remplace pas.
 
 1. Scannez le code QR avec un authentificateur TOTP ou saisissez manuellement la clé de configuration affichée. N’incluez jamais le code QR ni cette clé dans une capture.
 2. Saisissez le code actuel à six chiffres et confirmez. S’il a expiré, essayez le suivant ; après trop de tentatives, attendez avant de réessayer.

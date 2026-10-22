@@ -4,7 +4,7 @@
   "locale": "pt-BR",
   "title": "Objetivos",
   "summary": "Defina o resultado de um projeto, vincule o trabalho e interprete o progresso, as dependências e o ritmo.",
-  "topic": "Projetos e problemas",
+  "topic": "Projetos e tickets",
   "type": "guide",
   "audiences": [
     "member"
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
+  "revision": 18,
   "sourceRevision": 17,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -54,10 +54,10 @@
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 18,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of objectives-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "issues",
@@ -78,15 +78,16 @@
       "src": "/documentation/pt-BR/reader-objectives.png",
       "alt": "Janela de criação de objetivo não enviada no projeto Aurora com um nome de resultado de exemplo e o botão Criar objetivo.",
       "caption": "Defina o resultado antes de escolher responsável, data prevista e status. Essa janela não criou um segundo objetivo.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         720,
         358
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -95,37 +96,37 @@
 }
 ---
 
-Um objetivo reúne os problemas de um projeto para acompanhar um resultado. Suas dependências mostram os impedimentos, enquanto o progresso e o ritmo ajudam a interpretar o trabalho vinculado. Esses indicadores não substituem a verificação do resultado nem garantem uma data de entrega.
+Um objetivo reúne os tickets de um projeto para acompanhar um resultado. Suas dependências mostram os impedimentos, enquanto o progresso e o ritmo ajudam a interpretar o trabalho vinculado. Esses indicadores não substituem a verificação do resultado nem garantem uma data de entrega.
 
 ## Acompanhar um resultado com um objetivo {#objectives}
 
-Abra o destino de objetivos do projeto e crie um objetivo. Ao criá-lo em outro lugar do aplicativo, escolha o projeto em **Criar em**, no canto superior esquerdo do formulário (ao lado do título **Novo objetivo** no celular); trocar de projeto remove o responsável e as relações escolhidos para o anterior. No computador, Command/Ctrl+Shift+P abre esse menu mesmo enquanto você digita o nome ou a descrição; ao escolher um projeto ou fechar o menu, o cursor volta exatamente para onde estava. A pílula mostra esse atalho, que só existe quando mais de um projeto pode ser escolhido; no celular, nenhum atalho é indicado. Dê um nome ao resultado desejado, acrescente contexto útil e defina os campos disponíveis de responsável, data-alvo, cor e estado. Em um computador, as mesmas teclas dos campos de um problema os abrem assim que o cursor sai do nome e da descrição: S o estado, A o responsável, D a data-alvo, R uma relação e C a cor; a dica de cada seletor mostra sua tecla. Um objetivo pertence a um projeto e é diferente de um ciclo pessoal que abrange vários projetos. A pessoa responsável acompanha o resultado; escolhê-la não transfere a propriedade do projeto. Só o proprietário ou um Membro pode ser responsável por um objetivo, e um responsável cujo papel muda para Leitor é removido dele.
+Abra o destino de objetivos do projeto e crie um objetivo. Ao criá-lo em outro lugar do aplicativo, escolha o projeto em **Criar em**, no canto superior esquerdo do formulário (ao lado do título **Novo objetivo** no celular); trocar de projeto remove o responsável e as relações escolhidos para o anterior. No computador, Command/Ctrl+Shift+P abre esse menu mesmo enquanto você digita o nome ou a descrição; ao escolher um projeto ou fechar o menu, o cursor volta exatamente para onde estava. A pílula mostra esse atalho, que só existe quando mais de um projeto pode ser escolhido; no celular, nenhum atalho é indicado. Dê um nome ao resultado desejado, acrescente contexto útil e defina os campos disponíveis de responsável, data-alvo, cor e estado. Em um computador, as mesmas teclas dos campos de um ticket os abrem assim que o cursor sai do nome e da descrição: S o estado, A o responsável, D a data-alvo, R uma relação e C a cor; a dica de cada seletor mostra sua tecla. Um objetivo pertence a um projeto e é diferente de um ciclo pessoal que abrange vários projetos. A pessoa responsável acompanha o resultado; escolhê-la não transfere a propriedade do projeto. Só o proprietário ou um Membro pode ser responsável por um objetivo, e um responsável cujo papel muda para Leitor é removido dele.
 
-A descrição do objetivo e seus comentários usam o mesmo editor das páginas do projeto, sem as alças de bloco: digite `/` para inserir blocos e `@` para mencionar uma pessoa, um problema, um objetivo ou uma página. O menu `@` também lista os recursos anexados ao que você está escrevendo: o problema ou objetivo para a descrição e o plano, um comentário para os próprios arquivos ou uma janela de criação para os arquivos adicionados nela. Uma menção a um recurso anexado em outro lugar aparece como **Indisponível**. Várias pessoas podem editar a descrição ao mesmo tempo, com o cursor de cada uma exibido com seu nome e sua cor. Selecione um texto para formatá-lo ou adicionar um link. Cole ou solte uma imagem, ou escolha **Imagem** no menu `/`, para inseri-la na descrição.
+A descrição do objetivo e seus comentários usam o mesmo editor das páginas do projeto, sem as alças de bloco: digite `/` para inserir blocos e `@` para mencionar uma pessoa, um ticket, um objetivo ou uma página. O menu `@` também lista os recursos anexados ao que você está escrevendo: o ticket ou objetivo para a descrição e o plano, um comentário para os próprios arquivos ou uma janela de criação para os arquivos adicionados nela. Uma menção a um recurso anexado em outro lugar aparece como **Indisponível**. Várias pessoas podem editar a descrição ao mesmo tempo, com o cursor de cada uma exibido com seu nome e sua cor. Selecione um texto para formatá-lo ou adicionar um link. Cole ou solte uma imagem, ou escolha **Imagem** no menu `/`, para inseri-la na descrição.
 
-Abra cada problema relevante e escolha o objetivo nas propriedades, ou use os controles de problemas do objetivo. Confira se o trabalho desejado aparece sob o objetivo. Use a discussão e os recursos para decisões e páginas de referência que se apliquem ao resultado inteiro.
+Abra cada ticket relevante e escolha o objetivo nas propriedades, ou use os controles de tickets do objetivo. Confira se o trabalho desejado aparece sob o objetivo. Use a discussão e os recursos para decisões e páginas de referência que se apliquem ao resultado inteiro.
 
 ![Janela de criação de objetivo não enviada no projeto Aurora com um nome de resultado de exemplo e o botão Criar objetivo.](/documentation/pt-BR/reader-objectives.png)
 
 ### Ler o progresso antes de encerrar {#objective-progress}
 
-Revise problemas concluídos e ativos junto com o progresso do objetivo. Um indicador resume o trabalho vinculado; ele não determina se um resultado de produto é aceitável. Inspecione tarefas ausentes e trabalho cancelado ou duplicado antes de marcar o objetivo como concluído. O quadro do objetivo mostra primeiro o trabalho aberto: selecione **Concluído** e **Cancelada** no filtro **Status** dele para revisar ali os problemas fechados.
+Revise tickets concluídos e ativos junto com o progresso do objetivo. Um indicador resume o trabalho vinculado; ele não determina se um resultado de produto é aceitável. Inspecione tarefas ausentes e trabalho cancelado ou duplicado antes de marcar o objetivo como concluído. O quadro do objetivo mostra primeiro o trabalho aberto: selecione **Concluído** e **Cancelado** no filtro **Status** dele para revisar ali os tickets fechados.
 
-Use o ciclo de vida do objetivo para distinguir resultados planejados, em andamento, concluídos e cancelados. Uma data-alvo é uma meta, enquanto uma previsão é uma estimativa baseada na atividade. Se o objetivo parecer vazio, confira a associação dos problemas e os filtros da visualização em vez de recriá-lo. A exclusão de um objetivo usa a lixeira recuperável e não é uma mudança de estado comum.
+Use o ciclo de vida do objetivo para distinguir resultados planejados, em andamento, concluídos e cancelados. Uma data-alvo é uma meta, enquanto uma previsão é uma estimativa baseada na atividade. Se o objetivo parecer vazio, confira a associação dos tickets e os filtros da visualização em vez de recriá-lo. A exclusão de um objetivo usa a lixeira recuperável e não é uma mudança de estado comum.
 
 ## Interpretar dependências e ritmo dos objetivos {#objective-dependencies-and-momentum}
 
-Abra o objetivo e suas relações. Na página do objetivo, fora de um campo de texto, R abre a escolha do tipo de relação. Confira qual resultado depende de outro e leia as relações de bloqueio entre problemas quando explicarem a restrição. A organização entre pai e filho, um vínculo relacionado e uma dependência de bloqueio respondem a perguntas diferentes; confira a direção antes de mudar uma relação.
+Abra o objetivo e suas relações. Na página do objetivo, fora de um campo de texto, R abre a escolha do tipo de relação. Confira qual resultado depende de outro e leia as relações de bloqueio entre tickets quando explicarem a restrição. A organização entre pai e filho, um vínculo relacionado e uma dependência de bloqueio respondem a perguntas diferentes; confira a direção antes de mudar uma relação.
 
-Uma relação de bloqueio pode conectar um problema ou outro objetivo a este objetivo, dentro do mesmo projeto. Seus problemas abertos herdam o bloqueio não resolvido: a relação exibida identifica tanto o pré-requisito real quanto o objetivo que o transmite. Não é salva uma nova relação direta em cada problema. Encerrar o pré-requisito ou o objetivo bloqueado, ou retirar um problema desse objetivo, elimina o bloqueio herdado correspondente. Resolva o pré-requisito real ou corrija uma relação obsoleta. Mudar apenas a data-alvo de um objetivo não conclui os problemas que o bloqueiam.
+Uma relação de bloqueio pode conectar um ticket ou outro objetivo a este objetivo, dentro do mesmo projeto. Seus tickets abertos herdam o bloqueio não resolvido: a relação exibida identifica tanto o pré-requisito real quanto o objetivo que o transmite. Não é salva uma nova relação direta em cada ticket. Encerrar o pré-requisito ou o objetivo bloqueado, ou retirar um ticket desse objetivo, elimina o bloqueio herdado correspondente. Resolva o pré-requisito real ou corrija uma relação obsoleta. Mudar apenas a data-alvo de um objetivo não conclui os tickets que o bloqueiam.
 
 ### Interpretar o sinal de ritmo {#momentum}
 
 O painel Ritmo aparece apenas quando o objetivo tem uma data-alvo. Ao remover essa data, o painel fica oculto, incluindo o histórico, as estatísticas de ritmo e a data estimada de conclusão. Adicione uma data-alvo para exibi-lo novamente; o indicador de progresso geral continua disponível sem ela.
 
-O ritmo resume trabalho concluído recentemente. Ele pode estar acelerando, estável, desacelerando ou parado, com estados separados para objetivos não iniciados, concluídos e cancelados. Use-o para identificar um resultado que precisa de atenção, depois leia os problemas e a atividade subjacentes.
+O ritmo resume trabalho concluído recentemente. Ele pode estar acelerando, estável, desacelerando ou parado, com estados separados para objetivos não iniciados, concluídos e cancelados. Use-o para identificar um resultado que precisa de atenção, depois leia os tickets e a atividade subjacentes.
 
-A data estimada de conclusão exige pelo menos duas conclusões, uma semana inteira observada, esforço entregue positivo e trabalho restante. Apenas os problemas atualmente vinculados contribuem; uma conclusão anterior à criação do objetivo não produz um ritmo recente artificial.
+A data estimada de conclusão exige pelo menos duas conclusões, uma semana inteira observada, esforço entregue positivo e trabalho restante. Apenas os tickets atualmente vinculados contribuem; uma conclusão anterior à criação do objetivo não produz um ritmo recente artificial.
 
 Com uma data-alvo válida, o histórico vai da criação até essa data e o ritmo de entrega usa o tempo observado desde a criação, incluindo o período depois de um prazo não cumprido. Se uma data-alvo estiver definida, mas não determinar um período válido após a criação, o cálculo usa um histórico móvel de oito semanas e uma janela de previsão de 28 dias.
 

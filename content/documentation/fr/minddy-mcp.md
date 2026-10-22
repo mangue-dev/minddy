@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
+  "revision": 14,
   "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-21",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -57,10 +57,10 @@
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:MIN-768 (MCP setup moved to wizards: changed passages checked against components/settings/account-mcp-clients.tsx and mcp-connect-panel.tsx; 1 screenshot recaptured on 2026-10-21 from the local candidate and inspected; earlier evidence retained in git history)",
-    "language": "agent:MIN-768 (fr translation of the changed passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-21"
+    "revision": 14,
+    "fact": "agent:MIN-768 (MCP setup moved to wizards: changed passages checked against components/settings/account-mcp-clients.tsx and mcp-connect-panel.tsx; 1 screenshot recaptured on 2026-10-21 from the local candidate and inspected; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label correction: quoted labels aligned on the corrected fr catalog; no behavior change, no new captures)",
+    "language": "agent:MIN-768 (fr translation of the changed passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-762 label edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "numo",
@@ -81,7 +81,7 @@
       "src": "/documentation/fr/external-minddy-mcp-workflow.png",
       "alt": "Choix du client MCP minddy : Claude, Codex et autres assistants.",
       "caption": "Choisissez votre client pour afficher sa commande ou sa configuration d’installation.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -98,7 +98,7 @@
       "src": "/documentation/fr/external-minddy-mcp-install-workflow.png",
       "alt": "Étape d’installation de Codex dans l’assistant de connexion au MCP de minddy, avec le point d’accès de minddy Cloud.",
       "caption": "Cet exemple se connecte à minddy Cloud. Pour l’auto-hébergement, utilisez l’origine de votre instance ; la commande affichée n’a pas été exécutée pour cette capture.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-21",
       "viewport": [
@@ -117,7 +117,7 @@
 }
 ---
 
-Le MCP minddy permet à un assistant externe d’utiliser les outils minddy avec les accès de votre compte. Connectez l’assistant depuis le parcours de configuration de l’instance, contrôlez ou révoquez ses accès dans les réglages du compte, puis lisez les schémas actuels des outils avant de modifier tickets, pages ou routines.
+Le MCP minddy permet à un assistant externe d’utiliser les outils minddy avec les accès de votre compte. Connectez l’assistant depuis le parcours de configuration de l’instance, contrôlez ou révoquez ses accès dans les paramètres du compte, puis lisez les schémas actuels des outils avant de modifier tickets, pages ou routines.
 
 ## Connecter un assistant externe au MCP minddy {#external-minddy-mcp}
 

@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
+  "revision": 14,
   "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-21",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -57,10 +57,10 @@
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:MIN-768 (MCP setup moved to wizards: changed passages checked against components/settings/account-mcp-clients.tsx and mcp-connect-panel.tsx; 1 screenshot recaptured on 2026-10-21 from the local candidate and inspected; earlier evidence retained in git history)",
-    "language": "agent:MIN-768 (pt-BR translation of the changed passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-21"
+    "revision": 14,
+    "fact": "agent:MIN-768 (MCP setup moved to wizards: changed passages checked against components/settings/account-mcp-clients.tsx and mcp-connect-panel.tsx; 1 screenshot recaptured on 2026-10-21 from the local candidate and inspected; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures)",
+    "language": "agent:MIN-768 (pt-BR translation of the changed passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "numo",
@@ -82,7 +82,7 @@
       "src": "/documentation/pt-BR/external-minddy-mcp-workflow.png",
       "alt": "Seletor de clientes MCP minddy com Claude, Codex e outros assistentes.",
       "caption": "Selecione seu cliente para exibir o comando ou a configuração de instalação.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -99,7 +99,7 @@
       "src": "/documentation/pt-BR/external-minddy-mcp-install-workflow.png",
       "alt": "Etapa de instalação do Codex no assistente de conexão ao MCP do minddy, mostrando o endpoint minddy Cloud.",
       "caption": "Este exemplo se conecta ao minddy Cloud. Para uma instância autogerenciada, use a origem da sua própria instância; o comando exibido não foi executado para esta captura.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-21",
       "viewport": [
@@ -124,7 +124,7 @@ O minddy MCP permite que um assistente externo leia e altere o trabalho dentro d
 
 Abra a página pública MCP da instância e escolha as instruções do cliente. Use o endpoint exibido, terminado em `/api/mcp`. Em self-hosted use sua própria origem, não a do Cloud. O cliente precisa aceitar MCP remoto e o fluxo OAuth descrito.
 
-Entre pelo navegador e confira a autorização antes de concedê-la. A conexão age como sua conta minddy, sem acesso a projetos fora das suas permissões. Comece lendo uma tarefa já acessível e confira o projeto retornado.
+Entre pelo navegador e confira a autorização antes de concedê-la. A conexão age como sua conta minddy, sem acesso a projetos fora das suas permissões. Comece lendo um ticket que você já consegue abrir e confira o projeto retornado.
 
 Nas configurações da conta, a seção MCP do minddy abre um assistente de duas etapas para cada cliente: copie o comando de instalação, a configuração ou a URL do servidor e depois autorize o login do cliente. A segunda etapa indica quando o minddy recebe esse acesso; até lá, fechá-la apenas adia o login.
 
@@ -144,9 +144,9 @@ A disponibilidade do serviço não garante que ele seja acessível pela rede. Ta
 
 ### Escopo e revogação {#access}
 
-Clientes externos usam ferramentas disponíveis para tarefas, planos, comentários, páginas, feedback, ciclos, rotinas e caderno dentro dos acessos autorizados. As ferramentas seguem, a cada chamada, o seu papel atual em cada projeto, então uma mudança de papel vale sem reconectar. Como leitor, você recebe as ferramentas de leitura, mais as ferramentas de comentário quando o proprietário ativou **Pode comentar** para você. MCP está disponível em todos os planos Cloud; a IA do cliente ainda depende da configuração e custos dele.
+Clientes externos usam ferramentas disponíveis para tickets, planos, comentários, páginas, feedback, ciclos, rotinas e caderno de tarefas dentro dos acessos autorizados. As ferramentas seguem, a cada chamada, o seu papel atual em cada projeto, então uma mudança de papel vale sem reconectar. Como leitor, você recebe as ferramentas de leitura, mais as ferramentas de comentário quando o proprietário ativou **Pode comentar** para você. MCP está disponível em todos os planos Cloud; a IA do cliente ainda depende da configuração e custos dele.
 
-minddy MCP nas configurações da conta lista acessos externos e controles de revogação. Revogue clientes sem uso ou confiança. O cartão **MCP para o Numo** da aba **IA e Numo** é diferente: conecta o Numo a outros serviços. Não cole tokens em tarefas, feedback público nem capturas.
+minddy MCP nas configurações da conta lista acessos externos e controles de revogação. Revogue clientes sem uso ou confiança. O cartão **MCP para o Numo** da aba **IA e Numo** é diferente: conecta o Numo a outros serviços. Não cole tokens em tickets, feedback público nem capturas.
 
 ![Etapa de instalação do Codex no assistente de conexão ao MCP do minddy, mostrando o endpoint minddy Cloud.](/documentation/pt-BR/external-minddy-mcp-install-workflow.png)
 
@@ -157,9 +157,9 @@ minddy MCP nas configurações da conta lista acessos externos e controles de re
 
 ### Ler antes de alterar os planos {#issue-plans}
 
-Para encontrar uma issue, chame `minddy_list_issues` com `query`: a busca considera palavras do título e da descrição, um identificador ou um número. Correspondências de texto e identificadores exatos vêm primeiro; uma busca descritiva pode depois acrescentar issues do mesmo projeto encontradas [pelo sentido](/docs/navigation#search-by-meaning), marcadas com `match: "semantic"`. Leia uma issue assim antes de agir sobre ela. A busca pelo sentido é cobrada da sua conta como **Busca de problemas** e não acontece se você desligou **Indexar tickets**.
+Para encontrar um ticket, chame `minddy_list_issues` com `query`: a busca considera palavras do título e da descrição, um identificador ou um número. Correspondências de texto e identificadores exatos vêm primeiro; uma busca descritiva pode depois acrescentar tickets do mesmo projeto encontrados [pelo sentido](/docs/navigation#search-by-meaning), marcados com `match: "semantic"`. Leia um ticket assim antes de agir sobre ele. A busca pelo sentido é cobrada da sua conta como **Busca de tickets** e não acontece se você desligou **Indexar tickets**.
 
-`minddy_get_issue` aceita o UUID de uma issue, um identificador de issue como `DEMO-42` ou o número da issue; `project_id` é informado separadamente. `plan_tasks` informa `task_index` a partir de zero. `minddy_update_plan_task` recebe um array `tasks` com os estados `pending`, `in_progress`, `completed` ou `cancelled`; um índice inválido faz o lote inteiro ser rejeitado. `minddy_append_to_plan` acrescenta conteúdo, enquanto `minddy_edit_issue_text` substitui `old_string` por `new_string` em uma correspondência exata e única. Releia um plano que pode ter mudado: substituí-lo por inteiro pode sobrescrever o progresso de outras pessoas. A seção `## Questions` fica fora da contagem de tarefas.
+`minddy_get_issue` aceita o UUID de um ticket, um identificador de ticket como `DEMO-42` ou o número do ticket; `project_id` é informado separadamente. `plan_tasks` informa `task_index` a partir de zero. `minddy_update_plan_task` recebe um array `tasks` com os estados `pending`, `in_progress`, `completed` ou `cancelled`; um índice inválido faz o lote inteiro ser rejeitado. `minddy_append_to_plan` acrescenta conteúdo, enquanto `minddy_edit_issue_text` substitui `old_string` por `new_string` em uma correspondência exata e única. Releia um plano que pode ter mudado: substituí-lo por inteiro pode sobrescrever o progresso de outras pessoas. A seção `## Questions` fica fora da contagem de tarefas.
 
 As leituras que retornam texto com imagens (`minddy_get_issue`, `minddy_get_objective`, `minddy_get_page`, `minddy_get_feedback`, `minddy_get_scratchpad`) as listam em `images`, cada uma com seu `src` e texto alternativo. Passe esse `src` exatamente como está para `minddy_get_image`: a ferramenta verifica seu acesso ao projeto da imagem, ou se uma imagem do caderno é sua, e retorna a imagem até 10 MB com um `download_url` assinado válido por cerca de dez minutos. Uma imagem hospedada fora do minddy volta apenas como URL.
 
@@ -173,7 +173,7 @@ As ferramentas de rotinas, exclusivas do proprietário, criam, alteram, pausam o
 
 ### Conferir com um exemplo {#example}
 
-O exemplo altera a primeira tarefa de um plano já lido. Substitua o UUID do projeto e a issue pelos valores encontrados na descoberta e use o índice da última leitura. Depois confira `plan_tasks` e `plan_progress`. Para um erro de acesso, verifique conta e projeto; para conflito, releia e aplique apenas a alteração necessária. Não repita uma alteração externa de resultado incerto sem conferir o resultado.
+O exemplo altera a primeira tarefa de um plano já lido. Substitua o UUID do projeto e o ticket pelos valores encontrados na descoberta e use o índice da última leitura. Depois confira `plan_tasks` e `plan_progress`. Para um erro de acesso, verifique conta e projeto; para conflito, releia e aplique apenas a alteração necessária. Não repita uma alteração externa de resultado incerto sem conferir o resultado.
 
 ```json
 {

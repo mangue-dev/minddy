@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
+  "revision": 7,
   "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -43,10 +43,10 @@
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 7,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label correction: quoted labels aligned on the corrected es catalog; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-762 label edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "views",
@@ -63,7 +63,7 @@
       "src": "/documentation/es/reader-cycle.png",
       "alt": "Incidencia de demostración en el backlog del ciclo personal.",
       "caption": "Al añadirla se asignó al titular del ciclo y se conservó su estado de backlog.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -92,6 +92,6 @@ El ciclo actual se llena automáticamente una vez con trabajo elegible. Para añ
 
 ## Terminar o ajustar el periodo {#cycle-results}
 
-Actualiza los estados a medida que avanza el trabajo y revisa lo completado y lo pendiente. Al cambiar de periodo, las incidencias elegibles sin terminar de ciclos anteriores se trasladan automáticamente al actual, conservando la asignación. Ese traslado no las marca como completadas. Cuando todas las incidencias del ciclo actual están cerradas, un aviso **Ciclo terminado** ofrece **Ciclo de relleno** para añadir trabajo elegible; el ciclo no se rellena automáticamente durante el periodo. Usa el selector de fechas para consultar ciclos anteriores y futuros. Esas vistas son de solo lectura, mientras que el ciclo actual permite cambios.
+Actualiza los estados a medida que avanza el trabajo y revisa lo completado y lo pendiente. Al cambiar de periodo, las incidencias elegibles sin terminar de ciclos anteriores se trasladan automáticamente al actual, conservando la asignación. Ese traslado no las marca como completadas. Cuando todas las incidencias del ciclo actual están cerradas, un aviso **Ciclo terminado** ofrece **Completar el ciclo** para añadir trabajo elegible; el ciclo no se rellena automáticamente durante el periodo. Usa el selector de fechas para consultar ciclos anteriores y futuros. Esas vistas son de solo lectura, mientras que el ciclo actual permite cambios.
 
 Si se añade un requisito al ciclo actual para mantener las dependencias coherentes, comprueba el motivo antes de quitarlo. Una incidencia que desaparece tras completarse puede seguir en el trabajo completado del ciclo o localizarse por su identificador. Los ajustes de ciclos de la cuenta afectan a tu planificación, no al ciclo personal de otro miembro.

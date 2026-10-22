@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
+  "revision": 10,
   "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -46,10 +46,10 @@
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 10,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "authentication-and-email",
@@ -66,7 +66,7 @@
       "src": "/documentation/pt-BR/instance-administration-overview.png",
       "alt": "Visão geral administrativa com indicadores agregados de contas, atividade, integração inicial e planos.",
       "caption": "Visão geral mostra os indicadores agregados da instância; a captura vem de uma instância de demonstração. Finanças aparece porque há uma chave gerenciada do OpenRouter configurada nela.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -82,7 +82,7 @@
       "src": "/documentation/pt-BR/instance-administration-models.png",
       "alt": "Configurações de modelos de IA e raciocínio da instância.",
       "caption": "Modelos configura padrões e usos específicos. A captura mostra a configuração existente; nenhum modelo ou provedor foi alterado.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -120,9 +120,9 @@ Novas decisões usam o modelo salvo em cerca de um minuto em cada processo do se
 
 ## Configurar as relações do Smart Fill {#smart-fill-relations}
 
-Depois que um problema é salvo, o Smart Fill pode indexá-lo e vinculá-lo a problemas relacionados. Dois campos em **Modelos**, seção **Automações**, controlam esse trabalho:
+Depois que um ticket é salvo, o Smart Fill pode indexá-lo e vinculá-lo a tickets relacionados. Dois campos em **Modelos**, seção **Automações**, controlam esse trabalho:
 
-- **Embeddings de problemas** escolhe o modelo que transforma o título e a descrição dos problemas em vetores. O padrão é `openai/text-embedding-3-small`. Trocá-lo inicia uma nova versão do índice: vetores antigos e novos nunca são comparados. A tarefa de hora em hora `/api/cron/issue-index` indexa então os problemas existentes, 100 por execução, cobrando o proprietário de cada projeto; ela nunca cria relações. O mesmo modelo transforma em vetor cada consulta da busca pelo sentido, com as configurações do provedor de IA do membro que busca, e as consultas só são comparadas com vetores da versão atual do índice. Até que um problema seja indexado de novo, a busca de problemas relacionados e a busca pelo sentido só o encontram pelas palavras. A mesma tarefa converte em vetores criptografados os salvos sem criptografia assim que o projeto deles passa a criptografar.
+- **Embeddings de tickets** escolhe o modelo que transforma o título e a descrição dos tickets em vetores. O padrão é `openai/text-embedding-3-small`. Trocá-lo inicia uma nova versão do índice: vetores antigos e novos nunca são comparados. A tarefa de hora em hora `/api/cron/issue-index` indexa então os tickets existentes, 100 por execução, cobrando o proprietário de cada projeto; ela nunca cria relações. O mesmo modelo transforma em vetor cada consulta da busca pelo sentido, com as configurações do provedor de IA do membro que busca, e as consultas só são comparadas com vetores da versão atual do índice. Até que um ticket seja indexado de novo, a busca de tickets relacionados e a busca pelo sentido só o encontram pelas palavras. A mesma tarefa converte em vetores criptografados os salvos sem criptografia assim que o projeto deles passa a criptografar.
 - **Modelo de decisão de relações** é o modelo LLM de reserva que responde às decisões de relação quando o [modelo de decisão](#decision-model) falha ou não tem certeza, como o modelo LLM próprio de cada recurso. O padrão é `deepseek/deepseek-v4-flash`.
 
 Os campos de embedding e de transcrição recusam ao salvar um modelo da família errada, por exemplo um modelo de chat em um campo de embeddings, e o modelo atual continua em uso. Essa verificação precisa do catálogo da plataforma: quando ele não pode ser carregado, como em uma instância auto-hospedada sem IA gerenciada, a escolha não pode ser verificada e é aceita. Para membros que executam automações com a própria chave, os padrões por provedor incluem `issue_embedding_model`: `text-embedding-3-small` para OpenAI e `gemini-embedding-001` para Google.

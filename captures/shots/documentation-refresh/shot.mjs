@@ -4,6 +4,7 @@ import { execFileSync } from "node:child_process";
 import { openPage, settle, CAPTURE, CAPTURE_LOCALES } from "../../lib/browser.mjs";
 import { settleDocumentationPage, captureDocumentationControl } from "../../lib/documentation-frame.mjs";
 import { catalog } from "../../lib/messages.mjs";
+import { demoProse, translateDemo } from "../../lib/demo-prose.mjs";
 
 if (!["localhost", "127.0.0.1", "www.minddy.app"].includes(new URL(CAPTURE.baseUrl).hostname)) throw new Error("Documentation refresh requires the local candidate or the canonical hosted application.");
 const output = "output/documentation-captures/visual-refresh-captures-2026-10-09.json";
@@ -34,12 +35,6 @@ const knownScreens = new Set([...settings.map(([screen]) => screen),
   "install-locally-wizard", "install-a-server-wizard", "web-and-mobile-workflow",
 ]);
 if (requested.some(screen => !knownScreens.has(screen))) throw new Error("The documentation batch contains an unknown screen ID.");
-function translate(value, mapping) {
-  if (typeof value === "string") return mapping[value] ?? value;
-  if (Array.isArray(value)) return value.map(item => translate(item, mapping));
-  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, translate(item, mapping)]));
-  return value;
-}
 for (const locale of locales) {
   const { browser, context, page } = await openPage({ locale, theme: "light", viewport: { width: 1440, height: 1800 }, launchArgs: ["--force-color-profile=srgb", "--disable-lcd-text"] });
   page.setDefaultTimeout(20000);
@@ -52,6 +47,7 @@ for (const locale of locales) {
   for (const name of ["Toutes", "All", "Alle", "Todos", "Tutti"]) fixture.mapping[name] = messages.Board.defaultViewName;
   const routines = JSON.parse(await readFile("captures/shots/documentation-refresh/routine-localized-capture-candidates.json", "utf8"));
   for (let index = 0; index < routines.original.length; index++) fixture.mapping[routines.original[index]] = routines.translations[locale][index];
+  const prose = demoProse(fixture.mapping);
   try {
     await context.route("**/api/**", async route => {
       const request = route.request(), path = new URL(request.url()).pathname;
@@ -61,12 +57,12 @@ for (const locale of locales) {
         return route.abort("blockedbyclient");
       }
       // `/api/stats` names the demo projects and objectives in the profile.
-      if (!path.startsWith(`/api/projects/${fixture.projectId}`) && !/^\/api\/(assistant|numo|routines|stats)(\/|$)/.test(path)) return route.fallback();
+      if (!path.startsWith(`/api/projects/${fixture.projectId}`) && !/^\/api\/(assistant|documents|numo|routines|stats)(\/|$)/.test(path)) return route.fallback();
       const response = await route.fetch().catch(() => null);
       if (!response) return;
       if (!response.ok()) return route.fulfill({ response });
       let body; try { body = await response.json(); } catch { return route.fulfill({ response }); }
-      const localized = translate(body, fixture.mapping);
+      const localized = translateDemo(body, prose);
       if (JSON.stringify(localized) !== JSON.stringify(body)) adaptations.push(path);
       return route.fulfill({ response, json: localized });
     });
@@ -111,7 +107,7 @@ for (const locale of locales) {
     }, { width: 1440, height: 2200 });
     // Project settings (MIN-737): the identity header of General, and the
     // Members tab (invite card and member list). Nothing is edited.
-    await capture("project-general", `/projects/${fixture.projectId}/settings`, () => page.locator("#settings-section-project-general"), async () => {
+    await capture("project-general", `/projects/${fixture.projectId}/settings?tab=general`, () => page.locator("#settings-section-project-general"), async () => {
       await page.getByRole("button", { name: messages.Settings.changeProjectIcon, exact: true }).waitFor();
     }, { width: 1440, height: 1100 });
     await capture("project-members", `/projects/${fixture.projectId}/settings?tab=members`, () => page.locator("#settings-section-project-members").locator("../.."), async () => {

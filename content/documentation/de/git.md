@@ -2,8 +2,8 @@
 {
   "id": "git",
   "locale": "de",
-  "title": "Git-Repositories und Problemsynchronisierung",
-  "summary": "Verbinden Sie ein Git-Konto, verknüpfen Sie ein Projekt-Repository und richten Sie die Problemsynchronisierung mit dem Anbieter ein.",
+  "title": "Git-Repositories und Issue-Synchronisierung",
+  "summary": "Verbinden Sie ein Git-Konto, verknüpfen Sie ein Projekt-Repository und richten Sie die Issue-Synchronisierung mit dem Anbieter ein.",
   "topic": "Numo und Integrationen",
   "type": "guide",
   "audiences": [
@@ -17,10 +17,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
+  "revision": 6,
   "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -41,10 +41,10 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 6,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "api-and-webhooks"
@@ -56,7 +56,7 @@
   ],
   "tags": [
     "Git verbinden und ein Repository verknüpfen",
-    "Forge-Tickets synchronisieren"
+    "Forge-Issues synchronisieren"
   ],
   "figures": [
     {
@@ -65,7 +65,7 @@
       "src": "/documentation/de/git-connection-flow.svg",
       "alt": "Die Verbindung des persönlichen Kontos und die Verknüpfung eines Projekt-Repositories sind getrennte Schritte.",
       "caption": "Autorisieren Sie zuerst das Konto und verknüpfen Sie dann als Projektinhaber ein Repository.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -98,7 +98,7 @@
       "src": "/documentation/de/forge-issue-sync-mapping.svg",
       "alt": "GitHub-Synchronisierung mit Einrichtung, Ereignisprüfung, Import und Statusabgleich.",
       "caption": "GitHub-Ereignisse bewahren neuere Änderungen und verhindern doppelte Zustellungen. GitLab-Zuordnungen sind separat zu prüfen.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -136,7 +136,7 @@
       "src": "/documentation/de/forge-issue-sync-workflow.png",
       "alt": "Verknüpftes GitHub-Demonstrationsrepository mit deaktivierter Issue-Synchronisierung.",
       "caption": "Das Demonstrationsrepository ist mit GitHub verknüpft. Die Issue-Synchronisierung ist noch ausgeschaltet. Prüfen Sie den Umfang und den vorhandenen Backlog vor der Aktivierung. Diese Aufnahme belegt keinen synchronisierten Import.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -155,13 +155,13 @@
 }
 ---
 
-Ein persönliches Git-Konto zu verbinden, ein Projekt-Repository zu verknüpfen und Forge-Tickets zu synchronisieren sind getrennte Aktionen. Autorisieren Sie zuerst das Konto. Danach wählt der Projekteigentümer das Repository und kann die Synchronisierung mit den erforderlichen Anbieterrechten aktivieren.
+Ein persönliches Git-Konto zu verbinden, ein Projekt-Repository zu verknüpfen und Forge-Issues zu synchronisieren sind getrennte Aktionen. Autorisieren Sie zuerst das Konto. Danach wählt der Projekteigentümer das Repository und kann die Synchronisierung mit den erforderlichen Anbieterrechten aktivieren.
 
 ## Git verbinden und ein Repository verknüpfen {#git-accounts-and-repositories}
 
 Verbinden Sie GitHub oder GitLab in den Git-Kontoeinstellungen und schließen Sie die Browserfreigabe ab. Gewähren Sie nur erforderlichen Repository-Zugriff. Kehren Sie bei Desktop danach zur App zurück. Die Kontoverbindung ist projektübergreifend nutzbar, verknüpft aber nicht automatisch alle Repositories.
 
-Der Eigentümer wählt im Git-Bereich der Projekteinstellungen ein verfügbares Repository und bestätigt. Prüfen Sie Anbieter, vollständigen Repository-Namen und angezeigtes handelndes Konto. Mitglieder können diese Eigentümerverknüpfung nicht ersetzen. Sie ermöglicht Repository-Kontext, die Verfolgung von Pull Requests und Repository-Skills; Ticketsynchronisierung wird separat aktiviert.
+Der Eigentümer wählt im Git-Bereich der Projekteinstellungen ein verfügbares Repository und bestätigt. Prüfen Sie Anbieter, vollständigen Repository-Namen und angezeigtes handelndes Konto. Mitglieder können diese Eigentümerverknüpfung nicht ersetzen. Sie ermöglicht Repository-Kontext, die Verfolgung von Pull Requests und Repository-Skills; Issue-Synchronisierung wird separat aktiviert.
 
 ![Die Verbindung des persönlichen Kontos und die Verknüpfung eines Projekt-Repositories sind getrennte Schritte.](/documentation/de/git-connection-flow.svg)
 
@@ -172,9 +172,9 @@ Bei leerer Auswahl prüfen Sie Anbieterrechte und Freigabe der Organisation oder
 Self-Hosting kann ein konfiguriertes verwaltetes Relay oder betreibereigene Anbieter-Apps nutzen. Relay-Zugriff startet ausdrücklich und macht die Forge nicht lokal. Verfügbarkeit hängt von der Instanzkonfiguration ab. Prüfen Sie Betreiberregeln vor der Freigabe.
 
 
-## Forge-Tickets synchronisieren {#forge-issue-sync}
+## Forge-Issues synchronisieren {#forge-issue-sync}
 
-Öffnen Sie als Eigentümer nach der Repository-Verknüpfung den Git-Bereich. Aktivieren Sie die Synchronisierung mit erforderlichen Schreibrechten. Importierte Tickets landen in der Triage. Prüfen Sie den gemeldeten Nachimport sowie Titel, Beschreibung und Status eines bekannten Remote-Tickets.
+Öffnen Sie als Eigentümer nach der Repository-Verknüpfung den Git-Bereich. Aktivieren Sie die Synchronisierung mit erforderlichen Schreibrechten. Importierte Forge-Issues landen als Tickets in der Triage. Prüfen Sie den gemeldeten Nachimport sowie Titel, Beschreibung und Status eines bekannten Remote-Issues.
 
 Offen und geschlossen werden in beide Richtungen gespiegelt. Bei GitHub werden Titel und Inhalt zu Titel und Beschreibung; Labels liefern Kategorien sowie erkannte Priorität und Aufwand; der erste verknüpfte Bearbeiter wird verwendet, die Milestone-Frist als Fälligkeit. Kommentare behalten Remote-Autor, Identität, URL und Zeitpunkte. Blockierbeziehungen verlangen beide Tickets im selben importierten Projekt. Anhangs-URLs bleiben erhalten; Dateibytes und GitHub-Projektfelder besitzen keine native Entsprechung.
 

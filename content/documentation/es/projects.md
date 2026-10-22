@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 16,
+  "revision": 17,
   "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-21",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -67,10 +67,10 @@
     ]
   },
   "review": {
-    "revision": 16,
-    "fact": "agent:claude (MIN-760: category reordering paragraph checked against components/project-categories.tsx, the order route and the Numo/MCP tools; existing figures unaffected and kept; no browser walkthrough of the procedure)",
-    "language": "agent:claude (es translation of the added en paragraph, equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-21"
+    "revision": 17,
+    "fact": "agent:claude (MIN-760: category reordering paragraph checked against components/project-categories.tsx, the order route and the Numo/MCP tools; existing figures unaffected and kept; no browser walkthrough of the procedure); agent:claude-code (MIN-762 UI label correction: quoted labels aligned on the corrected es catalog; no behavior change, no new captures)",
+    "language": "agent:claude (es translation of the added en paragraph, equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-762 label edit; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "issues",
@@ -94,7 +94,7 @@
       "src": "/documentation/es/project-general.png",
       "alt": "Cabecera del proyecto con el icono y su distintivo de edición, el nombre, la clave y las cifras Incidencias, Miembros, Objetivos, Categorías y Creado.",
       "caption": "Selecciona el icono, el nombre o la clave para cambiarlos ahí mismo; mover el proyecto a la papelera sigue siendo una acción aparte, más abajo.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -111,7 +111,7 @@
       "src": "/documentation/es/project-members.png",
       "alt": "Tarjeta «Invitar a personas» sobre la tarjeta Miembros, que lista tres miembros de demostración con la persona propietaria identificada.",
       "caption": "Invita con el correo de la cuenta e identifica al propietario antes de retirar el acceso de un miembro.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -157,7 +157,7 @@ Para recuperarlo, elige **Mostrar** en **Proyectos ocultos** o en la configuraci
 
 Un miembro o un lector puede elegir **Dejar** en la zona de peligro para retirar su propio acceso; antes, un diálogo que nombra el proyecto pide confirmación. Pide al propietario que vuelva a invitarte si lo necesitas más adelante. Abandonarlo no elimina el proyecto para todos. El propietario no puede abandonarlo: antes debe [transferir la propiedad](#transfer-ownership) a un miembro.
 
-Quitar el proyecto es una acción del propietario: en la zona de peligro, elige **Mover a la papelera** junto a **Mueva el proyecto a la basura**. La confirmación nombra el proyecto e indica que sus incidencias, objetivos y sugerencias se van con él; el proyecto se puede restaurar desde la [papelera](/es/documentacion/trash-and-recovery) durante 30 días, y su clave queda libre de inmediato. Lee la confirmación antes de hacerlo, sobre todo si contiene incidencias, páginas, archivos o integraciones. Si falla un guardado normal, conserva los valores que querías introducir, lee el error y actualiza el proyecto antes de intentarlo de nuevo. Evita repetir una acción destructiva cuando no sepas cuál fue su primer resultado.
+Quitar el proyecto es una acción del propietario: en la zona de peligro, elige **Mover a la papelera** junto a **Mover el proyecto a la papelera**. La confirmación nombra el proyecto e indica que sus incidencias, objetivos y sugerencias se van con él; el proyecto se puede restaurar desde la [papelera](/es/documentacion/trash-and-recovery) durante 30 días, y su clave queda libre de inmediato. Lee la confirmación antes de hacerlo, sobre todo si contiene incidencias, páginas, archivos o integraciones. Si falla un guardado normal, conserva los valores que querías introducir, lee el error y actualiza el proyecto antes de intentarlo de nuevo. Evita repetir una acción destructiva cuando no sepas cuál fue su primer resultado.
 
 El propietario también puede hacer clic derecho en el proyecto en la barra lateral y elegir **Mover a la papelera**. Aparece la misma confirmación y solo se ve afectado el proyecto en el que hiciste clic.
 

@@ -17,7 +17,7 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
+  "revision": 18,
   "sourceRevision": 17,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
@@ -56,9 +56,9 @@
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:/root/min764 (database views section checked against components/pages/database-view-strip.tsx, components/pages/page-database-view.tsx, lib/use-page-database-views.ts and lib/server/page-database-views.ts: named views shared by the project, each with its own sort, filter and hidden columns, managed and reordered by writers, adjusted locally by readers; insertion clears the active view's filter; rest of the article unchanged since the MIN-747 review; no figure changed)",
-    "language": "agent:/root/min764 (de changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 18,
+    "fact": "agent:/root/min764 (database views section checked against components/pages/database-view-strip.tsx, components/pages/page-database-view.tsx, lib/use-page-database-views.ts and lib/server/page-database-views.ts: named views shared by the project, each with its own sort, filter and hidden columns, managed and reordered by writers, adjusted locally by readers; insertion clears the active view's filter; rest of the article unchanged since the MIN-747 review; no figure changed); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures)",
+    "language": "agent:/root/min764 (de changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -83,7 +83,7 @@
       "src": "/documentation/de/database-setup-cards.png",
       "alt": "Komponentenvorschau der Karten zur Einrichtung einer neuen Datenbank mit Numo oder zum Import einer vorhandenen Datenbank.",
       "caption": "Vorschläge für eine neue Datenbank mit Demonstrationsdaten. Wählen Sie Numo oder Import, oder schließen Sie die Karten, um manuell fortzufahren.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -100,7 +100,7 @@
       "src": "/documentation/de/database-property-types.png",
       "alt": "Auswahl des Spaltentyps mit Suchfeld sowie Text, Zahl, Auswahl, Datum, Personen und Kontrollkästchen.",
       "caption": "Wähle einen Typ, der zu den gespeicherten Werten passt.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -117,7 +117,7 @@
       "src": "/documentation/de/database-entry.png",
       "alt": "Demoeintrag mit Beschreibung, Dauer 2.5, aktiviertem Kontrollkästchen und leerer Auswahl.",
       "caption": "Öffne einen Eintrag, um den vollständigen Text zu lesen und typisierte Werte zu bearbeiten.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -133,7 +133,7 @@
       "src": "/documentation/de/database-conversion-warning.png",
       "alt": "Umwandlungswarnung: Der Wechsel von Text zu Zahl leert eine inkompatible Zelle; Abbrechen und Bestätigen sind verfügbar.",
       "caption": "Prüfe die tatsächliche Zahl inkompatibler Zellen vor der Bestätigung. Abbrechen erhält die bisherigen Werte.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -149,7 +149,7 @@
       "src": "/documentation/de/database-import-review.png",
       "alt": "Importprüfung einer lokalen CSV-Datei: zwei Eintragsseiten und zwei Eigenschaftsspalten mit der Importschaltfläche.",
       "caption": "Prüfe die eingelesenen Einträge und die Spaltenzahl vor dem Import in die leere Datenbank.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -165,7 +165,7 @@
       "src": "/documentation/de/database-options.png",
       "alt": "Komponentenvorschau von Optionen bearbeiten mit deutschen Statusoptionen, Pfeilen nach oben und unten, Papierkörben und einer Erklärung zum Löschen.",
       "caption": "Bearbeite Namen, Farben und Reihenfolge der Optionen gemeinsam. Der Papierkorb entfernt eine Option aus dem Entwurf; Speichern übernimmt die Änderungen. Mit Demonstrationsdaten.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -181,8 +181,8 @@
       "kind": "screenshot",
       "src": "/documentation/de/database-date-time.png",
       "alt": "Komponentenvorschau der Datumsauswahl mit dem ausgewählten 12. Oktober 2026, aktivierter Uhrzeit und Zeit auf 14:30.",
-      "caption": "Aktiviere „Fügen Sie eine Uhrzeit hinzu“, um eine Uhrzeit einzugeben. Diese Komponentenvorschau verwendet Demonstrationsdaten und die Zeitzone des Geräts.",
-      "revision": 17,
+      "caption": "Aktiviere „Uhrzeit hinzufügen“, um eine Uhrzeit einzugeben. Diese Komponentenvorschau verwendet Demonstrationsdaten und die Zeitzone des Geräts.",
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -239,7 +239,7 @@ Neue Optionen erhalten eine zufällige Palettenfarbe, die in der Spalte noch nic
 
 Verwende unter „Optionen bearbeiten“ die Pfeile nach oben und unten neben einer Zeile, um Optionen neu anzuordnen. Mit dem Papierkorb entfernst du eine Option. Speichern übernimmt Namen, Farben, Reihenfolge und Löschungen gemeinsam; hast du Optionen gelöscht, listet es sie zuerst auf und fragt mit **Löschen und speichern** nach, weil sich das Löschen nicht rückgängig machen lässt. Eine gelöschte Option wird aus allen Einträgen entfernt, die sie verwenden, auch aus Einträgen im Papierkorb. Andere ausgewählte Optionen bleiben erhalten. Abbrechen verwirft die Änderungen im Entwurf.
 
-Wähle unter Datum einen Tag. Aktiviere „Fügen Sie eine Uhrzeit hinzu“ und fülle Zeit aus, um eine Uhrzeit anzugeben. Der Wert wird beim Bearbeiten gespeichert und die Auswahl bleibt geöffnet. Werte mit Uhrzeit werden in der Zeitzone deines Geräts angezeigt, auch Mitternacht. Wenn du „Fügen Sie eine Uhrzeit hinzu“ deaktivierst, bleibt der angezeigte Tag als Datum ohne Uhrzeit erhalten. Datumsfilter berücksichtigen den angezeigten Kalendertag.
+Wähle unter Datum einen Tag. Aktiviere „Uhrzeit hinzufügen“ und fülle Zeit aus, um eine Uhrzeit anzugeben. Der Wert wird beim Bearbeiten gespeichert und die Auswahl bleibt geöffnet. Werte mit Uhrzeit werden in der Zeitzone deines Geräts angezeigt, auch Mitternacht. Wenn du „Uhrzeit hinzufügen“ deaktivierst, bleibt der angezeigte Tag als Datum ohne Uhrzeit erhalten. Datumsfilter berücksichtigen den angezeigten Kalendertag.
 
 ![Komponentenvorschau von Optionen bearbeiten mit deutschen Statusoptionen, Pfeilen nach oben und unten, Papierkörben und einer Erklärung zum Löschen.](/documentation/de/database-options.png)
 
@@ -253,7 +253,7 @@ Ein leerer Eintrag zeigt im Inhalt einen Platzhalter für den Schreibbereich. Be
 
 Verwende Zeilen-Kontrollkästchen für die Auswahl und Shift-Klick für einen Bereich. Der Griff öffnet Aktionen und kann Einträge in manueller Reihenfolge umordnen. Das + am Zeilenrand fügt unter dem Eintrag ein; Option/Alt fügt oberhalb ein. Benachbartes Einfügen entfernt den Filter der aktiven Ansicht, damit der neue Eintrag sichtbar ist.
 
-Im Griffmenü eines einzelnen Eintrags kann der Eigentümer oder ein Mitglied **Zu Problem hochstufen** wählen, damit Numo diesen Eintrag mit Inhalt und Eigenschaften in ein Problem umwandelt. Der Eintrag bleibt in der Datenbank. Bezieht sich das Menü auf mehrere ausgewählte Zeilen, fehlt die Aktion; eine Sammel-Hochstufung gibt es nicht, also stufe jeden Eintrag einzeln hoch. Die [Seitenanleitung](/de/dokumentation/pages#promote-page-to-issue) beschreibt die Rückfragen von Numo und was zu tun ist, wenn der Eintrag vorher nicht gespeichert werden kann.
+Im Griffmenü eines einzelnen Eintrags kann der Eigentümer oder ein Mitglied **Zu Ticket hochstufen** wählen, damit Numo diesen Eintrag mit Inhalt und Eigenschaften in ein Ticket umwandelt. Der Eintrag bleibt in der Datenbank. Bezieht sich das Menü auf mehrere ausgewählte Zeilen, fehlt die Aktion; eine Sammel-Hochstufung gibt es nicht, also stufe jeden Eintrag einzeln hoch. Die [Seitenanleitung](/de/dokumentation/pages#promote-page-to-issue) beschreibt die Rückfragen von Numo und was zu tun ist, wenn der Eintrag vorher nicht gespeichert werden kann.
 
 ### Datenbankansichten {#database-display}
 

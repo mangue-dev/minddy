@@ -16,7 +16,7 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
+  "revision": 20,
   "sourceRevision": 19,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
@@ -61,9 +61,9 @@
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:claude/min773 (dictation pill, discard confirmation, cleanup preference and vocabulary checked against the changed source and the running app; earlier evidence retained in git history)",
-    "language": "agent:claude/min773 (pt-BR translation of the MIN-773 passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 20,
+    "fact": "agent:claude/min773 (dictation pill, discard confirmation, cleanup preference and vocabulary checked against the changed source and the running app; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures)",
+    "language": "agent:claude/min773 (pt-BR translation of the MIN-773 passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -86,7 +86,7 @@
       "src": "/documentation/pt-BR/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Conexões, atribuição por capacidade e modelo pessoal do Numo são ajustes separados.",
       "caption": "Vários provedores podem continuar conectados. A atribuição escolhe por capacidade; o padrão do Numo é salvo por conta e provedor.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -157,7 +157,7 @@ As chaves pessoais compatíveis fazem o provedor cobrar as chamadas aos modelos,
 
 Estes padrões descrevem o Minddy 0.20.0. Confira a página de preços e a conta reais antes de comprar: os preços configurados no pagamento e as exceções da conta podem ser diferentes. A contagem de convidados exclui o proprietário do projeto e inclui membros, leitores e convites pendentes; não há cobrança por assento. O armazenamento é contabilizado para o proprietário do projeto que recebe os arquivos. Quando a propriedade é transferida, esses limites, o armazenamento e a IA em segundo plano, como o Smart Assign e a análise de feedback, passam a usar o plano do novo proprietário.
 
-| Plano | Projetos | Tarefas por projeto | Convidados por projeto | Armazenamento | IA mensal incluída (USD) |
+| Plano | Projetos | Tickets por projeto | Convidados por projeto | Armazenamento | IA mensal incluída (USD) |
 | --- | --- | --- | --- | --- | --- |
 | Free | 2 | 300 | 3 | 1 GiB | 0.50 |
 | Go | Ilimitados | Ilimitadas | Ilimitados | 20 GiB | 5 |
@@ -167,11 +167,11 @@ A Cobrança mostra o orçamento de IA restante e sua próxima redefinição, **E
 
 ## Ditar texto e alterações {#voice-dictation}
 
-Use o microfone ao lado de um campo compatível para ditar uma issue, um objetivo, um comentário, uma mensagem do Numo, um feedback ou uma instrução de rotina. Você precisa de permissão para escrever ali, um microfone funcionando e um navegador compatível com gravação. Permita o acesso ao microfone para o site no navegador e no sistema operacional. Use HTTPS para uma instância remota. No Cloud, deve haver orçamento de IA disponível; instâncias self-hosted também precisam de provedores de transcrição e ditado funcionando. As chaves pessoais de voz e os modelos são configurados [acima](#ai-keys-and-models).
+Use o microfone ao lado de um campo compatível para ditar um ticket, um objetivo, um comentário, uma mensagem do Numo, um feedback ou uma instrução de rotina. Você precisa de permissão para escrever ali, um microfone funcionando e um navegador compatível com gravação. Permita o acesso ao microfone para o site no navegador e no sistema operacional. Use HTTPS para uma instância remota. No Cloud, deve haver orçamento de IA disponível; instâncias self-hosted também precisam de provedores de transcrição e ditado funcionando. As chaves pessoais de voz e os modelos são configurados [acima](#ai-keys-and-models).
 
-1. Abra o formulário ou a issue desejada e selecione seu microfone. Em uma issue aberta, Command+Shift+D no macOS ou Ctrl+Shift+D nos outros sistemas inicia ou encerra a edição por voz. Uma barra de ditado se abre na parte inferior da tela, como painel em um celular, com o cronômetro e uma onda que acompanha sua voz. O restante da interface aguarda o fim da gravação.
-2. Fale no idioma da interface, que orienta a transcrição. Para editar uma issue, indique a alteração com clareza, por exemplo “Defina a prioridade como alta”. Escolha **Transcrever** (✓), pressione Command+Enter no macOS ou Ctrl+Enter nos outros sistemas (Enter também funciona) ou repita o atalho e espere a transcrição e o processamento do Numo terminarem. Para descartar a gravação, escolha **Descartar gravação** (✕) ou pressione Esc e depois **Descartar**: nada é enviado.
-3. Confira o resultado. Mensagens do Numo, comentários e instruções de rotina recebem texto editável; revise antes de enviar ou salvar. Formulários de criação recebem campos de rascunho que ainda precisam de confirmação. A edição por voz de uma issue existente aplica as alterações imediatamente: confira os campos depois e corrija erros pelos controles habituais. O ditado não concede permissões adicionais.
+1. Abra o formulário ou o ticket desejado e selecione seu microfone. Em um ticket aberto, Command+Shift+D no macOS ou Ctrl+Shift+D nos outros sistemas inicia ou encerra a edição por voz. Uma barra de ditado se abre na parte inferior da tela, como painel em um celular, com o cronômetro e uma onda que acompanha sua voz. O restante da interface aguarda o fim da gravação.
+2. Fale no idioma da interface, que orienta a transcrição. Para editar um ticket, indique a alteração com clareza, por exemplo “Defina a prioridade como alta”. Escolha **Transcrever** (✓), pressione Command+Enter no macOS ou Ctrl+Enter nos outros sistemas (Enter também funciona) ou repita o atalho e espere a transcrição e o processamento do Numo terminarem. Para descartar a gravação, escolha **Descartar gravação** (✕) ou pressione Esc e depois **Descartar**: nada é enviado.
+3. Confira o resultado. Mensagens do Numo, comentários e instruções de rotina recebem texto editável; revise antes de enviar ou salvar. Formulários de criação recebem campos de rascunho que ainda precisam de confirmação. A edição por voz de um ticket existente aplica as alterações imediatamente: confira os campos depois e corrija erros pelos controles habituais. O ditado não concede permissões adicionais.
 
 ### Consumo e limites de gravação {#voice-limits}
 

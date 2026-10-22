@@ -2,9 +2,9 @@
 {
   "id": "issues",
   "locale": "pt-BR",
-  "title": "Problemas",
-  "summary": "Crie e organize problemas, acompanhe seu ciclo de vida, gerencie dependências e planos e importe ou atualize o trabalho em massa.",
-  "topic": "Projetos e problemas",
+  "title": "Tickets",
+  "summary": "Crie e organize tickets, acompanhe seu ciclo de vida, gerencie dependências e planos e importe ou atualize o trabalho em massa.",
+  "topic": "Projetos e tickets",
   "type": "guide",
   "audiences": [
     "member",
@@ -25,7 +25,7 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 34,
+  "revision": 35,
   "sourceRevision": 34,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
@@ -120,9 +120,9 @@
     ]
   },
   "review": {
-    "revision": 34,
-    "fact": "agent:/root/min776 (drafts paragraph checked against components/create-issue-dialog.tsx, components/objective-dialog.tsx and lib/use-held-draft.ts: closing keeps the form, reopening resumes it, two minutes after a close it becomes a draft, another context saves it first, and the split menu offers Save as draft; rest of the article unchanged since the MIN-778 review; no figure changed)",
-    "language": "agent:/root/min776 (pt-BR drafts paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 35,
+    "fact": "agent:/root/min776 (drafts paragraph checked against components/create-issue-dialog.tsx, components/objective-dialog.tsx and lib/use-held-draft.ts: closing keeps the form, reopening resumes it, two minutes after a close it becomes a draft, another context saves it first, and the split menu offers Save as draft; rest of the article unchanged since the MIN-778 review; no figure changed); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of create-an-issue-steps, issue-statuses-steps, sub-issues-steps, implementation-plans-steps, recurring-issues-steps, import-issues-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted)",
+    "language": "agent:/root/min776 (pt-BR drafts paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -150,17 +150,17 @@
     "import-issues"
   ],
   "tags": [
-    "Criar e editar um problema",
+    "Criar e editar um ticket",
     "Analisar trabalho recebido na triagem",
-    "Acompanhar o ciclo de vida de um problema",
+    "Acompanhar o ciclo de vida de um ticket",
     "Discutir o trabalho e anexar seu contexto",
-    "Vincular dependências e problemas relacionados",
-    "Dividir um problema em subproblemas",
+    "Vincular dependências e tickets relacionados",
+    "Dividir um ticket em subtickets",
     "Manter um plano de implementação",
-    "Repetir um problema depois de concluído",
-    "Atualizar vários problemas juntos",
+    "Repetir um ticket depois de concluído",
+    "Atualizar vários tickets juntos",
     "Importar um backlog CSV após conferir o mapeamento",
-    "Mover uma tarefa pelo ciclo de vida"
+    "Mover um ticket pelo ciclo de vida"
   ],
   "figures": [
     {
@@ -169,23 +169,24 @@
       "src": "/documentation/pt-BR/new-issue.png",
       "alt": "Rascunho não enviado no projeto Aurora com título, descrição, propriedades que podem ser escolhidas manualmente e o botão Criar AUR-19.",
       "caption": "Descreva o resultado esperado e escolha as propriedades úteis antes de criar o ticket.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         720,
         396
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "triage-incoming-work-steps",
       "kind": "screenshot",
       "src": "/documentation/pt-BR/triage-incoming.png",
-      "alt": "Problema recebido de demonstração DOC-11 com relato, propriedades e controles de duplicado, Recusar e Aceitar.",
+      "alt": "Ticket recebido de demonstração DOC-11 com relato, propriedades e controles de duplicado, Recusar e Aceitar.",
       "caption": "Leia o relato recebido antes de aceitar, recusar ou vincular um duplicado.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -201,15 +202,16 @@
       "src": "/documentation/pt-BR/issue-statuses.png",
       "alt": "Os oito estados do ticket no seletor, com Backlog selecionado.",
       "caption": "A marca indica o estado atual. Escolha o que representa a situação real do trabalho.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         288,
         358
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "issue-discussion-and-resources-steps",
@@ -217,7 +219,7 @@
       "src": "/documentation/pt-BR/work-resources.png",
       "alt": "Janela para adicionar um link com um endereço de contato de exemplo.",
       "caption": "Confira o destino antes de adicionar o recurso. Este link de exemplo não foi enviado.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -233,7 +235,7 @@
       "src": "/documentation/pt-BR/work-dependencies.png",
       "alt": "Busca de um ticket bloqueador pelo identificador.",
       "caption": "Escolha o sentido da relação antes do destino. O seletor é mostrado sem enviar a relação.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -249,15 +251,16 @@
       "src": "/documentation/pt-BR/work-sub-issues.png",
       "alt": "Campo de criação de um subticket em um ticket pai de demonstração.",
       "caption": "O campo cria um filho deste ticket; cada filho mantém seu próprio status e discussão.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         508,
         1096
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "implementation-plans-steps",
@@ -265,15 +268,16 @@
       "src": "/documentation/pt-BR/work-implementation-plan.png",
       "alt": "Plano de demonstração com duas tarefas de trabalho concluídas de seis.",
       "caption": "O plano salvo distingue etapas concluídas, ativas e pendentes. O progresso não comprova a execução da tarefa fictícia de código.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         508,
         1416
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "recurring-issues-steps",
@@ -281,15 +285,16 @@
       "src": "/documentation/pt-BR/issue-date-recurrence.png",
       "alt": "Seletor de prazo no modo recorrente com prévia semanal aos domingos e horário opcional.",
       "caption": "O modo recorrente mostra a frequência semanal. Confirme o primeiro prazo antes de criar o ticket.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         338,
         540
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "import-issues-workflow",
@@ -297,9 +302,9 @@
       "src": "/documentation/pt-BR/import-issues-preview-workflow.png",
       "alt": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas.",
       "caption": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas. A importação não foi enviada; o planejamento opcional com IA foi bloqueado para a captura.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         816,
         977
@@ -314,7 +319,7 @@
       "src": "/documentation/pt-BR/file-preview.png",
       "alt": "Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar, Renomear e Remover.",
       "caption": "O visualizador compartilhado mantém Fechar abaixo da prévia. O menu Ações do arquivo oferece Baixar e, quando permitido, Renomear e Remover.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -341,39 +346,39 @@
 }
 ---
 
-Um problema, também chamado de issue nesta documentação, descreve uma atividade do projeto, desde a triagem até a verificação do resultado. Você pode acrescentar discussão, recursos, dependências, subproblemas e um plano, além de gerenciar recorrências ou ações em massa. A importação CSV cria novos problemas e exige o proprietário do projeto.
+Um ticket descreve uma atividade do projeto, desde a triagem até a verificação do resultado. Você pode acrescentar discussão, recursos, dependências, subtickets e um plano, além de gerenciar recorrências ou ações em massa. A importação CSV cria novos tickets e exige o proprietário do projeto.
 
-## Criar e editar um problema {#create-an-issue}
+## Criar e editar um ticket {#create-an-issue}
 
-Você precisa ser o proprietário ou um Membro do projeto de destino; os leitores podem abrir tarefas, mas não criá-las nem editá-las. Abra o projeto e o controle para criar uma tarefa. Informe um título que identifique o trabalho, depois acrescente contexto, resultado esperado e restrições na descrição. O título e a descrição funcionam como um único texto: no computador, a seta para baixo na última linha do título passa para a primeira linha da descrição, a seta para cima volta, e o cursor mantém mais ou menos sua posição na linha. Shift+Enter no título passa para a descrição; Enter também, a menos que você tenha escolhido Enter como atalho de envio, caso em que ele cria a tarefa. Command/Ctrl+Enter a cria a partir de qualquer um dos campos. As mesmas setas e Enter ligam o título e a descrição de uma tarefa, um objetivo, uma página ou um feedback abertos. O formulário abre no projeto atual; escolha outro em **Criar em**, no canto superior esquerdo do formulário (ao lado do título **Novo problema** no celular), principalmente ao criar em uma visualização pessoal ou entre projetos. No computador, Command/Ctrl+Shift+P abre esse menu mesmo enquanto você digita o título ou a descrição; ao escolher um projeto ou fechar o menu, o cursor volta exatamente para onde estava. A pílula mostra esse atalho, que só existe quando mais de um projeto pode ser escolhido; no celular, nenhum atalho é indicado. Trocar de projeto remove as categorias, o objetivo e as relações escolhidos para o anterior. O botão de criação mostra o identificador que a tarefa receberá, como `MIN-42`, e acompanha as tarefas criadas nesse meio-tempo; seu menu cria a tarefa e copia esse identificador.
+Você precisa ser o proprietário ou um Membro do projeto de destino; os leitores podem abrir tickets, mas não criá-los nem editá-los. Abra o projeto e o controle para criar um ticket. Informe um título que identifique o trabalho, depois acrescente contexto, resultado esperado e restrições na descrição. O título e a descrição funcionam como um único texto: no computador, a seta para baixo na última linha do título passa para a primeira linha da descrição, a seta para cima volta, e o cursor mantém mais ou menos sua posição na linha. Shift+Enter no título passa para a descrição; Enter também, a menos que você tenha escolhido Enter como atalho de envio, caso em que ele cria o ticket. Command/Ctrl+Enter o cria a partir de qualquer um dos campos. As mesmas setas e Enter ligam o título e a descrição de um ticket, um objetivo, uma página ou um feedback abertos. O formulário abre no projeto atual; escolha outro em **Criar em**, no canto superior esquerdo do formulário (ao lado do título **Novo ticket** no celular), principalmente ao criar em uma visualização pessoal ou entre projetos. No computador, Command/Ctrl+Shift+P abre esse menu mesmo enquanto você digita o título ou a descrição; ao escolher um projeto ou fechar o menu, o cursor volta exatamente para onde estava. A pílula mostra esse atalho, que só existe quando mais de um projeto pode ser escolhido; no celular, nenhum atalho é indicado. Trocar de projeto remove as categorias, o objetivo e as relações escolhidos para o anterior. O botão de criação mostra o identificador que o ticket receberá, como `MIN-42`, e acompanha os tickets criados nesse meio-tempo; seu menu cria o ticket e copia esse identificador.
 
-Para criar a tarefa manualmente, desative Preenchimento inteligente se o botão estiver visível e ativado. Isso mostra os controles de prioridade, esforço, categorias, objetivo e relações para que você os defina. Para definir apenas algumas dessas propriedades, mantenha o Preenchimento inteligente ativado e, fora do título e da descrição, pressione a tecla da propriedade: P para prioridade, E para esforço, L para categorias ou O para objetivo. O seletor dela se abre, e o valor escolhido continua visível. O Preenchimento inteligente só deduz as propriedades que você deixou vazias. A escolha vale para essa tarefa; ao reabrir o formulário de criação, a preferência da conta é restaurada. Ela é independente dos controles de automação e Smart Assign do projeto. Enquanto o Preenchimento inteligente está ativado, ele também [vincula a tarefa a problemas relacionados](#smart-fill-relations) depois que ela é salva, por isso o seletor de relações fica oculto; R o abre mesmo assim. As relações que você já escolheu continuam visíveis acima do título e são criadas com a tarefa.
+Para criar o ticket manualmente, desative Preenchimento inteligente se o botão estiver visível e ativado. Isso mostra os controles de prioridade, esforço, categorias, objetivo e relações para que você os defina. Para definir apenas algumas dessas propriedades, mantenha o Preenchimento inteligente ativado e, fora do título e da descrição, pressione a tecla da propriedade: P para prioridade, E para esforço, L para categorias ou O para objetivo. O seletor dela se abre, e o valor escolhido continua visível. O Preenchimento inteligente só deduz as propriedades que você deixou vazias. A escolha vale para esse ticket; ao reabrir o formulário de criação, a preferência da conta é restaurada. Ela é independente dos controles de automação e Smart Assign do projeto. Enquanto o Preenchimento inteligente está ativado, ele também [vincula o ticket a tickets relacionados](#smart-fill-relations) depois que ele é salvo, por isso o seletor de relações fica oculto; R o abre mesmo assim. As relações que você já escolheu continuam visíveis acima do título e são criadas com o ticket.
 
-Defina as propriedades úteis antes de confirmar: estado, prioridade, esforço, responsável, objetivo, categorias, prazo e recorrência. O responsável é o proprietário do projeto ou um Membro, nunca um leitor; um objetivo agrupa tarefas em torno de um resultado do projeto. Você pode deixar propriedades opcionais sem valor em vez de adivinhar. A prioridade vai de nenhuma a baixa, média, alta e urgente; o esforço usa XS, S, M, L e XL.
+Defina as propriedades úteis antes de confirmar: estado, prioridade, esforço, responsável, objetivo, categorias, prazo e recorrência. O responsável é o proprietário do projeto ou um Membro, nunca um leitor; um objetivo agrupa tickets em torno de um resultado do projeto. Você pode deixar propriedades opcionais sem valor em vez de adivinhar. A prioridade vai de nenhuma a baixa, média, alta e urgente; o esforço usa XS, S, M, L e XL.
 
-Confirme a criação e abra a nova tarefa. Confira seu identificador e projeto. Abra novamente os seletores de propriedades para mudar valores conforme a tarefa ficar mais clara. A descrição explica o trabalho; o plano de implementação é mantido separadamente na aba do plano.
+Confirme a criação e abra o novo ticket. Confira seu identificador e projeto. Abra novamente os seletores de propriedades para mudar valores conforme o ticket ficar mais claro. A descrição explica o trabalho; o plano de implementação é mantido separadamente na aba do plano.
 
-Fechar o formulário mantém o que você escreveu: abra-o de novo para continuar de onde parou. Se você não o reabrir em dois minutos, o conteúdo é salvo como rascunho e o próximo formulário começa vazio; até lá ele existe só nesta janela, então recarregar ou fechar a janela faz perdê-lo. Abrir um rascunho ou um formulário preenchido a partir de outro lugar salva antes como rascunho o que você havia deixado. Para salvá-lo você mesmo, abra o menu ao lado do botão de criar e escolha **Salvar como rascunho**. Os rascunhos salvos de problemas e objetivos ficam em **Rascunhos**, no canto inferior direito da janela, entre Numo e o caderno de tarefas; o botão só aparece enquanto você tem um rascunho e mostra quantos são. A lista mostra o título e a primeira linha da descrição de cada rascunho. Escolha um rascunho para reabri-lo no formulário de criação e terminá-lo; criar o problema remove o rascunho. O botão de excluir ao lado de um rascunho pede confirmação antes, e a exclusão não pode ser desfeita. Em um telefone, abra a paleta de comandos e pesquise o título do rascunho. Os rascunhos ficam neste dispositivo por 30 dias, no máximo dez de cada tipo; a lista mostra apenas os de projetos em que você ainda pode criar problemas.
+Fechar o formulário mantém o que você escreveu: abra-o de novo para continuar de onde parou. Se você não o reabrir em dois minutos, o conteúdo é salvo como rascunho e o próximo formulário começa vazio; até lá ele existe só nesta janela, então recarregar ou fechar a janela faz perdê-lo. Abrir um rascunho ou um formulário preenchido a partir de outro lugar salva antes como rascunho o que você havia deixado. Para salvá-lo você mesmo, abra o menu ao lado do botão de criar e escolha **Salvar como rascunho**. Os rascunhos salvos de tickets e objetivos ficam em **Rascunhos**, no canto inferior direito da janela, entre Numo e o caderno de tarefas; o botão só aparece enquanto você tem um rascunho e mostra quantos são. A lista mostra o título e a primeira linha da descrição de cada rascunho. Escolha um rascunho para reabri-lo no formulário de criação e terminá-lo; criar o ticket remove o rascunho. O botão de excluir ao lado de um rascunho pede confirmação antes, e a exclusão não pode ser desfeita. Em um telefone, abra a paleta de comandos e pesquise o título do rascunho. Os rascunhos ficam neste dispositivo por 30 dias, no máximo dez de cada tipo; a lista mostra apenas os de projetos em que você ainda pode criar tickets.
 
 
 ![Rascunho não enviado no projeto Aurora com título, descrição, propriedades que podem ser escolhidas manualmente e o botão Criar AUR-19.](/documentation/pt-BR/new-issue.png)
 
-A descrição, os comentários e a janela de novo problema usam o mesmo editor das páginas do projeto, sem as alças de bloco. Digite `/` para inserir um título, uma lista, uma tarefa, uma citação, um **Destaque**, um bloco de código, um bloco **Alternar** ou um divisor, e `@` para mencionar uma pessoa, um problema, um objetivo ou uma página. O menu `@` também lista os recursos anexados ao que você está escrevendo: o problema ou objetivo para a descrição e o plano, um comentário para os próprios arquivos ou uma janela de criação para os arquivos adicionados nela. Uma menção a um recurso anexado em outro lugar aparece como **Indisponível**. Várias pessoas podem editar a mesma descrição ao mesmo tempo: o cursor de cada uma aparece com seu nome e sua cor, e as alterações de Numo ou de um agente conectado aparecem assim que são salvas. Numo, os agentes conectados e as exportações CSV leem o texto em Markdown, que é atualizado alguns segundos depois que a digitação para. Selecione um texto para deixá-lo em negrito, itálico, tachado ou código, ou para adicionar um link. Cole ou solte uma imagem, ou escolha **Imagem** no menu `/`, para inseri-la na descrição; os outros tipos de arquivo ficam nos recursos do problema. Uma menção aponta para o seu destino, não para o seu nome: ela acompanha uma renomeação e resiste a edições e a copiar e colar em outra descrição, um comentário, uma página ou o compositor do Numo. Quem não pode abrir o destino vê uma menção **Indisponível**, sem o nome nem o projeto.
+A descrição, os comentários e a janela de novo ticket usam o mesmo editor das páginas do projeto, sem as alças de bloco. Digite `/` para inserir um título, uma lista, uma tarefa, uma citação, um **Destaque**, um bloco de código, um bloco **Alternar** ou um divisor, e `@` para mencionar uma pessoa, um ticket, um objetivo ou uma página. O menu `@` também lista os recursos anexados ao que você está escrevendo: o ticket ou objetivo para a descrição e o plano, um comentário para os próprios arquivos ou uma janela de criação para os arquivos adicionados nela. Uma menção a um recurso anexado em outro lugar aparece como **Indisponível**. Várias pessoas podem editar a mesma descrição ao mesmo tempo: o cursor de cada uma aparece com seu nome e sua cor, e as alterações de Numo ou de um agente conectado aparecem assim que são salvas. Numo, os agentes conectados e as exportações CSV leem o texto em Markdown, que é atualizado alguns segundos depois que a digitação para. Selecione um texto para deixá-lo em negrito, itálico, tachado ou código, ou para adicionar um link. Cole ou solte uma imagem, ou escolha **Imagem** no menu `/`, para inseri-la na descrição; os outros tipos de arquivo ficam nos recursos do ticket. Uma menção aponta para o seu destino, não para o seu nome: ela acompanha uma renomeação e resiste a edições e a copiar e colar em outra descrição, um comentário, uma página ou o compositor do Numo. Quem não pode abrir o destino vê uma menção **Indisponível**, sem o nome nem o projeto.
 
 ### Verificar salvamento e visibilidade {#issue-save}
 
-Depois de mudar uma propriedade, verifique o valor exibido. Os filtros podem remover uma tarefa da visualização atual imediatamente quando seu responsável, estado ou categoria mudar. Pesquise o identificador ou abra o projeto sem esses filtros antes de criar um substituto.
+Depois de mudar uma propriedade, verifique o valor exibido. Os filtros podem remover um ticket da visualização atual imediatamente quando seu responsável, estado ou categoria mudar. Pesquise o identificador ou abra o projeto sem esses filtros antes de criar um substituto.
 
-Se a criação ou o salvamento falhar, preserve o texto, leia o erro e confira se a participação e o destino ainda existem. Antes de repetir após uma falha de rede, verifique se a tarefa já foi criada. Vincule páginas do projeto como recursos atualizados quando precisar do conteúdo atual e use comentários para discutir a tarefa.
+Se a criação ou o salvamento falhar, preserve o texto, leia o erro e confira se a participação e o destino ainda existem. Antes de repetir após uma falha de rede, verifique se o ticket já foi criado. Vincule páginas do projeto como recursos atualizados quando precisar do conteúdo atual e use comentários para discutir o ticket.
 
 ### Escolher o que o Preenchimento inteligente faz {#smart-fill-preferences}
 
 As preferências do Preenchimento inteligente pertencem à sua conta. Abra **Configurações da conta** → **Smart Fill**. Cada opção tem seu próprio cartão:
 
 - No cartão **Smart Fill**, **Ativar o Smart Fill** liga ou desliga o Preenchimento inteligente na sua conta. Ele completa prioridade, esforço, categorias e objetivo ausentes; estado, responsável e prazo continuam por sua conta. Os interruptores dos dois cartões seguintes dependem dele.
-- Em **Tickets a preencher**, **Preencher tickets criados** e **Preencher tickets na triagem** escolhem quais problemas novos ele completa: os que você cria e os problemas em triagem pelos quais você é responsável. **Reavaliar tickets editados**, ativado por padrão, permite que o Preenchimento inteligente [leia um ticket de novo](#smart-fill-reevaluation) depois que o título ou a descrição muda.
-- Em **Tickets relacionados**, **Vincular tickets relacionados**, ativado por padrão, permite que o Preenchimento inteligente [adicione relações](#smart-fill-relations) depois que um problema é salvo.
-- Em **Indexação de tickets**, **Indexar tickets**, ativado por padrão e independente do Preenchimento inteligente, transforma o título e a descrição dos problemas que você cria ou edita em vetores privados usados para encontrar problemas relacionados e para [buscar problemas pelo sentido](/docs/navigation#search-by-meaning). A indexação em segundo plano dos problemas existentes de um projeto respeita tanto o interruptor do proprietário do projeto quanto o do autor: um problema cujo autor o desligou nunca é indexado. Os vetores são criptografados com o projeto, como o problema; os salvos antes de o projeto passar a criptografar são convertidos pela tarefa em segundo plano. Com o interruptor desligado, nenhum vetor é criado para os seus problemas, mesmo quando outra pessoa os edita, e a busca de problemas relacionados compara apenas palavras. Suas próprias buscas passam então a usar só o texto, sem busca pelo sentido. Os vetores já criados permanecem enquanto o texto não muda; são excluídos assim que o texto muda, ou junto com o problema.
+- Em **Tickets a preencher**, **Preencher tickets criados** e **Preencher tickets na triagem** escolhem quais tickets novos ele completa: os que você cria e os tickets em triagem pelos quais você é responsável. **Reavaliar tickets editados**, ativado por padrão, permite que o Preenchimento inteligente [leia um ticket de novo](#smart-fill-reevaluation) depois que o título ou a descrição muda.
+- Em **Tickets relacionados**, **Vincular tickets relacionados**, ativado por padrão, permite que o Preenchimento inteligente [adicione relações](#smart-fill-relations) depois que um ticket é salvo.
+- Em **Indexação de tickets**, **Indexar tickets**, ativado por padrão e independente do Preenchimento inteligente, transforma o título e a descrição dos tickets que você cria ou edita em vetores privados usados para encontrar tickets relacionados e para [buscar tickets pelo sentido](/docs/navigation#search-by-meaning). A indexação em segundo plano dos tickets existentes de um projeto respeita tanto o interruptor do proprietário do projeto quanto o do autor: um ticket cujo autor o desligou nunca é indexado. Os vetores são criptografados com o projeto, como o ticket; os salvos antes de o projeto passar a criptografar são convertidos pela tarefa em segundo plano. Com o interruptor desligado, nenhum vetor é criado para os seus tickets, mesmo quando outra pessoa os edita, e a busca de tickets relacionados compara apenas palavras. Suas próprias buscas passam então a usar só o texto, sem busca pelo sentido. Os vetores já criados permanecem enquanto o texto não muda; são excluídos assim que o texto muda, ou junto com o ticket.
 
 Desligar um interruptor também cancela as execuções que ainda não aconteceram. O Numo pode alterar essas preferências quando você pedir.
 
@@ -387,30 +392,30 @@ Cada alteração aparece na atividade do ticket com o Preenchimento inteligente 
 
 ## Analisar trabalho recebido na triagem {#triage-incoming-work}
 
-Abra o destino Triagem do projeto. Leia o problema recebido e o contexto de origem antes de aceitá-lo no trabalho planejado. Confira se um problema existente já representa a solicitação. Esclareça resultado esperado, projeto, responsável, prioridade e esforço conforme necessário.
+Abra o destino Triagem do projeto. Leia o ticket recebido e o contexto de origem antes de aceitá-lo no trabalho planejado. Confira se um ticket existente já representa a solicitação. Esclareça resultado esperado, projeto, responsável, prioridade e esforço conforme necessário.
 
-Os filtros da lista permitem restringir os problemas recebidos por prioridade, esforço, responsável, objetivo, categorias ou integração. Valores da mesma propriedade são alternativas; propriedades diferentes são combinadas. Redefina os filtros para mostrar todos os problemas recebidos novamente.
+Os filtros da lista permitem restringir os tickets recebidos por prioridade, esforço, responsável, objetivo, categorias ou integração. Valores da mesma propriedade são alternativas; propriedades diferentes são combinadas. Redefina os filtros para mostrar todos os tickets recebidos novamente.
 
-Escolha Aceitar e confirme para mover ao Backlog um problema que pretende manter. Escolha Recusar e confirme para definir o estado Cancelada. Se for uma duplicata, use o seletor de duplicatas para escolher o problema que será mantido. O problema recebido assume o estado Duplicado e aponta para o escolhido. Descrever a solicitação na busca do seletor também lista problemas parecidos em **Relacionados pelo sentido**, depois das correspondências de texto; veja [Buscar problemas pelo sentido](/docs/navigation#search-by-meaning). Quando um item sai da triagem, o seguinte é selecionado. Confira o estado resultante ou o link da duplicata no próprio problema. Passar de um cartão para outro sem realizar uma dessas ações não encerra o problema.
+Escolha Aceitar e confirme para mover ao Backlog um ticket que pretende manter. Escolha Recusar e confirme para definir o estado Cancelado. Se for uma duplicata, use o seletor de duplicatas para escolher o ticket que será mantido. O ticket recebido assume o estado Duplicado e aponta para o escolhido. Descrever a solicitação na busca do seletor também lista tickets parecidos em **Relacionados pelo sentido**, depois das correspondências de texto; veja [Buscar tickets pelo sentido](/docs/navigation#search-by-meaning). Quando um item sai da triagem, o seguinte é selecionado. Confira o estado resultante ou o link da duplicata no próprio ticket. Passar de um cartão para outro sem realizar uma dessas ações não encerra o ticket.
 
 ### Ordenação e limites {#triage-order}
 
 O Smart Triage usa regras de ordenação determinísticas.
 
-Dentro de cada coluna de estado, os problemas abertos que bloqueiam outro trabalho aberto ficam primeiro, antes dos problemas sem bloqueio. Problemas bloqueados por trabalho aberto ficam por último, mesmo que também bloqueiem outros. Pontas encerradas da relação deixam de gerar essa prioridade.
+Dentro de cada coluna de estado, os tickets abertos que bloqueiam outro trabalho aberto ficam primeiro, antes dos tickets sem bloqueio. Tickets bloqueados por trabalho aberto ficam por último, mesmo que também bloqueiem outros. Pontas encerradas da relação deixam de gerar essa prioridade.
 
-Dentro de cada nível, prioridade maior, esforço menor e prazos vencidos ou próximos adiantam o trabalho. No mesmo nível de bloqueio, os problemas de um objetivo permanecem juntos, e o grupo é ordenado pelo seu problema mais bem posicionado. Os empates são resolvidos pelo prazo, pela data de criação mais antiga, pela posição manual e, por fim, pelo identificador, que mantém a ordem estável. Uma relação de vínculo não afeta essa ordenação.
+Dentro de cada nível, prioridade maior, esforço menor e prazos vencidos ou próximos adiantam o trabalho. No mesmo nível de bloqueio, os tickets de um objetivo permanecem juntos, e o grupo é ordenado pelo seu ticket mais bem posicionado. Os empates são resolvidos pelo prazo, pela data de criação mais antiga, pela posição manual e, por fim, pelo identificador, que mantém a ordem estável. Uma relação de vínculo não afeta essa ordenação.
 
 O Smart Triage não é um modo experimental de triagem com IA. A ordem ajuda a decidir quais itens analisar primeiro; ela não comprova a veracidade de uma descrição, não resolve duplicatas automaticamente nem concede permissões.
 
 Se o item esperado não aparecer, confira projeto ativo, estado e filtros, depois pesquise seu identificador. Trabalho importado ou sincronizado externamente pode entrar na triagem; inspecione a origem e o mapeamento da integração antes de alterar campos sincronizados. Uma solicitação vinculada pelo feedback continua sendo um objeto de feedback distinto com sua própria discussão pública.
 
 
-![Problema recebido de demonstração DOC-11 com relato, propriedades e controles de duplicado, Recusar e Aceitar.](/documentation/pt-BR/triage-incoming.png)
+![Ticket recebido de demonstração DOC-11 com relato, propriedades e controles de duplicado, Recusar e Aceitar.](/documentation/pt-BR/triage-incoming.png)
 
-## Acompanhar o ciclo de vida de um problema {#issue-statuses}
+## Acompanhar o ciclo de vida de um ticket {#issue-statuses}
 
-Abra o seletor de estado da tarefa ou use as ações de estado do quadro. Em uma visualização kanban, mover trabalho entre colunas altera a própria tarefa; mudar um filtro altera apenas o que você vê. Verifique o novo estado no painel de detalhes após a movimentação.
+Abra o seletor de estado do ticket ou use as ações de estado do quadro. Em uma visualização kanban, mover trabalho entre colunas altera o próprio ticket; mudar um filtro altera apenas o que você vê. Verifique o novo estado no painel de detalhes após a movimentação.
 
 | Estado | Uso |
 | --- | --- |
@@ -420,25 +425,25 @@ Abra o seletor de estado da tarefa ou use as ações de estado do quadro. Em uma
 | Em andamento | Trabalho em execução. |
 | Em revisão | Implementação aguardando revisão. |
 | Concluído | Resultado esperado concluído. |
-| Cancelada | Trabalho encerrado sem entrega. |
-| Duplicado | Trabalho representado por outra tarefa. |
+| Cancelado | Trabalho encerrado sem entrega. |
+| Duplicado | Trabalho representado por outro ticket. |
 
-Os estados são fixos e não são personalizados por projeto. Triagem e Duplicado estão disponíveis nos seletores, mas ficam deliberadamente fora das colunas kanban normais. Por padrão, os quadros também ocultam as colunas **Concluído** e **Cancelada**; selecione-as no filtro **Status** para mostrá-las. A ausência de uma coluna não indica que o estado ou a tarefa não exista.
+Os estados são fixos e não são personalizados por projeto. Triagem e Duplicado estão disponíveis nos seletores, mas ficam deliberadamente fora das colunas kanban normais. Por padrão, os quadros também ocultam as colunas **Concluído** e **Cancelado**; selecione-as no filtro **Status** para mostrá-las. A ausência de uma coluna não indica que o estado ou o ticket não exista.
 
 
 ![Os oito estados do ticket no seletor, com Backlog selecionado.](/documentation/pt-BR/issue-statuses.png)
 
 ### Estados finais e verificação {#closed-work}
 
-Concluído, Cancelada e Duplicado são estados finais para acompanhamento: deixam de bloquear tarefas dependentes e saem das contagens ativas. Encerrar como Cancelada não significa que a tarefa foi entregue. Ao marcar uma duplicata, identifique a tarefa mantida para dar um destino claro à discussão e ao progresso.
+Concluído, Cancelado e Duplicado são estados finais para acompanhamento: deixam de bloquear tickets dependentes e saem das contagens ativas. Encerrar como Cancelado não significa que o ticket foi entregue. Ao marcar uma duplicata, identifique o ticket mantido para dar um destino claro à discussão e ao progresso.
 
-Confira os filtros se uma tarefa desaparecer depois de encerrada. Abra-a novamente pelo identificador para inspecionar o resultado e mudar o estado se a encerrou por engano. Para trabalho bloqueado, confira também a direção da dependência: mudar o estado de uma tarefa não reescreve sua descrição ou plano.
+Confira os filtros se um ticket desaparecer depois de encerrado. Abra-o novamente pelo identificador para inspecionar o resultado e mudar o estado se o encerrou por engano. Para trabalho bloqueado, confira também a direção da dependência: mudar o estado de um ticket não reescreve sua descrição ou plano.
 
 ## Discutir o trabalho e anexar seu contexto {#issue-discussion-and-resources}
 
-Abra a linha do tempo da discussão do problema para adicionar um comentário. Explique uma decisão, pergunta ou resultado de verificação para que outro membro entenda o que mudou. Use menções quando precisar de uma pessoa ou objeto vinculado no contexto; as notificações ainda dependem das preferências do destinatário e da entrega no dispositivo. Um leitor só pode comentar quando o proprietário ativou **Pode comentar** para ele. Nesse caso, ele pode responder, mencionar pessoas, anexar arquivos aos próprios comentários e editar ou excluir os próprios comentários.
+Abra a linha do tempo da discussão do ticket para adicionar um comentário. Explique uma decisão, pergunta ou resultado de verificação para que outro membro entenda o que mudou. Use menções quando precisar de uma pessoa ou objeto vinculado no contexto; as notificações ainda dependem das preferências do destinatário e da entrega no dispositivo. Um leitor só pode comentar quando o proprietário ativou **Pode comentar** para ele. Nesse caso, ele pode responder, mencionar pessoas, anexar arquivos aos próprios comentários e editar ou excluir os próprios comentários.
 
-Anexe uma página relevante do projeto, um arquivo ou um link pelos controles de recursos. Uma página vinculada é um recurso atualizado: seu título acompanha renomeações e o conteúdo pode evoluir. Um arquivo é um anexo armazenado, não uma garantia de que uma URL externa continuará disponível. Para escrever uma página que ainda não existe, escolha **Página** e depois **Nova página** no fim da lista; um título digitado antes na busca vira o título dela. A página é criada no projeto, anexada ao problema e aberta em um painel lateral, onde **Expandir** abre a página inteira.
+Anexe uma página relevante do projeto, um arquivo ou um link pelos controles de recursos. Uma página vinculada é um recurso atualizado: seu título acompanha renomeações e o conteúdo pode evoluir. Um arquivo é um anexo armazenado, não uma garantia de que uma URL externa continuará disponível. Para escrever uma página que ainda não existe, escolha **Página** e depois **Nova página** no fim da lista; um título digitado antes na busca vira o título dela. A página é criada no projeto, anexada ao ticket e aberta em um painel lateral, onde **Expandir** abre a página inteira.
 
 Os recursos aparecem como cartões: a própria imagem ou o ícone do tipo de arquivo, o nome e o tamanho. Um link mostra a imagem de prévia da página quando o site oferece uma; caso contrário, o favicon. Clique ou clique com o botão direito em um cartão para abrir o menu: Visualização, Abrir link ou Abrir página, depois Renomear, Baixar e Remover quando se aplicam. Visualização abre um arquivo compatível em toda a janela. Imagens, PDF, Markdown (`.md`), texto simples (`.txt`, `.text`), CSV e formatos de áudio ou vídeo compatíveis usam o mesmo visualizador. O Markdown recebe formatação, o texto permanece literal e o CSV abre como tabela com rolagem. Use Fechar ou Escape para voltar ao ticket. O menu Ações do arquivo (`…`) oferece Baixar e, quando você pode alterar esse recurso, Renomear e Remover. Clicar na menção de um arquivo em um texto abre o mesmo visualizador. O Minddy pede confirmação antes de remover um recurso, que então é desvinculado deste contexto. Um recurso de página mantém o título da página e não pode ser renomeado. Os formatos não compatíveis mantêm a ação de download. **Abrir página** mostra a página em um painel lateral, onde **Expandir** abre a página inteira; um banco de dados abre diretamente como página inteira.
 
@@ -448,61 +453,61 @@ Os recursos aparecem como cartões: a própria imagem ou o ícone do tipo de arq
 
 ### Visibilidade e uploads com falha {#resource-access}
 
-A participação e o acesso ao projeto regem a discussão e os recursos internos. Adicionar um recurso a um problema não o publica para visitantes anônimos. Ao se referir ao feedback, diferencie a discussão interna da equipe de uma resposta pública antes de enviar texto.
+A participação e o acesso ao projeto regem a discussão e os recursos internos. Adicionar um recurso a um ticket não o publica para visitantes anônimos. Ao se referir ao feedback, diferencie a discussão interna da equipe de uma resposta pública antes de enviar texto.
 
 Depois da operação, confira se o recurso enviado aparece e pode ser aberto. Se houver falha, preserve o arquivo original, leia o erro de upload e verifique o limite aplicável de tamanho de arquivo ou armazenamento da conta. Operadores de instâncias auto-hospedadas também precisam de metadados, políticas e bytes do Storage funcionais. Evite anexar credenciais ou despejos privados de diagnóstico.
 
-## Vincular dependências e problemas relacionados {#issue-dependencies}
+## Vincular dependências e tickets relacionados {#issue-dependencies}
 
-Abra os controles de relações de um problema e encontre o outro pelo título ou identificador. Fora de um campo de texto, R abre a escolha do tipo de relação a partir de um cartão sob o ponteiro ou do painel do problema. Uma busca descritiva também lista, depois das correspondências de texto, problemas do mesmo projeto encontrados [pelo sentido](/docs/navigation#search-by-meaning) em **Relacionados pelo sentido**. Escolha uma relação de bloqueio quando uma tarefa precisar terminar antes que outra possa avançar. Se A bloqueia B, A é o pré-requisito e B é bloqueado por A. Uma relação de vínculo acrescenta contexto sem impor essa ordem.
+Abra os controles de relações de um ticket e encontre o outro pelo título ou identificador. Fora de um campo de texto, R abre a escolha do tipo de relação a partir de um cartão sob o ponteiro ou do painel do ticket. Uma busca descritiva também lista, depois das correspondências de texto, tickets do mesmo projeto encontrados [pelo sentido](/docs/navigation#search-by-meaning) em **Relacionados pelo sentido**. Escolha uma relação de bloqueio quando um ticket precisar terminar antes que outro possa avançar. Se A bloqueia B, A é o pré-requisito e B é bloqueado por A. Uma relação de vínculo acrescenta contexto sem impor essa ordem.
 
-Leia os dois identificadores e a direção exibida antes de confirmar. Por exemplo, “Preparar o endpoint” bloqueia “Conectar o cliente”, e não o contrário. Uma dependência não transforma nenhum problema em subproblema, e uma relação de pai e filho não substitui uma relação de bloqueio.
+Leia os dois identificadores e a direção exibida antes de confirmar. Por exemplo, “Preparar o endpoint” bloqueia “Conectar o cliente”, e não o contrário. Uma dependência não transforma nenhum ticket em subticket, e uma relação de pai e filho não substitui uma relação de bloqueio.
 
 ![Busca de um ticket bloqueador pelo identificador.](/documentation/pt-BR/work-dependencies.png)
 
 ### Bloqueios resolvidos e herdados {#blocker-state}
 
-Os estados finais Concluído, Cancelada e Duplicado fazem um problema deixar de bloquear trabalho. As relações conectam problemas ou objetivos do mesmo projeto; as duas pontas precisam estar acessíveis nele. Elas não conectam trabalho privado arbitrário entre projetos nem publicam nenhuma das pontas.
+Os estados finais Concluído, Cancelado e Duplicado fazem um ticket deixar de bloquear trabalho. As relações conectam tickets ou objetivos do mesmo projeto; as duas pontas precisam estar acessíveis nele. Elas não conectam trabalho privado arbitrário entre projetos nem publicam nenhuma das pontas.
 
-Um problema aberto pode herdar um bloqueio pelo seu objetivo aberto. Se A bloqueia o objetivo B, os problemas abertos vinculados a B mostram A como bloqueio herdado, mesmo sem uma relação direta de A ao problema. A interface identifica o pré-requisito real e o objetivo que transmite o bloqueio. Examine essa relação do objetivo antes de tentar removê-la do problema. Encerrar A, encerrar B ou retirar o problema de B elimina o bloqueio herdado. Esse mecanismo segue a participação no objetivo, não a hierarquia entre problema pai e subproblemas.
+Um ticket aberto pode herdar um bloqueio pelo seu objetivo aberto. Se A bloqueia o objetivo B, os tickets abertos vinculados a B mostram A como bloqueio herdado, mesmo sem uma relação direta de A ao ticket. A interface identifica o pré-requisito real e o objetivo que transmite o bloqueio. Examine essa relação do objetivo antes de tentar removê-la do ticket. Encerrar A, encerrar B ou retirar o ticket de B elimina o bloqueio herdado. Esse mecanismo segue a participação no objetivo, não a hierarquia entre ticket pai e subtickets.
 
-Remova uma relação pelos seus controles quando ela deixar de fazer sentido; uma confirmação nomeia o outro problema ou objetivo, e só o vínculo é removido. Depois verifique tanto o rótulo quanto o indicador de bloqueio. Marcar um problema como duplicata tem efeitos no ciclo de vida e aponta para o trabalho mantido. Use essa ação para tarefas duplicadas, em vez de criar uma relação comum e supor que isso encerra a duplicata.
+Remova uma relação pelos seus controles quando ela deixar de fazer sentido; uma confirmação nomeia o outro ticket ou objetivo, e só o vínculo é removido. Depois verifique tanto o rótulo quanto o indicador de bloqueio. Marcar um ticket como duplicata tem efeitos no ciclo de vida e aponta para o trabalho mantido. Use essa ação para tickets duplicados, em vez de criar uma relação comum e supor que isso encerra a duplicata.
 
-Se o seletor de relações não encontrar um problema, confira o acesso ao projeto e o identificador. Não exponha conteúdo de outro projeto colando a URL de um problema privado em uma resposta pública de feedback.
+Se o seletor de relações não encontrar um ticket, confira o acesso ao projeto e o identificador. Não exponha conteúdo de outro projeto colando a URL de um ticket privado em uma resposta pública de feedback.
 
 ### Vínculos adicionados pelo Preenchimento inteligente {#smart-fill-relations}
 
-Com **Vincular tickets relacionados** ativado, o Preenchimento inteligente procura problemas relacionados depois que um problema é criado ou que seu título ou sua descrição muda. O trabalho acontece em segundo plano após o salvamento: a criação e a edição nunca esperam por ele, e os vínculos podem aparecer alguns segundos depois. Para um problema novo, ele segue as mesmas escolhas dos outros campos, então não é executado se você desativou o Preenchimento inteligente para esse problema. Ele não é executado para problemas importados de um repositório vinculado, para cópias recorrentes nem para alterações sincronizadas a partir do repositório.
+Com **Vincular tickets relacionados** ativado, o Preenchimento inteligente procura tickets relacionados depois que um ticket é criado ou que seu título ou sua descrição muda. O trabalho acontece em segundo plano após o salvamento: a criação e a edição nunca esperam por ele, e os vínculos podem aparecer alguns segundos depois. Para um ticket novo, ele segue as mesmas escolhas dos outros campos, então não é executado se você desativou o Preenchimento inteligente para esse ticket. Ele não é executado para tickets importados de um repositório vinculado, para cópias recorrentes nem para alterações sincronizadas a partir do repositório.
 
-O Preenchimento inteligente compara o problema com no máximo cinco candidatos do mesmo projeto, deixando de fora problemas cancelados, duplicados ou excluídos. Em seguida, uma decisão classifica cada candidato como relacionado, bloqueador, bloqueado por ou sem relação. A semelhança sozinha nunca cria um vínculo, uma dependência exige indícios mais fortes que uma relação simples e, na dúvida, o Preenchimento inteligente não adiciona nada. Uma relação exige um vínculo evidente, como o mesmo bug, uma continuação direta ou uma reversão: dois problemas que só compartilham um recurso ou um assunto ficam sem vínculo. Por isso, a maioria dos problemas não recebe nenhum vínculo. Uma única execução adiciona no máximo duas relações. Ela nunca mexe em um par que já tem uma relação, nunca adiciona um bloqueio que fecharia um ciclo e descarta o resultado se o texto do problema mudou durante a decisão. Ela nunca marca uma duplicata e nunca muda um estado.
+O Preenchimento inteligente compara o ticket com no máximo cinco candidatos do mesmo projeto, deixando de fora tickets cancelados, duplicados ou excluídos. Em seguida, uma decisão classifica cada candidato como relacionado, bloqueador, bloqueado por ou sem relação. A semelhança sozinha nunca cria um vínculo, uma dependência exige indícios mais fortes que uma relação simples e, na dúvida, o Preenchimento inteligente não adiciona nada. Uma relação exige um vínculo evidente, como o mesmo bug, uma continuação direta ou uma reversão: dois tickets que só compartilham um recurso ou um assunto ficam sem vínculo. Por isso, a maioria dos tickets não recebe nenhum vínculo. Uma única execução adiciona no máximo duas relações. Ela nunca mexe em um par que já tem uma relação, nunca adiciona um bloqueio que fecharia um ciclo e descarta o resultado se o texto do ticket mudou durante a decisão. Ela nunca marca uma duplicata e nunca muda um estado.
 
-Os vínculos adicionados assim aparecem nas relações do problema como qualquer outro, e o histórico indica Smart-fill como autor. Confira a direção de uma dependência como faria com as suas. Para remover um vínculo, use os controles de relações: o Preenchimento inteligente não adiciona de novo um vínculo removido para esse par. Para deixar de receber vínculos novos, desative **Vincular tickets relacionados** nas [suas preferências](#smart-fill-preferences). Problemas criados antes deste recurso, problemas importados e problemas sincronizados de um repositório são indexados aos poucos em segundo plano, mas nunca recebem vínculos automáticos.
+Os vínculos adicionados assim aparecem nas relações do ticket como qualquer outro, e o histórico indica Smart-fill como autor. Confira a direção de uma dependência como faria com as suas. Para remover um vínculo, use os controles de relações: o Preenchimento inteligente não adiciona de novo um vínculo removido para esse par. Para deixar de receber vínculos novos, desative **Vincular tickets relacionados** nas [suas preferências](#smart-fill-preferences). Tickets criados antes deste recurso, tickets importados e tickets sincronizados de um repositório são indexados aos poucos em segundo plano, mas nunca recebem vínculos automáticos.
 
-A indexação e as decisões de relação usam IA. Elas contam na parcela **Automações** da conta responsável pela execução: a conta cobrada pelo Preenchimento inteligente do problema novo, geralmente quem o criou; quem edita, em uma edição; e o proprietário do projeto, na indexação em segundo plano. O histórico de uso mostra a indexação como **Smart-fill · índice de problemas**. Uma decisão de relação aparece como **Decisão de IA** quando o modelo de decisão a toma, e como **Smart-fill · relações** quando o modelo de reserva a toma. Se esse orçamento acabar ou o provedor falhar, a execução é ignorada e o problema não muda. [A busca de problemas pelo sentido](/docs/navigation#search-by-meaning) usa o mesmo índice: cada busca nova conta na parcela **Automações** da conta que busca e aparece como **Busca de problemas**.
+A indexação e as decisões de relação usam IA. Elas contam na parcela **Automações** da conta responsável pela execução: a conta cobrada pelo Preenchimento inteligente do ticket novo, geralmente quem o criou; quem edita, em uma edição; e o proprietário do projeto, na indexação em segundo plano. O histórico de uso mostra a indexação como **Smart-fill · índice de tickets**. Uma decisão de relação aparece como **Decisão de IA** quando o modelo de decisão a toma, e como **Smart-fill · relações** quando o modelo de reserva a toma. Se esse orçamento acabar ou o provedor falhar, a execução é ignorada e o ticket não muda. [A busca de tickets pelo sentido](/docs/navigation#search-by-meaning) usa o mesmo índice: cada busca nova conta na parcela **Automações** da conta que busca e aparece como **Busca de tickets**.
 
-## Dividir um problema em subproblemas {#sub-issues}
+## Dividir um ticket em subtickets {#sub-issues}
 
-Abra o problema pai e use os controles de subproblemas para criar partes menores do trabalho. Dê a cada filho um resultado distinto. Depois da criação, confira projeto, propriedades e identificador do pai; uma hierarquia deve facilitar o acompanhamento, não substituir a descrição do que cada filho precisa alcançar.
+Abra o ticket pai e use os controles de subtickets para criar partes menores do trabalho. Dê a cada filho um resultado distinto. Depois da criação, confira projeto, propriedades e identificador do pai; uma hierarquia deve facilitar o acompanhamento, não substituir a descrição do que cada filho precisa alcançar.
 
-A hierarquia permite um nível: o pai precisa ser um problema de nível superior no mesmo projeto, e um subproblema não pode ter filhos. Quando você não escolhe explicitamente um objetivo na criação, o filho herda o objetivo do pai. Confira as propriedades resultantes em vez de supor que alterações posteriores no pai serão propagadas.
+A hierarquia permite um nível: o pai precisa ser um ticket de nível superior no mesmo projeto, e um subticket não pode ter filhos. Quando você não escolhe explicitamente um objetivo na criação, o filho herda o objetivo do pai. Confira as propriedades resultantes em vez de supor que alterações posteriores no pai serão propagadas.
 
-Um filho continua sendo um problema com seu próprio estado e discussão. O indicador de progresso do pai é ponderado pelo esforço dos filhos e pela parcela de conclusão atribuída ao estado de cada um. O contador de concluídos/total na lista de subproblemas é uma contagem separada, sem ponderação. Leia os estados dos filhos junto com as duas medidas. Use uma dependência para dizer “precisa terminar antes” e um pai para dizer “faz parte desta tarefa maior”.
+Um filho continua sendo um ticket com seu próprio estado e discussão. O indicador de progresso do pai é ponderado pelo esforço dos filhos e pela parcela de conclusão atribuída ao estado de cada um. O contador de concluídos/total na lista de subtickets é uma contagem separada, sem ponderação. Leia os estados dos filhos junto com as duas medidas. Use uma dependência para dizer “precisa terminar antes” e um pai para dizer “faz parte deste ticket maior”.
 
 ![Campo de criação de um subticket em um ticket pai de demonstração.](/documentation/pt-BR/work-sub-issues.png)
 
 ### Abrir ou remover a relação com o pai {#change-parent}
 
-O identificador do pai ao lado do título do filho abre um menu. Use a ação de abrir o pai para inspecionar a tarefa maior. Para separar o filho, escolha desvinculá-lo do pai e leia a confirmação antes de aplicar. A desvinculação bem-sucedida remove a relação e mantém o problema.
+O identificador do pai ao lado do título do filho abre um menu. Use a ação de abrir o pai para inspecionar o ticket maior. Para separar o filho, escolha desvinculá-lo do pai e leia a confirmação antes de aplicar. A desvinculação bem-sucedida remove a relação e mantém o ticket.
 
 Não exclua um filho apenas para reorganizar a hierarquia. Confira as relações existentes antes de mudar o pai e resolva uma relação rejeitada em vez de forçar uma hierarquia circular. Se o salvamento falhar, reabra o filho para ver se a mudança foi aplicada antes de tentar novamente. Preserve o trabalho concluído dos filhos ao revisar o plano geral.
 
 ## Manter um plano de implementação {#implementation-plans}
 
-Abra a aba do plano do problema. A descrição já deve indicar o problema e o resultado esperado. Adicione etapas de implementação manualmente ou [copie o prompt **Gerar um plano**](#copy-issue-prompt) para o seu próprio agente de código, que explora o repositório por conta própria. O Numo não consegue ler o repositório: ele pode aprimorar a descrição e, se você pedir, escrever um plano básico, mas qualquer caminho de arquivo ou função que ele cite é uma suposição. Um caminho ou uma função em um plano só é evidência se o repositório foi realmente lido.
+Abra a aba do plano do ticket. A descrição já deve indicar o problema e o resultado esperado. Adicione etapas de implementação manualmente ou [copie o prompt **Gerar um plano**](#copy-issue-prompt) para o seu próprio agente de código, que explora o repositório por conta própria. O Numo não consegue ler o repositório: ele pode aprimorar a descrição e, se você pedir, escrever um plano básico, mas qualquer caminho de arquivo ou função que ele cite é uma suposição. Um caminho ou uma função em um plano só é evidência se o repositório foi realmente lido.
 
 O plano é editado no próprio lugar, como a descrição: clique nele e escreva, sem modo de edição nem botão de salvar. Um plano vazio mostra um texto de orientação. Vários membros, o Numo e os agentes conectados podem editar o mesmo plano ao mesmo tempo, cada um com um cursor identificado, e uma tarefa marcada por um agente aparece no seu editor enquanto você escreve em outro trecho. Digite `- [ ]` seguido de um espaço no início de uma linha, ou escolha **Lista de tarefas** no menu `/`, para adicionar uma tarefa. Clique na caixa de uma tarefa para concluí-la, ou abra o menu dela para os outros estados.
 
-Pressione Tab em uma tarefa para aninhá-la sob a anterior e Shift+Tab para trazê-la de volta; no Markdown salvo, cada nível é recuado com dois espaços. O aninhamento organiza as etapas do plano e não cria relações entre problemas pai e filho. Cada tarefa de trabalho não cancelada continua contando para o progresso, inclusive as aninhadas.
+Pressione Tab em uma tarefa para aninhá-la sob a anterior e Shift+Tab para trazê-la de volta; no Markdown salvo, cada nível é recuado com dois espaços. O aninhamento organiza as etapas do plano e não cria relações entre tickets pai e filho. Cada tarefa de trabalho não cancelada continua contando para o progresso, inclusive as aninhadas.
 
 O plano usa linhas de tarefas Markdown: `- [ ]` para pendente, `- [~]` para em andamento, `- [x]` para concluída e `- [-]` para cancelada. Escreva o texto da tarefa após o marcador, por exemplo `- [ ] Verificar o link de contato no celular`. Tarefas canceladas ficam fora da contagem de conclusão. As tarefas sob um título Questions reconhecido são tratadas como perguntas e também ficam fora do progresso; mantenha os passos de trabalho em outra seção no mesmo nível de título. O título reconhecido é `Questions`, com essa palavra em inglês. O editor mostra essas linhas como tarefas e as grava de volta no mesmo formato, que o Numo e os agentes conectados leem. Use pendente, em andamento, concluída e cancelada para representar o que aconteceu, sem sugerir verificações que não foram executadas.
 
@@ -512,48 +517,48 @@ O plano usa linhas de tarefas Markdown: `- [ ]` para pendente, `- [~]` para em a
 
 Amplie ou altere o plano existente em vez de substituí-lo por uma cópia nova sem marcações. Preserve as etapas concluídas e as explicações de mudanças de escopo. As alterações de outros membros e agentes aparecem no plano à medida que são feitas. Uma ferramenta que substitui o plano inteiro ainda substitui os trechos que reescreve, então peça aos agentes que editem apenas a parte que mudam.
 
-Para implementar o plano, copie o prompt do problema para seu próprio agente de código, como descrito abaixo. Uma tarefa marcada não prova por si só que o código passa nos testes. Leia resultado, mudanças e verificações antes de marcar o problema como concluído.
+Para implementar o plano, copie o prompt do ticket para seu próprio agente de código, como descrito abaixo. Uma tarefa marcada não prova por si só que o código passa nos testes. Leia resultado, mudanças e verificações antes de marcar o ticket como concluído.
 
 ### Copiar um prompt para outro agente de código {#copy-issue-prompt}
 
-Para entregar um problema a um agente de código fora do Minddy, como Claude Code, Codex ou Cursor, abra o menu de ações do problema, escolha **Copiar como prompt** e depois **Gerar um plano** (ou **Revisar o plano** quando já existir um), **Implementar o problema**, **Verificar a implementação** ou **Personalizado…**. Com vários problemas selecionados, **Copiar o prompt combinado** reúne todos em um único prompt. Copiar não executa nenhum modelo de IA nem consome sua cota de IA: o Minddy reúne o que já tem armazenado e o agente explora o repositório por conta própria. Se **Iniciar o problema ou tarefa quando eu copiar seu prompt** estiver ativado nas preferências da conta, copiar também inicia um problema que ainda não foi iniciado. Consulte [Trabalho de código e pull requests](/docs/code-work) para o fluxo completo e a revisão de pull requests.
+Para entregar um ticket a um agente de código fora do Minddy, como Claude Code, Codex ou Cursor, abra o menu de ações do ticket, escolha **Copiar como prompt** e depois **Gerar um plano** (ou **Revisar o plano** quando já existir um), **Implementar o ticket**, **Verificar a implementação** ou **Personalizado…**. Com vários tickets selecionados, **Copiar o prompt combinado** reúne todos em um único prompt. Copiar não executa nenhum modelo de IA nem consome sua cota de IA: o Minddy reúne o que já tem armazenado e o agente explora o repositório por conta própria. Se **Iniciar o ticket ou tarefa quando eu copiar seu prompt** estiver ativado nas preferências da conta, copiar também inicia um ticket que ainda não foi iniciado. Consulte [Trabalho de código e pull requests](/docs/code-work) para o fluxo completo e a revisão de pull requests.
 
-O prompt traz os campos do problema, suas categorias, suas relações, o número de recursos anexados e o progresso do plano, mas não o texto do plano, que o agente lê pelo servidor MCP do Minddy ou pede a você. Ele também indica o repositório vinculado ao projeto e cada pull request vinculada ao problema, com seu estado e suas branches quando conhecidos. O agente continua uma pull request aberta na branch dela e trata as mescladas ou fechadas como histórico. Sem uma pull request aberta, o prompt sugere um nome de branch formado pelo identificador do problema e um título curto, por exemplo `min-42-keyboard-navigation`. É apenas uma sugestão: o agente verifica primeiro as branches existentes e segue a convenção de nomes do repositório. Manter o identificador no nome da branch, no título da pull request ou em uma linha `Fixes MIN-42` permite que o Minddy vincule a pull request ao problema quando o repositório está vinculado.
+O prompt traz os campos do ticket, suas categorias, suas relações, o número de recursos anexados e o progresso do plano, mas não o texto do plano, que o agente lê pelo servidor MCP do Minddy ou pede a você. Ele também indica o repositório vinculado ao projeto e cada pull request vinculado ao ticket, com seu estado e suas branches quando conhecidos. O agente continua um pull request aberto na branch dele e trata os mesclados ou fechados como histórico. Sem um pull request aberto, o prompt sugere um nome de branch formado pelo identificador do ticket e um título curto, por exemplo `min-42-keyboard-navigation`. É apenas uma sugestão: o agente verifica primeiro as branches existentes e segue a convenção de nomes do repositório. Manter o identificador no nome da branch, no título do pull request ou em uma linha `Fixes MIN-42` permite que o Minddy vincule o pull request ao ticket quando o repositório está vinculado.
 
-Se as informações de pull request não puderem ser carregadas, o prompt informa isso em vez de afirmar que não há nenhuma. Os prompts de plano e de revisão do plano pedem que o agente pare antes de implementar. Um prompt personalizado mantém seu pedido e o escopo dele como você escreveu. O conteúdo do problema e seu pedido mantêm o idioma original; as instruções ao redor ficam em inglês.
+Se as informações de pull request não puderem ser carregadas, o prompt informa isso em vez de afirmar que não há nenhum. Os prompts de plano e de revisão do plano pedem que o agente pare antes de implementar. Um prompt personalizado mantém seu pedido e o escopo dele como você escreveu. O conteúdo do ticket e seu pedido mantêm o idioma original; as instruções ao redor ficam em inglês.
 
-## Repetir um problema depois de concluído {#recurring-issues}
+## Repetir um ticket depois de concluído {#recurring-issues}
 
-Crie ou abra um problema que continue útil a cada repetição, como uma verificação periódica de dependências. Defina um prazo, depois escolha uma recorrência diária, semanal, mensal ou anual no controle de data do problema. Uma recorrência sem prazo é rejeitada. Revise propriedades e responsável antes de salvar. As configurações de recorrências do projeto listam as séries ativas; use-as para mudar a frequência ou interromper a repetição.
+Crie ou abra um ticket que continue útil a cada repetição, como uma verificação periódica de dependências. Defina um prazo, depois escolha uma recorrência diária, semanal, mensal ou anual no controle de data do ticket. Uma recorrência sem prazo é rejeitada. Revise propriedades e responsável antes de salvar. As configurações de recorrências do projeto listam as séries ativas; use-as para mudar a frequência ou interromper a repetição.
 
-Problemas recorrentes são recriados depois que o anterior fica “Concluído”; o próximo é criado no Backlog. Confira o identificador e as propriedades do próximo problema após concluir uma recorrência.
+Tickets recorrentes são recriados depois que o anterior fica “Concluído”; o próximo é criado no Backlog. Confira o identificador e as propriedades do próximo ticket após concluir uma recorrência.
 
-O próximo prazo é calculado somando um intervalo de recorrência ao prazo anterior, não a partir do dia em que você concluiu a tarefa. O sucessor copia título, descrição, prioridade, esforço, responsável, objetivo e categorias. Não copia o plano de implementação, a relação com o pai, os recursos nem os comentários. A recorrência passa para o sucessor; reabrir e concluir novamente o problema antigo não cria outra ocorrência. Se a criação do sucessor falhar, a série para em vez de tentar repetidamente a partir do problema concluído. Examine o resultado e configure a recorrência na próxima tarefa apropriada depois de resolver a falha. Não suponha que um calendário execute código ou conclua o novo problema por você.
+O próximo prazo é calculado somando um intervalo de recorrência ao prazo anterior, não a partir do dia em que você concluiu a tarefa. O sucessor copia título, descrição, prioridade, esforço, responsável, objetivo e categorias. Não copia o plano de implementação, a relação com o pai, os recursos nem os comentários. A recorrência passa para o sucessor; reabrir e concluir novamente o ticket antigo não cria outra ocorrência. Se a criação do sucessor falhar, a série para em vez de tentar repetidamente a partir do ticket concluído. Examine o resultado e configure a recorrência no próximo ticket apropriado depois de resolver a falha. Não suponha que um calendário execute código ou conclua o novo ticket por você.
 
 
 ![Seletor de prazo no modo recorrente com prévia semanal aos domingos e horário opcional.](/documentation/pt-BR/issue-date-recurrence.png)
 
 ### Mudar ou interromper a repetição {#recurrence-change}
 
-Use as configurações de recorrência para editar ou desabilitar repetições futuras. Inspecione separadamente os problemas já criados: parar a criação futura não significa que o trabalho existente foi concluído ou removido.
+Use as configurações de recorrência para editar ou desabilitar repetições futuras. Inspecione separadamente os tickets já criados: parar a criação futura não significa que o trabalho existente foi concluído ou removido.
 
-Uma rotina do Numo é um objeto diferente: ela agenda uma conversa e pode usar o orçamento de IA do proprietário e os provedores configurados. Escolha problemas recorrentes para uma tarefa repetida acompanhável e uma rotina para uma instrução que precisa ser executada em um horário. Se o próximo problema não aparecer, confira se o anterior foi marcado como concluído, se a recorrência ainda está habilitada e se está vendo o Backlog sem filtros restritivos.
+Uma rotina do Numo é um objeto diferente: ela agenda uma conversa e pode usar o orçamento de IA do proprietário e os provedores configurados. Escolha tickets recorrentes para uma tarefa repetida acompanhável e uma rotina para uma instrução que precisa ser executada em um horário. Se o próximo ticket não aparecer, confira se o anterior foi marcado como concluído, se a recorrência ainda está habilitada e se está vendo o Backlog sem filtros restritivos.
 
-## Atualizar vários problemas juntos {#bulk-issue-actions}
+## Atualizar vários tickets juntos {#bulk-issue-actions}
 
-No quadro, mantenha Shift pressionado e clique em cada cartão para adicioná-lo à seleção ou removê-lo dela. Com o mouse, você também pode arrastar um retângulo de seleção a partir de um espaço vazio do quadro. Shift, Command ou Ctrl fazem esse gesto ampliar a seleção existente. O retângulo não é um modo de seleção para telas sensíveis ao toque. Confira a quantidade selecionada e os identificadores visíveis antes de abrir as ações em lote. A seleção é um conjunto de trabalho para a ação, não uma visualização salva nem uma concessão de permissão. Abra-as com **Ações** na barra de seleção ou pressione Command+K no macOS ou Ctrl+K no Windows/Linux enquanto houver problemas selecionados.
+No quadro, mantenha Shift pressionado e clique em cada cartão para adicioná-lo à seleção ou removê-lo dela. Com o mouse, você também pode arrastar um retângulo de seleção a partir de um espaço vazio do quadro. Shift, Command ou Ctrl fazem esse gesto ampliar a seleção existente. O retângulo não é um modo de seleção para telas sensíveis ao toque. Confira a quantidade selecionada e os identificadores visíveis antes de abrir as ações em lote. A seleção é um conjunto de trabalho para a ação, não uma visualização salva nem uma concessão de permissão. Abra-as com **Ações** na barra de seleção ou pressione Command+K no macOS ou Ctrl+K no Windows/Linux enquanto houver tickets selecionados.
 
-Escolha Ações na barra flutuante de seleção para abrir a paleta de comandos. Escolha estado, prioridade, esforço ou responsável, defina o valor e confirme o formulário integrado. A ação de objetivo aparece somente quando a seleção pertence a um único projeto com objetivos disponíveis. Outras ações, como adicionar ou remover do ciclo, vincular dois problemas ou enviar a seleção ao Numo, aparecem quando o quadro atual oferece suporte a elas. Confira os problemas afetados depois. Em um dispositivo somente de toque sem um gesto de seleção múltipla compatível, edite cada problema pelo painel de detalhes.
+Escolha Ações na barra flutuante de seleção para abrir a paleta de comandos. Escolha estado, prioridade, esforço ou responsável, defina o valor e confirme o formulário integrado. A ação de objetivo aparece somente quando a seleção pertence a um único projeto com objetivos disponíveis. Outras ações, como adicionar ou remover do ciclo, vincular dois tickets ou enviar a seleção ao Numo, aparecem quando o quadro atual oferece suporte a elas. Confira os tickets afetados depois. Em um dispositivo somente de toque sem um gesto de seleção múltipla compatível, edite cada ticket pelo painel de detalhes.
 
 ### Resultados parciais e ações destrutivas {#bulk-results}
 
-Ao trabalhar entre projetos, verifique sua participação em cada projeto afetado. Leia os resultados de falhas parciais: alterações bem-sucedidas podem já estar salvas mesmo que outro problema tenha sido rejeitado. Inspecione o resultado antes de repetir a seleção inteira.
+Ao trabalhar entre projetos, verifique sua participação em cada projeto afetado. Leia os resultados de falhas parciais: alterações bem-sucedidas podem já estar salvas mesmo que outro ticket tenha sido rejeitado. Inspecione o resultado antes de repetir a seleção inteira.
 
-A exclusão afeta todos os itens selecionados, então confirme o conjunto antes de continuar. **Mover os problemas para a lixeira** pede confirmação; os problemas, com seus comentários, arquivos e links, podem ser restaurados da [lixeira](/docs/trash-and-recovery) por 30 dias. Limpe a seleção depois da operação se for passar para outro trabalho. Se a atualização mudar os resultados dos filtros, problemas podem sair da visualização exibida e permanecer no projeto. Pesquise os identificadores para verificar o novo estado em vez de recriá-los.
+A exclusão afeta todos os itens selecionados, então confirme o conjunto antes de continuar. **Mover os tickets para a lixeira** pede confirmação; os tickets, com seus comentários, arquivos e links, podem ser restaurados da [lixeira](/docs/trash-and-recovery) por 30 dias. Limpe a seleção depois da operação se for passar para outro trabalho. Se a atualização mudar os resultados dos filtros, tickets podem sair da visualização exibida e permanecer no projeto. Pesquise os identificadores para verificar o novo estado em vez de recriá-los.
 
 ## Importar um backlog CSV após conferir o mapeamento {#import-issues}
 
-O proprietário do projeto abre Importação nas configurações do projeto e seleciona uma exportação CSV. Os formatos do Linear e do Jira são reconhecidos; os demais CSVs usam o mapeamento genérico. O limite por importação é de 5 MiB e 5.000 tarefas. Divida uma exportação maior de forma planejada e, quando possível, mantenha as referências às tarefas pai no mesmo lote.
+O proprietário do projeto abre Importação nas configurações do projeto e seleciona uma exportação CSV. Os formatos do Linear e do Jira são reconhecidos; os demais CSVs usam o mapeamento genérico. O limite por importação é de 5 MiB e 5.000 tickets. Divida uma exportação maior de forma planejada e, quando possível, mantenha as referências aos tickets pai no mesmo lote.
 
 Mapeie a coluna de título antes de importar. Confira descrição, status, prioridade, esforço, prazo, categorias e responsáveis. Associe as pessoas a membros reais do projeto e examine as novas categorias. As referências aos pais correspondem a chaves externas no lote e permitem um único nível. Os CSVs não importam os bytes dos arquivos anexos.
 
@@ -561,18 +566,18 @@ Uma proposta de IA só é solicitada para lacunas no mapeamento. Ela pode ser ed
 
 ### Importar e verificar {#result}
 
-Depois de cada mudança de mapeamento, leia as contagens de tarefas, a distribuição de status e os avisos. Corrija as linhas ignoradas ou inválidas antes de confirmar. A importação cria novas tarefas; não suponha que enviar o arquivo novamente seja uma atualização que elimina duplicatas. Após o sucesso, confira tarefas representativas, responsáveis, datas e vínculos com pais. Se a resposta se perder, examine o projeto antes de reenviar o arquivo inteiro, para evitar trabalho duplicado.
+Depois de cada mudança de mapeamento, leia as contagens de tickets, a distribuição de status e os avisos. Corrija as linhas ignoradas ou inválidas antes de confirmar. A importação cria novos tickets; não suponha que enviar o arquivo novamente seja uma atualização que elimina duplicatas. Após o sucesso, confira tickets representativos, responsáveis, datas e vínculos com pais. Se a resposta se perder, examine o projeto antes de reenviar o arquivo inteiro, para evitar trabalho duplicado.
 
 ![Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas.](/documentation/pt-BR/import-issues-preview-workflow.png)
 
-## Exportar issues em CSV {#export-issues}
+## Exportar tickets em CSV {#export-issues}
 
-Como membro conectado de um projeto, abra a paleta com Command+K no macOS ou Ctrl+K nos outros sistemas e procure “Exporte os problemas como CSV”. Escolha o comando, selecione um projeto ou todos os projetos acessíveis e confira as caixas de status. A página do projeto atual pré-seleciona esse projeto. Issues concluídas, canceladas e duplicadas ficam excluídas por padrão; inclua-as para obter o histórico completo. Pelo menos um status deve permanecer selecionado. Os filtros do quadro e os cartões selecionados não definem essa exportação.
+Como membro conectado de um projeto, abra a paleta com Command+K no macOS ou Ctrl+K nos outros sistemas e procure “Exporte os tickets como CSV”. Escolha o comando, selecione um projeto ou todos os projetos acessíveis e confira as caixas de status. A página do projeto atual pré-seleciona esse projeto. Tickets concluídos, cancelados e duplicados ficam excluídos por padrão; inclua-os para obter o histórico completo. Pelo menos um status deve permanecer selecionado. Os filtros do quadro e os cartões selecionados não definem essa exportação.
 
-Escolha Exportar e confira a confirmação do download e a quantidade informada. O CSV UTF-8 contém identificadores, títulos, descrições Markdown, status, prioridades, esforço, categorias, responsáveis, objetivos, nomes de projetos, datas e identificadores das issues pai. O acesso fica limitado aos seus projetos acessíveis. Um arquivo somente com cabeçalhos pode indicar que nenhuma issue acessível corresponde aos critérios. Ao compartilhar o arquivo, considere as descrições e os nomes como dados do projeto.
+Escolha Exportar e confira a confirmação do download e a quantidade informada. O CSV UTF-8 contém identificadores, títulos, descrições Markdown, status, prioridades, esforço, categorias, responsáveis, objetivos, nomes de projetos, datas e identificadores dos tickets pai. O acesso fica limitado aos seus projetos acessíveis. Um arquivo somente com cabeçalhos pode indicar que nenhum ticket acessível corresponde aos critérios. Ao compartilhar o arquivo, considere as descrições e os nomes como dados do projeto.
 
 ### Conferir a integridade e reimportar {#export-issues-limits}
 
-A exportação é limitada a 20.000 issues. Um aviso de truncamento indica que o arquivo pode estar incompleto. Reduza o escopo por projeto e status, exporte grupos separados e compare as quantidades. Repetir o mesmo escopo não busca uma página seguinte. Se o download falhar, confira o erro, sua sessão e o acesso ao projeto antes de tentar novamente.
+A exportação é limitada a 20.000 tickets. Um aviso de truncamento indica que o arquivo pode estar incompleto. Reduza o escopo por projeto e status, exporte grupos separados e compare as quantidades. Repetir o mesmo escopo não busca uma página seguinte. Se o download falhar, confira o erro, sua sessão e o acesso ao projeto antes de tentar novamente.
 
-O formato pode ser [importado no minddy](#import-issues), com permissão do proprietário de destino e após revisar o mapeamento. A importação cria novas issues; não restaura os identificadores originais nem atualiza as existentes. Mantenha as linhas pai no mesmo lote de importação. O CSV transporta dados das issues, não um backup de anexos, comentários, configurações da conta ou credenciais. Para transferir uma conta, use o [guia de transferência entre instâncias](/docs/transfer-between-instances).
+O formato pode ser [importado no minddy](#import-issues), com permissão do proprietário de destino e após revisar o mapeamento. A importação cria novos tickets; não restaura os identificadores originais nem atualiza as existentes. Mantenha as linhas pai no mesmo lote de importação. O CSV transporta dados dos tickets, não um backup de anexos, comentários, configurações da conta ou credenciais. Para transferir uma conta, use o [guia de transferência entre instâncias](/docs/transfer-between-instances).
