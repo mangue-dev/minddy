@@ -21,6 +21,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useDragAnnouncements } from "@/lib/use-drag-announcements";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
@@ -216,6 +217,8 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
   // minimum and hides behind the "more tabs" menu. Pinned tabs keep their
   // exact size. Unmeasured rail (first paint) → everything visible.
   const described = tabs.map((tab) => ({ tab, view: describe(tab) }));
+  const tabAnnouncements = useDragAnnouncements((id) =>
+    described.find(({ tab }) => tab.id === id)?.view.label);
   const PINNED_COMPOSITE_W = 52;
   const PINNED_W = 34;
   // Regular tabs stop shrinking while the label still has a few words: below
@@ -284,6 +287,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
           event.preventDefault(); controls[next]?.focus();
         }}>
         <DndContext sensors={sensors} collisionDetection={collisionDetection} modifiers={horizontalDragModifiers}
+          accessibility={{ announcements: tabAnnouncements }}
           onDragStart={(event: DragStartEvent) => setDragged(String(event.active.id))}
           onDragCancel={() => setDragged(null)} onDragEnd={finishDrag}>
         <SortableContext items={visible.map(({ tab }) => tab.id)} strategy={horizontalListSortingStrategy}>

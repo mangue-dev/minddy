@@ -22,6 +22,7 @@ import {
 import { FormDialog } from "@/components/form-dialog";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { cn } from "@/lib/utils";
+import { useDragAnnouncements } from "@/lib/use-drag-announcements";
 import {
   MAX_DATABASE_VIEWS,
   MAX_DATABASE_VIEW_NAME,
@@ -111,13 +112,14 @@ export function DatabaseViewStrip({ views, activeId, canWrite, onSelect, onCreat
   const [deleteTarget, setDeleteTarget] = useState<SavedDatabaseView | null>(null);
   // A plain click selects; only a drag of more than 6px reorders.
   const sensors = useSensors(useSensor(MouseSensor, { activationConstraint: { distance: 6 } }));
+  const announcements = useDragAnnouncements((id) => views.find((view) => view.id === id)?.name);
   const active = views.find((view) => view.id === activeId) ?? null;
   const name = active?.name ?? t("defaultView");
 
   return (
     <div role="group" aria-label={t("views")} className="flex min-w-0 items-center gap-0.5 overflow-x-auto">
       {views.length ? (
-        <DndContext sensors={sensors} collisionDetection={closestCenter}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} accessibility={{ announcements }}
           onDragEnd={({ active: dragged, over }) => {
             if (over && dragged.id !== over.id) onMove(String(dragged.id), String(over.id));
           }}>

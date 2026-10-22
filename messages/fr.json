@@ -6778,5 +6778,14 @@
     "signupClosedBody": "Cette version de test est réservée à l’équipe. Créez votre compte sur minddy.app.",
     "signupClosedCta": "S’inscrire sur minddy.app",
     "signupClosedSignIn": "Déjà un compte de test ? <link>Se connecter</link>"
+  },
+  "DragAnnouncements": {
+    "pickedUp": "{item} est saisi.",
+    "over": "{item} est au-dessus de {target}.",
+    "notOver": "{item} n’est plus au-dessus d’un emplacement.",
+    "dropped": "{item} a été déposé sur {target}.",
+    "droppedNowhere": "{item} a été déposé.",
+    "cancelled": "Le déplacement de {item} est annulé.",
+    "unnamedItem": "Élément"
   }
 }

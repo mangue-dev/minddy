@@ -55,6 +55,7 @@ import { NumoIcon } from "@/components/numo-icon";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { usePageDatabase } from "@/lib/use-page-database";
 import { usePageDatabaseViews } from "@/lib/use-page-database-views";
+import { useDragAnnouncements } from "@/lib/use-drag-announcements";
 import { DatabaseViewStrip } from "./database-view-strip";
 import { displayName } from "@/lib/display-name";
 import {
@@ -382,6 +383,8 @@ export function PageDatabaseView({
   const columnSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates, keyboardCodes: { start: ["F8"], cancel: ["Escape"], end: ["F8", "Enter", "Space"] } }));
   const t = useTranslations("PageDatabase");
+  const columnAnnouncements = useDragAnnouncements((id) =>
+    database.database_schema?.find((property) => property.id === id)?.name);
   const tPages = useTranslations("Pages");
   const { canWrite } = useProjectCapabilities(projectId);
   const promotePage = usePromotePage(projectId);
@@ -803,7 +806,7 @@ export function PageDatabaseView({
           {t("new")}
         </Button>
       </div>
-      <DndContext accessibility={{ screenReaderInstructions: { draggable: t("dragColumnHint") } }} sensors={columnSensors} collisionDetection={closestCenter} modifiers={[horizontalColumnDrag]}
+      <DndContext accessibility={{ announcements: columnAnnouncements, screenReaderInstructions: { draggable: t("dragColumnHint") } }} sensors={columnSensors} collisionDetection={closestCenter} modifiers={[horizontalColumnDrag]}
         onDragStart={() => { columnBase.current = database; }}
         onDragCancel={() => { columnBase.current = null; }}
         onDragEnd={({ active, over }) => {
