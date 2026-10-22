@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -42,10 +42,10 @@
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 9,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "accounts",
@@ -63,17 +63,18 @@
       "id": "first-project-steps",
       "kind": "screenshot",
       "src": "/documentation/en/reader-first-project.png",
-      "alt": "Completed demonstration issue with its description and saved comment.",
-      "caption": "The completed state records the application reader check. It does not assert that the example website’s email link was tested.",
-      "revision": 8,
+      "alt": "Issue AUR-3 in progress, with its description, assignee, effort and category.",
+      "caption": "The issue shows its identifier, status and properties. Move it to done only after the expected result is verified.",
+      "revision": 9,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-22",
       "viewport": [
         508,
         1096
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -96,7 +97,7 @@ If your team already has a project, give its owner your account email and accept
 6. Change its status to in progress when work begins. Perform the check, then record the result in a comment. Use in review if someone still needs to inspect it.
 7. Set the status to done after the expected result is verified. Boards hide the **Done** column by default: select **Done** in the board's **Status** filter, or search the issue's identifier, to confirm the change.
 
-![Completed demonstration issue with its description and saved comment.](/documentation/en/reader-first-project.png)
+![Issue AUR-3 in progress, with its description, assignee, effort and category.](/documentation/en/reader-first-project.png)
 
 ## Recover from an unexpected result {#first-use-recovery}
 

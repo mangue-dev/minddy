@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 35,
-  "sourceRevision": 34,
+  "revision": 36,
+  "sourceRevision": 35,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -120,9 +120,9 @@
     ]
   },
   "review": {
-    "revision": 35,
-    "fact": "agent:/root/min776 (drafts paragraph checked against components/create-issue-dialog.tsx, components/objective-dialog.tsx and lib/use-held-draft.ts: closing keeps the form, reopening resumes it, two minutes after a close it becomes a draft, another context saves it first, and the split menu offers Save as draft; rest of the article unchanged since the MIN-778 review; no figure changed); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of create-an-issue-steps, issue-statuses-steps, issue-dependencies-steps, sub-issues-steps, implementation-plans-steps, import-issues-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted)",
-    "language": "agent:/root/min776 (es drafts paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance)",
+    "revision": 36,
+    "fact": "agent:/root/min776 (drafts paragraph checked against components/create-issue-dialog.tsx, components/objective-dialog.tsx and lib/use-held-draft.ts: closing keeps the form, reopening resumes it, two minutes after a close it becomes a draft, another context saves it first, and the split menu offers Save as draft; rest of the article unchanged since the MIN-778 review; no figure changed); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of create-an-issue-steps, issue-statuses-steps, issue-dependencies-steps, sub-issues-steps, implementation-plans-steps, import-issues-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min776 (es drafts paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -168,7 +168,7 @@
       "src": "/documentation/es/new-issue.png",
       "alt": "Borrador sin enviar en el proyecto Aurora con título, descripción, propiedades que se pueden elegir manualmente y el botón Crear AUR-19.",
       "caption": "Describe el resultado esperado y elige las propiedades útiles antes de crear el ticket.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -183,17 +183,18 @@
       "id": "triage-incoming-work-steps",
       "kind": "screenshot",
       "src": "/documentation/es/triage-incoming.png",
-      "alt": "Incidencia entrante de demostración DOC-11 con informe, propiedades y controles de duplicado, Rechazar y Aceptar.",
+      "alt": "Incidencia entrante de demostración AUR-19 con informe, propiedades y controles de duplicado, Rechazar y Aceptar.",
       "caption": "Lee el informe recibido antes de aceptarlo, rechazarlo o enlazar un duplicado.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-22",
       "viewport": [
-        994,
-        866
+        1154,
+        786
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "issue-statuses-steps",
@@ -201,7 +202,7 @@
       "src": "/documentation/es/issue-statuses.png",
       "alt": "Los ocho estados del ticket en el selector, con el estado de backlog seleccionado.",
       "caption": "La marca indica el estado actual. Elige el que corresponda al estado real del trabajo.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -218,7 +219,7 @@
       "src": "/documentation/es/work-resources.png",
       "alt": "Diálogo para añadir un enlace con una dirección de contacto de ejemplo.",
       "caption": "Revisa el destino antes de añadir el recurso. Este enlace de ejemplo no se ha enviado.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -234,7 +235,7 @@
       "src": "/documentation/es/work-dependencies.png",
       "alt": "Búsqueda de una incidencia bloqueante por identificador.",
       "caption": "Elige el sentido de la relación antes de su destino. El selector se muestra sin enviar la relación.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -251,7 +252,7 @@
       "src": "/documentation/es/work-sub-issues.png",
       "alt": "Campo para crear una subincidencia en una incidencia principal de demostración.",
       "caption": "El campo crea una hija de esta incidencia; cada hija conserva su estado y conversación.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -268,7 +269,7 @@
       "src": "/documentation/es/work-implementation-plan.png",
       "alt": "Plan de demostración con dos tareas de trabajo completadas de seis.",
       "caption": "El plan guardado distingue pasos completados, activos y pendientes. Su progreso no demuestra que se ejecutara la tarea de código ficticia.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -285,7 +286,7 @@
       "src": "/documentation/es/issue-date-recurrence.png",
       "alt": "Selector de fecha en modo recurrente con vista previa semanal los domingos y hora opcional.",
       "caption": "El modo recurrente muestra la frecuencia semanal. Confirma la primera fecha antes de crear el ticket.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -301,7 +302,7 @@
       "src": "/documentation/es/import-issues-preview-workflow.png",
       "alt": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas.",
       "caption": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas. No se envió la importación; la planificación opcional con IA se bloqueó para la captura.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -318,7 +319,7 @@
       "src": "/documentation/es/file-preview.png",
       "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.",
       "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Cambiar nombre y Eliminar.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -406,7 +407,7 @@ Dentro de cada columna de estado, las incidencias abiertas que bloquean otro tra
 Si falta el elemento esperado, comprueba el proyecto activo, estado y filtros, y busca su identificador. El trabajo importado o sincronizado externamente puede entrar en clasificación; revisa la fuente original y el mapeo de la integración antes de modificar campos sincronizados. Una solicitud vinculada desde feedback sigue siendo un objeto de feedback independiente con su propia discusión pública.
 
 
-![Incidencia entrante de demostración DOC-11 con informe, propiedades y controles de duplicado, Rechazar y Aceptar.](/documentation/es/triage-incoming.png)
+![Incidencia entrante de demostración AUR-19 con informe, propiedades y controles de duplicado, Rechazar y Aceptar.](/documentation/es/triage-incoming.png)
 
 ## Mover una incidencia por su ciclo de vida {#issue-statuses}
 
@@ -553,15 +554,15 @@ La eliminación afecta a todos los elementos seleccionados, así que confirma el
 
 ## Importar un backlog CSV tras revisar correspondencias {#import-issues}
 
-El propietario abre Importar en los ajustes del proyecto y selecciona una exportación CSV. Los formatos de Linear y Jira se detectan; los demás CSV usan el mapeo genérico. El límite por importación es de 5 MiB y 5.000 incidencias. Divida una exportación mayor de forma planificada y, cuando sea posible, mantenga las referencias a incidencias padre en el mismo lote.
+El propietario abre Importar en los ajustes del proyecto y selecciona una exportación CSV. Los formatos de Linear y Jira se detectan; los demás CSV usan el mapeo genérico. El límite por importación es de 5 MiB y 5.000 incidencias. Divide una exportación mayor de forma planificada y, cuando sea posible, mantén las referencias a incidencias padre en el mismo lote.
 
-Asocie la columna del título antes de importar. Revise descripción, estado, prioridad, esfuerzo, fecha límite, categorías y responsables. Asocie las personas a miembros reales del proyecto y examine las categorías nuevas. Las referencias a padres corresponden a claves externas del lote y admiten un solo nivel. Los CSV no importan los bytes de los archivos adjuntos.
+Asocia la columna del título antes de importar. Revisa descripción, estado, prioridad, esfuerzo, fecha límite, categorías y responsables. Asocia las personas a miembros reales del proyecto y examina las categorías nuevas. Las referencias a padres corresponden a claves externas del lote y admiten un solo nivel. Los CSV no importan los bytes de los archivos adjuntos.
 
-Solo se solicita una propuesta de IA para los huecos del mapeo. Puede editarla; un proveedor fallido o no disponible deja utilizable el mapeo manual. Una corrección manual impide que una propuesta tardía sobrescriba sus decisiones.
+Solo se solicita una propuesta de IA para los huecos del mapeo. Puedes editarla; un proveedor fallido o no disponible deja utilizable el mapeo manual. Una corrección manual impide que una propuesta tardía sobrescriba tus decisiones.
 
 ### Importar y comprobar {#result}
 
-Tras cada cambio de mapeo, lea las cantidades de incidencias, la distribución de estados y los avisos. Corrija las filas omitidas o inválidas antes de confirmar. La importación crea incidencias nuevas; no suponga que reenviar el archivo sea una actualización que elimina duplicados. Después del éxito, compruebe incidencias representativas, responsables, fechas y vínculos con padres. Si se pierde la respuesta, revise el proyecto antes de reenviar el archivo completo para evitar trabajo duplicado.
+Tras cada cambio de mapeo, lee las cantidades de incidencias, la distribución de estados y los avisos. Corrige las filas omitidas o inválidas antes de confirmar. La importación crea incidencias nuevas; no supongas que reenviar el archivo sea una actualización que elimina duplicados. Después del éxito, comprueba incidencias representativas, responsables, fechas y vínculos con padres. Si se pierde la respuesta, revisa el proyecto antes de reenviar el archivo completo para evitar trabajo duplicado.
 
 ![Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas.](/documentation/es/import-issues-preview-workflow.png)
 

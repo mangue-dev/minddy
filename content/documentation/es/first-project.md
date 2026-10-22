@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 8,
+  "revision": 10,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -42,9 +42,9 @@
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance)",
+    "revision": 10,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -63,17 +63,18 @@
       "id": "first-project-steps",
       "kind": "screenshot",
       "src": "/documentation/es/reader-first-project.png",
-      "alt": "Incidencia de demostración completada con su descripción y comentario guardado.",
-      "caption": "El estado completado registra la comprobación del recorrido de la aplicación. No afirma que se probara el enlace de correo del sitio de ejemplo.",
-      "revision": 9,
+      "alt": "Incidencia AUR-3 en curso, con su descripción, responsable, esfuerzo y categoría.",
+      "caption": "La incidencia muestra su identificador, estado y propiedades. Márcala como completada solo después de verificar el resultado esperado.",
+      "revision": 10,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-22",
       "viewport": [
         508,
         1096
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -97,7 +98,7 @@ Si tu equipo ya tiene un proyecto, comunica al propietario el correo de tu cuent
 7. Cambia el estado a «En curso» cuando empiece el trabajo. Realiza la comprobación y registra el resultado en un comentario. Usa «En revisión» si otra persona todavía tiene que revisarlo.
 8. Cambia el estado a «Hecha» después de comprobar el resultado esperado. Los tableros ocultan la columna **Hecha** de forma predeterminada: selecciona **Hecha** en el filtro **Estado** del tablero, o busca el identificador de la incidencia, para confirmar el cambio.
 
-![Incidencia de demostración completada con su descripción y comentario guardado.](/documentation/es/reader-first-project.png)
+![Incidencia AUR-3 en curso, con su descripción, responsable, esfuerzo y categoría.](/documentation/es/reader-first-project.png)
 
 ## Resolver un resultado inesperado {#first-use-recovery}
 

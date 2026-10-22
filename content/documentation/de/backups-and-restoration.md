@@ -3,7 +3,7 @@
   "id": "backups-and-restoration",
   "locale": "de",
   "title": "Sicherungen und Wiederherstellung",
-  "summary": "Sichern Sie Datenbank, Storage, Konfiguration und Verschlüsselungsschlüssel, wählen Sie ein Sicherungsverfahren und stellen Sie einen vollständigen Satz auf einem leeren Ziel wieder her.",
+  "summary": "Sichere Datenbank, Storage, Konfiguration und Verschlüsselungsschlüssel, wähle ein Sicherungsverfahren und stelle einen vollständigen Satz auf einem leeren Ziel wieder her.",
   "topic": "Instanz betreiben",
   "type": "guide",
   "audiences": [
@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -38,10 +38,10 @@
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 8,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "update-an-instance"
@@ -63,8 +63,8 @@
       "kind": "diagram",
       "src": "/documentation/de/restore-and-roll-back-flow.svg",
       "alt": "Diagramm: Geprüftes vollständiges externes Backup. Leeres isoliertes Ziel mit passenden Versionen. Datenbank, Bytes und Schlüssel gemeinsam. Konto, Inhalte und Bytes vor Öffnung prüfen.",
-      "caption": "Lesen Sie die Schritte in dieser Reihenfolge. Geprüftes vollständiges externes Backup. Leeres isoliertes Ziel mit passenden Versionen. Datenbank, Bytes und Schlüssel gemeinsam. Konto, Inhalte und Bytes vor Öffnung prüfen.",
-      "revision": 7,
+      "caption": "Lies die Schritte in dieser Reihenfolge. Geprüftes vollständiges externes Backup. Leeres isoliertes Ziel mit passenden Versionen. Datenbank, Bytes und Schlüssel gemeinsam. Konto, Inhalte und Bytes vor Öffnung prüfen.",
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -97,15 +97,15 @@
 }
 ---
 
-Eine wiederherstellbare Sicherung hält Datenbank, Storage-Dateidaten, Konfiguration, Verschlüsselungsschlüssel und Anwendungsversion zusammen. Wählen Sie das Dateisystem-, logische oder Anbieterverfahren für Ihr installiertes Profil. Bewahren Sie den zusammengehörigen Satz außerhalb des Hosts auf und erproben Sie die Wiederherstellung auf einem leeren Ziel. Dabei können Schreibvorgänge seit dem Sicherungszeitpunkt verloren gehen.
+Eine wiederherstellbare Sicherung hält Datenbank, Storage-Dateidaten, Konfiguration, Verschlüsselungsschlüssel und Anwendungsversion zusammen. Wähle das Dateisystem-, logische oder Anbieterverfahren für dein installiertes Profil. Bewahre den zusammengehörigen Satz außerhalb des Hosts auf und erprobe die Wiederherstellung auf einem leeren Ziel. Dabei können Schreibvorgänge seit dem Sicherungszeitpunkt verloren gehen.
 
 ## Das full-Dateisystemprofil kalt sichern {#back-up-the-reference-instance}
 
-Dieses Linux-Verfahren gilt nur für full mit dem festgelegten offiziellen Supabase-Dateisystem-Storage. Physische Wiederherstellung verlangt gleiche CPU-Architektur und exaktes PostgreSQL-Image. Managed Supabase, S3 und Quellcodebereitstellungen verwenden das logische/Anbieter-Verfahren. Kündigen Sie Schreibausfall an und stoppen Sie externe Worker. Das Ziel muss verschlüsselt, groß genug und außerhalb aktiver Daten liegen. Verwenden Sie auf der Quelle nie `down --volumes`. Der Satz umfasst Datenbank, Auth, Storage-Metadaten und Bytes, Migrationen, Richtlinien, Vault-Schlüssel, Konfiguration und Release-Identitäten.
+Dieses Linux-Verfahren gilt nur für full mit dem festgelegten offiziellen Supabase-Dateisystem-Storage. Physische Wiederherstellung verlangt gleiche CPU-Architektur und exaktes PostgreSQL-Image. Managed Supabase, S3 und Quellcodebereitstellungen verwenden das logische/Anbieter-Verfahren. Kündige Schreibausfall an und stoppe externe Worker. Das Ziel muss verschlüsselt, groß genug und außerhalb aktiver Daten liegen. Verwende auf der Quelle nie `down --volumes`. Der Satz umfasst Datenbank, Auth, Storage-Metadaten und Bytes, Migrationen, Richtlinien, Vault-Schlüssel, Konfiguration und Release-Identitäten.
 
 ### Installierten Compose-Kontext setzen {#context}
 
-Ersetzen Sie Beispielversion und Pfade durch die tatsächlich installierte Instanz und setzen Sie `MODE=full`. Behalten Sie vorhandene Restore-Overrides in jedem Compose-Aufruf. Verwenden Sie niemals allein das Upstream-docker-`compose`, das minddy-Overlay und Umgebung auslässt. Führen Sie die Umgebung nicht als Shell-Code aus und zeigen Sie sie nicht an. Die Sicherung stoppt alle Dienste vor Kopieren der PostgreSQL-Dateien.
+Ersetze Beispielversion und Pfade durch die tatsächlich installierte Instanz und setze `MODE=full`. Behalte vorhandene Restore-Overrides in jedem Compose-Aufruf. Verwende niemals allein das Upstream-docker-`compose`, das minddy-Overlay und Umgebung auslässt. Führe die Umgebung nicht als Shell-Code aus und zeige sie nicht an. Die Sicherung stoppt alle Dienste vor Kopieren der PostgreSQL-Dateien.
 
 ```bash
 set -euo pipefail
@@ -130,7 +130,7 @@ compose ps
 
 ### Zusammengehörigen Satz versiegeln {#backup}
 
-Führen Sie die folgende Kaltkopie bei gestoppten Schreibzugriffen aus. Sie erfasst Quellcode und Images, archiviert Upstream-Daten und `db-config`-Schlüsselvolume und erhält Bereitstellungsdateien und geschützte Umgebung. Fehlendes `db-config` ist ein Abbruchgrund. Bewahren Sie Release-Dateien, OCI-Digests und Datenbankimage nach Digest zur Wiederherstellung auf. Enthält die Sicherung Wurzelschlüssel und Geheimtext, sind äußere Verschlüsselung und Zugriffsschutz ihre Vertraulichkeitsgrenze.
+Führe die folgende Kaltkopie bei gestoppten Schreibzugriffen aus. Sie erfasst Quellcode und Images, archiviert Upstream-Daten und `db-config`-Schlüsselvolume und erhält Bereitstellungsdateien und geschützte Umgebung. Fehlendes `db-config` ist ein Abbruchgrund. Bewahre Release-Dateien, OCI-Digests und Datenbankimage nach Digest zur Wiederherstellung auf. Enthält die Sicherung Wurzelschlüssel und Geheimtext, sind äußere Verschlüsselung und Zugriffsschutz ihre Vertraulichkeitsgrenze.
 
 ```bash
 export BACKUP_DIR="$BACKUP_ROOT/$(date -u +%Y%m%dT%H%M%SZ)"
@@ -176,21 +176,21 @@ sudo chown "$(id -u):$(id -g)" "$BACKUP_DIR/supabase-docker.tar.gz"
 
 ### Ergebnis überprüfen {#verify}
 
-Kopieren Sie den versiegelten Satz auf unabhängige Platte oder Host und prüfen Sie `SHA256SUMS` dort. Eine zweite Kopie auf demselben Host schützt nicht vor Hostverlust. Erhalten Sie TLS-Zertifikatsspeicher separat, falls die Richtlinie es verlangt. Bei reiner Sicherung starten Sie nach Prüfung mit `compose up -d --wait` neu. Bevor das Backup als nutzbar gilt, stellen Sie es auf leerem isoliertem Ziel wieder her, melden sich einschließlich MFA an, prüfen erhaltene Tickets und Anhänge mit gleichem SHA-256. Erhalten Sie passende historische Schlüssel.
+Kopiere den versiegelten Satz auf unabhängige Platte oder Host und prüfe `SHA256SUMS` dort. Eine zweite Kopie auf demselben Host schützt nicht vor Hostverlust. Erhalte TLS-Zertifikatsspeicher separat, falls die Richtlinie es verlangt. Bei reiner Sicherung startest du nach Prüfung mit `compose up -d --wait` neu. Bevor das Backup als nutzbar gilt, stellst du es auf leerem isoliertem Ziel wieder her, meldest dich einschließlich MFA an, prüfst erhaltene Tickets und Anhänge mit gleichem SHA-256. Erhalte passende historische Schlüssel.
 
 Der Befehl für die kalte Sicherung erkennt auch ein benanntes Dateisystem-Storage-Volume und archiviert dessen Bytes getrennt. Ein Bind-Mount ist weiterhin durch `supabase-docker.tar.gz` abgedeckt. Beide Fälle schließen ein S3- oder Anbieter-Backend aus.
 
 ## Ein logisches oder anbietergeführtes Backup erstellen {#logical-and-provider-backups}
 
-Dieses Verfahren gilt für Quellcode, verwaltete Datenbanken und eigenen Storage. Ordnen Sie Datenbank-, Rohstorage- und Proxybefehle derselben installierten Instanz zu. `self-host:backup`, `self-host:update` und `self-host:restore` sind nur lesende Vorprüfungen, keine Sicherung, Bereitstellung oder Wiederherstellung. Ein vollständiges Backup umfasst PostgreSQL mit auth, storage-Metadaten und Migrationshistorie, Rohbytes, geschützte Konfiguration und Schlüssel und exakte Quellcode-/Supabase-Identitäten an einem schreibkonsistenten Zeitpunkt.
+Dieses Verfahren gilt für Quellcode, verwaltete Datenbanken und eigenen Storage. Ordne Datenbank-, Rohstorage- und Proxybefehle derselben installierten Instanz zu. `self-host:backup`, `self-host:update` und `self-host:restore` sind nur lesende Vorprüfungen, keine Sicherung, Bereitstellung oder Wiederherstellung. Ein vollständiges Backup umfasst PostgreSQL mit auth, storage-Metadaten und Migrationshistorie, Rohbytes, geschützte Konfiguration und Schlüssel und exakte Quellcode-/Supabase-Identitäten an einem schreibkonsistenten Zeitpunkt.
 
 ### Supabase bei einem verwalteten Anbieter {#provider}
 
-Erfassen Sie bei providerverwaltetem Supabase Projekt, Datenbankversion, Backup- oder Snapshot-ID und Wiederherstellungspunkt. Schließen Sie minddy, Worker und geplante Schreibvorgänge. Nutzen Sie dann die unterstützten Konsistenz- oder Wartungskontrollen des Anbieters für direkte Schreibvorgänge über Auth, PostgREST und Storage. Sind diese nicht verfügbar, dokumentieren Sie die Einschränkung: Die Anwendung allein anzuhalten genügt nicht. Führen Sie die SQL-Exporte unten nur aus, wenn Datenbankrolle und Anbieter sie unterstützen, einschließlich Auth, Storage-Metadaten, Migrationshistorie und verwalteter Policies. Sichern Sie rohe Objektbytes getrennt per unterstütztem Export oder unveränderlichem Backend-Snapshot. Bewahren Sie die geschützte minddy-Umgebung, ihre Schlüssel und die von Ihnen kontrollierten Auth-/SMTP-, URL-, Proxy- und Job-Einstellungen auf. Plattformrollen und `pgsodium`-Schlüssel können dem Anbieter gehören; stellen Sie sie nicht als lokale Dateien dar. Die folgenden Blöcke mit `SUPABASE_COMPOSE_DIR`, `docker compose`, `supabase.env`, `pgsodium` und Dateisystem-tar gelten nur für ein vom Betreiber kontrolliertes Backend. Prüfen Sie die vollständige Wiederherstellung in einem separaten leeren Anbieterprojekt, bevor Sie dem Backup vertrauen. Für diese Dokumentationsrevision wurde kein Anbieter-Backup oder -Restore ausgeführt.
+Erfasse bei providerverwaltetem Supabase Projekt, Datenbankversion, Backup- oder Snapshot-ID und Wiederherstellungspunkt. Schließe minddy, Worker und geplante Schreibvorgänge. Nutze dann die unterstützten Konsistenz- oder Wartungskontrollen des Anbieters für direkte Schreibvorgänge über Auth, PostgREST und Storage. Sind diese nicht verfügbar, dokumentiere die Einschränkung: Die Anwendung allein anzuhalten genügt nicht. Führe die SQL-Exporte unten nur aus, wenn Datenbankrolle und Anbieter sie unterstützen, einschließlich Auth, Storage-Metadaten, Migrationshistorie und verwalteter Policies. Sichere rohe Objektbytes getrennt per unterstütztem Export oder unveränderlichem Backend-Snapshot. Bewahre die geschützte minddy-Umgebung, ihre Schlüssel und die von dir kontrollierten Auth-/SMTP-, URL-, Proxy- und Job-Einstellungen auf. Plattformrollen und `pgsodium`-Schlüssel können dem Anbieter gehören; stelle sie nicht als lokale Dateien dar. Die folgenden Blöcke mit `SUPABASE_COMPOSE_DIR`, `docker compose`, `supabase.env`, `pgsodium` und Dateisystem-tar gelten nur für ein vom Betreiber kontrolliertes Backend. Prüfe die vollständige Wiederherstellung in einem separaten leeren Anbieterprojekt, bevor du dem Backup vertraust. Für diese Dokumentationsrevision wurde kein Anbieter-Backup oder -Restore ausgeführt.
 
 ### Schreiben sperren und SQL exportieren {#outage}
 
-Schließen Sie Anwendung, Worker, Scheduler und öffentliche Supabase-API. Stoppen allein der Anwendung lässt direkte PostgREST-/Storage-Schreibzugriffe zu. Setzen Sie `SUPABASE_DB_URL` privat, `FROM_TAG` auf das Tag der aktuell installierten Release und `BACKUP_DIR` auf ein neues verschlüsseltes Ziel. Exportieren Sie SQL mit Werkzeugen der gewählten Version. Alle SQL-Dateien müssen Inhalt haben; `data.sql` muss `COPY`-Abschnitte für `auth.users`, `storage.objects` und Anwendungstabellen enthalten. Der normale Schemaexport lässt Migrationshistorie aus, deshalb sind beide separaten Exporte zwingend. Erhalten Sie verwaltete Storage-/Realtime-Richtlinien.
+Schließe Anwendung, Worker, Scheduler und öffentliche Supabase-API. Stoppen allein der Anwendung lässt direkte PostgREST-/Storage-Schreibzugriffe zu. Setze `SUPABASE_DB_URL` privat, `FROM_TAG` auf das Tag der aktuell installierten Release und `BACKUP_DIR` auf ein neues verschlüsseltes Ziel. Exportiere SQL mit Werkzeugen der gewählten Version. Alle SQL-Dateien müssen Inhalt haben; `data.sql` muss `COPY`-Abschnitte für `auth.users`, `storage.objects` und Anwendungstabellen enthalten. Der normale Schemaexport lässt Migrationshistorie aus, deshalb sind beide separaten Exporte zwingend. Erhalte verwaltete Storage-/Realtime-Richtlinien.
 
 ```bash
 set -euo pipefail
@@ -246,9 +246,9 @@ psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -Atc "
 
 ### Rohbytes und Konfiguration erhalten {#bytes}
 
-Stoppen Sie bei eigenem Dateisystem-Storage storage und `imgproxy` nach dem SQL-Export und archivieren Sie das Backend mit numerischen Eigentümern, ACLs und erweiterten Attributen. S3 benötigt einen unveränderlichen Rohsnapshot beziehungsweise eine Version. Restaurieren Sie nie über `/storage/v1/s3`, das widersprüchliche Metadaten erzeugt. Managed-Anbieter kontrollieren Plattformrollen und Dateizugriff; nutzen Sie deren unterstütztes Verfahren und erfassen Sie dessen Umfang. Kopieren Sie Anwendung/Supabase, Proxy, Jobs, Auth-Vorlagen, SMTP und eventuellen `pgsodium`-Wurzelschlüssel privat. `MINDDY_DATA_ROOT_KEY` und erhaltene Geheimnisse gehören dazu. SQL allein enthält keine Anhangbytes.
+Stoppe bei eigenem Dateisystem-Storage storage und `imgproxy` nach dem SQL-Export und archiviere das Backend mit numerischen Eigentümern, ACLs und erweiterten Attributen. S3 benötigt einen unveränderlichen Rohsnapshot beziehungsweise eine Version. Restauriere nie über `/storage/v1/s3`, das widersprüchliche Metadaten erzeugt. Managed-Anbieter kontrollieren Plattformrollen und Dateizugriff; nutze deren unterstütztes Verfahren und erfasse dessen Umfang. Kopiere Anwendung/Supabase, Proxy, Jobs, Auth-Vorlagen, SMTP und eventuellen `pgsodium`-Wurzelschlüssel privat. `MINDDY_DATA_ROOT_KEY` und erhaltene Geheimnisse gehören dazu. SQL allein enthält keine Anhangbytes.
 
-Sichern Sie beim festgelegten betreiberkontrollierten Backend das vollständige `db-config`-Volume statt nur `pgsodium_root.key`. Das folgende Hilfsprogramm erhält numerische Eigentümer, Berechtigungen, ACLs und erweiterte Attribute. Bewahren Sie sein exaktes PostgreSQL-Image zur Wiederherstellung auf. Ein anderer Schlüssel-Mount erfordert ein geprüftes Verfahren für dieses Backend. Lassen Sie Schlüssel nicht aus und nehmen Sie nicht an, ein neu erzeugter Wurzelschlüssel könne wiederhergestellte Vault-Daten lesen.
+Sichere beim festgelegten betreiberkontrollierten Backend das vollständige `db-config`-Volume statt nur `pgsodium_root.key`. Das folgende Hilfsprogramm erhält numerische Eigentümer, Berechtigungen, ACLs und erweiterte Attribute. Bewahre sein exaktes PostgreSQL-Image zur Wiederherstellung auf. Ein anderer Schlüssel-Mount erfordert ein geprüftes Verfahren für dieses Backend. Lass Schlüssel nicht aus und nimm nicht an, ein neu erzeugter Wurzelschlüssel könne wiederhergestellte Vault-Daten lesen.
 
 ```bash
 install -m 0600 "$MINDDY_ENV_FILE" "$BACKUP_DIR/config/minddy.env"
@@ -287,23 +287,23 @@ sha256sum --check SHA256SUMS
 
 ### Ergebnis überprüfen {#logical-and-provider-backups-verify}
 
-Erzeugen und prüfen Sie `SHA256SUMS` für den vollständigen Satz, verschlüsseln Sie ihn, kopieren Sie ihn auf einen anderen Host und prüfen Sie erneut. Erfassen Sie Versionen, Images, Objektzahlen und Beispieldatei-Hashes. Ein erfolgreicher Export beweist keine Wiederherstellung. Erproben Sie diese auf leerem Ziel mit gesicherten Versionen und Konfiguration, bevor Sie sich darauf verlassen; dokumentieren Sie Anbietergrenzen ausdrücklich.
+Erzeuge und prüfe `SHA256SUMS` für den vollständigen Satz, verschlüssele ihn, kopiere ihn auf einen anderen Host und prüfe erneut. Erfasse Versionen, Images, Objektzahlen und Beispieldatei-Hashes. Ein erfolgreicher Export beweist keine Wiederherstellung. Erprobe diese auf leerem Ziel mit gesicherten Versionen und Konfiguration, bevor du dich darauf verlässt; dokumentiere Anbietergrenzen ausdrücklich.
 
 ## Einen vollständigen Satz auf leerem Ziel wiederherstellen {#restore-and-roll-back}
 
-Wiederherstellung überschreibt ihr Ziel und führt keine Daten zusammen. Holen Sie das versiegelte externe Backup, prüfen Sie `SHA256SUMS` und lassen Sie Quelldaten unverändert. Zielzugang, Scheduler und externe Worker bleiben gestoppt. Physisches full-Restore verlangt gesicherte Architektur und exaktes PostgreSQL-Image. Holen Sie Quelltag und festgelegtes Upstream in neue Verzeichnisse und installieren Sie eingefrorene Werkzeuge. Prüfen Sie fehlendes Ziel-Datenbankverzeichnis, keine Storage-Objekte und kein `db-config`-Volume. Führen Sie auf dem leeren physischen Ziel keinen normalen Installer oder Bootstrap aus.
+Wiederherstellung überschreibt ihr Ziel und führt keine Daten zusammen. Hole das versiegelte externe Backup, prüfe `SHA256SUMS` und lass Quelldaten unverändert. Zielzugang, Scheduler und externe Worker bleiben gestoppt. Physisches full-Restore verlangt gesicherte Architektur und exaktes PostgreSQL-Image. Hole Quelltag und festgelegtes Upstream in neue Verzeichnisse und installiere eingefrorene Werkzeuge. Prüfe fehlendes Ziel-Datenbankverzeichnis, keine Storage-Objekte und kein `db-config`-Volume. Führe auf dem leeren physischen Ziel keinen normalen Installer oder Bootstrap aus.
 
 
 ![Diagramm: Geprüftes vollständiges externes Backup. Leeres isoliertes Ziel mit passenden Versionen. Datenbank, Bytes und Schlüssel gemeinsam. Konto, Inhalte und Bytes vor Öffnung prüfen.](/documentation/de/restore-and-roll-back-flow.svg)
 
 ### full-Dateisystem wiederherstellen {#physical}
 
-Nutzen Sie die vollständige physische Sequenz mit neuen Pfaden und Volumenamen. Sie entfernt gestoppte Quellcontainer ohne Volumenlöschung, stellt kaltes PostgreSQL und Storage zusammen wieder her, restauriert `db-config` mit gesichertem Image und vergleicht dieses vor Datenbankstart. Ändern Sie in der geschützten Umgebung nur Zielpfade, öffentliche Origins und Auth-Weiterleitungen. Erhalten Sie JWT, Passwörter, Vault-/Anwendungsschlüssel und Release-/Imageidentität. `RESTORE_OVERRIDE` muss bei jeder weiteren Operation bleiben; Weglassen kann Quellvolumes auswählen. Kompilieren Sie die Offline-Hauptfunktion, starten Sie Abhängigkeiten und Anwendung und prüfen Sie Wartungsbereitschaft vor Öffnung.
+Nutze die vollständige physische Sequenz mit neuen Pfaden und Volumenamen. Sie entfernt gestoppte Quellcontainer ohne Volumenlöschung, stellt kaltes PostgreSQL und Storage zusammen wieder her, restauriert `db-config` mit gesichertem Image und vergleicht dieses vor Datenbankstart. Ändere in der geschützten Umgebung nur Zielpfade, öffentliche Origins und Auth-Weiterleitungen. Erhalte JWT, Passwörter, Vault-/Anwendungsschlüssel und Release-/Imageidentität. `RESTORE_OVERRIDE` muss bei jeder weiteren Operation bleiben; Weglassen kann Quellvolumes auswählen. Kompiliere die Offline-Hauptfunktion, starte Abhängigkeiten und Anwendung und prüfe Wartungsbereitschaft vor Öffnung.
 
 
-Definieren Sie vor dem ersten `compose down` den [installierten Compose-Kontext der Quellinstanz](/de/dokumentation/backups-and-restoration#context) einschließlich ihres vorhandenen Overrides.
+Definiere vor dem ersten `compose down` den [installierten Compose-Kontext der Quellinstanz](/de/dokumentation/backups-and-restoration#context) einschließlich ihres vorhandenen Overrides.
 
-Falls `storage-volume.tar.gz` vorhanden ist, stellen Sie das Archiv in einem neuen benannten Linux-Volume wieder her und verbinden Sie genau dieses Volume über den dauerhaften Restore-Override, bevor Sie Storage starten. Die Prüfung auf ein leeres Ziel gilt auch für dieses Volume.
+Falls `storage-volume.tar.gz` vorhanden ist, stelle das Archiv in einem neuen benannten Linux-Volume wieder her und verbinde genau dieses Volume über den dauerhaften Restore-Override, bevor du Storage startest. Die Prüfung auf ein leeres Ziel gilt auch für dieses Volume.
 
 ```bash
 compose down
@@ -385,14 +385,14 @@ pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
 
 ### Logischen Satz wiederherstellen {#logical}
 
-Provisionieren Sie für logisches Restore einen leeren Stack mit aufgezeichneten PostgreSQL-/Supabase-Versionen und passenden Konfigurationen/Schlüsseln. Prüfen Sie Zieldatenbank und Rohstorage vor SQL. Stellen Sie Rollen, Schema und Daten in einer Transaktion wieder her, anschließend Migrationshistorie und verwaltete Richtlinien. Stoppen Sie Ziel-Storage und restaurieren Sie Rohdateien oder S3-Snapshot in ein neues leeres Backend. Kein Upload über Storage-API. Managed-Anbieter verlangen ihr eigenes Restore-Verfahren statt Dateisystembefehlen. Verwenden Sie den gesicherten Anwendungskommit und seine Schlüssel mit isolierten Ziel-Origins.
+Provisioniere für logisches Restore einen leeren Stack mit aufgezeichneten PostgreSQL-/Supabase-Versionen und passenden Konfigurationen/Schlüsseln. Prüfe Zieldatenbank und Rohstorage vor SQL. Stelle Rollen, Schema und Daten in einer Transaktion wieder her, anschließend Migrationshistorie und verwaltete Richtlinien. Stoppe Ziel-Storage und restauriere Rohdateien oder S3-Snapshot in ein neues leeres Backend. Kein Upload über Storage-API. Managed-Anbieter verlangen ihr eigenes Restore-Verfahren statt Dateisystembefehlen. Verwende den gesicherten Anwendungskommit und seine Schlüssel mit isolierten Ziel-Origins.
 
 
-Die folgenden Befehle für logische Extraktion, `run.sh` und Dateisystem-Storage gelten nur für ein vom Betreiber kontrolliertes Backend. Stellen Sie bei verwaltetem Supabase Datenbank und rohe Objektbytes mit dem unterstützten Anbieterprozess in einem leeren Ziel wieder her. Konfigurieren und starten Sie minddy anschließend nach [der Quellinstallation](/de/dokumentation/installation#source). Führen Sie für ein Projekt auf supabase.com keine lokalen Compose-Befehle aus.
+Die folgenden Befehle für logische Extraktion, `run.sh` und Dateisystem-Storage gelten nur für ein vom Betreiber kontrolliertes Backend. Stelle bei verwaltetem Supabase Datenbank und rohe Objektbytes mit dem unterstützten Anbieterprozess in einem leeren Ziel wieder her. Konfiguriere und starte minddy anschließend nach [der Quellinstallation](/de/dokumentation/installation#source). Führe für ein Projekt auf supabase.com keine lokalen Compose-Befehle aus.
 
-Vor dem ersten Datenbankstart stellt die folgende Sequenz das Schlüsselarchiv in einem neuen Volume wieder her und ergänzt die installierte Compose-Dateiliste um eine eindeutige Datei `docker-compose.restore-keys.*.yml`. Behalten Sie diesen Override bei jedem späteren Aufruf bei. Ältere Backups mit nur `pgsodium_root.key` benötigen ein geprüftes Verfahren, das ursprüngliche Eigentümer, Berechtigungen und Mount vor dem Start wiederherstellt. Die Sequenz bricht ab, statt Ersatzschlüssel zu erzeugen.
+Vor dem ersten Datenbankstart stellt die folgende Sequenz das Schlüsselarchiv in einem neuen Volume wieder her und ergänzt die installierte Compose-Dateiliste um eine eindeutige Datei `docker-compose.restore-keys.*.yml`. Behalte diesen Override bei jedem späteren Aufruf bei. Ältere Backups mit nur `pgsodium_root.key` benötigen ein geprüftes Verfahren, das ursprüngliche Eigentümer, Berechtigungen und Mount vor dem Start wiederherstellt. Die Sequenz bricht ab, statt Ersatzschlüssel zu erzeugen.
 
-Bereiten Sie zuerst den gesicherten Supabase-Upstream-Checkout mit seinen ursprünglichen statischen Dateien unter `volumes/` vor. Setzen Sie `RESTORE_SUPABASE_DIR` auf dessen Verzeichnis `docker`. Das Konfigurationsarchiv schließt `volumes/` bewusst aus und kann diesen Checkout nicht selbst bereitstellen. Die folgenden Prüfungen verlangen den gespeicherten Commit und die Initialisierungsdateien und lehnen vorhandene Datenbank- oder Storage-Daten ab. Halten Sie den öffentlichen Zugang gesperrt und führen Sie die Bash-Sequenz mit `set -euo pipefail` aus, damit eine gescheiterte Prüfung oder Extraktion vor dem Start abbricht.
+Bereite zuerst den gesicherten Supabase-Upstream-Checkout mit seinen ursprünglichen statischen Dateien unter `volumes/` vor. Setze `RESTORE_SUPABASE_DIR` auf dessen Verzeichnis `docker`. Das Konfigurationsarchiv schließt `volumes/` bewusst aus und kann diesen Checkout nicht selbst bereitstellen. Die folgenden Prüfungen verlangen den gespeicherten Commit und die Initialisierungsdateien und lehnen vorhandene Datenbank- oder Storage-Daten ab. Halte den öffentlichen Zugang gesperrt und führe die Bash-Sequenz mit `set -euo pipefail` aus, damit eine gescheiterte Prüfung oder Extraktion vor dem Start abbricht.
 
 ```bash
 set -euo pipefail
@@ -494,8 +494,8 @@ pnpm verify:supabase --db-url "$RESTORE_DB_URL" \
 ```
 
 
-Starten Sie die wiederhergestellte Anwendung nach Quellbuild und Prüfung mit `pnpm start` oder dem aufgezeichneten Prozessmanager aus [der Quellinstallation](/de/dokumentation/installation#source). Halten Sie öffentlichen Zugang und Jobs bis zum Bestehen der folgenden Prüfungen geschlossen.
+Starte die wiederhergestellte Anwendung nach Quellbuild und Prüfung mit `pnpm start` oder dem aufgezeichneten Prozessmanager aus [der Quellinstallation](/de/dokumentation/installation#source). Halte öffentlichen Zugang und Jobs bis zum Bestehen der folgenden Prüfungen geschlossen.
 
 ### Ergebnis überprüfen {#restore-and-roll-back-verify}
 
-Vergleichen Sie erfasste Datensatz- und Objektzahlen. Melden Sie sich mit wiederhergestelltem Konto und MFA an, lesen Sie verschlüsselte Projekte/Tickets/Seiten und laden Sie Objekte jedes Buckets mit gleichem SHA-256 herunter. Prüfen Sie Integrationen, widerrufene Schlüssel, Realtime, Jobs, OAuth/MCP und Callback-Origins. Erfassen Sie Zielpfade, Volumes, Versionen, Dauer und beobachtetes Datenverlustfenster. Verwenden Sie nach Migrationsfehler den passenden Vorupdatesatz. Nach Backup wieder geöffnete Schreibzugriffe können bei Rücksetzung verloren gehen. Erfinden Sie keine Rückwärtsmigrationen und erklären Sie gesunde Container nicht zur Wiederherstellungsprüfung.
+Vergleiche erfasste Datensatz- und Objektzahlen. Melde dich mit wiederhergestelltem Konto und MFA an, lies verschlüsselte Projekte/Tickets/Seiten und lade Objekte jedes Buckets mit gleichem SHA-256 herunter. Prüfe Integrationen, widerrufene Schlüssel, Realtime, Jobs, OAuth/MCP und Callback-Origins. Erfasse Zielpfade, Volumes, Versionen, Dauer und beobachtetes Datenverlustfenster. Verwende nach Migrationsfehler den passenden Vorupdatesatz. Nach Backup wieder geöffnete Schreibzugriffe können bei Rücksetzung verloren gehen. Erfinde keine Rückwärtsmigrationen und erkläre gesunde Container nicht zur Wiederherstellungsprüfung.

@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -38,10 +38,10 @@
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 7,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "pages",
@@ -57,17 +57,18 @@
       "id": "trash-and-recovery-steps",
       "kind": "screenshot",
       "src": "/documentation/it/reader-trash.png",
-      "alt": "Ticket dimostrativo recuperabile con trenta giorni rimanenti nel cestino.",
+      "alt": "Ticket AUR-20 recuperabile nel cestino, con progetto, autore dell’eliminazione e conservazione residua.",
       "caption": "Le azioni della riga permettono di ripristinarlo. Svuotare il cestino è un’operazione definitiva separata.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-22",
       "viewport": [
         994,
-        1046
+        526
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -82,7 +83,7 @@ Apri il cestino dal menu dell’account. Contiene lavoro eliminato recuperabile,
 
 Ripristina prima il padre o contenitore richiesto quando l’elemento ne dipende. Per esempio, ripristina un database eliminato prima di una voce eliminata separatamente. Riapri la destinazione ripristinata ed esamina contenuto e proprietà. Gli elementi eliminati restano recuperabili per 30 giorni prima che la conservazione li rimuova definitivamente. Solo il proprietario può ripristinare o rimuovere in modo permanente un progetto o una routine. Il proprietario e i Membri possono ripristinare o rimuovere gli altri oggetti supportati finché mantengono accesso. Un Lettore non può modificare un progetto, quindi gli elementi di un progetto che ti limiti a leggere non compaiono nel tuo cestino.
 
-![Ticket dimostrativo recuperabile con trenta giorni rimanenti nel cestino.](/documentation/it/reader-trash.png)
+![Ticket AUR-20 recuperabile nel cestino, con progetto, autore dell’eliminazione e conservazione residua.](/documentation/it/reader-trash.png)
 
 ## Eliminazione definitiva e recupero non riuscito {#permanent-removal}
 

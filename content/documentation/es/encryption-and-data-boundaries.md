@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 5,
+  "revision": 7,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -40,10 +40,10 @@
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 7,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "workspace-encryption",
@@ -61,7 +61,7 @@
       "src": "/documentation/es/encryption-and-data-boundaries-flow.svg",
       "alt": "Diagrama: Contenido cifrado y claves envueltas. Raíz en configuración protegida del servidor. Runtime autorizado puede descifrar. Exportaciones y proveedores necesitan protección aparte.",
       "caption": "El contenido almacenado está protegido, pero la aplicación autorizada puede descifrarlo y los datos que salen de la instancia necesitan protección propia.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -102,8 +102,8 @@ Tras la configuración y migración previstas, minddy cifra contenido y archivos
 
 ## Reconocer datos legibles y exportados {#exceptions}
 
-Auth conserva el email de inicio de sesión. Los identificadores, las claves de proyecto e incidencia, los estados, las prioridades, las fechas y los metadatos permitidos siguen siendo consultables. Las publicaciones son legibles por decisión de quien publica. Proteja por separado las exportaciones, los archivos descargados, el navegador y los datos enviados a proveedores externos de IA, email, Git o MCP. Un indicador no demuestra que el historial se haya convertido o eliminado de copias, registros y proveedores. Examinar el código no prueba que la migración de cifrado se haya ejecutado en producción de minddy Cloud.
+Auth conserva el email de inicio de sesión. Los identificadores, las claves de proyecto e incidencia, los estados, las prioridades, las fechas y los metadatos permitidos siguen siendo consultables. Las publicaciones son legibles por decisión de quien publica. Protege por separado las exportaciones, los archivos descargados, el navegador y los datos enviados a proveedores externos de IA, email, Git o MCP. Un indicador no demuestra que el historial se haya convertido o eliminado de copias, registros y proveedores. Examinar el código no prueba que la migración de cifrado se haya ejecutado en producción de minddy Cloud.
 
 ## Preservar la recuperación {#recovery}
 
-Proteja `MINDDY_DATA_ROOT_KEY` fuera de la base de datos y conserve el material de recuperación necesario para las copias actuales e históricas. Restaure juntos la base de datos, los bytes y la configuración. Cifre la copia externa que contiene datos y claves. Cambiar la raíz sin volver a envolver las claves hace ilegible el contenido; desactivar el indicador no lo devuelve a texto claro. Antes de activar el cifrado en una instancia existente, pruebe la recuperación y verifique el descifrado y los bytes realmente devueltos.
+Protege `MINDDY_DATA_ROOT_KEY` fuera de la base de datos y conserva el material de recuperación necesario para las copias actuales e históricas. Restaura juntos la base de datos, los bytes y la configuración. Cifra la copia externa que contiene datos y claves. Cambiar la raíz sin volver a envolver las claves hace ilegible el contenido; desactivar el indicador no lo devuelve a texto claro. Antes de activar el cifrado en una instancia existente, prueba la recuperación y verifica el descifrado y los bytes realmente devueltos.

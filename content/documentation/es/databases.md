@@ -17,8 +17,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 18,
-  "sourceRevision": 17,
+  "revision": 19,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -56,9 +56,9 @@
     ]
   },
   "review": {
-    "revision": 18,
-    "fact": "agent:/root/min764 (database views section checked against components/pages/database-view-strip.tsx, components/pages/page-database-view.tsx, lib/use-page-database-views.ts and lib/server/page-database-views.ts: named views shared by the project, each with its own sort, filter and hidden columns, managed and reordered by writers, adjusted locally by readers; insertion clears the active view's filter; rest of the article unchanged since the MIN-747 review; no figure changed); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures)",
-    "language": "agent:/root/min764 (es changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance)",
+    "revision": 19,
+    "fact": "agent:/root/min764 (database views section checked against components/pages/database-view-strip.tsx, components/pages/page-database-view.tsx, lib/use-page-database-views.ts and lib/server/page-database-views.ts: named views shared by the project, each with its own sort, filter and hidden columns, managed and reordered by writers, adjusted locally by readers; insertion clears the active view's filter; rest of the article unchanged since the MIN-747 review; no figure changed); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min764 (es changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -83,7 +83,7 @@
       "src": "/documentation/es/database-setup-cards.png",
       "alt": "Vista previa del componente con tarjetas para configurar una nueva base de datos con Numo o importar una existente.",
       "caption": "Sugerencias para una nueva base con datos de demostración. Elige Numo o la importación, o cierra las tarjetas para continuar manualmente.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -100,7 +100,7 @@
       "src": "/documentation/es/database-property-types.png",
       "alt": "Selector de tipo de columna con un campo de búsqueda, texto, número, selecciones, fechas, personas y casilla de verificación.",
       "caption": "Elige un tipo que corresponda a los valores que deseas guardar.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -117,7 +117,7 @@
       "src": "/documentation/es/database-entry.png",
       "alt": "Entrada de demostración con descripción, duración 2.5, casilla marcada y selección vacía.",
       "caption": "Abre una entrada para leer el texto completo y editar los valores según su tipo.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -133,7 +133,7 @@
       "src": "/documentation/es/database-conversion-warning.png",
       "alt": "Advertencia de conversión: cambiar de Texto a Número borra una celda incompatible, con botones para cancelar o confirmar.",
       "caption": "Revisa el número real de celdas incompatibles antes de confirmar. Cancelar conserva los valores actuales.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -149,7 +149,7 @@
       "src": "/documentation/es/database-import-review.png",
       "alt": "Revisión de un CSV local: dos páginas de entradas y dos columnas, con el botón Importar base de datos.",
       "caption": "Revisa las entradas analizadas y el número de columnas antes de importar a la base vacía.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -165,7 +165,7 @@
       "src": "/documentation/es/database-options.png",
       "alt": "Vista previa del componente Editar opciones con estados en español, flechas hacia arriba y abajo, papeleras y la explicación de la eliminación.",
       "caption": "Edita juntos los nombres, colores y orden de las opciones. La papelera retira una opción del borrador; Guardar aplica los cambios. Se muestran datos de demostración.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -180,14 +180,14 @@
       "id": "database-date-time-preview",
       "kind": "screenshot",
       "src": "/documentation/es/database-date-time.png",
-      "alt": "Vista previa del selector de fecha con el 12 de octubre de 2026 seleccionado, Añade una hora activado y Hora en 14:30.",
+      "alt": "Vista previa del selector de fecha con el 24 de julio de 2026 seleccionado, Añade una hora activado y Hora en 02:00 AM.",
       "caption": "Activa Añade una hora para introducir una hora. Esta vista previa del componente usa datos de demostración y la zona horaria del dispositivo.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
-      "capturedAt": "2026-10-12",
+      "capturedAt": "2026-10-22",
       "viewport": [
         324,
-        444
+        498
       ],
       "deviceScaleFactor": 2,
       "theme": "light",
@@ -243,7 +243,7 @@ Elige un día en Fecha. Para incluir una hora, activa Añade una hora y rellena 
 
 ![Vista previa del componente Editar opciones con estados en español, flechas hacia arriba y abajo, papeleras y la explicación de la eliminación.](/documentation/es/database-options.png)
 
-![Vista previa del selector de fecha con el 12 de octubre de 2026 seleccionado, Añade una hora activado y Hora en 14:30.](/documentation/es/database-date-time.png)
+![Vista previa del selector de fecha con el 24 de julio de 2026 seleccionado, Añade una hora activado y Hora en 02:00 AM.](/documentation/es/database-date-time.png)
 
 ### Abrir, seleccionar e insertar entradas {#entry-actions}
 

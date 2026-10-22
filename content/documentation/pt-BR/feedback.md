@@ -20,8 +20,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
-  "sourceRevision": 14,
+  "revision": 16,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -67,9 +67,9 @@
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of publish-a-feedback-board-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 16,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of publish-a-feedback-board-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -96,12 +96,12 @@
       "src": "/documentation/pt-BR/publish-a-feedback-board-workflow.png",
       "alt": "Mural público de feedback ativado, com identidade dos visitantes por código de e-mail, a ação Ativar SSO e URL oculta.",
       "caption": "O proprietário ativa o mural e escolhe a identidade dos visitantes. Este mural de demonstração usa a verificação por e-mail; sua URL está oculta.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
         816,
-        566
+        596
       ],
       "theme": "light",
       "padding": 24,
@@ -113,7 +113,7 @@
       "src": "/documentation/pt-BR/submit-and-follow-feedback-workflow.png",
       "alt": "Formulário de feedback do visitante com título, descrição e visibilidade pública ativada.",
       "caption": "Um visitante identificado envia uma necessidade e escolhe sua visibilidade. O exemplo foi realmente enviado com a revisão automática desativada.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -129,7 +129,7 @@
       "src": "/documentation/pt-BR/feedback-objective-selection.png",
       "alt": "Prévia dos componentes de seleção de objetivo para um feedback e uma integração, ambos definidos como Docs.",
       "caption": "Seletores de objetivo com dados de demonstração. Novos feedbacks herdam a configuração da integração.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -146,15 +146,16 @@
       "src": "/documentation/pt-BR/feedback-pages-and-views-workflow.png",
       "alt": "Guia de feedback publicado e selecionado na navegação do mural, legível sem entrar na conta.",
       "caption": "Publique uma página, ative as guias de páginas e selecione-a para o mural. Esta página de demonstração foi aberta anonimamente; seu URL opaco mantém `noindex`.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-22",
       "viewport": [
-        1148,
-        388
+        1328,
+        668
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -178,7 +179,7 @@ Escolha se os visitantes se identificam por código de email ou pelo SSO configu
 
 Desativar o mural torna suas páginas indisponíveis para os visitantes. A recepção entre servidores usa uma chave de integração de feedback separada e pode continuar sem mural público. A escolha de visibilidade de um feedback, seu estado de revisão e seu status de spam também controlam sua exibição; ativar o mural não publica, por si só, todos os feedbacks.
 
-O proprietário ativa ou desativa a **Revisão do Numo** nas configurações de Feedback do projeto; não existe um interruptor separado na instância. Com a revisão ativa, os envios do quadro público e das integrações aguardam revisão antes da publicação, enquanto os feedbacks criados pela equipe não ficam retidos. O que é marcado como sensível, como uma vulnerabilidade ou dados pessoais, passa a ser privado e aguarda em **Para revisar**. A revisão usa o provedor de IA da instância e o orçamento de IA do proprietário do projeto: quando o orçamento acaba, os feedbacks aguardam, visíveis apenas para a equipe, a menos que o proprietário ative **Publique sem revisão quando o orçamento de IA acabar**. Com a revisão desativada, os feedbacks são publicados como enviados, sem categorias automáticas, filtro de brincadeiras nem verificação de privacidade. Confira a fila depois de enviar um exemplo de demonstração. O Numo só envia respostas públicas quando solicitado explicitamente.
+O proprietário ativa ou desativa a **Revisão do Numo** nas configurações de Feedback do projeto; não existe um interruptor separado na instância. Com a revisão ativa, os envios do quadro público e das integrações aguardam revisão antes da publicação, enquanto os feedbacks criados pela equipe não ficam retidos. O que é marcado como sensível, como uma vulnerabilidade ou dados pessoais, passa a ser privado e aguarda em **Para revisar**. A revisão usa o provedor de IA da instância e o orçamento de IA do proprietário do projeto: quando o orçamento acaba, os feedbacks aguardam, visíveis apenas para a equipe, a menos que o proprietário ative **Publicar sem revisão quando o orçamento de IA acabar**. Com a revisão desativada, os feedbacks são publicados como enviados, sem categorias automáticas, filtro de brincadeiras nem verificação de privacidade. Confira a fila depois de enviar um exemplo de demonstração. O Numo só envia respostas públicas quando solicitado explicitamente.
 
 ![Mural público de feedback ativado, com identidade dos visitantes por código de e-mail, a ação Ativar SSO e URL oculta.](/documentation/pt-BR/publish-a-feedback-board-workflow.png)
 
@@ -196,7 +197,7 @@ As gravações no mural público são limitadas a 10 MiB. A transcrição permit
 
 Vote em uma solicitação existente em vez de duplicá-la. Cada identidade tem um voto por feedback, em uma solicitação que você ainda pode ler: pública ou sua. Para comentar, é necessário identificar-se e os comentários públicos precisam estar habilitados; um comentário público aceita 5.000 caracteres. Uma conversa longa abre nos comentários mais recentes; escolha **Mostrar comentários anteriores** para ler o restante. Você pode remover definitivamente seu próprio comentário depois de confirmar, e a equipe pode moderar comentários públicos.
 
-Abra Meus comentários para encontrar suas solicitações e votos, conforme o que sua identidade atual pode acessar. Leia ali, ou na solicitação, o status público e as respostas da equipe. Notas internas da equipe não são respostas públicas. Se o SSO tiver expirado, volte por um novo link do produto; mudar de navegador ou identidade pode alterar a lista pessoal.
+Abra Meu feedback para encontrar suas solicitações e votos, conforme o que sua identidade atual pode acessar. Leia ali, ou na solicitação, o status público e as respostas da equipe. Notas internas da equipe não são respostas públicas. Se o SSO tiver expirado, volte por um novo link do produto; mudar de navegador ou identidade pode alterar a lista pessoal.
 
 ![Formulário de feedback do visitante com título, descrição e visibilidade pública ativada.](/documentation/pt-BR/submit-and-follow-feedback-workflow.png)
 

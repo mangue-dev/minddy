@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 9,
+  "revision": 11,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -48,9 +48,9 @@
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance)",
+    "revision": 11,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -73,7 +73,7 @@
       "src": "/documentation/it/integration-api-and-webhooks-flow.svg",
       "alt": "Schema: Server conserva chiave integrazione. POST ticket o feedback con tipo corretto. Proprietario sceglie destinazione webhook. Ricevente verifica HMAC grezzo e UUID.",
       "caption": "Segui le fasi in questo ordine. Server conserva chiave integrazione. `POST` ticket o feedback con tipo corretto. Proprietario sceglie destinazione webhook. Ricevente verifica HMAC grezzo e UUID.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -105,7 +105,7 @@
       "src": "/documentation/it/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Sequenze distinte di acquisizione backend e SSO browser con segreti diversi.",
       "caption": "La chiave di acquisizione autentica le chiamate server. Il segreto SSO della bacheca firma un token visitatore breve e monouso.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -197,7 +197,7 @@ Fornisci un titolo non vuoto di massimo 200 caratteri, un corpo facoltativo di m
 
 Invia `{"user":{"external_id":"demo-user-1"}}` tramite `POST` a `/api/v1/feedback/<id>/vote` con gli stessi header. Ogni identità dispone di un voto; ripeterlo è idempotente. Un feedback unito restituisce 409 `post_merged` con la destinazione canonica.
 
-La creazione consente 20 chiamate al minuto per chiave; i voti, 60. Rispetta `Retry-After` in caso di 429. Controlla 401 `invalid_api_key`, 403 `wrong_key_kind`, 400 `invalid_json` e gli errori di campo 422 prima di riprovare. La creazione non è un aggiornamento idempotente: se perdi la risposta, controlla la casella feedback del team prima di ripetere. Le chiavi feedback non offrono webhook di issue in uscita. Un’integrazione issue configurata separatamente supporta quel canale con firma propria e consegna senza garanzia.
+La creazione consente 20 chiamate al minuto per chiave; i voti, 60. Rispetta `Retry-After` in caso di 429. Controlla 401 `invalid_api_key`, 403 `wrong_key_kind`, 400 `invalid_json` e gli errori di campo 422 prima di riprovare. La creazione non è un aggiornamento idempotente: se perdi la risposta, controlla la casella feedback del team prima di ripetere. Le chiavi feedback non offrono webhook di ticket in uscita. Un’integrazione per i ticket configurata separatamente supporta quel canale con firma propria e consegna senza garanzia.
 
 ### Identificare i visitatori tramite SSO {#sso}
 

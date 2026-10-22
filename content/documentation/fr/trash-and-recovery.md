@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -38,10 +38,10 @@
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 7,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "pages",
@@ -57,17 +57,18 @@
       "id": "trash-and-recovery-steps",
       "kind": "screenshot",
       "src": "/documentation/fr/reader-trash.png",
-      "alt": "Ticket de démonstration récupérable avec trente jours restants dans la corbeille.",
+      "alt": "Ticket AUR-20 récupérable dans la corbeille, avec son projet, l’auteur de la suppression et la durée de conservation restante.",
       "caption": "Les actions de la ligne permettent de restaurer le ticket. Vider la corbeille est une opération permanente distincte.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-22",
       "viewport": [
         994,
-        1046
+        526
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -82,7 +83,7 @@ Ouvrez la corbeille depuis le menu du compte. Elle contient le travail supprimé
 
 Restaurez d’abord le parent ou conteneur nécessaire. Par exemple, restaurez la base de données avant une entrée supprimée séparément. Ouvrez ensuite la destination et inspectez contenu et propriétés. Les objets supprimés restent récupérables pendant 30 jours, avant leur suppression définitive par la rétention. Seul le propriétaire peut restaurer ou supprimer définitivement un projet ou une routine. Le propriétaire et les Membres peuvent restaurer ou supprimer les autres objets pris en charge du projet tant qu’ils y ont accès. Un Lecteur ne peut pas modifier un projet : les éléments d’un projet que vous ne faites que lire n’apparaissent donc pas dans votre corbeille.
 
-![Ticket de démonstration récupérable avec trente jours restants dans la corbeille.](/documentation/fr/reader-trash.png)
+![Ticket AUR-20 récupérable dans la corbeille, avec son projet, l’auteur de la suppression et la durée de conservation restante.](/documentation/fr/reader-trash.png)
 
 ## Suppression définitive et récupération échouée {#permanent-removal}
 

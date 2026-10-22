@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 6,
+  "revision": 8,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -38,9 +38,9 @@
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 8,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -57,17 +57,18 @@
       "id": "trash-and-recovery-steps",
       "kind": "screenshot",
       "src": "/documentation/pt-BR/reader-trash.png",
-      "alt": "Ticket de demonstração recuperável com trinta dias restantes na lixeira.",
+      "alt": "Ticket AUR-20 recuperável na lixeira, com projeto, autor da exclusão e retenção restante.",
       "caption": "As ações da linha permitem restaurá-lo. Esvaziar a lixeira é uma operação permanente separada.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-22",
       "viewport": [
         994,
-        1046
+        526
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -82,7 +83,7 @@ Abra a lixeira pelo menu da conta. Ela contém trabalho excluído recuperável, 
 
 Restaure primeiro o pai ou contêiner necessário quando o item depender dele. Por exemplo, restaure um banco de dados excluído antes de uma entrada excluída separadamente. Reabra o destino restaurado e inspecione conteúdo e propriedades. Itens excluídos permanecem recuperáveis por 30 dias antes de a retenção removê-los permanentemente. Somente o proprietário pode restaurar ou remover permanentemente um projeto ou uma rotina. O proprietário e os Membros podem restaurar ou remover os outros objetos compatíveis do projeto enquanto mantiverem acesso. Um Leitor não pode alterar um projeto, então os itens de um projeto que você apenas lê não aparecem na sua lixeira.
 
-![Ticket de demonstração recuperável com trinta dias restantes na lixeira.](/documentation/pt-BR/reader-trash.png)
+![Ticket AUR-20 recuperável na lixeira, com projeto, autor da exclusão e retenção restante.](/documentation/pt-BR/reader-trash.png)
 
 ## Exclusão permanente e recuperação com falha {#permanent-removal}
 

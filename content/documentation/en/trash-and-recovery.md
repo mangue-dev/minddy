@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -38,10 +38,10 @@
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 7,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "pages",
@@ -57,17 +57,18 @@
       "id": "trash-and-recovery-steps",
       "kind": "screenshot",
       "src": "/documentation/en/reader-trash.png",
-      "alt": "Recoverable demonstration issue with thirty days remaining in trash.",
+      "alt": "Recoverable issue AUR-20 in trash, with its project, who deleted it and the remaining retention.",
       "caption": "Use the row’s actions to restore the issue. Emptying trash is a separate permanent operation.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-22",
       "viewport": [
         994,
-        1046
+        526
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -82,7 +83,7 @@ Open Trash from the account menu. It contains recoverable deleted work, includin
 
 Restore the required parent or container first when the item depends on one. For example, restore a deleted database before an entry deleted separately from it. Reopen the restored destination and inspect its content and properties. Deleted items remain recoverable for 30 days before retention removes them permanently. Only the project owner can restore or permanently remove a project or routine. The owner and Members can restore or remove the other supported project objects while they retain access. A Reader cannot change a project, so items from a project you only read do not appear in your trash.
 
-![Recoverable demonstration issue with thirty days remaining in trash.](/documentation/en/reader-trash.png)
+![Recoverable issue AUR-20 in trash, with its project, who deleted it and the remaining retention.](/documentation/en/reader-trash.png)
 
 ## Permanent deletion and failed recovery {#permanent-removal}
 

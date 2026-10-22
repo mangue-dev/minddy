@@ -231,6 +231,14 @@ export const TABLE_SCOPES = {
     projectColumn: "project_id",
     userRefColumns: ["created_by", "updated_by", "deleted_by"],
   },
+
+  // Read-only publication of a demo page (the public site's page tabs). A
+  // share has no project column: it is anchored by the page it publishes.
+  view_shares: {
+    writable: true,
+    parents: [{ column: "page_id", table: "pages" }],
+    userRefColumns: ["created_by"],
+  },
 };
 
 /** Tables where we have the right to write — strict subset of TABLE_SCOPES. */
@@ -245,7 +253,7 @@ export const WRITABLE_TABLES = Object.fromEntries(
 export const ALLOWED_RPC = new Set(["next_issue_number"]);
 
 /** Actual schema enums. Any value outside the list breaks a CHECK on the base side. */
-export const ISSUE_STATUS = ["backlog", "todo", "in_progress", "in_review", "done", "canceled"];
+export const ISSUE_STATUS = ["triage", "backlog", "todo", "in_progress", "in_review", "done", "canceled"];
 export const ISSUE_PRIORITY = ["none", "urgent", "high", "medium", "low"];
 export const ISSUE_EFFORT = ["xs", "s", "m", "l", "xl"];
 

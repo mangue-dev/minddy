@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -46,10 +46,10 @@
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 10,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "authentication-and-email",
@@ -64,17 +64,18 @@
       "id": "instance-administration-flow",
       "kind": "screenshot",
       "src": "/documentation/es/instance-administration-overview.png",
-      "alt": "Resumen de administración con métricas agregadas de cuentas, actividad, incorporación y planes.",
+      "alt": "Resumen de administración con métricas agregadas de cuentas, actividad, incorporación y contenido.",
       "caption": "Resumen muestra indicadores agregados de la instancia; la captura procede de una instancia de demostración. Finanzas aparece porque allí hay una clave gestionada de OpenRouter configurada.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         1488,
         1148
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "instance-administration-models",
@@ -82,15 +83,16 @@
       "src": "/documentation/es/instance-administration-models.png",
       "alt": "Configuración de modelos de IA y razonamiento de la instancia.",
       "caption": "Modelos configura valores predeterminados y usos específicos. La captura muestra la configuración existente; no se cambió ningún modelo ni proveedor.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-22",
       "viewport": [
         1488,
         1148
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -101,18 +103,18 @@
 
 ## Usar la consola de administración de la instancia {#instance-administration}
 
-Administrar la instancia es distinto de ser propietario de un proyecto. `ADMIN_EMAILS` contiene las direcciones de cuentas confirmadas autorizadas en el servidor; `app_metadata.role=admin` firmado por el servidor también es un origen de rol válido. La sesión de administrador exige `aal2`, MFA verificada y comprobaciones actuales de cuenta y sesión. Si fallan, se deniega el acceso. Inicie sesión, complete TOTP y abra `/admin`. No cambie roles en la base de datos para evitar el registro MFA. La consola y sus API privadas siguen siendo `noindex`.
+Administrar la instancia es distinto de ser propietario de un proyecto. `ADMIN_EMAILS` contiene las direcciones de cuentas confirmadas autorizadas en el servidor; `app_metadata.role=admin` firmado por el servidor también es un origen de rol válido. La sesión de administrador exige `aal2`, MFA verificada y comprobaciones actuales de cuenta y sesión. Si fallan, se deniega el acceso. Inicia sesión, completa TOTP y abre `/admin`. No cambies roles en la base de datos para evitar el registro MFA. La consola y sus API privadas siguen siendo `noindex`.
 
 
 
 
-![Resumen de administración con métricas agregadas de cuentas, actividad, incorporación y planes.](/documentation/es/instance-administration-overview.png)
+![Resumen de administración con métricas agregadas de cuentas, actividad, incorporación y contenido.](/documentation/es/instance-administration-overview.png)
 
 ![Configuración de modelos de IA y razonamiento de la instancia.](/documentation/es/instance-administration-models.png)
 
 ## Usar capacidades disponibles {#panels}
 
-La consola incluye Resumen, Usuarios, Modelos y, cuando está disponible, Finanzas. Finanzas queda oculto sin una capacidad OpenRouter gestionada vinculada. La asignación de planes depende de la facturación configurada o de un override existente. Abrir la consola no añade facturación Cloud a una instancia self-hosted sin proveedores comerciales. **Usuarios** solo encuentra una cuenta por su dirección de correo electrónico exacta; ábrala para ver el estado de confirmación de su correo, consultar o restablecer su presupuesto de uso de IA, regalar un plan con la condición anterior o marcarla como cuenta interna, lo que la excluye de todas las estadísticas. El panel no muestra la actividad de la cuenta ni su contenido personal; abra una cuenta solo para una tarea de soporte o facturación. Revise modelos, valores predeterminados, usuarios y cuotas en la versión instalada antes de cambiar nada. Los cambios afectan a toda la instancia: utilice cuentas de demostración para comprobarlos.
+La consola incluye Resumen, Usuarios, Modelos y, cuando está disponible, Finanzas. Finanzas queda oculto sin una capacidad OpenRouter gestionada vinculada. La asignación de planes depende de la facturación configurada o de un override existente. Abrir la consola no añade facturación Cloud a una instancia self-hosted sin proveedores comerciales. **Usuarios** solo encuentra una cuenta por su dirección de correo electrónico exacta; ábrela para ver el estado de confirmación de su correo, consultar o restablecer su presupuesto de uso de IA, regalar un plan con la condición anterior o marcarla como cuenta interna, lo que la excluye de todas las estadísticas. El panel no muestra la actividad de la cuenta ni su contenido personal; abre una cuenta solo para una tarea de soporte o facturación. Revisa modelos, valores predeterminados, usuarios y cuotas en la versión instalada antes de cambiar nada. Los cambios afectan a toda la instancia: utiliza cuentas de demostración para comprobarlos.
 
 ## Elegir el modelo de decisión de IA {#decision-model}
 
@@ -131,4 +133,4 @@ Los campos de embedding y de transcripción rechazan al guardar un modelo de la 
 
 ## Mantener responsabilidades operativas {#responsibilities}
 
-Usted sigue siendo responsable de limitar los privilegios, recuperar MFA, proteger secretos del servidor, mantener copias, gestionar retención e incidentes y controlar costes. La consola no sustituye una restauración de base de datos y Storage ni una prueba SMTP. Si se deniega el acceso, compruebe dirección confirmada, lista autorizada, MFA y sesión actual antes de modificar la configuración. Una sesión revocada o una cuenta bloqueada no conserva privilegios por tener un JWT todavía válido. No incluya datos privados ajenos, factores de seguridad o detalles financieros en las capturas documentales.
+Sigues siendo responsable de limitar los privilegios, recuperar MFA, proteger secretos del servidor, mantener copias, gestionar retención e incidentes y controlar costes. La consola no sustituye una restauración de base de datos y Storage ni una prueba SMTP. Si se deniega el acceso, comprueba dirección confirmada, lista autorizada, MFA y sesión actual antes de modificar la configuración. Una sesión revocada o una cuenta bloqueada no conserva privilegios por tener un JWT todavía válido. No incluyas datos privados ajenos, factores de seguridad o detalles financieros en las capturas documentales.

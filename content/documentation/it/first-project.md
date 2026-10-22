@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 8,
+  "revision": 11,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -42,9 +42,9 @@
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance)",
+    "revision": 11,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -63,17 +63,18 @@
       "id": "first-project-steps",
       "kind": "screenshot",
       "src": "/documentation/it/reader-first-project.png",
-      "alt": "Ticket dimostrativo completato con descrizione e commento salvato.",
-      "caption": "Lo stato completato documenta la verifica del percorso nell’applicazione. Non afferma che sia stato provato il link email del sito d’esempio.",
-      "revision": 10,
+      "alt": "Ticket AUR-3 in corso, con descrizione, assegnatario, impegno e categoria.",
+      "caption": "Il ticket mostra identificativo, stato e proprietà. Segnalo come completato solo dopo aver verificato il risultato atteso.",
+      "revision": 11,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-22",
       "viewport": [
         508,
         1096
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -94,7 +95,7 @@ Se il tuo team ha già un progetto, comunica al proprietario l'email del tuo acc
 4. Imposta lo stato «In corso» quando inizi il lavoro. Esegui il controllo e registra il risultato in un commento. Usa «In revisione» se qualcuno deve ancora esaminarlo.
 5. Imposta «Completato» dopo aver verificato il risultato previsto. I tabelloni nascondono la colonna **Completato** per impostazione predefinita: seleziona **Completato** nel filtro **Stato** del tabellone, oppure cerca l’identificativo del ticket, per confermare il cambiamento.
 
-![Ticket dimostrativo completato con descrizione e commento salvato.](/documentation/it/reader-first-project.png)
+![Ticket AUR-3 in corso, con descrizione, assegnatario, impegno e categoria.](/documentation/it/reader-first-project.png)
 
 ## Risolvere un risultato inatteso {#first-use-recovery}
 

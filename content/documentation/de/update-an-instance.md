@@ -3,7 +3,7 @@
   "id": "update-an-instance",
   "locale": "de",
   "title": "Instanzaktualisierungen",
-  "summary": "Aktualisieren Sie eine veröffentlichte Version nach der anderen.",
+  "summary": "Aktualisiere eine veröffentlichte Version nach der anderen.",
   "topic": "Instanz betreiben",
   "type": "guide",
   "audiences": [
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 6,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "backups-and-restoration"
@@ -54,8 +54,8 @@
       "kind": "diagram",
       "src": "/documentation/de/update-an-instance-flow.svg",
       "alt": "Diagramm: Schreiben und Jobs stoppen. Vollständiges Vorupdate-Backup versiegeln. Zielmigrationen, danach Zielanwendung. Wiederherstellung prüfen und öffnen.",
-      "caption": "Lesen Sie die Schritte in dieser Reihenfolge. Schreiben und Jobs stoppen. Vollständiges Vorupdate-Backup versiegeln. Zielmigrationen, danach Zielanwendung. Wiederherstellung prüfen und öffnen.",
-      "revision": 5,
+      "caption": "Lies die Schritte in dieser Reihenfolge. Schreiben und Jobs stoppen. Vollständiges Vorupdate-Backup versiegeln. Zielmigrationen, danach Zielanwendung. Wiederherstellung prüfen und öffnen.",
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -90,7 +90,7 @@
 
 ## Eine Instanz mit gesichertem Rückweg aktualisieren {#update-an-instance}
 
-Aktualisieren Sie eine veröffentlichte Version nach der anderen. Lesen Sie Hinweise, Migrationsunterschiede und Kompatibilitätseinträge. Kombinieren Sie minddy-Update nicht mit PostgreSQL-Hauptversion oder Supabase-Imagewechsel. Prüfen Sie Zielquellcode, Release-Prüfsummen und OCI-Digest und bereiten Sie ein separates Verzeichnis mit eingefrorenen Abhängigkeiten vor. Kündigen Sie Ausfall und Abbruchfrist an. Bestätigen Sie nutzbares externes Backup und kürzlich erfolgreiche Wiederherstellung. Erhalten Sie die aktuelle Anwendung und geschützte Umgebung startfähig.
+Aktualisiere eine veröffentlichte Version nach der anderen. Lies Hinweise, Migrationsunterschiede und Kompatibilitätseinträge. Kombiniere das minddy-Update nicht mit PostgreSQL-Hauptversion oder Supabase-Imagewechsel. Prüfe Zielquellcode, Release-Prüfsummen und OCI-Digest und bereite ein separates Verzeichnis mit eingefrorenen Abhängigkeiten vor. Kündige Ausfall und Abbruchfrist an. Bestätige nutzbares externes Backup und kürzlich erfolgreiche Wiederherstellung. Halte die aktuelle Anwendung und geschützte Umgebung startfähig.
 
 Einige Migrationen löschen Daten ausgemusterter Funktionen endgültig. Das Update von v0.11.0 auf v0.20.0 entfernt die Einträge benutzerdefinierter Domains, die Läufe und Unterhaltungen des Code-Agenten samt Verlauf und Verbindungen sowie die gespeicherten Ansichten der Befehlspalette (persönliche Lesezeichen; Board-Ansichten bleiben erhalten). Nach diesen Migrationen kann nur das vollständige Backup von vor dem Update sie zurückholen.
 
@@ -99,9 +99,9 @@ Einige Migrationen löschen Daten ausgemusterter Funktionen endgültig. Das Upda
 
 ## Das full-Profil aktualisieren {#full}
 
-Verwenden Sie den full-Compose-Kontext des Kaltbackup-Artikels. Stoppen Sie öffentliche Zugänge, Schreibzugriffe, Worker und Scheduler und erstellen Sie den vollständigen versiegelten Satz. Kopieren Sie die Umgebung mit Modus `0600` nach `TARGET_ENV_FILE` und ändern Sie nur `MINDDY_RELEASE`, `MINDDY_IMAGE`, `MINDDY_DEPLOY_DIR` und `MINDDY_ENV_FILE` für das geprüfte Ziel. Erhalten Sie URLs, Zugangsdaten, Schlüssel und Funktionsauswahl. Löschen Sie `AGENT_EXECUTION_BACKEND`, `AGENT_RUNNER_URL`, `AGENT_RUNNER_SECRET`, `AGENT_CONTROL_ORIGIN` sowie die Vercel-Sandbox-Variablen `VERCEL_TOKEN`, `VERCEL_TEAM_ID` und `VERCEL_PROJECT_ID`, falls eine frühere Release sie hinterlassen hat: Die Anwendung liest sie nicht mehr, und `--remove-orphans` entfernt den ausgemusterten Container `agent-runner`. Die folgende Sequenz im installierten Kontext startet nur Backendabhängigkeiten, migriert mit Zielcode und prüft die Anwendung bei gestopptem Caddy und Scheduler.
+Verwende den full-Compose-Kontext des Kaltbackup-Artikels. Stoppe öffentliche Zugänge, Schreibzugriffe, Worker und Scheduler und erstelle den vollständigen versiegelten Satz. Kopiere die Umgebung mit Modus `0600` nach `TARGET_ENV_FILE` und ändere nur `MINDDY_RELEASE`, `MINDDY_IMAGE`, `MINDDY_DEPLOY_DIR` und `MINDDY_ENV_FILE` für das geprüfte Ziel. Behalte URLs, Zugangsdaten, Schlüssel und Funktionsauswahl. Lösche `AGENT_EXECUTION_BACKEND`, `AGENT_RUNNER_URL`, `AGENT_RUNNER_SECRET`, `AGENT_CONTROL_ORIGIN` sowie die Vercel-Sandbox-Variablen `VERCEL_TOKEN`, `VERCEL_TEAM_ID` und `VERCEL_PROJECT_ID`, falls eine frühere Release sie hinterlassen hat: Die Anwendung liest sie nicht mehr, und `--remove-orphans` entfernt den ausgemusterten Container `agent-runner`. Die folgende Sequenz im installierten Kontext startet nur Backendabhängigkeiten, migriert mit Zielcode und prüft die Anwendung bei gestopptem Caddy und Scheduler.
 
-Beim Update von v0.10.30 auf v0.11.0 führt die Zielversion `MINDDY_DATA_ROOT_KEY` ein. Ergänzen Sie den Schlüssel nur, wenn die vorhandene Konfiguration keinen Root-Schlüssel enthält, und behalten Sie alle bisherigen Geheimnisse zur Verschlüsselung von Zugangsdaten. Der folgende Befehl schreibt einen neuen Root-Schlüssel mit 32 Bytes direkt in die geschützte Zieldatei, ohne ihn anzuzeigen, und ersetzt keinen ungültigen gespeicherten Wert. Ist die Quelle v0.11.0 oder neuer, existiert der Root-Schlüssel normalerweise bereits, und der Befehl prüft ihn nur. Der Root-Schlüssel allein aktiviert keine Inhaltsverschlüsselung: Ohne `MINDDY_CONTENT_ENCRYPTION_ENABLED=true` bleibt sie deaktiviert.
+Beim Update von v0.10.30 auf v0.11.0 führt die Zielversion `MINDDY_DATA_ROOT_KEY` ein. Ergänze den Schlüssel nur, wenn die vorhandene Konfiguration keinen Root-Schlüssel enthält, und behalte alle bisherigen Geheimnisse zur Verschlüsselung von Zugangsdaten. Der folgende Befehl schreibt einen neuen Root-Schlüssel mit 32 Bytes direkt in die geschützte Zieldatei, ohne ihn anzuzeigen, und ersetzt keinen ungültigen gespeicherten Wert. Ist die Quelle v0.11.0 oder neuer, existiert der Root-Schlüssel normalerweise bereits, und der Befehl prüft ihn nur. Der Root-Schlüssel allein aktiviert keine Inhaltsverschlüsselung: Ohne `MINDDY_CONTENT_ENCRYPTION_ENABLED=true` bleibt sie deaktiviert.
 
 ```bash
 export TARGET_RELEASE_DIR=/srv/minddy/releases/vX.Y.NEXT
@@ -149,13 +149,13 @@ pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
 
 ## Managed- und Quellcodebetrieb unterscheiden {#managed-source}
 
-Managed OCI folgt demselben Zielumgebungs- und Imageablauf mit anbietergesteuertem Datenbank-/Storage-Backup und Migrationszugriff statt lokalen Backenddiensten. Bei Quellcode bauen Sie den Zieltag, sperren öffentliche API-Schreibzugriffe, sichern logisch beziehungsweise beim Anbieter, bootstrappen mit Zielcode und starten Produktion hinter Wartung. Ersetzen Sie OCI zur Prüfung nicht durch einen Quellcodeprozess. Starten Sie alten Code nicht auf geändertem Schema ohne ausdrückliche Kompatibilitätsgarantie.
+Managed OCI folgt demselben Zielumgebungs- und Imageablauf mit anbietergesteuertem Datenbank-/Storage-Backup und Migrationszugriff statt lokalen Backenddiensten. Bei Quellcode baust du den Zieltag, sperrst öffentliche API-Schreibzugriffe, sicherst logisch beziehungsweise beim Anbieter, bootstrappst mit Zielcode und startest Produktion hinter Wartung. Ersetze OCI zur Prüfung nicht durch einen Quellcodeprozess. Starte alten Code nicht auf geändertem Schema ohne ausdrückliche Kompatibilitätsgarantie.
 
 
-Die lokalen Compose-Befehle im folgenden Quellverfahren gelten nur für ein vom Betreiber kontrolliertes Backend. Ersetzen Sie bei verwaltetem Supabase das Anhalten und Starten des Backends sowie den Migrationszugriff durch unterstützte Anbieteroperationen. Bewahren Sie die geschützte minddy-Umgebung und ein vollständiges Anbieter-Backup auf und starten Sie anschließend die geprüfte Zielanwendung.
+Die lokalen Compose-Befehle im folgenden Quellverfahren gelten nur für ein vom Betreiber kontrolliertes Backend. Ersetze bei verwaltetem Supabase das Anhalten und Starten des Backends sowie den Migrationszugriff durch unterstützte Anbieteroperationen. Bewahre die geschützte minddy-Umgebung und ein vollständiges Anbieter-Backup auf und starte anschließend die geprüfte Zielanwendung.
 
 
-Setzen Sie für das Quellverfahren `MINDDY_REPO` auf das versionierte Quellrepository, `SUPABASE_COMPOSE_DIR` auf das betreiberkontrollierte Backend aus [dem logischen Backup-Kontext](/de/dokumentation/backups-and-restoration#outage), `TO_TAG` auf den tatsächlich nächsten veröffentlichten und geprüften Tag und `TARGET_RELEASE_DIR` auf dessen separat erstellten Checkout. Stellen Sie die passenden Datenbank- und öffentlichen API-Variablen privat bereit. Starten Sie das Ziel nach Bootstrap und Prüfung mit `pnpm start` oder Ihrem vorhandenen Prozessmanager hinter der Wartung. Öffnen Sie den Zugang erst nach den folgenden Prüfungen.
+Setze für das Quellverfahren `MINDDY_REPO` auf das versionierte Quellrepository, `SUPABASE_COMPOSE_DIR` auf das betreiberkontrollierte Backend aus [dem logischen Backup-Kontext](/de/dokumentation/backups-and-restoration#outage), `TO_TAG` auf den tatsächlich nächsten veröffentlichten und geprüften Tag und `TARGET_RELEASE_DIR` auf dessen separat erstellten Checkout. Stelle die passenden Datenbank- und öffentlichen API-Variablen privat bereit. Starte das Ziel nach Bootstrap und Prüfung mit `pnpm start` oder deinem vorhandenen Prozessmanager hinter der Wartung. Öffne den Zugang erst nach den folgenden Prüfungen.
 
 ```bash
 test "$(git -C "$TARGET_RELEASE_DIR" rev-parse HEAD)" = \
@@ -173,4 +173,4 @@ curl --fail --silent --show-error "$MINDDY_PUBLIC_SUPABASE_URL/auth/v1/health"
 
 ## Ergebnis überprüfen {#verify}
 
-Führen Sie Wartungsdoctor vor Zugang/Jobs und normalen doctor nach Öffnung aus. Melden Sie sich an, prüfen Sie erhaltene Projekt-/Ticket-IDs, erstellen und ändern Sie Demodaten, übertragen Sie Anhang mit gleichem SHA-256 und prüfen Sie Realtime und harmlosen Job. Ein widerrufener Integrationsschlüssel muss weiter scheitern. Erfassen Sie Imagedigest und Migrationen. Bei Fehler bleibt der fehlerhafte Stack gestoppt; inkompatibler Rückweg stellt den vollständigen alten Satz auf leerem Ziel wieder her. Es gibt keine generierten Rückwärtsmigrationen.
+Führe Wartungsdoctor vor Zugang/Jobs und normalen doctor nach Öffnung aus. Melde dich an, prüfe erhaltene Projekt-/Ticket-IDs, erstelle und ändere Demodaten, übertrage einen Anhang mit gleichem SHA-256 und prüfe Realtime und harmlosen Job. Ein widerrufener Integrationsschlüssel muss weiter scheitern. Erfasse Imagedigest und Migrationen. Bei Fehler bleibt der fehlerhafte Stack gestoppt; inkompatibler Rückweg stellt den vollständigen alten Satz auf leerem Ziel wieder her. Es gibt keine generierten Rückwärtsmigrationen.

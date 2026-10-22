@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 20,
-  "sourceRevision": 19,
+  "revision": 21,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -61,9 +61,9 @@
     ]
   },
   "review": {
-    "revision": 20,
-    "fact": "agent:claude/min773 (dictation pill, discard confirmation, cleanup preference and vocabulary checked against the changed source and the running app; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures)",
-    "language": "agent:claude/min773 (pt-BR translation of the MIN-773 passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 21,
+    "fact": "agent:claude/min773 (dictation pill, discard confirmation, cleanup preference and vocabulary checked against the changed source and the running app; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:claude/min773 (pt-BR translation of the MIN-773 passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -86,7 +86,7 @@
       "src": "/documentation/pt-BR/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Conexões, atribuição por capacidade e modelo pessoal do Numo são ajustes separados.",
       "caption": "Vários provedores podem continuar conectados. A atribuição escolhe por capacidade; o padrão do Numo é salvo por conta e provedor.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -126,7 +126,7 @@ A seção **IA do Minddy** das configurações de IA da conta configura os prove
 
 ## Configurar chaves pessoais de IA e modelos {#ai-keys-and-models}
 
-Nos ajustes de IA da conta, **Provedor de IA** seleciona o provedor de modelos de texto entre o Minddy Cloud e seus provedores compatíveis conectados. **Provedores conectados** mostra a lista completa. Escolha **Adicionar provedor**, selecione-o, informe sua chave API e a URL base quando necessária e salve. Você pode conectar vários provedores; adicionar ou selecionar um não remove os demais. Nunca cole uma chave em uma conversa ou captura de tela.
+Nos ajustes de IA da conta, **Provedor de IA** seleciona o provedor de modelos de texto entre o Minddy Cloud e seus provedores compatíveis conectados. **Provedores conectados** mostra a lista completa. Escolha **Adicionar provedor**, selecione-o, informe sua chave de API e a URL base quando necessária e salve. Você pode conectar vários provedores; adicionar ou selecionar um não remove os demais. Nunca cole uma chave em uma conversa ou captura de tela.
 
 Atribua texto, transcrição e embeddings separadamente. Cada família usa um provedor por vez. Os controles de uso de cada provedor determinam se Numo, automações, voz e feedback usam essa chave ou a cota Minddy. Por exemplo, você pode manter o texto no OpenRouter e a transcrição no OpenAI. Selecionar um provedor de texto não reativa um uso do Numo anteriormente desativado.
 
@@ -143,7 +143,7 @@ O Minddy chama os modelos de IA pelo servidor, então não consegue usar um mode
 
 ## Entender os planos Cloud e o consumo de IA {#plans-and-ai-usage}
 
-O Cloud oferece os planos Free, Go e Pro. Todos incluem MCP, conversas do Numo, ações contextuais e rotinas. A capacidade, o uso de IA incluído, os modelos e o armazenamento variam. Abra Cobrança para consultar seu saldo e consumo atuais e compare a página pública de preços antes de escolher um plano; os valores publicados ali são a referência atual.
+O Cloud oferece os planos Grátis, Go e Pro. Todos incluem MCP, conversas do Numo, ações contextuais e rotinas. A capacidade, o uso de IA incluído, os modelos e o armazenamento variam. Abra Cobrança para consultar seu saldo e consumo atuais e compare a página pública de preços antes de escolher um plano; os valores publicados ali são a referência atual.
 
 Use a opção de contratação ou de gerenciamento de assinatura oferecida à sua conta. Confira o valor, o período de cobrança e a confirmação do provedor antes de aceitar. Uma mudança de plano bem-sucedida deve aparecer na cobrança da conta; verifique esse estado, em vez de tratar o fechamento da janela de pagamento como uma prova.
 
@@ -159,7 +159,7 @@ Estes padrões descrevem o Minddy 0.20.0. Confira a página de preços e a conta
 
 | Plano | Projetos | Tickets por projeto | Convidados por projeto | Armazenamento | IA mensal incluída (USD) |
 | --- | --- | --- | --- | --- | --- |
-| Free | 2 | 300 | 3 | 1 GiB | 0.50 |
+| Grátis | 2 | 300 | 3 | 1 GiB | 0.50 |
 | Go | Ilimitados | Ilimitadas | Ilimitados | 20 GiB | 5 |
 | Pro | Ilimitados | Ilimitadas | Ilimitados | 100 GiB | 15 |
 
