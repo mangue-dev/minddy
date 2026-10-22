@@ -19,6 +19,8 @@ import {SEND_MODE_META_KEY, resolveSendMode} from "@/lib/keyboard/send-shortcut"
 import type {SendMode} from "@/lib/keyboard/send-shortcut";
 import {useModKey} from "@/lib/keyboard/use-mod-shortcut";
 import {useAccountPreference} from "@/components/settings/use-account-preference";
+import {DICTATION_CLEANUP_META_KEY, resolveDictationCleanup} from "@/lib/dictation-context";
+import {DictationVocabularySection} from "@/components/settings/dictation-vocabulary-section";
 import {useAccountTheme} from "@/lib/use-account-theme";
 import {ThemePresetPicker} from "@/components/settings/theme-preset-picker";
 import type {ThemeMode, ThemePresetId} from "@/lib/theme-presets";
@@ -62,6 +64,10 @@ export function AccountPreferencesSection() {
   const [sendMode, changeSendMode] = useAccountPreference<SendMode>(
     SEND_MODE_META_KEY,
     resolveSendMode,
+  );
+  const [dictationCleanup, setDictationCleanup, ready] = useAccountPreference(
+    DICTATION_CLEANUP_META_KEY,
+    resolveDictationCleanup,
   );
 
   const switchLocale = async (locale: Locale) => {
@@ -212,6 +218,28 @@ export function AccountPreferencesSection() {
         />
       </SettingsGroup>
 
+      {/* Voice dictation (MIN-773): the cleanup pass after transcription is a
+          choice — off, the recognized words are inserted as they are. */}
+      <SettingsGroup
+        anchor={SETTINGS_SECTIONS.accountDictation}
+        title={ta("dictationSectionTitle")}
+      >
+        <SettingsRow
+          htmlFor="account-dictation-cleanup"
+          label={ta("dictationCleanupLabel")}
+          hint={ta("dictationCleanupDesc")}
+          control={
+            <Switch
+              id="account-dictation-cleanup"
+              checked={dictationCleanup}
+              onCheckedChange={(v) => void setDictationCleanup(v)}
+              disabled={!ready}
+            />
+          }
+        />
+      </SettingsGroup>
+
+      <DictationVocabularySection />
     </>
   );
 }

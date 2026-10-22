@@ -14,9 +14,11 @@ const MAX_HEIGHT_PX = 32;
 interface DictateWaveformProps {
   stream: MediaStream | null;
   className?: string;
+  /** The bars' colour; the brand accent by default. */
+  barClassName?: string;
 }
 
-export function DictateWaveform({ stream, className }: DictateWaveformProps) {
+export function DictateWaveform({ stream, className, barClassName = "bg-brand" }: DictateWaveformProps) {
   const barRefs = useRef<Array<HTMLDivElement | null>>([]);
 
   useEffect(() => {
@@ -77,7 +79,7 @@ export function DictateWaveform({ stream, className }: DictateWaveformProps) {
           ref={(el) => {
             barRefs.current[i] = el;
           }}
-          className="w-[3px] rounded-full bg-brand transition-[height] duration-75 ease-out"
+          className={cn("w-[3px] rounded-full transition-[height] duration-75 ease-out", barClassName)}
           style={{ height: `${MIN_HEIGHT_PX}px` }}
         />
       ))}

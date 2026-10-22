@@ -17,7 +17,7 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
   useLocale: () => "en",
 }));
-vi.mock("./auth-context", () => ({ useAuth: () => ({ user: null }) }));
+vi.mock("./auth-context", () => ({ useAuth: () => ({ user: null }), useAuthOptional: () => null }));
 vi.mock("./use-attachment-uploads", () => ({ useAttachmentUploads: () => h.uploads }));
 vi.mock("./analytics", () => ({ trackEvent: vi.fn() }));
 // Load the actual primitives without the package barrel's unrelated emoji data.

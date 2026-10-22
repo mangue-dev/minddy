@@ -22,10 +22,17 @@ import {
   reserveProviderOperation,
 } from "@/lib/server/provider-operation-guard";
 import {
+  resolveDictationCleanup,
   resolveDictationContext,
   resolvePolishedDictation,
 } from "@/lib/dictation-context";
 import { polishDictationTranscript } from "@/lib/server/dictation-polish";
+import {
+  applyVocabularyReplacements,
+  parseVocabularyField,
+  resolveDictationVocabulary,
+  vocabularyTerms,
+} from "@/lib/dictation-vocabulary";
 
 // A long dictation takes longer to come back than a short one: the road
 // takes the maximum budget of the platform, under which the timeout of
@@ -98,6 +105,20 @@ export async function POST(request: NextRequest) {
   const language =
     typeof langRaw === "string" && langRaw.trim() ? langRaw.trim() : undefined;
   const context = resolveDictationContext(formData.get("context"));
+  // The account can turn the cleanup pass off (MIN-773). The session's claims
+  // carry the preference as of the last token refresh, so the client also sends
+  // its live value; either one saying "off" skips the pass. Skipping only ever
+  // spends less, so the client's word is safe to take.
+  const cleanupEnabled =
+    resolveDictationCleanup(user.user_metadata) &&
+    formData.get("cleanup") !== "off";
+  // The account's vocabulary, from the client's live copy when it sends one
+  // (same lag as above) — it is the user's own list, used only for their own
+  // take, and re-sanitized and capped here like the stored one.
+  const vocabulary =
+    parseVocabularyField(formData.get("vocabulary")) ??
+    resolveDictationVocabulary(user.user_metadata);
+  const spellings = vocabularyTerms(vocabulary);
 
   // Model is DB-configured (app_config), like the assistant model.
   const cfg = await getAppConfigValues([
@@ -179,6 +200,7 @@ export async function POST(request: NextRequest) {
         usedModel = m;
         return transcribeAudio(m, audioBase64, format, runtime.apiKey, {
           language,
+          prompt: spellings.length ? spellings.join(", ") : undefined,
           temperature: 0,
           provider: runtime.provider === "openrouter" ? provider : undefined,
           title: "minddy Dictate",
@@ -215,6 +237,15 @@ export async function POST(request: NextRequest) {
     }
 
     const rawText = result.text.trim();
+    if (!cleanupEnabled) {
+      // No `polished` field: nothing was attempted, so nothing failed.
+      return Response.json({
+        text: applyVocabularyReplacements(rawText, vocabulary),
+        model,
+        runId,
+        durationSeconds: result.seconds,
+      });
+    }
     let cleanedText: string | null = null;
     if (/[\p{L}\p{N}]/u.test(rawText)) {
       try {
@@ -234,6 +265,7 @@ export async function POST(request: NextRequest) {
             billTo: { userId: user.id },
           },
           surface: cleanupSurface,
+          vocabulary: spellings,
         });
       } catch (err) {
         // Speech recognition succeeded. Cleanup is deliberately fail-open so a
@@ -247,7 +279,7 @@ export async function POST(request: NextRequest) {
     const { text, polished } = resolvePolishedDictation(rawText, cleanedText);
 
     return Response.json({
-      text,
+      text: applyVocabularyReplacements(text, vocabulary),
       polished,
       model,
       runId,

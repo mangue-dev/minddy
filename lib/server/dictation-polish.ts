@@ -36,9 +36,12 @@ export async function polishDictationTranscript({
   context,
   record,
   surface = "voice",
+  vocabulary = [],
 }: {
   transcript: string;
   context: DictationContext;
+  /** The account's spellings (MIN-773), see lib/dictation-vocabulary.ts. */
+  vocabulary?: readonly string[];
   record: ForcedToolCallRecord;
   surface?: "voice" | "feedback";
 }): Promise<string | null> {
@@ -51,7 +54,7 @@ export async function polishDictationTranscript({
   const { model } = await resolveConfiguredModel("dictate_model");
   const result = await forcedToolCall(
     model,
-    buildDictationPolishPrompt(context),
+    buildDictationPolishPrompt(context, vocabulary),
     source,
     "deliver_dictation",
     DELIVER_DICTATION_PARAMETERS,

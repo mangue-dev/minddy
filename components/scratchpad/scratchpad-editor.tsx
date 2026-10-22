@@ -9,13 +9,12 @@ import {
   reconcileBodyBlocks,
 } from "@/lib/pages-markdown";
 import { useTranslations } from "next-intl";
-import { Spinner } from "@/components/ui/spinner";
 import {
+  dictatedTasksFromText,
   removeSettledTasks,
   scratchpadSectionSubtree,
   stripScratchpadSpacers,
 } from "@/lib/scratchpad";
-import { AgentBeam } from "@/components/agent-beam";
 import { RichEditor, editorMarkdown } from "@/components/editor/rich-editor";
 import { useAttachmentImageUploads } from "@/components/editor/document-uploads";
 import { SectionCopy } from "@/components/scratchpad/section-copy-extension";
@@ -28,18 +27,12 @@ import {
   startPendingTasks,
 } from "@/components/scratchpad/start-tasks";
 import type { PageSlashItem } from "@/components/pages/page-slash-command";
-import { useDictation } from "@/components/scratchpad/use-dictation";
-import { DictateWaveform } from "@/components/ai-elements/dictate-waveform";
+import { useDictationRecorder } from "@/components/ai-elements/use-dictation-recorder";
+import { DictationPill } from "@/components/ai-elements/dictation-pill";
 import { eventKey } from "@/lib/keyboard/event-key";
 import { findTaskItemPos } from "@/lib/task-sections";
 import { flashBlockAt } from "@/components/pages/block-flash";
 import type { DocumentEditorMentions } from "@/components/editor/document-editor";
-
-/** mm:ss for the dictation timer. */
-function formatTime(ms: number): string {
-  const total = Math.floor(ms / 1000);
-  return `${Math.floor(total / 60)}:${(total % 60).toString().padStart(2, "0")}`;
-}
 
 function getMarkdown(editor: Editor): string {
   const md = editorMarkdown(editor);
@@ -142,7 +135,6 @@ export function ScratchpadEditor({
   uploadScope?: string | null;
 }) {
   const t = useTranslations("Scratchpad");
-  const tDictate = useTranslations("Dictate");
 
   const editorRef = useRef<Editor | null>(null);
   const mentionsRef = useRef(mentions);
@@ -152,9 +144,10 @@ export function ScratchpadEditor({
   const lastSubmittedRef = useRef(initialValue);
   const startDictationRef = useRef<() => void>(() => {});
 
-  // Dictation → one checkbox task per entry Numo cleaned up (a single take can
-  // hold several to-dos). They land at the caret, which sits on the empty line
-  // the `/` command left behind.
+  // Dictation → one checkbox task per line of the transcript (MIN-773): the
+  // shared cleanup pass puts each dictated to-do on its own line, and a raw
+  // transcript (cleanup turned off) lands as one task. They land at the caret,
+  // which sits on the empty line the `/` command left behind.
   const insertTasks = (tasks: string[]) => {
     const ed = editorRef.current;
     if (!ed || ed.isDestroyed || tasks.length === 0) return;
@@ -170,12 +163,9 @@ export function ScratchpadEditor({
     }
   };
 
-  const dictation = useDictation({
-    onTasks: insertTasks,
-    getNote: () => {
-      const ed = editorRef.current;
-      return ed && !ed.isDestroyed ? getMarkdown(ed) : "";
-    },
+  const dictation = useDictationRecorder({
+    context: "task_notebook",
+    onTranscription: (text) => insertTasks(dictatedTasksFromText(text)),
   });
   startDictationRef.current = dictation.start;
 
@@ -408,27 +398,6 @@ export function ScratchpadEditor({
     return () => window.removeEventListener("keydown", onKey, true);
   }, []);
 
-  // While recording: Enter stops (→ transcribe → task), Escape cancels. Captured
-  // so neither the editor nor the dialog sees the keystroke.
-  useEffect(() => {
-    if (dictation.status !== "recording") return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        dictation.stop();
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        dictation.cancel();
-      }
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [dictation.status, dictation.stop, dictation.cancel]);
-
-  const dictating = dictation.status !== "idle";
-
   // The bottom padding is room to scroll PAST the last line, so a note that
   // grows to the bottom isn't pinned against the edge. It sits on the editor
   // wrapper rather than the modal's scroll container so that empty space stays
@@ -468,53 +437,7 @@ export function ScratchpadEditor({
           autoFocus
         />
 
-        {dictating && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm">
-            {/* The border ONLY accompanies “Numo cleans up”: the step
- `processing` just before, it is the transcription of the audio, not
- Numo. The wrapper is in `overflow: hidden`, hence the `shadow-xl`
- which passes from the card to it; `keepMounted` keeps the card — and
- the waveform canvas — raised from one end to the other of the dictated
-, instead of raising it when the border lights up. */}
-            <AgentBeam
-              active={dictation.status === "polishing"}
-              keepMounted
-              className="rounded-2xl shadow-xl"
-            >
-              <div className="flex w-64 flex-col items-center gap-4 rounded-2xl border border-border bg-popover px-6 py-5 text-center">
-                {dictation.status === "processing" ||
-                dictation.status === "polishing" ? (
-                  <div className="flex flex-col items-center gap-2 py-3 text-sm text-muted-foreground">
-                    <Spinner />
-                    {dictation.status === "polishing"
-                      ? t("dictationPolishing")
-                      : t("dictationProcessing")}
-                  </div>
-                ) : dictation.status === "starting" ? (
-                  <div className="flex flex-col items-center gap-2 py-3 text-sm text-muted-foreground">
-                    <Spinner />
-                    {tDictate("starting")}
-                  </div>
-                ) : (
-                  <>
-                    {/* The timer alone, centred: dictation is no longer
-                        time-boxed, so there is no ceiling left to show opposite
-                        it. */}
-                    <div className="flex w-full items-center justify-center text-xs">
-                      <span className="font-medium tabular-nums text-foreground">
-                        {formatTime(dictation.elapsedMs)}
-                      </span>
-                    </div>
-                    <DictateWaveform stream={dictation.stream} />
-                    <p className="text-xs text-muted-foreground">
-                      {t("dictationHint")}
-                    </p>
-                  </>
-                )}
-              </div>
-            </AgentBeam>
-          </div>
-        )}
+        <DictationPill recorder={dictation} />
       </div>
     </ScratchpadTaskSurface>
   );

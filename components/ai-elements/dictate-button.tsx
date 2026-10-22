@@ -1,23 +1,21 @@
 "use client";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Mic01Icon, SquareIcon } from "@hugeicons/core-free-icons";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import {
   useCallback,
   useEffect,
   useImperativeHandle,
   useMemo,
   useRef,
-  useState,
   type Ref,
 } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import { KbdSequence } from "@/components/ui/kbd";
 
-import { DictateWaveform } from "./dictate-waveform";
+import { DictationPill } from "./dictation-pill";
+import { useDictationRecorder } from "./use-dictation-recorder";
 import { eventKey } from "@/lib/keyboard/event-key";
 import { ownsDictationShortcut } from "@/lib/keyboard/dictation-shortcut";
 import { resolveKeyToken } from "@/lib/keyboard/shortcuts";
@@ -28,20 +26,6 @@ import {
   TooltipTrigger,
   TooltipProvider,
 } from "@/components/ui/tooltip";
-
-// Dictation isn't time-boxed: talk for as long as you need. The only ceiling
-// left is the payload one — /api/transcribe rejects over 10 MB — so the
-// recorder is pinned to a speech bitrate (see AUDIO_BITS_PER_SECOND) and a
-// safety stop fires well inside that budget. A user never meets either: they
-// exist so a tab left recording by accident still transcribes what it caught
-// instead of dying on a 413 and losing the whole take.
-const AUDIO_BITS_PER_SECOND = 48_000; // ~6 KB/s → 10 MB ≈ 28 min
-const SAFETY_STOP_MS = 20 * 60_000;
-// Peak deviation from the analyser's 128 midline that counts as speech —
-// ambient room noise stays well under this, actual speech peaks far above.
-const SPEECH_PEAK_THRESHOLD = 20;
-
-type DictateStatus = "idle" | "starting" | "recording" | "processing";
 
 /** The button command, for those who have stored it elsewhere (see `hideWhenIdle`). */
 export interface DictateButtonHandle {
@@ -93,18 +77,15 @@ export interface DictateButtonProps {
   shortcutKey?: string;
   /**
    * Notified while a finished take is being transcribed (mic released, audio in
-   * flight). Hosts that can be dismissed use it to refuse the dismissal: unlike
-   * recording — which puts an open popover in front of everything, swallowing
-   * Escape and outside clicks — this window leaves every close path open, and
-   * closing here throws the take away.
+   * flight). The dictation pill already blocks the interface during that window;
+   * hosts that can also be closed programmatically use it to hold off.
    */
   onProcessingChange?: (processing: boolean) => void;
   /**
    * The button is no longer the gateway to the gesture — a menu entry is
-   * (Objectives page, MIN-226). It remains MOUNTED at rest, simply invisible:
-   * the tape recorder, the chrono, the silence guard and the popover anchor
-   * live here, and taking it apart would lose the current socket. It reappears
-   * itself as soon as it records — then it's the stop button.
+   * (Objectives page, MIN-226). It stays MOUNTED, simply invisible: the
+   * recorder, the shortcut and the dictation pill live here, and unmounting it
+   * would lose the take in progress.
    */
   hideWhenIdle?: boolean;
   /**
@@ -132,13 +113,6 @@ export interface DictateButtonProps {
   /** Display the current action beside the microphone in prominent controls. */
   showLabel?: boolean;
   className?: string;
-}
-
-function formatTime(ms: number): string {
-  const totalSec = Math.floor(ms / 1000);
-  const min = Math.floor(totalSec / 60);
-  const sec = totalSec % 60;
-  return `${min}:${sec.toString().padStart(2, "0")}`;
 }
 
 interface ParsedShortcut {
@@ -179,20 +153,6 @@ function parseShortcut(spec?: string): ParsedShortcut | null {
   };
 }
 
-function pickRecorderMimeType(): string | undefined {
-  if (typeof MediaRecorder === "undefined") return undefined;
-  const candidates = [
-    "audio/webm;codecs=opus",
-    "audio/webm",
-    "audio/ogg;codecs=opus",
-    "audio/mp4",
-  ];
-  for (const t of candidates) {
-    if (MediaRecorder.isTypeSupported(t)) return t;
-  }
-  return undefined;
-}
-
 export function DictateButton({
   ref,
   onTranscription,
@@ -211,269 +171,16 @@ export function DictateButton({
   showLabel = false,
 }: DictateButtonProps) {
   const t = useTranslations("Dictate");
-  const locale = useLocale();
-
-  const [status, setStatus] = useState<DictateStatus>("idle");
-  const [elapsedMs, setElapsedMs] = useState(0);
-  const [stream, setStream] = useState<MediaStream | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const startedAtRef = useRef<number>(0);
-  const tickIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const autoStopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const recorderMimeRef = useRef<string>("audio/webm");
-  const isMountedRef = useRef(true);
-  // Speech gate: flips to true the first time a recording frame crosses
-  // SPEECH_PEAK_THRESHOLD. Stopping while still false means a silent take.
-  const speechDetectedRef = useRef(false);
-  const audioContextRef = useRef<AudioContext | null>(null);
-
-  const cleanupStream = useCallback(() => {
-    if (tickIntervalRef.current) {
-      clearInterval(tickIntervalRef.current);
-      tickIntervalRef.current = null;
-    }
-    if (autoStopRef.current) {
-      clearTimeout(autoStopRef.current);
-      autoStopRef.current = null;
-    }
-    setStream((current) => {
-      current?.getTracks().forEach((track) => track.stop());
-      return null;
-    });
-    audioContextRef.current?.close().catch(() => {});
-    audioContextRef.current = null;
-    mediaRecorderRef.current = null;
-  }, []);
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-      cleanupStream();
-    };
-  }, [cleanupStream]);
-
-  // The send hook, read by a ref: the caller closes it on its own
-  // status (the current draft, a run to resume) without having to memorize it.
-  const uploadAudioRef = useRef(uploadAudio);
-  useEffect(() => {
-    uploadAudioRef.current = uploadAudio;
-  });
-
-  const sendForTranscription = useCallback(
-    async (blob: Blob) => {
-      const upload = uploadAudioRef.current;
-      if (upload) {
-        try {
-          const text = (await upload(blob, locale, context))?.trim() ?? "";
-          if (!isMountedRef.current) return;
-          // Same guard as below: without letters or numbers, Whisper has furnished
-          // silence. The caller has already spoken about his own failures.
-          if (/[\p{L}\p{N}]/u.test(text)) onTranscription(text);
-          else if (text) toast.error(t("emptyResult"));
-        } catch (err) {
-          if (!isMountedRef.current) return;
-          console.error("[DictateButton] upload failed", err);
-          toast.error(t("error"));
-        } finally {
-          if (isMountedRef.current) setStatus("idle");
-        }
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append("audio", blob, `dictate.${blob.type.includes("ogg") ? "ogg" : "webm"}`);
-      // Language hint = the UI locale. Whisper's auto-detect is unreliable on
-      // short clips (a lone "bonjour" comes back as "hello") — pinning the
-      // language keeps the transcription in the user's language, untranslated.
-      formData.append("lang", locale);
-      formData.append("context", context);
-      if (feature) formData.append("feature", feature);
-
-      try {
-        const res = await fetch("/api/transcribe", {
-          method: "POST",
-          body: formData,
-        });
-        if (!res.ok) {
-          if (res.status === 429) {
-            const data = (await res.json().catch(() => ({}))) as {
-              retry_after?: number;
-            };
-            const minutes = Math.max(1, Math.ceil((data.retry_after ?? 60) / 60));
-            toast.error(t("rateLimitReached", { minutes }));
-          } else if (res.status === 413) {
-            toast.error(t("tooLarge"));
-          } else {
-            toast.error(t("error"));
-          }
-          return;
-        }
-        const data = (await res.json()) as { text?: string; polished?: boolean };
-        const text = (data.text ?? "").trim();
-        if (!isMountedRef.current) return;
-        // A transcript with no letter or digit ("...", "♪") is Whisper's
-        // silence filler — treat it as an empty transcription.
-        if (/[\p{L}\p{N}]/u.test(text)) {
-          onTranscription(text);
-          if (data.polished === false) toast.error(t("polishFailed"));
-        }
-        else toast.error(t("emptyResult"));
-      } catch (err) {
-        if (!isMountedRef.current) return;
-        console.error("[DictateButton] transcribe failed", err);
-        toast.error(t("error"));
-      } finally {
-        if (isMountedRef.current) setStatus("idle");
-      }
-    },
-    [context, feature, onTranscription, t, locale],
-  );
-
-  const stopRecording = useCallback(() => {
-    const recorder = mediaRecorderRef.current;
-    if (recorder && recorder.state !== "inactive") {
-      recorder.stop();
-    }
-  }, []);
-
-  const startRecording = useCallback(async () => {
-    if (status !== "idle" || mediaRecorderRef.current) return;
-    if (
-      typeof navigator === "undefined" ||
-      !navigator.mediaDevices?.getUserMedia ||
-      typeof MediaRecorder === "undefined"
-    ) {
-      toast.error(t("notSupported"));
-      return;
-    }
-
-    setStatus("starting");
-    let mediaStream: MediaStream;
-    try {
-      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch (err) {
-      const name = (err as { name?: string } | null)?.name ?? "";
-      console.warn("[DictateButton] getUserMedia failed", name, err);
-      if (name === "NotFoundError" || name === "DevicesNotFoundError") {
-        toast.error(t("noDevice"));
-      } else if (name === "NotReadableError" || name === "TrackStartError") {
-        toast.error(t("deviceBusy"));
-      } else {
-        toast.error(t("permissionDenied"));
-      }
-      setStatus("idle");
-      return;
-    }
-
-    const mimeType = pickRecorderMimeType();
-    let recorder: MediaRecorder;
-    try {
-      recorder = new MediaRecorder(mediaStream, {
-        ...(mimeType ? { mimeType } : {}),
-        audioBitsPerSecond: AUDIO_BITS_PER_SECOND,
-      });
-    } catch (err) {
-      console.error("[DictateButton] MediaRecorder init failed", err);
-      mediaStream.getTracks().forEach((track) => track.stop());
-      toast.error(t("notSupported"));
-      setStatus("idle");
-      return;
-    }
-
-    recorderMimeRef.current = recorder.mimeType || mimeType || "audio/webm";
-    chunksRef.current = [];
-
-    // Speech gate — watch the mic's time-domain peaks while recording so a
-    // silent take is dropped without an API round-trip (on silence, Whisper
-    // hallucinates filler text instead of returning an empty transcript).
-    speechDetectedRef.current = false;
-    let detectSpeech: (() => void) | null = null;
-    try {
-      const AudioCtx =
-        window.AudioContext ||
-        (window as unknown as { webkitAudioContext?: typeof AudioContext })
-          .webkitAudioContext;
-      if (AudioCtx) {
-        const audioContext = new AudioCtx();
-        const analyser = audioContext.createAnalyser();
-        analyser.fftSize = 2048;
-        audioContext.createMediaStreamSource(mediaStream).connect(analyser);
-        audioContextRef.current = audioContext;
-        void audioContext.resume().catch(() => {});
-        const samples = new Uint8Array(analyser.fftSize);
-        detectSpeech = () => {
-          if (speechDetectedRef.current) return;
-          analyser.getByteTimeDomainData(samples);
-          for (const value of samples) {
-            if (Math.abs(value - 128) >= SPEECH_PEAK_THRESHOLD) {
-              speechDetectedRef.current = true;
-              return;
-            }
-          }
-        };
-      }
-    } catch {
-      // No analyser — the gate stays open (see the onstop check).
-    }
-
-    recorder.ondataavailable = (event) => {
-      if (event.data && event.data.size > 0) {
-        chunksRef.current.push(event.data);
-      }
-    };
-
-    recorder.onstop = () => {
-      const chunks = chunksRef.current;
-      chunksRef.current = [];
-      const blob = new Blob(chunks, { type: recorderMimeRef.current });
-      // Trust the "no speech" verdict only if the analyser actually ran — no
-      // AudioContext or a suspended one reads as flat silence regardless of
-      // what the mic picked up.
-      const silent =
-        !speechDetectedRef.current &&
-        audioContextRef.current?.state === "running";
-      cleanupStream();
-      if (blob.size === 0) {
-        setStatus("idle");
-        return;
-      }
-      if (silent) {
-        toast.error(t("emptyResult"));
-        setStatus("idle");
-        return;
-      }
-      setStatus("processing");
-      void sendForTranscription(blob);
-    };
-
-    mediaRecorderRef.current = recorder;
-    startedAtRef.current = Date.now();
-    setStream(mediaStream);
-    setElapsedMs(0);
-    setStatus("recording");
-    recorder.start();
-
-    tickIntervalRef.current = setInterval(() => {
-      setElapsedMs(Date.now() - startedAtRef.current);
-      detectSpeech?.();
-    }, 200);
-
-    autoStopRef.current = setTimeout(() => {
-      toast.info(t("maxReached"));
-      stopRecording();
-    }, SAFETY_STOP_MS);
-  }, [cleanupStream, sendForTranscription, status, stopRecording, t]);
+  const recorder = useDictationRecorder({ context, feature, uploadAudio, onTranscription });
+  const { status, start: startRecording, stop: stopRecording } = recorder;
 
   const handleClick = useCallback(() => {
     if (disabled) return;
     if (status === "recording") {
       stopRecording();
     } else if (status === "idle") {
-      void startRecording();
+      startRecording();
     }
   }, [disabled, startRecording, status, stopRecording]);
 
@@ -497,7 +204,7 @@ export function DictateButton({
     if (disabled || autoStartedRef.current) return;
     autoStartedRef.current = true;
     onAutoStartRef.current?.();
-    void startRecording();
+    startRecording();
   }, [autoStart, disabled, startRecording]);
 
   // Keyboard shortcut: toggle recording on `shortcutKey`. Modifiers must match
@@ -505,7 +212,8 @@ export function DictateButton({
   // down while the user is typing — it would type instead; a combo carries its
   // own modifiers, so it fires everywhere, inputs included. `preventDefault`
   // also swallows the browser's own binding for the combo (⌘⇧D = "bookmark all
-  // tabs" in Chrome) while minddy has focus.
+  // tabs" in Chrome) while minddy has focus. While the pill is open the same
+  // combo validates the take (the pill never claims the shortcut itself).
   const shortcut = useMemo(() => parseShortcut(shortcutKey), [shortcutKey]);
   useEffect(() => {
     if (!shortcut) return;
@@ -551,92 +259,53 @@ export function DictateButton({
 
   const isBusy = status !== "idle";
   const isRecording = status === "recording";
-  const isStarting = status === "starting";
-  const isPopoverOpen = isRecording || isStarting;
 
   return (
     <TooltipProvider>
-      <Popover open={isPopoverOpen}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <PopoverTrigger asChild>
-              <button
-                ref={buttonRef}
-                type="button"
-                onClick={handleClick}
-                disabled={disabled || status === "starting" || status === "processing"}
-                // Announce the stop action while recording, independently of the idle label.
-                aria-label={
-                  isRecording ? t("stop") : (tooltipLabel ?? t("start"))
-                }
-                aria-pressed={isRecording}
-                className={cn(
-                  "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50",
-                  isRecording && "text-brand",
-                  showLabel && "h-auto w-auto min-h-11 gap-2 px-3 py-2",
-                  floating && "absolute bottom-2 right-2 z-10",
-                  // `display:none` and not a disassembly: the element remains the anchor
-                  // of the popover, and it becomes visible again in the same rendering as
-                  // the one who opens it (the status has already left “idle”).
-                  hideWhenIdle && !isBusy && "hidden",
-                  className,
-                )}
-              >
-                {status === "processing" ? (
-                  <Spinner className="h-4 w-4" />
-                ) : isRecording ? (
-                  <HugeiconsIcon icon={SquareIcon} className="h-4 w-4 fill-current" />
-                ) : (
-                  <HugeiconsIcon icon={Mic01Icon} className="h-4 w-4" />
-                )}
-                {showLabel && <span className="min-w-0 text-left text-sm font-medium">
-                  {isRecording ? t("stop") : status === "starting" ? t("starting") : status === "processing" ? t("inFlight") : (tooltipLabel ?? t("start"))}
-                </span>}
-              </button>
-            </PopoverTrigger>
-          </TooltipTrigger>
-          {!isBusy && (
-            <TooltipContent side="top" className="flex items-center gap-1.5">
-              {tooltipLabel ?? t("start")}
-              {shortcut && (
-                <KbdSequence
-                  keys={[shortcut.tokens.map(resolveKeyToken)]}
-                  size="sm"
-                />
-              )}
-            </TooltipContent>
-          )}
-        </Tooltip>
-        <PopoverContent
-          side="top"
-          align="end"
-          sideOffset={8}
-          className="w-56 gap-2 p-3"
-          onOpenAutoFocus={(e) => e.preventDefault()}
-          onInteractOutside={(e) => e.preventDefault()}
-        >
-          {isStarting ? (
-            <div className="flex h-[88px] flex-col items-center justify-center gap-2 text-xs text-muted-foreground">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            ref={buttonRef}
+            type="button"
+            onClick={handleClick}
+            disabled={disabled || status === "starting" || status === "processing"}
+            // Announce the stop action while recording, independently of the idle label.
+            aria-label={isRecording ? t("stop") : (tooltipLabel ?? t("start"))}
+            aria-pressed={isRecording}
+            className={cn(
+              "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50",
+              isBusy && "text-foreground",
+              showLabel && "h-auto w-auto min-h-11 gap-2 px-3 py-2",
+              floating && "absolute bottom-2 right-2 z-10",
+              hideWhenIdle && "hidden",
+              className,
+            )}
+          >
+            {status === "processing" ? (
               <Spinner className="h-4 w-4" />
-              <span>{t("starting")}</span>
-            </div>
-          ) : (
-            <>
-              {/* The chrono alone, centered: no more countdowns to display
- since dictation is no longer limited in duration. */}
-              <div className="flex items-center justify-center text-xs">
-                <span className="font-medium tabular-nums text-foreground">
-                  {formatTime(elapsedMs)}
-                </span>
-              </div>
-              <DictateWaveform stream={stream} />
-              <p className="text-center text-xs text-muted-foreground">
-                {t("hint")}
-              </p>
-            </>
-          )}
-        </PopoverContent>
-      </Popover>
+            ) : isRecording ? (
+              <HugeiconsIcon icon={SquareIcon} className="h-4 w-4 fill-current" />
+            ) : (
+              <HugeiconsIcon icon={Mic01Icon} className="h-4 w-4" />
+            )}
+            {showLabel && <span className="min-w-0 text-left text-sm font-medium">
+              {isRecording ? t("stop") : status === "starting" ? t("starting") : status === "processing" ? t("inFlight") : (tooltipLabel ?? t("start"))}
+            </span>}
+          </button>
+        </TooltipTrigger>
+        {!isBusy && (
+          <TooltipContent side="top" className="flex items-center gap-1.5">
+            {tooltipLabel ?? t("start")}
+            {shortcut && (
+              <KbdSequence
+                keys={[shortcut.tokens.map(resolveKeyToken)]}
+                size="sm"
+              />
+            )}
+          </TooltipContent>
+        )}
+      </Tooltip>
+      <DictationPill recorder={recorder} />
     </TooltipProvider>
   );
 }

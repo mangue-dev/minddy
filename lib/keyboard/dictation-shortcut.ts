@@ -1,11 +1,12 @@
 import { isVisibleOverlay } from "@/lib/visible-overlays";
 
-// Popovers also have role="dialog", but the recording popover must not take
-// ownership away from the button that stops it.
+// Popovers also have role="dialog", and so does the dictation pill (MIN-773):
+// neither may take ownership away from the button whose take it shows, so the
+// same shortcut that started a take validates it.
 const SURFACE_SELECTOR = '[role="dialog"], [role="alertdialog"]';
 
 function isDictationSurface(element: Element): boolean {
-  return !element.closest('[data-radix-popper-content-wrapper], [data-slot="popover-content"]');
+  return !element.closest('[data-radix-popper-content-wrapper], [data-slot="popover-content"], [data-dictation-pill]');
 }
 
 type StackingContext = { element: Element; zIndex: number };
