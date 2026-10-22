@@ -14,7 +14,7 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
+  "revision": 8,
   "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
@@ -43,9 +43,9 @@
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label correction: quoted labels aligned on the corrected es catalog; no behavior change, no new captures)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-762 label edit; self-reviewed; agent review, not human acceptance)",
+    "revision": 8,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label correction: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-762 label edit; self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -63,7 +63,7 @@
       "src": "/documentation/es/reader-cycle.png",
       "alt": "Incidencia de demostración en el backlog del ciclo personal.",
       "caption": "Al añadirla se asignó al titular del ciclo y se conservó su estado de backlog.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -82,11 +82,11 @@
 
 ## Configurar y llenar tu ciclo {#personal-cycle}
 
-Activa los ciclos en **Configuración de la cuenta** → **Ciclos**, o con **Activar ciclos** en la pestaña **Ciclo**. Abre esa pestaña en la barra de vistas de **Todas las incidencias**, o busca Ciclo en la paleta de comandos; la pestaña **Ciclo** de un tablero de proyecto, marcada con una flecha, lleva al mismo ciclo personal. Pertenece a tu cuenta y puede contener incidencias que tienes asignadas en proyectos donde eres el propietario o un Miembro. A los lectores no se les puede asignar trabajo, así que un proyecto que solo lees no aporta ninguna incidencia. No es un sprint del proyecto ni pertenece a un objetivo del equipo.
+Activa los ciclos en **Ajustes de la cuenta** → **Ciclos**, o con **Activar ciclos** en la pestaña **Ciclo**. Abre esa pestaña en la barra de vistas de **Todas las incidencias**, o busca Ciclo en la paleta de comandos; la pestaña **Ciclo** de un tablero de proyecto, marcada con una flecha, lleva al mismo ciclo personal. Pertenece a tu cuenta y puede contener incidencias que tienes asignadas en proyectos donde eres el propietario o un Miembro. A los lectores no se les puede asignar trabajo, así que un proyecto que solo lees no aporta ninguna incidencia. No es un sprint del proyecto ni pertenece a un objetivo del equipo.
 
 Elige una duración de una o dos semanas, el día de inicio, de uno a cuatro ciclos futuros y una intensidad ligera, media o alta. Estas opciones determinan tu periodo y capacidad objetivo. Los controles de captura automática indican si las incidencias asignadas entran en el ciclo actual al iniciarse o completarse.
 
-El ciclo actual se llena automáticamente una vez con trabajo elegible. Para añadir una incidencia a mano, usa la acción de ciclo de su menú y elige el periodo actual o el siguiente cuando estén disponibles. Añadirla la asigna al propietario del ciclo sin cambiar su estado. Las incidencias en Clasificación, Hecho, Cancelado o Duplicado no se pueden añadir mediante esta acción. Comprueba el responsable y los bloqueos después de añadir trabajo. Quitar una incidencia del ciclo la conserva en el proyecto.
+El ciclo actual se llena automáticamente una vez con trabajo elegible. Para añadir una incidencia a mano, usa la acción de ciclo de su menú y elige el periodo actual o el siguiente cuando estén disponibles. Añadirla la asigna al propietario del ciclo sin cambiar su estado. Las incidencias en Clasificación, Hecha, Cancelada o Duplicada no se pueden añadir mediante esta acción. Comprueba el responsable y los bloqueos después de añadir trabajo. Quitar una incidencia del ciclo la conserva en el proyecto.
 
 ![Incidencia de demostración en el backlog del ciclo personal.](/documentation/es/reader-cycle.png)
 

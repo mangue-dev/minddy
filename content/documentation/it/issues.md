@@ -25,7 +25,7 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 34,
+  "revision": 35,
   "sourceRevision": 34,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
@@ -120,9 +120,9 @@
     ]
   },
   "review": {
-    "revision": 34,
-    "fact": "agent:/root/min776 (drafts paragraph checked against components/create-issue-dialog.tsx, components/objective-dialog.tsx and lib/use-held-draft.ts: closing keeps the form, reopening resumes it, two minutes after a close it becomes a draft, another context saves it first, and the split menu offers Save as draft; rest of the article unchanged since the MIN-778 review; no figure changed)",
-    "language": "agent:/root/min776 (it drafts paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 35,
+    "fact": "agent:/root/min776 (drafts paragraph checked against components/create-issue-dialog.tsx, components/objective-dialog.tsx and lib/use-held-draft.ts: closing keeps the form, reopening resumes it, two minutes after a close it becomes a draft, another context saves it first, and the split menu offers Save as draft; rest of the article unchanged since the MIN-778 review; no figure changed); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures)",
+    "language": "agent:/root/min776 (it drafts paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -168,7 +168,7 @@
       "src": "/documentation/it/new-issue.png",
       "alt": "Bozza non inviata nel progetto Aurora con titolo, descrizione, proprietà selezionabili manualmente e il pulsante Crea AUR-19.",
       "caption": "Descrivi il risultato atteso e scegli le proprietà utili prima di creare il ticket.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -184,7 +184,7 @@
       "src": "/documentation/it/triage-incoming.png",
       "alt": "Ticket dimostrativo DOC-11 in arrivo con segnalazione, proprietà e comandi per duplicato, Rifiuta e Accetta.",
       "caption": "Leggi la segnalazione ricevuta prima di accettarla, rifiutarla o collegare un duplicato.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -200,7 +200,7 @@
       "src": "/documentation/it/issue-statuses.png",
       "alt": "Gli otto stati del ticket nel selettore, con Backlog selezionato.",
       "caption": "La spunta indica lo stato attuale. Scegli quello che rispecchia lo stato effettivo del lavoro.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -216,7 +216,7 @@
       "src": "/documentation/it/work-resources.png",
       "alt": "Finestra di aggiunta di un link con un indirizzo di contatto d’esempio.",
       "caption": "Controlla la destinazione prima di aggiungere la risorsa. Questo link d’esempio non è stato inviato.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -232,7 +232,7 @@
       "src": "/documentation/it/work-dependencies.png",
       "alt": "Ricerca di un ticket bloccante tramite identificativo.",
       "caption": "Scegli la direzione della relazione prima della destinazione. Il selettore è mostrato senza inviare la relazione.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -248,7 +248,7 @@
       "src": "/documentation/it/work-sub-issues.png",
       "alt": "Campo per creare un sotto-ticket in un ticket principale dimostrativo.",
       "caption": "Il campo crea un figlio di questo ticket; ogni figlio conserva stato e discussione propri.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -264,7 +264,7 @@
       "src": "/documentation/it/work-implementation-plan.png",
       "alt": "Piano dimostrativo con due attività di lavoro completate su sei.",
       "caption": "Il piano salvato distingue passaggi completati, attivi e in attesa. L’avanzamento non dimostra l’esecuzione dell’attività di codice fittizia.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -280,7 +280,7 @@
       "src": "/documentation/it/issue-date-recurrence.png",
       "alt": "Selettore di scadenza ricorrente con anteprima settimanale la domenica e orario facoltativo.",
       "caption": "La modalità ricorrente mostra la cadenza settimanale. Conferma la prima scadenza prima di creare il ticket.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -296,7 +296,7 @@
       "src": "/documentation/it/import-issues-preview-workflow.png",
       "alt": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate.",
       "caption": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate. L’importazione non è stata inviata; la pianificazione IA facoltativa è stata bloccata per la cattura.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -313,7 +313,7 @@
       "src": "/documentation/it/file-preview.png",
       "alt": "Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica, Rinomina e Rimuovi.",
       "caption": "Il visualizzatore condiviso colloca Chiudi sotto l’anteprima. Il menu Azioni del file offre Scarica e, con i permessi necessari, Rinomina e Rimuovi.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -357,7 +357,7 @@ Chiudere il modulo conserva ciò che hai scritto: riaprilo per riprendere da dov
 
 ![Bozza non inviata nel progetto Aurora con titolo, descrizione, proprietà selezionabili manualmente e il pulsante Crea AUR-19.](/documentation/it/new-issue.png)
 
-La descrizione, i commenti e la finestra di creazione del ticket usano lo stesso editor delle pagine del progetto, senza le maniglie dei blocchi. Digita `/` per inserire un titolo, un elenco, un'attività, una citazione, un **Riquadro**, un blocco di codice, un blocco **Commuta** o un divisore, e `@` per menzionare una persona, un ticket, un obiettivo o una pagina. Il menu `@` elenca anche le risorse allegate a ciò che stai scrivendo: il ticket o l’obiettivo per la descrizione e il piano, un commento per i propri file o una finestra di creazione per i file aggiunti lì. Una menzione di una risorsa allegata altrove appare come **Non disponibile**. Più persone possono modificare la stessa descrizione contemporaneamente: il cursore di ciascuna appare con il suo nome e il suo colore, e le modifiche di Numo o di un agente collegato appaiono appena salvate. Numo, gli agenti collegati e le esportazioni CSV leggono il testo in Markdown, che si aggiorna pochi secondi dopo la fine della digitazione. Seleziona del testo per metterlo in grassetto, corsivo, barrato o codice, o per aggiungere un link. Incolla o trascina un'immagine, oppure scegli **Immagine** nel menu `/`, per inserirla nella descrizione; gli altri tipi di file vanno nelle risorse del ticket. Una menzione punta alla sua destinazione, non al suo nome: segue una rinomina e resiste alle modifiche e al copia-incolla in un’altra descrizione, un commento, una pagina o il compositore di Numo. Chi non può aprire la destinazione vede una menzione **Non disponibile**, senza nome né progetto.
+La descrizione, i commenti e la finestra di creazione del ticket usano lo stesso editor delle pagine del progetto, senza le maniglie dei blocchi. Digita `/` per inserire un titolo, un elenco, un'attività, una citazione, un **Riquadro**, un blocco di codice, un **Blocco a scomparsa** o un divisore, e `@` per menzionare una persona, un ticket, un obiettivo o una pagina. Il menu `@` elenca anche le risorse allegate a ciò che stai scrivendo: il ticket o l’obiettivo per la descrizione e il piano, un commento per i propri file o una finestra di creazione per i file aggiunti lì. Una menzione di una risorsa allegata altrove appare come **Non disponibile**. Più persone possono modificare la stessa descrizione contemporaneamente: il cursore di ciascuna appare con il suo nome e il suo colore, e le modifiche di Numo o di un agente collegato appaiono appena salvate. Numo, gli agenti collegati e le esportazioni CSV leggono il testo in Markdown, che si aggiorna pochi secondi dopo la fine della digitazione. Seleziona del testo per metterlo in grassetto, corsivo, barrato o codice, o per aggiungere un link. Incolla o trascina un'immagine, oppure scegli **Immagine** nel menu `/`, per inserirla nella descrizione; gli altri tipi di file vanno nelle risorse del ticket. Una menzione punta alla sua destinazione, non al suo nome: segue una rinomina e resiste alle modifiche e al copia-incolla in un’altra descrizione, un commento, una pagina o il compositore di Numo. Chi non può aprire la destinazione vede una menzione **Non disponibile**, senza nome né progetto.
 
 ### Verificare salvataggio e visibilità {#issue-save}
 
@@ -390,7 +390,7 @@ Apri la destinazione Triaggio del progetto. Leggi il ticket in arrivo e il conte
 
 I filtri dell’elenco restringono i ticket in arrivo per priorità, impegno, assegnatario, obiettivo, categorie o integrazione. I valori della stessa proprietà sono alternative; proprietà diverse si combinano. Reimposta i filtri per mostrare nuovamente tutti i ticket in arrivo.
 
-Scegli Accetta e conferma per spostare nel Backlog un ticket da mantenere. Scegli Rifiuta e conferma per impostarlo su Annullata. Se è un duplicato, usa il selettore dei duplicati per scegliere il ticket da mantenere. Il ticket in arrivo assume lo stato Duplicato e rimanda a quello scelto. Se descrivi la richiesta nella ricerca del selettore, compaiono anche ticket simili sotto **Correlati per significato**, dopo le corrispondenze testuali; vedi [Cercare i ticket per significato](/docs/navigation#search-by-meaning). Quando un elemento esce dal triage, viene selezionato il successivo. Verifica lo stato risultante o il collegamento al duplicato nel ticket stesso. Passare da una scheda all’altra senza eseguire una di queste azioni non chiude il ticket.
+Scegli Accetta e conferma per spostare nel Backlog un ticket da mantenere. Scegli Rifiuta e conferma per impostarlo su Annullato. Se è un duplicato, usa il selettore dei duplicati per scegliere il ticket da mantenere. Il ticket in arrivo assume lo stato Duplicato e rimanda a quello scelto. Se descrivi la richiesta nella ricerca del selettore, compaiono anche ticket simili sotto **Correlati per significato**, dopo le corrispondenze testuali; vedi [Cercare i ticket per significato](/docs/navigation#search-by-meaning). Quando un elemento esce dal triage, viene selezionato il successivo. Verifica lo stato risultante o il collegamento al duplicato nel ticket stesso. Passare da una scheda all’altra senza eseguire una di queste azioni non chiude il ticket.
 
 ### Ordinamento e limiti {#triage-order}
 
@@ -422,14 +422,14 @@ Apri il selettore di stato del ticket o usa le azioni di stato del tabellone. In
 | Annullata | Lavoro chiuso senza consegna. |
 | Duplicato | Lavoro rappresentato da un altro ticket. |
 
-Gli stati sono fissi e non vengono personalizzati per progetto. Triaggio e Duplicato sono disponibili nei selettori, ma sono deliberatamente assenti dalle normali colonne kanban. Per impostazione predefinita, i tabelloni nascondono anche le colonne **Fatto** e **Annullata**; selezionale nel filtro **Stato** per mostrarle. Una colonna mancante non dimostra che lo stato o il ticket non esistano.
+Gli stati sono fissi e non vengono personalizzati per progetto. Triage e Duplicato sono disponibili nei selettori, ma sono deliberatamente assenti dalle normali colonne kanban. Per impostazione predefinita, i tabelloni nascondono anche le colonne **Completato** e **Annullato**; selezionale nel filtro **Stato** per mostrarle. Una colonna mancante non dimostra che lo stato o il ticket non esistano.
 
 
 ![Gli otto stati del ticket nel selettore, con Backlog selezionato.](/documentation/it/issue-statuses.png)
 
 ### Stati finali e verifica {#closed-work}
 
-Fatto, Annullata e Duplicato sono stati finali per il monitoraggio: smettono di bloccare i ticket dipendenti ed escono dai conteggi attivi. Chiudere come Annullata non significa che l’attività sia stata consegnata. Quando contrassegni un duplicato, identifica il ticket mantenuto per dare una destinazione chiara alla discussione e al progresso.
+Completato, Annullato e Duplicato sono stati finali per il monitoraggio: smettono di bloccare i ticket dipendenti ed escono dai conteggi attivi. Chiudere come Annullato non significa che l’attività sia stata consegnata. Quando contrassegni un duplicato, identifica il ticket mantenuto per dare una destinazione chiara alla discussione e al progresso.
 
 Controlla i filtri se un ticket scompare dopo la chiusura. Riaprilo tramite identificativo per controllare il risultato e cambiare stato se l’hai chiuso per errore. Per il lavoro bloccato, controlla anche la direzione della dipendenza: cambiare lo stato di un ticket non ne riscrive descrizione o piano.
 
@@ -437,7 +437,7 @@ Controlla i filtri se un ticket scompare dopo la chiusura. Riaprilo tramite iden
 
 Apri la cronologia di discussione del ticket per aggiungere un commento. Spiega una decisione, una domanda o un risultato di verifica perché un altro membro possa capire cosa è cambiato. Usa le menzioni quando serve una persona o un oggetto collegato nel contesto; le notifiche dipendono comunque dalle preferenze del destinatario e dalla consegna sul suo dispositivo. Un lettore può commentare solo se il proprietario ha attivato **Può commentare** per lui. In quel caso può rispondere, menzionare persone, allegare file ai propri commenti e modificare o eliminare i propri commenti.
 
-Allega una pagina pertinente del progetto, un file o un collegamento attraverso i controlli delle risorse. Una pagina collegata è una risorsa aggiornata: il suo titolo segue le rinominazioni e il contenuto può evolvere. Un file è un allegato memorizzato, non una garanzia che un URL esterno resti disponibile. Per scrivere una pagina che non esiste ancora, scegli **Pagina** e poi **Nuova pagina** in fondo all’elenco; un titolo digitato prima nella ricerca diventa il suo titolo. La pagina viene creata nel progetto, allegata al ticket e aperta in un pannello laterale, dove **Espansione** apre la pagina intera.
+Allega una pagina pertinente del progetto, un file o un collegamento attraverso i controlli delle risorse. Una pagina collegata è una risorsa aggiornata: il suo titolo segue le rinominazioni e il contenuto può evolvere. Un file è un allegato memorizzato, non una garanzia che un URL esterno resti disponibile. Per scrivere una pagina che non esiste ancora, scegli **Pagina** e poi **Nuova pagina** in fondo all’elenco; un titolo digitato prima nella ricerca diventa il suo titolo. La pagina viene creata nel progetto, allegata al ticket e aperta in un pannello laterale, dove **Espandi** apre la pagina intera.
 
 Le risorse appaiono come schede: l’immagine stessa o l’icona del tipo di file, il nome e la dimensione. Un link mostra l’immagine di anteprima della sua pagina quando il sito ne fornisce una, altrimenti la sua favicon. Fai clic o clic destro su una scheda per aprirne il menu: Anteprima, Apri collegamento o Apri pagina, poi Rinomina, Scarica e Rimuovi quando si applicano. Anteprima apre un file supportato su tutta la finestra. Immagini, PDF, Markdown (`.md`), testo semplice (`.txt`, `.text`), CSV e formati audio o video supportati usano lo stesso visualizzatore. Il Markdown viene formattato, il testo resta letterale e il CSV si apre come tabella scorrevole. Usa Chiudi o Escape per tornare al ticket. Il menu Azioni del file (`…`) offre Scarica e, se puoi modificare quella risorsa, Rinomina e Rimuovi. Un clic sulla menzione di un file in un testo apre lo stesso visualizzatore. Minddy chiede una conferma prima di rimuovere una risorsa, che viene poi scollegata da questo contesto. Una risorsa pagina mantiene il titolo della sua pagina e non si può rinominare. I formati non supportati mantengono l’azione di download. **Apri pagina** la mostra in un pannello laterale, dove **Espandi** apre la pagina intera; un database si apre direttamente come pagina intera.
 
@@ -497,7 +497,7 @@ Non eliminare un figlio solo per riorganizzare la gerarchia. Controlla le relazi
 
 ## Mantenere un piano di implementazione {#implementation-plans}
 
-Apri la scheda del piano del ticket. La descrizione dovrebbe già indicare il problema e il risultato previsto. Aggiungi i passi di implementazione manualmente oppure [copia il prompt **Generare un piano**](#copy-issue-prompt) per il tuo agente di programmazione, che esplora da sé il repository. Numo non può leggere il repository: può precisare la descrizione e, se glielo chiedi, scrivere un piano semplice, ma qualsiasi percorso di file o funzione che cita è un’ipotesi. Un percorso o una funzione in un piano è una prova solo se il repository è stato realmente letto.
+Apri la scheda del piano del ticket. La descrizione dovrebbe già indicare il problema e il risultato previsto. Aggiungi i passi di implementazione manualmente oppure [copia il prompt **Genera un piano**](#copy-issue-prompt) per il tuo agente di programmazione, che esplora da sé il repository. Numo non può leggere il repository: può precisare la descrizione e, se glielo chiedi, scrivere un piano semplice, ma qualsiasi percorso di file o funzione che cita è un’ipotesi. Un percorso o una funzione in un piano è una prova solo se il repository è stato realmente letto.
 
 Il piano si modifica direttamente, come la descrizione: fai clic al suo interno e scrivi, senza modalità di modifica né pulsante di salvataggio. Un piano vuoto mostra un testo segnaposto. Più membri, Numo e gli agenti collegati possono modificare lo stesso piano contemporaneamente, ognuno con un cursore con il proprio nome, e un’attività spuntata da un agente compare nel tuo editor mentre scrivi altrove. Digita `- [ ]` seguito da uno spazio all’inizio di una riga, oppure scegli **Elenco attività** nel menu `/`, per aggiungere un’attività. Fai clic sulla casella di un’attività per completarla, oppure apri il suo menu per gli altri stati.
 
@@ -515,7 +515,7 @@ Per far implementare il piano, copia il prompt del ticket per il tuo agente di c
 
 ### Copiare un prompt per un altro agente di codice {#copy-issue-prompt}
 
-Per affidare un ticket a un agente di codice esterno a Minddy, come Claude Code, Codex o Cursor, apri il menu delle azioni del ticket, scegli **Copia come prompt** e poi **Generare un piano** (o **Rivedere il piano** se esiste già), **Implementa il ticket**, **Verificare l'attuazione** o **Personalizzato...**. Con più ticket selezionati, **Copia il prompt combinato** li riunisce in un unico prompt. La copia non esegue alcun modello di IA e non consuma la tua quota di IA: Minddy raccoglie ciò che ha già memorizzato e l'agente esplora il repository da solo. Se nelle preferenze dell’account è attiva l’opzione **Avvia il ticket o l'attività quando copi il prompt**, la copia avvia anche un ticket non ancora iniziato. Consulta [Lavoro sul codice e pull request](/docs/code-work) per il flusso completo e la revisione delle pull request.
+Per affidare un ticket a un agente di codice esterno a Minddy, come Claude Code, Codex o Cursor, apri il menu delle azioni del ticket, scegli **Copia come prompt** e poi **Genera un piano** (o **Rivedi il piano** se esiste già), **Implementa il ticket**, **Verifica l'implementazione** o **Personalizzato…**. Con più ticket selezionati, **Copia il prompt combinato** li riunisce in un unico prompt. La copia non esegue alcun modello di IA e non consuma la tua quota di IA: Minddy raccoglie ciò che ha già memorizzato e l'agente esplora il repository da solo. Se nelle preferenze dell’account è attiva l’opzione **Avvia il ticket o l'attività quando ne copio il prompt**, la copia avvia anche un ticket non ancora iniziato. Consulta [Lavoro sul codice e pull request](/docs/code-work) per il flusso completo e la revisione delle pull request.
 
 Il prompt contiene i campi del ticket, le sue categorie, le relazioni, il numero di risorse allegate e l'avanzamento del piano, ma non il testo del piano, che l'agente legge tramite il server MCP di Minddy o ti chiede. Indica inoltre il repository collegato al progetto e ogni pull request collegata al ticket, con il suo stato e i suoi branch quando sono noti. L'agente prosegue una pull request aperta sul suo branch e considera quelle unite o chiuse come cronologia. Senza una pull request aperta, il prompt suggerisce un nome di branch composto dall'identificativo del ticket e da un titolo breve, ad esempio `min-42-keyboard-navigation`. È solo un suggerimento: l'agente controlla prima i branch esistenti e segue la convenzione di denominazione del repository. Mantenere l'identificativo nel nome del branch, nel titolo della pull request o in una riga `Fixes MIN-42` permette a Minddy di collegare la pull request al ticket quando il repository è collegato.
 
@@ -525,7 +525,7 @@ Se le informazioni sulle pull request non possono essere caricate, il prompt lo 
 
 Crea o apri un ticket che resti utile a ogni ripetizione, per esempio un controllo periodico delle dipendenze. Imposta una scadenza, poi scegli una ricorrenza giornaliera, settimanale, mensile o annuale nel controllo della data del ticket. Una ricorrenza senza scadenza viene rifiutata. Controlla proprietà e assegnatario prima di salvare. Le impostazioni delle ricorrenze del progetto elencano le serie attive; usale per cambiare frequenza o interrompere la ripetizione.
 
-I ticket ricorrenti si ricreano dopo che il ticket è nello stato «Fatto»; il successivo viene creato nel Backlog. Dopo aver completato una ricorrenza, controlla identificativo e proprietà del ticket successivo.
+I ticket ricorrenti si ricreano dopo che il ticket è nello stato «Completato»; il successivo viene creato nel Backlog. Dopo aver completato una ricorrenza, controlla identificativo e proprietà del ticket successivo.
 
 La scadenza successiva deriva dalla scadenza precedente più un intervallo di ricorrenza, non dal giorno in cui hai completato l’attività. Il successore copia titolo, descrizione, priorità, impegno, assegnatario, obiettivo e categorie. Non copia il piano di implementazione, la relazione con il padre, le risorse o i commenti. La ricorrenza passa al successore; riaprire e completare di nuovo il vecchio ticket non crea un’altra occorrenza. Se la creazione del successore fallisce, la serie si interrompe invece di riprovare ripetutamente sul ticket completato. Esamina il risultato e configura la ricorrenza sulla prossima attività appropriata dopo aver risolto l’errore. Non supporre che un calendario esegua codice o completi il nuovo ticket per te.
 
@@ -566,7 +566,7 @@ Dopo ogni modifica delle associazioni, leggi il numero di ticket, la distribuzio
 
 ## Esportare i ticket in CSV {#export-issues}
 
-Come membro autenticato di un progetto, apri la palette con Command+K su macOS o Ctrl+K sugli altri sistemi e cerca «Ticket di esportazione come CSV». Scegli il comando, seleziona un progetto o tutti i progetti accessibili e controlla le caselle degli stati. La pagina del progetto corrente preseleziona quel progetto. I ticket completati, annullati e duplicati sono esclusi per impostazione predefinita; includili per ottenere l’intera cronologia. Deve restare selezionato almeno uno stato. I filtri della board e le schede selezionate non definiscono questa esportazione.
+Come membro autenticato di un progetto, apri la palette con Command+K su macOS o Ctrl+K sugli altri sistemi e cerca «Esporta i ticket in CSV». Scegli il comando, seleziona un progetto o tutti i progetti accessibili e controlla le caselle degli stati. La pagina del progetto corrente preseleziona quel progetto. I ticket completati, annullati e duplicati sono esclusi per impostazione predefinita; includili per ottenere l’intera cronologia. Deve restare selezionato almeno uno stato. I filtri della board e le schede selezionate non definiscono questa esportazione.
 
 Scegli Esporta e controlla la conferma del download e il numero di ticket indicato. Il CSV UTF-8 contiene identificativi, titoli, descrizioni Markdown, stati, priorità, impegno, categorie, assegnatari, obiettivi, nomi dei progetti, date e identificativi dei ticket padre. L’accesso è limitato ai tuoi progetti accessibili. Un file con sole intestazioni può indicare che non esistono ticket accessibili corrispondenti. Quando lo condividi, considera descrizioni e nomi come dati del progetto.
 

@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
+  "revision": 8,
   "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -40,10 +40,10 @@
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 8,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "projects",
@@ -61,7 +61,7 @@
       "src": "/documentation/es/work-inbox.png",
       "alt": "Bandeja de entrada con menciones, asignaciones y comentarios de demostración, leídos y no leídos.",
       "caption": "La actividad de ejemplo muestra el autor, el ticket y el estado de lectura. Todos incluye notificaciones leídas y no leídas.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -92,7 +92,7 @@ Las invitaciones pendientes a proyectos aparecen en Invitaciones con los filtros
 
 ## Elegir canales de notificación {#notification-preferences}
 
-Elige Ajustes de la caja de entrada en el encabezado de la bandeja de entrada, o abre Configuración de la cuenta y la pestaña Notificaciones. En Notificaciones de entrada, un interruptor por categoría (Asignaciones, Menciones, Comentarios, Numo, Rutinas, Pull requests, Sugerencias y Páginas) decide qué llega a tu bandeja de entrada. Desactivar una categoría detiene las futuras notificaciones de ese tipo, incluidos sus avisos push; no elimina las notificaciones que ya recibiste.
+Elige Ajustes de la bandeja de entrada en el encabezado de la bandeja de entrada, o abre Ajustes de la cuenta y la pestaña Notificaciones. En Notificaciones de entrada, un interruptor por categoría (Asignaciones, Menciones, Comentarios, Numo, Rutinas, Pull requests, Sugerencias y Páginas) decide qué llega a tu bandeja de entrada. Desactivar una categoría detiene las futuras notificaciones de ese tipo, incluidos sus avisos push; no elimina las notificaciones que ya recibiste.
 
 La sección Notificaciones push de la misma pestaña muestra los dispositivos que reciben avisos. La entrega por navegador, PWA o escritorio también requiere registrar el dispositivo y obtener permiso del sistema operativo. Desactivar o quitar un dispositivo detiene los avisos solo en ese dispositivo; tu bandeja de entrada y sus categorías no cambian.
 

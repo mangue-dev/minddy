@@ -17,10 +17,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
+  "revision": 6,
   "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -41,10 +41,10 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 6,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "api-and-webhooks"
@@ -65,7 +65,7 @@
       "src": "/documentation/es/git-connection-flow.svg",
       "alt": "Conectar la cuenta personal y vincular un repositorio al proyecto son pasos distintos.",
       "caption": "Autoriza primero la cuenta y después vincula un repositorio como propietario del proyecto.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -98,7 +98,7 @@
       "src": "/documentation/es/forge-issue-sync-mapping.svg",
       "alt": "Flujo de sincronización de GitHub con configuración, validación de eventos, importación y estados.",
       "caption": "Los eventos de GitHub conservan los cambios recientes y evitan entregas duplicadas. Las correspondencias de GitLab se verifican por separado.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -136,7 +136,7 @@
       "src": "/documentation/es/forge-issue-sync-workflow.png",
       "alt": "Repositorio de demostración de GitHub vinculado, con la sincronización de incidencias desactivada.",
       "caption": "El repositorio de demostración está vinculado a GitHub. La sincronización de incidencias sigue desactivada; compruebe el alcance y el backlog existente antes de activarla. Esta captura no demuestra una importación sincronizada.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -176,7 +176,7 @@ Self-hosted puede usar un relay gestionado configurado o aplicaciones propias de
 
 Como propietario, abra Git tras vincular el repositorio. Active sincronización con los permisos de escritura necesarios. Las incidencias importadas llegan al triaje. Compruebe la carga inicial indicada y título, descripción y estado de una incidencia remota conocida.
 
-Los estados abierto y cerrado se reflejan en ambas direcciones. En GitHub, título y cuerpo pasan a título y descripción; las etiquetas aportan categorías y prioridad o esfuerzo reconocidos; se usa el primer asignado vinculado y la fecha del hito como vencimiento. Los comentarios conservan autor, identidad, URL y fechas remotas. Bloqueos requieren ambas incidencias en el mismo proyecto importado. Permanecen URL de adjuntos; bytes y campos de GitHub Projects no tienen equivalente nativo.
+Los estados abierto y cerrado se reflejan en ambas direcciones. En GitHub, título y cuerpo pasan a título y descripción; las etiquetas aportan categorías y prioridad o esfuerzo reconocidos; se usa el primer responsable vinculado y la fecha del hito como vencimiento. Los comentarios conservan autor, identidad, URL y fechas remotas. Bloqueos requieren ambas incidencias en el mismo proyecto importado. Permanecen URL de adjuntos; bytes y campos de GitHub Projects no tienen equivalente nativo.
 
 ### Permisos, conflictos y desactivación {#forge-issue-sync-recovery}
 

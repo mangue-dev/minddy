@@ -20,10 +20,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
+  "revision": 15,
   "sourceRevision": 14,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -67,10 +67,10 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 15,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "api-and-webhooks"
@@ -96,7 +96,7 @@
       "src": "/documentation/es/publish-a-feedback-board-workflow.png",
       "alt": "Tablero público de feedback activado, con identidad por código de correo, la acción Activar SSO y URL oculta.",
       "caption": "El propietario activa el tablero y elige cómo se identifican los visitantes. Este tablero de demostración usa la verificación por correo; su URL está oculta.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -113,7 +113,7 @@
       "src": "/documentation/es/submit-and-follow-feedback-workflow.png",
       "alt": "Formulario de una solicitud de feedback con título, descripción y visibilidad pública activada.",
       "caption": "Un visitante identificado envía una solicitud y elige su visibilidad. El ejemplo se envió realmente con la revisión automática desactivada.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -129,7 +129,7 @@
       "src": "/documentation/es/feedback-objective-selection.png",
       "alt": "Vista previa de los componentes de selección de objetivo para un comentario y una integración, ambos con Docs.",
       "caption": "Selectores de objetivo con datos de demostración. Los nuevos comentarios heredan el ajuste de la integración.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -146,7 +146,7 @@
       "src": "/documentation/es/feedback-pages-and-views-workflow.png",
       "alt": "Guía de feedback publicada y seleccionada en la navegación del tablero, legible sin iniciar sesión.",
       "caption": "Publique una página, active las pestañas de páginas y selecciónela para el tablero. Esta página de demostración se abrió de forma anónima; su URL opaca conserva `noindex`.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -170,7 +170,7 @@ Las sugerencias conectan las solicitudes de los visitantes con la revisión y el
 
 ## Publicar un tablero de feedback {#publish-a-feedback-board}
 
-Como propietario, abra Feedback en la configuración del proyecto. Complete la preparación si todavía no existe un tablero y active el canal del tablero público. Copie su URL pública y ábrala en un navegador sin sesión para comprobar la vista de los visitantes. Los miembros pueden consultar la configuración, pero no cambiar la publicación, renovar tokens ni gestionar el secreto SSO.
+Como propietario, abra Feedback en los ajustes del proyecto. Complete la preparación si todavía no existe un tablero y active el canal del tablero público. Copie su URL pública y ábrala en un navegador sin sesión para comprobar la vista de los visitantes. Los miembros pueden consultar la configuración, pero no cambiar la publicación, renovar tokens ni gestionar el secreto SSO.
 
 Elija si los visitantes se identifican mediante un código por email o el SSO configurado. Configure los comentarios públicos, la visualización de categorías y las pestañas de páginas o vistas públicas seleccionadas. Revise los datos visibles antes de distribuir la URL. Los visitantes pueden leer sin identificarse; enviar solicitudes, votar y comentar requiere una identidad del tablero. La representación pública no muestra el email ni el nombre real del visitante, aunque el equipo puede gestionar en privado sus solicitudes identificadas.
 
@@ -178,7 +178,7 @@ Elija si los visitantes se identifican mediante un código por email o el SSO co
 
 Desactivar el tablero deja sus páginas fuera del alcance de los visitantes. La recepción de servidor a servidor utiliza una clave de integración de feedback independiente y puede continuar sin tablero público. La elección de visibilidad de una solicitud, su estado de revisión y su estado de spam también determinan si aparece: activar el tablero no publica por sí solo todas las solicitudes.
 
-El propietario activa o desactiva la **Revisión de Numo** en los ajustes de Sugerencias del proyecto; no hay un interruptor aparte para la instancia. Con la revisión activada, los envíos del tablero público y de las integraciones esperan la revisión antes de publicarse, mientras que el feedback creado por el equipo no queda retenido. Lo que se marca como sensible, como una vulnerabilidad o datos personales, pasa a privado y espera en **Por revisar**. La revisión usa el proveedor de IA de la instancia y el presupuesto de IA del propietario del proyecto: cuando el presupuesto se agota, el feedback espera, visible solo para el equipo, salvo que el propietario active **Publicar sin revisión cuando el presupuesto de IA se agota**. Con la revisión desactivada, el feedback se publica tal como se envió, sin categorías automáticas, filtro de bromas ni control de privacidad. Compruebe la cola después de enviar una solicitud de demostración. Numo solo envía respuestas públicas cuando se le solicita expresamente.
+El propietario activa o desactiva la **Revisión de Numo** en los ajustes de Sugerencias del proyecto; no hay un interruptor aparte para la instancia. Con la revisión activada, los envíos del tablero público y de las integraciones esperan la revisión antes de publicarse, mientras que el feedback creado por el equipo no queda retenido. Lo que se marca como sensible, como una vulnerabilidad o datos personales, pasa a privado y espera en **Por revisar**. La revisión usa el proveedor de IA de la instancia y el presupuesto de IA del propietario del proyecto: cuando el presupuesto se agota, el feedback espera, visible solo para el equipo, salvo que el propietario active **Publicar sin revisión cuando se agote el presupuesto de IA**. Con la revisión desactivada, el feedback se publica tal como se envió, sin categorías automáticas, filtro de bromas ni control de privacidad. Compruebe la cola después de enviar una solicitud de demostración. Numo solo envía respuestas públicas cuando se le solicita expresamente.
 
 ![Tablero público de feedback activado, con identidad por código de correo, la acción Activar SSO y URL oculta.](/documentation/es/publish-a-feedback-board-workflow.png)
 
@@ -220,7 +220,7 @@ La lista muestra el objetivo vinculado debajo del autor y las categorías. En la
 
 Como propietario o Miembro, elige **Objetivo** en las propiedades del comentario o al crearlo internamente. Elige **Ninguno** para quitar el vínculo. El objetivo debe pertenecer al mismo proyecto. Esta asociación es interna, no expone objetivos privados en el tablero público y no cuenta para el progreso de los tickets.
 
-El propietario puede elegir un objetivo opcional al crear una integración de comentarios en **Configuración del proyecto** → **Integraciones**, o cambiarlo después en la línea **Objetivo de los nuevos comentarios** bajo una integración de comentarios existente. Ese selector también puede crear un objetivo nuevo. Los nuevos envíos de la API heredan ese objetivo, incluso con `analyze: false`. Cambiar el ajuste no mueve comentarios existentes. Si el objetivo está en la papelera, elige uno activo o elimina el ajuste antes del siguiente envío. Numo nunca elige un objetivo al revisar comentarios. Pídele explícitamente que vincule una solicitud o quite su vínculo.
+El propietario puede elegir un objetivo opcional al crear una integración de comentarios en **Ajustes del proyecto** → **Integraciones**, o cambiarlo después en la línea **Objetivo de las nuevas sugerencias** bajo una integración de comentarios existente. Ese selector también puede crear un objetivo nuevo. Los nuevos envíos de la API heredan ese objetivo, incluso con `analyze: false`. Cambiar el ajuste no mueve comentarios existentes. Si el objetivo está en la papelera, elige uno activo o elimina el ajuste antes del siguiente envío. Numo nunca elige un objetivo al revisar comentarios. Pídele explícitamente que vincule una solicitud o quite su vínculo.
 
 Al convertir el comentario, el nuevo ticket hereda su objetivo y categorías. Puedes cambiarlos en el formulario de creación. Si no se eligió objetivo, el campo queda vacío incluso con Smart Fill activado. Cambiar después el objetivo del comentario no mueve un ticket ya vinculado. Las fusiones requieren que ambas solicitudes tengan el mismo objetivo, incluido que ambas no tengan ninguno. Iguala sus objetivos primero si el equipo decide que describen la misma necesidad.
 
@@ -234,7 +234,7 @@ Como propietario o Miembro, abra la solicitud y elija unirla a una solicitud can
 
 ### Crear o vincular trabajo {#work}
 
-Convierta la solicitud en una nueva incidencia si el trabajo aún no está registrado. Revise los campos de creación antes de confirmar; sin campos proporcionados, la promoción crea por defecto trabajo en el `backlog`. Si ya existe una incidencia, use la acción de vincular. **Vincular a una incidencia existente** busca entre las incidencias del proyecto, salvo las canceladas y duplicadas. Si describe la necesidad, también aparecen incidencias encontradas [por el sentido](/docs/navigation#search-by-meaning) bajo **Relacionadas por el sentido**, después de las coincidencias de texto, lo que ayuda cuando la solicitud no usa las palabras de la incidencia. Una solicitud ya vinculada no puede volver a convertirse. Desvincular pide confirmación antes; conserva el último estado público y detiene la relación con la incidencia.
+Convierta la solicitud en una nueva incidencia si el trabajo aún no está registrado. Revise los campos de creación antes de confirmar; sin campos proporcionados, la promoción crea por defecto trabajo en el `backlog`. Si ya existe una incidencia, use la acción de vincular. **Vincular a una incidencia existente** busca entre las incidencias del proyecto, salvo las canceladas y duplicadas. Si describe la necesidad, también aparecen incidencias encontradas [por el sentido](/docs/navigation#search-by-meaning) bajo **Relacionadas por significado**, después de las coincidencias de texto, lo que ayuda cuando la solicitud no usa las palabras de la incidencia. Una solicitud ya vinculada no puede volver a convertirse. Desvincular pide confirmación antes; conserva el último estado público y detiene la relación con la incidencia.
 
 El estado vinculado sigue a la incidencia: `triage`/`backlog`/`duplicate` → `open`; `todo` → `planned`; `in_progress`/`in_review` → `in_progress`; `done` → `shipped`; `canceled` → `declined`. Devolver el trabajo al `backlog` también reabre el estado de feedback. Tras cambiar un estado, compruebe la incidencia vinculada y la solicitud sin sesión.
 

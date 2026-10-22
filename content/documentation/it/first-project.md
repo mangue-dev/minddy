@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
+  "revision": 10,
   "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -42,10 +42,10 @@
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 10,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "accounts",
@@ -65,7 +65,7 @@
       "src": "/documentation/it/reader-first-project.png",
       "alt": "Ticket dimostrativo completato con descrizione e commento salvato.",
       "caption": "Lo stato completato documenta la verifica del percorso nell’applicazione. Non afferma che sia stato provato il link email del sito d’esempio.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -92,13 +92,13 @@ Se il tuo team ha già un progetto, comunica al proprietario l'email del tuo acc
 2. Apri il progetto e crea un ticket. Assegna un titolo concreto, come «Controllare il collegamento di contatto del sito». Descrivi la pagina, la destinazione prevista e come verificherai il risultato. Se il pulsante Riempimento intelligente è visibile e attivo, disattivalo per questo esempio manuale prima di creare il ticket. Questo pulsante controlla la compilazione di questo ticket ed è indipendente da Smart Assign e dalle routine.
 3. Scegli un assegnatario, una priorità e un impegno se aiutano a pianificare l’attività. Conferma la creazione, apri il ticket ottenuto e controlla progetto e identificativo.
 4. Imposta lo stato «In corso» quando inizi il lavoro. Esegui il controllo e registra il risultato in un commento. Usa «In revisione» se qualcuno deve ancora esaminarlo.
-5. Imposta «Fatto» dopo aver verificato il risultato previsto. I tabelloni nascondono la colonna **Fatto** per impostazione predefinita: seleziona **Fatto** nel filtro **Stato** del tabellone, oppure cerca l’identificativo del ticket, per confermare il cambiamento.
+5. Imposta «Completato» dopo aver verificato il risultato previsto. I tabelloni nascondono la colonna **Completato** per impostazione predefinita: seleziona **Completato** nel filtro **Stato** del tabellone, oppure cerca l’identificativo del ticket, per confermare il cambiamento.
 
 ![Ticket dimostrativo completato con descrizione e commento salvato.](/documentation/it/reader-first-project.png)
 
 ## Risolvere un risultato inatteso {#first-use-recovery}
 
-Un invito riguarda un account e un’istanza specifici. Se manca, verifica l’indirizzo email comunicato al proprietario e apri la posta in arrivo sulla stessa istanza. Conoscere il nome di un progetto non permette di entrarvi. Se un ticket scompare dal tabellone dopo un cambio di stato, rimuovi i filtri della vista o cerca il suo identificativo prima di crearne un’altra copia. I ticket fatti e annullati escono dal tabellone per impostazione predefinita; seleziona **Fatto** o **Annullata** nel filtro **Stato** per mostrarli.
+Un invito riguarda un account e un’istanza specifici. Se manca, verifica l’indirizzo email comunicato al proprietario e apri la posta in arrivo sulla stessa istanza. Conoscere il nome di un progetto non permette di entrarvi. Se un ticket scompare dal tabellone dopo un cambio di stato, rimuovi i filtri della vista o cerca il suo identificativo prima di crearne un’altra copia. I ticket completati e annullati escono dal tabellone per impostazione predefinita; seleziona **Completato** o **Annullato** nel filtro **Stato** per mostrarli.
 
 Se alcuni inviti aggiunti nella procedura guidata non sono partiti, il progetto viene comunque creato e una notifica elenca ogni persona non invitata con il motivo. Controlla gli inviti in sospeso nelle impostazioni dei membri del progetto prima di invitare di nuovo.
 

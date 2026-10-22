@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
+  "revision": 10,
   "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -48,10 +48,10 @@
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 10,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "integration-troubleshooting",
@@ -73,7 +73,7 @@
       "src": "/documentation/it/integration-api-and-webhooks-flow.svg",
       "alt": "Schema: Server conserva chiave integrazione. POST ticket o feedback con tipo corretto. Proprietario sceglie destinazione webhook. Ricevente verifica HMAC grezzo e UUID.",
       "caption": "Segui le fasi in questo ordine. Server conserva chiave integrazione. `POST` ticket o feedback con tipo corretto. Proprietario sceglie destinazione webhook. Ricevente verifica HMAC grezzo e UUID.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -105,7 +105,7 @@
       "src": "/documentation/it/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Sequenze distinte di acquisizione backend e SSO browser con segreti diversi.",
       "caption": "La chiave di acquisizione autentica le chiamate server. Il segreto SSO della bacheca firma un token visitatore breve e monouso.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -175,7 +175,7 @@ curl --fail-with-body --request POST "$MINDDY_ORIGIN/api/v1/issues" \
 
 ### Verificare e deduplicare eventi {#receive}
 
-Le integrazioni `issues` possono inviare `issue.created`, `issue.status_changed` e `issue.updated`. Una nuova destinazione webhook deve essere scelta dal proprietario con **Configura il webhook…** nel menu ⋯ dell’integrazione. Una volta impostata la destinazione, la riga **Webhook** sotto l’integrazione mostra l’ultima consegna, accettata o rifiutata con la data, oppure **Nessuna consegna ancora**. Gli agenti possono regolare eventi e ambito di una destinazione esistente o disattivarla; non possono aprire un nuovo canale di uscita. L’ambito `integration` include solo i ticket creati con quella chiave; `all` include l’intero progetto.
+Le integrazioni `issues` possono inviare `issue.created`, `issue.status_changed` e `issue.updated`. Una nuova destinazione webhook deve essere scelta dal proprietario con **Configura il webhook…** nel menu ⋯ dell’integrazione. Una volta impostata la destinazione, la riga **Webhook** sotto l’integrazione mostra l’ultima consegna, accettata o rifiutata con la data, oppure **Ancora nessun invio**. Gli agenti possono regolare eventi e ambito di una destinazione esistente o disattivarla; non possono aprire un nuovo canale di uscita. L’ambito `integration` include solo i ticket creati con quella chiave; `all` include l’intero progetto.
 
 `X-minddy-Signature` contiene il prefisso `sha256=` e un HMAC-SHA256 calcolato sui byte originali. La chiave HMAC è il digest SHA-256 della chiave API, rappresentato come stringa esadecimale minuscola. Confronta la firma in tempo costante prima di fidarti del payload, senza analizzarlo e riserializzarlo. `X-minddy-Delivery` corrisponde a `delivery_id`: usa questo UUID per eliminare i duplicati.
 

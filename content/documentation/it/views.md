@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
+  "revision": 11,
   "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -45,10 +45,10 @@
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 11,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "navigation",
@@ -70,7 +70,7 @@
       "src": "/documentation/it/work-view-filters.png",
       "alt": "Filtri manuali di una vista e menu di ordinamento.",
       "caption": "Filtra per proprietà dei ticket o scegli un ordine. Il campo IA è facoltativo per questi comandi manuali.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -86,7 +86,7 @@
       "src": "/documentation/it/work-share-view.png",
       "alt": "Finestra di condivisione di una vista con accesso privato selezionato.",
       "caption": "Accesso privato, protetto da password e pubblico sono scelte distinte. In questa schermata la vista rimane privata.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -110,15 +110,15 @@ Una vista salva filtri e ordinamento del lavoro a cui hai accesso, senza creare 
 
 Parti dal tabellone di un progetto o da un elenco personale di ticket tra progetti. Usa filtri, ordinamento e controlli di visualizzazione per scegliere il lavoro necessario. Controlla l’ambito prima di salvare: una vista personale e una vista di progetto non hanno lo stesso confine di accesso.
 
-Filtra per proprietà supportate, come stato, assegnatario, priorità, categorie o obiettivo. Ordina il risultato per rendere chiara la prossima azione. Nel kanban, i ticket restano raggruppati per stato; cambiare una vista non ne modifica stato o assegnazione. Senza un proprio filtro di stato, un tabellone mostra solo **Backlog**, **Da fare**, **In corso** e **In revisione**. Seleziona **Fatto** o **Annullata** nel filtro **Stato** per mostrare queste colonne; una vista conserva il filtro di stato salvato con essa.
+Filtra per proprietà supportate, come stato, assegnatario, priorità, categorie o obiettivo. Ordina il risultato per rendere chiara la prossima azione. Nel kanban, i ticket restano raggruppati per stato; cambiare una vista non ne modifica stato o assegnazione. Senza un proprio filtro di stato, un tabellone mostra solo **Backlog**, **Da fare**, **In corso** e **In revisione**. Seleziona **Completato** o **Annullato** nel filtro **Stato** per mostrare queste colonne; una vista conserva il filtro di stato salvato con essa.
 
-Salva la vista con un nome che ne descriva lo scopo, selezionala di nuovo nella barra delle viste in cima al tabellone (un menu su uno schermo stretto) e verifica i filtri. Modifica o rimuovi la vista salvata quando cambia il suo scopo. **Cancella vista** chiede una conferma, e un tabellone conserva sempre almeno una vista propria. Condividere una vista è un’operazione di pubblicazione separata con proprie regole di permessi e revoca.
+Salva la vista con un nome che ne descriva lo scopo, selezionala di nuovo nella barra delle viste in cima al tabellone (un menu su uno schermo stretto) e verifica i filtri. Modifica o rimuovi la vista salvata quando cambia il suo scopo. **Elimina vista** chiede una conferma, e un tabellone conserva sempre almeno una vista propria. Condividere una vista è un’operazione di pubblicazione separata con proprie regole di permessi e revoca.
 
 ![Filtri manuali di una vista e menu di ordinamento.](/documentation/it/work-view-filters.png)
 
 ### Risolvere risultati vuoti o inattesi {#view-recovery}
 
-Controlla tutti i filtri, il progetto attivo e la tua appartenenza quando mancano ticket previsti. Rimuovi i filtri restrittivi prima di supporre che i dati siano stati eliminati. Dopo una modifica, un ticket può legittimamente uscire da una vista filtrata. Cerca il suo identificativo, oppure seleziona **Fatto** e **Annullata** nel filtro **Stato** di un tabellone di progetto senza altri filtri, per controllare i valori salvati.
+Controlla tutti i filtri, il progetto attivo e la tua appartenenza quando mancano ticket previsti. Rimuovi i filtri restrittivi prima di supporre che i dati siano stati eliminati. Dopo una modifica, un ticket può legittimamente uscire da una vista filtrata. Cerca il suo identificativo, oppure seleziona **Completato** e **Annullato** nel filtro **Stato** di un tabellone di progetto senza altri filtri, per controllare i valori salvati.
 
 Una vista salvata non è una copia dei ticket. Eliminare la vista rimuove quella configurazione, mentre eliminare i ticket selezionati cambia il lavoro del progetto sottostante.
 

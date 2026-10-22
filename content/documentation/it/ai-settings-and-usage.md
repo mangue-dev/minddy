@@ -16,7 +16,7 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
+  "revision": 20,
   "sourceRevision": 19,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
@@ -61,9 +61,9 @@
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:claude/min773 (dictation pill, discard confirmation, cleanup preference and vocabulary checked against the changed source and the running app; earlier evidence retained in git history)",
-    "language": "agent:claude/min773 (it translation of the MIN-773 passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 20,
+    "fact": "agent:claude/min773 (dictation pill, discard confirmation, cleanup preference and vocabulary checked against the changed source and the running app; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures)",
+    "language": "agent:claude/min773 (it translation of the MIN-773 passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -86,7 +86,7 @@
       "src": "/documentation/it/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Connessioni, assegnazione per capacità e modello Numo personale sono impostazioni separate.",
       "caption": "Più fornitori possono restare collegati. L’assegnazione sceglie per capacità; il predefinito Numo viene salvato per account e fornitore.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -170,7 +170,7 @@ La fatturazione mostra il budget IA rimanente e il prossimo ripristino, **Andame
 Usa il microfono accanto a un campo compatibile per dettare un ticket, un obiettivo, un commento, un messaggio Numo, un feedback o un’istruzione per una routine. Servono il permesso di scrivere in quel punto, un microfono funzionante e un browser compatibile con la registrazione. Autorizza il microfono per il sito nel browser e nel sistema operativo. Usa HTTPS per un’istanza remota. Nel Cloud deve essere disponibile il budget IA; le istanze self-hosted richiedono anche fornitori di trascrizione e dettatura funzionanti. Le chiavi personali per la voce e i modelli si configurano [più sopra](#ai-keys-and-models).
 
 1. Apri il modulo o il ticket interessato e scegli il suo microfono. In un ticket aperto, Command+Maiusc+D su macOS o Ctrl+Maiusc+D sugli altri sistemi avvia o interrompe la modifica vocale. In fondo allo schermo si apre una barra di dettatura, come pannello su un telefono, con il timer e un’onda che segue la tua voce. Il resto dell’interfaccia attende la fine della registrazione.
-2. Parla nella lingua dell’interfaccia, che guida la trascrizione. Per modificare un ticket, indica chiaramente l’azione, ad esempio «Imposta la priorità su alta». Scegli **Trascrivi** (✓), premi Command+Invio su macOS o Ctrl+Invio sugli altri sistemi (funziona anche Invio) o ripeti la scorciatoia, poi attendi la fine della trascrizione e dell’elaborazione Numo. Per scartare la registrazione, scegli **Annulla registrazione** (✕) o premi Esc, poi conferma **Annulla registrazione**: non viene inviato nulla.
+2. Parla nella lingua dell’interfaccia, che guida la trascrizione. Per modificare un ticket, indica chiaramente l’azione, ad esempio «Imposta la priorità su alta». Scegli **Trascrivi** (✓), premi Command+Invio su macOS o Ctrl+Invio sugli altri sistemi (funziona anche Invio) o ripeti la scorciatoia, poi attendi la fine della trascrizione e dell’elaborazione Numo. Per scartare la registrazione, scegli **Scarta registrazione** (✕) o premi Esc, poi conferma **Scarta**: non viene inviato nulla.
 3. Controlla il risultato. Messaggi Numo, commenti e istruzioni delle routine ricevono testo modificabile; rileggilo prima di inviarlo o salvarlo. I moduli di creazione ricevono campi di bozza ancora da confermare. La modifica vocale di un ticket esistente applica subito i cambiamenti: verifica i campi e correggi eventuali errori con i normali comandi. La dettatura non concede permessi aggiuntivi.
 
 ### Consumo e limiti di registrazione {#voice-limits}

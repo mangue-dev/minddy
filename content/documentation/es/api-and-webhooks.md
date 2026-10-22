@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
+  "revision": 11,
   "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -48,10 +48,10 @@
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 11,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "integration-troubleshooting",
@@ -72,7 +72,7 @@
       "src": "/documentation/es/integration-api-and-webhooks-flow.svg",
       "alt": "Diagrama: Servidor guarda clave de integración. POST incidencias o feedback con tipo correcto. Propietario elige destino webhook issues. Receptor verifica HMAC bruto y UUID.",
       "caption": "Siga las etapas en este orden. Servidor guarda clave de integración. `POST` incidencias o feedback con tipo correcto. Propietario elige destino webhook issues. Receptor verifica HMAC bruto y UUID.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +104,7 @@
       "src": "/documentation/es/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Secuencias separadas de recogida desde el backend y SSO del navegador con secretos distintos.",
       "caption": "La clave de recogida autentica llamadas del servidor. El secreto SSO del tablero firma un token de visitante breve y de un solo uso.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -149,7 +149,7 @@ La API de integración recibe incidencias o sugerencias desde su servidor median
 
 ## Crear incidencias o feedback y recibir webhooks firmados {#integration-api-and-webhooks}
 
-El propietario crea una integración con **Nueva integración** en la línea de título de **Configuración del proyecto** → **Integraciones**. Elija `issues` para trabajo interno que entra en triage o `feedback` para solicitudes de usuarios con votos y estado público. La clave `mdy_` en texto claro se muestra una sola vez. Guárdela únicamente en el servidor, normalmente como `MINDDY_API_KEY` o `MINDDY_FEEDBACK_KEY`, nunca en el navegador, Git o registros compartidos. Cada integración aparece con su nombre, el prefijo de su clave, su fecha de creación, su último uso y una insignia **Incidencias** o **Sugerencias**. Para revocar una, el propietario elige **Revocar** en su menú ⋯ y confirma; entonces lleva la insignia **Revocado** y pasa al final de la lista, atenuada. La revocación es definitiva; las claves desconocidas o revocadas devuelven 401 `invalid_api_key`. Cada clave pertenece a un proyecto y un tipo: usarla en la otra familia de endpoints devuelve 403 `wrong_key_kind`. Una integración no es una persona: no tiene rol en el proyecto y conserva los permisos fijos de su tipo cuando cambian los roles de los miembros. Los lectores no ven las integraciones.
+El propietario crea una integración con **Nueva integración** en la línea de título de **Ajustes del proyecto** → **Integraciones**. Elija `issues` para trabajo interno que entra en triage o `feedback` para solicitudes de usuarios con votos y estado público. La clave `mdy_` en texto claro se muestra una sola vez. Guárdela únicamente en el servidor, normalmente como `MINDDY_API_KEY` o `MINDDY_FEEDBACK_KEY`, nunca en el navegador, Git o registros compartidos. Cada integración aparece con su nombre, el prefijo de su clave, su fecha de creación, su último uso y una insignia **Incidencias** o **Sugerencias**. Para revocar una, el propietario elige **Revocar** en su menú ⋯ y confirma; entonces lleva la insignia **Revocada** y pasa al final de la lista, atenuada. La revocación es definitiva; las claves desconocidas o revocadas devuelven 401 `invalid_api_key`. Cada clave pertenece a un proyecto y un tipo: usarla en la otra familia de endpoints devuelve 403 `wrong_key_kind`. Una integración no es una persona: no tiene rol en el proyecto y conserva los permisos fijos de su tipo cuando cambian los roles de los miembros. Los lectores no ven las integraciones.
 
 ![Diagrama: Servidor guarda clave de integración. POST incidencias o feedback con tipo correcto. Propietario elige destino webhook issues. Receptor verifica HMAC bruto y UUID.](/documentation/es/integration-api-and-webhooks-flow.svg)
 
@@ -174,7 +174,7 @@ curl --fail-with-body --request POST "$MINDDY_ORIGIN/api/v1/issues" \
 
 ### Verificar y deduplicar eventos {#receive}
 
-Una integración `issues` puede enviar `issue.created`, `issue.status_changed` e `issue.updated`. El propietario debe elegir cualquier nueva URL de destino webhook con **Configurar el webhook…** en el menú ⋯ de la integración. Una vez definido el destino, la línea **Webhook** bajo la integración muestra la última entrega, aceptada o rechazada con su fecha, o **Todavía no se ha entregado**. Los agentes pueden ajustar los eventos o el ámbito existentes o desactivarlo, pero no abrir un nuevo canal de salida. El ámbito `integration` incluye solo las incidencias de esa clave; `all` incluye todas las del proyecto.
+Una integración `issues` puede enviar `issue.created`, `issue.status_changed` e `issue.updated`. El propietario debe elegir cualquier nueva URL de destino webhook con **Configurar el webhook…** en el menú ⋯ de la integración. Una vez definido el destino, la línea **Webhook** bajo la integración muestra la última entrega, aceptada o rechazada con su fecha, o **Todavía no hay envíos**. Los agentes pueden ajustar los eventos o el ámbito existentes o desactivarlo, pero no abrir un nuevo canal de salida. El ámbito `integration` incluye solo las incidencias de esa clave; `all` incluye todas las del proyecto.
 
 Verifique `X-minddy-Signature`: el prefijo `sha256=` seguido de HMAC-SHA256 sobre los bytes originales recibidos. La clave HMAC es el digest SHA-256 de la clave API, representado como una cadena hexadecimal en minúsculas. Compare en tiempo constante antes de confiar en el contenido. No analice y vuelva a serializar JSON antes de calcular el hash. `X-minddy-Delivery` corresponde a `delivery_id`; elimine duplicados mediante ese UUID.
 
@@ -184,7 +184,7 @@ La entrega es de mejor esfuerzo: tiene un timeout de cinco segundos y un único 
 
 ## Conectar ingestión de feedback y SSO {#feedback-ingestion-and-sso}
 
-El propietario crea una clave de integración de feedback en la configuración del proyecto. Guarde la clave, que se muestra una sola vez, como `MINDDY_FEEDBACK_KEY` en la configuración secreta del backend. Nunca la incorpore al código del navegador. Defina `MINDDY_ORIGIN` con el origen de la instancia de destino, sin barra final.
+El propietario crea una clave de integración de feedback en los ajustes del proyecto. Guarde la clave, que se muestra una sola vez, como `MINDDY_FEEDBACK_KEY` en la configuración secreta del backend. Nunca la incorpore al código del navegador. Defina `MINDDY_ORIGIN` con el origen de la instancia de destino, sin barra final.
 
 ```bash
 curl -i "$MINDDY_ORIGIN/api/v1/feedback"   -H "Authorization: Bearer $MINDDY_FEEDBACK_KEY"   -H 'Content-Type: application/json'   --data '{"title":"Mostrar fecha de entrega","body":"Soporte necesita la fecha prevista.","user":{"external_id":"demo-user-1","name":"Lector de demostración"}}'
@@ -209,4 +209,4 @@ Compruebe que el visitante abra Mis sugerencias con la identidad prevista. Un to
 
 ## Elegir un objetivo para un comentario {#feedback-objective-default}
 
-Para una integración `feedback`, el propietario puede elegir el objetivo al crearla, o más tarde en la línea **Objetivo de los nuevos comentarios** bajo la integración existente en **Configuración del proyecto** → **Integraciones**; ese selector también puede crear un objetivo nuevo. Solo se aceptan objetivos activos del mismo proyecto. Cada nuevo envío `POST /api/v1/feedback` hereda el ajuste, incluso con `analyze: false`; no envíes `objective_id` en el cuerpo de la API. La respuesta 201 incluye el `objective_id` asignado o `null`. Cambiar o quitar el ajuste solo afecta a futuros envíos. Un objetivo no disponible devuelve 422 `objective_not_found`: elige uno activo o elimina el ajuste antes de reintentar. La revisión de Numo no deduce objetivos. La conversión hereda el objetivo y las categorías del comentario.
+Para una integración `feedback`, el propietario puede elegir el objetivo al crearla, o más tarde en la línea **Objetivo de las nuevas sugerencias** bajo la integración existente en **Ajustes del proyecto** → **Integraciones**; ese selector también puede crear un objetivo nuevo. Solo se aceptan objetivos activos del mismo proyecto. Cada nuevo envío `POST /api/v1/feedback` hereda el ajuste, incluso con `analyze: false`; no envíes `objective_id` en el cuerpo de la API. La respuesta 201 incluye el `objective_id` asignado o `null`. Cambiar o quitar el ajuste solo afecta a futuros envíos. Un objetivo no disponible devuelve 422 `objective_not_found`: elige uno activo o elimina el ajuste antes de reintentar. La revisión de Numo no deduce objetivos. La conversión hereda el objetivo y las categorías del comentario.

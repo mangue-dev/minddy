@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 18,
+  "revision": 19,
   "sourceRevision": 18,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -52,10 +52,10 @@
     ]
   },
   "review": {
-    "revision": 18,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 19,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "issues",
@@ -78,7 +78,7 @@
       "src": "/documentation/es/review-pull-requests-workflow.png",
       "alt": "Pestaña Cambios de la PR de demostración abierta, con las diferencias de greeting y un aviso de autorización de GitHub no disponible.",
       "caption": "PR de demostración que sigue abierta, sin fusionar. Las diferencias eliminan los espacios alrededor del nombre y usan World para un valor vacío. Esta instancia no puede solicitar autorización de usuario de GitHub; la indicación de disponibilidad no concede permisos para fusionar ni demuestra que la CI del proveedor haya pasado.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -110,11 +110,11 @@ El contenido del prompt, la rama sugerida y las reglas de idioma se describen en
 
 ### Mantener el trabajo vinculado a la incidencia {#link-work}
 
-Cuando el repositorio está vinculado al proyecto, mantenga el identificador de la incidencia en el nombre de la rama, en el título de la pull request o en una línea `Fixes MIN-42`. Minddy vincula entonces la pull request a la incidencia, y los prompts siguientes indican al agente que continúe la pull request abierta en su rama. Para vincular una incidencia a mano, use **Vincular una incidencia** en la pull request. Su búsqueda acepta un identificador o palabras del título, y una descripción también muestra incidencias del proyecto encontradas [por el sentido](/docs/navigation#search-by-meaning) bajo **Relacionadas por el sentido**.
+Cuando el repositorio está vinculado al proyecto, mantenga el identificador de la incidencia en el nombre de la rama, en el título de la pull request o en una línea `Fixes MIN-42`. Minddy vincula entonces la pull request a la incidencia, y los prompts siguientes indican al agente que continúe la pull request abierta en su rama. Para vincular una incidencia a mano, use **Vincular una incidencia** en la pull request. Su búsqueda acepta un identificador o palabras del título, y una descripción también muestra incidencias del proyecto encontradas [por el sentido](/docs/navigation#search-by-meaning) bajo **Relacionadas por significado**.
 
 Desde un tablero, haga clic derecho en una incidencia sin pull request abierta y elija **Vincular a una pull request** para escoger una de las pull requests abiertas de su proyecto, incluidos los borradores. La opción solo aparece cuando ese proyecto tiene al menos una pull request que vincular. Con varias incidencias seleccionadas, **Acciones** ofrece la misma opción para toda la selección, y **Vincular las demás incidencias a #N** cuando algunas ya tienen la pull request N. **Vincular a una pull request** deja de ofrecerse en cuanto una incidencia seleccionada tiene alguna pull request vinculada; **Desvincular N incidencias de sus pull requests** quita primero todos los vínculos de la selección, después de que lo confirme. Los vínculos aparecen al instante en las tarjetas, y un vínculo rechazado desaparece cuando el tablero se actualiza. Una tarjeta con una pull request abierta muestra su número, coloreado según su estado, y su preparación para la fusión, el mismo indicador que en **Revisión de código**.
 
-En **Configuración de la cuenta → Incidencias → Iniciar una incidencia**, **Inicia la incidencia o tarea cuando copies su prompt** pasa a «En curso» una incidencia o una tarea del cuaderno que aún no ha empezado cuando copia su prompt. Déjelo desactivado si solo copia prompts para leerlos.
+En **Ajustes de la cuenta → Incidencias → Iniciar una incidencia**, **Iniciar la incidencia o la tarea cuando copio su prompt** pasa a «En curso» una incidencia o una tarea del cuaderno que aún no ha empezado cuando copia su prompt. Déjelo desactivado si solo copia prompts para leerlos.
 
 ## Revisar una pull request vinculada {#review-pull-requests}
 
@@ -134,4 +134,4 @@ Use **Solicitar revisión** para elegir un revisor cuando haga falta una segunda
 
 Fusione solo después de satisfacer los controles y revisiones aplicables y cuando su cuenta del proveedor tenga permiso. **Fusionar con Numo** permite que Numo redacte el título y la descripción del commit de fusión a partir de la pull request y fusione en cuanto estén listos. El proveedor Git puede rechazar una acción visible. Si el estado mostrado parece desactualizado, actualice y consulte el proveedor antes de repetir la acción. Una vista previa vinculada depende de un despliegue real del proveedor.
 
-Haga clic derecho en una pull request de la lista para cambiar su estado, fusionarla o pedir una corrección sin abrirla. Una pull request abierta ofrece **Convertir en borrador** y **Cerrar pull request**, un borrador ofrece **Listo para la revisión** y **Cerrar pull request**, y una cerrada ofrece **Reabrir**; cada cambio pide confirmación. Una pull request fusionada no ofrece ningún cambio de estado. Las acciones de escritura solo aparecen cuando su cuenta del proveedor puede escribir en el repositorio y no están disponibles hasta que el menú vuelve a leer la pull request. **Fusionar** aparece cuando la pull request está abierta, no es un borrador y puede fusionarse; abre la pull request en su confirmación de fusión habitual. **Copiar prompt de corrección** y **Corregir con Numo** aparecen cuando falla una comprobación, hay una conversación sin resolver o la rama tiene conflictos o está desactualizada. **Corregir con Numo** envía ese prompt a Numo con la pull request como contexto. Numo puede leer la pull request, responder a una conversación de revisión que no requiere cambios en el código y resolver las conversaciones que la rama ya atiende, pero no modifica el código ni hace push de commits; para los cambios de código, use **Copiar prompt de corrección** y péguelo en su agente de código. Los permisos y la posibilidad de fusionar se vuelven a comprobar al confirmar.
+Haga clic derecho en una pull request de la lista para cambiar su estado, fusionarla o pedir una corrección sin abrirla. Una pull request abierta ofrece **Convertir en borrador** y **Cerrar pull request**, un borrador ofrece **Lista para revisión** y **Cerrar pull request**, y una cerrada ofrece **Reabrir**; cada cambio pide confirmación. Una pull request fusionada no ofrece ningún cambio de estado. Las acciones de escritura solo aparecen cuando su cuenta del proveedor puede escribir en el repositorio y no están disponibles hasta que el menú vuelve a leer la pull request. **Fusionar** aparece cuando la pull request está abierta, no es un borrador y puede fusionarse; abre la pull request en su confirmación de fusión habitual. **Copiar prompt de corrección** y **Corregir con Numo** aparecen cuando falla una comprobación, hay una conversación sin resolver o la rama tiene conflictos o está desactualizada. **Corregir con Numo** envía ese prompt a Numo con la pull request como contexto. Numo puede leer la pull request, responder a una conversación de revisión que no requiere cambios en el código y resolver las conversaciones que la rama ya atiende, pero no modifica el código ni hace push de commits; para los cambios de código, use **Copiar prompt de corrección** y péguelo en su agente de código. Los permisos y la posibilidad de fusionar se vuelven a comprobar al confirmar.

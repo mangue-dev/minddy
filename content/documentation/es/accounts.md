@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
+  "revision": 16,
   "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-21",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -71,10 +71,10 @@
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-21"
+    "revision": 16,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "choose-an-instance",
@@ -106,7 +106,7 @@
       "src": "/documentation/es/account-security-workflow.png",
       "alt": "Tarjeta de autenticación de dos factores con botón de activación.",
       "caption": "Empieza aquí, verifica después el autenticador y guarda los códigos de recuperación de forma privada.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -123,7 +123,7 @@
       "src": "/documentation/es/profile-and-preferences-workflow.png",
       "alt": "Cabecera del perfil con el avatar y su distintivo de edición, el nombre y el correo de solo lectura.",
       "caption": "Selecciona el avatar para generar o subir uno, o el nombre para cambiarlo; el correo sigue siendo de solo lectura.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -140,7 +140,7 @@
       "src": "/documentation/es/profile-and-preferences-preferences-workflow.png",
       "alt": "Selector de idioma, controles de tema claro, oscuro y del sistema, selectores de paleta de los modos claro y oscuro e interruptor de transparencia.",
       "caption": "El idioma de la cuenta se configura por separado del idioma del sitio público.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -157,7 +157,7 @@
       "src": "/documentation/es/privacy-and-account-deletion-workflow.png",
       "alt": "Vista previa de eliminación con proyectos propios, tickets y miembros que perderán acceso.",
       "caption": "Lee la vista previa y exporta los datos que quieras conservar antes de abrir la confirmación.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -195,14 +195,14 @@ Abre el menú de la cuenta, elige cerrar sesión y confirma. En la aplicación d
 
 Una sesión permanece iniciada mientras uses minddy, hasta un año, y termina tras 30 días sin uso. Cuando termina, o se cierra desde otro dispositivo, minddy vuelve a la pantalla de inicio de sesión con un mensaje que indica que tu sesión ha caducado. Vuelve a iniciar sesión para continuar donde estabas.
 
-El grupo **Sesiones** de la pestaña **Seguridad** de los ajustes de la cuenta muestra los navegadores y apps de escritorio conectados a tu cuenta, marca el dispositivo que usas e indica cuándo estuvo activo por última vez cada uno de los demás. Para cerrar todas las demás sesiones, por ejemplo en un portátil perdido o un ordenador compartido, elige **Cerrar todas** en la fila **Cerrar sesión en otros dispositivos** y confirma: todos los demás navegadores y apps de escritorio conectados a tu cuenta vuelven a la pantalla de inicio de sesión. Para cerrar una sola sesión, elige **Cerrar sesión** en su fila y confirma; solo ese dispositivo vuelve a la pantalla de inicio de sesión. En ambos casos, el dispositivo que usas sigue conectado. Las aplicaciones que autorizaste en **MCP de minddy** → **Aplicaciones conectadas** conservan su acceso hasta que lo revoques allí.
+El grupo **Sesiones** de la pestaña **Seguridad** de los ajustes de la cuenta muestra los navegadores y apps de escritorio conectados a tu cuenta, marca el dispositivo que usas e indica cuándo estuvo activo por última vez cada uno de los demás. Para cerrar todas las demás sesiones, por ejemplo en un portátil perdido o un ordenador compartido, elige **Cerrar todas las sesiones** en la fila **Cerrar sesión en otros dispositivos** y confirma: todos los demás navegadores y apps de escritorio conectados a tu cuenta vuelven a la pantalla de inicio de sesión. Para cerrar una sola sesión, elige **Cerrar sesión** en su fila y confirma; solo ese dispositivo vuelve a la pantalla de inicio de sesión. En ambos casos, el dispositivo que usas sigue conectado. Las aplicaciones que autorizaste en **MCP de minddy** → **Aplicaciones conectadas** conservan su acceso hasta que lo revoques allí.
 
 Si el correo no llega, comprueba la dirección, la carpeta de spam y la identidad de la instancia. El operador de una instancia autoalojada debe haber configurado un envío de correo de Auth que funcione; el correo opcional de notificaciones de la aplicación y la confirmación de Auth son funciones distintas. Una página de confirmación caducada permite volver al inicio de sesión para solicitar un enlace nuevo. No reenvíes enlaces de confirmación o recuperación como prueba para diagnosticar un problema: autorizan el acceso a la cuenta.
 
 
 ## Proteger la cuenta con un segundo factor {#account-security}
 
-Abre la sección Seguridad en la configuración de la cuenta y activa la autenticación de dos factores. El segundo factor también se aplica al iniciar sesión mediante Google o GitHub; la autenticación del proveedor no lo sustituye.
+Abre la sección Seguridad en los ajustes de la cuenta y activa la autenticación de dos factores. El segundo factor también se aplica al iniciar sesión mediante Google o GitHub; la autenticación del proveedor no lo sustituye.
 
 1. Escanea el código QR con un autenticador TOTP o introduce manualmente la clave de configuración mostrada. Nunca incluyas ni el código QR ni la clave en una captura.
 2. Introduce el código actual de seis dígitos y confirma. Si ha caducado, prueba el siguiente. Después de demasiados intentos, espera antes de volver a intentarlo.
@@ -234,7 +234,7 @@ Si no dispones ni del segundo factor ni de un código de recuperación, contacta
 
 ## Cambiar perfil y preferencias {#profile-and-preferences}
 
-Elige **Configuración de la cuenta** en el menú de la cuenta, en el menú móvil o en la paleta de comandos, o pulsa Command+coma en macOS (Ctrl+coma en Windows/Linux): la configuración de la cuenta se abre en la pestaña **Preferencias**. Para abrir directamente la pestaña **Perfil**, elige tu nombre en la parte superior del menú de la cuenta; también puedes seleccionar **Perfil** entre las pestañas de la configuración. Muestra tu avatar, tu nombre y tu correo, seguidos de tus [estadísticas personales](/docs/personal-statistics). Selecciona tu avatar y elige **Nuevo avatar de Lorelei** o **Cargar imagen**; el cambio se aplica en cuanto se completa. Selecciona tu nombre para cambiarlo: en un ordenador se convierte en un campo que Intro o salir del campo guardan y Escape cancela; en un teléfono abre un panel con **Nombre de usuario** y **Guardar**. El nombre no puede quedar vacío. El correo es de solo lectura. Espera el resultado y comprueba el avatar en un comentario o en la lista de miembros; es el mismo en todos los proyectos y conversaciones. Si se rechaza un archivo, sigue el mensaje de validación en vez de subirlo repetidamente.
+Elige **Ajustes de la cuenta** en el menú de la cuenta, en el menú móvil o en la paleta de comandos, o pulsa Command+coma en macOS (Ctrl+coma en Windows/Linux): los ajustes de la cuenta se abren en la pestaña **Preferencias**. Para abrir directamente la pestaña **Perfil**, elige tu nombre en la parte superior del menú de la cuenta; también puedes seleccionar **Perfil** entre las pestañas de los ajustes. Muestra tu avatar, tu nombre y tu correo, seguidos de tus [estadísticas personales](/docs/personal-statistics). Selecciona tu avatar y elige **Nuevo avatar de Lorelei** o **Subir imagen**; el cambio se aplica en cuanto se completa. Selecciona tu nombre para cambiarlo: en un ordenador se convierte en un campo que Intro o salir del campo guardan y Escape cancela; en un teléfono abre un panel con **Nombre de usuario** y **Guardar**. El nombre no puede quedar vacío. El correo es de solo lectura. Espera el resultado y comprueba el avatar en un comentario o en la lista de miembros; es el mismo en todos los proyectos y conversaciones. Si se rechaza un archivo, sigue el mensaje de validación en vez de subirlo repetidamente.
 
 La imagen fuente no debe superar 10 MiB. El servidor comprueba que la imagen pueda leerse, aplica su orientación y la recorta por el centro para crear un avatar WebP de 256 × 256 píxeles.
 
