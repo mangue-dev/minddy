@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 18,
-  "sourceRevision": 18,
+  "revision": 19,
+  "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -41,6 +41,9 @@
       "app/(marketing)/pricing/page.tsx",
       "lib/billing-plans.ts",
       "components/ai-elements/dictate-button.tsx",
+      "components/ai-elements/dictation-pill.tsx",
+      "components/ai-elements/use-dictation-recorder.ts",
+      "components/settings/account-preferences-section.tsx",
       "app/api/transcribe/route.ts",
       "lib/use-issue-dictation.ts",
       "components/issue-side-panel.tsx",
@@ -56,10 +59,10 @@
     ]
   },
   "review": {
-    "revision": 18,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 19,
+    "fact": "agent:claude/min773 (dictation pill, discard confirmation and cleanup preference checked against the changed source and the running app; earlier evidence retained in git history)",
+    "language": "agent:claude/min773 (pt-BR translation of the MIN-773 passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "scheduled-routines"
@@ -81,7 +84,7 @@
       "src": "/documentation/pt-BR/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Conexões, atribuição por capacidade e modelo pessoal do Numo são ajustes separados.",
       "caption": "Vários provedores podem continuar conectados. A atribuição escolhe por capacidade; o padrão do Numo é salvo por conta e provedor.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -164,13 +167,13 @@ A Cobrança mostra o orçamento de IA restante e sua próxima redefinição, **E
 
 Use o microfone ao lado de um campo compatível para ditar uma issue, um objetivo, um comentário, uma mensagem do Numo, um feedback ou uma instrução de rotina. Você precisa de permissão para escrever ali, um microfone funcionando e um navegador compatível com gravação. Permita o acesso ao microfone para o site no navegador e no sistema operacional. Use HTTPS para uma instância remota. No Cloud, deve haver orçamento de IA disponível; instâncias self-hosted também precisam de provedores de transcrição e ditado funcionando. As chaves pessoais de voz e os modelos são configurados [acima](#ai-keys-and-models).
 
-1. Abra o formulário ou a issue desejada e selecione seu microfone. Em uma issue aberta, Command+Shift+D no macOS ou Ctrl+Shift+D nos outros sistemas inicia ou encerra a edição por voz. Verifique se o cronômetro e a forma de onda aparecem.
-2. Fale no idioma da interface, que orienta a transcrição. Para editar uma issue, indique a alteração com clareza, por exemplo “Defina a prioridade como alta”. Pare a gravação pelo controle quadrado e espere a transcrição e o processamento do Numo terminarem antes de fechar o formulário.
+1. Abra o formulário ou a issue desejada e selecione seu microfone. Em uma issue aberta, Command+Shift+D no macOS ou Ctrl+Shift+D nos outros sistemas inicia ou encerra a edição por voz. Uma barra de ditado se abre na parte inferior da tela, como painel em um celular, com o cronômetro e uma onda que acompanha sua voz. O restante da interface aguarda o fim da gravação.
+2. Fale no idioma da interface, que orienta a transcrição. Para editar uma issue, indique a alteração com clareza, por exemplo “Defina a prioridade como alta”. Escolha **Transcrever** (✓), pressione Command+Enter no macOS ou Ctrl+Enter nos outros sistemas (Enter também funciona) ou repita o atalho e espere a transcrição e o processamento do Numo terminarem. Para descartar a gravação, escolha **Descartar gravação** (✕) ou pressione Esc e depois **Descartar**: nada é enviado.
 3. Confira o resultado. Mensagens do Numo, comentários e instruções de rotina recebem texto editável; revise antes de enviar ou salvar. Formulários de criação recebem campos de rascunho que ainda precisam de confirmação. A edição por voz de uma issue existente aplica as alterações imediatamente: confira os campos depois e corrija erros pelos controles habituais. O ditado não concede permissões adicionais.
 
 ### Consumo e limites de gravação {#voice-limits}
 
-O áudio é enviado ao serviço de transcrição configurado e depois pode ser revisado ou interpretado por um modelo de IA. O consumo segue as regras do provedor e do orçamento da conta; a gravação e sua interpretação podem gerar consumos separados. O feedback público tem regras próprias de disponibilidade e cobrança, descritas no [guia de feedback](/docs/feedback). A demonstração da página inicial tem um limite separado e não representa uma cota de ditado da conta.
+O áudio é enviado ao serviço de transcrição configurado e depois pode ser revisado ou interpretado por um modelo de IA. A limpeza corrige pontuação, vícios de linguagem e autocorreções; para inserir as palavras exatamente como foram ouvidas, desative **Limpar ditados** em **Configurações da conta** > **Preferências** > **Ditado por voz**, e nenhum modelo de limpeza é chamado para seus ditados. O feedback público mantém seu próprio processamento. O consumo segue as regras do provedor e do orçamento da conta; a gravação e sua interpretação podem gerar consumos separados. O feedback público tem regras próprias de disponibilidade e cobrança, descritas no [guia de feedback](/docs/feedback). A demonstração da página inicial tem um limite separado e não representa uma cota de ditado da conta.
 
 O serviço de transcrição para usuários conectados aceita até 10 MiB de áudio e 30 solicitações por conta por hora. O gravador compartilhado para após 20 minutos como precaução. Prefira gravações curtas para conferir cada resultado. Mantenha o texto existente até verificá-lo; o gravador não é um backup de áudio.
 

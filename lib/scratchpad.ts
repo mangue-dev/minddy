@@ -283,9 +283,8 @@ export function scratchpadPreview(content: string): ScratchpadPreviewSection[] {
 }
 
 /**
- * Normalize ONE line of task text coming from a model (the dictation step of
- * the notebook, /api/me/scratchpad/dictate-task). The notebook draws the
- * checkbox itself, so a marker, a bullet or a heading level the model wrote
+ * Normalize ONE line of dictated task text. The notebook draws the checkbox
+ * itself, so a marker, a bullet or a heading level the cleanup pass wrote
  * anyway is stripped rather than left to show up as literal text; newlines are
  * flattened, since an entry is one line. `max` caps the result.
  */
@@ -297,6 +296,24 @@ export function cleanDictatedTaskLine(value: string, max = 1000): string {
     .trim()
     .slice(0, max)
     .trim();
+}
+
+// A safeguard, not a format rule: one dictation rarely holds more than a few
+// to-dos, and an entry runs as long as it was spoken (2,000 ≈ 2 min of speech).
+const MAX_DICTATED_TASKS = 20;
+const MAX_DICTATED_TASK_CHARS = 2000;
+
+/**
+ * The notebook entries of one dictation (MIN-773): the transcript, cleaned up
+ * with one to-do per line by `/api/transcribe` (or raw, as one line, when the
+ * account turned the cleanup off), becomes one task per non-empty line.
+ */
+export function dictatedTasksFromText(text: string): string[] {
+  return text
+    .split(/\n+/)
+    .map((line) => cleanDictatedTaskLine(line, MAX_DICTATED_TASK_CHARS))
+    .filter(Boolean)
+    .slice(0, MAX_DICTATED_TASKS);
 }
 
 export interface NewTask {

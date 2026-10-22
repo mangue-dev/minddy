@@ -14,10 +14,6 @@
     "slashH2": "Titolo 2",
     "slashH3": "Titolo 3",
     "slashBullet": "Elenco puntato",
-    "dictationHint": "Invio per interrompere · Esc per annullare",
-    "dictationProcessing": "Trascrizione…",
-    "dictationPolishing": "Numo sta mettendo in ordine…",
-    "dictationPolishFailed": "Numo non è riuscito a mettere in ordine la dettatura: è stato inserito il testo non elaborato.",
     "saving": "Salvataggio…",
     "saved": "Salvato",
     "savedAgo": "Salvato {time}",
@@ -1486,7 +1482,6 @@
     "start": "Dettatura vocale",
     "stop": "Fermati",
     "starting": "Connessione al microfono...",
-    "hint": "Clicca di nuovo per fermare",
     "maxReached": "Lanciata registrazione; fermarsi qui e trascrire.",
     "permissionDenied": "Accesso al microfono negato. Consentitelo nelle impostazioni del browser o del sistema.",
     "noDevice": "Non è stato rilevato nessun microfono, ne collega uno e riprova.",
@@ -1499,7 +1494,14 @@
     "emptyResult": "Non è stato rilevato alcun discorso.",
     "unavailable": "La dettatura vocale non è disponibile al momento.",
     "inFlight": "Dettatura in corso; un momento.",
-    "numoWorking": "Numo sta scrivendo il feedback..."
+    "numoWorking": "Numo sta scrivendo il feedback...",
+    "discard": "Annulla registrazione",
+    "discardTitle": "Annullare questa registrazione?",
+    "discardDescription": "Quello che hai detto finora non verrà trascritto.",
+    "keepRecording": "Continua a registrare",
+    "discardConfirm": "Annulla registrazione",
+    "validate": "Trascrivi",
+    "transcribing": "Trascrizione…"
   },
   "Field": {
     "title": "Titolo",
@@ -2920,7 +2922,10 @@
     "smartFillScopeTitle": "Ticket da compilare",
     "smartFillRelationsTitle": "Ticket correlati",
     "issueIndexingTitle": "Indicizzazione dei ticket",
-    "numoIssuesTitle": "Ticket creati da Numo"
+    "numoIssuesTitle": "Ticket creati da Numo",
+    "dictationSectionTitle": "Dettatura vocale",
+    "dictationCleanupLabel": "Ripulisci le dettature",
+    "dictationCleanupDesc": "Corregge punteggiatura, intercalari e autocorrezioni prima di inserire il testo. Se disattivato, la trascrizione viene inserita così come è stata sentita."
   },
   "AccountData": {
     "importTitle": "Trasferire dati da un'altra istanza minddy",

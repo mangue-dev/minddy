@@ -14,10 +14,6 @@
     "slashH2": "Título 2",
     "slashH3": "Título 3",
     "slashBullet": "Lista de marcadores",
-    "dictationHint": "Enter para parar · Esc para cancelar",
-    "dictationProcessing": "Transcrevendo…",
-    "dictationPolishing": "Numo está arrumando tudo…",
-    "dictationPolishFailed": "Numo não conseguiu arrumar o ditado: texto bruto inserido.",
     "saving": "Salvando…",
     "saved": "Salvo",
     "savedAgo": "Salvo {time}",
@@ -1486,7 +1482,6 @@
     "start": "Ditado de voz",
     "stop": "Parar",
     "starting": "Conectando ao microfone…",
-    "hint": "Clique novamente para parar",
     "maxReached": "Gravação longa; parando aqui e transcrevendo.",
     "permissionDenied": "Acesso ao microfone negado. Permita-o nas configurações do seu navegador ou sistema.",
     "noDevice": "Nenhum microfone detectado. Conecte um e tente novamente.",
@@ -1499,7 +1494,14 @@
     "emptyResult": "Nenhuma fala foi detectada.",
     "unavailable": "O ditado por voz não está disponível no momento.",
     "inFlight": "Ditado em andamento; um momento.",
-    "numoWorking": "Numo está escrevendo o feedback…"
+    "numoWorking": "Numo está escrevendo o feedback…",
+    "discard": "Descartar gravação",
+    "discardTitle": "Descartar esta gravação?",
+    "discardDescription": "O que você disse até agora não será transcrito.",
+    "keepRecording": "Continuar gravando",
+    "discardConfirm": "Descartar",
+    "validate": "Transcrever",
+    "transcribing": "Transcrevendo…"
   },
   "Field": {
     "title": "Título",
@@ -2920,7 +2922,10 @@
     "smartFillScopeTitle": "Tickets a preencher",
     "smartFillRelationsTitle": "Tickets relacionados",
     "issueIndexingTitle": "Indexação de tickets",
-    "numoIssuesTitle": "Tickets criados pelo Numo"
+    "numoIssuesTitle": "Tickets criados pelo Numo",
+    "dictationSectionTitle": "Ditado por voz",
+    "dictationCleanupLabel": "Limpar ditados",
+    "dictationCleanupDesc": "Corrige pontuação, vícios de linguagem e autocorreções antes de inserir o texto. Desativado, a transcrição é inserida exatamente como foi ouvida."
   },
   "AccountData": {
     "importTitle": "Transfira dados de outra instância minddy",

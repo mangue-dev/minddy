@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 18,
-  "sourceRevision": 18,
+  "revision": 19,
+  "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -41,6 +41,9 @@
       "app/(marketing)/pricing/page.tsx",
       "lib/billing-plans.ts",
       "components/ai-elements/dictate-button.tsx",
+      "components/ai-elements/dictation-pill.tsx",
+      "components/ai-elements/use-dictation-recorder.ts",
+      "components/settings/account-preferences-section.tsx",
       "app/api/transcribe/route.ts",
       "lib/use-issue-dictation.ts",
       "components/issue-side-panel.tsx",
@@ -56,10 +59,10 @@
     ]
   },
   "review": {
-    "revision": 18,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 19,
+    "fact": "agent:claude/min773 (dictation pill, discard confirmation and cleanup preference checked against the changed source and the running app; earlier evidence retained in git history)",
+    "language": "agent:claude/min773 (de translation of the MIN-773 passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "scheduled-routines"
@@ -80,7 +83,7 @@
       "src": "/documentation/de/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Verbundene Anbieter, Fähigkeitszuordnung und persönliches Numo-Modell sind getrennte Einstellungen.",
       "caption": "Mehrere Anbieter bleiben verbunden. Die Zuordnung wählt je Fähigkeit; Numos Standard wird je Konto und Anbieter gespeichert.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -163,13 +166,13 @@ Die Abrechnung zeigt das verbleibende KI-Budget und die nächste Zurücksetzung,
 
 Mit dem Mikrofon neben einem unterstützten Feld können Sie Issues, Ziele, Kommentare, Numo-Nachrichten, Feedback oder Routine-Anweisungen diktieren. Sie benötigen Schreibrechte an dieser Stelle, ein funktionierendes Mikrofon und einen Browser mit Aufnahmeunterstützung. Erlauben Sie den Mikrofonzugriff für die Website im Browser und im Betriebssystem. Verwenden Sie für eine entfernte Instanz HTTPS. In der Cloud muss KI-Budget verfügbar sein; selbst gehostete Instanzen benötigen zusätzlich funktionierende Anbieter für Transkription und Diktat. Persönliche Sprachschlüssel und Modellzuweisungen richten Sie [weiter oben](#ai-keys-and-models) ein.
 
-1. Öffnen Sie das gewünschte Formular oder Issue und wählen Sie dessen Mikrofon. In einem geöffneten Issue schaltet Command+Umschalt+D unter macOS beziehungsweise Strg+Umschalt+D auf anderen Systemen die Sprachbearbeitung um. Prüfen Sie, ob Aufnahmezeit und Wellenform erscheinen.
-2. Sprechen Sie in der Oberflächensprache, die der Transkription als Hinweis dient. Benennen Sie Änderungen deutlich, etwa „Setze die Priorität auf hoch“. Beenden Sie die Aufnahme mit der quadratischen Schaltfläche und warten Sie auf Transkription und Numo-Verarbeitung, bevor Sie das Formular schließen.
+1. Öffnen Sie das gewünschte Formular oder Issue und wählen Sie dessen Mikrofon. In einem geöffneten Issue schaltet Command+Umschalt+D unter macOS beziehungsweise Strg+Umschalt+D auf anderen Systemen die Sprachbearbeitung um. Unten am Bildschirm öffnet sich eine Diktierleiste, auf dem Telefon als Panel, mit der Aufnahmezeit und einer Welle, die Ihrer Stimme folgt. Der Rest der Oberfläche wartet, bis die Aufnahme endet.
+2. Sprechen Sie in der Oberflächensprache, die der Transkription als Hinweis dient. Benennen Sie Änderungen deutlich, etwa „Setze die Priorität auf hoch“. Wählen Sie **Transkribieren** (✓), drücken Sie Command+Eingabe unter macOS beziehungsweise Strg+Eingabe auf anderen Systemen (die Eingabetaste allein funktioniert ebenfalls) oder wiederholen Sie das Tastenkürzel und warten Sie dann auf Transkription und Numo-Verarbeitung. Um die Aufnahme zu verwerfen, wählen Sie **Aufnahme verwerfen** (✕) oder drücken Sie Esc, dann **Verwerfen**: Es wird nichts gesendet.
 3. Prüfen Sie das Ergebnis. Numo-Nachrichten, Kommentare und Routine-Anweisungen erhalten bearbeitbaren Text; lesen Sie ihn vor dem Senden oder Speichern. Erstellungsformulare erhalten Entwurfsfelder, die Sie noch bestätigen müssen. Die Sprachbearbeitung eines bestehenden Issues übernimmt Änderungen sofort: prüfen Sie danach die Felder und korrigieren Sie Fehler mit den üblichen Bedienelementen. Diktieren gewährt keine zusätzlichen Rechte.
 
 ### Verbrauch und Aufnahmegrenzen {#voice-limits}
 
-Die Audiodaten werden an den konfigurierten Transkriptionsdienst gesendet und können anschließend von einem KI-Modell überarbeitet oder interpretiert werden. Es gelten die Anbieter- und Budgetregeln des Kontos; Aufnahme und anschließende Interpretation können getrennten Verbrauch verursachen. Öffentliches Feedback hat eigene Verfügbarkeits- und Abrechnungsregeln im [Feedback-Leitfaden](/docs/feedback). Die Demo auf der Startseite besitzt ein separates Limit und ist kein Diktatkontingent des Kontos.
+Die Audiodaten werden an den konfigurierten Transkriptionsdienst gesendet und können anschließend von einem KI-Modell überarbeitet oder interpretiert werden. Die Bereinigung korrigiert Zeichensetzung, Füllwörter und Selbstkorrekturen; um die Wörter so einzufügen, wie sie gehört wurden, deaktivieren Sie **Diktate bereinigen** unter **Kontoeinstellungen** > **Einstellungen** > **Spracheingabe**. Dann wird für Ihre Diktate kein Bereinigungsmodell aufgerufen. Öffentliches Feedback behält seine eigene Verarbeitung. Es gelten die Anbieter- und Budgetregeln des Kontos; Aufnahme und anschließende Interpretation können getrennten Verbrauch verursachen. Öffentliches Feedback hat eigene Verfügbarkeits- und Abrechnungsregeln im [Feedback-Leitfaden](/docs/feedback). Die Demo auf der Startseite besitzt ein separates Limit und ist kein Diktatkontingent des Kontos.
 
 Der Transkriptionsendpunkt für angemeldete Nutzer akzeptiert bis zu 10 MiB Audio und 30 Anfragen pro Konto und Stunde. Der gemeinsame Recorder stoppt nach 20 Minuten als Schutzmaßnahme. Kürzere Aufnahmen erleichtern die Prüfung. Behalten Sie vorhandenen Text, bis das Ergebnis geprüft ist; der Recorder ist keine Audiosicherung.
 

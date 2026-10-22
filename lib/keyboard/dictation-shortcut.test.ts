@@ -39,6 +39,10 @@ beforeEach(() => {
     unobserve() {}
     disconnect() {}
   });
+  // The open dictation pill is a Dialog, which reads the viewport.
+  vi.stubGlobal("matchMedia", (query: string) => ({
+    matches: false, media: query, addEventListener() {}, removeEventListener() {},
+  }));
   getUserMedia.mockResolvedValue({ getTracks: () => [{ stop: vi.fn() }] });
   Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: { getUserMedia } });
   // jsdom has no layout. Model visibility through ancestors, as a browser does.
@@ -248,11 +252,13 @@ describe("dictation shortcut ownership (MIN-656)", () => {
     expect(recording("Active")).toBe(true);
   });
 
-  it.each([false, true])("stops the same recorder through its portaled popover (in modal: %s)", async (inModal) => {
+  it.each([false, true])("validates the take through the open dictation pill (in modal: %s)", async (inModal) => {
     const child = mic("Active", false, true);
     await act(() => root.render(inModal ? surface("dialog-content", child) : createElement("main", null, child)));
     await press();
-    expect(document.querySelector('[data-slot="popover-content"][role="dialog"]')).not.toBeNull();
+    // The pill is itself a dialog in front of everything, and must not take
+    // the shortcut away from the button whose take it shows (MIN-773).
+    expect(document.querySelector('[data-dictation-pill][role="dialog"]')).not.toBeNull();
     await press();
     expect(stop).toHaveBeenCalledOnce();
     expect(getUserMedia).toHaveBeenCalledOnce();

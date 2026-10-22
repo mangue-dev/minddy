@@ -1639,6 +1639,11 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             description:
               "When copying an issue's prompt, move that issue to in_progress.",
           },
+          dictation_cleanup: {
+            type: "boolean",
+            description:
+              "Clean up voice dictations (punctuation, filler words, self-corrections) before they are inserted. Off inserts the raw transcription.",
+          },
           smart_fill: {
             type: "boolean",
             description:

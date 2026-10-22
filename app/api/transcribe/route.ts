@@ -22,6 +22,7 @@ import {
   reserveProviderOperation,
 } from "@/lib/server/provider-operation-guard";
 import {
+  resolveDictationCleanup,
   resolveDictationContext,
   resolvePolishedDictation,
 } from "@/lib/dictation-context";
@@ -98,6 +99,13 @@ export async function POST(request: NextRequest) {
   const language =
     typeof langRaw === "string" && langRaw.trim() ? langRaw.trim() : undefined;
   const context = resolveDictationContext(formData.get("context"));
+  // The account can turn the cleanup pass off (MIN-773). The session's claims
+  // carry the preference as of the last token refresh, so the client also sends
+  // its live value; either one saying "off" skips the pass. Skipping only ever
+  // spends less, so the client's word is safe to take.
+  const cleanupEnabled =
+    resolveDictationCleanup(user.user_metadata) &&
+    formData.get("cleanup") !== "off";
 
   // Model is DB-configured (app_config), like the assistant model.
   const cfg = await getAppConfigValues([
@@ -215,6 +223,10 @@ export async function POST(request: NextRequest) {
     }
 
     const rawText = result.text.trim();
+    if (!cleanupEnabled) {
+      // No `polished` field: nothing was attempted, so nothing failed.
+      return Response.json({ text: rawText, model, runId, durationSeconds: result.seconds });
+    }
     let cleanedText: string | null = null;
     if (/[\p{L}\p{N}]/u.test(rawText)) {
       try {

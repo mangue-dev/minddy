@@ -20,6 +20,19 @@ export const DICTATION_CONTEXTS = [
 
 export type DictationContext = (typeof DICTATION_CONTEXTS)[number];
 
+/**
+ * Account preference (MIN-773): whether a dictation goes through the editorial
+ * cleanup pass after speech recognition. On by default; off, `/api/transcribe`
+ * returns the recognized words as they are, without a second model call.
+ */
+export const DICTATION_CLEANUP_META_KEY = "dictation_cleanup";
+
+export function resolveDictationCleanup(
+  meta: Record<string, unknown> | null | undefined,
+): boolean {
+  return meta?.[DICTATION_CLEANUP_META_KEY] !== false;
+}
+
 const DICTATION_CONTEXT_SET = new Set<string>(DICTATION_CONTEXTS);
 
 // Dictation can be much longer than a chat message, so it must not use the
@@ -169,7 +182,7 @@ export const DICTATION_DESTINATIONS: Record<DictationContext, DictationDestinati
   task_notebook: {
     destination: "a personal task-notebook entry",
     guidance:
-      "Keep each distinct to-do or note and every reason, example, qualifier, name, identifier, and deadline. Do not summarize it or turn the speaker's wording into a generic task title.",
+      "Each line becomes one notebook task, so put each distinct to-do on its own line, in the order dictated, and never break one to-do across lines. Split only when the speaker clearly dictated separate things; when in doubt, write a single line. Write plain text: no checkbox, bullet, dash, numbering, or heading. Keep every reason, example, qualifier, name, identifier, and deadline. Do not summarize it or turn the speaker's wording into a generic task title.",
   },
   comment: {
     destination: "a comment or reply to teammates",

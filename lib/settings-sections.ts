@@ -1,6 +1,6 @@
 import type { AppIcon } from "@/components/icon";
 import { useMemo } from "react";
-import { AppWindowIcon as AppWindow, AiAutoRotateIcon as CycleIcon, Analytics01Icon, BlurIcon, ChartLineData01Icon, Copy01Icon, LaptopIcon, Link01Icon, Moon02Icon, PlayIcon, SearchList01Icon, Sun01Icon, UserCheck01Icon, BellRingIcon as BellRing, CalendarClockIcon, CodeSimpleIcon as Code2, Download, GitBranchIcon as GitBranch, ImportIcon, InboxIcon as Inbox, Keyboard, KeyRoundIcon as KeyRound, Languages, ListPlus, LockIcon, LogOut, MessageMultiple01Icon as MessagesSquare, Palette, PlugIcon as Plug, RepeatIcon as Repeat, Settings02Icon as Settings2, ShieldOff, Sparkles, TagsIcon as Tags, TicketIcon as Ticket, Trash2, TriangleAlertIcon, Upload04Icon as Upload, ViewOffIcon, UserGroupIcon as Users, UserIcon as User } from "@hugeicons/core-free-icons";
+import { Mic01Icon, AppWindowIcon as AppWindow, AiAutoRotateIcon as CycleIcon, Analytics01Icon, BlurIcon, ChartLineData01Icon, Copy01Icon, LaptopIcon, Link01Icon, Moon02Icon, PlayIcon, SearchList01Icon, Sun01Icon, UserCheck01Icon, BellRingIcon as BellRing, CalendarClockIcon, CodeSimpleIcon as Code2, Download, GitBranchIcon as GitBranch, ImportIcon, InboxIcon as Inbox, Keyboard, KeyRoundIcon as KeyRound, Languages, ListPlus, LockIcon, LogOut, MessageMultiple01Icon as MessagesSquare, Palette, PlugIcon as Plug, RepeatIcon as Repeat, Settings02Icon as Settings2, ShieldOff, Sparkles, TagsIcon as Tags, TicketIcon as Ticket, Trash2, TriangleAlertIcon, Upload04Icon as Upload, ViewOffIcon, UserGroupIcon as Users, UserIcon as User } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { SMART_ASSIGN_ICON, SMART_FILL_ICON } from "@/components/feature-icons";
 
@@ -78,6 +78,7 @@ export const SETTINGS_SECTIONS = {
   accountThemeDark: "account-theme-dark",
   accountTransparency: "account-transparency",
   accountKeyboard: "account-keyboard",
+  accountDictation: "account-dictation",
   accountHiddenProjects: "account-hidden-projects",
   accountDesktop: "account-desktop",
   // The id predates MIN-737, when the card held every issue preference. It
@@ -368,6 +369,17 @@ export function useSettingsSections(): SettingsSection[] {
           "maj", "shift", "saut de ligne", "line break", "nouvelle ligne",
           "new line", "commentaire", "comment", "composer", "message",
           "préférences", "preferences",
+        ],
+      }),
+      account({
+        id: SETTINGS_SECTIONS.accountDictation,
+        tab: "preferences",
+        icon: Mic01Icon,
+        title: tAccount("dictationSectionTitle"),
+        keywords: [
+          "dictée", "dictee", "dictation", "voix", "voice", "vocal", "micro",
+          "microphone", "transcription", "nettoyage", "cleanup", "clean up",
+          "brut", "raw", "préférences", "preferences",
         ],
       }),
       account({

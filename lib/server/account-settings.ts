@@ -70,6 +70,7 @@ import {
   type SendMode,
 } from "@/lib/keyboard/send-shortcut";
 import { ANALYTICS_CONSENT_META_KEY, resolveAnalyticsConsent } from "@/lib/cookie-consent";
+import { DICTATION_CLEANUP_META_KEY, resolveDictationCleanup } from "@/lib/dictation-context";
 
 /**
  * The requesting user's own account settings, mirroring Account → Profile /
@@ -100,6 +101,8 @@ export interface AccountSettings {
   prompt_copy_auto_start: boolean;
   /** Keyboard gesture that sends a composer (mod-enter | enter). */
   send_shortcut: SendMode;
+  /** Voice dictation cleanup pass (MIN-773); off = raw transcription. */
+  dictation_cleanup: boolean;
   smart_fill: boolean;
   smart_fill_created: boolean;
   smart_fill_triage: boolean;
@@ -153,6 +156,7 @@ function toSettings(
     auto_assign_on_start: resolveAutoAssignOnStart(meta),
     prompt_copy_auto_start: resolvePromptCopyAutoStart(meta),
     send_shortcut: resolveSendMode(meta),
+    dictation_cleanup: resolveDictationCleanup(meta),
     smart_fill: resolveSmartFill(meta),
     smart_fill_created: resolveSmartFillScope(meta, "created"),
     smart_fill_triage: resolveSmartFillScope(meta, "triage"),
@@ -294,6 +298,7 @@ export async function updateAccountSettings({
     next[SMART_FILL_META_KEY] = input[SMART_FILL_META_KEY];
   }
   for (const key of [
+    DICTATION_CLEANUP_META_KEY,
     SMART_FILL_CREATED_META_KEY,
     SMART_FILL_TRIAGE_META_KEY,
     SMART_FILL_REEVALUATE_META_KEY,

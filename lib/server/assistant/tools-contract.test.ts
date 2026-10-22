@@ -57,6 +57,7 @@ describe("Numo tool contracts", () => {
     const settings = tool("update_account_settings")?.function.parameters.properties;
     for (const name of [
       "send_shortcut",
+      "dictation_cleanup",
       "analytics_consent",
       "theme_light",
       "theme_dark",

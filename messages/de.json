@@ -14,10 +14,6 @@
     "slashH2": "Überschrift 2",
     "slashH3": "Überschrift 3",
     "slashBullet": "Aufzählungsliste",
-    "dictationHint": "Eingabetaste zum Stoppen · Esc zum Abbrechen",
-    "dictationProcessing": "Wird transkribiert…",
-    "dictationPolishing": "Numo bringt das Diktat in Form…",
-    "dictationPolishFailed": "Numo konnte das Diktat nicht aufräumen: Rohtext eingefügt.",
     "saving": "Wird gespeichert…",
     "saved": "Gespeichert",
     "savedAgo": "Gespeichert {time}",
@@ -1486,7 +1482,6 @@
     "start": "Sprachdiktat",
     "stop": "Stopp",
     "starting": "Verbindung zum Mikrofon herstellen…",
-    "hint": "Erneut klicken, um zu stoppen",
     "maxReached": "Lange Aufnahme; hier stoppen und transkribieren.",
     "permissionDenied": "Mikrofonzugriff verweigert. Erlauben Sie es in Ihrem Browser oder Ihren Systemeinstellungen.",
     "noDevice": "Kein Mikrofon erkannt. Schließen Sie eines an und versuchen Sie es erneut.",
@@ -1499,7 +1494,14 @@
     "emptyResult": "Es wurde keine Sprache erkannt.",
     "unavailable": "Sprachdiktat ist derzeit nicht verfügbar.",
     "inFlight": "Diktat läuft; einen Moment bitte.",
-    "numoWorking": "Numo schreibt das Feedback…"
+    "numoWorking": "Numo schreibt das Feedback…",
+    "discard": "Aufnahme verwerfen",
+    "discardTitle": "Diese Aufnahme verwerfen?",
+    "discardDescription": "Was Sie bisher gesagt haben, wird nicht transkribiert.",
+    "keepRecording": "Weiter aufnehmen",
+    "discardConfirm": "Verwerfen",
+    "validate": "Transkribieren",
+    "transcribing": "Wird transkribiert…"
   },
   "Field": {
     "title": "Titel",
@@ -2920,7 +2922,10 @@
     "smartFillScopeTitle": "Zu füllende Vorgänge",
     "smartFillRelationsTitle": "Verwandte Vorgänge",
     "issueIndexingTitle": "Vorgangsindexierung",
-    "numoIssuesTitle": "Von Numo erstellte Vorgänge"
+    "numoIssuesTitle": "Von Numo erstellte Vorgänge",
+    "dictationSectionTitle": "Spracheingabe",
+    "dictationCleanupLabel": "Diktate bereinigen",
+    "dictationCleanupDesc": "Korrigiert Zeichensetzung, Füllwörter und Selbstkorrekturen, bevor der Text eingefügt wird. Deaktiviert wird die Rohtranskription so eingefügt, wie sie gehört wurde."
   },
   "AccountData": {
     "importTitle": "Daten von einer anderen minddy-Instanz übertragen",

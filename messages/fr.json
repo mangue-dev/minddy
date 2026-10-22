@@ -14,10 +14,6 @@
     "slashH2": "Titre 2",
     "slashH3": "Titre 3",
     "slashBullet": "Liste à puces",
-    "dictationHint": "Entrée pour arrêter · Échap pour annuler",
-    "dictationProcessing": "Transcription…",
-    "dictationPolishing": "Numo met au propre…",
-    "dictationPolishFailed": "Numo n'a pas pu mettre la dictée au propre : texte brut inséré.",
     "saving": "Enregistrement…",
     "saved": "Enregistré",
     "savedAgo": "Enregistré {time}",
@@ -1486,7 +1482,6 @@
     "start": "Dictée vocale",
     "stop": "Arrêter",
     "starting": "Connexion au micro…",
-    "hint": "Cliquez à nouveau pour arrêter",
     "maxReached": "Enregistrement long; on s'arrête là, transcription en cours.",
     "permissionDenied": "Accès micro refusé. Autorisez-le dans votre navigateur ou vos préférences système.",
     "noDevice": "Aucun micro détecté. Branchez-en un et réessayez.",
@@ -1499,7 +1494,14 @@
     "emptyResult": "Aucune voix détectée.",
     "unavailable": "La dictée n'est pas disponible pour le moment.",
     "inFlight": "Dictée en cours; un instant.",
-    "numoWorking": "Numo écrit le retour…"
+    "numoWorking": "Numo écrit le retour…",
+    "discard": "Abandonner l’enregistrement",
+    "discardTitle": "Abandonner cet enregistrement ?",
+    "discardDescription": "Ce que vous avez dit jusqu’ici ne sera pas transcrit.",
+    "keepRecording": "Continuer",
+    "discardConfirm": "Abandonner",
+    "validate": "Transcrire",
+    "transcribing": "Transcription…"
   },
   "Field": {
     "title": "Titre",
@@ -2920,7 +2922,10 @@
     "smartFillScopeTitle": "Tickets à remplir",
     "smartFillRelationsTitle": "Tickets liés",
     "issueIndexingTitle": "Indexation des tickets",
-    "numoIssuesTitle": "Tickets créés par Numo"
+    "numoIssuesTitle": "Tickets créés par Numo",
+    "dictationSectionTitle": "Dictée vocale",
+    "dictationCleanupLabel": "Nettoyer les dictées",
+    "dictationCleanupDesc": "Corrige la ponctuation, les hésitations et les reprises avant d’insérer le texte. Désactivé, la transcription brute est insérée telle qu’elle a été entendue."
   },
   "AccountData": {
     "importTitle": "Transférer des données depuis une autre instance minddy",

@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 18,
-  "sourceRevision": 18,
+  "revision": 19,
+  "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -41,6 +41,9 @@
       "app/(marketing)/pricing/page.tsx",
       "lib/billing-plans.ts",
       "components/ai-elements/dictate-button.tsx",
+      "components/ai-elements/dictation-pill.tsx",
+      "components/ai-elements/use-dictation-recorder.ts",
+      "components/settings/account-preferences-section.tsx",
       "app/api/transcribe/route.ts",
       "lib/use-issue-dictation.ts",
       "components/issue-side-panel.tsx",
@@ -56,10 +59,10 @@
     ]
   },
   "review": {
-    "revision": 18,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 19,
+    "fact": "agent:claude/min773 (dictation pill, discard confirmation and cleanup preference checked against the changed source and the running app; earlier evidence retained in git history)",
+    "language": "agent:claude/min773 (fr translation of the MIN-773 passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "scheduled-routines"
@@ -80,7 +83,7 @@
       "src": "/documentation/fr/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Les connexions, le routage par capacité et le modèle Numo personnel sont des réglages distincts.",
       "caption": "Plusieurs fournisseurs peuvent rester connectés. Le routage choisit le fournisseur par capacité ; le défaut Numo est enregistré par compte et fournisseur.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -163,13 +166,13 @@ La facturation affiche le budget IA restant et sa prochaine réinitialisation, *
 
 Utilisez le microphone à côté d’un champ compatible pour dicter un ticket, un objectif, un commentaire, un message Numo, un feedback ou une instruction de routine. Vous devez pouvoir écrire à cet endroit, disposer d’un microphone fonctionnel et utiliser un navigateur compatible avec l’enregistrement. Autorisez le microphone pour ce site dans le navigateur et le système d’exploitation. Utilisez HTTPS pour une instance distante. Sur le Cloud, votre budget IA doit être disponible ; une instance self-hosted doit aussi disposer de fournisseurs de transcription et de dictée fonctionnels. Les clés personnelles et les modèles de voix se règlent [plus haut](#ai-keys-and-models).
 
-1. Ouvrez le formulaire ou le ticket concerné et choisissez son microphone. Dans un ticket ouvert, Command+Maj+D sur macOS ou Ctrl+Maj+D ailleurs active ou arrête la modification vocale. Vérifiez que le compteur et la forme d’onde apparaissent.
-2. Parlez dans la langue de l’interface, qui guide la transcription. Pour modifier un ticket, formulez clairement l’action, par exemple « Passe la priorité à haute ». Arrêtez avec le bouton carré et attendez la fin de la transcription et du traitement Numo avant de fermer le formulaire.
+1. Ouvrez le formulaire ou le ticket concerné et choisissez son microphone. Dans un ticket ouvert, Command+Maj+D sur macOS ou Ctrl+Maj+D ailleurs active ou arrête la modification vocale. Une barre de dictée s’ouvre en bas de l’écran, en panneau sur un téléphone, avec le compteur et une onde qui suit votre voix. Le reste de l’interface attend la fin de l’enregistrement.
+2. Parlez dans la langue de l’interface, qui guide la transcription. Pour modifier un ticket, formulez clairement l’action, par exemple « Passe la priorité à haute ». Choisissez **Transcrire** (✓), appuyez sur Command+Entrée sur macOS ou Ctrl+Entrée ailleurs (Entrée fonctionne aussi) ou refaites le raccourci, puis attendez la fin de la transcription et du traitement Numo. Pour jeter l’enregistrement, choisissez **Abandonner l’enregistrement** (✕) ou appuyez sur Échap, puis **Abandonner** : rien n’est envoyé.
 3. Vérifiez le résultat. Les messages Numo, commentaires et instructions de routine reçoivent du texte modifiable ; relisez-le avant de l’envoyer ou de l’enregistrer. Les formulaires de création reçoivent des champs de brouillon à confirmer. La modification vocale d’un ticket existant applique immédiatement les changements : vérifiez ensuite ses champs et corrigez toute erreur avec les commandes habituelles. La dictée n’accorde aucun droit supplémentaire.
 
 ### Consommation et limites d’enregistrement {#voice-limits}
 
-L’audio est envoyé au service de transcription configuré, puis peut être corrigé ou interprété par un modèle IA. La consommation suit les règles du fournisseur et du budget du compte ; l’enregistrement et son interprétation peuvent être comptabilisés séparément. Le feedback public possède ses propres conditions de disponibilité et de facturation, décrites dans le [guide du feedback](/docs/feedback). La démo de la page d’accueil a une limite distincte et ne constitue pas un quota de dictée du compte.
+L’audio est envoyé au service de transcription configuré, puis peut être corrigé ou interprété par un modèle IA. Le nettoyage corrige la ponctuation, les hésitations et les reprises ; pour insérer les mots tels qu’ils ont été entendus, désactivez **Nettoyer les dictées** dans **Paramètres du compte** > **Préférences** > **Dictée vocale** : aucun modèle de nettoyage n’est alors appelé pour vos dictées. Le feedback public garde son propre traitement. La consommation suit les règles du fournisseur et du budget du compte ; l’enregistrement et son interprétation peuvent être comptabilisés séparément. Le feedback public possède ses propres conditions de disponibilité et de facturation, décrites dans le [guide du feedback](/docs/feedback). La démo de la page d’accueil a une limite distincte et ne constitue pas un quota de dictée du compte.
 
 Le service de transcription connecté accepte jusqu’à 10 MiB d’audio et 30 requêtes par compte et par heure. L’enregistreur partagé s’arrête après 20 minutes par précaution. Préférez des prises courtes pour vérifier chaque résultat. Conservez le texte existant jusqu’à vérification ; l’enregistreur ne sauvegarde pas vos fichiers audio.
 

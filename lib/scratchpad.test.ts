@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   appendScratchpadTasks,
   cleanDictatedTaskLine,
+  dictatedTasksFromText,
   containsMarkdownTaskLine,
   mergeScratchpad,
   removeSettledTasks,
@@ -338,6 +339,25 @@ describe("cleanDictatedTaskLine", () => {
 
   it("returns an empty string for a marker-only line", () => {
     expect(cleanDictatedTaskLine("- [ ] ")).toBe("");
+  });
+});
+
+describe("dictatedTasksFromText (MIN-773)", () => {
+  it("makes one task per line of a cleaned-up dictation", () => {
+    expect(dictatedTasksFromText("Revoir les filtres du board.\n\nAppeler Léa pour MIN-42.")).toEqual([
+      "Revoir les filtres du board.",
+      "Appeler Léa pour MIN-42.",
+    ]);
+  });
+
+  it("keeps a raw, single-line transcript as one task", () => {
+    expect(dictatedTasksFromText("  alors euh revoir les filtres  ")).toEqual([
+      "alors euh revoir les filtres",
+    ]);
+  });
+
+  it("drops markers the cleanup wrote anyway and empty lines", () => {
+    expect(dictatedTasksFromText("- [ ] un\n* deux\n- [ ] \n")).toEqual(["un", "deux"]);
   });
 });
 

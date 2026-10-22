@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 18,
-  "sourceRevision": 18,
+  "revision": 19,
+  "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -41,6 +41,9 @@
       "app/(marketing)/pricing/page.tsx",
       "lib/billing-plans.ts",
       "components/ai-elements/dictate-button.tsx",
+      "components/ai-elements/dictation-pill.tsx",
+      "components/ai-elements/use-dictation-recorder.ts",
+      "components/settings/account-preferences-section.tsx",
       "app/api/transcribe/route.ts",
       "lib/use-issue-dictation.ts",
       "components/issue-side-panel.tsx",
@@ -56,10 +59,10 @@
     ]
   },
   "review": {
-    "revision": 18,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 19,
+    "fact": "agent:claude/min773 (dictation pill, discard confirmation and cleanup preference checked against the changed source and the running app; earlier evidence retained in git history)",
+    "language": "agent:claude/min773 (it translation of the MIN-773 passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "scheduled-routines"
@@ -81,7 +84,7 @@
       "src": "/documentation/it/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Connessioni, assegnazione per capacità e modello Numo personale sono impostazioni separate.",
       "caption": "Più fornitori possono restare collegati. L’assegnazione sceglie per capacità; il predefinito Numo viene salvato per account e fornitore.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -164,13 +167,13 @@ La fatturazione mostra il budget IA rimanente e il prossimo ripristino, **Andame
 
 Usa il microfono accanto a un campo compatibile per dettare un ticket, un obiettivo, un commento, un messaggio Numo, un feedback o un’istruzione per una routine. Servono il permesso di scrivere in quel punto, un microfono funzionante e un browser compatibile con la registrazione. Autorizza il microfono per il sito nel browser e nel sistema operativo. Usa HTTPS per un’istanza remota. Nel Cloud deve essere disponibile il budget IA; le istanze self-hosted richiedono anche fornitori di trascrizione e dettatura funzionanti. Le chiavi personali per la voce e i modelli si configurano [più sopra](#ai-keys-and-models).
 
-1. Apri il modulo o il ticket interessato e scegli il suo microfono. In un ticket aperto, Command+Maiusc+D su macOS o Ctrl+Maiusc+D sugli altri sistemi avvia o interrompe la modifica vocale. Verifica che compaiano il timer e la forma d’onda.
-2. Parla nella lingua dell’interfaccia, che guida la trascrizione. Per modificare un ticket, indica chiaramente l’azione, ad esempio «Imposta la priorità su alta». Ferma la registrazione con il comando quadrato e attendi la fine della trascrizione e dell’elaborazione Numo prima di chiudere il modulo.
+1. Apri il modulo o il ticket interessato e scegli il suo microfono. In un ticket aperto, Command+Maiusc+D su macOS o Ctrl+Maiusc+D sugli altri sistemi avvia o interrompe la modifica vocale. In fondo allo schermo si apre una barra di dettatura, come pannello su un telefono, con il timer e un’onda che segue la tua voce. Il resto dell’interfaccia attende la fine della registrazione.
+2. Parla nella lingua dell’interfaccia, che guida la trascrizione. Per modificare un ticket, indica chiaramente l’azione, ad esempio «Imposta la priorità su alta». Scegli **Trascrivi** (✓), premi Command+Invio su macOS o Ctrl+Invio sugli altri sistemi (funziona anche Invio) o ripeti la scorciatoia, poi attendi la fine della trascrizione e dell’elaborazione Numo. Per scartare la registrazione, scegli **Annulla registrazione** (✕) o premi Esc, poi conferma **Annulla registrazione**: non viene inviato nulla.
 3. Controlla il risultato. Messaggi Numo, commenti e istruzioni delle routine ricevono testo modificabile; rileggilo prima di inviarlo o salvarlo. I moduli di creazione ricevono campi di bozza ancora da confermare. La modifica vocale di un ticket esistente applica subito i cambiamenti: verifica i campi e correggi eventuali errori con i normali comandi. La dettatura non concede permessi aggiuntivi.
 
 ### Consumo e limiti di registrazione {#voice-limits}
 
-L’audio viene inviato al servizio di trascrizione configurato, poi può essere corretto o interpretato da un modello IA. Il consumo segue le regole del fornitore e del budget dell’account; registrazione e interpretazione possono generare consumi separati. Il feedback pubblico ha regole proprie di disponibilità e addebito, descritte nella [guida al feedback](/docs/feedback). La demo della pagina iniziale ha un limite separato e non costituisce una quota di dettatura dell’account.
+L’audio viene inviato al servizio di trascrizione configurato, poi può essere corretto o interpretato da un modello IA. La pulizia corregge punteggiatura, intercalari e autocorrezioni; per inserire le parole così come sono state sentite, disattiva **Ripulisci le dettature** in **Impostazioni account** > **Preferenze** > **Dettatura vocale**, e nessun modello di pulizia viene chiamato per le tue dettature. Il feedback pubblico mantiene la propria elaborazione. Il consumo segue le regole del fornitore e del budget dell’account; registrazione e interpretazione possono generare consumi separati. Il feedback pubblico ha regole proprie di disponibilità e addebito, descritte nella [guida al feedback](/docs/feedback). La demo della pagina iniziale ha un limite separato e non costituisce una quota di dettatura dell’account.
 
 Il servizio di trascrizione per utenti autenticati accetta fino a 10 MiB di audio e 30 richieste per account all’ora. Il registratore condiviso si ferma dopo 20 minuti come precauzione. Preferisci registrazioni brevi per controllare ogni risultato. Conserva il testo esistente fino alla verifica; il registratore non è un backup dell’audio.
 
