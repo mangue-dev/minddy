@@ -21,6 +21,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useDragAnnouncements } from "@/lib/use-drag-announcements";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
@@ -276,6 +277,8 @@ export function ProjectCategories({ projectId }: { projectId: string }) {
 
   const [adding, setAdding] = useState(false);
   const [toDelete, setToDelete] = useState<Category | null>(null);
+  const announcements = useDragAnnouncements((id) =>
+    categories.find((category) => category.id === id)?.name);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -306,7 +309,7 @@ export function ProjectCategories({ projectId }: { projectId: string }) {
         // divide-y body, they would add a border under the last row.
         <div>
           <DndContext
-            accessibility={{ screenReaderInstructions: { draggable: t("reorderHint") } }}
+            accessibility={{ announcements, screenReaderInstructions: { draggable: t("reorderHint") } }}
             sensors={sensors}
             collisionDetection={closestCenter}
             modifiers={[verticalDrag]}

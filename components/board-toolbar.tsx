@@ -54,6 +54,7 @@ import { ProgressRing } from "@/components/progress-ring";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { ShareViewDialog } from "@/components/share-view-dialog";
 import { FormDialog } from "@/components/form-dialog";
+import { useDragAnnouncements } from "@/lib/use-drag-announcements";
 import {
   PRIORITIES,
   EFFORTS,
@@ -772,6 +773,11 @@ export function BoardToolbar({
     () => mergeTabOrder(defaultTabKeys, storedOrder),
     [defaultTabKeys, storedOrder]
   );
+  const tabAnnouncements = useDragAnnouncements((id) => {
+    if (id === CYCLE_TAB_KEY) return t("cycleTab");
+    const view = viewById.get(String(id));
+    return view?.kind === "my" ? t("myView") : view?.name;
+  });
   const tabSensors = useSensors(
     // MouseSensor + a small distance so a plain click still selects the view;
     // only a >6px drag starts a reorder (same pattern as the issue cards).
@@ -873,6 +879,7 @@ export function BoardToolbar({
         <div className="hidden shrink-0 items-center gap-1 app-desktop:flex">
           <DndContext
             sensors={tabSensors}
+            accessibility={{ announcements: tabAnnouncements }}
             collisionDetection={closestCenter}
             onDragStart={(event: DragStartEvent) =>
               setActiveTabId(String(event.active.id))

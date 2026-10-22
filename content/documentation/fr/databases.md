@@ -17,10 +17,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 16,
-  "sourceRevision": 16,
+  "revision": 17,
+  "sourceRevision": 17,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -49,14 +49,17 @@
       "lib/page-databases.ts",
       "scripts/page-database-date-times.integration.test.mjs",
       "components/pages/page-promotion-context.tsx",
-      "components/pages/page-promotion-context.test.tsx"
+      "components/pages/page-promotion-context.test.tsx",
+      "components/pages/database-view-strip.tsx",
+      "lib/use-page-database-views.ts",
+      "lib/server/page-database-views.ts"
     ]
   },
   "review": {
-    "revision": 16,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 7 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 17,
+    "fact": "agent:/root/min764 (database views section checked against components/pages/database-view-strip.tsx, components/pages/page-database-view.tsx, lib/use-page-database-views.ts and lib/server/page-database-views.ts: named views shared by the project, each with its own sort, filter and hidden columns, managed and reordered by writers, adjusted locally by readers; insertion clears the active view's filter; rest of the article unchanged since the MIN-747 review; no figure changed)",
+    "language": "agent:/root/min764 (fr changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "pages"
@@ -80,7 +83,7 @@
       "src": "/documentation/fr/database-setup-cards.png",
       "alt": "Aperçu du composant proposant la création d’une base avec Numo ou l’import d’une base existante.",
       "caption": "Suggestions pour une nouvelle base, présentées avec des données de démonstration. Choisissez Numo ou l’import, ou masquez les cartes pour continuer manuellement.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -97,7 +100,7 @@
       "src": "/documentation/fr/database-property-types.png",
       "alt": "Sélecteur de type de colonne avec un champ de recherche : texte, nombre, sélections, dates, personnes et case à cocher.",
       "caption": "Choisissez un type adapté aux valeurs à conserver.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -114,7 +117,7 @@
       "src": "/documentation/fr/database-entry.png",
       "alt": "Entrée de démonstration avec description, durée 2.5, case cochée et sélection vide.",
       "caption": "Ouvrez une entrée pour lire son texte complet et modifier les valeurs typées.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -130,7 +133,7 @@
       "src": "/documentation/fr/database-conversion-warning.png",
       "alt": "Avertissement de conversion : passer de Texte à Nombre efface une cellule incompatible, avec boutons Annuler et confirmation.",
       "caption": "Vérifiez le nombre réel de cellules incompatibles avant de confirmer. Annuler conserve les valeurs actuelles.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -146,7 +149,7 @@
       "src": "/documentation/fr/database-import-review.png",
       "alt": "Vérification d’un CSV local : deux pages d’entrées et deux colonnes, avec le bouton Importer la base.",
       "caption": "Vérifiez les entrées analysées et le nombre de colonnes avant l’import dans la base vide.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -162,7 +165,7 @@
       "src": "/documentation/fr/database-options.png",
       "alt": "Aperçu du composant Modifier les options avec des statuts en français, des flèches vers le haut et le bas, des corbeilles et l’explication de la suppression.",
       "caption": "Modifiez ensemble les noms, les couleurs et l’ordre des options. La corbeille retire une option des modifications en cours ; Enregistrer applique les changements. Données de démonstration.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -179,7 +182,7 @@
       "src": "/documentation/fr/database-date-time.png",
       "alt": "Aperçu du sélecteur de date avec le 12 octobre 2026 sélectionné, Préciser l’heure activé et Heure réglée sur 14:30.",
       "caption": "Activez Préciser l’heure pour saisir une heure. Cet aperçu du composant utilise des données de démonstration et le fuseau horaire de l’appareil.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -219,7 +222,7 @@ Une base accepte 30 colonnes de propriétés en plus du nom. Sélection autorise
 
 Personnes sélectionne les membres du projet, pas des e-mails arbitraires. Les membres nouvellement mentionnés peuvent être notifiés. Chaque entrée est aussi une page avec contenu, commentaires et pièces jointes.
 
-Formules avancées, automatisations et vues supplémentaires ne sont pas disponibles. Utilisez une propriété texte ou un document lié si les données ne correspondent pas à un type proposé ; ne présentez pas une formule non prise en charge comme une colonne fonctionnelle.
+Formules avancées et automatisations ne sont pas disponibles. Utilisez une propriété texte ou un document lié si les données ne correspondent pas à un type proposé ; ne présentez pas une formule non prise en charge comme une colonne fonctionnelle.
 
 
 ![Sélecteur de type de colonne avec un champ de recherche : texte, nombre, sélections, dates, personnes et case à cocher.](/documentation/fr/database-property-types.png)
@@ -248,13 +251,13 @@ Le contenu d’une entrée vide affiche un texte indicatif pour repérer la zone
 
 Ouvrez une entrée dans le panneau flottant. Agrandir l’ouvre en page entière une fois les sauvegardes en attente terminées. En cas d’échec, le panneau reste ouvert pour permettre la correction. Une entrée vide reste dans la base jusqu’à suppression.
 
-Les cases des lignes permettent de sélectionner les entrées ; Maj-clic sélectionne une plage. La poignée ouvre les actions et réordonne en ordre manuel. Le + de marge insère en dessous ; Option/Alt permet de l’insérer au-dessus. L’insertion adjacente rétablit l’ordre manuel et enlève les filtres pour montrer la nouvelle entrée.
+Les cases des lignes permettent de sélectionner les entrées ; Maj-clic sélectionne une plage. La poignée ouvre les actions et réordonne en ordre manuel. Le + de marge insère en dessous ; Option/Alt permet de l’insérer au-dessus. L’insertion adjacente enlève le filtre de la vue active pour montrer la nouvelle entrée.
 
 Depuis le menu de la poignée d’une seule entrée, le propriétaire ou un Membre peut choisir **Promouvoir en ticket** pour que Numo transforme cette entrée, son contenu et ses propriétés en un ticket. L’entrée reste dans la base. L’action est absente lorsque le menu vise plusieurs lignes sélectionnées : il n’existe pas de promotion groupée, promouvez donc chaque entrée séparément. Le [guide des pages](/fr/documentation/pages#promote-page-to-issue) décrit les questions de Numo et la marche à suivre lorsque l’entrée ne peut pas être enregistrée au préalable.
 
-### Préférences d’affichage {#database-display}
+### Vues de la base {#database-display}
 
-Recherchez, filtrez, classez et masquez les colonnes dans l’unique vue liste. Ces choix restent sur l’appareil ; l’ordre manuel est partagé avec l’arbre. Faites défiler horizontalement avec le pavé tactile, Maj et molette, le toucher ou la barre inférieure. Un aperçu tronqué ne raccourcit pas la valeur stockée. Une entrée avec des valeurs peut se réordonner dans sa base, mais pas sortir de celle-ci.
+Une base présente ses entrées à travers des vues, listées au-dessus du tableau. Chaque vue garde son propre classement, son filtre et ses colonnes masquées, et tous les membres du projet voient les mêmes vues. Le propriétaire ou un Membre ajoute une vue avec **Nouvelle vue** (+), qui part de la vue affichée, renomme ou supprime la vue active depuis son menu d’options (⋯) avec **Renommer la vue** ou **Supprimer la vue**, et fait glisser les vues pour les réordonner. Les changements de classement, de filtre et de colonnes sont enregistrés dans la vue active pour tout le monde. Une base garde au moins une vue ; avant son premier changement, elle affiche la vue **Tableau** par défaut. Les lecteurs passent d’une vue à l’autre et peuvent en ajuster une pour eux-mêmes jusqu’à ce qu’ils quittent la page. Le navigateur retient la dernière vue ouverte ; la recherche n’est jamais enregistrée. L’ordre manuel est partagé avec l’arbre. Faites défiler horizontalement avec le pavé tactile, Maj et molette, le toucher ou la barre inférieure. Un aperçu tronqué ne raccourcit pas la valeur stockée. Une entrée avec des valeurs peut se réordonner dans sa base, mais pas sortir de celle-ci.
 
 
 ![Entrée de démonstration avec description, durée 2.5, case cochée et sélection vide.](/documentation/fr/database-entry.png)

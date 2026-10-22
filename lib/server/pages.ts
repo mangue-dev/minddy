@@ -25,6 +25,7 @@ import {
   type PageEventType,
 } from "@/lib/server/page-activity";
 import { notifyPageMentions } from "@/lib/server/page-mentions";
+import { copyPageDatabaseViews } from "./page-database-views";
 import { queuePageBodyLinks } from "@/lib/server/page-links";
 import { appendSubpage, remapSubpages, removeSubpages } from "@/lib/pages-subpage";
 import { bodyFromMarkdownServer, pageBodyToMarkdownServer, pageCollaborationServer } from "@/lib/server/pages-projection";
@@ -945,6 +946,10 @@ export async function duplicatePage(
   );
   // NEW pages: like creation, they cover nothing.
   stampPageWrite({ service, previous: null, actorId, kind });
+  // A copied database keeps its saved view (MIN-764); the copy stands without it.
+  await copyPageDatabaseViews(service, page.project_id, idMap, actorId).catch((cause) => {
+    console.error("[pages] duplicate view copy failed:", cause instanceof Error ? cause.message : cause);
+  });
 
   const rootId = idMap.get(pageId);
   const copy = copied.find((row) => row.id === rootId);

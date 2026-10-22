@@ -6668,7 +6668,10 @@
     "addOption": "Aggiungi un’opzione",
     "moveToTrash": "Sposta nel cestino",
     "duplicateEntries": "{count, plural, one {Duplicare questa voce?} other {Duplicare # voci?}}",
-    "duplicateEntriesBody": "Crea una copia di ogni voce selezionata e delle sue sottopagine."
+    "duplicateEntriesBody": "Crea una copia di ogni voce selezionata e delle sue sottopagine.",
+    "defaultView": "Tabella",
+    "views": "Viste",
+    "deleteViewDescription": "Questa vista verrà eliminata per tutti i membri del progetto."
   },
   "AppTabs": {
     "label": "Schede dell’applicazione",
@@ -6775,5 +6778,14 @@
     "signupClosedBody": "Questa versione di test è riservata al team. Crea il tuo account su minddy.app.",
     "signupClosedCta": "Iscriviti su minddy.app",
     "signupClosedSignIn": "Hai già un account di test? <link>Accedi</link>"
+  },
+  "DragAnnouncements": {
+    "pickedUp": "{item} afferrato.",
+    "over": "{item} è sopra {target}.",
+    "notOver": "{item} non è più sopra una posizione.",
+    "dropped": "{item} è stato rilasciato su {target}.",
+    "droppedNowhere": "{item} è stato rilasciato.",
+    "cancelled": "Spostamento di {item} annullato.",
+    "unnamedItem": "Elemento"
   }
 }

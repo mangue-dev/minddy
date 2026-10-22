@@ -4247,5 +4247,35 @@
         "window_start"
       ]
     }
+  },
+  "page_database_views": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "name",
+      "view"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "position"
+      ],
+      "routing_identity": [
+        "created_by",
+        "id",
+        "page_id",
+        "project_id",
+        "updated_by"
+      ],
+      "timestamp": [
+        "created_at",
+        "updated_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version"
+      ]
+    }
   }
 }

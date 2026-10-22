@@ -6668,7 +6668,10 @@
     "addOption": "Option hinzufügen",
     "moveToTrash": "In den Papierkorb verschieben",
     "duplicateEntries": "{count, plural, one {Diesen Eintrag duplizieren?} other {# Einträge duplizieren?}}",
-    "duplicateEntriesBody": "Eine Kopie jedes ausgewählten Eintrags und seiner Unterseiten erstellen."
+    "duplicateEntriesBody": "Eine Kopie jedes ausgewählten Eintrags und seiner Unterseiten erstellen.",
+    "defaultView": "Tabelle",
+    "views": "Ansichten",
+    "deleteViewDescription": "Diese Ansicht wird für alle Mitglieder des Projekts gelöscht."
   },
   "AppTabs": {
     "label": "Anwendungstabs",
@@ -6775,5 +6778,14 @@
     "signupClosedBody": "Diese Testversion ist nur für das Team. Erstelle dein Konto auf minddy.app.",
     "signupClosedCta": "Auf minddy.app registrieren",
     "signupClosedSignIn": "Schon ein Testkonto? <link>Anmelden</link>"
+  },
+  "DragAnnouncements": {
+    "pickedUp": "{item} aufgenommen.",
+    "over": "{item} befindet sich über {target}.",
+    "notOver": "{item} befindet sich nicht mehr über einer Ablageposition.",
+    "dropped": "{item} wurde auf {target} abgelegt.",
+    "droppedNowhere": "{item} wurde abgelegt.",
+    "cancelled": "Verschieben von {item} abgebrochen.",
+    "unnamedItem": "Element"
   }
 }
