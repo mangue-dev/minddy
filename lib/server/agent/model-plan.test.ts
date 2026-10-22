@@ -1,15 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getResolvedBilling, getOpenRouterModelInfo } = vi.hoisted(() => ({
+const { getResolvedBilling, getOpenRouterModelInfo, getAppConfigValues } = vi.hoisted(() => ({
   getResolvedBilling: vi.fn(),
   getOpenRouterModelInfo: vi.fn(),
+  getAppConfigValues: vi.fn(),
 }));
 
 vi.mock("@/lib/server/billing-accounts", () => ({ getResolvedBilling }));
 vi.mock("./openrouter-index", () => ({ getOpenRouterModelInfo }));
+vi.mock("@/lib/server/app-config", () => ({ getAppConfigValues }));
 
-import { PRICING_BASELINE_MODEL } from "@/lib/ai-model-config";
-import { ensureModelInPlan } from "./model-plan";
+import { aiModelFallback, PRICING_BASELINE_CONFIG_KEY } from "@/lib/ai-model-config";
+import { ensureModelInPlan, getBaselinePricing } from "./model-plan";
 
 const PRICING = { inputUsdPerMTok: 1, outputUsdPerMTok: 1 };
 
@@ -18,9 +20,11 @@ beforeEach(() => {
   getResolvedBilling.mockResolvedValue({
     plan: { id: "free", maxModelMultiplier: 1 },
   });
+  getAppConfigValues.mockReset();
+  getAppConfigValues.mockResolvedValue({});
   getOpenRouterModelInfo.mockReset();
   getOpenRouterModelInfo.mockImplementation(async (model: string) =>
-    model === PRICING_BASELINE_MODEL
+    model === aiModelFallback(PRICING_BASELINE_CONFIG_KEY)
       ? { pricing: PRICING }
       : { pricing: { inputUsdPerMTok: 2, outputUsdPerMTok: 2 } },
   );
@@ -68,5 +72,23 @@ describe("ensureModelInPlan", () => {
         mode: "byok",
       }),
     ).resolves.toBeUndefined();
+  });
+});
+
+describe("getBaselinePricing", () => {
+  it("prices the scale on Numo's admin model, without its routing suffix", async () => {
+    getAppConfigValues.mockResolvedValue({
+      [PRICING_BASELINE_CONFIG_KEY]: "provider/admin-numo",
+      [`${PRICING_BASELINE_CONFIG_KEY}_suffix`]: "nitro",
+    });
+    getOpenRouterModelInfo.mockImplementation(async (model: string) =>
+      model === "provider/admin-numo" ? { pricing: { inputUsdPerMTok: 3, outputUsdPerMTok: 5 } } : null,
+    );
+
+    await expect(getBaselinePricing()).resolves.toEqual({ inputUsdPerMTok: 3, outputUsdPerMTok: 5 });
+  });
+
+  it("falls back to the code default when the admin row is unset", async () => {
+    await expect(getBaselinePricing()).resolves.toEqual(PRICING);
   });
 });

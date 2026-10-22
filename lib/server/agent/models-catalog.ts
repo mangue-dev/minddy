@@ -53,9 +53,9 @@ import { resolveByokFeatureDefaultModel } from "@/lib/server/ai-runtime";
  * otherwise an empty list (free entry remains authorized downstream).
  *
  * The multiplier is NEVER hidden with the list: it is recalculated at
- * each call from the pricing baseline (`PRICING_BASELINE_MODEL`). Frozen in
- * the cache, it would keep locating models for an hour on the scale of a
- * baseline that a release has since changed.
+ * each call from the pricing baseline (Numo's admin model,
+ * `PRICING_BASELINE_CONFIG_KEY`). Frozen in the cache, it would keep locating
+ * models for an hour on the scale of a baseline the admin has since changed.
  */
 
 export interface AgentModelEntry {

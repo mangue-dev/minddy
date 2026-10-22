@@ -8,7 +8,8 @@ import {
 } from "@/lib/model-multiplier";
 import { getResolvedBilling, type ResolvedBilling } from "@/lib/server/billing-accounts";
 import { PlanLimitError } from "@/lib/server/plan-limit-error";
-import { PRICING_BASELINE_MODEL } from "@/lib/ai-model-config";
+import { PRICING_BASELINE_CONFIG_KEY } from "@/lib/ai-model-config";
+import { resolveConfiguredModel } from "@/lib/server/model-config";
 import { getOpenRouterModelInfo } from "./openrouter-index";
 
 /**
@@ -21,7 +22,8 @@ import { getOpenRouterModelInfo } from "./openrouter-index";
  *
  * 2. **What the user chooses, not what Minddy resolves internally.** The cap
  * applies to the account's explicit model. The instance pricing baseline
- * (`PRICING_BASELINE_MODEL`) is never itself an account selection.
+ * (the admin's Numo model, `PRICING_BASELINE_CONFIG_KEY`) is never itself an
+ * account selection.
  *
  * We never refuse on ignorance: unknown prices (model absent from the index,
  * endpoint which publishes nothing) → authorized. The platform usage budget
@@ -37,9 +39,15 @@ export interface ModelPlanLimit {
   baseline: ModelPricing | null;
 }
 
-/** Minddy's default model price — the origin of the scale (×1). */
+/**
+ * Minddy's default model price — the origin of the scale (×1). The model is
+ * the one the admin picked for Numo, read on each call (behind the 60 s
+ * `app_config` cache) so a dashboard change moves the scale without a deploy.
+ * The suffix is dropped: the index prices the bare model.
+ */
 export async function getBaselinePricing(): Promise<ModelPricing | null> {
-  return (await getOpenRouterModelInfo(PRICING_BASELINE_MODEL))?.pricing ?? null;
+  const { base } = await resolveConfiguredModel(PRICING_BASELINE_CONFIG_KEY);
+  return (await getOpenRouterModelInfo(base))?.pricing ?? null;
 }
 
 /** The ceiling applicable to this account, and the baseline to locate the models. */

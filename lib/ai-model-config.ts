@@ -94,11 +94,12 @@ export function isModelSuffix(value: string): value is ModelSuffix {
 
 /**
  * Origin (×1) of the model cost multiplier that plan caps are expressed in
- * (`lib/model-multiplier.ts`, `BillingPlan.maxModelMultiplier`). A code
- * constant, not an admin knob: the caps in `lib/billing-plans.ts` are
- * calibrated against this model's price, so the two change together.
+ * (`lib/model-multiplier.ts`, `BillingPlan.maxModelMultiplier`): Numo's
+ * model, as configured in the admin dashboard (its code fallback when unset).
+ * Changing that model moves the whole scale, and the caps in
+ * `lib/billing-plans.ts` are read against the new price.
  */
-export const PRICING_BASELINE_MODEL = "deepseek/deepseek-v4-flash";
+export const PRICING_BASELINE_CONFIG_KEY = "assistant_model";
 
 export const ASSISTANT_REASONING_CONFIG_KEY = "assistant_reasoning_level";
 

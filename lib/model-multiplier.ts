@@ -3,8 +3,9 @@
  * the plan caps (`BillingPlan.maxModelMultiplier`).
  *
  * Definition: average of entry and exit prices per million tokens,
- * compared to that of MINDDY'S PRICING BASELINE (`PRICING_BASELINE_MODEL` in
- * `lib/ai-model-config.ts`). The baseline is therefore always worth ×1, and the
+ * compared to that of MINDDY'S PRICING BASELINE (Numo's admin model,
+ * `PRICING_BASELINE_CONFIG_KEY` in `lib/ai-model-config.ts`). The baseline is
+ * therefore always worth ×1, and the
  * entire scale is recalculated from live prices — a hard-written multiplier
  * table would have lied from the next generation of models.
  *
