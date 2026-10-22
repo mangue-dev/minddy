@@ -21,6 +21,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslations, useLocale } from "next-intl";
 import { AppShell } from "@/components/app-shell";
 import { cn } from "@/lib/utils";
+import { useRetainedWhileClosing } from "@/lib/use-retained-while-closing";
 import { toast } from "sonner";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
@@ -136,7 +137,8 @@ const GlobalPagePanel = dynamic(
 
 /** Keeps panel state updates out of the large app-shell render path. */
 function GlobalIssuePanelHost() {
-  const target = useIssuePanelTarget();
+  const liveTarget = useIssuePanelTarget();
+  const target = useRetainedWhileClosing(liveTarget);
   const { closeIssue } = useIssuePanelActions();
   if (!target) return null;
   return (
@@ -144,6 +146,7 @@ function GlobalIssuePanelHost() {
       key={`${target.projectId}:${target.issueId}`}
       projectId={target.projectId}
       issueId={target.issueId}
+      open={liveTarget != null}
       onClose={closeIssue}
     />
   );
@@ -152,7 +155,8 @@ function GlobalIssuePanelHost() {
 /** The page panel (MIN-777), mounted after the issue panel so a page opened
  * from an issue lies above it. */
 function GlobalPagePanelHost() {
-  const target = usePagePanelTarget();
+  const liveTarget = usePagePanelTarget();
+  const target = useRetainedWhileClosing(liveTarget);
   const { closePage } = usePagePanelActions();
   if (!target) return null;
   return (
@@ -160,6 +164,7 @@ function GlobalPagePanelHost() {
       key={`${target.projectId}:${target.pageId}`}
       projectId={target.projectId}
       pageId={target.pageId}
+      open={liveTarget != null}
       onClose={closePage}
     />
   );

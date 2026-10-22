@@ -100,7 +100,7 @@ function SidePanelOverlay({
         // No `backdrop-filter`: a full-viewport blur re-composites the page on
         // every frame something moves behind the scrim, and under 10 % black
         // nobody sees it. The tint alone costs nothing per repaint.
-        "fixed inset-0 isolate z-50 bg-black/10 duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 isolate z-50 bg-black/10 duration-200 data-closed:duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         drawer && "bg-black/40",
         className
       )}
@@ -122,8 +122,8 @@ function isInsidePopperContent(target: EventTarget | null): boolean {
 
 const SIDE_CLASSES: Record<"left" | "right", string> = {
   right:
-    "inset-y-4 right-4 data-open:slide-in-from-right-10 data-closed:slide-out-to-right-10",
-  left: "inset-y-4 left-4 data-open:slide-in-from-left-10 data-closed:slide-out-to-left-10",
+    "inset-y-4 right-4 data-open:slide-in-from-right-full data-closed:slide-out-to-right-full",
+  left: "inset-y-4 left-4 data-open:slide-in-from-left-full data-closed:slide-out-to-left-full",
 }
 
 function ModalSidePanelContent({
@@ -188,7 +188,7 @@ function ModalSidePanelContent({
         className={cn(
           // Floating panel: detached from the screen edges with a 1rem margin,
           // rounded corners, border and elevation.
-          "fixed z-50 flex h-auto w-[min(460px,calc(100vw-2rem))] max-w-none flex-col overflow-hidden rounded-2xl border border-border bg-card bg-clip-padding text-sm shadow-2xl outline-none transition duration-200 ease-in-out data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+          "fixed z-50 flex h-auto w-[min(460px,calc(100vw-2rem))] max-w-none flex-col overflow-hidden rounded-2xl border border-border bg-card bg-clip-padding text-sm shadow-2xl outline-none transition duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 data-closed:duration-150",
           SIDE_CLASSES[side],
           className
         )}

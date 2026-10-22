@@ -22,10 +22,13 @@ import type { Issue, IssueRelationType } from "@/lib/types";
 export function PrIssuePanel({
   projectId,
   issueId,
+  open = true,
   onClose,
 }: {
   projectId: string;
   issueId: string;
+  /** False while the host keeps the panel mounted for its exit animation. */
+  open?: boolean;
   onClose: () => void;
 }) {
   useAppTabChange(onClose);
@@ -66,7 +69,7 @@ export function PrIssuePanel({
   return (
     <IssueSidePanel
       issue={issue}
-      open={!!issue}
+      open={open && !!issue}
       onOpenChange={(next) => {
         if (!next) onClose();
       }}

@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useRetainedWhileClosing } from "@/lib/use-retained-while-closing";
 import { SidePanel, SidePanelBody, SidePanelClose, SidePanelContent, SidePanelFooter, SidePanelTitle } from "@/components/ui/side-panel";
 import {
   AssigneeValue,
@@ -111,8 +112,8 @@ import type {
 } from "@/lib/types";
 
 export function IssueSidePanel({
-  issue,
-  open,
+  issue: liveIssue,
+  open: requestedOpen,
   onOpenChange,
   projectKey,
   members,
@@ -157,6 +158,10 @@ export function IssueSidePanel({
   /** Tab to show when the panel (re)opens on a new issue. */
   initialTab?: "description" | "plan";
 }) {
+  // Callers close the panel by clearing the issue: keep showing it while the
+  // panel slides out, closed (MIN-774).
+  const issue = useRetainedWhileClosing(liveIssue);
+  const open = requestedOpen && liveIssue != null;
   const { siteName } = useRuntimeConfig();
   const { user } = useAuth();
   const router = useAppRouter();

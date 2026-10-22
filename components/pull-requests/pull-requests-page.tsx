@@ -17,6 +17,7 @@ import { type InfiniteData, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
+import { useRetainedWhileClosing } from "@/lib/use-retained-while-closing";
 import { PrDetailSkeleton, PrListSkeleton } from "@/components/pull-requests/pr-loading-skeleton";
 import { EmptyScene } from "@/components/empty-scene";
 import { ReadFailureNotice } from "@/components/read-failure-notice";
@@ -413,6 +414,8 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const [selectedPrId, setSelectedPrId] = useState<string | null>(prParam);
   // Related issue open in side panel (on top of page, no navigation).
   const [panel, setPanel] = useState<{ projectId: string; issueId: string } | null>(null);
+  // Stays mounted, closed, while the panel slides out (MIN-774).
+  const shownPanel = useRetainedWhileClosing(panel);
   // Sections start expanded; each keeps its own collapse and show-more state.
   const [collapsedGroups, setCollapsedGroups] = useMobileCollectionState<ReadonlySet<string>>("/pull-requests", "collapsedGroups",
     () => new Set(),
@@ -905,11 +908,12 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
       {prContext.dialog}
 
       {/* Linked issue side panel — overlay over the page (no nav). */}
-      {panel ? (
+      {shownPanel ? (
         <PrIssuePanel
-          key={`${panel.projectId}:${panel.issueId}`}
-          projectId={panel.projectId}
-          issueId={panel.issueId}
+          key={`${shownPanel.projectId}:${shownPanel.issueId}`}
+          projectId={shownPanel.projectId}
+          issueId={shownPanel.issueId}
+          open={panel != null}
           onClose={() => setPanel(null)}
         />
       ) : null}
