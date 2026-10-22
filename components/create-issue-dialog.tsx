@@ -8,7 +8,6 @@ import { createUuid } from "@/lib/create-uuid";
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button } from "@/components/ui/button";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
 import { SplitButton } from "@/components/ui/split-button";
@@ -28,7 +27,6 @@ import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { useResourceMentions } from "@/lib/use-resource-mentions";
 import { useArrowField } from "@/lib/use-arrow-field";
 import { useTitleBodyLink } from "@/lib/use-title-body-link";
-import { CloseDraftDialog } from "@/components/close-draft-dialog";
 import { CreationDictation, CreationProperty } from "@/components/creation-form-layout";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 import {
@@ -67,6 +65,7 @@ import {
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { useAuth } from "@/lib/auth-context";
 import { useDrafts } from "@/lib/use-drafts";
+import { useHeldDraft } from "@/lib/use-held-draft";
 import { useIssueDictation } from "@/lib/use-issue-dictation";
 import { useAnalytics } from "@/lib/use-analytics";
 import { useTrackView } from "@/lib/use-track-view";
@@ -184,14 +183,40 @@ export function CreateIssueDialog({
   const tRelations = useTranslations("Relations");
   const { user } = useAuth();
   const { track } = useAnalytics();
+  // Closing keeps the form; reopening resumes it (MIN-776). Declared before
+  // the opening effects below, which leave a resumed form as it was.
+  const resuming = useHeldDraft({
+    open,
+    context: [projectId, initialDraftId, initialTitle, initialDescription].join("\n"),
+    hasContent: () => draftHasContent(),
+    save: () => saveDraft(),
+    clear: () => reset(),
+    onLost: () => toast.error(tDrafts("autoSaveFailed")),
+  });
   /**
    * "Create in" (MIN-741): the project the issue lands in, `projectId` when the
    * dialog opens. Everything project-scoped follows the selection — pickers,
    * drafts, mentions, relation search, dictation and the upload prefix.
    */
   const [selectedProjectId, setSelectedProjectId] = useState(projectId);
+  // The project a resumed form was left in; presets reapply once it changes.
+  const resumedProjectRef = useRef<string | null>(null);
+  // A resumed form takes the caret at the end of its description, where the
+  // writing stopped, instead of the start of the title.
+  const [focusDescription, setFocusDescription] = useState(false);
   useEffect(() => {
-    if (open) setSelectedProjectId(projectId);
+    if (!open) return;
+    if (resuming.current) {
+      resumedProjectRef.current = selectedProjectId;
+      // The editor remounts on the description as last written.
+      setDraftDocument(descriptionDocument.current);
+      setFocusDescription(true);
+      setEditorKey((k) => k + 1);
+      return;
+    }
+    resumedProjectRef.current = null;
+    setFocusDescription(false);
+    setSelectedProjectId(projectId);
   }, [open, projectId]);
   const activeProjectId = selectedProjectId;
   const inHomeProject = activeProjectId === projectId;
@@ -227,17 +252,9 @@ export function CreateIssueDialog({
   // A field picker, or the relations picker that R opens (MIN-749).
   const [openPicker, setOpenPicker] = useState<ShortcutField | "relation" | null>(null);
   // Id of the draft currently loaded in the form (MIN-41): set when a draft is
-  // recovered, so re-closing updates it in place rather than spawning a copy,
-  // and a successful create removes exactly the draft it came from.
+  // recovered or saved, so saving again updates it in place rather than
+  // spawning a copy, and a successful create removes exactly that draft.
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
-  // Dismissing a form with content asks first (MIN-41) — confirming stashes it
-  // as a local draft rather than losing it.
-  const [confirmClose, setConfirmClose] = useState(false);
-  // Closing the confirmation lets the dismissing pointer/click fall through to
-  // this dialog below it and read as an outside click — which would immediately
-  // re-open the confirmation just dismissed. This ref muffles the dialog's close
-  // signal for the brief window right after the confirmation closes.
-  const ignoreCloseAfterConfirmRef = useRef(false);
   // A take being transcribed (the audio is gone, the text is not
   // income): with the Numo suite, this is the window where closing loses dictation.
   const [transcribing, setTranscribing] = useState(false);
@@ -310,7 +327,7 @@ export function CreateIssueDialog({
       },
     });
   useEffect(() => {
-    if (open) {
+    if (open && !resuming.current) {
       smartFillTouchedRef.current = false;
       setSmartFill(smartFillDefault);
     }
@@ -356,7 +373,7 @@ export function CreateIssueDialog({
   // family mode reopens it under the active parent; the auto-assign
   // preference seeds the assignee).
   useEffect(() => {
-    if (!open) return;
+    if (!open || resuming.current) return;
     setFields((f) => ({ ...f, status: initialStatus ?? DEFAULTS.status }));
   }, [open, initialStatus]);
   // Changing the "Create in" project resets the project-scoped fields to that
@@ -364,14 +381,16 @@ export function CreateIssueDialog({
   // loading in after the dialog opens or the project changes.
   const { objective_id: presetObjectiveId, parent_id: presetParentId, assignee_id: presetAssigneeId } = scopedPresets;
   useEffect(() => {
-    if (!open) return;
+    // A resumed form keeps its own values until its project changes.
+    if (!open || (resuming.current && resumedProjectRef.current === activeProjectId)) return;
+    resumedProjectRef.current = null;
     setFields((f) => ({
       ...f,
       objective_id: presetObjectiveId,
       parent_id: presetParentId,
       assignee_id: presetAssigneeId,
     }));
-  }, [open, presetObjectiveId, presetParentId, presetAssigneeId]);
+  }, [open, presetObjectiveId, presetParentId, presetAssigneeId, activeProjectId]);
 
   // The starting content, placed ONCE per opening. The flag is a ref and
   // not an effect dependency: `initialCategoryIds` is an array, therefore a
@@ -385,6 +404,8 @@ export function CreateIssueDialog({
     }
     if (seededRef.current) return;
     seededRef.current = true;
+    // A resumed form already holds its seed and what was written over it.
+    if (resuming.current) return;
     if (initialTitle) setTitle(initialTitle);
     if (initialDescription) {
       setDescription(initialDescription);
@@ -448,6 +469,7 @@ export function CreateIssueDialog({
   }, [open]);
 
   const clearContent = () => {
+    setFocusDescription(false);
     setTitle("");
     setDescription("");
     descriptionDocument.current = null;
@@ -483,11 +505,13 @@ export function CreateIssueDialog({
     uploads.inputs.length > 0 ||
     relations.length > 0;
 
-  // Snapshot the form as a draft (MIN-41) — reuses the active id so re-closing a
-  // recovered draft updates it in place instead of piling up copies.
+  // Snapshot the form as a draft (MIN-41) — reuses the active id so saving a
+  // recovered draft again updates it in place instead of piling up copies.
   const saveDraft = async () => {
+    const id = activeDraftId ?? createUuid();
+    setActiveDraftId(id);
     await drafts.save({
-      id: activeDraftId ?? createUuid(),
+      id,
       projectId: activeProjectId,
       updatedAt: Date.now(),
       title,
@@ -506,19 +530,16 @@ export function CreateIssueDialog({
     });
   };
 
-  // Stash the draft and close (the confirmation's "Save" action).
+  // The split menu's "Save as draft" (MIN-776): stash the form and close.
   const saveDraftAndClose = async () => {
-    try { await saveDraft(); closeAndReset(); }
-    catch { toast.error(tDrafts("saveFailed")); }
-  };
-
-  // “Abandon”: we close WITHOUT keeping, and the original draft goes away
-  // with — otherwise we would find in the repeat row the one we thought
-  // having given up. Same gesture as successful creation, which also consumes the
-  // draft it came from.
-  const discardDraftAndClose = async () => {
-    if (activeDraftId && !await drafts.remove(activeDraftId)) return;
-    closeAndReset();
+    if (!draftHasContent()) return;
+    try {
+      await saveDraft();
+      toast.success(tDrafts("saved"));
+      closeAndReset();
+    } catch {
+      toast.error(tDrafts("saveFailed"));
+    }
   };
 
   const handleOpenChange = (next: boolean) => {
@@ -529,31 +550,11 @@ export function CreateIssueDialog({
       toast.info(t("dictationInFlight"), { id: "dictation-in-flight" });
       return;
     }
-    // Swallow close signals while the confirmation owns the decision (it's up),
-    // and for the brief window right after it closes — that window is the
-    // fall-through click that would otherwise re-open the confirmation in a loop.
-    if (!next && (confirmClose || ignoreCloseAfterConfirmRef.current)) return;
-    // Dismissing a form with content asks first — confirming keeps it as a draft.
-    if (!next && draftHasContent()) {
-      setConfirmClose(true);
-      return;
-    }
-    if (!next) reset();
+    // A form with content stays as it is, for the next opening or the
+    // automatic draft (see useHeldDraft); a blank one starts over.
+    if (!next && !draftHasContent()) reset();
+    if (!next) setOpenPicker(null);
     onOpenChange(next);
-  };
-
-  // Route the confirmation's own open/close through here so we can arm the
-  // fall-through guard the instant it closes (keep-editing, Escape, or after
-  // confirming). "Close draft" also closes the dialog via saveDraftAndClose,
-  // which calls onOpenChange directly and bypasses handleOpenChange's guard.
-  const handleConfirmOpenChange = (open: boolean) => {
-    setConfirmClose(open);
-    if (!open) {
-      ignoreCloseAfterConfirmRef.current = true;
-      window.setTimeout(() => {
-        ignoreCloseAfterConfirmRef.current = false;
-      }, 300);
-    }
   };
 
   // Load a saved draft back into the form and remember its id so a create /
@@ -591,6 +592,8 @@ export function CreateIssueDialog({
   const restoredDraftRef = useRef<string | null>(null);
   useEffect(() => {
     if (!open) { restoredDraftRef.current = null; return; }
+    // A resumed form is newer than the stored copy of its draft.
+    if (resuming.current) return;
     if (!initialDraftId || restoredDraftRef.current === initialDraftId || !drafts.find(initialDraftId)) return;
     restoredDraftRef.current = initialDraftId;
     recoverDraft(initialDraftId);
@@ -714,6 +717,7 @@ export function CreateIssueDialog({
   const applyPatch = (patch: IssueDraftPatch) => {
     if (typeof patch.title === "string") setTitle(patch.title);
     if (typeof patch.description === "string") {
+      setFocusDescription(false);
       setDescription(patch.description);
       descriptionDocument.current = null;
       setDraftDocument(null);
@@ -771,6 +775,13 @@ export function CreateIssueDialog({
       disabled={submitting || numoBusy}
     />
   );
+
+  const createLabel = nextIdentifier
+    ? t("createIdentifier", { identifier: nextIdentifier })
+    : t("createTicket");
+  const createDisabled = submitting || numoBusy || !title.trim() || uploads.uploading;
+  // A draft keeps finished uploads only, so it waits for those in flight.
+  const saveDraftDisabled = submitting || numoBusy || uploads.uploading || !draftHasContent();
 
   const dictationControl = <CreationDictation mobile={mobile} busy={numoBusy} busyLabel={t("numoWorking")}
     context="issue_form" onTranscription={(text) => { track("issue_dictation_used", { surface: "create_dialog" }); onTranscript(text); }}
@@ -832,7 +843,7 @@ export function CreateIssueDialog({
                 id={titleId}
                 ref={arrowTitle.ref}
                 enterKeyHint={mobile ? "next" : undefined}
-                autoFocus={!mobile}
+                autoFocus={!mobile && !focusDescription}
                 required
                 value={title}
                 onChange={(e) => setTitle(arrowTitle.read(e))}
@@ -848,6 +859,7 @@ export function CreateIssueDialog({
                 mentions={mentions}
                 key={editorKey}
                 onLeaveTop={titleBody.leaveBody}
+                autoFocus={focusDescription}
                 value={description}
                 document={draftDocument}
                 uploadScope={`projects/${activeProjectId}`}
@@ -1025,44 +1037,42 @@ export function CreateIssueDialog({
   line, full width, when the bar passes the line. No Cancel button:
   the dialog's own close X already does that job. */}
               <div className="creation-submit flex items-center justify-end gap-2 app-mobile:w-full app-desktop:ml-1">
-                {nextIdentifier ? (
-                  /* The tooltip clings to the action, not the chevron: its
-                     props pass through `SplitButton` to the left button,
-                     the only one that ⌘↵ activates. */
-                  <SendShortcutTooltip
-                    scope="form"
-                    label={t("createIdentifier", { identifier: nextIdentifier })}
-                  >
-                    <SplitButton
-                      type="submit"
-                      disabled={submitting || numoBusy || !title.trim() || uploads.uploading}
-                      className="app-mobile:w-full"
-                      actionClassName="app-mobile:flex-1"
-                      menuLabel={t("moreCreateOptions")}
-                      menu={
-                        <DropdownMenuItem onSelect={() => void submit(createMore, true)}>
-                          {t("createAndCopyIdentifier", { identifier: nextIdentifier })}
+                {/* The tooltip clings to the action, not the chevron: its
+                    props pass through `SplitButton` to the left button, the
+                    only one that ⌘↵ activates. */}
+                <SendShortcutTooltip scope="form" label={createLabel}>
+                  <SplitButton
+                    type="submit"
+                    disabled={createDisabled}
+                    menuDisabled={createDisabled && saveDraftDisabled}
+                    className="app-mobile:w-full"
+                    actionClassName="app-mobile:flex-1"
+                    menuLabel={t("moreCreateOptions")}
+                    menu={
+                      <>
+                        {nextIdentifier && (
+                          <DropdownMenuItem
+                            disabled={createDisabled}
+                            onSelect={() => void submit(createMore, true)}
+                          >
+                            {t("createAndCopyIdentifier", { identifier: nextIdentifier })}
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem
+                          disabled={saveDraftDisabled}
+                          onSelect={() => void saveDraftAndClose()}
+                        >
+                          {tDrafts("saveAsDraft")}
                         </DropdownMenuItem>
-                      }
-                    >
-                      {submitting && <Spinner />}
-                      <span className="max-w-[14rem] truncate py-0.5 leading-normal">
-                        {t("createIdentifier", { identifier: nextIdentifier })}
-                      </span>
-                    </SplitButton>
-                  </SendShortcutTooltip>
-                ) : (
-                  <SendShortcutTooltip scope="form" label={t("createTicket")}>
-                    <Button
-                      type="submit"
-                      className="rounded-full px-4 app-mobile:w-full"
-                      disabled={submitting || numoBusy || !title.trim() || uploads.uploading}
-                    >
-                      {submitting && <Spinner />}
-                      {t("createTicket")}
-                    </Button>
-                  </SendShortcutTooltip>
-                )}
+                      </>
+                    }
+                  >
+                    {submitting && <Spinner />}
+                    <span className="max-w-[14rem] truncate py-0.5 leading-normal">
+                      {createLabel}
+                    </span>
+                  </SplitButton>
+                </SendShortcutTooltip>
                 {/* On phones the recorder sits beside the create button. */}
                 {mobile && dictationControl}
               </div>
@@ -1075,15 +1085,6 @@ export function CreateIssueDialog({
           <AgentBeamOverlay active={numoBusy} />
         </DialogContent>
       </Dialog>
-
-      {/* Dismissing a non-empty draft asks first — Escape / outside click / any
-        close path funnels through handleOpenChange above. */}
-      <CloseDraftDialog
-        open={confirmClose}
-        onOpenChange={handleConfirmOpenChange}
-        onConfirm={saveDraftAndClose}
-        onDiscard={discardDraftAndClose}
-      />
     </>
   );
 }

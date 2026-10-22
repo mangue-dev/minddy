@@ -21,12 +21,10 @@ import {
  * go and delete it in the sidebar — the simplest exit would be
  * plus longue.
  *
- * The `CloseDraftDialog` cousin (ticket and goal creation dialogs,
- * MIN-41) asks exactly the same question, with the same words: only what he
- * said storage changes — the row of dialogue resumption over there, the bar
- * side here. Two components and not just one because the two drafts do not
- * do not live in the same place (localStorage versus table), not because the
- * drawing differs: making it diverge would be the mistake to avoid.
+ * The issue and objective creation dialogs no longer ask: since MIN-776 they
+ * keep their content across a close and save it as a draft on their own. The
+ * wizard still asks because its draft is a database row shared with the
+ * sidebar, which a silent save would add without the person knowing.
  */
 export function CloseProjectDraftDialog({
   open,

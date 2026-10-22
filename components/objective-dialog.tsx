@@ -13,6 +13,8 @@ import { createUuid } from "@/lib/create-uuid";
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { SplitButton } from "@/components/ui/split-button";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -37,7 +39,6 @@ import { CreationProjectSelect } from "@/components/creation-project-select";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useAuth } from "@/lib/auth-context";
 import { capabilitiesForProject } from "@/lib/use-project-capabilities";
-import { CloseDraftDialog } from "@/components/close-draft-dialog";
 import { CreationDictation, CreationProperty } from "@/components/creation-form-layout";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 import {
@@ -53,6 +54,7 @@ import { landedResources, useAttachmentUploads } from "@/lib/use-attachment-uplo
 import { useObjectiveDictation } from "@/lib/use-objective-dictation";
 import { useAnalytics } from "@/lib/use-analytics";
 import { useDrafts } from "@/lib/use-drafts";
+import { useHeldDraft } from "@/lib/use-held-draft";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { useSubmitShortcut } from "@/lib/keyboard/use-submit-shortcut";
 import { useTitleBodyLink } from "@/lib/use-title-body-link";
@@ -253,9 +255,20 @@ export function ObjectiveDialog({
   const titleBody = useTitleBodyLink();
   const tCommon = useTranslations("Common");
   const tDrafts = useTranslations("Drafts");
+  const tIssue = useTranslations("IssueUI");
   const tRelations = useTranslations("Relations");
   const { track } = useAnalytics();
   const { user } = useAuth();
+  // Closing keeps the form; reopening resumes it (MIN-776). Declared before
+  // the opening effects below, which leave a resumed form as it was.
+  const resuming = useHeldDraft({
+    open,
+    context: [projectId, objective?.id, initialDraftId, initialName].join("\n"),
+    hasContent: () => composerEnabled && draftHasContent(),
+    save: () => saveDraft(),
+    clear: () => resetForm(),
+    onLost: () => toast.error(tDrafts("autoSaveFailed")),
+  });
   /**
    * "Create in" (MIN-741): the project the objective lands in, `projectId`
    * when the dialog opens. Drafts, uploads, mentions, dictation, relations and
@@ -263,7 +276,7 @@ export function ObjectiveDialog({
    */
   const [selectedProjectId, setSelectedProjectId] = useState(projectId);
   useEffect(() => {
-    if (open) setSelectedProjectId(projectId);
+    if (open && !resuming.current) setSelectedProjectId(projectId);
   }, [open, projectId]);
   const activeProjectId = selectedProjectId ?? projectId;
   const inHomeProject = activeProjectId === projectId;
@@ -275,16 +288,9 @@ export function ObjectiveDialog({
   const [form, setForm] = useState(EMPTY);
   const [relations, setRelations] = useState<PendingRelationInput[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  // Id of the draft loaded in the form (MIN-41), so re-closing updates it in
-  // place and a successful create removes exactly the draft it came from.
+  // Id of the draft loaded or saved in the form (MIN-41), so saving again
+  // updates it in place and a successful create removes exactly that draft.
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
-  // Dismissing a create form with content asks first (MIN-41) — confirming
-  // stashes it as a local draft rather than losing it.
-  const [confirmClose, setConfirmClose] = useState(false);
-  // Closing the confirmation lets the dismissing click fall through to this
-  // dialog as an outside click, which would re-open the confirmation just
-  // dismissed. This ref muffles the close signal for the brief window after.
-  const ignoreCloseAfterConfirmRef = useRef(false);
   // Live emptiness of the description editor — `form.description` alone would
   // miss text typed but not yet committed (commit happens on blur).
   const editorNonEmptyRef = useRef(false);
@@ -363,8 +369,19 @@ export function ObjectiveDialog({
     setActiveDraftId(null);
   };
 
+  // A resumed form takes the caret at the end of its description, where the
+  // writing stopped, instead of the start of the name.
+  const [focusDescription, setFocusDescription] = useState(false);
   useEffect(() => {
     if (!open) return;
+    if (resuming.current) {
+      // The editor remounts on the description as last written.
+      setDraftDocument(descriptionDocument.current);
+      setFocusDescription(true);
+      setEditorKey((k) => k + 1);
+      return;
+    }
+    setFocusDescription(false);
     descriptionDocument.current = null;
     setDraftDocument(null);
     setForm(
@@ -385,7 +402,8 @@ export function ObjectiveDialog({
     setEditorKey((k) => k + 1);
   }, [open, objective, initialName, projectId]);
 
-  const closeAndReset = () => {
+  const resetForm = () => {
+    setFocusDescription(false);
     setOpenPicker(null);
     descriptionDocument.current = null;
     setDraftDocument(null);
@@ -396,6 +414,10 @@ export function ObjectiveDialog({
     setActiveDraftId(null);
     uploads.clear();
     resetDictation();
+  };
+
+  const closeAndReset = () => {
+    resetForm();
     onOpenChange(false);
   };
 
@@ -411,8 +433,10 @@ export function ObjectiveDialog({
   // Snapshot the form as a local draft (MIN-41), reusing the active id.
   const saveDraft = async () => {
     if (!activeProjectId) return;
+    const id = activeDraftId ?? createUuid();
+    setActiveDraftId(id);
     await drafts.save({
-      id: activeDraftId ?? createUuid(),
+      id,
       projectId: activeProjectId,
       updatedAt: Date.now(),
       name: form.name,
@@ -427,19 +451,16 @@ export function ObjectiveDialog({
     });
   };
 
-  // Stash the draft and close (the confirmation's "Save" action).
+  // The split menu's "Save as draft" (MIN-776): stash the form and close.
   const saveDraftAndClose = async () => {
-    try { await saveDraft(); closeAndReset(); }
-    catch { toast.error(tDrafts("saveFailed")); }
-  };
-
-  // “Abandon”: we close WITHOUT keeping, and the original draft goes away
-  // with — otherwise we would find in the repeat row the one we thought
-  // have given up. Same gesture as successful creation, which also consumes the
-  // draft it came from.
-  const discardDraftAndClose = async () => {
-    if (activeDraftId && !await drafts.remove(activeDraftId)) return;
-    closeAndReset();
+    if (!draftHasContent()) return;
+    try {
+      await saveDraft();
+      toast.success(tDrafts("saved"));
+      closeAndReset();
+    } catch {
+      toast.error(tDrafts("saveFailed"));
+    }
   };
 
   const handleOpenChange = (next: boolean) => {
@@ -450,28 +471,13 @@ export function ObjectiveDialog({
       toast.info(t("dictationInFlight"), { id: "dictation-in-flight" });
       return;
     }
-    // Swallow close signals while the confirmation owns the decision, and for
-    // the brief window right after it closes (the fall-through click).
-    if (!next && (confirmClose || ignoreCloseAfterConfirmRef.current)) return;
-    // Dismissing a create form with content asks first — confirming keeps it.
+    // A create form with content stays as it is, for the next opening or the
+    // automatic draft (see useHeldDraft); anything else starts over.
     if (!next && composerEnabled && draftHasContent()) {
-      setConfirmClose(true);
-      return;
-    }
-    if (!next) closeAndReset();
+      setOpenPicker(null);
+      onOpenChange(false);
+    } else if (!next) closeAndReset();
     else onOpenChange(next);
-  };
-
-  // Arm the fall-through guard the instant the confirmation closes (keep
-  // editing, Escape, or after confirming).
-  const handleConfirmOpenChange = (openNext: boolean) => {
-    setConfirmClose(openNext);
-    if (!openNext) {
-      ignoreCloseAfterConfirmRef.current = true;
-      window.setTimeout(() => {
-        ignoreCloseAfterConfirmRef.current = false;
-      }, 300);
-    }
   };
 
   // Load a saved draft back into the form and track its id.
@@ -500,6 +506,8 @@ export function ObjectiveDialog({
   const restoredDraftRef = useRef<string | null>(null);
   useEffect(() => {
     if (!open) { restoredDraftRef.current = null; return; }
+    // A resumed form is newer than the stored copy of its draft.
+    if (resuming.current) return;
     if (!initialDraftId || restoredDraftRef.current === initialDraftId || !drafts.find(initialDraftId)) return;
     restoredDraftRef.current = initialDraftId;
     recoverDraft(initialDraftId);
@@ -579,6 +587,7 @@ export function ObjectiveDialog({
       ...(patch.color !== undefined ? { color: patch.color } : {}),
     }));
     if (patch.description !== undefined) {
+      setFocusDescription(false);
       descriptionDocument.current = null;
       setDraftDocument(null);
       setEditorKey((k) => k + 1); // remount the editor with the new content
@@ -606,6 +615,11 @@ export function ObjectiveDialog({
       disabled={submitting || numoBusy}
     />
   );
+
+  const submitLabel = objective ? tCommon("save") : t("createObjective");
+  const submitDisabled = submitting || numoBusy || !form.name.trim() || uploads.uploading;
+  // A draft keeps finished uploads only, so it waits for those in flight.
+  const saveDraftDisabled = submitting || numoBusy || uploads.uploading || !draftHasContent();
 
   const dictationControl = <CreationDictation mobile={mobile} busy={numoBusy} busyLabel={t("numoWorking")}
     context="objective_form" onTranscription={(text) => { track("objective_dictation_used", { surface: "create_dialog" }); onTranscript(text); }}
@@ -670,7 +684,7 @@ export function ObjectiveDialog({
               <AutoTextarea
                 id={titleId}
                 enterKeyHint={mobile ? "next" : undefined}
-                autoFocus={!mobile}
+                autoFocus={!mobile && !focusDescription}
                 required
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -693,6 +707,7 @@ export function ObjectiveDialog({
                 key={editorKey}
                 mentions={mentions}
                 onLeaveTop={titleBody.leaveBody}
+                autoFocus={focusDescription}
                 value={form.description}
                 uploadScope={activeProjectId ? `projects/${activeProjectId}` : null}
                 onUploadingChange={setImagesUploading}
@@ -784,23 +799,39 @@ export function ObjectiveDialog({
               {/* No Cancel button: the dialog's own close X already does
                   that job. */}
               <div className="creation-submit ml-auto flex items-center justify-end gap-2 app-mobile:w-full">
-                <SendShortcutTooltip
-                  scope="form"
-                  label={objective ? tCommon("save") : t("createObjective")}
-                >
-                  <Button
-                    type="submit"
-                    className="rounded-full px-4 app-mobile:w-full"
-                    disabled={
-                      submitting ||
-                      numoBusy ||
-                      !form.name.trim() ||
-                      uploads.uploading
-                    }
-                  >
-                    {submitting && <Spinner />}
-                    {objective ? tCommon("save") : t("createObjective")}
-                  </Button>
+                <SendShortcutTooltip scope="form" label={submitLabel}>
+                  {composerEnabled ? (
+                    /* The tooltip clings to the action: its props pass
+                       through `SplitButton` to the left button. */
+                    <SplitButton
+                      type="submit"
+                      disabled={submitDisabled}
+                      menuDisabled={submitDisabled && saveDraftDisabled}
+                      className="app-mobile:w-full"
+                      actionClassName="app-mobile:flex-1"
+                      menuLabel={tIssue("moreCreateOptions")}
+                      menu={
+                        <DropdownMenuItem
+                          disabled={saveDraftDisabled}
+                          onSelect={() => void saveDraftAndClose()}
+                        >
+                          {tDrafts("saveAsDraft")}
+                        </DropdownMenuItem>
+                      }
+                    >
+                      {submitting && <Spinner />}
+                      {submitLabel}
+                    </SplitButton>
+                  ) : (
+                    <Button
+                      type="submit"
+                      className="rounded-full px-4 app-mobile:w-full"
+                      disabled={submitDisabled}
+                    >
+                      {submitting && <Spinner />}
+                      {submitLabel}
+                    </Button>
+                  )}
                 </SendShortcutTooltip>
                 {/* On phones the recorder sits beside the create button. */}
                 {mobile && composerEnabled && dictationControl}
@@ -815,13 +846,6 @@ export function ObjectiveDialog({
         </DialogContent>
       </Dialog>
 
-      {/* Dismissing a non-empty new-objective draft asks first (create only). */}
-      <CloseDraftDialog
-        open={confirmClose}
-        onOpenChange={handleConfirmOpenChange}
-        onConfirm={saveDraftAndClose}
-        onDiscard={discardDraftAndClose}
-      />
     </>
   );
 }

@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 33,
-  "sourceRevision": 33,
+  "revision": 34,
+  "sourceRevision": 34,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -115,13 +115,14 @@
       "lib/keyboard/shortcuts.ts",
       "lib/server/assistant/prompt.ts",
       "components/drafts-tray.tsx",
-      "lib/use-all-drafts.ts"
+      "lib/use-all-drafts.ts",
+      "lib/use-held-draft.ts"
     ]
   },
   "review": {
-    "revision": 33,
-    "fact": "agent:/root/min778 (resources paragraph checked against components/resources.tsx, lib/use-pages-query.ts, lib/use-attachment-uploads.ts and components/global-page-panel.tsx: the page picker creates a page, titled by the search when one is typed, attaches it and opens it in the side panel with Expand; rest of the article unchanged since the MIN-777 review; no figure changed)",
-    "language": "agent:/root/min778 (de sentences on creating a page from the page picker with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 34,
+    "fact": "agent:/root/min776 (drafts paragraph checked against components/create-issue-dialog.tsx, components/objective-dialog.tsx and lib/use-held-draft.ts: closing keeps the form, reopening resumes it, two minutes after a close it becomes a draft, another context saves it first, and the split menu offers Save as draft; rest of the article unchanged since the MIN-778 review; no figure changed)",
+    "language": "agent:/root/min776 (de drafts paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -167,7 +168,7 @@
       "src": "/documentation/de/new-issue.png",
       "alt": "Noch nicht abgesendeter Ticketentwurf im Projekt Aurora mit Titel, Beschreibung, manuell wählbaren Eigenschaften und der Schaltfläche AUR-19 erstellen.",
       "caption": "Beschreibe das erwartete Ergebnis und wähle vor der Erstellung die passenden Eigenschaften.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -183,7 +184,7 @@
       "src": "/documentation/de/triage-incoming.png",
       "alt": "Eingegangenes Demoproblem DOC-11 mit Bericht, Eigenschaften und Funktionen für Duplikat, Ablehnen und Akzeptieren.",
       "caption": "Lies den eingegangenen Bericht, bevor du ihn akzeptierst, ablehnst oder mit einem Duplikat verknüpfst.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -199,7 +200,7 @@
       "src": "/documentation/de/issue-statuses.png",
       "alt": "Die acht Ticketstatus im Auswahlmenü, mit ausgewähltem Backlog-Status.",
       "caption": "Das Häkchen zeigt den aktuellen Status. Wähle den Status, der dem tatsächlichen Arbeitsstand entspricht.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -215,7 +216,7 @@
       "src": "/documentation/de/work-resources.png",
       "alt": "Dialog zum Hinzufügen eines Links mit einer Beispiel-Kontaktadresse.",
       "caption": "Prüfe das Ziel, bevor du die Ressource hinzufügst. Dieser Beispiellink wurde nicht gesendet.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -231,7 +232,7 @@
       "src": "/documentation/de/work-dependencies.png",
       "alt": "Suche nach einem blockierenden Ticket anhand seiner Kennung.",
       "caption": "Wähle zuerst die Richtung der Beziehung und dann ihr Ziel. Hier wurde keine Beziehung gespeichert.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -247,7 +248,7 @@
       "src": "/documentation/de/work-sub-issues.png",
       "alt": "Eingabefeld für ein Unterticket in einem Demo-Elternticket.",
       "caption": "Das Feld erstellt ein Kind dieses Elterntickets; jedes Kind behält seinen eigenen Status und Diskussionsverlauf.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -263,7 +264,7 @@
       "src": "/documentation/de/work-implementation-plan.png",
       "alt": "Demo-Plan mit zwei von sechs abgeschlossenen Arbeitsschritten.",
       "caption": "Der gespeicherte Demo-Plan unterscheidet abgeschlossene, laufende und ausstehende Schritte. Der Fortschritt belegt nicht, dass die fiktive Codeaufgabe ausgeführt wurde.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -279,7 +280,7 @@
       "src": "/documentation/de/issue-date-recurrence.png",
       "alt": "Fälligkeitsauswahl im wiederkehrenden Modus mit Sonntagsvorschau und optionaler Uhrzeit.",
       "caption": "Der wiederkehrende Modus zeigt die wöchentliche Folge. Bestätige die erste Fälligkeit vor der Ticketerstellung.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -295,7 +296,7 @@
       "src": "/documentation/de/import-issues-preview-workflow.png",
       "alt": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen.",
       "caption": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen. Es wurde nichts importiert; die optionale KI-Planung war für die Aufnahme gesperrt.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -312,7 +313,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Umbenennen und Entfernen.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -351,7 +352,7 @@ Setze vor der Bestätigung die hilfreichen Eigenschaften: Status, Priorität, Au
 
 Bestätige die Erstellung und öffne das neue Problem. Prüfe Kennung und Projekt. Öffne die Eigenschaftsauswahl erneut, um Werte zu ändern, sobald die Aufgabe klarer wird. Die Beschreibung erklärt die Arbeit; ein Umsetzungsplan wird gesondert im Plan-Tab gepflegt.
 
-Wenn Sie das Formular schließen, während es Text enthält, fragt minddy, ob er erhalten bleiben soll: **Speichern** behält ihn als Entwurf, **Verwerfen** löscht ihn, **Zurück** kehrt zum Formular zurück. Gespeicherte Entwürfe von Problemen und Zielen sammeln sich unter **Entwürfe**, unten rechts im Fenster zwischen Numo und dem Aufgabennotizbuch; die Schaltfläche erscheint nur, solange Sie einen Entwurf haben, und zeigt deren Anzahl. Ihre Liste zeigt Titel und erste Beschreibungszeile jedes Entwurfs. Wählen Sie einen Entwurf, um ihn in seinem Erstellungsformular wieder zu öffnen und fertigzustellen; das Erstellen des Problems entfernt den Entwurf. Die Löschschaltfläche neben einem Entwurf fragt zuerst nach einer Bestätigung, und das Löschen lässt sich nicht rückgängig machen. Auf einem Telefon öffnen Sie die Befehlspalette und suchen nach dem Titel des Entwurfs. Entwürfe bleiben 30 Tage auf diesem Gerät, höchstens zehn je Art; die Liste zeigt nur Entwürfe aus Projekten, in denen Sie noch Probleme erstellen können.
+Wenn Sie das Formular schließen, bleibt das Geschriebene erhalten: Öffnen Sie es wieder, um dort weiterzumachen, wo Sie aufgehört haben. Öffnen Sie es nicht innerhalb von zwei Minuten wieder, wird sein Inhalt als Entwurf gespeichert und das nächste Formular beginnt leer; bis dahin existiert er nur in diesem Fenster, und Neuladen oder Schließen des Fensters verwirft ihn. Wenn Sie einen Entwurf oder ein von anderer Stelle vorausgefülltes Formular öffnen, wird das Zurückgelassene zuerst als Entwurf gespeichert. Um selbst zu speichern, öffnen Sie das Menü neben der Erstellen-Schaltfläche und wählen **Als Entwurf speichern**. Gespeicherte Entwürfe von Problemen und Zielen sammeln sich unter **Entwürfe**, unten rechts im Fenster zwischen Numo und dem Aufgabennotizbuch; die Schaltfläche erscheint nur, solange Sie einen Entwurf haben, und zeigt deren Anzahl. Ihre Liste zeigt Titel und erste Beschreibungszeile jedes Entwurfs. Wählen Sie einen Entwurf, um ihn in seinem Erstellungsformular wieder zu öffnen und fertigzustellen; das Erstellen des Problems entfernt den Entwurf. Die Löschschaltfläche neben einem Entwurf fragt zuerst nach einer Bestätigung, und das Löschen lässt sich nicht rückgängig machen. Auf einem Telefon öffnen Sie die Befehlspalette und suchen nach dem Titel des Entwurfs. Entwürfe bleiben 30 Tage auf diesem Gerät, höchstens zehn je Art; die Liste zeigt nur Entwürfe aus Projekten, in denen Sie noch Probleme erstellen können.
 
 
 ![Noch nicht abgesendeter Ticketentwurf im Projekt Aurora mit Titel, Beschreibung, manuell wählbaren Eigenschaften und der Schaltfläche AUR-19 erstellen.](/documentation/de/new-issue.png)
