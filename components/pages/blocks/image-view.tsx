@@ -140,7 +140,10 @@ export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }
           <button type="button" disabled={!src} aria-label={t("imageOpen")} aria-haspopup="dialog"
             className="block w-full text-left disabled:cursor-default"
             onClick={() => { if (src) setZoomed(true); }}>
-          <motion.span layoutId={layoutId} className="block"
+          {/* `layoutDependency`: the hero flight runs when the preview opens or
+              closes, never when the width changes — a resize animated every
+              step, so the image trailed behind the handle. */}
+          <motion.span layoutId={layoutId} layoutDependency={zoomed} className="block"
             animate={{ opacity: zoomed ? 0 : 1 }}
             transition={{ ...IMAGE_HERO_TRANSITION, opacity: { duration: reducedMotion ? 0 : 0.12 } }}>
           <img

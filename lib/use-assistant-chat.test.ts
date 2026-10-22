@@ -700,7 +700,8 @@ describe("completed response notifications", () => {
     ));
     await act(async () => root.render(createElement(Probe)));
     await act(async () => value.sendMessage(null, "Question"));
-    expect(value.state.completedResponse).toEqual({ conversationId, messageId: "interaction" });
+    // An interaction waits on the user: the launchers show it apart (orange dot).
+    expect(value.state.completedResponse).toEqual({ conversationId, messageId: "interaction", awaitsAnswer: true });
   });
 
   it("does not mark an empty completed turn ready", async () => {

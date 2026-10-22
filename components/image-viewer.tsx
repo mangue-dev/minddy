@@ -2,8 +2,9 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { TooltipPortalContainer } from "@/components/ui/tooltip";
 import { useTranslations } from "next-intl";
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type SyntheticEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type SyntheticEvent } from "react";
 import { createPortal } from "react-dom";
 
 export const IMAGE_HERO_TRANSITION = {
@@ -68,6 +69,12 @@ export function PreviewViewer({ label, open, onOpenChange, children, action, clo
   const [host, setHost] = useState<HTMLElement | null>(null);
   const reducedMotion = useReducedMotion();
   const dialog = useRef<HTMLDialogElement>(null);
+  // The dialog element, as state: the tooltips of the reader portal into it.
+  const [dialogElement, setDialogElement] = useState<HTMLDialogElement | null>(null);
+  const bindDialog = useCallback((element: HTMLDialogElement | null) => {
+    dialog.current = element;
+    setDialogElement(element);
+  }, []);
   const restoreScroll = useRef<(() => void) | null>(null);
   const close = () => onOpenChange(false);
   const finishClose = () => {
@@ -135,7 +142,7 @@ export function PreviewViewer({ label, open, onOpenChange, children, action, clo
     : open ? { duration: enter, ease: EASE_OUT, delay } : { duration: exit, ease: EASE_OUT };
   const dismissOnClick = closeOnContentClick ? close : undefined;
   if (!host) return null;
-  return createPortal(<dialog ref={dialog} aria-label={label}
+  return createPortal(<dialog ref={bindDialog} aria-label={label}
     onClick={stopReactPropagation} onPointerDown={stopReactPropagation} onPointerUp={stopReactPropagation}
     onPointerMove={stopReactPropagation} onMouseDown={stopReactPropagation} onWheel={stopReactPropagation}
     onTouchStart={stopReactPropagation} onTouchMove={stopReactPropagation} onContextMenu={stopReactPropagation}
@@ -144,6 +151,7 @@ export function PreviewViewer({ label, open, onOpenChange, children, action, clo
     // A Radix modal below sets `pointer-events: none` on the body, which the
     // dialog would inherit even in the top layer.
     className="pointer-events-auto fixed inset-0 m-0 h-dvh max-h-none w-screen max-w-none overflow-hidden border-0 bg-transparent p-0 text-foreground outline-none backdrop:bg-transparent">
+    <TooltipPortalContainer container={dialogElement}>
     <AnimatePresence onExitComplete={finishClose}>
       {open && <motion.div key="viewer" className="absolute inset-0 flex flex-col"
         initial="initial" animate="visible" exit="exit" onClick={dismissOnClick}>
@@ -165,6 +173,7 @@ export function PreviewViewer({ label, open, onOpenChange, children, action, clo
         </motion.div>
       </motion.div>}
     </AnimatePresence>
+    </TooltipPortalContainer>
   </dialog>, host);
 }
 

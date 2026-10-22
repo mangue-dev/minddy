@@ -28,19 +28,22 @@ import { cn } from "@/lib/utils";
  */
 
 /** A box. Purely decorative: the real field is transparent, above. */
-function Slot({ char, isActive }: SlotProps) {
+function Slot({ char, isActive, hasFakeCaret }: SlotProps) {
   return (
     <div
       className={cn(
-        "flex h-11 w-10 items-center justify-center rounded-md border border-input bg-card",
-        "font-mono text-base tabular-nums transition-colors",
-        // No fake blinking cursor: it would require a global keyframe
-        // for this component alone, while the ring already says where we are —
-        // and it is the focus indication of the other fields of the app.
-        isActive && "z-10 border-ring ring-2 ring-ring/40"
+        "relative flex h-11 w-10 items-center justify-center rounded-md border border-input bg-card",
+        "font-mono text-base tabular-nums"
       )}
     >
       {char}
+      {/* The active box shows a blinking caret and no focus ring: the real
+          input is transparent, so this drawn caret is the only place marker. */}
+      {isActive && hasFakeCaret && (
+        <div aria-hidden className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="h-5 w-px bg-foreground motion-safe:animate-[caret-blink_1.2s_ease-out_infinite]" />
+        </div>
+      )}
     </div>
   );
 }

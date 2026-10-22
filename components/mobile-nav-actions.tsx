@@ -6,7 +6,11 @@ import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { NumoLauncherIcon } from "@/components/assistant/numo-launcher-icon";
-import { useAssistantBusy, useAssistantUnreadResponseConversationId } from "@/lib/assistant-chat-context";
+import {
+  useAssistantBusy,
+  useAssistantUnreadAwaitsAnswer,
+  useAssistantUnreadResponseConversationId,
+} from "@/lib/assistant-chat-context";
 import { AppIcon } from "@/components/icon";
 import { useAssistantPanel, useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { useCreateActions } from "@/components/new-menu";
@@ -20,7 +24,10 @@ export function MobileNavActions() {
   const busy = useAssistantBusy();
   const unreadConversationId = useAssistantUnreadResponseConversationId();
   const unread = !!unreadConversationId && !isOpen && !busy;
-  const numoLabel = unread ? `${tk("navAssistant")} — ${ta("unreadConversation")}` : tk("navAssistant");
+  const question = useAssistantUnreadAwaitsAnswer() && unread;
+  const numoLabel = unread
+    ? `${tk("navAssistant")} — ${ta(question ? "unreadQuestion" : "unreadConversation")}`
+    : tk("navAssistant");
   const { toggle, open } = useAssistantPanelActions();
   const actions = useCreateActions();
   const createTrigger = useRef<HTMLButtonElement>(null);
@@ -38,7 +45,7 @@ export function MobileNavActions() {
       >
         {/* Static: an animation of SVG attributes looping on a navigation bar
  says nothing, and even runs hidden (MIN-323). */}
-        <NumoLauncherIcon unread={unread} className="size-[22px] text-foreground" />
+        <NumoLauncherIcon unread={unread} question={question} className="size-[22px] text-foreground" />
       </button>
       <button ref={createTrigger} type="button" aria-label={tn("new")} aria-haspopup="dialog" aria-expanded={createOpen}
         className="flex h-full min-w-0 items-center justify-center rounded-full focus-visible:ring-2 focus-visible:ring-ring"

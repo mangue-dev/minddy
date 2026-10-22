@@ -362,6 +362,7 @@ function UserText({
                     ? links?.issueStatus(mention.id) ?? mention.status
                     : undefined
                 }
+                tooltip={mention.type === "issue" ? links?.issueTitle?.(mention.id) ?? null : null}
                 href={links?.href(mention.type, mention.id) ?? null}
                 onNavigate={() => links?.navigate(mention.type, mention.id)}
               />

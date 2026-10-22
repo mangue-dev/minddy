@@ -161,9 +161,9 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
     state.status === "executing_tool" ||
     state.status === "generating_server";
 
-  const [unreadResponses, setUnreadResponses] = useState<ReadonlyMap<string, string>>(
-    () => new Map(),
-  );
+  const [unreadResponses, setUnreadResponses] = useState<
+    ReadonlyMap<string, { messageId: string; awaitsAnswer: boolean }>
+  >(() => new Map());
   const observedResponses = useRef(new Set<string>());
   useEffect(() => {
     const response = state.completedResponse;
@@ -172,10 +172,16 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
     if (observedResponses.current.has(key)) return;
     observedResponses.current.add(key);
     setUnreadResponses((previous) =>
-      new Map(previous).set(response.conversationId, response.messageId),
+      new Map(previous).set(response.conversationId, {
+        messageId: response.messageId,
+        awaitsAnswer: response.awaitsAnswer === true,
+      }),
     );
   }, [state.completedResponse]);
   const unreadConversationId = unreadResponses.keys().next().value ?? null;
+  const unreadAwaitsAnswer = unreadConversationId
+    ? unreadResponses.get(unreadConversationId)?.awaitsAnswer === true
+    : false;
   const markResponseRead = useCallback((conversationId: string) => {
     if (!unreadResponses.has(conversationId)) return;
     setUnreadResponses((previous) => {
@@ -354,9 +360,11 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
     <AssistantChatContext.Provider value={value}>
       <AssistantBusyContext.Provider value={isBusy}>
         <AssistantUnreadResponseContext.Provider value={unreadConversationId}>
-          <AssistantResumeContext.Provider value={resumeValue}>
-            {children}
-          </AssistantResumeContext.Provider>
+          <AssistantUnreadQuestionContext.Provider value={unreadAwaitsAnswer}>
+            <AssistantResumeContext.Provider value={resumeValue}>
+              {children}
+            </AssistantResumeContext.Provider>
+          </AssistantUnreadQuestionContext.Provider>
         </AssistantUnreadResponseContext.Provider>
       </AssistantBusyContext.Provider>
     </AssistantChatContext.Provider>
@@ -386,6 +394,14 @@ const AssistantUnreadResponseContext = createContext<string | null>(null);
 /** Open the oldest conversation with a response that has not been displayed yet. */
 export function useAssistantUnreadResponseConversationId(): string | null {
   return useContext(AssistantUnreadResponseContext);
+}
+
+const AssistantUnreadQuestionContext = createContext(false);
+
+/** The unread response the launchers point to waits on the user (a question or
+    a proposal), not a finished reply: their dot turns orange instead of blue. */
+export function useAssistantUnreadAwaitsAnswer(): boolean {
+  return useContext(AssistantUnreadQuestionContext);
 }
 
 /**

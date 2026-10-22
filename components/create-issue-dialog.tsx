@@ -782,6 +782,7 @@ export function CreateIssueDialog({
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent
           ref={contentRef}
+          onKeyDownCapture={submitShortcut.onKeyDownCapture}
           aria-describedby={undefined}
           // The extra top padding clears the "Create in" pill and the close button.
           className="creation-sheet p-8 pt-15 max-sm:p-5 max-sm:pt-15 sm:max-w-2xl"
@@ -802,7 +803,7 @@ export function CreateIssueDialog({
           )}
 
           <form
-            {...submitShortcut}
+            ref={submitShortcut.ref}
             onSubmit={(e) => {
               e.preventDefault();
               void submit(createMore);
@@ -839,7 +840,7 @@ export function CreateIssueDialog({
                   titleBody.onTitleKeyDown(e, { submit: () => void submit(createMore), mobile });
                 }}
                 placeholder={t("titlePlaceholder")}
-                className="creation-title w-full overflow-hidden bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50 sm:text-2xl"
+                className="creation-title w-full title-field bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50 sm:text-2xl"
               />
               <div className="creation-field-label">{tField("description")}</div>
               <div ref={titleBody.bodyRef}>

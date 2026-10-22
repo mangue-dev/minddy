@@ -212,7 +212,9 @@ function Slider({
       >
         <SliderPrimitive.Range
           data-slot="slider-range"
-          className="absolute bg-control-hover select-none data-horizontal:h-full data-vertical:w-full"
+          // The filled part takes the account's accent (`--primary`, which the
+          // theme presets recolor), tinted so the thumb and labels stay legible.
+          className="absolute bg-primary/25 select-none data-horizontal:h-full data-vertical:w-full"
         />
         {hasLabels ? (
           <span
@@ -241,7 +243,9 @@ function Slider({
           <span
             data-slot="slider-ticks"
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0 z-10 opacity-0 transition-opacity duration-150 group-hover/slider:opacity-100 data-vertical:hidden"
+            // Always shown: the notches say where the steps are before the
+            // pointer gets there, and a phone has no hover to reveal them.
+            className="pointer-events-none absolute inset-0 z-10 data-vertical:hidden"
           >
             {tickValues.map((tickValue) => (
               <span
@@ -282,7 +286,7 @@ function Slider({
           >
             <span
               aria-hidden="true"
-              className="pointer-events-auto absolute top-1/2 left-1/2 z-10 block translate-x-[calc(-50%+var(--slider-thumb-offset-x,0px))] translate-y-[calc(-50%+var(--slider-thumb-offset-y,0px))] rounded-full bg-foreground opacity-0 transition-[height,width,opacity,transform] duration-150 before:absolute before:-inset-2 before:content-[''] group-hover/slider:opacity-[var(--slider-thumb-hover-opacity,1)]"
+              className="pointer-events-auto absolute top-1/2 left-1/2 z-10 block translate-x-[calc(-50%+var(--slider-thumb-offset-x,0px))] translate-y-[calc(-50%+var(--slider-thumb-offset-y,0px))] rounded-full bg-foreground opacity-40 scale-75 transition-[height,width,opacity,transform,scale] duration-150 before:absolute before:-inset-2 before:content-[''] group-hover/slider:scale-100 group-hover/slider:opacity-[var(--slider-thumb-hover-opacity,1)] group-active/slider:scale-100 group-active/slider:opacity-[var(--slider-thumb-hover-opacity,1)] group-focus-within/slider:scale-100 group-focus-within/slider:opacity-[var(--slider-thumb-hover-opacity,1)] app-mobile:scale-100 app-mobile:opacity-[var(--slider-thumb-hover-opacity,1)] pointer-coarse:scale-100 pointer-coarse:opacity-[var(--slider-thumb-hover-opacity,1)]"
               style={
                 {
                   "--slider-thumb-offset-x": `${metric.offsetX}px`,

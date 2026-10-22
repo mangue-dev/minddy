@@ -253,6 +253,7 @@ export function useMentionLinksFor(
     const href: MentionLinks["href"] = (type, id) =>
       mentionTargetPath(type, id, projectOf(type, id));
     const statusByIssueId = new Map(issues.map((issue) => [issue.id, issue.status]));
+    const titleByIssueId = new Map(issues.map((issue) => [issue.id, issue.title]));
     const labels = new Map<string, string>([
       ...issues.map((issue) => [`issue:${issue.id}`, issue.identifier] as [string, string]),
       ...objectives.map((objective) => [`objective:${objective.id}`, objective.name] as [string, string]),
@@ -264,6 +265,7 @@ export function useMentionLinksFor(
     return {
       href,
       issueStatus: (id) => statusByIssueId.get(id) ?? null,
+      issueTitle: (id) => titleByIssueId.get(id) || null,
       label: (type, id) => labels.get(`${type}:${id}`) ?? null,
       navigate: (type, id) => {
         const target = mentionNavigationTarget(type, id, projectOf(type, id));

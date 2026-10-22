@@ -1653,7 +1653,10 @@ export function PrDetail({
               <PrStateControl state={badgeState} canChange={!!canWrite} disabled={!!acting || readState !== "fresh"}
                 onChange={(state) => setConfirmAction({ kind: "state", state })} />
             </div>
-            {!isDraft && effectiveReadiness ? (
+            {/* A merged or closed pull request has nothing left to act on:
+                its readiness is a plain badge, never the merge popover. */}
+            {!isDraft && !isTerminal && effectiveReadiness
+              && effectiveReadiness.state !== "merged" && effectiveReadiness.state !== "closed" ? (
               <PrReadinessControl
                 open={readinessOpen}
                 onOpenChange={(open) => {

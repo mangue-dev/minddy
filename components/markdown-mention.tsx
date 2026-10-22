@@ -162,6 +162,7 @@ function MentionNodeView({ node }: NodeViewProps) {
             ? links?.issueStatus(id) ?? node.attrs.status ?? undefined
             : undefined
         }
+        tooltip={type === "issue" ? links?.issueTitle?.(id) ?? null : null}
         // The `icon` attribute carries two things depending on the type, and only one on
         // times: the favicon of a project (a URL) or the emoji of a page. THE
         // passing both without distinguishing would give a page pill

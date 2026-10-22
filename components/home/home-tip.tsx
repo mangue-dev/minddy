@@ -19,7 +19,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { BulbIcon } from "@hugeicons/core-free-icons";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { KbdSequence } from "@/components/ui/kbd";
 import { resolveKeyToken } from "@/lib/keyboard/shortcuts";
@@ -36,6 +36,7 @@ export function HomeTip() {
 
   const tip = seed === null ? null : pickTip(seed);
   const shortcut = tip ? tipShortcut(tip) : undefined;
+  const textRef = useShrinkWrap(tip?.key);
 
   return (
     // Full row width, `mt-auto` glues it to the foot of the page; the container
@@ -47,7 +48,7 @@ export function HomeTip() {
            its natural left alignment inside the container. */
         <span className="mx-auto flex w-fit max-w-[36rem] items-center gap-x-2">
           <HugeiconsIcon icon={BulbIcon} className="size-3.5 shrink-0" aria-hidden />
-          <span className="text-balance">
+          <span ref={textRef} className="text-balance">
             {t(tip.key)}
             {shortcut && (
               <>
@@ -64,4 +65,41 @@ export function HomeTip() {
       )}
     </p>
   );
+}
+
+/**
+ * Narrow a wrapped text box to its widest line.
+ *
+ * A box whose text wraps keeps the width it was offered, not the width of its
+ * lines — and `text-balance` shortens the lines further. The hint then sat
+ * left of center on two lines, its box centered but its text not. Measuring
+ * the rendered lines and pinning the width makes the box hug the text, so
+ * centering the box centers what is read.
+ */
+function useShrinkWrap(key: string | undefined) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const fit = () => {
+      el.style.width = "";
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const left = el.getBoundingClientRect().left;
+      let right = left;
+      for (const rect of range.getClientRects()) right = Math.max(right, rect.right);
+      const width = Math.ceil(right - left);
+      if (width > 0) el.style.width = `${width}px`;
+    };
+    fit();
+    if (typeof ResizeObserver === "undefined") return;
+    // The row (window resizes) and the text itself: the shortcut keys render
+    // a moment after the words, and their arrival can rewrap the lines.
+    const observer = new ResizeObserver(fit);
+    const row = el.parentElement?.parentElement;
+    if (row) observer.observe(row);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [key]);
+  return ref;
 }

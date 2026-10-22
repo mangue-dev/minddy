@@ -61,8 +61,10 @@ export function Kbd({
         // `tracking-normal`: a key cap often sits inside a `tracking-widest`
         // shortcut span (dropdown menus); the inherited letter-space is added
         // AFTER the glyph, so a centered flex item came out visibly left of
-        // center inside the fixed square.
-        "inline-flex items-center justify-center tracking-normal rounded-[0.375rem] border [border-color:color-mix(in_srgb,currentColor_30%,transparent)] [color:color-mix(in_srgb,currentColor_75%,transparent)] [font-family:var(--font-kbd)] font-semibold",
+        // center inside the fixed square. `shrink-0`: in a flex row beside a
+        // label that wraps (a tooltip, a menu row), a key cap was squeezed
+        // narrower than tall — a key keeps its shape whatever the row does.
+        "inline-flex shrink-0 items-center justify-center tracking-normal rounded-[0.375rem] border [border-color:color-mix(in_srgb,currentColor_30%,transparent)] [color:color-mix(in_srgb,currentColor_75%,transparent)] [font-family:var(--font-kbd)] font-semibold",
         // `leading-*` equals the cap's own height, per size. The flex
         // centering centers the text's LINE BOX, whose height is the
         // INHERITED line-height — it varies per surface (menu rows, cheat

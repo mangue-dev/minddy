@@ -95,7 +95,10 @@ function buildToolCallResultsFromMessages(messages: AssistantMessage[]): Map<str
 export interface AssistantChatState {
   status: AssistantStatus;
   /** Last successfully completed answer, independent of working/idle transitions. */
-  completedResponse: { conversationId: string; messageId: string } | null;
+  /** The last ready answer; `awaitsAnswer` when it waits on the user (an
+      `ask_user` question or a `propose_backlog` proposal), which the
+      launchers mark apart from a plain reply. */
+  completedResponse: { conversationId: string; messageId: string; awaitsAnswer?: true } | null;
   messages: AssistantMessage[];
   streamingContent: string;
   streamingReasoning: StreamingAssistantReasoning | null;
@@ -416,7 +419,12 @@ function reducer(
         ...state,
         status: "idle",
         completedResponse: hasAnswer && state.conversationId
-          ? { conversationId: state.conversationId, messageId: answer.id }
+          ? {
+              conversationId: state.conversationId,
+              messageId: answer.id,
+              // Both interactions end the turn on `waiting_input`.
+              ...(answer.tool_calls?.length ? { awaitsAnswer: true as const } : {}),
+            }
           : state.completedResponse,
         streamingContent: "",
         streamingReasoning: null,

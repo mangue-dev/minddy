@@ -4,6 +4,9 @@ import { useCallback, useRef } from "react";
 import type { KeyboardEvent } from "react";
 import { planSubmitShortcut } from "@/lib/keyboard/submit-shortcut";
 
+const MODAL_SURFACES =
+  '[data-slot="dialog-content"],[data-slot="alert-dialog-content"],[data-slot="sheet-content"]';
+
 /**
  * Branch ⌘/Ctrl + Enter on the main button of a form.
  *
@@ -18,12 +21,18 @@ import { planSubmitShortcut } from "@/lib/keyboard/submit-shortcut";
  *
  * - listening is in **capture**. tiptap binds `Mod-Enter` to hard newline
  * on its own surface: when going up, the line would already be inserted. React
- * dispatches its capture listeners from the root, so before
- * the event does not reach the editor — this is the only place from which it can be
- *   lui reprendre ;
- * - on `stopPropagation()` en plus du `preventDefault()`, ce qui coupe aussi
+ * dispatches its capture listeners from the root, before the event reaches
+ * the editor — the only place from which the shortcut can be taken back;
+ * - `stopPropagation()` on top of `preventDefault()`, which also stops
  * the native event: without that, the title field (which submits on Enter)
  * would submit a second time.
+ *
+ * In a dialog, put `ref` on the form and `onKeyDownCapture` on the dialog
+ * content: the shortcut then also works with the focus outside the form —
+ * on the "Create in" pill, or on the dialog itself after a click on its
+ * background — where a listener on the form alone never heard it. A dialog
+ * opened ON TOP keeps its keys: the event is ignored when it comes from a
+ * modal surface that does not hold this form.
  */
 export function useSubmitShortcut({
   /**
@@ -42,6 +51,9 @@ export function useSubmitShortcut({
   const onKeyDownCapture = useCallback((e: KeyboardEvent) => {
     const form = ref.current;
     if (!form) return;
+    const target = e.target instanceof Element ? e.target : null;
+    const surface = target?.closest(MODAL_SURFACES);
+    if (surface && !surface.contains(form)) return;
     const button = form.querySelector<HTMLButtonElement>(selector);
     const active = document.activeElement as HTMLElement | null;
     const plan = planSubmitShortcut(e, {
