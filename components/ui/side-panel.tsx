@@ -188,7 +188,7 @@ function ModalSidePanelContent({
         className={cn(
           // Floating panel: detached from the screen edges with a 1rem margin,
           // rounded corners, border and elevation.
-          "fixed z-50 flex h-auto w-[min(460px,calc(100vw-2rem))] max-w-none flex-col overflow-hidden rounded-2xl border border-border bg-card bg-clip-padding text-sm shadow-2xl outline-none transition duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 data-closed:duration-150",
+          "fixed z-50 flex h-auto w-[min(460px,calc(100vw-2rem))] max-w-none flex-col overflow-hidden rounded-2xl border border-border bg-card bg-clip-padding text-sm shadow-2xl outline-none transition duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 data-closed:duration-200 data-closed:ease-in",
           SIDE_CLASSES[side],
           className
         )}
