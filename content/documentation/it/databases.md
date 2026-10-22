@@ -17,10 +17,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 16,
-  "sourceRevision": 16,
+  "revision": 17,
+  "sourceRevision": 17,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -49,14 +49,17 @@
       "lib/page-databases.ts",
       "scripts/page-database-date-times.integration.test.mjs",
       "components/pages/page-promotion-context.tsx",
-      "components/pages/page-promotion-context.test.tsx"
+      "components/pages/page-promotion-context.test.tsx",
+      "components/pages/database-view-strip.tsx",
+      "lib/use-page-database-views.ts",
+      "lib/server/page-database-views.ts"
     ]
   },
   "review": {
-    "revision": 16,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 7 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 17,
+    "fact": "agent:/root/min764 (database views section checked against components/pages/database-view-strip.tsx, components/pages/page-database-view.tsx, lib/use-page-database-views.ts and lib/server/page-database-views.ts: named views shared by the project, each with its own sort, filter and hidden columns, managed and reordered by writers, adjusted locally by readers; insertion clears the active view's filter; rest of the article unchanged since the MIN-747 review; no figure changed)",
+    "language": "agent:/root/min764 (it changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "pages"
@@ -80,7 +83,7 @@
       "src": "/documentation/it/database-setup-cards.png",
       "alt": "Anteprima del componente con le schede per configurare una nuova banca dati con Numo o importarne una esistente.",
       "caption": "Suggerimenti per una nuova banca dati con dati dimostrativi. Scegli Numo o l’importazione, oppure chiudi le schede per continuare manualmente.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -97,7 +100,7 @@
       "src": "/documentation/it/database-property-types.png",
       "alt": "Selettore del tipo di colonna con un campo di ricerca, testo, numero, selezioni, date, persone e casella di controllo.",
       "caption": "Scegli un tipo adatto ai valori da conservare.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -114,7 +117,7 @@
       "src": "/documentation/it/database-entry.png",
       "alt": "Voce dimostrativa con descrizione, durata 2.5, casella selezionata e selezione vuota.",
       "caption": "Apri una voce per leggere il testo completo e modificare i valori in base al tipo.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -130,7 +133,7 @@
       "src": "/documentation/it/database-conversion-warning.png",
       "alt": "Avviso di conversione: il passaggio da Testo a Numero svuota una cella incompatibile, con pulsanti per annullare o confermare.",
       "caption": "Controlla il numero effettivo di celle incompatibili prima di confermare. Annulla conserva i valori attuali.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -146,7 +149,7 @@
       "src": "/documentation/it/database-import-review.png",
       "alt": "Verifica di un CSV locale: due pagine di voci e due colonne, con il pulsante Importa database.",
       "caption": "Controlla le voci analizzate e il numero di colonne prima di importare nel database vuoto.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -162,7 +165,7 @@
       "src": "/documentation/it/database-options.png",
       "alt": "Anteprima del componente Modifica opzioni con stati in italiano, frecce verso l’alto e il basso, cestini e la spiegazione dell’eliminazione.",
       "caption": "Modifica insieme nomi, colori e ordine delle opzioni. Il cestino rimuove un’opzione dalla bozza; Salva applica le modifiche. Sono mostrati dati dimostrativi.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -179,7 +182,7 @@
       "src": "/documentation/it/database-date-time.png",
       "alt": "Anteprima del selettore di data con il 12 ottobre 2026 selezionato, Aggiungere un’ora attivo e Tempo impostato su 14:30.",
       "caption": "Attiva Aggiungere un’ora per inserire un’ora. Questa anteprima del componente usa dati dimostrativi e il fuso orario del dispositivo.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -219,7 +222,7 @@ Un database supporta fino a 30 colonne di proprietà oltre al nome della voce. S
 
 Persone seleziona membri del progetto, non indirizzi email arbitrari. I membri appena menzionati possono ricevere notifiche. Una voce di database è anche una pagina completa con normali contenuti, commenti e allegati.
 
-Formule avanzate, automazioni e viste aggiuntive non sono disponibili. Scegli una proprietà di testo o un documento collegato quando i dati non rientrano in un tipo supportato; non descrivere una formula non supportata come una colonna funzionante.
+Formule avanzate e automazioni non sono disponibili. Scegli una proprietà di testo o un documento collegato quando i dati non rientrano in un tipo supportato; non descrivere una formula non supportata come una colonna funzionante.
 
 
 ![Selettore del tipo di colonna con un campo di ricerca, testo, numero, selezioni, date, persone e casella di controllo.](/documentation/it/database-property-types.png)
@@ -248,13 +251,13 @@ Il contenuto di una voce vuota mostra un segnaposto per individuare l’area di 
 
 Apri una voce per modificarne la pagina completa in un pannello flottante. «Espandi» la apre come pagina completa dopo la fine dei salvataggi del documento in attesa. Se il salvataggio fallisce, il pannello resta aperto per risolverlo. Una voce vuota resta nel database finché non viene eliminata.
 
-Usa le caselle delle righe per selezionare e Shift-clic per un intervallo. La maniglia apre le azioni e può riordinare le voci in ordine manuale. Il + nel margine inserisce sotto una voce; Option/Alt inserisce sopra. L’inserimento adiacente torna all’ordine manuale e rimuove i filtri per rendere visibile la nuova voce.
+Usa le caselle delle righe per selezionare e Shift-clic per un intervallo. La maniglia apre le azioni e può riordinare le voci in ordine manuale. Il + nel margine inserisce sotto una voce; Option/Alt inserisce sopra. L’inserimento adiacente rimuove il filtro della vista attiva per rendere visibile la nuova voce.
 
 Dal menu della maniglia di una singola voce, il proprietario o un Membro può scegliere **Promuovi a ticket** perché Numo trasformi quella voce, il suo contenuto e le sue proprietà in un ticket. La voce resta nel database. L’azione non compare quando il menu riguarda più righe selezionate: non esiste una promozione multipla, quindi promuovi ogni voce separatamente. La [guida alle pagine](/it/documentazione/pages#promote-page-to-issue) descrive le domande di Numo e cosa fare se la voce non può essere salvata prima.
 
-### Preferenze di visualizzazione {#database-display}
+### Viste del database {#database-display}
 
-Cerca, filtra, ordina e nascondi colonne nell’unica vista elenco. Queste preferenze vengono ricordate sul dispositivo; l’ordine manuale è condiviso con l’albero delle pagine. Scorri orizzontalmente con un gesto del trackpad, Shift e rotella del mouse, tocco o barra inferiore. Un’anteprima tagliata non accorcia il testo salvato. Le voci con valori di colonne si possono riordinare nel proprio database, ma non spostare fuori.
+Un database mostra le sue voci attraverso viste, elencate sopra la tabella. Ogni vista conserva il proprio ordinamento, il proprio filtro e le proprie colonne nascoste, e tutti i membri del progetto vedono le stesse viste. Il proprietario o un Membro aggiunge una vista con **Nuova vista** (+), che parte dalla vista mostrata, rinomina o cancella la vista attiva dal suo menu delle opzioni (⋯) con **Rinomina vista** o **Cancella vista**, e trascina le viste per riordinarle. Le modifiche a ordinamento, filtro e colonne vengono salvate nella vista attiva per tutti. Un database conserva almeno una vista; prima della sua prima modifica mostra la vista predefinita **Tabella**. I lettori passano da una vista all’altra e possono regolarne una per sé finché non lasciano la pagina. Il browser ricorda l’ultima vista aperta; la ricerca non viene mai salvata. L’ordine manuale è condiviso con l’albero delle pagine. Scorri orizzontalmente con un gesto del trackpad, Shift e rotella del mouse, tocco o barra inferiore. Un’anteprima tagliata non accorcia il testo salvato. Le voci con valori di colonne si possono riordinare nel proprio database, ma non spostare fuori.
 
 
 ![Voce dimostrativa con descrizione, durata 2.5, casella selezionata e selezione vuota.](/documentation/it/database-entry.png)

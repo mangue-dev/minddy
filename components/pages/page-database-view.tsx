@@ -1,10 +1,9 @@
 "use client";
-import { removeLocalSnapshot, restoreLocalSnapshot, saveLocalSnapshot } from "@/lib/local-snapshots";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { Add01Icon, ArrowDown01Icon, ArrowUp01Icon, ArrowUpDownIcon, Cancel01Icon, Copy01Icon, Delete02Icon, DragDropVerticalIcon, File02Icon, FilterIcon, Search01Icon, Settings02Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -55,6 +54,8 @@ import { usePromotePage } from "./page-promotion-context";
 import { NumoIcon } from "@/components/numo-icon";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { usePageDatabase } from "@/lib/use-page-database";
+import { usePageDatabaseViews } from "@/lib/use-page-database-views";
+import { DatabaseViewStrip } from "./database-view-strip";
 import { displayName } from "@/lib/display-name";
 import {
   MAX_DATABASE_PROPERTIES,
@@ -394,56 +395,13 @@ export function PageDatabaseView({
   } = usePagesQuery(projectId);
   const { members } = useMembersQuery(projectId, true);
   const [query, setQuery] = useState("");
-  const [sort, setSort] = useState("position");
-  const [descending, setDescending] = useState(false);
-  const [filter, setFilter] = useState("");
-  const [filterValue, setFilterValue] = useState("");
-  const [hidden, setHidden] = useState<string[]>([]);
-  const [preferencesReady, setPreferencesReady] = useState(false);
-  const storageKey = `minddy:database-list:${projectId}:${database.id}`;
-  useEffect(() => {
-    let cancelled = false;
-    setPreferencesReady(false);
-    void (async () => {
-      const raw = JSON.parse(localStorage.getItem(storageKey) ?? "null");
-      const decoded = raw?.format === "minddy-local-v1"
-        ? await restoreLocalSnapshot(localStorage, storageKey, "page-list-settings") : null;
-      const stored = decoded && typeof decoded === "object" ? decoded as Record<string, unknown> : null;
-      if (raw && raw?.format !== "minddy-local-v1") removeLocalSnapshot(localStorage, storageKey);
-      if (cancelled) return;
-      if (stored && typeof stored === "object") {
-        if (typeof stored.sort === "string") setSort(stored.sort);
-        if (typeof stored.descending === "boolean")
-          setDescending(stored.descending);
-        if (typeof stored.filter === "string") setFilter(stored.filter);
-        if (typeof stored.filterValue === "string")
-          setFilterValue(stored.filterValue);
-        if (
-          Array.isArray(stored.hidden) &&
-          stored.hidden.every((id: unknown) => typeof id === "string")
-        )
-          setHidden(stored.hidden);
-      }
-    })().catch(() => {}).finally(() => { if (!cancelled) setPreferencesReady(true); });
-    return () => { cancelled = true; };
-  }, [storageKey]);
-  useEffect(() => {
-    if (!preferencesReady) return;
-    try {
-      void saveLocalSnapshot(localStorage, storageKey, "page-list-settings",
-        { sort, descending, filter, filterValue, hidden }).catch(() => {});
-    } catch {
-      /* List controls remain usable without persistence. */
-    }
-  }, [
-    storageKey,
-    preferencesReady,
-    sort,
-    descending,
-    filter,
-    filterValue,
-    hidden,
-  ]);
+  const databaseViews = usePageDatabaseViews(projectId, database.id, canWrite);
+  const { sort, descending, filter, filterValue, hidden } = databaseViews.config;
+  const updateView = databaseViews.update;
+  const setSort = (next: string) => updateView({ sort: next });
+  const setDescending = (next: boolean) => updateView({ descending: next });
+  const setFilter = (next: string) => updateView({ filter: next, filterValue: "" });
+  const setFilterValue = (next: string) => updateView({ filterValue: next });
   const [remove, setRemove] = useState<PageSummary[]>([]);
   const [menuEntry, setMenuEntry] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
@@ -551,10 +509,9 @@ export function PageDatabaseView({
       const [position] = databaseRowPositions(entries, entry.id, above);
       if (!position) return;
       const created = await createPage({ parent_id: database.id, position });
-      setSort("position");
-      setDescending(false);
+      // Manual order is already on screen; the new entry must not be filtered out.
+      if (filter) setFilter("");
       setQuery("");
-      setFilter("");
       onOpen(created.id);
       await created.settled;
     });
@@ -625,7 +582,17 @@ export function PageDatabaseView({
   return (
     <div className="mt-5 space-y-1">
       <div className="flex items-center gap-0.5">
-        <div className="mr-auto flex items-center gap-1">
+        <div className="mr-auto flex min-w-0 items-center gap-1">
+          <DatabaseViewStrip
+            views={databaseViews.views}
+            activeId={databaseViews.active?.id ?? null}
+            canWrite={canWrite}
+            onSelect={databaseViews.select}
+            onCreate={databaseViews.create}
+            onRename={databaseViews.rename}
+            onDelete={databaseViews.remove}
+            onMove={databaseViews.move}
+          />
           {selectedRows.length > 0 && (
             <>
               <span
@@ -690,10 +657,7 @@ export function PageDatabaseView({
             <DatabaseSelect
               label={t("filterProperty")}
               value={filter}
-              onChange={(next) => {
-                setFilter(next);
-                setFilterValue("");
-              }}
+              onChange={setFilter}
               options={[
                 { value: "", label: t("allEntries") },
                 ...schema.map((p) => ({ value: p.id, label: p.name })),
@@ -828,11 +792,11 @@ export function PageDatabaseView({
           hidden={hidden}
           onCreate={() => setCreateProperty(true)}
           onToggleVisibility={(id) =>
-            setHidden((ids) =>
-              ids.includes(id)
-                ? ids.filter((value) => value !== id)
-                : [...ids, id],
-            )
+            updateView({
+              hidden: hidden.includes(id)
+                ? hidden.filter((value) => value !== id)
+                : [...hidden, id],
+            })
           }
         />
         <Button size="sm" className="ml-2" onClick={add}>

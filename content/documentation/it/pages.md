@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 16,
-  "sourceRevision": 16,
+  "revision": 17,
+  "sourceRevision": 17,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -69,13 +69,14 @@
       "lib/page-collaboration-stream.ts",
       "components/pages/page-promotion-context.tsx",
       "components/pages/page-promotion-context.test.tsx",
-      "components/pages/page-database-view.tsx"
+      "components/pages/page-database-view.tsx",
+      "lib/server/page-database-views.ts"
     ]
   },
   "review": {
-    "revision": 16,
-    "fact": "agent:/root/min777 (page editor mentions paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed)",
-    "language": "agent:/root/min777 (it sentence on the page side panel with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 17,
+    "fact": "agent:/root/min764 (database archive sentence checked against lib/server/database-export.ts and lib/server/page-database-views.ts: saved views are not exported and are copied by duplication; rest of the article unchanged since the previous review; no figure changed)",
+    "language": "agent:/root/min764 (it changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -113,7 +114,7 @@
       "src": "/documentation/it/page-create-menu.png",
       "alt": "Menu di creazione con Nuova pagina e Nuovo database.",
       "caption": "Usa i controlli delle pagine del progetto per scegliere un documento o un database.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -129,7 +130,7 @@
       "src": "/documentation/it/page-editor.png",
       "alt": "Pagina dimostrativa con titoli, paragrafi, caselle delle attività e una menzione a un ticket.",
       "caption": "Titoli, blocchi di attività e la menzione AUR-2 organizzano la pagina. Il contenuto è un esempio dimostrativo.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -145,7 +146,7 @@
       "src": "/documentation/it/page-comments.png",
       "alt": "Attività della pagina con una modifica dimostrativa e campo del commento vuoto.",
       "caption": "Leggi l’attività e scrivi un commento nel campo. In questo esempio non è stato inviato alcun commento.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -161,7 +162,7 @@
       "src": "/documentation/it/page-file-states.png",
       "alt": "Pagina dimostrativa con un caricamento incompleto e un file salvato di 67 byte con il comando Scarica.",
       "caption": "Controlla lo stato effettivo del file: il secondo allegato è disponibile, il primo caricamento incompleto no.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -177,7 +178,7 @@
       "src": "/documentation/it/page-history-preview.png",
       "alt": "Scheda Versioni con uno stato precedente espanso, autore, Ripristina e avviso di conservazione per 30 giorni.",
       "caption": "Esamina l’anteprima di uno stato salvato e confrontalo con la pagina attuale prima di ripristinarlo.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -193,7 +194,7 @@
       "src": "/documentation/it/page-publish.png",
       "alt": "Finestra di pubblicazione con Privato selezionato e opzioni con password o link.",
       "caption": "Privato mantiene la pagina nel progetto. Controlla chi deve leggerla prima di cambiare la pubblicazione.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -209,7 +210,7 @@
       "src": "/documentation/it/page-export.png",
       "alt": "Menu di esportazione del documento con Markdown (.md) e Stampa / PDF.",
       "caption": "Scegli Markdown per scaricare il documento oppure Stampa / PDF per aprire la vista di stampa.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -225,7 +226,7 @@
       "src": "/documentation/it/file-preview.png",
       "alt": "Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica, Rinomina e Rimuovi.",
       "caption": "Il visualizzatore condiviso colloca Chiudi sotto l’anteprima. Il menu Azioni del file offre Scarica e, con i permessi necessari, Rinomina e Rimuovi.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -378,7 +379,7 @@ Apri l’esportazione e verifica i titoli, i riquadri di avviso, i collegamenti 
 
 ### Archivi di database e limiti {#export-fidelity}
 
-Un archivio di database (.zip) include il suo ramo: Markdown e CSV, lo schema esatto e i colori delle opzioni, valori, contenuti, date e orari, pagine annidate e contenuti dei file. Importalo in un database nuovo e vuoto per ripristinare questa struttura. I filtri, l’ordinamento e le preferenze per le colonne nascoste specifici del dispositivo rimangono sul dispositivo originale.
+Un archivio di database (.zip) include il suo ramo: Markdown e CSV, lo schema esatto e i colori delle opzioni, valori, contenuti, date e orari, pagine annidate e contenuti dei file. Importalo in un database nuovo e vuoto per ripristinare questa struttura. Le viste salvate del database non fanno parte dell’archivio: ricreale dopo l’importazione. Duplicare un database ne conserva le viste.
 
 Un’esportazione non trasferisce password, credenziali dei provider di account o abbonamenti. Per spostare il lavoro di un account tra istanze, usa la guida al trasferimento dei dati dell’account. Se un formato importato non può mantenere un blocco o una proprietà esterna, controlla il risultato prima di usarlo come sostituto. Non eliminare l’originale solo perché è stato creato un file da scaricare.
 

@@ -6668,7 +6668,10 @@
     "addOption": "Option hinzufügen",
     "moveToTrash": "In den Papierkorb verschieben",
     "duplicateEntries": "{count, plural, one {Diesen Eintrag duplizieren?} other {# Einträge duplizieren?}}",
-    "duplicateEntriesBody": "Eine Kopie jedes ausgewählten Eintrags und seiner Unterseiten erstellen."
+    "duplicateEntriesBody": "Eine Kopie jedes ausgewählten Eintrags und seiner Unterseiten erstellen.",
+    "defaultView": "Tabelle",
+    "views": "Ansichten",
+    "deleteViewDescription": "Diese Ansicht wird für alle Mitglieder des Projekts gelöscht."
   },
   "AppTabs": {
     "label": "Anwendungstabs",

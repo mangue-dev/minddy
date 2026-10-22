@@ -63,6 +63,10 @@ const rules = [
     allowed: new Set(["lib/server/managed-ai-key.ts"]),
   },
   {
+    access: /\.\s*from\s*\(\s*["'`]page_database_views["'`]\s*\)/,
+    allowed: new Set(["lib/server/page-database-views.ts"]),
+  },
+  {
     access: /\.\s*from\s*\(\s*["'`]oauth_authorization_codes["'`]\s*\)/,
     allowed: new Set(["lib/server/oauth/codes.ts",
       "lib/server/encryption/oauth-code-backfill.ts",

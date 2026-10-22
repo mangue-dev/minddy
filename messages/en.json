@@ -6668,7 +6668,10 @@
     "addOption": "Add an option",
     "moveToTrash": "Move to trash",
     "duplicateEntries": "{count, plural, one {Duplicate this entry?} other {Duplicate # entries?}}",
-    "duplicateEntriesBody": "Create a copy of each selected entry and its subpages."
+    "duplicateEntriesBody": "Create a copy of each selected entry and its subpages.",
+    "defaultView": "Table",
+    "views": "Views",
+    "deleteViewDescription": "This view will be deleted for every member of the project."
   },
   "AppTabs": {
     "label": "Application tabs",

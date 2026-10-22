@@ -199,3 +199,94 @@ export function parseDatabaseNumber(value: string): number | null | undefined {
   const number = Number(value.replace(",", "."));
   return Number.isFinite(number) ? number : undefined;
 }
+
+/**
+ * The saved view of a database: its sort, filter and hidden columns (MIN-764).
+ * It belongs to the database page, so every member sees the same view. The
+ * search box is not part of it.
+ */
+export interface DatabaseView {
+  /** `position`, `title` or a property ID. */
+  sort: string;
+  descending: boolean;
+  /** A property ID, or empty for no filter. */
+  filter: string;
+  filterValue: string;
+  hidden: string[];
+}
+export const DEFAULT_DATABASE_VIEW: DatabaseView = {
+  sort: "position",
+  descending: false,
+  filter: "",
+  filterValue: "",
+  hidden: [],
+};
+const MAX_VIEW_FILTER_LENGTH = 200;
+const VIEW_PROPERTY = /^(?:position|title|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+
+/**
+ * The stored view, or null when the input is not one. Unknown keys are
+ * dropped; a property that no longer exists stays harmless because the table
+ * ignores a sort, filter or hidden column it cannot find.
+ */
+export function normalizeDatabaseView(value: unknown): DatabaseView | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const input = value as Record<string, unknown>;
+  const { sort, descending, filter, filterValue, hidden } = input;
+  if (
+    typeof sort !== "string" ||
+    !VIEW_PROPERTY.test(sort) ||
+    typeof descending !== "boolean" ||
+    typeof filter !== "string" ||
+    (filter !== "" && !UUID.test(filter)) ||
+    typeof filterValue !== "string" ||
+    filterValue.length > MAX_VIEW_FILTER_LENGTH ||
+    !Array.isArray(hidden) ||
+    hidden.length > MAX_DATABASE_PROPERTIES ||
+    !hidden.every((id) => typeof id === "string" && UUID.test(id))
+  )
+    return null;
+  return {
+    sort,
+    descending,
+    filter,
+    filterValue: filter ? filterValue : "",
+    hidden: [...new Set(hidden as string[])],
+  };
+}
+
+export function sameDatabaseView(a: DatabaseView, b: DatabaseView): boolean {
+  return (
+    a.sort === b.sort &&
+    a.descending === b.descending &&
+    a.filter === b.filter &&
+    a.filterValue === b.filterValue &&
+    a.hidden.length === b.hidden.length &&
+    a.hidden.every((id, index) => id === b.hidden[index])
+  );
+}
+
+/** A named view of a database, shared by the project (MIN-764). */
+export interface SavedDatabaseView {
+  id: string;
+  name: string;
+  /** The shared order of the view strip, ascending. */
+  position: number;
+  view: DatabaseView;
+}
+export const MAX_DATABASE_VIEWS = 20;
+export const MAX_DATABASE_VIEW_NAME = 80;
+
+export function normalizeDatabaseViewName(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const name = value.trim();
+  return name && name.length <= MAX_DATABASE_VIEW_NAME ? name : null;
+}
+
+/** The position between two neighbours of the strip (either may be missing). */
+export function databaseViewPositionBetween(before?: number, after?: number): number {
+  if (before === undefined && after === undefined) return 1;
+  if (before === undefined) return (after as number) - 1;
+  if (after === undefined) return before + 1;
+  return (before + after) / 2;
+}

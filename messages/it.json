@@ -6668,7 +6668,10 @@
     "addOption": "Aggiungi un’opzione",
     "moveToTrash": "Sposta nel cestino",
     "duplicateEntries": "{count, plural, one {Duplicare questa voce?} other {Duplicare # voci?}}",
-    "duplicateEntriesBody": "Crea una copia di ogni voce selezionata e delle sue sottopagine."
+    "duplicateEntriesBody": "Crea una copia di ogni voce selezionata e delle sue sottopagine.",
+    "defaultView": "Tabella",
+    "views": "Viste",
+    "deleteViewDescription": "Questa vista verrà eliminata per tutti i membri del progetto."
   },
   "AppTabs": {
     "label": "Schede dell’applicazione",

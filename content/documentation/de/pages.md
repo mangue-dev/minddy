@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 16,
-  "sourceRevision": 16,
+  "revision": 17,
+  "sourceRevision": 17,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -69,13 +69,14 @@
       "lib/page-collaboration-stream.ts",
       "components/pages/page-promotion-context.tsx",
       "components/pages/page-promotion-context.test.tsx",
-      "components/pages/page-database-view.tsx"
+      "components/pages/page-database-view.tsx",
+      "lib/server/page-database-views.ts"
     ]
   },
   "review": {
-    "revision": 16,
-    "fact": "agent:/root/min777 (page editor mentions paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed)",
-    "language": "agent:/root/min777 (de sentence on the page side panel with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 17,
+    "fact": "agent:/root/min764 (database archive sentence checked against lib/server/database-export.ts and lib/server/page-database-views.ts: saved views are not exported and are copied by duplication; rest of the article unchanged since the previous review; no figure changed)",
+    "language": "agent:/root/min764 (de changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -111,7 +112,7 @@
       "src": "/documentation/de/page-create-menu.png",
       "alt": "Erstellungsmenü mit Neue Seite und Neue Datenbank.",
       "caption": "Wähle über die Seitenfunktionen des Projekts ein Dokument oder eine Datenbank.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -127,7 +128,7 @@
       "src": "/documentation/de/page-editor.png",
       "alt": "Demoseite mit Überschriften, Absätzen, Aufgaben mit Kontrollkästchen und einer Ticketreferenz.",
       "caption": "Überschriften, Aufgabenblöcke und die Referenz AUR-2 gliedern die Seite. Der Inhalt dient als Demobeispiel.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -143,7 +144,7 @@
       "src": "/documentation/de/page-comments.png",
       "alt": "Seitenaktivität mit einer Demoänderung und einem leeren Kommentarfeld.",
       "caption": "Lies die Seitenaktivität und verfasse einen Kommentar im Eingabefeld. In diesem Beispiel wurde keiner abgesendet.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -159,7 +160,7 @@
       "src": "/documentation/de/page-file-states.png",
       "alt": "Demoseite mit einem unvollständigen Upload und einer gespeicherten Datei von 67 Byte mit Downloadfunktion.",
       "caption": "Prüfe den tatsächlichen Dateizustand: Der zweite Anhang ist verfügbar, der erste unvollständige Upload nicht.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -175,7 +176,7 @@
       "src": "/documentation/de/page-history-preview.png",
       "alt": "Versionen-Tab mit aufgeklapptem früherem Zustand, Autor, Wiederherstellen und Hinweis auf 30 Tage Aufbewahrung.",
       "caption": "Prüfe einen gespeicherten Zustand in der Vorschau und vergleiche ihn vor dem Wiederherstellen mit der aktuellen Seite.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -191,7 +192,7 @@
       "src": "/documentation/de/page-publish.png",
       "alt": "Veröffentlichungsdialog mit ausgewähltem Privat und Alternativen für Passwort oder Link.",
       "caption": "Privat hält die Seite im Projekt. Prüfe die vorgesehene Zielgruppe vor einer Änderung der Freigabe.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -207,7 +208,7 @@
       "src": "/documentation/de/page-export.png",
       "alt": "Exportmenü des Dokuments mit Markdown (.md) und Drucken / PDF.",
       "caption": "Wähle Markdown zum Herunterladen oder Drucken / PDF für die Druckansicht.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -223,7 +224,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Umbenennen und Entfernen.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -376,7 +377,7 @@ Benutzerseitenlinks bleiben auf `noindex` und sind von der indexierten offiziell
 
 ### Datenbankarchive und Grenzen {#export-fidelity}
 
-Ein Datenbankarchiv (.zip) enthält den zugehörigen Zweig: Markdown und CSV, das genaue Schema und die Optionsfarben, Werte, Inhalte, Zeitstempel, verschachtelte Seiten und die Dateiinhalte. Importiere es in eine neue, leere Datenbank, um diese Struktur wiederherzustellen. Gerätespezifische Filter, Sortierungen und Einstellungen für ausgeblendete Spalten bleiben auf dem ursprünglichen Gerät.
+Ein Datenbankarchiv (.zip) enthält den zugehörigen Zweig: Markdown und CSV, das genaue Schema und die Optionsfarben, Werte, Inhalte, Zeitstempel, verschachtelte Seiten und die Dateiinhalte. Importiere es in eine neue, leere Datenbank, um diese Struktur wiederherzustellen. Gespeicherte Datenbankansichten gehören nicht zum Archiv: Lege sie nach dem Import neu an. Beim Duplizieren einer Datenbank bleiben ihre Ansichten erhalten.
 
 Ein Export überträgt keine Passwörter, Zugangsdaten von Kontoanbietern oder Abonnements. Zum Übertragen deiner Arbeit zwischen Instanzen verwende den Leitfaden zum Kontodatentransfer. Kann ein importiertes Format einen Block oder eine externe Eigenschaft nicht erhalten, prüfe das Ergebnis, bevor du es als Ersatz verwendest. Lösche das Original nicht allein deshalb, weil eine Datei heruntergeladen wurde.
 

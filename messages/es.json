@@ -6668,7 +6668,10 @@
     "addOption": "Añadir una opción",
     "moveToTrash": "Mover a la papelera",
     "duplicateEntries": "{count, plural, one {¿Duplicar esta entrada?} other {¿Duplicar # entradas?}}",
-    "duplicateEntriesBody": "Crear una copia de cada entrada seleccionada y de sus subpáginas."
+    "duplicateEntriesBody": "Crear una copia de cada entrada seleccionada y de sus subpáginas.",
+    "defaultView": "Tabla",
+    "views": "Vistas",
+    "deleteViewDescription": "Esta vista se eliminará para todos los miembros del proyecto."
   },
   "AppTabs": {
     "label": "Pestañas de la aplicación",

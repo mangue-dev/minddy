@@ -1354,14 +1354,14 @@
     "file": "captures/world/seed/014-pages-aurora.mjs",
     "operation": "from",
     "resource": "issues",
-    "line": 361,
+    "line": 398,
     "storage": false
   },
   {
     "file": "captures/world/seed/014-pages-aurora.mjs",
     "operation": "from",
     "resource": "pages",
-    "line": 387,
+    "line": 424,
     "storage": false
   },
   {
@@ -2068,63 +2068,63 @@
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_request_syncs",
-    "line": 564,
+    "line": 572,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_request_syncs",
-    "line": 604,
+    "line": 615,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 654,
+    "line": 665,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_request_syncs",
-    "line": 784,
+    "line": 795,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 841,
+    "line": 852,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_request_issues",
-    "line": 896,
+    "line": 907,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_request_issues",
-    "line": 922,
+    "line": 933,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 951,
+    "line": 962,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 1003,
+    "line": 1014,
     "storage": false
   },
   {
@@ -7010,28 +7010,28 @@
     "file": "lib/server/issue-relation-inference.ts",
     "operation": "from",
     "resource": "issue_relation_inferences",
-    "line": 427,
+    "line": 431,
     "storage": false
   },
   {
     "file": "lib/server/issue-relation-inference.ts",
     "operation": "from",
     "resource": "issue_relation_inferences",
-    "line": 432,
+    "line": 436,
     "storage": false
   },
   {
     "file": "lib/server/issue-relation-inference.ts",
     "operation": "from",
     "resource": "issue_relation_inferences",
-    "line": 687,
+    "line": 691,
     "storage": false
   },
   {
     "file": "lib/server/issue-relation-inference.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 832,
+    "line": 836,
     "storage": false
   },
   {
@@ -8435,6 +8435,55 @@
     "storage": false
   },
   {
+    "file": "lib/server/page-database-views.ts",
+    "operation": "from",
+    "resource": "page_database_views",
+    "line": 63,
+    "storage": false
+  },
+  {
+    "file": "lib/server/page-database-views.ts",
+    "operation": "from",
+    "resource": "page_database_views",
+    "line": 116,
+    "storage": false
+  },
+  {
+    "file": "lib/server/page-database-views.ts",
+    "operation": "from",
+    "resource": "page_database_views",
+    "line": 140,
+    "storage": false
+  },
+  {
+    "file": "lib/server/page-database-views.ts",
+    "operation": "from",
+    "resource": "page_database_views",
+    "line": 150,
+    "storage": false
+  },
+  {
+    "file": "lib/server/page-database-views.ts",
+    "operation": "from",
+    "resource": "page_database_views",
+    "line": 166,
+    "storage": false
+  },
+  {
+    "file": "lib/server/page-database-views.ts",
+    "operation": "from",
+    "resource": "page_database_views",
+    "line": 179,
+    "storage": false
+  },
+  {
+    "file": "lib/server/page-database-views.ts",
+    "operation": "from",
+    "resource": "page_database_views",
+    "line": 192,
+    "storage": false
+  },
+  {
     "file": "lib/server/page-databases.ts",
     "operation": "from",
     "resource": "pages",
@@ -8676,140 +8725,140 @@
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 242,
+    "line": 243,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "page_viewers",
-    "line": 251,
+    "line": 252,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "page_viewers",
-    "line": 270,
+    "line": 271,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 323,
+    "line": 324,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 379,
+    "line": 380,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 601,
+    "line": 602,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 794,
+    "line": 795,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 869,
+    "line": 870,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 926,
+    "line": 927,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 1035,
+    "line": 1040,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "page_collaboration_heads",
-    "line": 1719,
+    "line": 1724,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "page_collaboration_heads",
-    "line": 1741,
+    "line": 1746,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "page_collaboration_heads",
-    "line": 1894,
+    "line": 1899,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "page_collaboration_heads",
-    "line": 2132,
+    "line": 2137,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 2555,
+    "line": 2560,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 2739,
+    "line": 2744,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 2750,
+    "line": 2755,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 2784,
+    "line": 2789,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "rpc",
     "resource": "discard_blank_page_guarded",
-    "line": 2829,
+    "line": 2834,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "rpc",
     "resource": "restore_page_guarded",
-    "line": 2886,
+    "line": 2891,
     "storage": false
   },
   {

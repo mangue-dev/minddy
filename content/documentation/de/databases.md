@@ -17,10 +17,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 16,
-  "sourceRevision": 16,
+  "revision": 17,
+  "sourceRevision": 17,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -49,14 +49,17 @@
       "lib/page-databases.ts",
       "scripts/page-database-date-times.integration.test.mjs",
       "components/pages/page-promotion-context.tsx",
-      "components/pages/page-promotion-context.test.tsx"
+      "components/pages/page-promotion-context.test.tsx",
+      "components/pages/database-view-strip.tsx",
+      "lib/use-page-database-views.ts",
+      "lib/server/page-database-views.ts"
     ]
   },
   "review": {
-    "revision": 16,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 7 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 17,
+    "fact": "agent:/root/min764 (database views section checked against components/pages/database-view-strip.tsx, components/pages/page-database-view.tsx, lib/use-page-database-views.ts and lib/server/page-database-views.ts: named views shared by the project, each with its own sort, filter and hidden columns, managed and reordered by writers, adjusted locally by readers; insertion clears the active view's filter; rest of the article unchanged since the MIN-747 review; no figure changed)",
+    "language": "agent:/root/min764 (de changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "pages"
@@ -80,7 +83,7 @@
       "src": "/documentation/de/database-setup-cards.png",
       "alt": "Komponentenvorschau der Karten zur Einrichtung einer neuen Datenbank mit Numo oder zum Import einer vorhandenen Datenbank.",
       "caption": "Vorschläge für eine neue Datenbank mit Demonstrationsdaten. Wählen Sie Numo oder Import, oder schließen Sie die Karten, um manuell fortzufahren.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -97,7 +100,7 @@
       "src": "/documentation/de/database-property-types.png",
       "alt": "Auswahl des Spaltentyps mit Suchfeld sowie Text, Zahl, Auswahl, Datum, Personen und Kontrollkästchen.",
       "caption": "Wähle einen Typ, der zu den gespeicherten Werten passt.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -114,7 +117,7 @@
       "src": "/documentation/de/database-entry.png",
       "alt": "Demoeintrag mit Beschreibung, Dauer 2.5, aktiviertem Kontrollkästchen und leerer Auswahl.",
       "caption": "Öffne einen Eintrag, um den vollständigen Text zu lesen und typisierte Werte zu bearbeiten.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -130,7 +133,7 @@
       "src": "/documentation/de/database-conversion-warning.png",
       "alt": "Umwandlungswarnung: Der Wechsel von Text zu Zahl leert eine inkompatible Zelle; Abbrechen und Bestätigen sind verfügbar.",
       "caption": "Prüfe die tatsächliche Zahl inkompatibler Zellen vor der Bestätigung. Abbrechen erhält die bisherigen Werte.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -146,7 +149,7 @@
       "src": "/documentation/de/database-import-review.png",
       "alt": "Importprüfung einer lokalen CSV-Datei: zwei Eintragsseiten und zwei Eigenschaftsspalten mit der Importschaltfläche.",
       "caption": "Prüfe die eingelesenen Einträge und die Spaltenzahl vor dem Import in die leere Datenbank.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -162,7 +165,7 @@
       "src": "/documentation/de/database-options.png",
       "alt": "Komponentenvorschau von Optionen bearbeiten mit deutschen Statusoptionen, Pfeilen nach oben und unten, Papierkörben und einer Erklärung zum Löschen.",
       "caption": "Bearbeite Namen, Farben und Reihenfolge der Optionen gemeinsam. Der Papierkorb entfernt eine Option aus dem Entwurf; Speichern übernimmt die Änderungen. Mit Demonstrationsdaten.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -179,7 +182,7 @@
       "src": "/documentation/de/database-date-time.png",
       "alt": "Komponentenvorschau der Datumsauswahl mit dem ausgewählten 12. Oktober 2026, aktivierter Uhrzeit und Zeit auf 14:30.",
       "caption": "Aktiviere „Fügen Sie eine Uhrzeit hinzu“, um eine Uhrzeit einzugeben. Diese Komponentenvorschau verwendet Demonstrationsdaten und die Zeitzone des Geräts.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -219,7 +222,7 @@ Eine Datenbank unterstützt bis zu 30 Eigenschaftsspalten zusätzlich zum Eintra
 
 Personen wählt Projektmitglieder statt beliebiger Konto-E-Mail-Adressen aus. Neu erwähnte Mitglieder können Benachrichtigungen erhalten. Ein Datenbankeintrag ist außerdem eine vollständige Seite mit normalen Inhalten, Kommentaren und Anhängen.
 
-Erweiterte Formeln und zusätzliche Datenbankansichten sind nicht verfügbar. Wähle eine Texteigenschaft oder ein verknüpftes Dokument, wenn die Daten nicht in einen unterstützten Typ passen. Beschreibe keine nicht unterstützte Formel als funktionierende Spalte.
+Erweiterte Formeln sind nicht verfügbar. Wähle eine Texteigenschaft oder ein verknüpftes Dokument, wenn die Daten nicht in einen unterstützten Typ passen. Beschreibe keine nicht unterstützte Formel als funktionierende Spalte.
 
 
 ![Auswahl des Spaltentyps mit Suchfeld sowie Text, Zahl, Auswahl, Datum, Personen und Kontrollkästchen.](/documentation/de/database-property-types.png)
@@ -248,13 +251,13 @@ Ein leerer Eintrag zeigt im Inhalt einen Platzhalter für den Schreibbereich. Be
 
 Öffne einen Eintrag, um seine vollständige Seite in einem schwebenden Panel zu bearbeiten. „Vergrößern“ öffnet ihn als vollständige Seite, nachdem ausstehendes Speichern des Dokuments beendet ist. Schlägt Speichern fehl, bleibt das Panel zur Fehlerbehebung offen. Ein leerer Eintrag bleibt bis zum Löschen in der Datenbank.
 
-Verwende Zeilen-Kontrollkästchen für die Auswahl und Shift-Klick für einen Bereich. Der Griff öffnet Aktionen und kann Einträge in manueller Reihenfolge umordnen. Das + am Zeilenrand fügt unter dem Eintrag ein; Option/Alt fügt oberhalb ein. Benachbartes Einfügen wechselt zurück zur manuellen Reihenfolge und entfernt Filter, damit der neue Eintrag sichtbar ist.
+Verwende Zeilen-Kontrollkästchen für die Auswahl und Shift-Klick für einen Bereich. Der Griff öffnet Aktionen und kann Einträge in manueller Reihenfolge umordnen. Das + am Zeilenrand fügt unter dem Eintrag ein; Option/Alt fügt oberhalb ein. Benachbartes Einfügen entfernt den Filter der aktiven Ansicht, damit der neue Eintrag sichtbar ist.
 
 Im Griffmenü eines einzelnen Eintrags kann der Eigentümer oder ein Mitglied **Zu Problem hochstufen** wählen, damit Numo diesen Eintrag mit Inhalt und Eigenschaften in ein Problem umwandelt. Der Eintrag bleibt in der Datenbank. Bezieht sich das Menü auf mehrere ausgewählte Zeilen, fehlt die Aktion; eine Sammel-Hochstufung gibt es nicht, also stufe jeden Eintrag einzeln hoch. Die [Seitenanleitung](/de/dokumentation/pages#promote-page-to-issue) beschreibt die Rückfragen von Numo und was zu tun ist, wenn der Eintrag vorher nicht gespeichert werden kann.
 
-### Darstellungseinstellungen {#database-display}
+### Datenbankansichten {#database-display}
 
-Suche, filtere, sortiere und blende Spalten in der einzigen Listenansicht aus. Diese Einstellungen werden auf deinem Gerät gespeichert; die manuelle Reihenfolge wird mit dem Seitenbaum geteilt. Scrolle horizontal per Trackpad-Geste, Shift und Mausrad, Touch oder unterer Bildlaufleiste. Eine abgeschnittene Textvorschau kürzt den gespeicherten Wert nicht. Einträge mit Spaltenwerten lassen sich innerhalb ihrer Datenbank umordnen, aber nicht aus ihr heraus verschieben.
+Eine Datenbank zeigt ihre Einträge in Ansichten, die über der Tabelle aufgelistet sind. Jede Ansicht hat ihre eigene Sortierung, ihren Filter und ihre ausgeblendeten Spalten, und alle Projektmitglieder sehen dieselben Ansichten. Der Projektinhaber oder ein Mitglied fügt mit **Neue Ansicht** (+) eine Ansicht hinzu, die von der angezeigten Ansicht ausgeht, benennt die aktive Ansicht über ihr Optionsmenü (⋯) mit **Ansicht umbenennen** um oder löscht sie mit **Ansicht löschen** und ordnet Ansichten per Ziehen neu an. Änderungen an Sortierung, Filter und Spalten werden für alle in der aktiven Ansicht gespeichert. Eine Datenbank behält mindestens eine Ansicht; vor ihrer ersten Änderung zeigt sie die Standardansicht **Tabelle**. Leser wechseln zwischen Ansichten und können eine Ansicht für sich anpassen, bis sie die Seite verlassen. Dein Browser merkt sich die zuletzt geöffnete Ansicht; die Suche wird nie gespeichert. Die manuelle Reihenfolge wird mit dem Seitenbaum geteilt. Scrolle horizontal per Trackpad-Geste, Shift und Mausrad, Touch oder unterer Bildlaufleiste. Eine abgeschnittene Textvorschau kürzt den gespeicherten Wert nicht. Einträge mit Spaltenwerten lassen sich innerhalb ihrer Datenbank umordnen, aber nicht aus ihr heraus verschieben.
 
 
 ![Demoeintrag mit Beschreibung, Dauer 2.5, aktiviertem Kontrollkästchen und leerer Auswahl.](/documentation/de/database-entry.png)

@@ -6668,7 +6668,10 @@
     "addOption": "Ajouter une option",
     "moveToTrash": "Déplacer vers la corbeille",
     "duplicateEntries": "{count, plural, one {Dupliquer cette entrée ?} other {Dupliquer # entrées ?}}",
-    "duplicateEntriesBody": "Créer une copie de chaque entrée sélectionnée et de ses sous-pages."
+    "duplicateEntriesBody": "Créer une copie de chaque entrée sélectionnée et de ses sous-pages.",
+    "defaultView": "Tableau",
+    "views": "Vues",
+    "deleteViewDescription": "Cette vue sera supprimée pour tous les membres du projet."
   },
   "AppTabs": {
     "label": "Onglets de l’application",

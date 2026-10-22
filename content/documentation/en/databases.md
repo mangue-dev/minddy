@@ -17,10 +17,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 16,
-  "sourceRevision": 16,
+  "revision": 17,
+  "sourceRevision": 17,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -49,14 +49,17 @@
       "lib/page-databases.ts",
       "scripts/page-database-date-times.integration.test.mjs",
       "components/pages/page-promotion-context.tsx",
-      "components/pages/page-promotion-context.test.tsx"
+      "components/pages/page-promotion-context.test.tsx",
+      "components/pages/database-view-strip.tsx",
+      "lib/use-page-database-views.ts",
+      "lib/server/page-database-views.ts"
     ]
   },
   "review": {
-    "revision": 16,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 7 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 17,
+    "fact": "agent:/root/min764 (database views section checked against components/pages/database-view-strip.tsx, components/pages/page-database-view.tsx, lib/use-page-database-views.ts and lib/server/page-database-views.ts: named views shared by the project, each with its own sort, filter and hidden columns, managed and reordered by writers, adjusted locally by readers; insertion clears the active view's filter; rest of the article unchanged since the MIN-747 review; no figure changed)",
+    "language": "agent:/root/min764 (en changed passages on shared database views with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "pages"
@@ -80,7 +83,7 @@
       "src": "/documentation/en/database-setup-cards.png",
       "alt": "Component preview of the new-database cards for Numo setup and importing an existing database.",
       "caption": "New-database suggestions, shown with demonstration data. Choose Numo setup or import, or dismiss the cards to continue manually.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -97,7 +100,7 @@
       "src": "/documentation/en/database-property-types.png",
       "alt": "Database column type picker with a search field, then text, number, selections, dates, people and checkbox.",
       "caption": "Choose a column type that matches the values to store.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -114,7 +117,7 @@
       "src": "/documentation/en/database-entry.png",
       "alt": "Demonstration entry with a text description, duration 2.5, a checked checkbox and an empty selection.",
       "caption": "Open an entry to read its complete text and edit typed values.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -130,7 +133,7 @@
       "src": "/documentation/en/database-conversion-warning.png",
       "alt": "Conversion warning: changing Text to Number clears one incompatible cell, with Cancel and confirmation buttons.",
       "caption": "Review the real incompatible-cell count before confirming a type change. Cancel preserves the current values.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -146,7 +149,7 @@
       "src": "/documentation/en/database-import-review.png",
       "alt": "Import review for a local CSV: two entry pages and two property columns, with the Import database button.",
       "caption": "Review the parsed entries and column count before importing into the empty database.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -162,7 +165,7 @@
       "src": "/documentation/en/database-options.png",
       "alt": "Component preview of Edit options with localized status options, up and down buttons, trash buttons and the deletion explanation.",
       "caption": "Edit option names, colors and order together. The trash button removes an option from the draft; Save applies the changes. Shown with demonstration data.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -179,7 +182,7 @@
       "src": "/documentation/en/database-date-time.png",
       "alt": "Component preview of the date picker with October 12, 2026 selected, Add a time enabled and Time set to 14:30.",
       "caption": "Turn on Add a time to enter an hour. This component preview uses demonstration data and the device time zone.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -219,7 +222,7 @@ A database supports up to 30 property columns besides the entry name. Select per
 
 People selects project members rather than arbitrary account emails. Newly mentioned members can receive notifications. A database entry is also a full page with normal content, comments and attachments.
 
-Advanced formulas and additional database views are not available. Choose a text property or a linked document when the required data does not fit a supported type; do not describe an unsupported formula as a functioning column.
+Advanced formulas are not available. Choose a text property or a linked document when the required data does not fit a supported type; do not describe an unsupported formula as a functioning column.
 
 
 ![Database column type picker with a search field, then text, number, selections, dates, people and checkbox.](/documentation/en/database-property-types.png)
@@ -248,13 +251,13 @@ An empty entry body displays a placeholder so you can locate the writing area. F
 
 Open an entry to edit its full page in a floating panel. Extend opens it as a full page after pending document saves finish. If saving fails, the panel stays open so you can resolve it. An empty entry stays in the database until deleted.
 
-Use row checkboxes for a selection and Shift-click for a range. The handle opens actions and can reorder entries in manual order. The gutter + inserts below an entry; Option/Alt inserts above. Adjacent insertion switches back to manual order and clears filters so the new entry is visible.
+Use row checkboxes for a selection and Shift-click for a range. The handle opens actions and can reorder entries in manual order. The gutter + inserts below an entry; Option/Alt inserts above. Adjacent insertion clears the filter of the active view so the new entry is visible.
 
 From the handle menu of a single entry, the owner or a Member can choose **Promote to issue** to have Numo turn that entry, its content and its properties into one issue. The entry stays in the database. The action is absent when the menu targets several selected rows; there is no bulk promotion, so promote each entry separately. The [Pages guide](/docs/pages#promote-page-to-issue) describes Numo’s questions and what to do when the entry cannot be saved first.
 
-### Display preferences {#database-display}
+### Database views {#database-display}
 
-Search, filter, sort and hide columns in the single list view. These preferences are remembered on your device; manual order is shared with the page tree. Scroll horizontally with a trackpad gesture, Shift plus mouse wheel, touch or the bottom scrollbar. A clipped text preview does not shorten the stored value. Entries with column values can be reordered within their database but cannot be moved outside it.
+A database shows its entries through views, listed above the table. Each view keeps its own sort, filter and hidden columns, and every project member sees the same views. The owner or a Member adds a view with **New view** (+), which starts from the view on screen, renames or deletes the active view from its options menu (⋯) with **Rename view** or **Delete view**, and drags views to reorder them. Sort, filter and column changes are saved to the active view for everyone. A database keeps at least one view; before its first change it shows the default **Table** view. Readers switch between views and can adjust one for themselves until they leave the page. Your browser remembers the view you last opened; search is never saved. Manual order is shared with the page tree. Scroll horizontally with a trackpad gesture, Shift plus mouse wheel, touch or the bottom scrollbar. A clipped text preview does not shorten the stored value. Entries with column values can be reordered within their database but cannot be moved outside it.
 
 
 ![Demonstration entry with a text description, duration 2.5, a checked checkbox and an empty selection.](/documentation/en/database-entry.png)

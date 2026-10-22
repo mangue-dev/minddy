@@ -17,10 +17,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 16,
-  "sourceRevision": 16,
+  "revision": 17,
+  "sourceRevision": 17,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-22",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -49,14 +49,17 @@
       "lib/page-databases.ts",
       "scripts/page-database-date-times.integration.test.mjs",
       "components/pages/page-promotion-context.tsx",
-      "components/pages/page-promotion-context.test.tsx"
+      "components/pages/page-promotion-context.test.tsx",
+      "components/pages/database-view-strip.tsx",
+      "lib/use-page-database-views.ts",
+      "lib/server/page-database-views.ts"
     ]
   },
   "review": {
-    "revision": 16,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 7 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 17,
+    "fact": "agent:/root/min764 (database views section checked against components/pages/database-view-strip.tsx, components/pages/page-database-view.tsx, lib/use-page-database-views.ts and lib/server/page-database-views.ts: named views shared by the project, each with its own sort, filter and hidden columns, managed and reordered by writers, adjusted locally by readers; insertion clears the active view's filter; rest of the article unchanged since the MIN-747 review; no figure changed)",
+    "language": "agent:/root/min764 (pt-BR changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-22"
   },
   "related": [
     "pages"
@@ -80,7 +83,7 @@
       "src": "/documentation/pt-BR/database-setup-cards.png",
       "alt": "Prévia do componente com cartões para configurar uma nova base de dados com Numo ou importar uma existente.",
       "caption": "Sugestões para uma nova base com dados de demonstração. Escolha Numo ou importação, ou feche os cartões para continuar manualmente.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -97,7 +100,7 @@
       "src": "/documentation/pt-BR/database-property-types.png",
       "alt": "Seletor de tipo de coluna com um campo de busca, texto, número, seleções, datas, pessoas e caixa de seleção.",
       "caption": "Escolha um tipo adequado aos valores que serão armazenados.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -114,7 +117,7 @@
       "src": "/documentation/pt-BR/database-entry.png",
       "alt": "Registro de demonstração com descrição, duração 2.5, caixa marcada e seleção vazia.",
       "caption": "Abra um registro para ler o texto completo e editar os valores conforme o tipo.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -130,7 +133,7 @@
       "src": "/documentation/pt-BR/database-conversion-warning.png",
       "alt": "Aviso de conversão: mudar de Texto para Número limpa uma célula incompatível, com botões para cancelar ou confirmar.",
       "caption": "Confira o número real de células incompatíveis antes de confirmar. Cancelar preserva os valores atuais.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -146,7 +149,7 @@
       "src": "/documentation/pt-BR/database-import-review.png",
       "alt": "Revisão de um CSV local: duas páginas de registros e duas colunas, com o botão Importar banco de dados.",
       "caption": "Confira os registros analisados e o número de colunas antes de importar para o banco vazio.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -162,7 +165,7 @@
       "src": "/documentation/pt-BR/database-options.png",
       "alt": "Prévia do componente Editar opções com status em português, setas para cima e para baixo, lixeiras e a explicação da exclusão.",
       "caption": "Edite nomes, cores e ordem das opções em conjunto. A lixeira remove uma opção do rascunho; Salvar aplica as alterações. São exibidos dados de demonstração.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -179,7 +182,7 @@
       "src": "/documentation/pt-BR/database-date-time.png",
       "alt": "Prévia do seletor de data com 12 de outubro de 2026 selecionado, Adicione um horário ativado e Hora definida como 14:30.",
       "caption": "Ative Adicione um horário para inserir um horário. Esta prévia do componente usa dados de demonstração e o fuso horário do dispositivo.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -219,7 +222,7 @@ Um banco de dados aceita até 30 colunas de propriedades além do nome da entrad
 
 Pessoas seleciona membros do projeto, não e-mails arbitrários de contas. Membros recém-mencionados podem receber notificações. Uma entrada de banco de dados também é uma página completa com conteúdo normal, comentários e anexos.
 
-Fórmulas avançadas, automações e visualizações adicionais de banco de dados não estão disponíveis. Escolha uma propriedade de texto ou um documento vinculado quando os dados não couberem em um tipo compatível; não descreva uma fórmula não aceita como uma coluna funcional.
+Fórmulas avançadas e automações não estão disponíveis. Escolha uma propriedade de texto ou um documento vinculado quando os dados não couberem em um tipo compatível; não descreva uma fórmula não aceita como uma coluna funcional.
 
 
 ![Seletor de tipo de coluna com um campo de busca, texto, número, seleções, datas, pessoas e caixa de seleção.](/documentation/pt-BR/database-property-types.png)
@@ -248,13 +251,13 @@ O conteúdo de uma entrada vazia mostra um texto indicativo para localizar a ár
 
 Abra uma entrada para editar sua página completa em um painel flutuante. “Expandir” abre como página completa depois que os salvamentos pendentes do documento terminarem. Se o salvamento falhar, o painel permanece aberto para resolver. Uma entrada vazia fica no banco até ser excluída.
 
-Use caixas de seleção de linhas para selecionar e Shift-clique para um intervalo. A alça abre ações e pode reordenar entradas em ordem manual. O + na margem insere abaixo de uma entrada; Option/Alt insere acima. A inserção adjacente volta à ordem manual e limpa filtros para deixar a nova entrada visível.
+Use caixas de seleção de linhas para selecionar e Shift-clique para um intervalo. A alça abre ações e pode reordenar entradas em ordem manual. O + na margem insere abaixo de uma entrada; Option/Alt insere acima. A inserção adjacente limpa o filtro da visualização ativa para deixar a nova entrada visível.
 
 No menu da alça de uma única entrada, o proprietário ou um Membro pode escolher **Promover a problema** para que o Numo transforme essa entrada, o conteúdo e as propriedades dela em um problema. A entrada continua no banco de dados. A ação não aparece quando o menu se aplica a várias linhas selecionadas: não há promoção em massa, então promova cada entrada separadamente. O [guia de páginas](/pt-br/documentacao/pages#promote-page-to-issue) descreve as perguntas do Numo e o que fazer quando a entrada não pode ser salva antes.
 
-### Preferências de exibição {#database-display}
+### Visualizações do banco de dados {#database-display}
 
-Pesquise, filtre, ordene e oculte colunas na única visualização de lista. Essas preferências ficam salvas no seu dispositivo; a ordem manual é compartilhada com a árvore de páginas. Role horizontalmente com gesto de trackpad, Shift e roda do mouse, toque ou barra inferior. Uma prévia de texto cortada não encurta o valor armazenado. Entradas com valores de colunas podem ser reordenadas dentro do banco, mas não movidas para fora.
+Um banco de dados mostra suas entradas por meio de visualizações, listadas acima da tabela. Cada visualização guarda sua própria ordenação, seu filtro e suas colunas ocultas, e todos os membros do projeto veem as mesmas visualizações. O proprietário ou um Membro adiciona uma visualização com **Nova visualização** (+), que parte da visualização na tela, renomeia ou exclui a visualização ativa pelo menu de opções (⋯) com **Renomear visualização** ou **Excluir visualização**, e arrasta as visualizações para reordená-las. As mudanças de ordenação, filtro e colunas são salvas na visualização ativa para todos. Um banco de dados mantém pelo menos uma visualização; antes da primeira mudança, ele mostra a visualização padrão **Tabela**. Leitores alternam entre visualizações e podem ajustar uma para si até sair da página. Seu navegador lembra a última visualização aberta; a pesquisa nunca é salva. A ordem manual é compartilhada com a árvore de páginas. Role horizontalmente com gesto de trackpad, Shift e roda do mouse, toque ou barra inferior. Uma prévia de texto cortada não encurta o valor armazenado. Entradas com valores de colunas podem ser reordenadas dentro do banco, mas não movidas para fora.
 
 
 ![Registro de demonstração com descrição, duração 2.5, caixa marcada e seleção vazia.](/documentation/pt-BR/database-entry.png)

@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 16,
-  "sourceRevision": 16,
+  "revision": 17,
+  "sourceRevision": 17,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-22",
   "compatibility": {
@@ -69,13 +69,14 @@
       "lib/page-collaboration-stream.ts",
       "components/pages/page-promotion-context.tsx",
       "components/pages/page-promotion-context.test.tsx",
-      "components/pages/page-database-view.tsx"
+      "components/pages/page-database-view.tsx",
+      "lib/server/page-database-views.ts"
     ]
   },
   "review": {
-    "revision": 16,
-    "fact": "agent:/root/min777 (page editor mentions paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed)",
-    "language": "agent:/root/min777 (en sentence on the page side panel with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 17,
+    "fact": "agent:/root/min764 (database archive sentence checked against lib/server/database-export.ts and lib/server/page-database-views.ts: saved views are not exported and are copied by duplication; rest of the article unchanged since the previous review; no figure changed)",
+    "language": "agent:/root/min764 (en changed passages on shared database views with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
   "related": [
@@ -111,7 +112,7 @@
       "src": "/documentation/en/page-create-menu.png",
       "alt": "Page creation menu offering New page and New database.",
       "caption": "Use the project page controls to choose a document or a database.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -127,7 +128,7 @@
       "src": "/documentation/en/page-editor.png",
       "alt": "Demonstration page with headings, paragraphs, task checkboxes and an issue mention.",
       "caption": "Headings, task blocks and the AUR-2 mention keep the page structured. This is demonstration content.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -143,7 +144,7 @@
       "src": "/documentation/en/page-comments.png",
       "alt": "Page activity dialog with a demonstration edit event and an empty comment composer.",
       "caption": "Read page activity and write a comment in the composer. No comment has been submitted in this example.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -159,7 +160,7 @@
       "src": "/documentation/en/page-file-states.png",
       "alt": "Demo page with an unfinished upload and a saved 67-byte file offering Download.",
       "caption": "Check the actual file state: the second attachment is available, while the first unfinished upload is not.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -175,7 +176,7 @@
       "src": "/documentation/en/page-history-preview.png",
       "alt": "Versions tab with an expanded earlier state, its author, Restore and the 30-day retention notice.",
       "caption": "Preview a saved state and compare it with the current page before restoring.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -191,7 +192,7 @@
       "src": "/documentation/en/page-publish.png",
       "alt": "Page publication dialog with Private selected and password or bearer-link alternatives.",
       "caption": "Private keeps the page within the project. Review the intended audience before changing publication.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -207,7 +208,7 @@
       "src": "/documentation/en/page-export.png",
       "alt": "Document export menu with Markdown (.md) and Print / PDF.",
       "caption": "Choose Markdown to download the document, or Print / PDF to open the printable view.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -223,7 +224,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -376,7 +377,7 @@ Open the resulting export and verify headings, callouts, links and attachments n
 
 ### Database archives and limits {#export-fidelity}
 
-A database archive (.zip) includes its branch: Markdown and CSV, exact schema and option colors, values, bodies, timestamps, nested pages and file bytes. Import it into a new empty database to restore that structure. Device-specific filtering, sorting and hidden-column preferences stay on the original device.
+A database archive (.zip) includes its branch: Markdown and CSV, exact schema and option colors, values, bodies, timestamps, nested pages and file bytes. Import it into a new empty database to restore that structure. Saved database views are not part of the archive: recreate them after the import. Duplicating a database keeps its views.
 
 An export is not a transfer of passwords, account provider credentials or subscriptions. For moving account work between instances, use the [account-data transfer guide](/docs/transfer-between-instances). If an imported format cannot preserve a block or external property, inspect the result before relying on it as a replacement. Do not delete the original merely because a download file was created.
 

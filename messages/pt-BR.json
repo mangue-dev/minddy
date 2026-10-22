@@ -6668,7 +6668,10 @@
     "addOption": "Adicionar uma opção",
     "moveToTrash": "Mover para a lixeira",
     "duplicateEntries": "{count, plural, one {Duplicar esta entrada?} other {Duplicar # entradas?}}",
-    "duplicateEntriesBody": "Criar uma cópia de cada entrada selecionada e de suas subpáginas."
+    "duplicateEntriesBody": "Criar uma cópia de cada entrada selecionada e de suas subpáginas.",
+    "defaultView": "Tabela",
+    "views": "Visualizações",
+    "deleteViewDescription": "Esta visualização será excluída para todos os membros do projeto."
   },
   "AppTabs": {
     "label": "Abas do aplicativo",

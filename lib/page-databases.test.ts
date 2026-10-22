@@ -9,6 +9,9 @@ import {
   isDatabaseValue,
   compareDatabaseValues,
   databaseDateMatches,
+  databaseViewPositionBetween,
+  normalizeDatabaseView,
+  normalizeDatabaseViewName,
 } from "./page-databases";
 
 const property = {
@@ -170,5 +173,44 @@ describe("extended database properties", () => {
     ).toBe("2026-09-06T12:00:00Z");
     for (const value of [null, "2026-09-06", "fake", 0])
       expect(isDatabasePropertyValue(created, value)).toBe(false);
+  });
+});
+
+describe("saved database views", () => {
+  const property = "10000000-0000-4000-8000-000000000001";
+  const view = { sort: property, descending: true, filter: property,
+    filterValue: "Acme", hidden: [property, property] };
+
+  it("keeps a valid view, without duplicate hidden columns or unknown keys", () => {
+    expect(normalizeDatabaseView({ ...view, extra: "dropped" })).toEqual({
+      ...view, hidden: [property],
+    });
+  });
+
+  it("drops the filter value of a view without a filter", () => {
+    expect(normalizeDatabaseView({ ...view, filter: "" })?.filterValue).toBe("");
+  });
+
+  it.each([
+    ["an unknown sort", { ...view, sort: "updated_at" }],
+    ["a filter that is not a property", { ...view, filter: "title" }],
+    ["an oversized filter value", { ...view, filterValue: "x".repeat(201) }],
+    ["a hidden column that is not a property", { ...view, hidden: ["title"] }],
+    ["a missing direction", { ...view, descending: undefined }],
+  ])("refuses %s", (_case, input) => {
+    expect(normalizeDatabaseView(input)).toBeNull();
+  });
+
+  it("names a view with trimmed, bounded text", () => {
+    expect(normalizeDatabaseViewName("  By owner ")).toBe("By owner");
+    expect(normalizeDatabaseViewName(" ")).toBeNull();
+    expect(normalizeDatabaseViewName("x".repeat(81))).toBeNull();
+  });
+
+  it("places a moved view between its new neighbours", () => {
+    expect(databaseViewPositionBetween()).toBe(1);
+    expect(databaseViewPositionBetween(undefined, 1)).toBe(0);
+    expect(databaseViewPositionBetween(2)).toBe(3);
+    expect(databaseViewPositionBetween(1, 2)).toBe(1.5);
   });
 });
