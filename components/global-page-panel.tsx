@@ -40,10 +40,13 @@ function useOpenFullPage() {
 export function GlobalPagePanel({
   projectId,
   pageId,
+  open = true,
   onClose,
 }: {
   projectId: string;
   pageId: string;
+  /** False while the host keeps the panel mounted for its exit animation. */
+  open?: boolean;
   onClose: () => void;
 }) {
   const t = useTranslations("Pages");
@@ -59,7 +62,7 @@ export function GlobalPagePanel({
   }, []);
 
   useEffect(() => {
-    if (loading) return;
+    if (!open || loading) return;
     if (isDatabase) {
       onClose();
       openFullPage(projectId, openId);
@@ -67,7 +70,7 @@ export function GlobalPagePanel({
       // The page is already the screen underneath: nothing to open beside it.
       onClose();
     }
-  }, [loading, isDatabase, projectId, openId, onClose, openFullPage]);
+  }, [open, loading, isDatabase, projectId, openId, onClose, openFullPage]);
 
   // Every way out first saves what was typed in the panel, as the database
   // preview does: a refused write keeps the panel open on its error.
@@ -83,7 +86,7 @@ export function GlobalPagePanel({
   const showsDocument = !loading && !isDatabase;
   return (
     <PagePeekPanel
-      open
+      open={open}
       title={page?.title.trim() || t("untitled")}
       expandLabel={t("expand")}
       onExpand={() => void leave(() => openFullPage(projectId, openId))}

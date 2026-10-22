@@ -41,6 +41,7 @@ import {
 import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 import type { PageMenuTarget } from "@/components/pages/page-document-actions";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
+import { useRetainedWhileClosing } from "@/lib/use-retained-while-closing";
 
 export function PagesShell({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   return <AppTabRouteBoundary><PagesShellInner browse={browse} /></AppTabRouteBoundary>;
@@ -78,6 +79,8 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const previewId = searchParams.get("entry");
   const preview = previewId ? byId.get(previewId) : undefined;
   const validPreview = preview?.parent_id === activePageId && byId.get(activePageId ?? "")?.database_schema != null ? preview : undefined;
+  // The entry stays in the panel while it slides out (MIN-774).
+  const shownPreview = useRetainedWhileClosing(validPreview);
   const openPage = useCallback((pageId: string, databaseId?: string) => {
     const page = byId.get(pageId);
     const parent = databaseId ? byId.get(databaseId) : page?.parent_id ? byId.get(page.parent_id) : undefined;
@@ -288,12 +291,12 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
     </div>
     <PagePeekPanel
       open={!!validPreview}
-      title={validPreview?.title || tDatabase("newEntry")}
+      title={shownPreview?.title || tDatabase("newEntry")}
       expandLabel={tDatabase("extend")}
       onExpand={() => void leavePreview(true)}
       onClose={() => void leavePreview()}
     >
-      {validPreview && <PageView panel key={validPreview.id} projectId={projectId} pageId={validPreview.id} onNavigate={openPage} onNavigationReady={registerPreviewFlush} />}
+      {shownPreview && <PageView panel key={shownPreview.id} projectId={projectId} pageId={shownPreview.id} onNavigate={openPage} onNavigationReady={registerPreviewFlush} />}
     </PagePeekPanel>
     </PagePromotionProvider>
     </PagePresenceProvider>
