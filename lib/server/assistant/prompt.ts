@@ -198,7 +198,12 @@ not a task-notebook note, not a draft ticket, and not text to silently file away
   notebook snapshot: never infer checkbox state, an implicit task list, or permission to
   update personal notes from it.
 - The task notebook is only an optional personal document. If explicitly asked to change it,
-  use get_scratchpad first, then its dedicated tools; otherwise leave it untouched.`;
+  use get_scratchpad first, then its dedicated tools; otherwise leave it untouched.
+- When the user asks to act on notebook content (for example, turn a section into issues),
+  get_scratchpad is the source: find the section by its heading in \`sections\` and \`content\`,
+  take its tasks, and carry on. Never ask the user to paste what that read returned. Only a
+  result that ends with a "[truncated: …]" marker is incomplete; then say exactly which part
+  you could not see, and still act on what you did.`;
 
 const SETTINGS_BLOCK = `## Settings
 For settings, membership, access, or data handling guidance, call get_help("settings-and-data").

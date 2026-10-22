@@ -9,8 +9,18 @@ import {
 export function serializeToolResult(result: unknown, maxChars = 4_000): string {
   const full = JSON.stringify(result);
   if (full.length <= maxChars) return full;
-  return `${full.slice(0, maxChars)}... [truncated]`;
+  // The marker says how much was cut, so the model can name what it did not
+  // see instead of declaring the whole document unreadable (MIN-779).
+  return `${full.slice(0, maxChars)}... [truncated: only the first ${maxChars} of ${full.length} characters of this result were shown]`;
 }
+
+/**
+ * Documents Numo reads to act on: their text must arrive whole, or the model
+ * works from the first sections only. The notebook read also repeats its
+ * tasks after the markdown, so the 4,000-character default cut a notebook of
+ * a few sections mid-document (MIN-779).
+ */
+const DOCUMENT_READ_RESULT_CHAR_LIMIT = 32_000;
 
 export function getToolResultCharLimit(
   toolName: string,
@@ -59,6 +69,11 @@ export function getToolResultCharLimit(
       return 10_000;
     case "get_help":
       return 24_000;
+    case "get_scratchpad":
+    case "get_page":
+    case "get_objective":
+    case "get_feedback":
+      return DOCUMENT_READ_RESULT_CHAR_LIMIT;
     default:
       return 4_000;
   }
