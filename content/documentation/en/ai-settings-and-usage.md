@@ -44,6 +44,8 @@
       "components/ai-elements/dictation-pill.tsx",
       "components/ai-elements/use-dictation-recorder.ts",
       "components/settings/account-preferences-section.tsx",
+      "components/settings/dictation-vocabulary-section.tsx",
+      "lib/dictation-vocabulary.ts",
       "app/api/transcribe/route.ts",
       "lib/use-issue-dictation.ts",
       "components/issue-side-panel.tsx",
@@ -60,7 +62,7 @@
   },
   "review": {
     "revision": 19,
-    "fact": "agent:claude/min773 (dictation pill, discard confirmation and cleanup preference checked against the changed source and the running app; earlier evidence retained in git history)",
+    "fact": "agent:claude/min773 (dictation pill, discard confirmation, cleanup preference and vocabulary checked against the changed source and the running app; earlier evidence retained in git history)",
     "language": "agent:claude/min773 (en changed passages with catalog UI labels; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
@@ -172,7 +174,7 @@ Use the microphone beside a supported field to dictate an issue, objective, comm
 
 ### Usage and recording limits {#voice-limits}
 
-Audio is sent to the configured transcription service, then may be cleaned up or interpreted by an AI model. The cleanup fixes punctuation, filler words and self-corrections; to insert the words as they were heard, turn off **Clean up dictations** under **Account settings** > **Preferences** > **Voice dictation**, and no cleanup model is called for your dictations. Public feedback keeps its own processing. Usage follows the account's provider and budget rules; a recording and its subsequent interpretation can incur separate usage. Public feedback has its own availability and charging rules, described in the [feedback guide](/docs/feedback). The public landing-page demo uses a separate limit and is not an account dictation allowance.
+Audio is sent to the configured transcription service, then may be cleaned up or interpreted by an AI model. The cleanup fixes punctuation, filler words and self-corrections; to insert the words as they were heard, turn off **Clean up dictations** under **Account settings** > **Preferences** > **Voice dictation**, and no cleanup model is called for your dictations. Public feedback keeps its own processing. Under **Vocabulary**, below that setting, add up to 50 names and terms dictation should spell your way; fill in **Heard as** to replace that word in every dictation, even with cleanup off. Usage follows the account's provider and budget rules; a recording and its subsequent interpretation can incur separate usage. Public feedback has its own availability and charging rules, described in the [feedback guide](/docs/feedback). The public landing-page demo uses a separate limit and is not an account dictation allowance.
 
 The signed-in transcription endpoint accepts up to 10 MiB of audio and 30 requests per account per hour. The shared recorder stops after 20 minutes as a safeguard. Prefer shorter takes so you can inspect each result. Keep existing text until the result is verified; the recorder is not an audio backup.
 

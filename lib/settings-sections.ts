@@ -79,6 +79,7 @@ export const SETTINGS_SECTIONS = {
   accountTransparency: "account-transparency",
   accountKeyboard: "account-keyboard",
   accountDictation: "account-dictation",
+  accountDictationVocabulary: "account-dictation-vocabulary",
   accountHiddenProjects: "account-hidden-projects",
   accountDesktop: "account-desktop",
   // The id predates MIN-737, when the card held every issue preference. It
@@ -380,6 +381,18 @@ export function useSettingsSections(): SettingsSection[] {
           "dictée", "dictee", "dictation", "voix", "voice", "vocal", "micro",
           "microphone", "transcription", "nettoyage", "cleanup", "clean up",
           "brut", "raw", "préférences", "preferences",
+        ],
+      }),
+      account({
+        id: SETTINGS_SECTIONS.accountDictationVocabulary,
+        tab: "preferences",
+        icon: Mic01Icon,
+        title: tAccount("vocabularyTitle"),
+        parentTitle: tAccount("dictationSectionTitle"),
+        keywords: [
+          "vocabulaire", "vocabulary", "mots", "words", "dictionnaire",
+          "dictionary", "remplacement", "replacement", "orthographe",
+          "spelling", "dictée", "dictee", "dictation", "transcription",
         ],
       }),
       account({

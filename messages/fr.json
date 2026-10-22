@@ -2925,7 +2925,22 @@
     "numoIssuesTitle": "Tickets créés par Numo",
     "dictationSectionTitle": "Dictée vocale",
     "dictationCleanupLabel": "Nettoyer les dictées",
-    "dictationCleanupDesc": "Corrige la ponctuation, les hésitations et les reprises avant d’insérer le texte. Désactivé, la transcription brute est insérée telle qu’elle a été entendue."
+    "dictationCleanupDesc": "Corrige la ponctuation, les hésitations et les reprises avant d’insérer le texte. Désactivé, la transcription brute est insérée telle qu’elle a été entendue.",
+    "vocabularyTitle": "Vocabulaire",
+    "vocabularyHelp": "Les noms et termes que la dictée doit écrire à votre façon. Un mot seul guide le nettoyage ; avec ce qui est entendu à la place, ce mot est remplacé dans chaque dictée, même sans nettoyage.",
+    "vocabularyHeardAsLabel": "Entendu comme",
+    "vocabularyHeardAsPlaceholder": "Entendu comme (facultatif)",
+    "vocabularyTermLabel": "Mot ou expression",
+    "vocabularyTermPlaceholder": "Mot ou expression",
+    "vocabularyAdd": "Ajouter",
+    "vocabularyEmpty": "Aucun mot pour l’instant. Ajoutez un nom ou un terme que la dictée écrit mal.",
+    "vocabularyReplaces": "Remplace « {heardAs} »",
+    "vocabularySpelling": "Orthographe",
+    "vocabularyRemove": "Retirer « {term} »",
+    "vocabularyFull": "Le vocabulaire contient au plus {max} entrées. Retirez-en une pour en ajouter une autre.",
+    "vocabularyRemoveTitle": "Retirer « {term} » du vocabulaire ?",
+    "vocabularyRemoveDescription": "La dictée n’utilisera plus cette orthographe. Vous pourrez l’ajouter de nouveau à tout moment.",
+    "vocabularyRemoveConfirm": "Retirer"
   },
   "AccountData": {
     "importTitle": "Transférer des données depuis une autre instance minddy",

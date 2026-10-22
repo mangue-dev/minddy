@@ -2925,7 +2925,22 @@
     "numoIssuesTitle": "Von Numo erstellte Vorgänge",
     "dictationSectionTitle": "Spracheingabe",
     "dictationCleanupLabel": "Diktate bereinigen",
-    "dictationCleanupDesc": "Korrigiert Zeichensetzung, Füllwörter und Selbstkorrekturen, bevor der Text eingefügt wird. Deaktiviert wird die Rohtranskription so eingefügt, wie sie gehört wurde."
+    "dictationCleanupDesc": "Korrigiert Zeichensetzung, Füllwörter und Selbstkorrekturen, bevor der Text eingefügt wird. Deaktiviert wird die Rohtranskription so eingefügt, wie sie gehört wurde.",
+    "vocabularyTitle": "Wortschatz",
+    "vocabularyHelp": "Namen und Begriffe, die das Diktat in Ihrer Schreibweise schreiben soll. Ein Wort allein leitet die Bereinigung; mit dem, was stattdessen gehört wird, wird dieses Wort in jedem Diktat ersetzt, auch ohne Bereinigung.",
+    "vocabularyHeardAsLabel": "Gehört als",
+    "vocabularyHeardAsPlaceholder": "Gehört als (optional)",
+    "vocabularyTermLabel": "Wort oder Ausdruck",
+    "vocabularyTermPlaceholder": "Wort oder Ausdruck",
+    "vocabularyAdd": "Hinzufügen",
+    "vocabularyEmpty": "Noch keine Wörter. Fügen Sie einen Namen oder Begriff hinzu, den das Diktat falsch schreibt.",
+    "vocabularyReplaces": "Ersetzt „{heardAs}“",
+    "vocabularySpelling": "Schreibweise",
+    "vocabularyRemove": "„{term}“ entfernen",
+    "vocabularyFull": "Der Wortschatz umfasst höchstens {max} Einträge. Entfernen Sie einen, um einen weiteren hinzuzufügen.",
+    "vocabularyRemoveTitle": "„{term}“ aus dem Wortschatz entfernen?",
+    "vocabularyRemoveDescription": "Das Diktat verwendet diese Schreibweise nicht mehr. Sie können sie jederzeit wieder hinzufügen.",
+    "vocabularyRemoveConfirm": "Entfernen"
   },
   "AccountData": {
     "importTitle": "Daten von einer anderen minddy-Instanz übertragen",

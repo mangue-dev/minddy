@@ -44,6 +44,8 @@
       "components/ai-elements/dictation-pill.tsx",
       "components/ai-elements/use-dictation-recorder.ts",
       "components/settings/account-preferences-section.tsx",
+      "components/settings/dictation-vocabulary-section.tsx",
+      "lib/dictation-vocabulary.ts",
       "app/api/transcribe/route.ts",
       "lib/use-issue-dictation.ts",
       "components/issue-side-panel.tsx",
@@ -60,7 +62,7 @@
   },
   "review": {
     "revision": 19,
-    "fact": "agent:claude/min773 (dictation pill, discard confirmation and cleanup preference checked against the changed source and the running app; earlier evidence retained in git history)",
+    "fact": "agent:claude/min773 (dictation pill, discard confirmation, cleanup preference and vocabulary checked against the changed source and the running app; earlier evidence retained in git history)",
     "language": "agent:claude/min773 (it translation of the MIN-773 passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
@@ -173,7 +175,7 @@ Usa il microfono accanto a un campo compatibile per dettare un ticket, un obiett
 
 ### Consumo e limiti di registrazione {#voice-limits}
 
-L’audio viene inviato al servizio di trascrizione configurato, poi può essere corretto o interpretato da un modello IA. La pulizia corregge punteggiatura, intercalari e autocorrezioni; per inserire le parole così come sono state sentite, disattiva **Ripulisci le dettature** in **Impostazioni account** > **Preferenze** > **Dettatura vocale**, e nessun modello di pulizia viene chiamato per le tue dettature. Il feedback pubblico mantiene la propria elaborazione. Il consumo segue le regole del fornitore e del budget dell’account; registrazione e interpretazione possono generare consumi separati. Il feedback pubblico ha regole proprie di disponibilità e addebito, descritte nella [guida al feedback](/docs/feedback). La demo della pagina iniziale ha un limite separato e non costituisce una quota di dettatura dell’account.
+L’audio viene inviato al servizio di trascrizione configurato, poi può essere corretto o interpretato da un modello IA. La pulizia corregge punteggiatura, intercalari e autocorrezioni; per inserire le parole così come sono state sentite, disattiva **Ripulisci le dettature** in **Impostazioni account** > **Preferenze** > **Dettatura vocale**, e nessun modello di pulizia viene chiamato per le tue dettature. Il feedback pubblico mantiene la propria elaborazione. In **Vocabolario**, subito sotto, aggiungi fino a 50 nomi e termini che la dettatura deve scrivere a modo tuo; compila **Sentito come** per sostituire quella parola in ogni dettatura, anche senza pulizia. Il consumo segue le regole del fornitore e del budget dell’account; registrazione e interpretazione possono generare consumi separati. Il feedback pubblico ha regole proprie di disponibilità e addebito, descritte nella [guida al feedback](/docs/feedback). La demo della pagina iniziale ha un limite separato e non costituisce una quota di dettatura dell’account.
 
 Il servizio di trascrizione per utenti autenticati accetta fino a 10 MiB di audio e 30 richieste per account all’ora. Il registratore condiviso si ferma dopo 20 minuti come precauzione. Preferisci registrazioni brevi per controllare ogni risultato. Conserva il testo esistente fino alla verifica; il registratore non è un backup dell’audio.
 

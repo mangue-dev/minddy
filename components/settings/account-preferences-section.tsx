@@ -20,6 +20,7 @@ import type {SendMode} from "@/lib/keyboard/send-shortcut";
 import {useModKey} from "@/lib/keyboard/use-mod-shortcut";
 import {useAccountPreference} from "@/components/settings/use-account-preference";
 import {DICTATION_CLEANUP_META_KEY, resolveDictationCleanup} from "@/lib/dictation-context";
+import {DictationVocabularySection} from "@/components/settings/dictation-vocabulary-section";
 import {useAccountTheme} from "@/lib/use-account-theme";
 import {ThemePresetPicker} from "@/components/settings/theme-preset-picker";
 import type {ThemeMode, ThemePresetId} from "@/lib/theme-presets";
@@ -237,6 +238,8 @@ export function AccountPreferencesSection() {
           }
         />
       </SettingsGroup>
+
+      <DictationVocabularySection />
     </>
   );
 }

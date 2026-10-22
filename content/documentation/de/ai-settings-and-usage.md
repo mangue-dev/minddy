@@ -44,6 +44,8 @@
       "components/ai-elements/dictation-pill.tsx",
       "components/ai-elements/use-dictation-recorder.ts",
       "components/settings/account-preferences-section.tsx",
+      "components/settings/dictation-vocabulary-section.tsx",
+      "lib/dictation-vocabulary.ts",
       "app/api/transcribe/route.ts",
       "lib/use-issue-dictation.ts",
       "components/issue-side-panel.tsx",
@@ -60,7 +62,7 @@
   },
   "review": {
     "revision": 19,
-    "fact": "agent:claude/min773 (dictation pill, discard confirmation and cleanup preference checked against the changed source and the running app; earlier evidence retained in git history)",
+    "fact": "agent:claude/min773 (dictation pill, discard confirmation, cleanup preference and vocabulary checked against the changed source and the running app; earlier evidence retained in git history)",
     "language": "agent:claude/min773 (de translation of the MIN-773 passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
@@ -172,7 +174,7 @@ Mit dem Mikrofon neben einem unterstützten Feld können Sie Issues, Ziele, Komm
 
 ### Verbrauch und Aufnahmegrenzen {#voice-limits}
 
-Die Audiodaten werden an den konfigurierten Transkriptionsdienst gesendet und können anschließend von einem KI-Modell überarbeitet oder interpretiert werden. Die Bereinigung korrigiert Zeichensetzung, Füllwörter und Selbstkorrekturen; um die Wörter so einzufügen, wie sie gehört wurden, deaktivieren Sie **Diktate bereinigen** unter **Kontoeinstellungen** > **Einstellungen** > **Spracheingabe**. Dann wird für Ihre Diktate kein Bereinigungsmodell aufgerufen. Öffentliches Feedback behält seine eigene Verarbeitung. Es gelten die Anbieter- und Budgetregeln des Kontos; Aufnahme und anschließende Interpretation können getrennten Verbrauch verursachen. Öffentliches Feedback hat eigene Verfügbarkeits- und Abrechnungsregeln im [Feedback-Leitfaden](/docs/feedback). Die Demo auf der Startseite besitzt ein separates Limit und ist kein Diktatkontingent des Kontos.
+Die Audiodaten werden an den konfigurierten Transkriptionsdienst gesendet und können anschließend von einem KI-Modell überarbeitet oder interpretiert werden. Die Bereinigung korrigiert Zeichensetzung, Füllwörter und Selbstkorrekturen; um die Wörter so einzufügen, wie sie gehört wurden, deaktivieren Sie **Diktate bereinigen** unter **Kontoeinstellungen** > **Einstellungen** > **Spracheingabe**. Dann wird für Ihre Diktate kein Bereinigungsmodell aufgerufen. Öffentliches Feedback behält seine eigene Verarbeitung. Unter **Wortschatz**, direkt darunter, fügen Sie bis zu 50 Namen und Begriffe hinzu, die das Diktat in Ihrer Schreibweise schreiben soll; füllen Sie **Gehört als** aus, um dieses Wort in jedem Diktat zu ersetzen, auch ohne Bereinigung. Es gelten die Anbieter- und Budgetregeln des Kontos; Aufnahme und anschließende Interpretation können getrennten Verbrauch verursachen. Öffentliches Feedback hat eigene Verfügbarkeits- und Abrechnungsregeln im [Feedback-Leitfaden](/docs/feedback). Die Demo auf der Startseite besitzt ein separates Limit und ist kein Diktatkontingent des Kontos.
 
 Der Transkriptionsendpunkt für angemeldete Nutzer akzeptiert bis zu 10 MiB Audio und 30 Anfragen pro Konto und Stunde. Der gemeinsame Recorder stoppt nach 20 Minuten als Schutzmaßnahme. Kürzere Aufnahmen erleichtern die Prüfung. Behalten Sie vorhandenen Text, bis das Ergebnis geprüft ist; der Recorder ist keine Audiosicherung.
 

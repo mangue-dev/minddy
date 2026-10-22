@@ -2925,7 +2925,22 @@
     "numoIssuesTitle": "Issues Numo creates",
     "dictationSectionTitle": "Voice dictation",
     "dictationCleanupLabel": "Clean up dictations",
-    "dictationCleanupDesc": "Fix punctuation, filler words and self-corrections before the text is inserted. Off, the raw transcription is inserted as it was heard."
+    "dictationCleanupDesc": "Fix punctuation, filler words and self-corrections before the text is inserted. Off, the raw transcription is inserted as it was heard.",
+    "vocabularyTitle": "Vocabulary",
+    "vocabularyHelp": "Names and terms dictation should spell your way. A word alone guides the cleanup; with what it is heard as, that word is replaced in every dictation, even with cleanup off.",
+    "vocabularyHeardAsLabel": "Heard as",
+    "vocabularyHeardAsPlaceholder": "Heard as (optional)",
+    "vocabularyTermLabel": "Word or phrase",
+    "vocabularyTermPlaceholder": "Word or phrase",
+    "vocabularyAdd": "Add",
+    "vocabularyEmpty": "No words yet. Add a name or a term dictation gets wrong.",
+    "vocabularyReplaces": "Replaces “{heardAs}”",
+    "vocabularySpelling": "Spelling",
+    "vocabularyRemove": "Remove “{term}”",
+    "vocabularyFull": "The vocabulary holds up to {max} entries. Remove one to add another.",
+    "vocabularyRemoveTitle": "Remove “{term}” from the vocabulary?",
+    "vocabularyRemoveDescription": "Dictation will stop using this spelling. You can add it again at any time.",
+    "vocabularyRemoveConfirm": "Remove"
   },
   "AccountData": {
     "importTitle": "Transfer data from another minddy instance",

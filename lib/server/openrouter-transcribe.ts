@@ -41,6 +41,12 @@ export function resolveAudioFormat(mimeType: string): TranscribeAudioFormat | nu
 
 export interface TranscribeAudioOptions {
   language?: string;
+  /**
+   * Spelling hint (the account's dictation vocabulary). Sent as the standard
+   * `prompt` field to direct OpenAI-compatible providers only: OpenRouter's
+   * endpoint has no generic equivalent, so there the cleanup pass carries it.
+   */
+  prompt?: string;
   temperature?: number;
   provider?: Record<string, unknown>;
   title?: string;
@@ -95,6 +101,7 @@ export async function transcribeAudio(
     if (options?.temperature !== undefined) {
       directBody.append("temperature", String(options.temperature));
     }
+    if (options?.prompt) directBody.append("prompt", options.prompt);
   }
 
   const res = await fetchAiProvider(providerId, `${baseUrl}/audio/transcriptions`, {

@@ -2925,7 +2925,22 @@
     "numoIssuesTitle": "Tickets criados pelo Numo",
     "dictationSectionTitle": "Ditado por voz",
     "dictationCleanupLabel": "Limpar ditados",
-    "dictationCleanupDesc": "Corrige pontuação, vícios de linguagem e autocorreções antes de inserir o texto. Desativado, a transcrição é inserida exatamente como foi ouvida."
+    "dictationCleanupDesc": "Corrige pontuação, vícios de linguagem e autocorreções antes de inserir o texto. Desativado, a transcrição é inserida exatamente como foi ouvida.",
+    "vocabularyTitle": "Vocabulário",
+    "vocabularyHelp": "Nomes e termos que o ditado deve escrever do seu jeito. Uma palavra sozinha orienta a limpeza; com o que é ouvido no lugar dela, essa palavra é substituída em todo ditado, mesmo sem limpeza.",
+    "vocabularyHeardAsLabel": "Ouvido como",
+    "vocabularyHeardAsPlaceholder": "Ouvido como (opcional)",
+    "vocabularyTermLabel": "Palavra ou expressão",
+    "vocabularyTermPlaceholder": "Palavra ou expressão",
+    "vocabularyAdd": "Adicionar",
+    "vocabularyEmpty": "Nenhuma palavra ainda. Adicione um nome ou termo que o ditado escreve errado.",
+    "vocabularyReplaces": "Substitui “{heardAs}”",
+    "vocabularySpelling": "Grafia",
+    "vocabularyRemove": "Remover “{term}”",
+    "vocabularyFull": "O vocabulário comporta até {max} entradas. Remova uma para adicionar outra.",
+    "vocabularyRemoveTitle": "Remover “{term}” do vocabulário?",
+    "vocabularyRemoveDescription": "O ditado deixará de usar esta grafia. Você pode adicioná-la de novo a qualquer momento.",
+    "vocabularyRemoveConfirm": "Remover"
   },
   "AccountData": {
     "importTitle": "Transfira dados de outra instância minddy",

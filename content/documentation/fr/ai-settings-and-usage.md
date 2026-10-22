@@ -44,6 +44,8 @@
       "components/ai-elements/dictation-pill.tsx",
       "components/ai-elements/use-dictation-recorder.ts",
       "components/settings/account-preferences-section.tsx",
+      "components/settings/dictation-vocabulary-section.tsx",
+      "lib/dictation-vocabulary.ts",
       "app/api/transcribe/route.ts",
       "lib/use-issue-dictation.ts",
       "components/issue-side-panel.tsx",
@@ -60,7 +62,7 @@
   },
   "review": {
     "revision": 19,
-    "fact": "agent:claude/min773 (dictation pill, discard confirmation and cleanup preference checked against the changed source and the running app; earlier evidence retained in git history)",
+    "fact": "agent:claude/min773 (dictation pill, discard confirmation, cleanup preference and vocabulary checked against the changed source and the running app; earlier evidence retained in git history)",
     "language": "agent:claude/min773 (fr translation of the MIN-773 passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
@@ -172,7 +174,7 @@ Utilisez le microphone à côté d’un champ compatible pour dicter un ticket, 
 
 ### Consommation et limites d’enregistrement {#voice-limits}
 
-L’audio est envoyé au service de transcription configuré, puis peut être corrigé ou interprété par un modèle IA. Le nettoyage corrige la ponctuation, les hésitations et les reprises ; pour insérer les mots tels qu’ils ont été entendus, désactivez **Nettoyer les dictées** dans **Paramètres du compte** > **Préférences** > **Dictée vocale** : aucun modèle de nettoyage n’est alors appelé pour vos dictées. Le feedback public garde son propre traitement. La consommation suit les règles du fournisseur et du budget du compte ; l’enregistrement et son interprétation peuvent être comptabilisés séparément. Le feedback public possède ses propres conditions de disponibilité et de facturation, décrites dans le [guide du feedback](/docs/feedback). La démo de la page d’accueil a une limite distincte et ne constitue pas un quota de dictée du compte.
+L’audio est envoyé au service de transcription configuré, puis peut être corrigé ou interprété par un modèle IA. Le nettoyage corrige la ponctuation, les hésitations et les reprises ; pour insérer les mots tels qu’ils ont été entendus, désactivez **Nettoyer les dictées** dans **Paramètres du compte** > **Préférences** > **Dictée vocale** : aucun modèle de nettoyage n’est alors appelé pour vos dictées. Le feedback public garde son propre traitement. Sous **Vocabulaire**, juste en dessous, ajoutez jusqu’à 50 noms et termes que la dictée doit écrire à votre façon ; renseignez **Entendu comme** pour remplacer ce mot dans chaque dictée, même sans nettoyage. La consommation suit les règles du fournisseur et du budget du compte ; l’enregistrement et son interprétation peuvent être comptabilisés séparément. Le feedback public possède ses propres conditions de disponibilité et de facturation, décrites dans le [guide du feedback](/docs/feedback). La démo de la page d’accueil a une limite distincte et ne constitue pas un quota de dictée du compte.
 
 Le service de transcription connecté accepte jusqu’à 10 MiB d’audio et 30 requêtes par compte et par heure. L’enregistreur partagé s’arrête après 20 minutes par précaution. Préférez des prises courtes pour vérifier chaque résultat. Conservez le texte existant jusqu’à vérification ; l’enregistreur ne sauvegarde pas vos fichiers audio.
 

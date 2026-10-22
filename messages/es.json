@@ -2925,7 +2925,22 @@
     "numoIssuesTitle": "Incidencias que crea Numo",
     "dictationSectionTitle": "Dictado por voz",
     "dictationCleanupLabel": "Limpiar los dictados",
-    "dictationCleanupDesc": "Corrige la puntuación, las muletillas y las autocorrecciones antes de insertar el texto. Desactivado, se inserta la transcripción tal como se oyó."
+    "dictationCleanupDesc": "Corrige la puntuación, las muletillas y las autocorrecciones antes de insertar el texto. Desactivado, se inserta la transcripción tal como se oyó.",
+    "vocabularyTitle": "Vocabulario",
+    "vocabularyHelp": "Nombres y términos que el dictado debe escribir a tu manera. Una palabra sola guía la limpieza; con lo que se oye en su lugar, esa palabra se sustituye en cada dictado, incluso sin limpieza.",
+    "vocabularyHeardAsLabel": "Se oye como",
+    "vocabularyHeardAsPlaceholder": "Se oye como (opcional)",
+    "vocabularyTermLabel": "Palabra o expresión",
+    "vocabularyTermPlaceholder": "Palabra o expresión",
+    "vocabularyAdd": "Añadir",
+    "vocabularyEmpty": "Aún no hay palabras. Añade un nombre o un término que el dictado escribe mal.",
+    "vocabularyReplaces": "Sustituye «{heardAs}»",
+    "vocabularySpelling": "Ortografía",
+    "vocabularyRemove": "Quitar «{term}»",
+    "vocabularyFull": "El vocabulario admite hasta {max} entradas. Quita una para añadir otra.",
+    "vocabularyRemoveTitle": "¿Quitar «{term}» del vocabulario?",
+    "vocabularyRemoveDescription": "El dictado dejará de usar esta ortografía. Puedes volver a añadirla cuando quieras.",
+    "vocabularyRemoveConfirm": "Quitar"
   },
   "AccountData": {
     "importTitle": "Transferir datos de otra instancia de minddy",

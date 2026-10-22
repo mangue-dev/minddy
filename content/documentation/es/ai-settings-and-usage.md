@@ -44,6 +44,8 @@
       "components/ai-elements/dictation-pill.tsx",
       "components/ai-elements/use-dictation-recorder.ts",
       "components/settings/account-preferences-section.tsx",
+      "components/settings/dictation-vocabulary-section.tsx",
+      "lib/dictation-vocabulary.ts",
       "app/api/transcribe/route.ts",
       "lib/use-issue-dictation.ts",
       "components/issue-side-panel.tsx",
@@ -60,7 +62,7 @@
   },
   "review": {
     "revision": 19,
-    "fact": "agent:claude/min773 (dictation pill, discard confirmation and cleanup preference checked against the changed source and the running app; earlier evidence retained in git history)",
+    "fact": "agent:claude/min773 (dictation pill, discard confirmation, cleanup preference and vocabulary checked against the changed source and the running app; earlier evidence retained in git history)",
     "language": "agent:claude/min773 (es translation of the MIN-773 passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
@@ -172,7 +174,7 @@ Usa el micrófono junto a un campo compatible para dictar una incidencia, un obj
 
 ### Consumo y límites de grabación {#voice-limits}
 
-El audio se envía al servicio de transcripción configurado y después un modelo de IA puede corregirlo o interpretarlo. La limpieza corrige la puntuación, las muletillas y las autocorrecciones; para insertar las palabras tal como se oyeron, desactiva **Limpiar los dictados** en **Configuración de la cuenta** > **Preferencias** > **Dictado por voz**, y no se llama a ningún modelo de limpieza para tus dictados. El feedback público mantiene su propio procesamiento. El consumo sigue las reglas del proveedor y del presupuesto de la cuenta; la grabación y su interpretación pueden generar consumos separados. El feedback público tiene sus propias reglas de disponibilidad y facturación, descritas en la [guía de feedback](/docs/feedback). La demo de la página de inicio tiene un límite independiente y no es una cuota de dictado de la cuenta.
+El audio se envía al servicio de transcripción configurado y después un modelo de IA puede corregirlo o interpretarlo. La limpieza corrige la puntuación, las muletillas y las autocorrecciones; para insertar las palabras tal como se oyeron, desactiva **Limpiar los dictados** en **Configuración de la cuenta** > **Preferencias** > **Dictado por voz**, y no se llama a ningún modelo de limpieza para tus dictados. El feedback público mantiene su propio procesamiento. En **Vocabulario**, justo debajo, añade hasta 50 nombres y términos que el dictado debe escribir a tu manera; rellena **Se oye como** para sustituir esa palabra en cada dictado, incluso sin limpieza. El consumo sigue las reglas del proveedor y del presupuesto de la cuenta; la grabación y su interpretación pueden generar consumos separados. El feedback público tiene sus propias reglas de disponibilidad y facturación, descritas en la [guía de feedback](/docs/feedback). La demo de la página de inicio tiene un límite independiente y no es una cuota de dictado de la cuenta.
 
 El servicio de transcripción para usuarios conectados acepta hasta 10 MiB de audio y 30 solicitudes por cuenta y hora. El grabador compartido se detiene a los 20 minutos como precaución. Usa grabaciones cortas para revisar cada resultado. Conserva el texto existente hasta verificarlo; el grabador no es una copia de seguridad de audio.
 

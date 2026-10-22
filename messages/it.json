@@ -2925,7 +2925,22 @@
     "numoIssuesTitle": "Ticket creati da Numo",
     "dictationSectionTitle": "Dettatura vocale",
     "dictationCleanupLabel": "Ripulisci le dettature",
-    "dictationCleanupDesc": "Corregge punteggiatura, intercalari e autocorrezioni prima di inserire il testo. Se disattivato, la trascrizione viene inserita così come è stata sentita."
+    "dictationCleanupDesc": "Corregge punteggiatura, intercalari e autocorrezioni prima di inserire il testo. Se disattivato, la trascrizione viene inserita così come è stata sentita.",
+    "vocabularyTitle": "Vocabolario",
+    "vocabularyHelp": "Nomi e termini che la dettatura deve scrivere a modo tuo. Una parola da sola guida la pulizia; con ciò che viene sentito al suo posto, quella parola viene sostituita in ogni dettatura, anche senza pulizia.",
+    "vocabularyHeardAsLabel": "Sentito come",
+    "vocabularyHeardAsPlaceholder": "Sentito come (facoltativo)",
+    "vocabularyTermLabel": "Parola o espressione",
+    "vocabularyTermPlaceholder": "Parola o espressione",
+    "vocabularyAdd": "Aggiungi",
+    "vocabularyEmpty": "Ancora nessuna parola. Aggiungi un nome o un termine che la dettatura scrive male.",
+    "vocabularyReplaces": "Sostituisce «{heardAs}»",
+    "vocabularySpelling": "Grafia",
+    "vocabularyRemove": "Rimuovi «{term}»",
+    "vocabularyFull": "Il vocabolario contiene al massimo {max} voci. Rimuovine una per aggiungerne un’altra.",
+    "vocabularyRemoveTitle": "Rimuovere «{term}» dal vocabolario?",
+    "vocabularyRemoveDescription": "La dettatura smetterà di usare questa grafia. Puoi aggiungerla di nuovo in qualsiasi momento.",
+    "vocabularyRemoveConfirm": "Rimuovi"
   },
   "AccountData": {
     "importTitle": "Trasferire dati da un'altra istanza minddy",

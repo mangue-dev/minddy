@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { useAuthOptional } from "@/lib/auth-context";
 import { resolveDictationCleanup, type DictationContext } from "@/lib/dictation-context";
+import { resolveDictationVocabulary } from "@/lib/dictation-vocabulary";
 
 /**
  * The one recording pipeline behind every voice dictation (MIN-773): the
@@ -90,7 +91,10 @@ export function useDictationRecorder({
   const locale = useLocale();
   // The live preference: the server's session claims can lag behind a switch
   // the user just flipped (see /api/transcribe).
-  const cleanupEnabled = resolveDictationCleanup(useAuthOptional()?.user?.user_metadata);
+  const accountMeta = useAuthOptional()?.user?.user_metadata;
+  const cleanupEnabled = resolveDictationCleanup(accountMeta);
+  // Same for the vocabulary (MIN-773): a word just added counts at once.
+  const vocabularyJson = JSON.stringify(resolveDictationVocabulary(accountMeta));
 
   const [status, setStatus] = useState<DictationStatus>("idle");
   const [elapsedMs, setElapsedMs] = useState(0);
@@ -179,6 +183,7 @@ export function useDictationRecorder({
       formData.append("context", context);
       if (feature) formData.append("feature", feature);
       if (!cleanupEnabled) formData.append("cleanup", "off");
+      if (vocabularyJson !== "[]") formData.append("vocabulary", vocabularyJson);
 
       try {
         const res = await fetch("/api/transcribe", { method: "POST", body: formData });
@@ -219,7 +224,7 @@ export function useDictationRecorder({
         if (mountedRef.current) setStatus("idle");
       }
     },
-    [cleanupEnabled, context, feature, locale, t],
+    [cleanupEnabled, context, feature, locale, t, vocabularyJson],
   );
 
   const stop = useCallback(() => {
