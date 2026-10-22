@@ -182,9 +182,10 @@ warnings, and compatibility. A translation may reorganize sentences to read
 naturally; it must not summarize away part of the procedure.
 
 Use idiomatic grammar and typography in each language, subject to the house
-rule on sentence dashes. Use the actual localized UI labels and agreed product
-glossary. Keep identifiers and executable examples intact. Localize meaningful
-demo text in instructional screenshots as well as captions and alternative
+rule on sentence dashes. Use the actual localized UI labels and the agreed
+product glossary of [localization and copy](localization-and-copy.md). Keep
+identifiers and executable examples intact. Localize meaningful demo text in
+instructional screenshots as well as captions and alternative
 text. A translated application shell with an unreadable foreign-language
 example is insufficient.
 
