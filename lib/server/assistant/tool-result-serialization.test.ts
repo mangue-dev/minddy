@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MCP_MAX_RESULT_BYTES } from "@/lib/mcp-client-tools";
+import { parsePlan } from "@/lib/plan";
 
 import {
   ROUTINE_LIST_RESULT_CHAR_LIMIT,
@@ -68,7 +69,7 @@ describe("Numo tool result serialization", () => {
     expect(
       getToolResultCharLimit("list_routines", { routine_id: "routine-1" }),
     ).toBe(ROUTINE_TOOL_RESULT_CHAR_LIMIT);
-    expect(serialized).not.toContain("... [truncated]");
+    expect(serialized).not.toContain("... [truncated");
     expect(JSON.parse(serialized)).toEqual(result);
   });
 
@@ -92,13 +93,66 @@ describe("Numo tool result serialization", () => {
     expect(getToolResultCharLimit("read_routine_occurrence")).toBe(
       ROUTINE_RUNS_TOOL_RESULT_CHAR_LIMIT,
     );
-    expect(serialized).not.toContain("... [truncated]");
+    expect(serialized).not.toContain("... [truncated");
     expect(JSON.parse(serialized)).toEqual(result);
+  });
+
+  it("hands the model a multi-section notebook whole (MIN-779)", () => {
+    const section = (title: string) =>
+      [
+        `## ${title}`,
+        ...Array.from(
+          { length: 12 },
+          (_, index) => `- [ ] ${title}: task ${index} with a sentence of context`,
+        ),
+      ].join("\n");
+    const content = [
+      section("Today"),
+      section("This week"),
+      section("Ideas"),
+      section("Tasks to turn into issues"),
+    ].join("\n\n");
+    // The shape of get_scratchpad: the markdown, then its tasks repeated.
+    const result = {
+      content,
+      rev: 7,
+      tasks: parsePlan(content).tasks.map((task) => ({
+        index: task.index,
+        text: task.text,
+        state: task.state,
+        depth: task.depth,
+      })),
+      sections: ["Today", "This week", "Ideas", "Tasks to turn into issues"],
+    };
+    expect(JSON.stringify(result).length).toBeGreaterThan(4_000);
+
+    const serialized = serializeToolResult(
+      result,
+      getToolResultCharLimit("get_scratchpad"),
+    );
+    expect(JSON.parse(serialized)).toEqual(result);
+  });
+
+  it.each(["get_page", "get_objective", "get_feedback"])(
+    "keeps a long document read by %s intact",
+    (name) => {
+      const result = { markdown: "Paragraph of documentation. ".repeat(400) };
+      const serialized = serializeToolResult(result, getToolResultCharLimit(name));
+      expect(JSON.parse(serialized)).toEqual(result);
+    },
+  );
+
+  it("says how much of a truncated result the model saw", () => {
+    const result = { value: "x".repeat(5_000) };
+    const total = JSON.stringify(result).length;
+    expect(serializeToolResult(result)).toMatch(
+      new RegExp(`\\[truncated: only the first 4000 of ${total} characters`),
+    );
   });
 
   it("retains the default ceiling for unrelated tools", () => {
     expect(serializeToolResult({ value: "x".repeat(5_000) })).toContain(
-      "... [truncated]",
+      "... [truncated",
     );
   });
 });
