@@ -34,6 +34,20 @@ test("the full profile keeps application and Supabase traffic on internal networ
   assert.match(profile, /auth:[\s\S]*?networks:\n\s+- default\n\s+- auth_egress/);
 });
 
+test("every full-profile route to Supabase targets the gateway service the overlay closes", () => {
+  const profile = readFileSync(resolve(root, "deploy/self-hosted/compose.full.yml"), "utf8");
+  const caddy = readFileSync(resolve(root, "deploy/self-hosted/Caddyfile.full"), "utf8");
+  const proxy = readFileSync(resolve(root, "deploy/self-hosted/database-proxy.mjs"), "utf8");
+  // Upstream self-hosted/v0.8.3 renamed its gateway service from kong to api-gw.
+  const gateway = /^  ([a-z-]+):\n    ports: !reset \[\]\n/m.exec(profile)?.[1];
+  assert.equal(gateway, "api-gw");
+  assert.match(profile, new RegExp(`SUPABASE_INTERNAL_URL: http://${gateway}:8000\\n`));
+  assert.equal([...profile.matchAll(/^      ([a-z-]+):\n        condition: service_healthy$/gm)]
+    .filter((match) => match[1] === gateway).length, 2);
+  assert.match(caddy, new RegExp(`reverse_proxy ${gateway}:8000\\n`));
+  assert.match(proxy, new RegExp(`host: "${gateway}", port: 8000`));
+});
+
 test("the full profile enforces the application password policy and leaked-password checks", () => {
   const profile = readFileSync(resolve(root, "deploy/self-hosted/compose.full.yml"), "utf8");
   assert.match(profile, /GOTRUE_PASSWORD_MIN_LENGTH: "8"/);

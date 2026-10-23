@@ -83,7 +83,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     const value = (name) => { const index = args.indexOf(name); return index >= 0 ? args[index + 1] : undefined; };
     const supabaseDir = value("--supabase-dir");
     const envFile = value("--env-file");
-    if (!supabaseDir || !envFile) throw new Error("Usage: node scripts/prepare-self-hosted-functions.mjs --supabase-dir <checkout> --env-file <protected-file>");
+    if (!supabaseDir || !envFile) throw new Error("Usage: node -- scripts/prepare-self-hosted-functions.mjs --supabase-dir <checkout> --env-file <protected-file>");
     prepareFunctionsBundle({ supabaseDir, envFile });
   } catch (error) {
     console.error(error.message);

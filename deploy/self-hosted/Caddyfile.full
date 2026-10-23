@@ -19,5 +19,5 @@
 {$SUPABASE_SITE_ADDRESS} {
   encode zstd gzip
   header Strict-Transport-Security "max-age=31536000; includeSubDomains"
-  reverse_proxy kong:8000
+  reverse_proxy api-gw:8000
 }

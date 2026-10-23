@@ -61,8 +61,8 @@ docker compose --env-file "$MINDDY_DEPLOY_DIR/.env" \
   -f "$MINDDY_DEPLOY_DIR/compose.full.yml" up -d
 ```
 
-The full profile removes every upstream public host port, including Kong and
-Supavisor. Caddy is the only public service. PostgreSQL binds only to the host
+The full profile removes every upstream public host port, including the API
+gateway and Supavisor. Caddy is the only public service. PostgreSQL binds only to the host
 loopback on `MINDDY_POSTGRES_BIND_PORT` for bootstrap and maintenance. Upstream
 PostgreSQL and Storage paths remain persistent exactly as defined by the
 official distribution; Caddy
@@ -87,7 +87,7 @@ LAN, keep router ports 80, 443, and 8000 closed, and never expose this HTTP mode
 to the internet.
 
 For public HTTPS, the complete profile also requires `SUPABASE_HOST`; Caddy
-terminates TLS for it and sends API traffic to the upstream Kong service. For a
+terminates TLS for it and sends API traffic to the upstream `api-gw` service. For a
 private full stack, the installer derives the Supabase API address from the
 server IP and uses port 8000. PostgreSQL, Supavisor, and all other internal
 service ports are never published by the reference profile.
@@ -119,7 +119,7 @@ serves the app and redirects HTTP to HTTPS, restarts the application and proxy,
 and starts scheduled jobs:
 
 ```bash
-node "$MINDDY_RELEASE_DIR/scripts/smoke-self-hosted-compose.mjs" \
+node -- "$MINDDY_RELEASE_DIR/scripts/smoke-self-hosted-compose.mjs" \
   --profile managed \
   --env-file "$MINDDY_DEPLOY_DIR/.env" \
   --public-url "https://tickets.example.test"

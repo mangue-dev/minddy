@@ -276,7 +276,8 @@ test "$(git -C "$RESTORE_SUPABASE_DIR" rev-parse HEAD)" = \
   "$(cat "$BACKUP_DIR/supabase-commit.txt")"
 for file in volumes/db/realtime.sql volumes/db/webhooks.sql volumes/db/roles.sql \
   volumes/db/jwt.sql volumes/db/_supabase.sql volumes/db/logs.sql \
-  volumes/db/pooler.sql volumes/api/kong.yml volumes/api/kong-entrypoint.sh \
+  volumes/db/pooler.sql volumes/api/envoy/envoy.yaml volumes/api/envoy/cds.yaml \
+  volumes/api/envoy/lds.template.yaml volumes/api/envoy/docker-entrypoint.sh \
   volumes/pooler/pooler.exs; do
   test -f "$RESTORE_SUPABASE_DIR/$file"
 done

@@ -41,7 +41,7 @@ pnpm self-host:restore -- --backup-dir /mnt/backup/minddy/<verified-backup> \
 
 Before the maintenance window, announce the outage, confirm a recent restore and off-host capacity, read release notes and migration/configuration diffs, verify the source tags and ancestry, prepare the target worktree, install its frozen dependencies, and build it. During the outage, stop the app, workers, and scheduler and block public Supabase API access; stopping only the web app still permits direct PostgREST or Storage writes.
 
-After the backup, apply the target migrations with the target release's protected environment file (`node scripts/bootstrap-supabase.mjs --db-url "$SUPABASE_DB_URL" --env-file "$TARGET_ENV_FILE" --existing-env ...`, per the runbook), then run `pnpm self-host:doctor --maintenance`. The scheduler and public ingress stay stopped through the maintenance checks; the runbook's final `compose up -d --wait` starts Caddy and the scheduler together only after those checks pass. While maintenance is active, test sign-in, project and issue create/edit, and attachment upload/download before reopening.
+After the backup, apply the target migrations with the target release's protected environment file (`node -- scripts/bootstrap-supabase.mjs --db-url "$SUPABASE_DB_URL" --env-file "$TARGET_ENV_FILE" --existing-env ...`, per the runbook), then run `pnpm self-host:doctor --maintenance`. The scheduler and public ingress stay stopped through the maintenance checks; the runbook's final `compose up -d --wait` starts Caddy and the scheduler together only after those checks pass. While maintenance is active, test sign-in, project and issue create/edit, and attachment upload/download before reopening.
 
 ## Restore and rollback
 

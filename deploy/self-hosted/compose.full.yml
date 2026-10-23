@@ -10,7 +10,7 @@ services:
 
   # The upstream distribution remains the first Compose file. This overlay adds
   # minddy services and removes all upstream host port publications.
-  kong:
+  api-gw:
     ports: !reset []
 
   supavisor:
@@ -67,11 +67,11 @@ services:
     env_file:
       - ${MINDDY_ENV_FILE:?Set MINDDY_ENV_FILE to the protected deployment environment file.}
     environment:
-      SUPABASE_INTERNAL_URL: http://kong:8000
+      SUPABASE_INTERNAL_URL: http://api-gw:8000
     expose:
       - "3000"
     depends_on:
-      kong:
+      api-gw:
         condition: service_healthy
     networks:
       - default
@@ -92,7 +92,7 @@ services:
     depends_on:
       minddy:
         condition: service_healthy
-      kong:
+      api-gw:
         condition: service_healthy
     ports:
       - ${MINDDY_HTTP_BIND_ADDRESS:-0.0.0.0}:80:80

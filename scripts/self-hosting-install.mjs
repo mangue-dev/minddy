@@ -486,6 +486,16 @@ export function fullBootstrapDatabaseUrl(values) {
   return `postgresql://postgres:${encodeURIComponent(password)}@127.0.0.1:${port}/postgres`;
 }
 
+// Node reads `--env-file` as its own option anywhere on its command line and
+// exits when the file is missing; `--` hands every later argument to the script.
+export function bootstrapArguments(options, values) {
+  const bootstrap = resolve(SCRIPT_DIR, "bootstrap-supabase.mjs");
+  // Forge secrets are generated unconditionally (relay-first default), so
+  // the bootstrap only needs to know about the scheduler.
+  return ["--", bootstrap, "--db-url", options.dbUrl, "--env-file", options.envFile, "--existing-env", "--enable", "scheduler",
+    ...(options.mode === "full" ? ["--supabase-url", fullMaintenanceApiUrl(values)] : [])];
+}
+
 export function fullMaintenanceApiUrl(values) {
   const port = values.MINDDY_SUPABASE_MAINTENANCE_PORT || "8001";
   if (!/^\d{2,5}$/.test(port) || Number(port) > 65535) fail("MINDDY_SUPABASE_MAINTENANCE_PORT must be a TCP port.");
@@ -560,10 +570,7 @@ export async function main(argv = process.argv.slice(2)) {
   command("docker", [...compose, "up", "-d", ...(options.pull === false ? ["--pull", "never"] : []), "--remove-orphans", "--wait", "--wait-timeout", "120"], { dryRun: options.dryRun });
   recordCheckpoint(options.envFile, options.mode === "full" ? "database-started" : "application-stack-started", options);
   if (options.bootstrap) {
-    const bootstrap = resolve(SCRIPT_DIR, "bootstrap-supabase.mjs");
-    // Forge secrets are generated unconditionally (relay-first default), so
-    // the bootstrap only needs to know about the scheduler.
-    command(process.execPath, [bootstrap, "--db-url", options.dbUrl, "--env-file", options.envFile, "--existing-env", "--enable", "scheduler", ...(options.mode === "full" ? ["--supabase-url", fullMaintenanceApiUrl(values)] : [])], {
+    command(process.execPath, bootstrapArguments(options, values), {
       dryRun: options.dryRun,
       env: {
         MINDDY_PUBLIC_APP_URL: values.MINDDY_PUBLIC_APP_URL,

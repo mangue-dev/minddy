@@ -39,9 +39,15 @@ daemons or must be operated sequentially.
 
 The environment contains the public URLs, image pin, encryption secrets, and
 absolute deployment paths. Do not `source` it as shell code or print it in a
-report. The full profile routes server HTTP requests to `http://kong:8000`
-through `SUPABASE_INTERNAL_URL`; browsers, session-cookie names, generated
+report. The full profile routes server HTTP requests to the upstream API
+gateway service, `http://api-gw:8000`, through `SUPABASE_INTERNAL_URL`; browsers, session-cookie names, generated
 links, and attachment URLs retain the public Supabase origin.
+
+Start the minddy scripts that accept `--env-file` as `node -- scripts/<name>.mjs`.
+Node reads `--env-file` as its own option anywhere on its command line: it
+loads the file into its environment, and it exits with code 9 when the file does
+not exist yet. The `--` passes every later argument to the script. The
+`pnpm self-host:*` commands already include it.
 
 ## Restart and recover an interrupted installation
 
@@ -145,8 +151,10 @@ The order is **stop writes → sealed backup → target migrations → target im
 verify → reopen**. Download the next release into a separate checkout, verify
 its tag, asset checksums and signed OCI digest as in
 [clean-room verification](self-hosting-clean-room.md#1-prepare-the-disposable-host),
-and run its frozen dependency install. Compare compatibility rows first: do
-not combine this procedure with an upstream Supabase image change.
+and run its frozen dependency install. Compare compatibility rows first. When
+the target row pins another official Supabase release, also follow
+[the upstream release change](#move-to-a-new-pinned-supabase-release) inside
+the same outage; never change individual upstream images.
 
 Make a protected copy of the current environment for the target. In that copy,
 change only `MINDDY_RELEASE`, `MINDDY_IMAGE`, `MINDDY_DEPLOY_DIR`, and
@@ -165,7 +173,7 @@ export TARGET_ENV_FILE=/etc/minddy/target.env
 install -m 0600 "$MINDDY_ENV_FILE" "$TARGET_ENV_FILE"
 # Edit the four deployment identity fields in TARGET_ENV_FILE as described above.
 # Review the release notes and the migration diff before proceeding.
-compose up -d --wait db database-access kong auth rest storage imgproxy
+compose up -d --wait db database-access api-gw auth rest storage imgproxy
 cd "$TARGET_RELEASE_DIR"
 pnpm install --frozen-lockfile
 # Derive the loopback URL without putting a password in shell history or logs.
@@ -174,12 +182,12 @@ SUPABASE_DB_URL="$(node --input-type=module -e '
   import {parseEnvironment,fullBootstrapDatabaseUrl} from "./scripts/self-hosting-install.mjs";
   console.log(fullBootstrapDatabaseUrl(parseEnvironment(readFileSync(process.env.TARGET_ENV_FILE,"utf8"))));
 ')"
-node scripts/bootstrap-supabase.mjs --db-url "$SUPABASE_DB_URL" \
+node -- scripts/bootstrap-supabase.mjs --db-url "$SUPABASE_DB_URL" \
   --env-file "$TARGET_ENV_FILE" --existing-env --supabase-url http://127.0.0.1:8001 --enable scheduler
 unset SUPABASE_DB_URL
 export CURRENT_RELEASE_DIR="$TARGET_RELEASE_DIR"
 export MINDDY_ENV_FILE="$TARGET_ENV_FILE"
-node scripts/prepare-self-hosted-functions.mjs --supabase-dir "$SUPABASE_DIR" \
+node -- scripts/prepare-self-hosted-functions.mjs --supabase-dir "$SUPABASE_DIR" \
   --env-file "$MINDDY_ENV_FILE"
 compose pull minddy
 compose up -d --wait --remove-orphans minddy
@@ -203,7 +211,59 @@ checks. Record the exact image digest and migration history. Managed mode uses
 the same target-environment and image sequence, with provider-controlled database
 and Storage backup/migration access instead of starting local database services.
 
+## Move to a new pinned Supabase release
+
+A target compatibility row can pin a newer `self-hosted/vX.Y.Z` release of
+official Supabase, as v0.20.1 does with `self-hosted/v0.8.3` to clear the
+Storage and Realtime advisories of October 2026. The minddy update and the
+upstream change then share one outage and one sealed backup. The PostgreSQL
+major version must stay the same; a major upgrade requires a separate logical
+migration.
+
+Never check out the new commit in the existing upstream directory: it holds the
+live database and Storage bytes. Fetch the target checkout into a new directory
+with the target release tooling, then move the data directories into it after
+the cold backup has stopped every service. From `self-hosted/v0.8.3`, Envoy
+replaces Kong and its service is named `api-gw`; remove the stopped
+`supabase-kong` container, which the new Compose files no longer define. In
+the full profile, run this after the sealed backup and before the update
+sequence above, which then starts `api-gw` with the target overlay.
+
+```bash
+export TARGET_RELEASE_DIR=/srv/minddy/releases/vX.Y.NEXT
+export TARGET_SUPABASE_DIR=/srv/minddy/supabase-vX.Y.NEXT
+cd "$TARGET_RELEASE_DIR"
+pnpm install --frozen-lockfile
+node scripts/fetch-official-supabase.mjs --destination "$TARGET_SUPABASE_DIR"
+compose stop
+SOURCE_VOLUMES="$SUPABASE_DIR/docker/volumes"
+TARGET_VOLUMES="$TARGET_SUPABASE_DIR/docker/volumes"
+test ! -e "$TARGET_VOLUMES/db/data"
+sudo mv "$SOURCE_VOLUMES/db/data" "$TARGET_VOLUMES/db/data"
+if [ -d "$SOURCE_VOLUMES/storage" ]; then
+  sudo find "$SOURCE_VOLUMES/storage" -mindepth 1 -maxdepth 1 ! -name .gitkeep \
+    -exec mv -t "$TARGET_VOLUMES/storage" {} +
+fi
+if [ -d "$SOURCE_VOLUMES/snippets" ]; then
+  sudo mv "$SOURCE_VOLUMES/snippets" "$TARGET_VOLUMES/snippets"
+fi
+docker rm supabase-kong 2>/dev/null || true
+export SUPABASE_DIR="$TARGET_SUPABASE_DIR"
+export CURRENT_RELEASE_DIR="$TARGET_RELEASE_DIR"
+```
+
+The named `db-config` and Storage volumes belong to the `minddy-full` Compose
+project and stay attached. Keep the previous upstream directory until the
+reopened instance passes its checks; rolling back means restoring the sealed
+backup with the previous release and its saved upstream commit. The existing
+environment needs no new upstream variable, and the overlay removes the
+gateway's host port, so `API_GW_HTTP_PORT` has no effect.
+
 ## Restore the full profile to a blank target
+
+Restore with the release that made the backup and its saved upstream commit.
+Releases before v0.20.1 pin `self-hosted/v0.7.2`, whose gateway service is
+named `kong` instead of `api-gw`.
 
 Use a new host/VM with the same architecture or, for a disposable rehearsal,
 stop and remove source containers **without removing their data** before using
@@ -317,9 +377,9 @@ test "$(docker inspect "$(compose ps --all -q db)" --format '{{.Image}}')" = \
   "$BACKUP_HELPER_IMAGE"
 cd "$CURRENT_RELEASE_DIR"
 pnpm install --frozen-lockfile
-node scripts/prepare-self-hosted-functions.mjs --supabase-dir "$SUPABASE_DIR" \
+node -- scripts/prepare-self-hosted-functions.mjs --supabase-dir "$SUPABASE_DIR" \
   --env-file "$MINDDY_ENV_FILE"
-compose up -d --wait db database-access kong auth rest storage imgproxy
+compose up -d --wait db database-access api-gw auth rest storage imgproxy
 compose up -d --wait minddy
 pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
   --supabase-compose "$SUPABASE_DIR/docker/docker-compose.yml" --skip-network --maintenance
