@@ -237,7 +237,12 @@ export function useCompletedPullRequestsQuery(enabled: boolean) {
     enabled,
     retry: pullRequestReadRetry,
     refetchOnMount: "always",
-    refetchInterval: PULL_REQUEST_SETTLED_POLL_MS,
+    // A refetch rereads EVERY loaded page. Past the first one the reader is
+    // browsing history, which a sweep rarely changes: the realtime bridge
+    // still invalidates the list on each write, the minute backstop stops
+    // (MIN-786) instead of costing one request per page per minute.
+    refetchInterval: (query) =>
+      (query.state.data?.pages.length ?? 0) > 1 ? false : PULL_REQUEST_SETTLED_POLL_MS,
   });
   const pullRequests = useMemo(() => query.data?.pages.flatMap((page) => page.pullRequests) ?? [], [query.data]);
   return { ...query, pullRequests };
