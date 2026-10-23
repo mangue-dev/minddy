@@ -4,8 +4,6 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Target01Icon } from "@hugeicons/core-free-icons";
 import { issueIdentifier } from "@/lib/issue-constants";
 import {
   RELATION_PRIORITY,
@@ -17,6 +15,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { RelationIcon, StatusIndicator } from "@/components/issue-indicators";
+import { ObjectiveBadge } from "@/components/objective-label";
 
 export type ChipRelation = DisplayRelation;
 const stop = (e: React.SyntheticEvent) => e.stopPropagation();
@@ -113,12 +112,6 @@ export function RelationChips({
                       }}
                       className="flex w-full min-w-0 items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-100"
                     >
-                      {isObjective && (
-                        <HugeiconsIcon
-                          icon={Target01Icon}
-                          className="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                        />
-                      )}
                       {r.otherStatus && (
                         <StatusIndicator
                           status={r.otherStatus}
@@ -131,20 +124,26 @@ export function RelationChips({
                         </span>
                       )}
                       <span className="min-w-0 flex-1">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span
-                              className={cn(
-                                "block truncate",
-                                r.otherStatus === "done" &&
-                                  "text-muted-foreground line-through",
-                              )}
-                            >
-                              {name}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>{name}</TooltipContent>
-                        </Tooltip>
+                        {r.otherObjective ? (
+                          <span className="flex min-w-0">
+                            <ObjectiveBadge objective={r.otherObjective} tooltip={name} />
+                          </span>
+                        ) : (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span
+                                className={cn(
+                                  "block truncate",
+                                  r.otherStatus === "done" &&
+                                    "text-muted-foreground line-through",
+                                )}
+                              >
+                                {name}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>{name}</TooltipContent>
+                          </Tooltip>
+                        )}
                         {r.inheritedObjectiveName && (
                           <span className="block whitespace-normal text-xs leading-relaxed text-muted-foreground">
                             {t("viaObjective", {

@@ -111,6 +111,7 @@ function BacklinkPill({
         {item.kind === "objective" ? (
           <ObjectiveIconBadge
             color={item.color}
+            status={item.status}
             className={cn("size-5 shrink-0", PILL_INNER_RADIUS.md)}
             iconClassName="h-3 w-3"
           />

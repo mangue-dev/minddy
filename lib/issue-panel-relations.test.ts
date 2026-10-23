@@ -82,7 +82,8 @@ describe("issue panel relation plumbing", () => {
         objectives: [{ id: "objective", name: "Release", status }],
       });
       expect(rows).toEqual([{
-        id: "relation", relation: "blocked_by", otherId: "objective", otherType: "objective", otherName: "Release", resolved,
+        id: "relation", relation: "blocked_by", otherId: "objective", otherType: "objective", otherName: "Release",
+        otherObjective: { id: "objective", name: "Release", status }, resolved,
       }]);
     }
     const root = source("components/issue-side-panel.tsx");

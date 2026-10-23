@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { SearchMenu } from "@/components/search-menu";
 import { RelationIcon, StatusIndicator } from "@/components/issue-indicators";
 import { RelationObjectiveLabel } from "@/components/relation-objective-label";
+import { useOrderedObjectives } from "@/lib/use-ordered-objectives";
 import { SemanticIssueGroup } from "@/components/semantic-issue-group";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { issueIdentifier } from "@/lib/issue-constants";
@@ -66,6 +67,8 @@ export function CreationRelationsCompact({
   const { objectives, loading: objectivesLoading } = useObjectivesQuery(
     active && open ? projectId : null,
   );
+  // Picker order (MIN-785): open objectives first, the most recently fed ahead.
+  const orderedObjectives = useOrderedObjectives(objectives);
 
   const resetPicker = () => {
     setOpen(false);
@@ -96,7 +99,7 @@ export function CreationRelationsCompact({
     ),
     (i) => i.status,
   );
-  const objectiveCandidates = objectives.filter(
+  const objectiveCandidates = orderedObjectives.filter(
     (o) => o.project_id === projectId && o.status !== "done" &&
       o.status !== "canceled" && !linked(o.id, "objective"),
   );

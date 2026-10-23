@@ -15,7 +15,9 @@
 // neutral: to dye it would be to designate an objective which does not exist.
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Target01Icon } from "@hugeicons/core-free-icons";
+import { ObjectiveStatusIndicator } from "@/components/issue-indicators";
 import { cn } from "@/lib/utils";
+import type { ObjectiveStatus } from "@/lib/objective-validation";
 
 /** The color of an objective, including fallback — the same rule as the chips on the
  board (components/issue-property-fields, Dot). */
@@ -44,10 +46,14 @@ export function ObjectiveIcon({
  */
 export function ObjectiveIconBadge({
   color,
+  status,
   className,
   iconClassName,
 }: {
   color?: string | null;
+  /** When the surface knows it, the objective's real status glyph replaces
+      the target (MIN-785). */
+  status?: ObjectiveStatus | null;
   className?: string;
   iconClassName?: string;
 }) {
@@ -60,7 +66,11 @@ export function ObjectiveIconBadge({
         color: tone,
       }}
     >
-      <HugeiconsIcon icon={Target01Icon} className={iconClassName} />
+      {status ? (
+        <ObjectiveStatusIndicator status={status} className={iconClassName} />
+      ) : (
+        <HugeiconsIcon icon={Target01Icon} className={iconClassName} />
+      )}
     </span>
   );
 }

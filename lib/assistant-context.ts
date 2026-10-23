@@ -7,6 +7,7 @@
 // EXACTLY the fields that this pill represented. The message therefore persists
 // what Numo actually saw, not what the page was posting.
 
+import type { ObjectiveStatus } from "@/lib/objective-validation";
 import type { useTranslations } from "next-intl";
 import { orbSeedOr } from "@/lib/project-orb-colors";
 import type {
@@ -47,6 +48,8 @@ export interface AssistantContextChip {
   iconUrl?: string | null;
   /** Objectives: the color used for their target icon throughout the app. */
   color?: string | null;
+  /** Objectives: their status, whose glyph replaces the target (MIN-785). */
+  objectiveStatus?: ObjectiveStatus;
   /** Wiki pages: their emoji, when they have one. */
   icon?: string | null;
   /** Hand pinned (@ button) — removeable, where ambient turns off. */
@@ -162,6 +165,7 @@ export function contextChips(
       label: ctx.objectiveName ?? t("contextObjective"),
       tooltip: t("contextObjective"),
       color: ctx.objectiveColor ?? null,
+      objectiveStatus: ctx.objectiveStatus,
     });
   }
 
@@ -230,7 +234,9 @@ export function contextChips(
       ...(item.kind === "project"
         ? { iconUrl: project?.icon_url ?? null }
         : {}),
-      ...(item.kind === "objective" ? { color: item.color ?? null } : {}),
+      ...(item.kind === "objective"
+        ? { color: item.color ?? null, objectiveStatus: item.objectiveStatus }
+        : {}),
       ...(item.kind === "page" ? { icon: item.icon ?? null } : {}),
       pinned: true,
     });

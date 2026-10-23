@@ -14,6 +14,7 @@ import {
 } from "@/lib/mention-token";
 import { PROJECT_KEY_MAX, PROJECT_KEY_MIN } from "@/lib/project-key";
 import type { IssueStatus } from "@/lib/issue-constants";
+import type { ObjectiveStatus } from "@/lib/objective-validation";
 import type { Member } from "@/lib/types";
 
 /** What is written after the “@” to quote a member. */
@@ -54,6 +55,8 @@ export interface MentionObjective {
   /** The name — it’s what is written after the at sign. */
   name: string;
   color: string | null;
+  /** Its status, when the source carries it: the pill shows it (MIN-785). */
+  status?: ObjectiveStatus;
 }
 
 /** A PAGE of the wiki such that a mention needs to know it (MIN-273).

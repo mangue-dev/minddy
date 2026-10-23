@@ -1,9 +1,10 @@
 import { appTabRoute, normalizeAppTabLocation } from "./app-tab-location";
+import type { ObjectiveStatus } from "./objective-validation";
 
 export const APP_TAB_METADATA_BATCH_SIZE = 100;
 export interface AppTabMetadata {
   pages: { id: string; project_id: string; title: string; icon: string | null }[];
-  objectives: { id: string; project_id: string; name: string; color: string | null }[];
+  objectives: { id: string; project_id: string; name: string; color: string | null; status: ObjectiveStatus }[];
   pullRequests: { id: string; number: number; title: string | null }[];
   routines: { id: string; title: string }[];
   /** Family boards name their tab after the parent issue. */

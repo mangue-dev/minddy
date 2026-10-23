@@ -13,6 +13,10 @@
 import { createContext, useContext, type ReactNode } from "react";
 import type { MentionTargetType } from "@/lib/mention-target";
 import type { IssueStatus } from "@/lib/issue-constants";
+import {
+  OBJECTIVE_STATUS_MAP,
+  type ObjectiveStatus,
+} from "@/lib/objective-constants";
 
 export interface MentionLinks {
   /**
@@ -26,6 +30,8 @@ export interface MentionLinks {
   /** The ticket's title when this source holds it: an issue pill names the
       ticket by its identifier, and shows its title on hover. */
   issueTitle?: (id: string) => string | null;
+  /** Current objective state when this source holds the objective (MIN-785). */
+  objectiveStatus?: (id: string) => ObjectiveStatus | null;
   /**
  * Handle an ordinary click. Issues open in the app-wide side panel without
  * leaving the current page; other linked entities use client-side routing.
@@ -51,6 +57,22 @@ export function MentionLinksProvider({
   children: ReactNode;
 }) {
   return <Context.Provider value={value}>{children}</Context.Provider>;
+}
+
+/**
+ * The status glyph a pill shows, as the issue status whose indicator draws it:
+ * an issue's own, or the one an objective state borrows. `null` when the
+ * sources do not hold the target, or for a type without status.
+ */
+export function mentionStatus(
+  links: MentionLinks | null,
+  type: string,
+  id: string,
+): IssueStatus | null {
+  if (type === "issue") return links?.issueStatus(id) ?? null;
+  if (type !== "objective") return null;
+  const status = links?.objectiveStatus?.(id);
+  return status ? OBJECTIVE_STATUS_MAP[status].issueStatus : null;
 }
 
 /** `null` = surface without destinations: the pills go there, they don't click there. */

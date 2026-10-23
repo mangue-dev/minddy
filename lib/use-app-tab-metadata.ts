@@ -55,7 +55,7 @@ export function useAppTabMetadata(hrefs: string[]) {
   })) });
   const objectiveQueries = useQueries({ queries: objectiveProjects.map((projectId) => ({
     queryKey: ["objectives", projectId], enabled: false,
-    select: (objectives: AppTabMetadata["objectives"]) => objectives.filter((objective) => routes.some((route) => route.objectiveId === objective.id)).map(({ id, project_id, name, color }) => ({ id, project_id, name, color })),
+    select: (objectives: AppTabMetadata["objectives"]) => objectives.filter((objective) => routes.some((route) => route.objectiveId === objective.id)).map(({ id, project_id, name, color, status }) => ({ id, project_id, name, color, status })),
   })) });
   const prLabels = useMemo(() => createPullRequestTabLabels(client, prIds), [client, prIds]);
   const prSnapshot = useSyncExternalStore(prLabels.subscribe, prLabels.getSnapshot, prLabels.getServerSnapshot);

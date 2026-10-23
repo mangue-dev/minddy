@@ -237,6 +237,8 @@ export interface DisplayRelation extends ResolvedRelation {
   /** The other issue's status, shown next to it like the issue panel does. */
   otherStatus?: IssueStatus;
   otherName?: string;
+  /** The other objective, for its pill (status, color). */
+  otherObjective?: Objective;
   inheritedObjectiveId?: string;
   inheritedObjectiveName?: string;
 }
@@ -258,7 +260,7 @@ export function resolveDisplayRelationsByIssue(
     if (!other) return null;
     return "number" in other
       ? { ...r, otherNumber: other.number, otherName: other.title, otherStatus: other.status }
-      : { ...r, otherName: other.name };
+      : { ...r, otherName: other.name, otherObjective: other };
   };
   const members = new Map<string, Issue[]>();
   for (const issue of issueById.values()) {

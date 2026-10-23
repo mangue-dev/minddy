@@ -2,6 +2,7 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 import type { MentionLinkType } from "@/lib/mention-link";
+import { isObjectiveStatus, type ObjectiveStatus } from "@/lib/objective-validation";
 
 /**
  * What the signed-in reader may see of a typed mention (MIN-734), resolved by
@@ -14,7 +15,8 @@ import type { MentionLinkType } from "@/lib/mention-link";
  * only, for a minute, so a rename shows up without a reload.
  */
 
-type Entry = { label: string | null; at: number };
+/** `status`: an objective's, for the glyph of its pill (MIN-785). */
+type Entry = { label: string | null; status?: ObjectiveStatus; at: number };
 
 const TTL_MS = 60_000;
 const BATCH = 200;
@@ -54,10 +56,14 @@ async function flush() {
       const now = Date.now();
       if (response.ok) {
         const { mentions } = (await response.json()) as {
-          mentions: Array<{ type: string; id: string; label: string | null }>;
+          mentions: Array<{ type: string; id: string; label: string | null; status?: unknown }>;
         };
         for (const mention of mentions) {
-          cache.set(`${mention.type}:${mention.id}`, { label: mention.label, at: now });
+          cache.set(`${mention.type}:${mention.id}`, {
+            label: mention.label,
+            ...(isObjectiveStatus(mention.status) ? { status: mention.status } : {}),
+            at: now,
+          });
         }
       } else {
         // Not resolved is not resolvable: stay neutral, retry after the TTL.
@@ -103,12 +109,31 @@ export function useResolvedMentionLabel(
 }
 
 /**
+ * The objective status the server returned with a resolved mention, read
+ * from the same cache as its label; `undefined` until it is known. It never
+ * requests: the label hook beside it does.
+ */
+export function useResolvedMentionStatus(
+  type: MentionLinkType | null,
+  id: string | null
+): ObjectiveStatus | undefined {
+  const current = useSyncExternalStore(subscribe, () => version, () => -1);
+  if (!type || !id || current === -1) return undefined;
+  return cache.get(keyOf(type, id))?.status;
+}
+
+/**
  * Record what the reader already knows: a mention picked from the menu is a
  * target they can see, under the label the menu showed. Its pill appears at
  * once instead of waiting for the server.
  */
-export function primeMentionLabel(type: MentionLinkType, id: string, label: string): void {
-  cache.set(keyOf(type, id), { label, at: Date.now() });
+export function primeMentionLabel(
+  type: MentionLinkType,
+  id: string,
+  label: string,
+  status?: ObjectiveStatus
+): void {
+  cache.set(keyOf(type, id), { label, ...(status ? { status } : {}), at: Date.now() });
   notify();
 }
 

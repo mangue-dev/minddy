@@ -10,9 +10,10 @@ import { cn } from "@/lib/utils";
 import { OBJECTIVE_STATUS_MAP } from "@/lib/objective-constants";
 import { ObjectiveStatusIndicator } from "@/components/issue-indicators";
 import { AppContentHeader } from "@/components/app-content-header";
-import { Dot } from "@/components/issue-property-fields";
 import { ProgressRing } from "@/components/progress-ring";
 import { SearchSelect, type PickerOption } from "@/components/search-select";
+import { objectivePickerOption } from "@/components/objective-label";
+import { useOrderedObjectives } from "@/lib/use-ordered-objectives";
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
@@ -44,11 +45,7 @@ function ObjectiveSwitch({
   projectId: string;
 }) {
   const t = useTranslations("Objectives");
-  const options: PickerOption[] = objectives.map((o) => ({
-    value: o.id,
-    label: o.name,
-    icon: <Dot color={o.color} />,
-  }));
+  const options: PickerOption[] = useOrderedObjectives(objectives).map(objectivePickerOption);
   return (
     <SearchSelect
       value={objective.id}

@@ -115,6 +115,7 @@ import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import { hasPlanTasks, planProgress, type PlanProgress } from "@/lib/plan";
 import { plainMarkdownParts } from "@/lib/plain-markdown";
 import { PlainPreview } from "@/components/typed-mention-chip";
+import { ObjectiveBadge } from "@/components/objective-label";
 import {
   Tooltip,
   TooltipContent,
@@ -505,27 +506,11 @@ function DueDatePick({
   );
 }
 
-/** Read-only objective indicator on the card — colored dot + name, shown on the
-    bottom line (mirrors how the category is displayed). */
+/** Read-only objective on the card's bottom line: the objective pill at its
+    small size (MIN-785). */
 function ObjectiveIndicator({ objective }: { objective: IssueCardObjective }) {
   const tField = useTranslations("Field");
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
-          <span
-            className="size-2.5 shrink-0 rounded-full"
-            style={{
-              backgroundColor: objective.color ?? "var(--muted-foreground)",
-            }}
-            aria-hidden
-          />
-          <span className="truncate">{objective.name}</span>
-        </span>
-      </TooltipTrigger>
-      <TooltipContent>{tField("objectiveLinked")}</TooltipContent>
-    </Tooltip>
-  );
+  return <ObjectiveBadge objective={objective} size="sm" tooltip={tField("objectiveLinked")} />;
 }
 
 /** Compact plan progress on the card header: checklist icon + "done/total".

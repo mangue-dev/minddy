@@ -2,7 +2,7 @@
  * Core type definitions for the command palette.
  */
 
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import type { AppIcon } from "@/components/icon";
 
 export type { AppIcon, IconComponent } from "@/components/icon";
@@ -73,6 +73,10 @@ export interface PaletteItem {
   typeLabel?: string;
   /** Colored status dot displayed before the title. */
   statusDot?: "success" | "muted" | "warning" | "danger";
+  /** Extra class and style on the title, e.g. an objective's name in its
+      color (MIN-785). */
+  titleClassName?: string;
+  titleStyle?: CSSProperties;
   /** Optional context id — items matching SearchContext.currentContextId get boosted. */
   contextId?: string;
   /** Optional sub-context id — items matching SearchContext.currentSubContextId get boosted. */

@@ -360,6 +360,7 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
             objectiveId: selected.id,
             objectiveName: selected.name,
             objectiveColor: selected.color,
+            objectiveStatus: selected.status,
           }
         : { projectId }
       : null

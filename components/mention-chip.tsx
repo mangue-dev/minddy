@@ -126,7 +126,8 @@ function MentionChipBody({
   color?: string | null;
   /** Page: her emoji, when she has one (MIN-273). */
   icon?: string | null;
-  /** Issue workflow state. Its indicator is the issue's figure everywhere. */
+  /** Issue workflow state. Its indicator is the issue's figure everywhere;
+      an objective passes the issue state its own status borrows. */
   status?: IssueStatus;
   /**
  * Where does the pill lead. Present = it clicks, and becomes a real anchor:
@@ -189,6 +190,10 @@ function MentionChipBody({
         ) : (
           <HugeiconsIcon icon={Book02Icon} className="size-full" />
         )
+      ) : status ? (
+        // An objective whose status the sources hold shows it (MIN-785),
+        // like an issue pill; the pill's tint already says it is THIS one.
+        <StatusIndicator status={status} className="size-full" />
       ) : (
         <HugeiconsIcon icon={Target01Icon} className="size-full" />
       )}

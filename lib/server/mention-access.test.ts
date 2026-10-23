@@ -14,6 +14,8 @@ const STRANGER = "55555555-5555-4555-8555-555555555552";
 const OWNER = "55555555-5555-4555-8555-555555555553";
 const FILE_OK = "66666666-6666-4666-8666-666666666661";
 const FILE_HIDDEN = "66666666-6666-4666-8666-666666666662";
+const OBJECTIVE_OK = "77777777-7777-4777-8777-777777777771";
+const OBJECTIVE_HIDDEN = "77777777-7777-4777-8777-777777777772";
 
 const h = vi.hoisted(() => ({ tables: {} as Record<string, Array<Record<string, unknown>>> }));
 
@@ -66,7 +68,10 @@ beforeEach(() => {
       { id: HIDDEN, key: "SEC", name: "Secret project", deleted_at: null },
     ],
     pages: [{ id: PAGE_HIDDEN, project_id: HIDDEN, title: "Secret roadmap", deleted_at: null }],
-    objectives: [],
+    objectives: [
+      { id: OBJECTIVE_OK, project_id: ALLOWED, name: "Launch", status: "in_progress", deleted_at: null },
+      { id: OBJECTIVE_HIDDEN, project_id: HIDDEN, name: "Secret goal", status: "done", deleted_at: null },
+    ],
     attachments: [
       { id: FILE_OK, project_id: ALLOWED, file_name: "cipher:Spec v2.pdf" },
       { id: FILE_HIDDEN, project_id: HIDDEN, file_name: "cipher:Secret budget.xlsx" },
@@ -79,6 +84,17 @@ beforeEach(() => {
 });
 
 describe("resolving mention targets", () => {
+  it("returns the status of an objective the reader can open, and nothing of a hidden one", async () => {
+    const statuses = new Map<string, string>();
+    const resolution = await resolveMentionTargets("reader", [
+      { type: "objective", id: OBJECTIVE_OK },
+      { type: "objective", id: OBJECTIVE_HIDDEN },
+    ], undefined, statuses as never);
+    expect(resolution.get(`objective:${OBJECTIVE_OK}`)).toBe("Launch");
+    expect(resolution.get(`objective:${OBJECTIVE_HIDDEN}`)).toBeNull();
+    expect(Object.fromEntries(statuses)).toEqual({ [`objective:${OBJECTIVE_OK}`]: "in_progress" });
+  });
+
   it("names a resource by its decoded name, only inside a project the reader can open", async () => {
     const resolution = await resolveMentionTargets("reader", [
       { type: "resource", id: FILE_OK },

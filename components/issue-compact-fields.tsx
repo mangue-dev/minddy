@@ -33,6 +33,8 @@ import {
   EffortIndicator,
 } from "@/components/issue-indicators";
 import { Dot } from "@/components/issue-property-fields";
+import { OBJECTIVE_PILL_TRIGGER, objectivePickerOption, ObjectivePill } from "@/components/objective-label";
+import { useOrderedObjectives } from "@/lib/use-ordered-objectives";
 import {
   useCategoryCreateOption,
   useObjectiveCreateOption,
@@ -360,11 +362,7 @@ export function ObjectiveCompact({
   const tField = useTranslations("Field");
   const tCommon = useTranslations("Common");
   const current = objectives.find((o) => o.id === value) ?? null;
-  const options: PickerOption[] = objectives.map((o) => ({
-    value: o.id,
-    label: o.name,
-    icon: <Dot color={o.color} />,
-  }));
+  const options: PickerOption[] = useOrderedObjectives(objectives).map(objectivePickerOption);
   const createOption = useObjectiveCreateOption({
     projectId,
     onCreated: (objective) => onChange(objective.id),
@@ -381,12 +379,13 @@ export function ObjectiveCompact({
       onOpenChange={onOpenChange}
       shortcutHint={shortcutHint}
       trigger={
-        <button type="button" aria-label={t("changeObjectiveAria")} className={BARE}>
+        <button
+          type="button"
+          aria-label={t("changeObjectiveAria")}
+          className={current ? cn(OBJECTIVE_PILL_TRIGGER, "max-w-48") : BARE}
+        >
           {current ? (
-            <>
-              <Dot color={current.color} />
-              <span className="max-w-40 truncate">{current.name}</span>
-            </>
+            <ObjectivePill objective={current} />
           ) : (
             <>
               <HugeiconsIcon icon={Target01Icon} className="size-4 shrink-0 text-muted-foreground" />

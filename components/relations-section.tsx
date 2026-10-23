@@ -31,6 +31,7 @@ import { useMemo, useState } from "react";
 import { useAppRouter } from "@/lib/use-app-router";
 import { useQuery } from "@tanstack/react-query";
 import { RelationObjectiveLabel } from "@/components/relation-objective-label";
+import { useOrderedObjectives } from "@/lib/use-ordered-objectives";
 import { useTranslations } from "next-intl";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Button } from "@/components/ui/button";
@@ -44,7 +45,7 @@ import {
   FEEDBACK_TO_ISSUE_STATUS,
   type IssueLinkedFeedback,
 } from "@/lib/feedback/types";
-import { RelationIcon, StatusIndicator } from "@/components/issue-indicators";
+import { ObjectiveStatusIndicator, RelationIcon, StatusIndicator } from "@/components/issue-indicators";
 import { PropertyRow, TRIGGER } from "@/components/issue-property-fields";
 import { RELATION_SHORTCUT_HINT } from "@/components/issue-field-shortcuts";
 import { SearchMenu } from "@/components/search-menu";
@@ -148,17 +149,19 @@ export function RelationsSection({
       (i) => i.status,
     );
   }, [allIssues, relations, issue.id, step]);
+  // Picker order (MIN-785): the most recently fed objectives first.
+  const orderedObjectives = useOrderedObjectives(objectives);
   const objectiveCandidates = useMemo<Objective[]>(() => {
     const linked = new Set(
       relations
         .filter((r) => !r.inheritedObjectiveId && r.relation === step)
         .map((r) => r.otherId),
     );
-    return objectives.filter(
+    return orderedObjectives.filter(
       (o) =>
         !linked.has(o.id) && o.status !== "done" && o.status !== "canceled",
     );
-  }, [objectives, relations, step]);
+  }, [orderedObjectives, relations, step]);
 
   const grouped = useMemo(
     () =>
@@ -408,11 +411,16 @@ export function RelationsSection({
                                 name: r.inheritedObjectiveName ?? "",
                               })}
                             >
-                              <HugeiconsIcon
-                                icon={Target01Icon}
-                                className="size-3.5"
-                                aria-hidden
-                              />
+                              {(() => {
+                                // The objective passing the blocker on, by its
+                                // real status (MIN-785).
+                                const via = objectives.find((o) => o.id === r.inheritedObjectiveId);
+                                return via ? (
+                                  <ObjectiveStatusIndicator status={via.status} className="size-3.5" />
+                                ) : (
+                                  <HugeiconsIcon icon={Target01Icon} className="size-3.5" aria-hidden />
+                                );
+                              })()}
                             </button>
                           </TooltipTrigger>
                           <TooltipContent>

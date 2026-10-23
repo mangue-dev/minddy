@@ -38,7 +38,7 @@ import {
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { MentionChip, NUMO_MENTION_ID } from "@/components/mention-chip";
-import { useMentionLinks } from "@/components/mention-links";
+import { mentionStatus, useMentionLinks } from "@/components/mention-links";
 import {
   MentionOptionRow,
   MentionRowWithDivider,
@@ -158,9 +158,8 @@ function MentionNodeView({ node }: NodeViewProps) {
         avatarUrl={type === "forge" ? ((node.attrs.icon as string | null) ?? undefined) : undefined}
         color={node.attrs.color}
         status={
-          type === "issue"
-            ? links?.issueStatus(id) ?? node.attrs.status ?? undefined
-            : undefined
+          mentionStatus(links, type, id) ??
+          (type === "issue" ? node.attrs.status ?? undefined : undefined)
         }
         tooltip={type === "issue" ? links?.issueTitle?.(id) ?? null : null}
         // The `icon` attribute carries two things depending on the type, and only one on
@@ -448,7 +447,9 @@ export const MentionSuggest = Extension.create<MentionSuggestOptions>({
         command: ({ editor, range, props }) => {
           // The reader just picked it, so they can see it: its pill shows at
           // once, without waiting for the server (MIN-734).
-          if (isMentionLinkType(props.type)) primeMentionLabel(props.type, props.id, props.label);
+          if (isMentionLinkType(props.type)) {
+            primeMentionLabel(props.type, props.id, props.label, props.objectiveStatus);
+          }
           editor
             .chain()
             .focus()

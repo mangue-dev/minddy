@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { displayName } from "@/lib/display-name";
 import { issueIdentifier } from "@/lib/issue-constants";
+import { isObjectiveStatus, type ObjectiveStatus } from "@/lib/objective-validation";
 import {
   mentionLinks,
   relabelMentions,
@@ -65,11 +66,14 @@ function rows(result: { data: unknown; error: unknown }, what: string): Row[] {
 }
 
 /** Resolve mention targets for `userId`. Unknown, deleted and inaccessible
- targets all resolve to `null`, indistinguishably. */
+ targets all resolve to `null`, indistinguishably. `objectiveStatuses`, when
+ given, also receives the status of each objective the reader may open, for
+ the glyph of its pill (MIN-785). */
 export async function resolveMentionTargets(
   userId: string,
   refs: readonly MentionRef[],
-  service: SupabaseClient = getServiceClient()
+  service: SupabaseClient = getServiceClient(),
+  objectiveStatuses?: Map<string, ObjectiveStatus>
 ): Promise<MentionResolution> {
   const resolution: MentionResolution = new Map();
   const unique = new Map<string, MentionRef>();
@@ -90,7 +94,7 @@ export async function resolveMentionTargets(
         .then((result) => rows(result, "issue"))
       : none,
     idsOf("objective").length
-      ? objectiveStore(service, userId).select("id, project_id, name, deleted_at").in("id", idsOf("objective"))
+      ? objectiveStore(service, userId).select("id, project_id, name, status, deleted_at").in("id", idsOf("objective"))
         .then((result) => rows(result, "objective"))
       : none,
     idsOf("page").length
@@ -146,7 +150,9 @@ export async function resolveMentionTargets(
   }
   for (const row of objectives) {
     // The objective store returns names already decoded.
-    if (readable(row) && typeof row.name === "string") resolution.set(`objective:${row.id}`, row.name);
+    if (!readable(row) || typeof row.name !== "string") continue;
+    resolution.set(`objective:${row.id}`, row.name);
+    if (isObjectiveStatus(row.status)) objectiveStatuses?.set(`objective:${row.id}`, row.status);
   }
   for (const stored of pages) {
     if (!readable(stored)) continue;

@@ -262,12 +262,14 @@ function AddContextButton({
                       id: objective.id,
                       label: objective.name,
                       color: objective.color,
+                      objectiveStatus: objective.status,
                     })
                   }
                   className="gap-2"
                 >
                   <ObjectiveIconBadge
                     color={objective.color}
+                    status={objective.status}
                     className="size-4 rounded-full"
                     iconClassName="size-2.5"
                   />

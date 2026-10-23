@@ -1,5 +1,6 @@
 "use client";
 
+import { OBJECTIVE_STATUS_MAP } from "@/lib/objective-constants";
 import { pastedMentionPieces } from "@/lib/mention-paste";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 
@@ -884,6 +885,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           ...(option.color ? { color: option.color } : {}),
           ...(option.icon ? { icon: option.icon } : {}),
           ...(option.status ? { status: option.status } : {}),
+          // An objective keeps the issue state its status borrows (MIN-785).
+          ...(option.objectiveStatus
+            ? { status: OBJECTIVE_STATUS_MAP[option.objectiveStatus].issueStatus }
+            : {}),
         });
       }
       return out;
@@ -1425,7 +1430,12 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               iconUrl={option.iconUrl}
               icon={option.icon}
               color={option.color}
-              status={option.status}
+              status={
+                option.status ??
+                (option.objectiveStatus
+                  ? OBJECTIVE_STATUS_MAP[option.objectiveStatus].issueStatus
+                  : undefined)
+              }
             />,
             el,
             // Two mentions of the SAME person in a message: the key takes

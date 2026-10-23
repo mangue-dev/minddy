@@ -181,6 +181,7 @@ export function ContextPill({
             // the common gray — it is extinction that we read then, not the objective.
             <ObjectiveIconBadge
               color={chip.color}
+              status={chip.objectiveStatus}
               className={cn("size-5", PILL_INNER_RADIUS[radius])}
               iconClassName="h-3 w-3"
             />

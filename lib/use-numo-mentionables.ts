@@ -139,6 +139,8 @@ export function useNumoMentionables(
         projectId: o.project_id,
         label: o.name,
         color: o.color,
+        // The status glyph replaces the target in the suggestion (MIN-785).
+        objectiveStatus: o.status,
       })),
       // The wiki pages of the current project (MIN-273): quoting “@Guide” is enough
       // that Numo reads the document before responding.
