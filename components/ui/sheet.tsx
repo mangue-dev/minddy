@@ -4,6 +4,7 @@ import * as React from "react"
 import { Dialog as SheetPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
+import { releasePoppersBelow } from "@/lib/overlay-dismiss"
 import { CloseButton } from "./close-button"
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
@@ -71,6 +72,7 @@ function SheetContent({
   const handleOpenAutoFocus = (event: Event) => {
     if (!autoFocusOnOpen) event.preventDefault()
     onOpenAutoFocus?.(event)
+    releasePoppersBelow(event)
   }
 
   return (
