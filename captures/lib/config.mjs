@@ -90,6 +90,14 @@ export const TABLE_SCOPES = {
     writable: true,
     projectColumn: "project_id",
   },
+  // Objectives of a demo project. Their name and description are protected
+  // content: seeds encode the row with `encrypted-content.mjs` before the
+  // guarded insert. A lead, when set, must be a demo account.
+  objectives: {
+    writable: true,
+    projectColumn: "project_id",
+    userRefColumns: ["lead_user_id"],
+  },
   // Ticket ↔ category connection. No own column: the row is not
   // acceptable only if the ticket AND the category concerned are themselves proven
   // demo.

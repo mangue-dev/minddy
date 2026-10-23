@@ -44,3 +44,13 @@ of "Release process" (MIN-777), so a capture can open that page in the side
 panel from a mention. The seed rewrites the seven Aurora pages with their
 existing ids and fixed dates; run `--dry-run` first, and the write requires
 explicit user approval.
+
+`020-objectifs.mjs` seeds Aurora's four objectives (Public launch, Onboarding
+revamp, Search v2, Legacy importer) for the objective picker, pill and palette
+screenshots (MIN-785), and files five open Aurora tickets and the two oldest
+feedback requests under the two open ones. Aurora has a content key, so the
+seed encodes each new objective with the application's own codec through
+`captures/lib/encrypted-content.mjs`, and decodes the existing ones to
+recognize them by name; that module refuses the production database and
+non-demo projects, and never creates a key. The default run only describes
+the change; `--apply` requires explicit user approval.

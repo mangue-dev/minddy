@@ -1456,6 +1456,13 @@
     "storage": false
   },
   {
+    "file": "captures/world/seed/020-objectifs.mjs",
+    "operation": "from",
+    "resource": null,
+    "line": 37,
+    "storage": false
+  },
+  {
     "file": "captures/world/seed/_categories.mjs",
     "operation": "from",
     "resource": "categories",
