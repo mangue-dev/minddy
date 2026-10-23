@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-23",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review)",
+    "version": "0.20.1 (MIN-788 Supabase self-hosted/v0.8.3)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -39,10 +39,10 @@
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 8,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-788 changed passages; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-23"
   },
   "related": [
     "instance-configuration",
@@ -60,7 +60,7 @@
       "src": "/documentation/fr/architecture-and-data-flows-flow.svg",
       "alt": "Schéma: Navigateur et application authentifiée. Supabase : PostgreSQL, Auth, Storage, Realtime. Planificateur indépendant des tâches de fond. Fournisseurs optionnels : destinations séparées.",
       "caption": "L’application coordonne l’accès aux données persistantes et le travail en arrière-plan, avec des destinations distinctes pour les intégrations externes.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -102,7 +102,7 @@ L’application `Next.js` sert l’interface et les API autorisées. Supabase fo
 
 ## Suivre une requête {#requests}
 
-Le navigateur utilise les origines publiques de l’application et de Supabase. Auth établit la session ; les points d’accès serveur vérifient l’identité de l’utilisateur et son accès à l’objet avant toute lecture ou modification. Realtime transmet les mises à jour aux sessions connectées. Dans le profil full, les appels serveur passent par Kong en interne, sans changer les origines du navigateur ni l’identité des liens de compte. Le planificateur appelle les tâches HTTP authentifiées indépendamment du navigateur.
+Le navigateur utilise les origines publiques de l’application et de Supabase. Auth établit la session ; les points d’accès serveur vérifient l’identité de l’utilisateur et son accès à l’objet avant toute lecture ou modification. Realtime transmet les mises à jour aux sessions connectées. Dans le profil full, les appels serveur passent par la passerelle d’API interne, sans changer les origines du navigateur ni l’identité des liens de compte. Le planificateur appelle les tâches HTTP authentifiées indépendamment du navigateur.
 
 ## Identifier les destinations externes {#providers}
 

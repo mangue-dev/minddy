@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-23",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review)",
+    "version": "0.20.1 (MIN-788 Supabase self-hosted/v0.8.3)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -39,10 +39,10 @@
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 8,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-788 changed passages; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-23"
   },
   "related": [
     "instance-configuration",
@@ -60,7 +60,7 @@
       "src": "/documentation/en/architecture-and-data-flows-flow.svg",
       "alt": "Diagram: Browser and authenticated application. Supabase: PostgreSQL, Auth, Storage, Realtime. Independent scheduler for background jobs. Optional providers have separate data destinations.",
       "caption": "The application coordinates access to persistent data and background work, with separate destinations for external integrations.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -102,7 +102,7 @@ The `Next.js` application serves the interface and authorized server APIs. Supab
 
 ## Follow a user request {#requests}
 
-The browser uses public application and Supabase origins. Auth establishes the session; server endpoints verify the actor and object access before reading or changing content. Realtime projects updates to connected sessions. In the full profile, server-to-Supabase calls use internal Kong without changing browser origins or account-link identity. The scheduler invokes authenticated HTTP jobs independently of browser connections.
+The browser uses public application and Supabase origins. Auth establishes the session; server endpoints verify the actor and object access before reading or changing content. Realtime projects updates to connected sessions. In the full profile, server-to-Supabase calls use the internal API gateway without changing browser origins or account-link identity. The scheduler invokes authenticated HTTP jobs independently of browser connections.
 
 ## Identify each outbound boundary {#providers}
 

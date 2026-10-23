@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-23",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review)",
+    "version": "0.20.1 (MIN-788 Supabase self-hosted/v0.8.3)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -39,10 +39,10 @@
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 8,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-788 changed passages; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-23"
   },
   "related": [
     "instance-configuration",
@@ -60,7 +60,7 @@
       "src": "/documentation/it/architecture-and-data-flows-flow.svg",
       "alt": "Schema: Browser e applicazione autenticata. Supabase: PostgreSQL, Auth, Storage, Realtime. Scheduler indipendente per i job in background. Provider opzionali: destinazioni separate.",
       "caption": "L’applicazione coordina i servizi interni e usa i provider esterni quando sono configurati.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -101,7 +101,7 @@
 
 ## Seguire una richiesta {#requests}
 
-Il browser usa le origini pubbliche di minddy e Supabase. Auth crea la sessione; il server verifica l’attore e l’oggetto prima di eseguire un’operazione. Realtime propaga gli aggiornamenti. Nel profilo full il server usa Kong sulla rete interna senza cambiare le origini del browser o i link degli account. Lo scheduler invia richieste HTTP autenticate senza un browser.
+Il browser usa le origini pubbliche di minddy e Supabase. Auth crea la sessione; il server verifica l’attore e l’oggetto prima di eseguire un’operazione. Realtime propaga gli aggiornamenti. Nel profilo full il server usa il gateway API sulla rete interna senza cambiare le origini del browser o i link degli account. Lo scheduler invia richieste HTTP autenticate senza un browser.
 
 ## Identificare destinazioni esterne {#providers}
 

@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 10,
+  "revision": 12,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-23",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review)",
+    "version": "0.20.1 (MIN-788 Supabase self-hosted/v0.8.3)",
     "editions": [
       "self-hosted"
     ],
@@ -50,10 +50,10 @@
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog review recapture of install-a-server-wizard on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it figure update after the catalog review; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 12,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog review recapture of install-a-server-wizard on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it figure update after the catalog review; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-788 changed passages; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-23"
   },
   "related": [
     "authentication-and-email",
@@ -78,7 +78,7 @@
       "src": "/documentation/it/self-hosted-compatibility-flow.svg",
       "alt": "Schema: Tag sorgente annotato. Asset e SHA256SUMS. Firma e digest OCI ufficiali. Profilo di compatibilità scelto.",
       "caption": "Segui le fasi in questo ordine. Tag sorgente annotato. Asset e `SHA256SUMS`. Firma e digest OCI ufficiali. Profilo di compatibilità scelto.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -110,7 +110,7 @@
       "src": "/documentation/it/install-a-server-flow.svg",
       "alt": "Schema: Release verificata e ambiente protetto. Installer: profilo full di riferimento. Supabase ufficiale, app, scheduler. Verifica account, file e recupero.",
       "caption": "Segui le fasi in questo ordine. Release verificata e ambiente protetto. Installer: profilo full di riferimento. Supabase ufficiale, app, scheduler. Verifica account, file e recupero.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -142,7 +142,7 @@
       "src": "/documentation/it/install-a-server-wizard.png",
       "alt": "Assistente pubblico di installazione con Supabase sullo stesso server selezionato.",
       "caption": "Il profilo full mantiene applicazione e Supabase sul tuo server. In questo esempio, l’accesso tramite rete privata è limitato alla rete locale.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -159,7 +159,7 @@
       "src": "/documentation/it/managed-or-source-installation-flow.svg",
       "alt": "Schema: Il tuo progetto Supabase gestito. PostgreSQL, Auth, Storage, Realtime. Profilo OCI O applicazione dal tag. Job e backup specifici del profilo.",
       "caption": "La scelta tra immagine OCI e compilazione dai sorgenti cambia la gestione dell’applicazione, mentre il provider gestisce il backend.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -208,7 +208,7 @@ Scegli un’origine raggiungibile dal client MCP e dal browser di autorizzazione
 
 ## Scegliere una versione e un profilo supportati {#self-hosted-compatibility}
 
-Usa una versione immutabile del repository pubblico `mangue-dev/minddy` e leggi i requisiti nella voce di `deploy/self-hosted/compatibility.json` il cui `minddyRelease` corrisponde a quella versione. Una versione del package senza una propria voce non è una release self-hosted supportata. Ogni voce pubblicata supporta server Linux amd64 e arm64, Node.js 24, `pnpm` 10.28.0, Docker Engine da 27.0.0 e plugin Compose da 2.29.0. full fissa Supabase ufficiale `self-hosted/v0.7.2` al commit `549db119c44c25167461812041ba198bde2b31a4`. Mantieni l’intero insieme di immagini: aggiornare un singolo servizio crea una variante gestita dall’operatore.
+Usa una versione immutabile del repository pubblico `mangue-dev/minddy` e leggi i requisiti nella voce di `deploy/self-hosted/compatibility.json` il cui `minddyRelease` corrisponde a quella versione. Una versione del package senza una propria voce non è una release self-hosted supportata. Ogni voce pubblicata supporta server Linux amd64 e arm64, Node.js 24, `pnpm` 10.28.0, Docker Engine da 27.0.0 e plugin Compose da 2.29.0. full fissa Supabase ufficiale `self-hosted/v0.8.3` al commit `bc27d2661edd09a5d0b8d76ce33da6d4071a756e`. Mantieni l’intero insieme di immagini: aggiornare un singolo servizio crea una variante gestita dall’operatore.
 
 managed usa un progetto Supabase su supabase.com che deve fornire PostgreSQL, Auth, Storage e Realtime e superare la verifica della versione. PostgreSQL da solo non basta. Lo stack locale Supabase CLI serve a sviluppo e valutazione, non alla produzione pubblica.
 

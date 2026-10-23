@@ -1,7 +1,7 @@
 import { createConnection, createServer } from "node:net";
 import { pathToFileURL } from "node:url";
 
-// PostgreSQL and Kong stay on their internal network. Docker publishes these
+// PostgreSQL and the API gateway stay on their internal network. Docker publishes these
 // listeners on host loopback only, for authenticated bootstrap and maintenance.
 export function createDatabaseProxy({ host = "db", port = 5432 } = {}) {
   const server = createServer({ allowHalfOpen: true }, (client) => {
@@ -21,5 +21,5 @@ export function createDatabaseProxy({ host = "db", port = 5432 } = {}) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   createDatabaseProxy().listen(5432, "0.0.0.0");
-  createDatabaseProxy({ host: "kong", port: 8000 }).listen(8000, "0.0.0.0");
+  createDatabaseProxy({ host: "api-gw", port: 8000 }).listen(8000, "0.0.0.0");
 }

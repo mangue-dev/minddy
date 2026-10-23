@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-23",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review)",
+    "version": "0.20.1 (MIN-788 Supabase self-hosted/v0.8.3)",
     "editions": [
       "self-hosted"
     ],
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 7,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-788 changed passages; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-23"
   },
   "related": [
     "backups-and-restoration"
@@ -55,7 +55,7 @@
       "src": "/documentation/es/update-an-instance-flow.svg",
       "alt": "Diagrama: Parar escrituras y tareas. Sellar copia completa anterior. Migraciones destino, luego aplicación. Verificar recuperación y reabrir.",
       "caption": "Sigue las etapas en este orden. Parar escrituras y tareas. Sellar copia completa anterior. Migraciones destino, luego aplicación. Verificar recuperación y reabrir.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -90,7 +90,7 @@
 
 ## Actualizar una instancia conservando la recuperación {#update-an-instance}
 
-Actualiza una versión publicada cada vez. Revisa las notas, las diferencias de migraciones y las entradas de compatibilidad. No combines una actualización de minddy con una nueva versión principal de PostgreSQL o un cambio de imágenes Supabase. Verifica el código de destino, las sumas de los archivos y el digest OCI y prepara un directorio de versión independiente con dependencias fijadas. Anuncia la interrupción y el plazo para cancelar. Confirma una copia externa utilizable y una restauración reciente. Conserva la aplicación actual lista para reiniciar y su entorno protegido.
+Actualiza una versión publicada cada vez. Revisa las notas, las diferencias de migraciones y las entradas de compatibilidad. No combines una actualización de minddy con una nueva versión principal de PostgreSQL ni con el cambio de imágenes Supabase sueltas. Cuando la entrada de destino fija una nueva versión oficial de Supabase, [traslada la copia de Supabase](#supabase-release) durante la misma interrupción. Verifica el código de destino, las sumas de los archivos y el digest OCI y prepara un directorio de versión independiente con dependencias fijadas. Anuncia la interrupción y el plazo para cancelar. Confirma una copia externa utilizable y una restauración reciente. Conserva la aplicación actual lista para reiniciar y su entorno protegido.
 
 Algunas migraciones eliminan definitivamente datos de funciones retiradas. La actualización de v0.11.0 a v0.20.0 elimina los registros de dominios personalizados, las ejecuciones y conversaciones del agente de código con su historial y sus conexiones, y las vistas guardadas de la paleta de comandos (marcadores personales; las vistas de tablero se conservan). Después de estas migraciones, solo la copia completa anterior a la actualización puede recuperarlos.
 
@@ -106,7 +106,7 @@ Al actualizar de v0.10.30 a v0.11.0, la versión de destino introduce `MINDDY_DA
 export TARGET_RELEASE_DIR=/srv/minddy/releases/vX.Y.NEXT
 export TARGET_ENV_FILE=/etc/minddy/target.env
 install -m 0600 "$MINDDY_ENV_FILE" "$TARGET_ENV_FILE"
-compose up -d --wait db database-access kong auth rest storage imgproxy
+compose up -d --wait db database-access api-gw auth rest storage imgproxy
 cd "$TARGET_RELEASE_DIR"
 pnpm install --frozen-lockfile
 node --input-type=module <<'NODE'
@@ -130,12 +130,12 @@ SUPABASE_DB_URL="$(node --input-type=module -e '
   import {parseEnvironment,fullBootstrapDatabaseUrl} from "./scripts/self-hosting-install.mjs";
   console.log(fullBootstrapDatabaseUrl(parseEnvironment(readFileSync(process.env.TARGET_ENV_FILE,"utf8"))));
 ')"
-node scripts/bootstrap-supabase.mjs --db-url "$SUPABASE_DB_URL" \
+node -- scripts/bootstrap-supabase.mjs --db-url "$SUPABASE_DB_URL" \
   --env-file "$TARGET_ENV_FILE" --existing-env --supabase-url http://127.0.0.1:8001 --enable scheduler
 unset SUPABASE_DB_URL
 export CURRENT_RELEASE_DIR="$TARGET_RELEASE_DIR"
 export MINDDY_ENV_FILE="$TARGET_ENV_FILE"
-node scripts/prepare-self-hosted-functions.mjs --supabase-dir "$SUPABASE_DIR" \
+node -- scripts/prepare-self-hosted-functions.mjs --supabase-dir "$SUPABASE_DIR" \
   --env-file "$MINDDY_ENV_FILE"
 compose pull minddy
 compose up -d --wait --remove-orphans minddy
@@ -145,6 +145,35 @@ compose up -d --wait
 pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
   --supabase-compose "$SUPABASE_DIR/docker/docker-compose.yml"
 ```
+
+## Pasar a una nueva versión fijada de Supabase {#supabase-release}
+
+La v0.20.1 fija Supabase oficial `self-hosted/v0.8.3` en lugar de `self-hosted/v0.7.2`, lo que corrige los avisos de seguridad de Storage y Realtime de octubre de 2026. Cuando la entrada de destino fija otra versión de Supabase, ejecuta los comandos siguientes en el perfil full, después de la copia sellada y antes de la secuencia de actualización anterior. Nunca extraigas el nuevo commit en el directorio de Supabase existente, que contiene los archivos de la base de datos y de Storage. Descárgalo en un directorio nuevo con las herramientas de destino y luego traslada los datos con todos los servicios detenidos. Desde `self-hosted/v0.8.3`, Envoy sustituye a Kong y el servicio de pasarela se llama `api-gw`, por lo que la secuencia elimina el contenedor detenido `supabase-kong`. El entorno protegido no necesita ninguna variable nueva.
+
+```bash
+export TARGET_RELEASE_DIR=/srv/minddy/releases/vX.Y.NEXT
+export TARGET_SUPABASE_DIR=/srv/minddy/supabase-vX.Y.NEXT
+cd "$TARGET_RELEASE_DIR"
+pnpm install --frozen-lockfile
+node scripts/fetch-official-supabase.mjs --destination "$TARGET_SUPABASE_DIR"
+compose stop
+SOURCE_VOLUMES="$SUPABASE_DIR/docker/volumes"
+TARGET_VOLUMES="$TARGET_SUPABASE_DIR/docker/volumes"
+test ! -e "$TARGET_VOLUMES/db/data"
+sudo mv "$SOURCE_VOLUMES/db/data" "$TARGET_VOLUMES/db/data"
+if [ -d "$SOURCE_VOLUMES/storage" ]; then
+  sudo find "$SOURCE_VOLUMES/storage" -mindepth 1 -maxdepth 1 ! -name .gitkeep \
+    -exec mv -t "$TARGET_VOLUMES/storage" {} +
+fi
+if [ -d "$SOURCE_VOLUMES/snippets" ]; then
+  sudo mv "$SOURCE_VOLUMES/snippets" "$TARGET_VOLUMES/snippets"
+fi
+docker rm supabase-kong 2>/dev/null || true
+export SUPABASE_DIR="$TARGET_SUPABASE_DIR"
+export CURRENT_RELEASE_DIR="$TARGET_RELEASE_DIR"
+```
+
+Después ejecuta la secuencia de actualización del perfil full. Conserva el directorio anterior de Supabase hasta que la instancia reabierta supere sus comprobaciones. Para volver atrás, restaura la copia sellada con la versión anterior y su commit de Supabase guardado.
 
 ## Distinguir operaciones managed y fuentes {#managed-source}
 

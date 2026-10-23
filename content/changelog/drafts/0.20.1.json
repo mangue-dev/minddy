@@ -1,0 +1,98 @@
+{
+  "version": "0.20.1",
+  "layout": "compact",
+  "copy": {
+    "en": {
+      "title": "Security update for self-hosted instances",
+      "summary": "The complete self-hosted profile moves to a Supabase release that fixes Storage and Realtime vulnerabilities. Minddy Cloud is not affected."
+    },
+    "fr": {
+      "title": "Mise à jour de sécurité pour les instances auto-hébergées",
+      "summary": "Le profil auto-hébergé complet passe à une version de Supabase qui corrige des failles de Storage et de Realtime. Minddy Cloud n’est pas concerné."
+    },
+    "de": {
+      "title": "Sicherheitsupdate für selbst gehostete Instanzen",
+      "summary": "Das vollständige selbst gehostete Profil wechselt zu einer Supabase-Version, die Sicherheitslücken in Storage und Realtime behebt. Minddy Cloud ist nicht betroffen."
+    },
+    "pt-BR": {
+      "title": "Atualização de segurança para instâncias auto-hospedadas",
+      "summary": "O perfil auto-hospedado completo passa para uma versão do Supabase que corrige vulnerabilidades no Storage e no Realtime. O Minddy Cloud não é afetado."
+    },
+    "it": {
+      "title": "Aggiornamento di sicurezza per le istanze self-hosted",
+      "summary": "Il profilo self-hosted completo passa a una release di Supabase che corregge vulnerabilità di Storage e Realtime. Minddy Cloud non è interessato."
+    },
+    "es": {
+      "title": "Actualización de seguridad para instancias autoalojadas",
+      "summary": "El perfil autoalojado completo pasa a una versión de Supabase que corrige vulnerabilidades de Storage y Realtime. Minddy Cloud no se ve afectado."
+    }
+  },
+  "features": [
+    {
+      "id": "self-hosted-supabase-security-0201",
+      "illustration": {
+        "kind": "icon",
+        "name": "shield"
+      },
+      "copy": {
+        "en": {
+          "title": "Supabase Storage and Realtime fixes",
+          "summary": "The complete profile now pins official Supabase self-hosted/v0.8.3, which fixes published Storage and Realtime vulnerabilities.",
+          "details": [
+            "If you run the complete self-hosted profile, update to 0.20.1 promptly. The previous Supabase release had vulnerabilities that could let an unauthenticated caller write files to private buckets, which hold your attachments, or keep using an expired session in Realtime. Instances that use Supabase Cloud, and Minddy Cloud itself, are not affected.",
+            "The update replaces the Supabase checkout instead of changing it in place, so your database and files move to the new directory during the maintenance window. Follow the new “Move to a new pinned Supabase release” section of the update guide, then the usual update steps. The installer also accepts a new environment file passed with --env-file again."
+          ]
+        },
+        "fr": {
+          "title": "Correctifs de Storage et de Realtime de Supabase",
+          "summary": "Le profil complet épingle désormais Supabase officiel self-hosted/v0.8.3, qui corrige des failles publiées de Storage et de Realtime.",
+          "details": [
+            "Si vous utilisez le profil auto-hébergé complet, passez rapidement à la 0.20.1. La version précédente de Supabase comportait des failles qui pouvaient permettre à un appelant non authentifié d’écrire des fichiers dans les buckets privés, qui contiennent vos pièces jointes, ou de continuer à utiliser une session expirée dans Realtime. Les instances qui utilisent Supabase Cloud, ainsi que Minddy Cloud, ne sont pas concernées.",
+            "La mise à jour remplace la copie de Supabase au lieu de la modifier sur place : votre base et vos fichiers passent dans le nouveau répertoire pendant la fenêtre de maintenance. Suivez la nouvelle section « Passer à une nouvelle version épinglée de Supabase » du guide de mise à jour, puis les étapes habituelles. L’installeur accepte aussi de nouveau un fichier d’environnement neuf passé avec --env-file."
+          ]
+        },
+        "de": {
+          "title": "Korrekturen für Supabase Storage und Realtime",
+          "summary": "Das vollständige Profil legt jetzt das offizielle Supabase self-hosted/v0.8.3 fest, das veröffentlichte Sicherheitslücken in Storage und Realtime behebt.",
+          "details": [
+            "Wenn du das vollständige selbst gehostete Profil nutzt, aktualisiere zügig auf 0.20.1. Die vorherige Supabase-Version hatte Sicherheitslücken, über die ein nicht angemeldeter Aufrufer Dateien in private Buckets mit deinen Anhängen schreiben oder in Realtime eine abgelaufene Sitzung weiter nutzen konnte. Instanzen mit Supabase Cloud sowie Minddy Cloud selbst sind nicht betroffen.",
+            "Das Update ersetzt den Supabase-Checkout, statt ihn an Ort und Stelle zu ändern: Datenbank und Dateien ziehen im Wartungsfenster in das neue Verzeichnis um. Folge dem neuen Abschnitt „Zu einer neuen festgelegten Supabase-Version wechseln“ der Update-Anleitung und danach den üblichen Schritten. Der Installer akzeptiert außerdem wieder eine neue Umgebungsdatei, die mit --env-file übergeben wird."
+          ]
+        },
+        "pt-BR": {
+          "title": "Correções no Storage e no Realtime do Supabase",
+          "summary": "O perfil completo agora fixa o Supabase oficial self-hosted/v0.8.3, que corrige vulnerabilidades publicadas do Storage e do Realtime.",
+          "details": [
+            "Se você usa o perfil auto-hospedado completo, atualize para a 0.20.1 o quanto antes. A versão anterior do Supabase tinha vulnerabilidades que podiam permitir que alguém sem autenticação gravasse arquivos nos buckets privados, onde ficam seus anexos, ou continuasse usando uma sessão expirada no Realtime. Instâncias que usam o Supabase Cloud, assim como o próprio Minddy Cloud, não são afetadas.",
+            "A atualização substitui a cópia do Supabase em vez de alterá-la no lugar: o banco de dados e os arquivos passam para o novo diretório durante a janela de manutenção. Siga a nova seção “Passar para uma nova versão fixada do Supabase” do guia de atualização e depois as etapas habituais. O instalador também volta a aceitar um arquivo de ambiente novo passado com --env-file."
+          ]
+        },
+        "it": {
+          "title": "Correzioni per Storage e Realtime di Supabase",
+          "summary": "Il profilo completo ora fissa Supabase ufficiale self-hosted/v0.8.3, che corregge vulnerabilità pubblicate di Storage e Realtime.",
+          "details": [
+            "Se usi il profilo self-hosted completo, aggiorna presto alla 0.20.1. La release precedente di Supabase aveva vulnerabilità che potevano permettere a un chiamante non autenticato di scrivere file nei bucket privati, dove si trovano i tuoi allegati, o di continuare a usare una sessione scaduta in Realtime. Le istanze che usano Supabase Cloud, e Minddy Cloud stesso, non sono interessate.",
+            "L’aggiornamento sostituisce la copia di Supabase invece di modificarla sul posto: database e file passano nella nuova directory durante la finestra di manutenzione. Segui la nuova sezione “Passare a una nuova release fissata di Supabase” della guida all’aggiornamento, poi i passaggi abituali. L’installer accetta di nuovo anche un nuovo file di ambiente passato con --env-file."
+          ]
+        },
+        "es": {
+          "title": "Correcciones en Storage y Realtime de Supabase",
+          "summary": "El perfil completo ahora fija Supabase oficial self-hosted/v0.8.3, que corrige vulnerabilidades publicadas de Storage y Realtime.",
+          "details": [
+            "Si usas el perfil autoalojado completo, actualiza pronto a la 0.20.1. La versión anterior de Supabase tenía vulnerabilidades que podían permitir que alguien sin autenticar escribiera archivos en los buckets privados, donde están tus adjuntos, o siguiera usando una sesión caducada en Realtime. Las instancias que usan Supabase Cloud, y el propio Minddy Cloud, no se ven afectadas.",
+            "La actualización sustituye la copia de Supabase en lugar de modificarla en el sitio: la base de datos y los archivos pasan al nuevo directorio durante la ventana de mantenimiento. Sigue la nueva sección «Pasar a una nueva versión fijada de Supabase» de la guía de actualización y después los pasos habituales. El instalador también vuelve a aceptar un archivo de entorno nuevo pasado con --env-file."
+          ]
+        }
+      }
+    }
+  ],
+  "evidence": {
+    "commits": [
+      "a6ec4c209c0cafbfbe97b7c4a37ef4d69a29174d"
+    ],
+    "issues": [
+      "MIN-787",
+      "MIN-788"
+    ]
+  }
+}

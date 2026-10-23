@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
 import {
+  bootstrapArguments,
   checkpointPath,
   command,
   combineFullEnvironmentTemplates,
@@ -24,6 +26,34 @@ import {
 } from "./self-hosting-install.mjs";
 import { compatibilityFinding, configFindings, disabledCapabilities, forgeAccessFinding, parseArgs as parseDoctorArgs, redact, schedulerFinding } from "./self-hosting-doctor.mjs";
 import { maintenanceMessage, parseArgs as parseMaintenanceArgs } from "./self-hosting-maintenance.mjs";
+
+// Node treats `--env-file` as its own option even after the script path and
+// exits with code 9 when that file does not exist yet.
+test("self-hosting package scripts pass --env-file to the script instead of Node", (t) => {
+  const root = new URL("..", import.meta.url).pathname;
+  const scripts = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).scripts;
+  const directory = mkdtempSync(join(tmpdir(), "minddy-env-file-"));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const missing = join(directory, "not-created-yet.env");
+  for (const name of ["bootstrap:supabase", "self-host:install", "self-host:doctor", "self-host:update", "self-host:backup", "self-host:restore", "smoke:self-hosted-compose"]) {
+    const result = spawnSync("sh", ["-c", `${scripts[name]} --help --env-file "$1"`, "sh", missing], { cwd: root, encoding: "utf8" });
+    assert.notEqual(result.status, 9, `${name}: ${result.stderr}`);
+    assert.doesNotMatch(result.stderr, /^node: /m, name);
+  }
+});
+
+test("the installer starts bootstrap with --env-file after the Node argument separator", (t) => {
+  const directory = mkdtempSync(join(tmpdir(), "minddy-bootstrap-args-"));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const envFile = join(directory, "not-created-yet.env");
+  const args = bootstrapArguments({ dbUrl: "postgresql://localhost/minddy", envFile, mode: "full" }, {});
+  assert.equal(args[0], "--");
+  const probe = join(directory, "argv.mjs");
+  writeFileSync(probe, "process.stdout.write(JSON.stringify(process.argv.slice(2)));");
+  const result = spawnSync(process.execPath, ["--", probe, ...args.slice(2)], { encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(JSON.parse(result.stdout).slice(2, 4), ["--env-file", envFile]);
+});
 
 test("installation commands tolerate output larger than the default subprocess buffer", () => {
   assert.doesNotThrow(() => command(process.execPath, ["-e", "process.stdout.write('x'.repeat(2 * 1024 * 1024))"]));

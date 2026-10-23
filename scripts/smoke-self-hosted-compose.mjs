@@ -87,7 +87,7 @@ export async function smoke(options) {
 export async function main(argv = process.argv.slice(2)) {
   const options = parseArgs(argv);
   if (options.help) {
-    console.log("Usage: node scripts/smoke-self-hosted-compose.mjs --profile managed|full --env-file PATH --public-url URL [--supabase-compose PATH] [--persistence-url URL]");
+    console.log("Usage: node -- scripts/smoke-self-hosted-compose.mjs --profile managed|full --env-file PATH --public-url URL [--supabase-compose PATH] [--persistence-url URL]");
     return;
   }
   await smoke(options);

@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-23",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review); MIN-750 Smart Fill re-evaluation schedule",
+    "version": "0.20.1 (MIN-788 Supabase self-hosted/v0.8.3)",
     "editions": [
       "self-hosted"
     ],
@@ -46,10 +46,10 @@
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root/min750 (schedule table and release delta sentence checked against vercel.json and deploy/self-hosted/scheduler.mjs after adding smart-fill-reevaluation; rest of the article unchanged since the 0.20.0 release review; no screenshot in scope); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min750 (fr table row and release delta sentence; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 12,
+    "fact": "agent:/root/min750 (schedule table and release delta sentence checked against vercel.json and deploy/self-hosted/scheduler.mjs after adding smart-fill-reevaluation; rest of the article unchanged since the 0.20.0 release review; no screenshot in scope); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope)",
+    "language": "agent:/root/min750 (fr table row and release delta sentence; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-788 changed passages; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-23"
   },
   "related": [
     "workspace-encryption",
@@ -74,7 +74,7 @@
       "src": "/documentation/fr/optional-providers-flow.svg",
       "alt": "Schéma: L’opérateur choisit une capacité optionnelle. Identifiants complets et conditions fournisseur. Destination externe explicitement choisie. Vérifier le comportement et suivre les coûts.",
       "caption": "Activer un service optionnel ajoute ses propres identifiants, destinations de données et coûts d’utilisation.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -106,7 +106,7 @@
       "src": "/documentation/fr/proxy-network-and-jobs-flow.svg",
       "alt": "Schéma: Proxy HTTPS public. Origines application et Supabase public. Base et ports internes privés. Jobs authentifiés, arrêtés en maintenance.",
       "caption": "L’accès public utilise HTTPS, tandis que les services internes restent privés et les tâches planifiées sont arrêtées pendant la maintenance.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -177,7 +177,7 @@ GitHub.com et GitLab.com sont pris en charge, contrairement à Enterprise Server
 
 ## Exposer les origines publiques et exécuter les tâches planifiées {#proxy-network-and-jobs}
 
-Une installation publique exige un proxy TLS et une redirection HTTP vers HTTPS. Origines applicative et Supabase, redirections Auth, callbacks OAuth et en-têtes transmis doivent correspondre. Gardez PostgreSQL, Studio et ports internes hors d’Internet. En full, l’application appelle `http://kong:8000` en interne ; le navigateur et les liens générés conservent l’origine publique Supabase. HTTP privé exige `localhost` ou une IPv4 privée de confiance, sans redirection de ports du routeur.
+Une installation publique exige un proxy TLS et une redirection HTTP vers HTTPS. Origines applicative et Supabase, redirections Auth, callbacks OAuth et en-têtes transmis doivent correspondre. Gardez PostgreSQL, Studio et ports internes hors d’Internet. En full, l’application appelle `http://api-gw:8000` en interne ; le navigateur et les liens générés conservent l’origine publique Supabase. HTTP privé exige `localhost` ou une IPv4 privée de confiance, sans redirection de ports du routeur.
 
 
 ![Schéma: Proxy HTTPS public. Origines application et Supabase public. Base et ports internes privés. Jobs authentifiés, arrêtés en maintenance.](/documentation/fr/proxy-network-and-jobs-flow.svg)
