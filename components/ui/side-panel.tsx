@@ -6,6 +6,7 @@ import { Drawer } from "vaul"
 
 import { cn } from "@/lib/utils"
 import { useMediaQuery } from "@/lib/use-media-query"
+import { releasePoppersBelow } from "@/lib/overlay-dismiss"
 import { CloseButton } from "./close-button"
 import { Sheet } from "./sheet"
 import { MobileSheetContent, MobileSheetScrollArea } from "./mobile-sheet"
@@ -150,6 +151,7 @@ function ModalSidePanelContent({
   const handleOpenAutoFocus = (event: Event) => {
     if (!autoFocusOnOpen) event.preventDefault()
     onOpenAutoFocus?.(event)
+    releasePoppersBelow(event)
   }
 
   if (drawer) {

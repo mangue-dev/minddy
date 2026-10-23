@@ -7,6 +7,7 @@ import { Drawer } from "vaul"
 
 import { cn } from "@/lib/utils"
 import { useMediaQuery } from "@/lib/use-media-query"
+import { releasePoppersBelow } from "@/lib/overlay-dismiss"
 import { Button } from "./button"
 import { CloseButton } from "./close-button"
 import { COARSE_INSET_HIT_AREA } from "./touch-target"
@@ -129,11 +130,16 @@ function ModalDialogContent({
   className,
   children,
   showCloseButton = true,
+  onOpenAutoFocus,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
 }) {
   const drawer = useDialogMode()
+  const handleOpenAutoFocus = (event: Event) => {
+    onOpenAutoFocus?.(event)
+    releasePoppersBelow(event)
+  }
 
   if (drawer) {
     return (
@@ -141,6 +147,7 @@ function ModalDialogContent({
         <ModalDialogOverlay />
         <Drawer.Content
           data-slot="dialog-content"
+          onOpenAutoFocus={handleOpenAutoFocus}
           // Keep the sheet open when the pointer-down is inside an open
           // dropdown/select (its content is portaled outside this subtree).
           onPointerDownOutside={(e) => {
@@ -172,6 +179,7 @@ function ModalDialogContent({
       <ModalDialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
+        onOpenAutoFocus={handleOpenAutoFocus}
         className={cn(
           "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] max-h-[calc(100dvh_-_2rem_-_env(safe-area-inset-top)_-_env(safe-area-inset-bottom))] overflow-y-auto -translate-x-1/2 -translate-y-1/2 gap-4 rounded-[2rem] bg-card p-6 text-sm ring-1 ring-foreground/10 duration-200 ease-out outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-[0.98] data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-[0.98] data-closed:duration-150 data-closed:ease-in",
           className
