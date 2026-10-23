@@ -129,7 +129,7 @@ function CommandItem({
         // surface is the same 20px with the same 8px inset. The rounded-lg
         // override this used to carry counted only <Command>'s p-1 and missed
         // <CommandGroup>'s, so it drew 16px where 12px is concentric.
-        `group/command-item relative flex min-h-8 max-[1199px]:min-h-10 ${COARSE_ROW} cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 hover:bg-muted hover:text-foreground data-selected:bg-muted data-selected:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-selected:*:[svg]:text-foreground`,
+        `group/command-item relative flex min-h-8 max-[1199px]:min-h-10 ${COARSE_ROW} cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-selected:bg-muted data-selected:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-selected:*:[svg]:text-foreground`,
         className
       )}
       {...props}

@@ -21,14 +21,13 @@ describe("page interface regressions", () => {
     );
   });
 
-  it("keeps the grab cursor until a block drag actually starts", () => {
+  it("shows a grab cursor only once a block drag actually starts", () => {
     const gutter = source("components/pages/block-gutter.tsx");
 
     expect(gutter).toContain("onElementDragStart={() => setDragging(true)}");
     expect(gutter).toContain("onElementDragEnd={() => setDragging(false)}");
-    expect(gutter).toContain(
-      'dragging ? "cursor-grabbing" : "cursor-grab"'
-    );
+    expect(gutter).toContain('dragging && "cursor-grabbing"');
+    expect(gutter).not.toContain('"cursor-grab"');
     expect(gutter).not.toContain("active:cursor-grabbing");
   });
 

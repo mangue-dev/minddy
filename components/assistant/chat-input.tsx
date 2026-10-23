@@ -1747,6 +1747,14 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               {leadingControls}
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
+              {/* Dictation stays during a response: the next message can be
+                  spoken while Numo is still writing this one. */}
+              <DictateButton
+                context="assistant_message"
+                onTranscription={appendDictated}
+                disabled={disabled}
+                className={canAttach ? "-ml-0.5" : undefined}
+              />
               {isStreaming && (isEmpty || !sendWhileStreaming) ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1765,14 +1773,6 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                 </Tooltip>
               ) : (
                 <>
-                  {!isStreaming && (
-                    <DictateButton
-                      context="assistant_message"
-                      onTranscription={appendDictated}
-                      disabled={disabled}
-                      className={canAttach ? "-ml-0.5" : undefined}
-                    />
-                  )}
                   {!isEmpty &&
                     (sendDisabled && sendDisabledTooltip ? (
                       // Sending blocked with explanation: a native <button disabled>

@@ -737,7 +737,9 @@ function RoutinePrompt({
         <Button
           variant="link"
           size="sm"
-          className="h-auto p-0 text-xs"
+          // Room around the label for its hover background, pulled back by
+          // the same amount so the text stays aligned with the prompt above.
+          className="-ml-1.5 h-auto px-1.5 py-0.5 text-xs"
           onClick={() => setExpanded((e) => !e)}
         >
           {expanded ? t("promptShowLess") : t("promptShowMore")}

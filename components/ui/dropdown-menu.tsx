@@ -102,7 +102,7 @@ function DropdownMenuItem({
       data-inset={inset}
       data-variant={variant}
       className={cn(
-        `group/dropdown-menu-item relative flex min-h-8 max-[1199px]:min-h-10 ${COARSE_ROW} app-desktop:py-1.5! cursor-default items-center gap-1.5 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none not-data-[variant=destructive]:hover:bg-accent not-data-[variant=destructive]:hover:text-accent-foreground not-data-[variant=destructive]:hover:**:text-accent-foreground focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-inset:pl-8 data-[variant=destructive]:text-destructive data-[variant=destructive]:hover:bg-destructive-surface-hover data-[variant=destructive]:focus:bg-destructive-surface-hover data-[variant=destructive]:focus:text-destructive data-[variant=destructive]:focus:**:text-destructive data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-[variant=destructive]:*:[svg]:text-destructive`,
+        `group/dropdown-menu-item relative flex min-h-8 max-[1199px]:min-h-10 ${COARSE_ROW} app-desktop:py-1.5! cursor-default items-center gap-1.5 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground data-inset:pl-8 data-[variant=destructive]:text-destructive data-[variant=destructive]:data-highlighted:bg-destructive-surface-hover data-[variant=destructive]:data-highlighted:text-destructive data-[variant=destructive]:data-highlighted:**:text-destructive data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-[variant=destructive]:*:[svg]:text-destructive`,
         className
       )}
       {...props}
@@ -124,7 +124,7 @@ function DropdownMenuCheckboxItem({
       data-slot="dropdown-menu-checkbox-item"
       data-inset={inset}
       className={cn(
-        `relative flex min-h-8 max-[1199px]:min-h-10 ${COARSE_ROW} app-desktop:py-1.5! cursor-default items-center gap-1.5 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none hover:bg-accent hover:text-accent-foreground hover:**:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-8 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
+        `relative flex min-h-8 max-[1199px]:min-h-10 ${COARSE_ROW} app-desktop:py-1.5! cursor-default items-center gap-1.5 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground data-highlighted:**:text-accent-foreground data-inset:pl-8 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
         className
       )}
       checked={checked}
@@ -167,7 +167,7 @@ function DropdownMenuRadioItem({
       data-slot="dropdown-menu-radio-item"
       data-inset={inset}
       className={cn(
-        `relative flex min-h-8 max-[1199px]:min-h-10 ${COARSE_ROW} app-desktop:py-1.5! cursor-default items-center gap-1.5 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none hover:bg-accent hover:text-accent-foreground hover:**:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-8 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
+        `relative flex min-h-8 max-[1199px]:min-h-10 ${COARSE_ROW} app-desktop:py-1.5! cursor-default items-center gap-1.5 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground data-highlighted:**:text-accent-foreground data-inset:pl-8 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
         className
       )}
       {...props}
@@ -264,8 +264,11 @@ function DropdownMenuSub({
   )
 }
 
+// Rows light up from `data-highlighted` alone, never `:hover`: Radix moves the
+// highlight with the pointer AND the keyboard, and ignores the rows crossed on
+// the way to a submenu, so a hover style would light a second row.
 const SUB_TRIGGER_CLASS =
-  `flex min-h-8 max-[1199px]:min-h-10 ${COARSE_ROW} app-desktop:py-1.5! cursor-default items-center gap-1.5 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none hover:bg-accent hover:text-accent-foreground not-data-[variant=destructive]:hover:**:text-accent-foreground focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-inset:pl-8 data-open:bg-accent data-open:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`
+  `flex min-h-8 max-[1199px]:min-h-10 ${COARSE_ROW} app-desktop:py-1.5! cursor-default items-center gap-1.5 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground data-inset:pl-8 data-open:bg-accent data-open:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`
 
 function DropdownMenuSubTrigger({
   className,

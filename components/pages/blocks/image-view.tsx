@@ -125,7 +125,7 @@ export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }
       // assumed: what designates the block is the gutter when hovered (the handle
       // and the `+`), as on any other block of the document. Nothing
       // else in this editor is not painting because it is selected.
-      className="my-2 flex flex-col items-start"
+      className="group/image-block my-2 flex flex-col items-start"
       contentEditable={false}
     >
       {displayed ? (
@@ -256,7 +256,14 @@ export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }
             const pos = getPos?.();
             if (typeof pos === "number") editor.commands.setNodeSelection(pos);
           }}
-          className="mt-1 w-full bg-transparent text-sm text-muted-foreground outline-none placeholder:text-muted-foreground/60"
+          // An empty caption is an offer, shown on hover and while typing in
+          // it; a written one is content and stays. A touch screen has no
+          // hover, so the offer stays there.
+          className={cx(
+            "mt-1 w-full bg-transparent text-sm text-muted-foreground outline-none placeholder:text-muted-foreground/60",
+            !alt &&
+              "opacity-0 transition-opacity group-hover/image-block:opacity-100 focus:opacity-100 pointer-coarse:opacity-100"
+          )}
           style={{ maxWidth: width ? `${width}%` : "100%" }}
         />
       )}

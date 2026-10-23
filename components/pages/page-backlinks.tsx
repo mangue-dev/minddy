@@ -5,18 +5,14 @@
 // context about the document, not part of its editable body. An empty result is
 // deliberately absent, and both citation sources use the same presentation.
 
-import { HugeiconsIcon } from "@hugeicons/react";
-import { File02Icon, HashtagIcon } from "@hugeicons/core-free-icons";
 import { useQuery } from "@tanstack/react-query";
-import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 import { fetchPageBacklinksApi } from "@/lib/pages-api";
 import { mentionNavigationTarget } from "@/lib/mention-target";
-import { EntityPill, PillIcon, PILL_INNER_RADIUS } from "@/components/entity-pill";
-import { ObjectiveIconBadge } from "@/components/objective-icon";
-import { isPlainNavigationClick } from "@/components/editor-node-link";
+import { MentionChip } from "@/components/mention-chip";
+import { OBJECTIVE_STATUS_MAP } from "@/lib/objective-constants";
 import { useIssuePanelActions } from "@/lib/issue-panel-context";
 import { useOptionalPagePanelActions } from "@/lib/page-panel-context";
 import type { PageBacklink } from "@/lib/types";
@@ -24,16 +20,8 @@ import {
   PAGE_ACTIVITY_FRESH_MS,
   pageBacklinksKey,
 } from "@/lib/page-activity-cache";
-import { useAppNavigation } from "@/lib/use-app-router";
+import { useAppNavigation, useAppRouter } from "@/lib/use-app-router";
 import { pushPagesHistory } from "@/lib/pages-navigation";
-
-/** The shades of the two genres that have one, taken as is from Numo's
- context pills: a ticket is blue and an indigo page here like
- there. The objective wears ITS color (ObjectiveIconBadge). */
-const TINT: Record<"issue" | "page", string> = {
-  issue: "bg-blue-500/12 text-blue-600 dark:text-blue-400",
-  page: "bg-indigo-500/12 text-indigo-600 dark:text-indigo-400",
-};
 
 export function PageBacklinks({
   projectId,
@@ -62,7 +50,7 @@ export function PageBacklinks({
       <h2 className="mb-3 text-xs font-medium text-muted-foreground">
         {t("backlinksTitle", { count: items.length })}
       </h2>
-      <ul className="flex flex-wrap gap-2">
+      <ul className="flex flex-wrap gap-1.5 text-sm">
         {items.map((item) => (
           <li key={`${item.kind}:${item.id}`} className="min-w-0 max-w-full">
             <BacklinkPill item={item} projectId={projectId} />
@@ -84,61 +72,37 @@ function BacklinkPill({
   const { openIssue } = useIssuePanelActions();
   const pagePanel = useOptionalPagePanelActions();
   const openDestination = useAppNavigation();
+  const router = useAppRouter();
   const target = mentionNavigationTarget(item.kind, item.id, projectId);
-  const href = target?.href ?? "#";
-  const label = item.title.trim() || t("untitled");
+  const title = item.title.trim() || t("untitled");
 
+  // The pill of a mention, the one the citing text itself shows: a ticket by
+  // its identifier (its title on hover), an objective and a page by name.
   return (
-    <Link
-      href={href}
-      className="block min-w-0 max-w-full"
-      onClick={(event) => {
-        if (!isPlainNavigationClick(event)) return;
-        if (target?.kind === "issue-panel") {
-          event.preventDefault();
+    <MentionChip
+      type={item.kind}
+      id={item.id}
+      label={item.kind === "issue" && item.identifier ? item.identifier : title}
+      tooltip={item.kind === "issue" && item.identifier ? title : null}
+      color={item.kind === "objective" ? item.color : null}
+      icon={item.kind === "page" ? item.icon : null}
+      // A ticket and an objective show their status, as their mentions do.
+      status={item.issueStatus ?? (item.status ? OBJECTIVE_STATUS_MAP[item.status].issueStatus : undefined)}
+      href={target?.href ?? null}
+      className="mx-0 max-w-full truncate align-top"
+      onNavigate={() => {
+        if (!target) return;
+        if (target.kind === "issue-panel") {
           pagePanel?.closePage();
           openIssue(target.projectId, target.issueId);
-        } else if (target?.kind === "page-panel" && pagePanel) {
-          event.preventDefault();
+        } else if (target.kind === "page-panel" && pagePanel) {
           pagePanel.openPage(target.projectId, target.pageId);
-        } else if (item.kind === "page" && target) {
-          event.preventDefault();
+        } else if (item.kind === "page") {
           openDestination(target.href, () => pushPagesHistory(target.href));
+        } else {
+          router.push(target.href);
         }
       }}
-    >
-      <EntityPill radius="md" className="hover:bg-accent">
-        {item.kind === "objective" ? (
-          <ObjectiveIconBadge
-            color={item.color}
-            status={item.status}
-            className={cn("size-5 shrink-0", PILL_INNER_RADIUS.md)}
-            iconClassName="h-3 w-3"
-          />
-        ) : (
-          <PillIcon radius="md" tint={TINT[item.kind]}>
-            {/* The emoji of a page when it has one — the same figure as in
- the sidebar tree, so that we recognize it. */}
-            {item.kind === "page" && item.icon ? (
-              <span className="text-[11px] leading-none">{item.icon}</span>
-            ) : item.kind === "page" ? (
-              <HugeiconsIcon icon={File02Icon} className="h-3 w-3" />
-            ) : (
-              <HugeiconsIcon icon={HashtagIcon} className="h-3 w-3" />
-            )}
-          </PillIcon>
-        )}
-        {/* The identifier in front of the title, like everywhere where a ticket is named:
-, this is the one we look for in a list. */}
-        {item.identifier ? (
-          <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
-            {item.identifier}
-          </span>
-        ) : null}
-        <span className="min-w-0 truncate font-medium text-foreground/80">
-          {label}
-        </span>
-      </EntityPill>
-    </Link>
+    />
   );
 }
