@@ -341,11 +341,11 @@ export function IssueShortcutMenu({
         <>
           <CommandItem
             value="__none__"
-            keywords={[tCommon("none")]}
+            keywords={[tField("effortNone")]}
             onSelect={() => apply({ effort: null })}
             {...checked(issue.effort === null)}
           >
-            <span className="truncate">{tCommon("none")}</span>
+            <span className="truncate">{tField("effortNone")}</span>
           </CommandItem>
           {EFFORTS.map((eff) => (
             <CommandItem

@@ -174,9 +174,9 @@ const VIEW_FILTER_PROPERTIES = {
   },
   effort: {
     type: "array",
-    items: { type: "string", enum: [...ISSUE_EFFORTS] },
+    items: { type: ["string", "null"], enum: [...ISSUE_EFFORTS, null] },
     description:
-      "Effort values to KEEP, copied VERBATIM from this enum — never paraphrase or invent one.",
+      "Effort values to KEEP, copied VERBATIM from this enum — never paraphrase or invent one. null = effort not set.",
   },
   assignee: {
     type: "array",
@@ -916,7 +916,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "create_view",
       description:
-        "Create a saved kanban view. In project mode it is shared with the whole project; in global mode it is your personal CROSS-PROJECT view (spanning every project). The kanban ALWAYS groups by status — a view only filters, sorts and optionally hides done issues. STRICT ID RULE: filter values are IDS or enum values, never names or free text — resolve member/category/objective/integration names through list_members / list_categories / list_objectives / list_integrations (or list_global_filter_options in global mode) BEFORE calling, and copy status/priority/effort verbatim from their enums. null inside assignee/objective/integration means 'unassigned'/'no objective'/'not from an integration'; '@me' inside assignee means 'assigned to the viewing user' (dynamic). Omitting a filter key means 'do not filter on it' — a view with NO filters shows everything.",
+        "Create a saved kanban view. In project mode it is shared with the whole project; in global mode it is your personal CROSS-PROJECT view (spanning every project). The kanban ALWAYS groups by status — a view only filters, sorts and optionally hides done issues. STRICT ID RULE: filter values are IDS or enum values, never names or free text — resolve member/category/objective/integration names through list_members / list_categories / list_objectives / list_integrations (or list_global_filter_options in global mode) BEFORE calling, and copy status/priority/effort verbatim from their enums. null inside effort/assignee/objective/integration means 'effort not set'/'unassigned'/'no objective'/'not from an integration'; '@me' inside assignee means 'assigned to the viewing user' (dynamic). Omitting a filter key means 'do not filter on it' — a view with NO filters shows everything.",
       parameters: {
         type: "object",
         properties: {

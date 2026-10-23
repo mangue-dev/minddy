@@ -53,6 +53,7 @@
     "forgeStatusSynced": "hat das Ticket gemäß dem verknüpften Repository nach {to} verschoben",
     "priorityChanged": "hat die Priorität geändert: {from} → {to}",
     "effortChanged": "hat den Aufwand geändert: {from} → {to}",
+    "effortNone": "Nicht festgelegt",
     "assigneeChanged": "hat die zuständige Person geändert: {from} → {to}",
     "smartAssigned": "hat das Ticket {to} zugewiesen",
     "smartAssignedByRules": "hat {to} anhand der Zuweisungsregeln ausgewählt",
@@ -1512,6 +1513,7 @@
     "status": "Status",
     "priority": "Priorität",
     "effort": "Aufwand",
+    "effortNone": "Nicht festgelegt",
     "assignee": "Zuständig",
     "assignedToMe": "Mir zugewiesen",
     "unassigned": "Nicht zugewiesen",
@@ -2666,7 +2668,7 @@
     "taskCheckboxAria": "Aufgabe „{text}“ umschalten"
   },
   "Priority": {
-    "none": "Keine",
+    "none": "Nicht festgelegt",
     "urgent": "Dringend",
     "high": "Hoch",
     "medium": "Mittel",

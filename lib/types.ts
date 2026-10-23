@@ -1289,7 +1289,7 @@ export interface ViewFilters {
   status?: IssueStatus[];
   priority?: IssuePriority[];
   assignee?: (string | null)[]; // null = unassigned, "@me" = current user (resolved at filter time)
-  effort?: IssueEffort[];
+  effort?: (IssueEffort | null)[]; // null = effort not set
   category?: string[];
   objective?: (string | null)[]; // null = no objective
   integration?: (string | null)[]; // null = not created by an integration

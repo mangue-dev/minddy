@@ -24,7 +24,7 @@ export function CollectionFilterItems({ filters, onChange, members, categories, 
   const tActivity = useTranslations("Activity");
   const facets: { key: "priority" | "effort" | "assignee" | "objective" | "category" | "integration"; label: string; options: { value: string | null; label: string }[] }[] = [
     { key: "priority", label: tf("priority"), options: PRIORITIES.map((p) => ({ value: p.value, label: tp(p.value) })) },
-    { key: "effort", label: tf("effort"), options: EFFORTS.map((e) => ({ value: e.value, label: e.label })) },
+    { key: "effort", label: tf("effort"), options: [{ value: null, label: tf("effortNone") }, ...EFFORTS.map((e) => ({ value: e.value, label: e.label }))] },
     { key: "assignee", label: tf("assignee"), options: [{ value: ME_ASSIGNEE, label: tf("assignedToMe") }, { value: null, label: tf("unassigned") }, ...members.map((m) => ({ value: m.user_id, label: displayName(m, tActivity("memberSomeone")) }))] },
     { key: "objective", label: tf("objective"), options: [{ value: null, label: tc("none") }, ...objectives.map((o) => ({ value: o.id, label: o.name }))] },
     { key: "category", label: tf("categories"), options: categories.map((c) => ({ value: c.id, label: c.name })) },

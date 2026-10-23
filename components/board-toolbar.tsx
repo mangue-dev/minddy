@@ -392,12 +392,18 @@ function FiltersPopover({
           )}
         </FilterSub>
         <FilterSub label={tf("effort")} count={f.effort?.length ?? 0}>
+          <MenuToggleRow
+            active={!!f.effort?.includes(null)}
+            onSelect={() => setFilters({ ...f, effort: toggle(f.effort, null) })}
+          >
+            {tf("effortNone")}
+          </MenuToggleRow>
           {EFFORTS.map((e) => (
             <MenuToggleRow
               key={e.value}
               active={!!f.effort?.includes(e.value)}
               onSelect={() =>
-                setFilters({ ...f, effort: toggle<IssueEffort>(f.effort, e.value) })
+                setFilters({ ...f, effort: toggle<IssueEffort | null>(f.effort, e.value) })
               }
             >
               <HugeiconsIcon icon={TriangleIcon} className="size-4 text-muted-foreground" />

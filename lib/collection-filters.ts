@@ -10,7 +10,7 @@ export type CollectionFilterFields = {
 export function matchesCollectionFilters(item: CollectionFilterFields, filters: ViewFilters, userId: string | null) {
   const assignees = filters.assignee?.map((id) => id === ME_ASSIGNEE ? userId ?? ME_ASSIGNEE : id);
   return (!filters.priority?.length || filters.priority.includes((item.priority ?? "none") as NonNullable<ViewFilters["priority"]>[number])) &&
-    (!filters.effort?.length || !!item.effort && filters.effort.includes(item.effort as NonNullable<ViewFilters["effort"]>[number])) &&
+    (!filters.effort?.length || filters.effort.includes((item.effort ?? null) as NonNullable<ViewFilters["effort"]>[number])) &&
     (!assignees?.length || assignees.includes(item.assignee_id ?? null)) &&
     (!filters.objective?.length || filters.objective.includes(item.objective_id ?? null)) &&
     (!filters.category?.length || filters.category.some((id) => item.category_ids.includes(id))) &&
@@ -48,7 +48,7 @@ export function readCollectionFilters(params: URLSearchParams): CollectionFilter
   const filters: Record<string, (string | null)[]> = {};
   for (const [field, parameter] of Object.entries(parameters)) {
     const values = params.getAll(parameter);
-    if (values.length) filters[field] = values.map((value) => value === "none" && ["assignee", "objective", "integration", "author"].includes(field) ? null : value);
+    if (values.length) filters[field] = values.map((value) => value === "none" && ["effort", "assignee", "objective", "integration", "author"].includes(field) ? null : value);
   }
   return filters as CollectionFilters;
 }

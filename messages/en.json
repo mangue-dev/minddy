@@ -53,6 +53,7 @@
     "forgeStatusSynced": "moved the issue to {to}, following the linked repository",
     "priorityChanged": "changed priority: {from} → {to}",
     "effortChanged": "changed effort: {from} → {to}",
+    "effortNone": "Not set",
     "assigneeChanged": "changed assignee: {from} → {to}",
     "smartAssigned": "assigned the issue to {to}",
     "smartAssignedByRules": "picked {to} from the assignment rules",
@@ -1512,6 +1513,7 @@
     "status": "Status",
     "priority": "Priority",
     "effort": "Effort",
+    "effortNone": "Not set",
     "assignee": "Assignee",
     "assignedToMe": "Assigned to me",
     "unassigned": "Unassigned",
@@ -2666,7 +2668,7 @@
     "taskCheckboxAria": "Toggle task “{text}”"
   },
   "Priority": {
-    "none": "None",
+    "none": "Not set",
     "urgent": "Urgent",
     "high": "High",
     "medium": "Medium",

@@ -23,10 +23,17 @@ describe("feedback property filters", () => {
 
 describe("triage property filters", () => {
   const issue = { priority: "high", effort: "s", assignee_id: "member", category_ids: ["bug"], objective_id: "goal-a", integration_id: "api-a" };
+  it("round-trips the not-set effort through the URL", () => {
+    const params = collectionFilterParams({ effort: [null, "s"] }, new URLSearchParams());
+    expect(params.getAll("effort")).toEqual(["none", "s"]);
+    expect(readCollectionFilters(params)).toEqual({ effort: [null, "s"] });
+  });
   it("matches board semantics for multiple values and the current assignee", () => {
     expect(matchesCollectionFilters(issue, { priority: ["low", "high"], effort: ["s"], assignee: ["@me"], objective: ["goal-a"], category: ["bug"], integration: ["api-a"] }, "member")).toBe(true);
     expect(matchesCollectionFilters(issue, { assignee: ["@me"] }, "other")).toBe(false);
     expect(matchesCollectionFilters({ ...issue, effort: null }, { effort: ["s"] }, "member")).toBe(false);
+    expect(matchesCollectionFilters({ ...issue, effort: null }, { effort: [null] }, "member")).toBe(true);
+    expect(matchesCollectionFilters(issue, { effort: [null] }, "member")).toBe(false);
     expect(matchesCollectionFilters({ category_ids: [] }, { assignee: [null], objective: [null], integration: [null] }, null)).toBe(true);
   });
 });

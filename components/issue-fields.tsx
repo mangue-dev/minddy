@@ -137,7 +137,6 @@ export function EffortPicker({
   size?: "sm" | "default";
 }) {
   const tField = useTranslations("Field");
-  const tCommon = useTranslations("Common");
   const options: PickerOption[] = EFFORTS.map((e) => ({
     value: e.value,
     label: e.label,
@@ -148,7 +147,7 @@ export function EffortPicker({
       value={value}
       onChange={(v) => onChange(v as IssueEffort | null)}
       options={options}
-      noneOption={{ label: tCommon("none") }}
+      noneOption={{ label: tField("effortNone") }}
       trigger={
         <Button variant="outline" size={size}>
           <HugeiconsIcon icon={TriangleIcon} className="text-muted-foreground" />

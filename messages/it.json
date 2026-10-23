@@ -53,6 +53,7 @@
     "forgeStatusSynced": "ha spostato il ticket in {to} in base al repository collegato",
     "priorityChanged": "ha modificato la priorità: {from} → {to}",
     "effortChanged": "ha modificato l'impegno: {from} → {to}",
+    "effortNone": "Non definito",
     "assigneeChanged": "ha modificato l'assegnatario: {from} → {to}",
     "smartAssigned": "ha assegnato il ticket a {to}",
     "smartAssignedByRules": "ha scelto {to} in base alle regole di assegnazione",
@@ -1512,6 +1513,7 @@
     "status": "Stato",
     "priority": "Priorità",
     "effort": "Impegno",
+    "effortNone": "Non definito",
     "assignee": "Assegnatario",
     "assignedToMe": "Assegnati a me",
     "unassigned": "Non assegnato",
@@ -2666,7 +2668,7 @@
     "taskCheckboxAria": "Attiva o disattiva l'attività «{text}»"
   },
   "Priority": {
-    "none": "Nessuna",
+    "none": "Non definita",
     "urgent": "Urgente",
     "high": "Alta",
     "medium": "Media",

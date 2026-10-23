@@ -65,7 +65,7 @@ const isViewSort = (v: unknown): v is ViewSort =>
   typeof v === "string" && (VIEW_SORTS as readonly string[]).includes(v);
 
 /** Keep only allowed enum values; report anything dropped. */
-function keepEnumValues<T extends string>(
+function keepEnumValues<T extends string | null>(
   key: string,
   raw: unknown,
   allowed: readonly T[],
@@ -78,14 +78,14 @@ function keepEnumValues<T extends string>(
   const kept: T[] = [];
   const dropped: unknown[] = [];
   for (const v of raw) {
-    if (typeof v === "string" && (allowed as readonly string[]).includes(v)) kept.push(v as T);
+    if ((typeof v === "string" || v === null) && (allowed as readonly unknown[]).includes(v)) kept.push(v as T);
     else dropped.push(v);
   }
   if (dropped.length > 0) {
     invalid.push(
       `filters.${key}: dropped invalid value(s) ${dropped
         .map((v) => JSON.stringify(v))
-        .join(", ")} (allowed: ${allowed.join(", ")})`
+        .join(", ")} (allowed: ${allowed.map(String).join(", ")})`
     );
   }
   if (kept.length > MAX_FILTER_VALUES) {
@@ -178,7 +178,8 @@ export function sanitizeViewConfig(input: {
             break;
           }
           case "effort": {
-            const kept = keepEnumValues(key, value, ISSUE_EFFORTS, invalid);
+            // null keeps the issues whose effort is not set.
+            const kept = keepEnumValues(key, value, [...ISSUE_EFFORTS, null], invalid);
             if (kept) filters.effort = kept;
             break;
           }
