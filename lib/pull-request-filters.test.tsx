@@ -315,3 +315,75 @@ describe("Pull Requests list read failure", () => {
     expect(container.textContent).not.toContain(en.PullRequests.listReadFailed);
   });
 });
+
+describe("Pull Requests selection stability (MIN-786)", () => {
+  function shown() {
+    return [...container.querySelectorAll("[data-dynamic-detail] button")].map((button) => button.textContent);
+  }
+  // A finished request can precede React Query's batched observer notification.
+  async function until(assertion: () => void) {
+    await vi.waitFor(async () => {
+      await act(async () => {});
+      assertion();
+    });
+  }
+  function row(prId: string) {
+    return container.querySelector<HTMLButtonElement>(`[data-navigation-href="/pull-requests?pr=${prId}"]`);
+  }
+
+  it("keeps the default pick when a newer pull request opens", async () => {
+    search = "";
+    rows = [item("open", "first")];
+    await render();
+    await flush();
+    await until(() => expect(shown()).toEqual(["Merge first"]));
+    rows = [item("open", "newer"), item("open", "first")];
+    await refetch();
+    await until(() => expect(row("newer")).not.toBeNull());
+    expect(shown()).toEqual(["Merge first"]);
+  });
+
+  it("keeps the selected pull request on screen when a refetch drops it", async () => {
+    search = "";
+    rows = [item("open", "a"), item("open", "b")];
+    await render();
+    await flush();
+    await until(() => expect(row("b")).not.toBeNull());
+    await act(() => row("b")!.click());
+    expect(shown()).toEqual(["Merge b"]);
+    rows = [item("open", "a")];
+    await refetch();
+    await until(() => expect(row("a")).not.toBeNull());
+    expect(row("b")).not.toBeNull();
+    expect(shown()).toEqual(["Merge b"]);
+    await act(() => row("a")!.click());
+    expect(shown()).toEqual(["Merge a"]);
+  });
+});
+
+describe("Pull Requests truncation notice (MIN-786)", () => {
+  it("only appears at the end of a fully loaded completed list", async () => {
+    search = "";
+    rows = [item("open", "open"), item("merged", "old")];
+    h.fetchList.mockImplementation(async ({ state, offset }) => state === "completed"
+      ? { ...response(offset ? [item("merged", "older")] : [item("merged", "old")]), hasMore: !offset, truncated: true }
+      : { ...response([item("open", "open")]), truncated: true });
+    const notice = () => container.querySelector('[data-testid="pr-list-truncated"]');
+    await render();
+    await flush();
+    expect(notice()).toBeNull();
+    await openFilters();
+    await toggle();
+    await vi.waitFor(async () => {
+      await act(async () => {});
+      expect(container.querySelector('[data-testid="pr-completed-load-more"]')).not.toBeNull();
+    });
+    expect(notice()).toBeNull();
+    await act(() => container.querySelector<HTMLButtonElement>('[data-testid="pr-completed-load-more"]')!.click());
+    await flush();
+    await vi.waitFor(async () => {
+      await act(async () => {});
+      expect(notice()?.textContent).toBe(en.PullRequests.listTruncated);
+    });
+  });
+});

@@ -295,6 +295,7 @@ function PrGroupRows({
   hasNextPage,
   fetchingNextPage,
   loadingInitialPage,
+  truncated,
   onLoadNextPage,
 }: {
   group: { key: PullRequestSection; items: PullRequestListItem[] };
@@ -312,6 +313,7 @@ function PrGroupRows({
   hasNextPage: boolean;
   fetchingNextPage: boolean;
   loadingInitialPage: boolean;
+  truncated: boolean;
   onLoadNextPage: () => void;
 }) {
   const tCommon = useTranslations("Common");
@@ -358,6 +360,12 @@ function PrGroupRows({
           onClick={onLoadNextPage} data-testid="pr-completed-load-more">
           {tCommon("showMore")}
         </Button>
+      ) : null}
+      {/* A sweep reads the most recently updated PRs first, so a cut forge
+          pagination can only hide the OLDEST completed ones: say it where
+          they would appear, once every page is on screen. */}
+      {group.key === "completed" && truncated && !hasNextPage && !loadingInitialPage && !fetchingNextPage ? (
+        <p className="px-3 pt-2 text-xs text-muted-foreground" data-testid="pr-list-truncated">{t("listTruncated")}</p>
       ) : null}
     </SidebarProjectGroup>
   );
@@ -443,32 +451,38 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const completed = useCompletedPullRequestsQuery(sections.has("completed"));
   const { hasMore, repoCount, anyPr, loading, readFailed } = active;
   const fetching = active.fetching || completed.isFetching;
-  const truncated = active.truncated || completed.data?.pages.some((page) => page.truncated);
+  const completedTruncated = completed.data?.pages.some((page) => page.truncated) ?? false;
   /**
-   * The PR the reader had open when it reached a terminal state (merged or
-   * closed) from this page. It stays in the list and on screen even after it
-   * leaves the lens, so merging never moves the focus to another PR; picking
-   * another row releases it.
+   * The PR on screen (MIN-786). It stays in the list and selected until the
+   * reader picks another row or changes the sections — whatever the data
+   * does meanwhile: a refetch that drops it for a moment, a newer PR pushing
+   * it past the page, a merge (here or at the forge) taking it out of the
+   * lens. Without it the detail blinked away and back on refreshes, or
+   * jumped to the newest PR when one was opened.
    */
-  const [retainedPrId, setRetainedPrId] = useState<string | null>(null);
+  const [heldPrId, setHeldPrId] = useState<string | null>(null);
   const selectedIdRef = useRef<string | null>(null);
-  // The last row seen for the selection: a refetch of the "open" lens drops
-  // the merged row, and the retained PR must still have a row to render.
+  // The last row seen for the selection: the held PR must still have a row
+  // to render when a refetch no longer returns it.
   const selectedRowRef = useRef<PullRequestListItem | null>(null);
   const pullRequests = useMemo(() => {
     const rows = new Map([
       ...active.pullRequests, ...completed.pullRequests,
     ].map((pr) => [pr.prId, pr]));
-    const retainedRow = selectedRowRef.current;
-    if (retainedPrId && retainedRow?.prId === retainedPrId && !rows.has(retainedPrId)) {
-      rows.set(retainedPrId, retainedRow);
+    const heldRow = selectedRowRef.current;
+    if (heldPrId && heldRow?.prId === heldPrId && !rows.has(heldPrId)) {
+      rows.set(heldPrId, heldRow);
     }
     return [...rows.values()];
-  }, [active.pullRequests, completed.pullRequests, retainedPrId]);
+  }, [active.pullRequests, completed.pullRequests, heldPrId]);
   const selectPr = useCallback((prId: string) => {
     setSelectedPrId(prId);
-    setRetainedPrId((current) => (current === prId ? current : null));
   }, []);
+  /** A section change is the reader redrawing the lens: the held PR yields. */
+  const changeSections = useCallback((next: (previous: ReadonlySet<string>) => ReadonlySet<string>) => {
+    setSections(next);
+    setHeldPrId(null);
+  }, [setSections]);
   const refetch = () => {
     void active.refetch();
     if (sections.has("completed")) void completed.refetch();
@@ -533,9 +547,11 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
         prId,
       ]);
       updateCachedPullRequestState(queryClient, prId, state);
+      // The held PR stays on screen as it leaves the lens: merging never
+      // moves the focus to another PR.
       if (isTerminalPrState(state) && prId === selectedIdRef.current) {
         setSelectedPrId(prId);
-        setRetainedPrId(prId);
+        setHeldPrId(prId);
       }
       return () => {
         for (const [key, data] of previous) queryClient.setQueryData(key, data);
@@ -560,8 +576,8 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
 
   const filtered = useMemo(
     () => pullRequests.filter((pr) =>
-      pr.prId === retainedPrId || sections.has(pullRequestSection(pr))),
-    [pullRequests, retainedPrId, sections],
+      pr.prId === heldPrId || sections.has(pullRequestSection(pr))),
+    [pullRequests, heldPrId, sections],
   );
 
   /**
@@ -633,24 +649,36 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
    * deep-link, then the first in the list — and nothing as long as a fetch is in effect.
    * flight, otherwise we would open a defect just before the good PR arrives.
    *
-   * Merging or closing the PR on screen keeps it selected: `retainedPrId`
-   * holds its row in the list although it left the lens. The filter stays
-   * where it is — widening it is the READER's gesture (the filter menu),
-   * never a side effect of the merge. Any other row that leaves the lens
-   * (a refetch, a change made elsewhere) still releases its selection.
+   * The PR on screen is HELD (`heldPrId`): it keeps its row in the list
+   * even after it leaves the lens or the data, so neither a refetch nor a
+   * newer PR moves the focus. The filter stays where it is — widening it is
+   * the READER's gesture (the filter menu), never a side effect of a merge.
    */
   const clicked =
     selectedPrId && filtered.some((p) => p.prId === selectedPrId) ? selectedPrId : null;
+  const held =
+    heldPrId && filtered.some((p) => p.prId === heldPrId) ? heldPrId : null;
   // A background refetch should never close the panel: it was the source of the
   // flashing each time you return to the window. Only a deep connection yet
-  // being resolved waits for its response before taking the first PR.
+  // being resolved, with nothing on screen, waits for its response before
+  // taking the first PR.
   const waitingForDeepLink = !!deepLink && fetching && !clicked;
   const selectedId =
     clicked ??
+    held ??
     (waitingForDeepLink ? null : (filtered[0]?.prId ?? null));
   const selected = filtered.find((p) => p.prId === selectedId) ?? null;
   selectedIdRef.current = selectedId;
   if (selected) selectedRowRef.current = selected;
+
+  // Hold what is on screen, and commit a default pick (the first row) as the
+  // selection: a newer PR arriving on top must not take its place. A pending
+  // link keeps its target, which an explicit lens choice may still reveal.
+  useEffect(() => {
+    if (!selectedId) return;
+    setHeldPrId(selectedId);
+    setSelectedPrId((current) => current ?? selectedId);
+  }, [selectedId]);
 
   // The open PR is a selection of the page, derived rather than pushed into
   // the address — `?pr=` is precisely what restores it in an app tab (and the pin on the server side, even if it's six months old).
@@ -745,7 +773,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
               consumeDeepLink();
               // Settle before toggling so a pinned target cannot restore a hidden section.
               settledDeepLinkRef.current = deepLink;
-              setSections((previous) => toggledSet(previous, section));
+              changeSections((previous) => toggledSet(previous, section));
               setLimit(PULL_REQUESTS_PAGE);
             }}
           />
@@ -778,7 +806,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
                   // `consumeDeepLink`) — the filter the reader chose rules.
                   consumeDeepLink();
                   settledDeepLinkRef.current = deepLink;
-                  setSections(new Set(PULL_REQUEST_SECTIONS));
+                  changeSections(() => new Set(PULL_REQUEST_SECTIONS));
                   setLimit(PULL_REQUESTS_PAGE);
                 }}
               >
@@ -803,6 +831,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
                 hasNextPage={completed.hasNextPage}
                 fetchingNextPage={completed.isFetchingNextPage}
                 loadingInitialPage={completed.isPending}
+                truncated={completedTruncated}
                 onLoadNextPage={() => void completed.fetchNextPage()}
                 onToggle={() => toggleGroup(g.key)}
                 onShowAll={() => setExpandedGroups((prev) => toggledSet(prev, g.key))}
@@ -825,12 +854,6 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
               >
                 {t("loadMore")}
               </Button>
-            ) : null}
-
-            {/* The pagination of a forge has been cut: say it, rather than
-                let us believe that the list is complete. */}
-            {truncated ? (
-              <p className="px-3 pt-3 text-xs text-muted-foreground">{t("listTruncated")}</p>
             ) : null}
           </div>
         )}
