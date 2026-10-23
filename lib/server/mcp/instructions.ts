@@ -112,8 +112,8 @@ export const MCP_FULL_USAGE_GUIDE =
       "minddy_search_pages is the way IN when you have a subject rather than a " +
       "page — full text over titles AND bodies, with the passage that matched; " +
       "Database pages expose schemas, revisions, and entry values through minddy_get_page. " +
-      "Create them with minddy_create_page database=true and their entries with parent_page_id. " +
-      "minddy_update_page_database edits schemas or cells and previews/applies column conversions; preserve revision, expected value, and preview token guards. " +
+      "Create them with minddy_create_page database=true and their entries with parent_page_id, passing an entry's property values in `values` on the same call. " +
+      "minddy_update_page_database edits schemas or cells (operation=values for several cells of one entry at once) and previews/applies column conversions; preserve revision, expected value, and preview token guards. " +
       "minddy_list_pages maps the wiki (ids, titles, icons, parents, no bodies), " +
       "minddy_get_page reads one in MARKDOWN with its direct subpages, " +
       "minddy_create_page writes a new one (optionally under a parent), and — as " +

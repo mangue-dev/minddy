@@ -2,7 +2,8 @@ import { scheduleRoutineEvents } from "@/lib/server/routine-hooks";
 import "server-only";
 
 import { storePageVersion, hasRecentPageVersion } from "./page-version-store";
-import { isDatabaseSchema } from "@/lib/page-databases";
+import { type DatabaseValues, isDatabasePropertyValue, isDatabaseSchema } from "@/lib/page-databases";
+import { notifyAddedPeople } from "./page-database-people";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
@@ -734,6 +735,25 @@ export async function createPage({
     const parent = await loadPage(service, parentId, actorId);
     if (parent?.database_schema) return { ok: false, status: 400, errorKey: "pageDatabaseInvalid" };
   }
+  // A database entry can be born with its values (MIN-784): one insert instead
+  // of one guarded cell edit per property, checked against the parent schema
+  // exactly like those edits.
+  let propertyValues: DatabaseValues = {};
+  let parentSchema: NonNullable<Page["database_schema"]> = [];
+  if (input.property_values !== undefined) {
+    const values = input.property_values;
+    const parent = parentId ? await loadPage(service, parentId, actorId) : null;
+    parentSchema = parent?.database_schema ?? [];
+    if (!values || typeof values !== "object" || Array.isArray(values) ||
+        !parent?.database_schema ||
+        Object.entries(values).some(([id, value]) => {
+          const property = parentSchema.find((p) => p.id === id);
+          return !property || !isDatabasePropertyValue(property, value);
+        })) {
+      return { ok: false, status: 400, errorKey: "pageDatabaseInvalid" };
+    }
+    propertyValues = values as DatabaseValues;
+  }
 
   const all = await loadProjectPages(service, projectId);
   if (parentId) {
@@ -778,7 +798,7 @@ export async function createPage({
     title: readTitle(input.title) ?? "",
     database_schema: input.database_schema ?? null,
     database_title_name: null,
-    property_values: {},
+    property_values: propertyValues,
     icon: readIcon(input.icon),
     // Born canonical (MIN-688): one schema-valid block with its ID, so every
     // collaborator opening the new page starts from the same document instead
@@ -819,6 +839,13 @@ export async function createPage({
     mcpKeyId,
     event: "page_created",
   });
+  if (Object.keys(propertyValues).length) {
+    afterOrNow(async () => {
+      await notifyAddedPeople(service, { projectId, pageId: page.id, actorId,
+        schema: parentSchema, changes: Object.entries(propertyValues).map(
+          ([propertyId, value]) => ({ propertyId, value, expected: null })) });
+    });
+  }
   scheduleRoutineEvents();
   return { ok: true, page };
 }

@@ -647,6 +647,7 @@ export async function createPageForAgent({
   markdown,
   parentPageId,
   database,
+  values,
   mcpKeyId,
 }: {
   projectId: string;
@@ -656,6 +657,8 @@ export async function createPageForAgent({
   markdown?: string;
   parentPageId?: string | null;
   database?: boolean;
+  /** Property values of a new database entry, keyed by property id (MIN-784). */
+  values?: Record<string, unknown>;
   /** The MCP key behind the call, when the surface has one (MIN-278): it is
  which NAMES the agent in the activity of the page and in the quotes
  that he places there. Absent on chat and code agent, which are Numo. */
@@ -665,6 +668,7 @@ export async function createPageForAgent({
     parent_id: parentPageId ?? null,
   };
   if (database) input.database_schema = [];
+  if (values !== undefined) input.property_values = values;
   let body = "";
 
   if (markdown !== undefined && markdown.trim()) {

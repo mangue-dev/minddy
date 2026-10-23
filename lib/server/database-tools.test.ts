@@ -79,6 +79,17 @@ describe.each(surfaces)("%s database tools", (surface) => {
     expect(h.rpc).not.toHaveBeenCalled();
     expect(h.wake).not.toHaveBeenCalled();
   });
+  it("dispatches a whole-entry write with its previous values and attribution (MIN-784)", async () => {
+    const args = { page_id: ENTRY, operation: "values", values: { [PROPERTY]: 32 }, expected: { [PROPERTY]: null } };
+    expect(await call(surface, args)).toMatchObject({ success: true });
+    expect(h.rpc).toHaveBeenCalledTimes(1);
+    expect(h.rpc).toHaveBeenCalledWith("update_page_database_guarded", expect.objectContaining({
+      p_input: expect.objectContaining({ operation: "values", values: { [PROPERTY]: 32 },
+        expected: { [PROPERTY]: null }, kind: "agent", mcpKeyId: surface === "mcp" ? KEY : null }),
+    }));
+    expect(await call(surface, { ...args, values: { [PROPERTY]: "32" } })).toMatchObject({ success: false });
+    expect(h.rpc).toHaveBeenCalledTimes(1);
+  });
   it("forwards schema revisions and preserves stale-write failures", async () => {
     const args = { page_id: DATABASE, operation: "schema", schema, revision: 3, titleName: "Report" };
     expect(await call(surface, args)).toMatchObject({ success: true });

@@ -164,7 +164,7 @@ Las lecturas que devuelven texto con imágenes (`minddy_get_issue`, `minddy_get_
 
 ### Respetar revisiones y propiedad {#pages-and-routines}
 
-`minddy_list_pages` muestra la jerarquía, `minddy_search_pages` encuentra extractos y `minddy_get_page` lee el Markdown completo, los comentarios y los valores de base de datos. Prefiere cambios parciales y utiliza la versión actual para un reemplazo completo. Conserva exactamente las URL de archivos e imágenes. `minddy_create_page` con `database=true` crea una base de datos de páginas. `minddy_update_page_database` exige la revisión del esquema y el valor anterior para los cambios de celdas.
+`minddy_list_pages` muestra la jerarquía, `minddy_search_pages` encuentra extractos y `minddy_get_page` lee el Markdown completo, los comentarios y los valores de base de datos. Prefiere cambios parciales y utiliza la versión actual para un reemplazo completo. Conserva exactamente las URL de archivos e imágenes. `minddy_create_page` con `database=true` crea una base de datos de páginas. `minddy_update_page_database` exige la revisión del esquema y el valor anterior para los cambios de celdas. Para rellenar una base de datos con menos llamadas, pasa `values` a `minddy_create_page` para crear una entrada con sus propiedades, o usa `operation=values` para cambiar varias propiedades de una misma entrada a la vez: todas las celdas se escriben juntas o ninguna.
 
 Para convertir una propiedad, indica `operation=convert`, `propertyId`, `targetType`, `revision` y primero `preview=true`. Revisa `incompatibleCount` y envía después los mismos ajustes de conversión con `preview=false` y el `token` devuelto. Usa `confirmLoss=true` solo si el usuario ha autorizado expresamente la pérdida de valores incompatibles.
 

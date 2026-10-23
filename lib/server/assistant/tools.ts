@@ -712,7 +712,13 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           database: {
             type: "boolean",
             description:
-              "Create a database instead of a document. Then add properties with update_page_database. Never create one to stand in for a database that already exists: when the user asks for a database while on a page, read it with get_page first — if is_database is true (even with an empty schema), add the properties to THAT page; if it is a document, ask before creating a new page. Create entries with parent_page_id set to this database id; an empty markdown body is valid for databases and entries.",
+              "Create a database instead of a document. Then add properties with update_page_database. Never create one to stand in for a database that already exists: when the user asks for a database while on a page, read it with get_page first — if is_database is true (even with an empty schema), add the properties to THAT page; if it is a document, ask before creating a new page. Create entries with parent_page_id set to this database id and their property values in values; an empty markdown body is valid for databases and entries.",
+          },
+          values: {
+            type: "object",
+            additionalProperties: true,
+            description:
+              "Only for a new ENTRY of a database (parent_page_id is the database): its property values, keyed by property id from the database_schema of get_page, so the entry is created with every property in ONE call instead of one update_page_database call per property. Same value formats as update_page_database; created_at is read-only. Omit for any other page.",
           },
           title: {
             type: "string",
@@ -742,7 +748,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     type: "function",
     function: {
       name: "update_page_database",
-      description: databaseToolDescription("get_page"),
+      description: databaseToolDescription("get_page", "create_page"),
       parameters: DATABASE_TOOL_PARAMETERS,
     },
   },

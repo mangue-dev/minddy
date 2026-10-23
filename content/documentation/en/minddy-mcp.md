@@ -164,7 +164,7 @@ Reads that return text with images (`minddy_get_issue`, `minddy_get_objective`, 
 
 ### Use revision guards and owner scope {#pages-and-routines}
 
-`minddy_list_pages` maps hierarchy; `minddy_search_pages` finds title/body excerpts and `minddy_get_page` reads the full Markdown, comments and database values. Use append/edit tools for partial changes and current version guards for full replacement. Preserve file/image URLs exactly. `minddy_create_page` with `database=true` creates a database; `minddy_update_page_database` requires the database revision for schema edits and the previous value for cell edits.
+`minddy_list_pages` maps hierarchy; `minddy_search_pages` finds title/body excerpts and `minddy_get_page` reads the full Markdown, comments and database values. Use append/edit tools for partial changes and current version guards for full replacement. Preserve file/image URLs exactly. `minddy_create_page` with `database=true` creates a database; `minddy_update_page_database` requires the database revision for schema edits and the previous value for cell edits. To fill a database in fewer calls, pass `values` to `minddy_create_page` to create an entry with its properties, or use `operation=values` to change several properties of one entry at once: every cell is written together or none is.
 
 For a type conversion, use `operation=convert` with `propertyId`, `targetType`, `revision` and `preview=true`. Inspect `incompatibleCount`, then submit the same settings with `preview=false` and the returned `token`. Set `confirmLoss=true` only after the user explicitly authorizes clearing incompatible values.
 
