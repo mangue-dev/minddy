@@ -114,6 +114,9 @@ vi.mock("@/components/creation-project-select", () => ({ CreationProjectSelect: 
 }) => React.createElement("div", { "data-create-in": value }, projects.map((p) =>
   React.createElement("button", { key: p.id, type: "button", onClick: () => onChange(p.id) }, `Create in ${p.name}`))),
 }));
+// Picker order has its own suite (lib/objective-order.test.ts); these tests
+// render without a QueryClient, so the hook keeps the fixture order.
+vi.mock("@/lib/use-ordered-objectives", () => ({ useOrderedObjectives: <T,>(objectives: T[]) => objectives }));
 vi.mock("@/lib/use-objectives-query", () => ({ useObjectivesQuery: (project: string | null) => ({ objectives: project ? fixture.objectives : [], loading: false }) }));
 vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: { id: "user", user_metadata: { smart_fill: fixture.smartFill, smart_fill_created: fixture.smartFillCreated, smart_fill_relations: fixture.smartFillRelations } } }) }));
 vi.mock("@/lib/use-analytics", () => ({ useAnalytics: () => ({ track: vi.fn() }) }));

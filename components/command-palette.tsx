@@ -64,7 +64,8 @@ import { NumoIcon } from "@/components/numo-icon";
 import { AppIcon } from "@/components/icon";
 import { projectOrbIcon } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
-import { StatusIndicator, PriorityIndicator } from "@/components/issue-indicators";
+import { ObjectiveStatusIndicator, StatusIndicator, PriorityIndicator } from "@/components/issue-indicators";
+import { OBJECTIVE_TEXT, objectiveTextStyle } from "@/components/objective-label";
 import { useBulkActions } from "@/lib/bulk-actions-context";
 import { useBulkPaletteMode } from "@/lib/use-bulk-palette-mode";
 import { displayName } from "@/lib/display-name";
@@ -107,6 +108,7 @@ import type {
   Issue,
   Member,
   SearchIndexIssue,
+  SearchIndexObjective,
   SearchIndexPage,
   SearchIndexResponse,
 } from "@/lib/types";
@@ -118,6 +120,7 @@ import { scratchpadSearchTasks } from "@/lib/scratchpad-search";
 import { shownMentionLabel } from "@/lib/mention-resolution";
 import type { MentionLinkType } from "@/lib/mention-link";
 import { withPageContentHits } from "@/lib/palette-page-hits";
+import { orderObjectives } from "@/lib/objective-order";
 import "./command-palette.css";
 
 /** Search boosts by group — same philosophy as minddy v1:
@@ -349,6 +352,9 @@ export function CommandPalette({
     (it: GroupItem, cat: string): CpPaletteItem => {
       const Icon = it.icon;
       const issue = it.entityType === "issue" ? (it.data as PaletteIssue) : null;
+      // An objective: its status as the icon, its name in its color — no dot
+      // (MIN-785).
+      const objective = it.entityType === "objective" ? (it.data as SearchIndexObjective) : null;
       return {
         id: it.key,
         title: it.label,
@@ -357,9 +363,14 @@ export function CommandPalette({
         shortcut: it.keys,
         icon: issue
           ? statusIcon(issue.status)
+          : objective
+            ? <ObjectiveStatusIndicator status={objective.status} className="size-4" />
           : Icon
             ? <AppIcon icon={Icon} className="size-4" />
             : undefined,
+        ...(objective
+          ? { titleClassName: OBJECTIVE_TEXT, titleStyle: objectiveTextStyle(objective.color) }
+          : {}),
         contextLabel: it.metaText,
         contextIcon: (() => {
           if (!it.contextId) return undefined;
@@ -657,8 +668,13 @@ export function CommandPalette({
           },
         });
 
-        const projectObjectives = (searchIndex?.objectives ?? []).filter(
-          (objective) => objective.project_id === issue.project_id
+        // Picker order (MIN-785), counted on the project's cached tickets: the
+        // search index rows carry no creation date.
+        const projectObjectives = orderObjectives(
+          (searchIndex?.objectives ?? []).filter(
+            (objective) => objective.project_id === issue.project_id
+          ),
+          queryClient.getQueryData<Issue[]>(["issues", issue.project_id]) ?? []
         );
         actions.push({
           id: "issue.objective",

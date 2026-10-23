@@ -13,7 +13,7 @@ import { MarkdownLink, PlainMarkdownLink } from "@/components/markdown-link";
 import { extractCodeBlock } from "@/lib/markdown-code";
 import { MentionChip, NUMO_MENTION_ID } from "@/components/mention-chip";
 import { SkillChip } from "@/components/assistant/skill-chip";
-import { MentionLinksProvider, useMentionLinks, type MentionLinks } from "@/components/mention-links";
+import { MentionLinksProvider, mentionStatus, useMentionLinks, type MentionLinks } from "@/components/mention-links";
 import {
   memberLabel,
   mentionScanner,
@@ -573,10 +573,10 @@ function MarkdownRenderer({
                   }
                   color={p["data-mention-color"] as string | undefined}
                   status={
-                    type === "issue"
-                      ? links?.issueStatus(id) ??
-                        (p["data-mention-status"] as import("@/lib/issue-constants").IssueStatus | undefined)
-                      : undefined
+                    mentionStatus(links, type, id) ??
+                    (type === "issue"
+                      ? (p["data-mention-status"] as import("@/lib/issue-constants").IssueStatus | undefined)
+                      : undefined)
                   }
                   tooltip={type === "issue" ? links?.issueTitle?.(id) ?? null : null}
                   href={links?.href(type, id) ?? null}

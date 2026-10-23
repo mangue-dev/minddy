@@ -56,6 +56,7 @@ import { buildViewHref } from "@/lib/view-href";
 import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { CategoryValue, ObjectiveValue, PropertyRow, TRIGGER } from "@/components/issue-property-fields";
+import { ObjectivePill } from "@/components/objective-label";
 import { CommentComposer, IssueActivity } from "@/components/issue-timeline";
 import { CreateIssueDialog } from "@/components/create-issue-dialog";
 import { AgentBeamOverlay } from "@/components/agent-beam";
@@ -594,9 +595,9 @@ function FeedbackRow({
           separated={!!authorLabel}
         />
       </span>
-      {objective && <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-        <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: objective.color ?? "var(--muted-foreground)" }} />
-        <span className="truncate">{objective.name}</span>
+      {/* The objective pill at its small size, like on issue cards (MIN-785). */}
+      {objective && <span className="flex min-w-0">
+        <ObjectivePill objective={objective} size="sm" />
       </span>}
     </button>
   );

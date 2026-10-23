@@ -42,6 +42,7 @@ import {
 import { normalizeWebhookUrl } from "@/lib/webhook-url";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { EmptyScene } from "@/components/empty-scene";
+import { ObjectiveBadge } from "@/components/objective-label";
 import type { Integration, IntegrationKind } from "@/lib/types";
 
 /**
@@ -403,9 +404,11 @@ export function ProjectIntegrations({
                         }}
                       />
                     ) : (
-                      <span className="text-sm text-muted-foreground">
-                        {objective?.name ?? tc("none")}
-                      </span>
+                      objective ? (
+                        <ObjectiveBadge objective={objective} />
+                      ) : (
+                        <span className="text-sm text-muted-foreground">{tc("none")}</span>
+                      )
                     )}
                   </IntegrationDetail>
                 )}

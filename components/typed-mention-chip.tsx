@@ -2,9 +2,14 @@
 
 import { useTranslations } from "next-intl";
 import { MentionChip } from "@/components/mention-chip";
-import { useMentionLinks } from "@/components/mention-links";
+import { mentionStatus, useMentionLinks } from "@/components/mention-links";
 import { mentionMarkdown, type MentionLinkType } from "@/lib/mention-link";
-import { rememberShownMention, useResolvedMentionLabel } from "@/lib/mention-resolution";
+import {
+  rememberShownMention,
+  useResolvedMentionLabel,
+  useResolvedMentionStatus,
+} from "@/lib/mention-resolution";
+import { OBJECTIVE_STATUS_MAP } from "@/lib/objective-constants";
 import { useEffect } from "react";
 
 /** Marks a typed pill so a copy of rendered text keeps its reference. */
@@ -40,6 +45,11 @@ export function TypedMentionChip({
   const scopedOnly = type === "resource";
   const resolved = useResolvedMentionLabel(local || scopedOnly ? null : type, local || scopedOnly ? null : id);
   const label = local ?? (scopedOnly ? null : resolved);
+  // An objective's status: from the sources on screen, else from the server
+  // resolution (MIN-785) — without it the pill falls back to the target.
+  const resolvedStatus = useResolvedMentionStatus(type === "objective" ? type : null, id);
+  const status = mentionStatus(links, type, id)
+    ?? (resolvedStatus ? OBJECTIVE_STATUS_MAP[resolvedStatus].issueStatus : undefined);
   // A copy of this pill carries what it shows, never its stored label.
   useEffect(() => {
     if (label !== undefined) rememberShownMention(type, id, label);
@@ -60,7 +70,7 @@ export function TypedMentionChip({
         label={label ?? "…"}
         href={href}
         onNavigate={href ? () => links?.navigate(type, id) : undefined}
-        status={type === "issue" ? links?.issueStatus(id) ?? undefined : undefined}
+        status={status ?? undefined}
         tooltip={type === "issue" && label !== undefined ? links?.issueTitle?.(id) ?? null : null}
         avatarSeed={label === undefined ? null : appearance?.seed ?? null}
         color={label === undefined ? null : appearance?.color ?? null}

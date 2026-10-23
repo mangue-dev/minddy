@@ -306,7 +306,8 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
             icon={pageIcon
               ? <span className="text-sm leading-none" aria-hidden>{pageIcon}</span>
               : <AppTabIcon section={section} project={project} projectId={projectId}
-                  objectiveColor={objectiveId ? objective?.color ?? null : undefined} />}
+                  objectiveColor={objectiveId ? objective?.color ?? null : undefined}
+                  objectiveStatus={objectiveId ? objective?.status : undefined} />}
             badge={sectionBadges(section, projectId ?? null)} busy={busy} last={tabs.length <= 1}
             compositeIcon={composite} width={tab.pinned ? undefined : regularWidth}
             onActivate={() => { if (!busy) void session.activate(tab.id); }} onClose={() => close(tab.id)}
@@ -324,7 +325,8 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
               : "flex h-[34px] items-center gap-2 rounded-md bg-sidebar-accent px-2.5 text-sm text-sidebar-foreground shadow-lg"}
               style={draggedTab.pinned ? undefined : { width: regularWidth }}>
               <AppTabIcon section={section} project={project} projectId={projectId}
-                objectiveColor={objectiveId ? objective?.color ?? null : undefined} />
+                objectiveColor={objectiveId ? objective?.color ?? null : undefined}
+                  objectiveStatus={objectiveId ? objective?.status : undefined} />
               {!draggedTab.pinned && <span className="truncate">{label}</span>}
             </div>;
           })()}
@@ -352,7 +354,8 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
             {hidden.map(({ tab, view }) => (
               <DropdownMenuItem key={tab.id} onPointerEnter={() => session.prefetch(tab.href)} onFocus={() => session.prefetch(tab.href)} onSelect={() => { if (!busy) void session.activate(tab.id); }}>
                 <AppTabIcon section={view.section} project={view.project} projectId={view.projectId}
-                  objectiveColor={view.objectiveId ? view.objective?.color ?? null : undefined} />
+                  objectiveColor={view.objectiveId ? view.objective?.color ?? null : undefined}
+                  objectiveStatus={view.objectiveId ? view.objective?.status : undefined} />
                 <span className="truncate">{view.label}</span>
                 {(() => {
                   const badge = sectionBadges(view.section, view.projectId ?? null);

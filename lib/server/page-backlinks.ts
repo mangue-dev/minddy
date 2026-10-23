@@ -2,6 +2,7 @@ import "server-only";
 
 import { issueIdentifier } from "@/lib/issue-constants";
 import type { PageBacklink } from "@/lib/types";
+import type { ObjectiveStatus } from "@/lib/objective-validation";
 import { decodeIssue } from "@/lib/server/issue-store";
 import { decodeObjective } from "@/lib/server/objective-store";
 import { decodePageProjection } from "@/lib/server/page-content";
@@ -97,7 +98,7 @@ export async function pageBacklinks(
 
   const [issues, objectives, pages] = (await Promise.all([
     fetchIn(client, "issues", "id, project_id, number, title, description, plan, remote_url, automation_override, deleted_at, encrypted_content, encryption_version", idsOf("issue")),
-    fetchIn(client, "objectives", "id, project_id, name, description, color, deleted_at, encrypted_content, encryption_version", idsOf("objective")),
+    fetchIn(client, "objectives", "id, project_id, name, description, color, status, deleted_at, encrypted_content, encryption_version", idsOf("objective")),
     fetchIn(client, "pages", "id, project_id, title, icon, deleted_at, encrypted_content, encryption_version", idsOf("page")),
   ])) as [Rows, Rows, Rows];
 
@@ -125,6 +126,7 @@ export async function pageBacklinks(
     project_id: string;
     name: string | null;
     color: string | null;
+    status: ObjectiveStatus | null;
     deleted_at: string | null;
   }[]) {
     if (stored.deleted_at) continue;
@@ -136,6 +138,7 @@ export async function pageBacklinks(
       title: row.name as string,
       icon: null,
       color: row.color as string | null,
+      ...(stored.status ? { status: stored.status } : {}),
     });
   }
   for (const stored of (pages.data ?? []) as {

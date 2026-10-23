@@ -1,4 +1,5 @@
 import type { ReasoningLevel } from "./agent-reasoning";
+import type { ObjectiveStatus } from "./objective-validation";
 import type { ResourceInput } from "./types";
 import type { IssueStatus } from "./issue-constants";
 import type { SelfHostingHelpContext } from "./self-hosting-help-context";
@@ -172,6 +173,8 @@ export interface AssistantPinnedContext {
   /** Objectives: their color — this is what their target wears, here like
  everywhere else in the application. */
   color?: string | null;
+  /** Objectives: their status, shown instead of the target (MIN-785). */
+  objectiveStatus?: ObjectiveStatus;
   /** Wiki pages: their emoji, when they have one. */
   icon?: string | null;
 }
@@ -204,7 +207,8 @@ export interface AssistantMention {
   color?: string | null;
   /** Wiki pages: their emoji (MIN-273). */
   icon?: string | null;
-  /** Issues: workflow state captured for immediate rendering; live sources win. */
+  /** Issues: workflow state captured for immediate rendering; live sources
+      win. Objectives: the issue state their status borrows (MIN-785). */
   status?: IssueStatus;
 }
 
@@ -257,6 +261,8 @@ export interface AssistantPageContext {
   objectiveName?: string;
   /** Its color — what its target wears on the context pill. */
   objectiveColor?: string | null;
+  /** Its status, whose glyph the context pill shows (MIN-785). */
+  objectiveStatus?: ObjectiveStatus;
   /** The feedback post open in the team dashboard, when any (MIN-52). */
   feedbackId?: string;
   feedbackTitle?: string;

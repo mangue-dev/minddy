@@ -19,22 +19,14 @@ import { displayName } from "@/lib/display-name";
 import { UserAvatar } from "@/components/user-avatar";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { SearchSelect, type PickerOption } from "@/components/search-select";
+import { OBJECTIVE_PILL_TRIGGER, objectivePickerOption, ObjectivePill } from "@/components/objective-label";
+import { useOrderedObjectives } from "@/lib/use-ordered-objectives";
 import type { Issue, Member, Objective } from "@/lib/types";
 
 function memberLabel(m: Member): string {
   return displayName(m);
 }
 
-/** A small round color dot used for objective/category-style options. */
-function Dot({ color }: { color: string | null | undefined }) {
-  return (
-    <span
-      className="size-2.5 shrink-0 rounded-full"
-      style={{ backgroundColor: color ?? "var(--muted-foreground)" }}
-      aria-hidden
-    />
-  );
-}
 
 export function ObjectivePicker({
   value,
@@ -49,11 +41,7 @@ export function ObjectivePicker({
 }) {
   const tField = useTranslations("Field");
   const current = objectives.find((o) => o.id === value) ?? null;
-  const options: PickerOption[] = objectives.map((o) => ({
-    value: o.id,
-    label: o.name,
-    icon: <Dot color={o.color} />,
-  }));
+  const options: PickerOption[] = useOrderedObjectives(objectives).map(objectivePickerOption);
   return (
     <SearchSelect
       value={value}
@@ -61,17 +49,19 @@ export function ObjectivePicker({
       options={options}
       noneOption={{ label: tField("noObjective") }}
       trigger={
-        // A chosen lens shows ITS chip, its color — like its options
-        // just above, and like the compact picker. The neutral target remains
-        // than for "no objective", where there is no color to follow.
-        <Button variant="outline" size={size}>
-          {current ? (
-            <Dot color={current.color} />
-          ) : (
+        // A chosen objective is its pill, like its options just above and the
+        // compact picker: the pill is the button. The neutral target stays for
+        // "no objective", where there is no color to follow.
+        current ? (
+          <button type="button" className={OBJECTIVE_PILL_TRIGGER}>
+            <ObjectivePill objective={current} />
+          </button>
+        ) : (
+          <Button variant="outline" size={size}>
             <HugeiconsIcon icon={Target01Icon} className="text-muted-foreground" />
-          )}
-          {current ? current.name : tField("noObjective")}
-        </Button>
+            {tField("noObjective")}
+          </Button>
+        )
       }
     />
   );

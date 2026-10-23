@@ -5,6 +5,7 @@ import { APP_TAB_METADATA_BATCH_SIZE, type AppTabMetadata } from "@/lib/app-tab-
 import { decodeRoutineTitle } from "@/lib/server/routine-content";
 import { decodePageProjection } from "@/lib/server/page-content";
 import { decodeObjective } from "@/lib/server/objective-store";
+import type { ObjectiveStatus } from "@/lib/objective-validation";
 import { decodeIssue } from "@/lib/server/issue-store";
 import { decodePullRequestContentRow } from "@/lib/server/agent/pull-request-content";
 
@@ -29,7 +30,7 @@ export async function readAppTabMetadata(client: SupabaseClient, hrefs: string[]
   }
   const [pages, objectives, pullRequests, routines, issues] = await Promise.all([
     read<Record<string, unknown>>("pages", "id,project_id,title,icon,encrypted_content,encryption_version", ids("pageId")),
-    read<Record<string, unknown>>("objectives", "id,project_id,name,description,color,encrypted_content,encryption_version", ids("objectiveId")),
+    read<Record<string, unknown>>("objectives", "id,project_id,name,description,color,status,encrypted_content,encryption_version", ids("objectiveId")),
     read<AppTabMetadata["pullRequests"][number]>("pull_requests", "id,number,title", ids("prId")),
     read<AppTabMetadata["routines"][number]>("agent_routines",
       "id,project_id,title,encrypted_content,encryption_version", ids("routineId")),
@@ -48,7 +49,8 @@ export async function readAppTabMetadata(client: SupabaseClient, hrefs: string[]
     objectives: await Promise.all(visibleObjectives.map(async (row) => {
       const decoded = await decodeObjective(row);
       return { id: decoded.id as string, project_id: decoded.project_id as string,
-        name: decoded.name as string, color: decoded.color as string | null };
+        name: decoded.name as string, color: decoded.color as string | null,
+        status: decoded.status as ObjectiveStatus };
     })),
     pullRequests: await Promise.all(pullRequests.map((row) => decodePullRequestContentRow(row))),
     routines: await Promise.all(routines.map(async (row) => ({ id: row.id,

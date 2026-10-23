@@ -4,6 +4,7 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { boundedText } from "@/lib/server/bounded-body";
 import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
 import { isMentionLinkType } from "@/lib/mention-link";
+import type { ObjectiveStatus } from "@/lib/objective-validation";
 import {
   MAX_MENTION_REFS,
   mentionKey,
@@ -18,9 +19,10 @@ const RESOLVES_PER_MINUTE = 600;
 /**
  * POST /api/mentions/resolve — what the signed-in reader may see of the
  * mentions a text makes (MIN-734). Body: `{ refs: [{ type, id }] }`, at most
- * 200. Answer: `{ mentions: [{ type, id, label }] }`, where `label` is the
- * target's current label, or `null` when it is unknown, deleted or not the
- * reader's to see — the three are indistinguishable on purpose. See
+ * 200. Answer: `{ mentions: [{ type, id, label, status? }] }`, where `label`
+ * is the target's current label, or `null` when it is unknown, deleted or not
+ * the reader's to see — the three are indistinguishable on purpose. An
+ * objective the reader may see also carries its `status`. See
  * lib/server/mention-access.ts.
  */
 export async function POST(request: NextRequest) {
@@ -48,8 +50,12 @@ export async function POST(request: NextRequest) {
     }
     refs.push({ type, id });
   }
-  const resolution = await resolveMentionTargets(auth.user.id, refs);
+  const statuses = new Map<string, ObjectiveStatus>();
+  const resolution = await resolveMentionTargets(auth.user.id, refs, undefined, statuses);
   return NextResponse.json({
-    mentions: refs.map((ref) => ({ ...ref, label: resolution.get(mentionKey(ref)) ?? null })),
+    mentions: refs.map((ref) => {
+      const status = statuses.get(mentionKey(ref));
+      return { ...ref, label: resolution.get(mentionKey(ref)) ?? null, ...(status ? { status } : {}) };
+    }),
   }, { headers: NO_STORE });
 }

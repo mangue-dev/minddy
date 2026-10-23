@@ -23,6 +23,7 @@ import { NumoFace } from "@/components/numo-face";
 import { filterMentionItems } from "@/lib/mention-menu";
 import { StatusIndicator } from "@/components/issue-indicators";
 import type { IssueStatus } from "@/lib/issue-constants";
+import type { ObjectiveStatus } from "@/lib/objective-validation";
 
 export interface MentionOption {
   /** Source project for contextual mentions retained across navigation. */
@@ -48,7 +49,7 @@ export interface MentionOption {
   avatarSeed?: string;
   /** Projects: the imported favicon, when there is one (otherwise the orb). */
   iconUrl?: string | null;
-  /** Objectifs : leur couleur — celle que porte leur cible partout ailleurs. */
+  /** Objectives: their color, the tint of their pill everywhere else. */
   color?: string | null;
   /** Pages: their emoji, when they have one (MIN-273). */
   icon?: string | null;
@@ -57,6 +58,8 @@ export interface MentionOption {
   mime?: string | null;
   /** Issues: their live workflow state replaces the generic page glyph. */
   status?: IssueStatus;
+  /** Objectives: their status, whose glyph replaces the target (MIN-785). */
+  objectiveStatus?: ObjectiveStatus;
   /** Second row of the line: the title of a ticket, the name of the project of an objective. What distinguishes MIN-42 from MIN-43 when choosing. */
   detail?: string;
   /** Search terms in addition to the label (email, project key, title). */
@@ -121,6 +124,7 @@ export function MentionFigure({
     return (
       <ObjectiveIconBadge
         color={option.color}
+        status={option.objectiveStatus}
         className={cn("shrink-0 rounded-full", className)}
         iconClassName="size-3"
       />

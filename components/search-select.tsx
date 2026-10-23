@@ -43,7 +43,14 @@ export type PickerOption = {
   keywords?: string[];
   /** Leading visual (indicator, avatar, color dot…). */
   icon?: React.ReactNode;
+  /** Rendered in place of the label text, e.g. an objective's pill; `label`
+      stays the search term. */
+  labelNode?: React.ReactNode;
 };
+
+function OptionLabel({ option }: { option: PickerOption }) {
+  return option.labelNode ?? <span className="truncate">{option.label}</span>;
+}
 
 /**
  * A last line of the menu that CREATES what we can't find — quick add
@@ -247,7 +254,7 @@ export function SearchSelect({
             {...checkedProps(value === opt.value)}
           >
             {opt.icon}
-            <span className="truncate">{opt.label}</span>
+            <OptionLabel option={opt} />
           </CommandItem>
         ))}
       </CommandGroup>
@@ -262,7 +269,7 @@ export function SearchSelect({
           renderItem={(opt) => (
             <>
               {opt.icon}
-              <span className="truncate">{opt.label}</span>
+              <OptionLabel option={opt} />
             </>
           )}
         />
@@ -329,7 +336,7 @@ export function SearchMultiSelect({
             {...checkedProps(values.includes(opt.value))}
           >
             {opt.icon}
-            <span className="truncate">{opt.label}</span>
+            <OptionLabel option={opt} />
           </CommandItem>
         ))}
       </CommandGroup>

@@ -145,7 +145,12 @@ export const ResultItem = memo(function ResultItem({
         )}
 
         {/* Title */}
-        <span className={styles.title}>{item.title}</span>
+        <span
+          className={item.titleClassName ? `${styles.title} ${item.titleClassName}` : styles.title}
+          style={item.titleStyle}
+        >
+          {item.title}
+        </span>
       </span>
 
       {/* Trailing metadata (desktop only): the project it belongs to first,

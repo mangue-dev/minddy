@@ -1,6 +1,7 @@
 "use client";
 
 import { RelationObjectiveLabel } from "@/components/relation-objective-label";
+import { useOrderedObjectives } from "@/lib/use-ordered-objectives";
 import { useTranslations } from "next-intl";
 import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { CommandAnchor } from "@/components/command-anchor";
@@ -58,19 +59,13 @@ export function RelationTargetPicker({
       </CommandGroup>
       {objectives.length > 0 && (
         <CommandGroup heading={t("objectives")}>
-          {objectives.map((objective) => (
-            <CommandItem
-              key={objective.id}
-              value={objective.id}
-              keywords={[objective.name]}
-              onSelect={() => {
-                onClose();
-                onSelect(objective.id, "objective");
-              }}
-            >
-              <RelationObjectiveLabel objective={objective} />
-            </CommandItem>
-          ))}
+          <ObjectiveTargetItems
+            objectives={objectives}
+            onSelect={(objectiveId) => {
+              onClose();
+              onSelect(objectiveId, "objective");
+            }}
+          />
         </CommandGroup>
       )}
       {/* Same eligible issues, found by meaning (MIN-718). */}
@@ -96,4 +91,27 @@ export function RelationTargetPicker({
       />
     </CommandAnchor>
   );
+}
+
+/**
+ * The objective targets in picker order (MIN-785). Its own component so the
+ * ordering only runs while the picker is open: the picker is mounted on cards.
+ */
+function ObjectiveTargetItems({
+  objectives,
+  onSelect,
+}: {
+  objectives: Objective[];
+  onSelect: (objectiveId: string) => void;
+}) {
+  return useOrderedObjectives(objectives).map((objective) => (
+    <CommandItem
+      key={objective.id}
+      value={objective.id}
+      keywords={[objective.name]}
+      onSelect={() => onSelect(objective.id)}
+    >
+      <RelationObjectiveLabel objective={objective} />
+    </CommandItem>
+  ));
 }

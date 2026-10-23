@@ -159,6 +159,7 @@ export function useMentionSources(
       project_id: row.project_id,
       name: row.name,
       color: row.color,
+      status: row.status,
     }));
   }, [
     index?.objectives,
@@ -256,6 +257,11 @@ export function useMentionLinksFor(
       mentionTargetPath(type, id, projectOf(type, id));
     const statusByIssueId = new Map(issues.map((issue) => [issue.id, issue.status]));
     const titleByIssueId = new Map(issues.map((issue) => [issue.id, issue.title]));
+    const statusByObjectiveId = new Map(
+      objectives.flatMap((objective) =>
+        objective.status ? [[objective.id, objective.status] as const] : [],
+      ),
+    );
     const labels = new Map<string, string>([
       ...issues.map((issue) => [`issue:${issue.id}`, issue.identifier] as [string, string]),
       ...objectives.map((objective) => [`objective:${objective.id}`, objective.name] as [string, string]),
@@ -268,6 +274,7 @@ export function useMentionLinksFor(
       href,
       issueStatus: (id) => statusByIssueId.get(id) ?? null,
       issueTitle: (id) => titleByIssueId.get(id) || null,
+      objectiveStatus: (id) => statusByObjectiveId.get(id) ?? null,
       label: (type, id) => labels.get(`${type}:${id}`) ?? null,
       navigate: (type, id) => {
         const target = mentionNavigationTarget(type, id, projectOf(type, id));
@@ -351,6 +358,8 @@ export function useDescriptionMentions(
         id: o.id,
         label: o.name,
         color: o.color,
+        // The status glyph replaces the target in the suggestion (MIN-785).
+        objectiveStatus: o.status,
       })),
     ],
     [members, offered],

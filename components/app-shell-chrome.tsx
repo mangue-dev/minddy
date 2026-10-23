@@ -197,32 +197,9 @@ function toMenuSections(sections: AppNavSection[]): MobileMenuSection[] {
   }));
 }
 
-// The palette icon slot renders `<Icon className="size-4 …" />` with no way to
-// pass a color, so we hand it a per-color component (the objective's dot, like
-// on the objectives page). Cache by color to keep component identity stable
-// across renders — otherwise the dot remounts (mirrors projectOrbIcon).
-const objectiveDotCache = new Map<string, ComponentType<{ className?: string }>>();
-
-function objectiveDotIcon(color: string | null): ComponentType<{ className?: string }> {
-  const key = color ?? "none";
-  const cached = objectiveDotCache.get(key);
-  if (cached) return cached;
-  const Icon = ({ className }: { className?: string }) => (
-    <span className={cn("flex items-center justify-center", className)} aria-hidden>
-      <span
-        className="size-2.5 rounded-full"
-        style={{ backgroundColor: color ?? "var(--muted-foreground)" }}
-      />
-    </span>
-  );
-  Icon.displayName = `ObjectiveDotIcon(${key})`;
-  objectiveDotCache.set(key, Icon);
-  return Icon;
-}
-
 // The emoji of a wiki page, in the icon slot of the palette (MIN-270).
-// Cached by emoji for the same reason as the objective point: slot
-// receives a COMPONENT, and making a new one each time it is rendered would reassemble it.
+// Cached by emoji: the slot receives a COMPONENT, and making a new one each
+// time it is rendered would remount it.
 const emojiIconCache = new Map<string, ComponentType<{ className?: string }>>();
 
 function emojiIcon(emoji: string): ComponentType<{ className?: string }> {
@@ -1150,7 +1127,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               {
                 key: `objective-${o.id}`,
                 label: o.name,
-                icon: objectiveDotIcon(o.color),
+                // The palette shows its status and colors its name (MIN-785).
                 keywords: [project.name, project.key],
                 meta: projectChip(project),
                 metaText: project.name,

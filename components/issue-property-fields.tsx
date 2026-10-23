@@ -33,6 +33,8 @@ import {
   useObjectiveCreateOption,
 } from "@/lib/use-picker-create";
 import type { RecurrenceCadence } from "@/lib/recurrence";
+import { OBJECTIVE_PILL_TRIGGER, objectivePickerOption, ObjectivePill } from "@/components/objective-label";
+import { useOrderedObjectives } from "@/lib/use-ordered-objectives";
 import type { Category, Member, Objective } from "@/lib/types";
 
 /* Borderless key/value fields for the issue panel — the value control has no
@@ -338,11 +340,7 @@ export function ObjectiveValue({
   const tField = useTranslations("Field");
   const tCommon = useTranslations("Common");
   const current = objectives.find((o) => o.id === value) ?? null;
-  const options: PickerOption[] = objectives.map((o) => ({
-    value: o.id,
-    label: o.name,
-    icon: <Dot color={o.color} />,
-  }));
+  const options: PickerOption[] = useOrderedObjectives(objectives).map(objectivePickerOption);
   const createOption = useObjectiveCreateOption({
     projectId,
     onCreated: (objective) => onChange(objective.id),
@@ -358,12 +356,13 @@ export function ObjectiveValue({
       tooltip={tField("objective")}
       shortcutHint={KEY_FOR_FIELD.objective}
       trigger={
-        <button type="button" aria-label={t("changeObjectiveAria")} className={TRIGGER}>
+        <button
+          type="button"
+          aria-label={t("changeObjectiveAria")}
+          className={current ? OBJECTIVE_PILL_TRIGGER : TRIGGER}
+        >
           {current ? (
-            <>
-              <Dot color={current.color} />
-              <span className="truncate">{current.name}</span>
-            </>
+            <ObjectivePill objective={current} />
           ) : (
             <span className="text-muted-foreground">{tCommon("none")}</span>
           )}

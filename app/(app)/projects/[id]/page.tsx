@@ -607,6 +607,7 @@ function ProjectBoard() {
               objectiveId: activeObjective.id,
               objectiveName: activeObjective.name,
               objectiveColor: activeObjective.color,
+              objectiveStatus: activeObjective.status,
             }
           : { projectId, ...viewCtx }
       : null

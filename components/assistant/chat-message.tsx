@@ -35,7 +35,7 @@ import { useProjects } from "@/lib/projects-context";
 import { orbSeedOr } from "@/lib/project-orb-colors";
 import { MentionChip } from "@/components/mention-chip";
 import { MarkdownLink } from "@/components/markdown-link";
-import { useMentionLinks } from "@/components/mention-links";
+import { mentionStatus, useMentionLinks } from "@/components/mention-links";
 import { ResourcePills, type ResourceLike } from "@/components/resources";
 import {
   AdaptiveContextRow,
@@ -358,9 +358,10 @@ function UserText({
                 icon={mention.icon}
                 color={mention.color}
                 status={
-                  mention.type === "issue"
-                    ? links?.issueStatus(mention.id) ?? mention.status
-                    : undefined
+                  mentionStatus(links, mention.type, mention.id) ??
+                  (mention.type === "issue" || mention.type === "objective"
+                    ? mention.status
+                    : undefined)
                 }
                 tooltip={mention.type === "issue" ? links?.issueTitle?.(mention.id) ?? null : null}
                 href={links?.href(mention.type, mention.id) ?? null}

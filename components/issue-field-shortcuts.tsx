@@ -35,6 +35,8 @@ import {
 } from "@/lib/use-picker-create";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { Dot } from "@/components/issue-property-fields";
+import { ObjectivePill } from "@/components/objective-label";
+import { useOrderedObjectives } from "@/lib/use-ordered-objectives";
 import {
   StatusIndicator,
   PriorityIndicator,
@@ -206,6 +208,33 @@ export function useIssueFieldShortcuts(
 /** cmdk reads `data-checked` off the DOM to render the trailing check. */
 const checked = (on: boolean) => (on ? { "data-checked": "true" as const } : {});
 
+/**
+ * The objective rows of the O menu, in picker order. A component of its own so
+ * the ordering (and the ticket lists it reads) only exists while this menu is
+ * open — the menu itself is mounted on every card.
+ */
+function ObjectiveShortcutItems({
+  objectives,
+  value,
+  onSelect,
+}: {
+  objectives: Objective[];
+  value: string | null;
+  onSelect: (objectiveId: string) => void;
+}) {
+  return useOrderedObjectives(objectives).map((o) => (
+    <CommandItem
+      key={o.id}
+      value={o.id}
+      keywords={[o.name]}
+      onSelect={() => onSelect(o.id)}
+      {...checked(value === o.id)}
+    >
+      <ObjectivePill objective={o} />
+    </CommandItem>
+  ));
+}
+
 export function IssueShortcutMenu({
   state,
   onClose,
@@ -375,18 +404,11 @@ export function IssueShortcutMenu({
           >
             <span className="truncate text-muted-foreground">{tCommon("none")}</span>
           </CommandItem>
-          {objectives.map((o) => (
-            <CommandItem
-              key={o.id}
-              value={o.id}
-              keywords={[o.name]}
-              onSelect={() => apply({ objective_id: o.id })}
-              {...checked(issue.objective_id === o.id)}
-            >
-              <Dot color={o.color} />
-              <span className="truncate">{o.name}</span>
-            </CommandItem>
-          ))}
+          <ObjectiveShortcutItems
+            objectives={objectives}
+            value={issue.objective_id}
+            onSelect={(objective_id) => apply({ objective_id })}
+          />
         </>
       );
       break;

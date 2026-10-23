@@ -130,7 +130,7 @@ describe("pageBacklinks", () => {
         { id: "i1", number: 1, title: "Un", deleted_at: null },
         { id: "i2", number: 2, title: "Deux", deleted_at: null },
       ],
-      objectives: [{ id: "o1", name: "L'objectif", description: null, color: "amber", deleted_at: null }],
+      objectives: [{ id: "o1", name: "L'objectif", description: null, color: "amber", status: "in_progress", deleted_at: null }],
       pages: [{ id: "pg", title: "L'autre page", icon: "📘", deleted_at: null }],
     });
 
@@ -138,7 +138,7 @@ describe("pageBacklinks", () => {
     // Chaque genre se nomme comme il se nomme partout ailleurs : un identifiant
     // for a ticket, its color for a goal, its emoji for a page.
     expect(found[1].identifier).toBe("MIN-1");
-    expect(found[2]).toMatchObject({ title: "L'objectif", color: "amber" });
+    expect(found[2]).toMatchObject({ title: "L'objectif", color: "amber", status: "in_progress" });
     expect(found[3]).toMatchObject({ title: "L'autre page", icon: "📘" });
   });
 

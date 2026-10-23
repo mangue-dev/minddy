@@ -25,6 +25,9 @@ vi.mock("@/components/ui/command", async (importOriginal) => ({
   CommandItem: "item",
 }));
 vi.mock("@/components/command-anchor", () => ({ CommandAnchor: "anchor" }));
+// Picker order has its own suite (lib/objective-order.test.ts); these tests
+// render without a QueryClient, so the hook keeps the fixture order.
+vi.mock("@/lib/use-ordered-objectives", () => ({ useOrderedObjectives: <T,>(objectives: T[]) => objectives }));
 vi.mock("@/components/issue-indicators", () => ({
   StatusIndicator: "issue-status", ObjectiveStatusIndicator: "objective-status",
 }));
@@ -78,6 +81,11 @@ function evaluate<T>(expression: string, scope: Record<string, unknown>): T {
 function elements(node: React.ReactNode): React.ReactElement<Record<string, unknown>>[] {
   return React.Children.toArray(node).flatMap((child) => {
     if (!React.isValidElement<Record<string, unknown>>(child)) return [];
+    // The objective rows render from a child component of the picker: expand
+    // it, as the picker is called as a plain function here.
+    if (typeof child.type === "function" && child.type.name === "ObjectiveTargetItems") {
+      return elements((child.type as (props: Record<string, unknown>) => React.ReactNode)(child.props));
+    }
     return [child, ...elements(child.props.children as React.ReactNode)];
   });
 }

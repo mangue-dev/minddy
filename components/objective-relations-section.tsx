@@ -16,6 +16,7 @@ import { Cancel01Icon, Link02Icon } from "@hugeicons/core-free-icons";
 import { useAppRouter } from "@/lib/use-app-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { RelationObjectiveLabel } from "@/components/relation-objective-label";
+import { useOrderedObjectives } from "@/lib/use-ordered-objectives";
 import { SemanticIssueGroup } from "@/components/semantic-issue-group";
 import { useTranslations } from "next-intl";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
@@ -126,16 +127,18 @@ export function ObjectiveRelationsSection({
     () => orderIssuesForSearch(issues.filter((i) => !linked.has(i.id)), (i) => i.status),
     [issues, linked],
   );
+  // Picker order (MIN-785): the most recently fed objectives first.
+  const orderedObjectives = useOrderedObjectives(objectives);
   const objectiveCandidates = useMemo(
     () =>
-      objectives.filter(
+      orderedObjectives.filter(
         (o) =>
           o.id !== objective.id &&
           !linked.has(o.id) &&
           o.status !== "done" &&
           o.status !== "canceled",
       ),
-    [objectives, objective.id, linked],
+    [orderedObjectives, objective.id, linked],
   );
 
   const grouped = useMemo(

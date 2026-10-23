@@ -874,6 +874,8 @@ export interface PageBacklink {
   icon: string | null;
   /** The color of a lens — it travels with it everywhere. */
   color: string | null;
+  /** An objective's status, whose glyph its pill shows (MIN-785). */
+  status?: ObjectiveStatus;
   /** When the quote was asked: order within a genre. */
   at: string;
 }
@@ -1061,7 +1063,10 @@ export interface IssueCardIssue {
 }
 
 /** The objective as a map shows it: a tablet and a name. */
-export type IssueCardObjective = Pick<Objective, "id" | "name" | "color">;
+/** The status is absent from the public board projection, which keeps only the
+    name and color. */
+export type IssueCardObjective = Pick<Objective, "id" | "name" | "color"> &
+  Partial<Pick<Objective, "status">>;
 
 /** The category as a map shows it: a sticker and a name. */
 export type IssueCardCategory = Pick<Category, "id" | "name" | "color">;
