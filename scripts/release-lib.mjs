@@ -55,11 +55,15 @@ export function assertOfficialSupabaseRelease(release) {
 }
 
 export function assertOfficialSupabaseImages(compose) {
+  const references = [...compose.matchAll(/^\s*image:\s*(\S+)\s*$/gm)].map((match) => {
+    const reference = match[1];
+    const separator = reference.lastIndexOf(":");
+    return separator === -1
+      ? { name: reference, tag: "" }
+      : { name: reference.slice(0, separator), tag: reference.slice(separator + 1) };
+  });
   for (const [image, minimum] of Object.entries(MINIMUM_OFFICIAL_SUPABASE_IMAGES)) {
-    const escaped = image.replace(/[/.]/g, "\\$&");
-    const tags = [...compose.matchAll(new RegExp(`^\\s*image:\\s*${escaped}:(\\S+)\\s*$`, "gm"))].map(
-      (match) => match[1],
-    );
+    const tags = references.filter((reference) => reference.name === image).map((reference) => reference.tag);
     if (tags.length === 0) throw new Error(`the pinned upstream Compose file does not declare ${image}`);
     for (const tag of tags) {
       if (!isVersionAtLeast(tag, minimum)) {
