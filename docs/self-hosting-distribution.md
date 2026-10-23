@@ -73,13 +73,23 @@ the only supported matrix for that release. Its values are intentionally exact:
 - the host must meet the recorded Docker Engine and Docker Compose plugin
   minimums; Docker Desktop is suitable for local acceptance but is not a
   production platform guarantee;
-- the complete path uses the exact official `self-hosted/v0.7.2` Supabase
-  Compose release and the image set it pins; upgrading a service image by hand
-  is unsupported; and
+- the complete path uses the exact official Supabase Compose release recorded
+  in the row's `supabase.completeOfficial` field and the image set it pins;
+  upgrading a service image by hand is unsupported; and
 - the simple path supports a managed service that provides the listed APIs and
   passes the release's verification command. A managed service has no
   operator-selected server version, so API capability—not an inferred internal
   version—is the compatibility check.
+
+A new row must also clear the Supabase security floor. Release preparation
+(`assertReleaseCompatibility` in `scripts/release-lib.mjs`) refuses a complete
+path older than `MINIMUM_OFFICIAL_SUPABASE_RELEASE`, and
+`pnpm validate:self-hosted-compose` refuses a pinned upstream Compose file whose
+Realtime or Storage image is older than `MINIMUM_OFFICIAL_SUPABASE_IMAGES`.
+Raise both constants, with the advisory identifiers in their comment, when a
+Supabase advisory affects a service the complete path ships. Rows published
+before a floor existed stay unchanged; their operators move to the first
+release that clears it.
 
 The matrix is changed in the same pull request as a compatibility change. A
 later minddy release may add a new row, but it never silently widens the

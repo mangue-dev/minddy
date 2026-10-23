@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assertReleaseCompatibility, assertVersion } from "./release-lib.mjs";
+import {
+  assertOfficialSupabaseImages,
+  assertReleaseCompatibility,
+  assertVersion,
+  isVersionAtLeast,
+} from "./release-lib.mjs";
 
 test("assertVersion accepts SemVer and rejects ambiguous versions", () => {
   assert.equal(assertVersion("1.2.3"), "1.2.3");
@@ -16,6 +21,7 @@ function compatibilityEntry(overrides = {}) {
     tag: "v1.2.3",
     supportedTopologies: ["simple-managed-supabase", "complete-official-supabase"],
     referenceCompose: { minddyImage: "ghcr.io/mangue-dev/minddy:v1.2.3" },
+    supabase: { completeOfficial: { release: "self-hosted/v0.8.3" } },
     ...overrides,
   };
 }
@@ -65,5 +71,46 @@ test("release compatibility pins the official image and both supported topologie
       "1.2.3",
     ),
     /complete-official-supabase/,
+  );
+});
+
+test("release compatibility refuses an official Supabase release with vulnerable Storage or Realtime", () => {
+  const publish = (release) => assertReleaseCompatibility(
+    { schemaVersion: 1, entries: [compatibilityEntry({ supabase: { completeOfficial: { release } } })] },
+    "1.2.3",
+  );
+  assert.doesNotThrow(() => publish("self-hosted/v0.8.3"));
+  assert.doesNotThrow(() => publish("self-hosted/v0.10.0"));
+  assert.throws(() => publish("self-hosted/v0.7.2"), /self-hosted\/v0\.8\.3 or later, not self-hosted\/v0\.7\.2/);
+  assert.throws(() => publish("v0.8.3"), /self-hosted\/v0\.8\.3 or later/);
+  assert.throws(
+    () => assertReleaseCompatibility({ schemaVersion: 1, entries: [compatibilityEntry({ supabase: undefined })] }, "1.2.3"),
+    /not nothing/,
+  );
+});
+
+test("version floors compare numerically and reject unparseable tags", () => {
+  assert.equal(isVersionAtLeast("v1.80.2", "1.80.2"), true);
+  assert.equal(isVersionAtLeast("1.81.0", "1.80.2"), true);
+  assert.equal(isVersionAtLeast("v1.80.10", "1.80.2"), true);
+  assert.equal(isVersionAtLeast("v1.60.4", "1.80.2"), false);
+  assert.equal(isVersionAtLeast("latest", "1.80.2"), false);
+});
+
+test("the pinned upstream Compose file must ship patched Realtime and Storage images", () => {
+  const compose = (realtime, storage) =>
+    `services:\n  realtime:\n    image: supabase/realtime:${realtime}\n  storage:\n    image: supabase/storage-api:${storage}\n`;
+  assert.doesNotThrow(() => assertOfficialSupabaseImages(compose("v2.143.3", "v1.81.0")));
+  assert.throws(
+    () => assertOfficialSupabaseImages(compose("v2.102.3", "v1.81.0")),
+    /supabase\/realtime:v2\.102\.3; 2\.137\.15 or later/,
+  );
+  assert.throws(
+    () => assertOfficialSupabaseImages(compose("v2.143.3", "v1.60.4")),
+    /supabase\/storage-api:v1\.60\.4; 1\.80\.2 or later/,
+  );
+  assert.throws(
+    () => assertOfficialSupabaseImages("services:\n  realtime:\n    image: supabase/realtime:v2.143.3\n"),
+    /does not declare supabase\/storage-api/,
   );
 });
