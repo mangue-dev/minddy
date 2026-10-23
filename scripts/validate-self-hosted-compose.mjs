@@ -7,6 +7,8 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { assertOfficialSupabaseImages, assertOfficialSupabaseRelease } from "./release-lib.mjs";
+
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const deployDirectory = resolve(root, "deploy/self-hosted");
 const compatibilityPath = join(deployDirectory, "compatibility.json");
@@ -116,10 +118,12 @@ export async function validate({ checkPlatforms = true } = {}) {
     run("docker", ["compose", "--env-file", join(temporaryDirectory, "deployment.env"), "-f", join(deployDirectory, "compose.managed.yml"), "config", "--quiet"]);
 
     const upstream = entry.supabase.completeOfficial;
+    assertOfficialSupabaseRelease(upstream.release);
     const [upstreamCompose, upstreamEnvironment] = await Promise.all([
       fetchPinnedFile(upstream.commit, "docker/docker-compose.yml", upstream.dockerComposeSha256),
       fetchPinnedFile(upstream.commit, "docker/.env.example", upstream.environmentTemplateSha256),
     ]);
+    assertOfficialSupabaseImages(upstreamCompose);
     const upstreamDirectory = join(temporaryDirectory, "supabase/docker");
     await mkdir(upstreamDirectory, { recursive: true });
     await writeFile(join(upstreamDirectory, "docker-compose.yml"), upstreamCompose);

@@ -49,6 +49,16 @@ Storage, and Realtime.
 | AI | Per-user provider reachable from the server, or managed AI in the cloud edition | No |
 | GitHub, GitLab, application email, Web Push, scheduled routines | Operator-owned accounts and explicit configuration | No |
 
+A Supabase Cloud project receives Storage and Realtime security updates from
+Supabase. An operator-run Supabase must not run a Storage (`storage-api`) or
+Realtime image older than the floors in `MINIMUM_OFFICIAL_SUPABASE_IMAGES`
+(`scripts/release-lib.mjs`): Storage 1.80.2 for GHSA-67rp-h2mf-ph72 and
+GHSA-8rrf-w776-x75g, and Realtime later than 2.137.14 for GHSA-hg9h-6mhq-6c2v
+(CVE-2026-54238) and GHSA-9vjf-j9f7-j42c. The signed-upload bypass in
+GHSA-8rrf-w776-x75g affects private buckets even though minddy never issues
+signed upload URLs, because the vulnerable route ships with every Storage
+server. Upgrade by moving to a newer official Supabase release as a whole.
+
 GitHub integration targets `github.com` and GitLab integration targets
 `gitlab.com`. GitHub Enterprise Server and self-managed GitLab are not silently
 substituted and are currently unsupported by these adapters.
