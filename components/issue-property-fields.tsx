@@ -138,7 +138,6 @@ export function EffortValue({
 }) {
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
-  const tCommon = useTranslations("Common");
   const options: PickerOption[] = EFFORTS.map((e) => ({
     value: e.value,
     label: e.label,
@@ -149,7 +148,7 @@ export function EffortValue({
       value={value}
       onChange={(v) => onChange(v as IssueEffort | null)}
       options={options}
-      noneOption={{ label: tCommon("none") }}
+      noneOption={{ label: tField("effortNone") }}
       align="end"
       tooltip={tField("effort")}
       shortcutHint={KEY_FOR_FIELD.effort}
@@ -158,7 +157,7 @@ export function EffortValue({
           {value ? (
             <EffortIndicator effort={value} className="text-foreground" />
           ) : (
-            <span className="text-muted-foreground">{tCommon("none")}</span>
+            <span className="text-muted-foreground">{tField("effortNone")}</span>
           )}
         </button>
       }

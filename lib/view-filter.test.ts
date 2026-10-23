@@ -253,3 +253,23 @@ describe("default status columns (MIN-736)", () => {
     expect(storedStatusFilter(["todo", "done"])).toEqual(["todo", "done"]);
   });
 });
+
+describe("effort filter — not set (MIN-790)", () => {
+  const withEffort = (effort: Issue["effort"], id = String(effort)) =>
+    ({ ...issue(id), effort }) as Issue;
+  const shown = (effort: (Issue["effort"])[]) =>
+    filterIssues(
+      [withEffort(null, "unset"), withEffort("s"), withEffort("l")],
+      { ...DEFAULT_CONFIG, filters: { effort } },
+      { myUserId: null }
+    ).map((i) => i.id);
+
+  it("keeps only the issues without an effort when null is selected", () => {
+    expect(shown([null])).toEqual(["unset"]);
+  });
+
+  it("combines not set with sizes, and a size alone still drops unset issues", () => {
+    expect(shown([null, "s"])).toEqual(["unset", "s"]);
+    expect(shown(["s"])).toEqual(["s"]);
+  });
+});

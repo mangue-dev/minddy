@@ -156,7 +156,6 @@ export function EffortCompact({
 } & ShortcutControl) {
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
-  const tCommon = useTranslations("Common");
   const options: PickerOption[] = EFFORTS.map((e) => ({
     value: e.value,
     label: e.label,
@@ -167,7 +166,7 @@ export function EffortCompact({
       value={value}
       onChange={(v) => onChange(v as IssueEffort | null)}
       options={options}
-      noneOption={{ label: tCommon("none") }}
+      noneOption={{ label: tField("effortNone") }}
       tooltip={tField("effort")}
       open={open}
       onOpenChange={onOpenChange}
@@ -179,7 +178,7 @@ export function EffortCompact({
           ) : (
             <HugeiconsIcon icon={TriangleIcon} className="size-[18px] shrink-0 text-muted-foreground" />
           )}
-          {showValue && !value && <span>{tCommon("none")}</span>}
+          {showValue && !value && <span>{tField("effortNone")}</span>}
         </button>
       }
     />

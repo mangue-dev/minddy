@@ -239,7 +239,6 @@ function EffortPick({
 }) {
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
-  const tCommon = useTranslations("Common");
   const display = value ? (
     <EffortIndicator effort={value} />
   ) : (
@@ -260,7 +259,7 @@ function EffortPick({
       value={value}
       onChange={(v) => onChange(v as IssueEffort | null)}
       options={options}
-      noneOption={{ label: tCommon("none") }}
+      noneOption={{ label: tField("effortNone") }}
       align="start"
       tooltip={tField("effort")}
       shortcutHint={KEY_FOR_FIELD.effort}

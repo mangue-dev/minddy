@@ -348,8 +348,7 @@ export function filterIssues(
     if (!status.includes(i.status)) return false;
     if (f.priority?.length && !f.priority.includes(i.priority)) return false;
     if (assignee?.length && !assignee.includes(i.assignee_id)) return false;
-    if (f.effort?.length && (i.effort === null || !f.effort.includes(i.effort)))
-      return false;
+    if (f.effort?.length && !f.effort.includes(i.effort)) return false;
     if (f.category?.length && !f.category.some((c) => i.category_ids.includes(c)))
       return false;
     if (f.objective?.length && !f.objective.includes(i.objective_id)) return false;

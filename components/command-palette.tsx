@@ -196,6 +196,15 @@ const priorityActionIcon = cachedIndicator<IssuePriority>(
  * current) or light line of the cross-project index (MIN-91). */
 type PaletteIssue = Issue | SearchIndexIssue;
 
+// "__none__" is the effort select's clear option: the issue's effort becomes unset.
+function effortFromPalette(value: unknown): IssueEffort | null {
+  return value === "__none__" ? null : (value as IssueEffort);
+}
+
+function effortPaletteLabel(value: unknown, noneLabel: string): string {
+  return value === "__none__" ? noneLabel : String(value).toUpperCase();
+}
+
 /** Only board rows have `category_ids` (added by mapIssueRow) —
  * this is what distinguishes a complete ticket from an index line, devoid of
  * description and plan. */
@@ -623,17 +632,24 @@ export function CommandPalette({
             ...selectField(
               "effort",
               tIssueUI("changeEffortAria"),
-              EFFORTS.map((e) => ({
-                value: e.value,
-                label: e.label,
-                description: e.value === issue.effort ? "•" : undefined,
-              }))
+              [
+                {
+                  value: "__none__",
+                  label: tField("effortNone"),
+                  description: issue.effort === null ? "•" : undefined,
+                },
+                ...EFFORTS.map((e) => ({
+                  value: e.value,
+                  label: e.label,
+                  description: e.value === issue.effort ? "•" : undefined,
+                })),
+              ]
             ),
             onSubmit: (values) =>
               update(
                 issue,
-                { effort: values.effort as IssueEffort },
-                `${tIssueUI("changeEffortAria")} → ${String(values.effort).toUpperCase()}`
+                { effort: effortFromPalette(values.effort) },
+                `${tIssueUI("changeEffortAria")} → ${effortPaletteLabel(values.effort, tField("effortNone"))}`
               ),
           },
         });
@@ -1168,12 +1184,15 @@ export function CommandPalette({
                 ...selectField(
                   "effort",
                   tIssueUI("changeEffortAria"),
-                  EFFORTS.map((e) => ({ value: e.value, label: e.label }))
+                  [
+                    { value: "__none__", label: tField("effortNone") },
+                    ...EFFORTS.map((e) => ({ value: e.value, label: e.label })),
+                  ]
                 ),
                 onSubmit: (values) =>
                   update(
-                    { effort: values.effort as IssueEffort },
-                    `${tIssueUI("changeEffortAria")} → ${String(values.effort).toUpperCase()}`
+                    { effort: effortFromPalette(values.effort) },
+                    `${tIssueUI("changeEffortAria")} → ${effortPaletteLabel(values.effort, tField("effortNone"))}`
                   ),
               },
             },

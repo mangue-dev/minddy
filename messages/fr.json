@@ -53,6 +53,7 @@
     "forgeStatusSynced": "a passé le ticket en {to}, d'après le dépôt lié",
     "priorityChanged": "a changé la priorité : {from} → {to}",
     "effortChanged": "a changé l'effort : {from} → {to}",
+    "effortNone": "Non défini",
     "assigneeChanged": "a changé l'assigné : {from} → {to}",
     "smartAssigned": "a assigné le ticket à {to}",
     "smartAssignedByRules": "a choisi {to} d'après les règles d'attribution",
@@ -1512,6 +1513,7 @@
     "status": "Statut",
     "priority": "Priorité",
     "effort": "Effort",
+    "effortNone": "Non défini",
     "assignee": "Assigné",
     "assignedToMe": "Assigné à moi",
     "unassigned": "Non assigné",
@@ -2666,7 +2668,7 @@
     "taskCheckboxAria": "Basculer la tâche « {text} »"
   },
   "Priority": {
-    "none": "Aucune",
+    "none": "Non définie",
     "urgent": "Urgente",
     "high": "Haute",
     "medium": "Moyenne",

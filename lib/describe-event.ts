@@ -124,8 +124,8 @@ const IMPORT_SOURCE_LABELS: Record<string, string> = {
 };
 
 const emptyDash = "—";
-const effortLabel = (v: string | null) =>
-  v ? EFFORT_MAP[v as IssueEffort]?.label ?? v : emptyDash;
+const effortLabel = (v: string | null, t: ActivityT) =>
+  v ? EFFORT_MAP[v as IssueEffort]?.label ?? v : t("effortNone");
 
 /** Localized description of an activity event (without the actor). The caller
     supplies the translators (from useTranslations). */
@@ -228,8 +228,8 @@ export function describeEvent(
         });
       case "effort":
         return t("effortChanged", {
-          from: effortLabel(e.from_value),
-          to: effortLabel(e.to_value),
+          from: effortLabel(e.from_value, t),
+          to: effortLabel(e.to_value, t),
         });
       case "assignee_id":
         // Smart Assign writes a dedicated sentence — the actor line already

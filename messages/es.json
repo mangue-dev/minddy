@@ -53,6 +53,7 @@
     "forgeStatusSynced": "ha movido la incidencia a {to} de acuerdo con el repositorio vinculado",
     "priorityChanged": "ha cambiado la prioridad: {from} → {to}",
     "effortChanged": "ha cambiado el esfuerzo: {from} → {to}",
+    "effortNone": "Sin definir",
     "assigneeChanged": "ha cambiado la persona asignada: {from} → {to}",
     "smartAssigned": "ha asignado la incidencia a {to}",
     "smartAssignedByRules": "ha elegido a {to} según las reglas de asignación",
@@ -1512,6 +1513,7 @@
     "status": "Estado",
     "priority": "Prioridad",
     "effort": "Esfuerzo",
+    "effortNone": "Sin definir",
     "assignee": "Responsable",
     "assignedToMe": "Asignadas a mí",
     "unassigned": "Sin asignar",
@@ -2666,7 +2668,7 @@
     "taskCheckboxAria": "Cambiar el estado de la tarea «{text}»"
   },
   "Priority": {
-    "none": "Ninguna",
+    "none": "Sin definir",
     "urgent": "Urgente",
     "high": "Alta",
     "medium": "Media",
