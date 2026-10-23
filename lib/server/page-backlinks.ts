@@ -1,6 +1,6 @@
 import "server-only";
 
-import { issueIdentifier } from "@/lib/issue-constants";
+import { issueIdentifier, type IssueStatus } from "@/lib/issue-constants";
 import type { PageBacklink } from "@/lib/types";
 import type { ObjectiveStatus } from "@/lib/objective-validation";
 import { decodeIssue } from "@/lib/server/issue-store";
@@ -97,7 +97,7 @@ export async function pageBacklinks(
     [...merged.values()].filter((s) => s.kind === kind).map((s) => s.id);
 
   const [issues, objectives, pages] = (await Promise.all([
-    fetchIn(client, "issues", "id, project_id, number, title, description, plan, remote_url, automation_override, deleted_at, encrypted_content, encryption_version", idsOf("issue")),
+    fetchIn(client, "issues", "id, project_id, number, status, title, description, plan, remote_url, automation_override, deleted_at, encrypted_content, encryption_version", idsOf("issue")),
     fetchIn(client, "objectives", "id, project_id, name, description, color, status, deleted_at, encrypted_content, encryption_version", idsOf("objective")),
     fetchIn(client, "pages", "id, project_id, title, icon, deleted_at, encrypted_content, encryption_version", idsOf("page")),
   ])) as [Rows, Rows, Rows];
@@ -107,6 +107,7 @@ export async function pageBacklinks(
     id: string;
     project_id: string;
     number: number;
+    status: IssueStatus | null;
     title: string | null;
     deleted_at: string | null;
   }[]) {
@@ -119,6 +120,7 @@ export async function pageBacklinks(
       title: row.title as string,
       icon: null,
       color: null,
+      ...(stored.status ? { issueStatus: stored.status } : {}),
     });
   }
   for (const stored of (objectives.data ?? []) as {

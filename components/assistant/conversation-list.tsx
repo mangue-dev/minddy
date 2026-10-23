@@ -122,6 +122,18 @@ export function ConversationList({
   const [hasMore, setHasMore] = useState(false);
   const [fetching, setFetching] = useState(false);
 
+  // Opening a conversation already in the list does not refetch it: the
+  // history would re-sort under the cursor. Only a conversation the list does
+  // not hold yet (the one a first message just created) asks for a new page.
+  const [missingFetches, setMissingFetches] = useState(0);
+  const loadedRef = useRef(false);
+  useEffect(() => {
+    // The first page is still on its way and will hold it if it exists.
+    if (!activeConversationId || !loadedRef.current) return;
+    if (conversationsRef.current.some((conversation) => conversation.id === activeConversationId)) return;
+    setMissingFetches((count) => count + 1);
+  }, [activeConversationId]);
+
   useEffect(() => {
     let active = true;
 
@@ -129,6 +141,7 @@ export function ConversationList({
     void fetchConversations(limit).then((page) => {
       if (active) {
         conversationsRef.current = page.conversations;
+        loadedRef.current = true;
         setConversations(page.conversations);
         setHasMore(page.hasMore);
         setLoaded(true);
@@ -145,7 +158,7 @@ export function ConversationList({
     return () => {
       active = false;
     };
-  }, [activeConversationId, limit, refreshKey]);
+  }, [missingFetches, limit, refreshKey]);
 
   const patchConversation = useCallback(
     async (id: string, patch: { pinned?: boolean; archived?: boolean }) => {

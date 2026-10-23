@@ -2072,6 +2072,24 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
   }
 }
 
+/* Where a dragged file will land (components/editor/file-drop.ts): a gap
+   between two top-level blocks. The widget has no height, so nothing below it
+   moves while the file is dragged; the line is painted over the gap. */
+.editor-file-drop-line {
+  position: relative;
+  height: 0;
+  pointer-events: none;
+}
+.editor-file-drop-line::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: -1px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--ring);
+}
+
 .page-block-target {
   position: relative;
   border-radius: 0.375rem;

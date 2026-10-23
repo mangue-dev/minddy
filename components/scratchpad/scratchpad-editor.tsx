@@ -73,8 +73,9 @@ function sectionRange(
   return from === null ? null : { from, to: to ?? doc.content.size };
 }
 
-/** The notebook is a list of things to do: its “/” menu opens on the task list. */
-const SCRATCHPAD_SLASH_FIRST = ["taskList"] as const;
+/** The notebook is a list of things to do: its “/” menu opens on the task list,
+ with dictating tasks right under it. */
+const SCRATCHPAD_SLASH_FIRST = ["taskList", "dictate"] as const;
 
 /**
  * Always-editable WYSIWYG note (edit == preview, no raw-markdown mode, no

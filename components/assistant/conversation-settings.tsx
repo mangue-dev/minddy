@@ -67,7 +67,13 @@ export function ConversationSettings() {
     modelReasoningLevels,
   );
   const displayedReasoning = reasoningLevels[reasoningIndex] ?? "off";
+  // Judged against the model's real levels only: while the catalog loads, or
+  // for a model it does not list, the levels are the generic fallback, and a
+  // "repair" would overwrite the stored choice and move the conversation to
+  // the top of the history just because it was opened.
   const persistedReasoningNeedsRepair =
+    !catalog.loading &&
+    catalog.models.some((entry) => entry.id === resolvedModel) &&
     state.conversationReasoningLevel !== null &&
     !reasoningLevels.includes(state.conversationReasoningLevel);
 
