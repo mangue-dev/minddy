@@ -3,6 +3,7 @@ import "server-only";
 
 import {
   DATABASE_PROPERTY_TYPES,
+  MAX_DATABASE_PROPERTIES,
   type DatabasePropertyType,
   type DatabaseValues,
   isDatabaseSchema,
@@ -12,7 +13,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { getPage, getStoredPage, pageWriteRefusal, type PageResult } from "@/lib/server/pages";
 import { recordPageEvent } from "@/lib/server/page-activity";
 import { afterOrNow } from "@/lib/server/after-safe";
-import { insertNotifications } from "@/lib/server/notifications";
+import { notifyAddedPeople } from "./page-database-people";
 import type { DatabaseConversionPreview } from "@/lib/page-database-conversion";
 import type { Page } from "@/lib/pages";
 import { isDeepStrictEqual } from "node:util";
@@ -22,6 +23,34 @@ import { convertProtectedPageDatabase } from "./page-database-conversion-protect
 
 type StoredPage = Page & { content_revision: number; encryption_version: number;
   database_revision: number };
+
+type CellEdit = { propertyId: string; value: unknown; expected: unknown };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+/**
+ * The cells one entry write changes: one for `value`, up to the whole schema
+ * for `values` (MIN-784). Every written cell carries its own previous value, so
+ * the batch keeps the per-cell conflict guard and lands all or nothing.
+ */
+function requestedCells(body: Record<string, unknown>): CellEdit[] | null {
+  if (body.operation === "value") {
+    return typeof body.propertyId === "string" && body.expected !== undefined
+      ? [{ propertyId: body.propertyId, value: body.value, expected: body.expected }]
+      : null;
+  }
+  if (body.operation !== "values" || !isRecord(body.values) || !isRecord(body.expected))
+    return null;
+  const values = body.values;
+  const expected = body.expected;
+  const ids = Object.keys(values);
+  if (!ids.length || ids.length > MAX_DATABASE_PROPERTIES ||
+      Object.keys(expected).length !== ids.length ||
+      ids.some((id) => !Object.hasOwn(expected, id))) return null;
+  return ids.map((id) => ({ propertyId: id, value: values[id], expected: expected[id] }));
+}
 
 async function databaseChildren(projectId: string, parentId: string,
   actorId: string): Promise<StoredPage[]> {
@@ -93,14 +122,19 @@ async function updateProtectedPageDatabase(projectId: string,
   }
   const parent = await getPage(page.parent_id!, actorId);
   if (!parent.ok || parent.page.project_id !== projectId) return "not_found";
-  const property = parent.page.database_schema?.find((item) =>
-    item.id === body.propertyId);
-  if (!property || property.type === "created_at" ||
-      !isDatabasePropertyValue(property, body.value) ||
-      !isDeepStrictEqual(page.property_values?.[property.id] ?? null,
-        body.expected)) return "conflict";
-  const next = { ...page, property_values: { ...page.property_values,
-    [property.id]: body.value } } as StoredPage;
+  const cells = requestedCells(body) ?? [];
+  const values = { ...page.property_values };
+  for (const cell of cells) {
+    const property = parent.page.database_schema?.find((item) =>
+      item.id === cell.propertyId);
+    if (!property || property.type === "created_at" ||
+        !isDatabasePropertyValue(property, cell.value) ||
+        !isDeepStrictEqual(page.property_values?.[property.id] ?? null,
+          cell.expected)) return "conflict";
+    values[property.id] = cell.value;
+  }
+  if (!cells.length) return "conflict";
+  const next = { ...page, property_values: values } as StoredPage;
   return commitPageContentBatch({ projectId, actorId,
     parentId: parent.page.id,
     expected: [parent.page as StoredPage, page],
@@ -132,6 +166,8 @@ export async function updatePageDatabase(
   if (!input || typeof input !== "object" || Array.isArray(input))
     return invalid;
   const body = input as Record<string, unknown>;
+  const cells = requestedCells(body);
+  let schema: NonNullable<Page["database_schema"]> = [];
   if (body.operation === "schema") {
     if (
       !loaded.page.database_schema ||
@@ -145,20 +181,16 @@ export async function updatePageDatabase(
       (body.revision as number) < 0
     )
       return invalid;
-  } else if (body.operation === "value") {
-    if (
-      !loaded.page.parent_id ||
-      typeof body.propertyId !== "string" ||
-      body.expected === undefined
-    )
-      return invalid;
+  } else if (cells) {
+    if (!loaded.page.parent_id) return invalid;
     const parent = await getPage(loaded.page.parent_id, actorId);
     if (!parent.ok) return parent;
-    const property = parent.page.database_schema?.find(
-      (p) => p.id === body.propertyId,
-    );
-    if (!property || !isDatabasePropertyValue(property, body.value))
-      return invalid;
+    schema = parent.page.database_schema ?? [];
+    for (const cell of cells) {
+      const property = schema.find((p) => p.id === cell.propertyId);
+      if (!property || !isDatabasePropertyValue(property, cell.value))
+        return invalid;
+    }
   } else return invalid;
 
   const service = getServiceClient();
@@ -199,35 +231,8 @@ export async function updatePageDatabase(
       mcpKeyId: kind === "agent" ? mcpKeyId : null,
       type: "page_updated",
     });
-    if (body.operation !== "value" || !loaded.page.parent_id) return;
-    const parent = await getPage(loaded.page.parent_id, actorId);
-    if (!parent.ok) return;
-    const property = parent.page.database_schema?.find(
-      (p) => p.id === body.propertyId,
-    );
-    if (property?.type !== "people") return;
-    const ids = Array.isArray(body.value)
-      ? (body.value as string[])
-      : typeof body.value === "string"
-        ? [body.value]
-        : [];
-    const previous = Array.isArray(body.expected)
-      ? body.expected
-      : [body.expected];
-    await insertNotifications(
-      service,
-      ids
-        .filter((id) => id !== actorId && !previous.includes(id))
-        .map((userId) => ({
-          user_id: userId,
-          project_id: projectId,
-          type: "page_mention" as const,
-          issue_id: null,
-          page_id: pageId,
-          block_id: null,
-          actor_id: actorId,
-        })),
-    );
+    await notifyAddedPeople(service, { projectId, pageId, actorId, schema,
+      changes: cells ?? [] });
   });
   return getPage(pageId, actorId);
 }

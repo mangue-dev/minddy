@@ -146,6 +146,14 @@ describe("Numo database tool dispatch", () => {
     expect(h.create).toHaveBeenLastCalledWith(
       expect.objectContaining({ database: false, parentPageId: "database" }),
     );
+    await executeTool(
+      "create_page",
+      { title: "Alice", markdown: "", parent_page_id: "database", values: { email: "alice@example.com", age: 32 } },
+      ctx,
+    );
+    expect(h.create).toHaveBeenLastCalledWith(
+      expect.objectContaining({ parentPageId: "database", values: { email: "alice@example.com", age: 32 } }),
+    );
   });
 });
 

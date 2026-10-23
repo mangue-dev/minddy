@@ -5432,7 +5432,7 @@
       ]
     },
     "update_page_database_guarded(uuid,uuid,uuid,jsonb)": {
-      "sha256": "1ba942971824f6a3f2601faf0209a3d3abce6933dc2ecb4f82112ff4948b0d61",
+      "sha256": "c59692138afb829adf5f65e88c225c9944cc3556ec0795dd2d71dadc08b3d958",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""

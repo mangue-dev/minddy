@@ -1,7 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
-import { DATABASE_TOOL_SCHEMA, databaseToolDescription } from "@/lib/server/database-tool-schema";
+import { DATABASE_ENTRY_VALUES, DATABASE_TOOL_SCHEMA, databaseToolDescription } from "@/lib/server/database-tool-schema";
 import type { McpServer } from "@modelcontextprotocol/server";
 import {
   addPageCommentForAgent,
@@ -239,7 +239,8 @@ export function registerPageTools(server: McpServer): void {
         "(parent_page_id — the wiki nests at any depth). Write it FILLED: a title " +
         "and a real body, in markdown, in ONE call — not an empty page to fill " +
         "later. Databases and their entries may have an empty markdown body. " +
-        "Set database=true to create a database, add columns with minddy_update_page_database, and create entries using parent_page_id. A page is " +
+        "Set database=true to create a database, add columns with minddy_update_page_database, and create entries using parent_page_id, " +
+        "with their property values in `values`. A page is " +
         "for knowledge that outlives a ticket — a spec, a decision and its why, a " +
         "convention, a runbook; what is work to do belongs in an issue " +
         "(minddy_create_issue), not here. Prefer a subpage of the right parent " +
@@ -259,6 +260,9 @@ export function registerPageTools(server: McpServer): void {
           ),
         markdown: BODY,
         database: z.boolean().optional().describe("Create a database; then add columns with minddy_update_page_database. Never to replace one that exists: when minddy_get_page reports is_database, even with an empty schema, add the columns to that page instead."),
+        values: DATABASE_ENTRY_VALUES.optional().describe(
+          "Only for a new ENTRY of a database (parent_page_id is the database): its property values, keyed by property id from the database_schema of minddy_get_page, so the entry is created with every property in ONE call instead of one minddy_update_page_database call per property. Same value formats as minddy_update_page_database; created_at is read-only. Omit for any other page."
+        ),
         icon: z
           .string()
           .optional()
@@ -288,6 +292,7 @@ export function registerPageTools(server: McpServer): void {
         markdown: args.markdown,
         parentPageId: args.parent_page_id ?? null,
         database: args.database === true,
+        values: args.values,
         // The key that writes NAME the agent (MIN-278): the activity of the page and
         // the quotes he puts there say “Claude Code (mcp)”, not the name of the
         // key holder — the same rule as the ticket timeline.
@@ -302,7 +307,7 @@ export function registerPageTools(server: McpServer): void {
     "minddy_update_page_database",
     {
       title: "Update page database",
-      description: databaseToolDescription("minddy_get_page"),
+      description: databaseToolDescription("minddy_get_page", "minddy_create_page"),
       inputSchema: DATABASE_TOOL_SCHEMA.extend({ project_id: PROJECT_ID }),
       annotations: { ...WRITE, destructiveHint: true },
     },

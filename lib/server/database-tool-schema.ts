@@ -4,17 +4,19 @@ import { z } from "zod";
 import { DATABASE_PROPERTY_TYPES } from "@/lib/page-databases";
 
 /** Shared model contract for MCP, Numo chat, and the coding agent. */
-export function databaseToolDescription(readTool: string): string {
-  return DESCRIPTION.replaceAll("get_page", readTool);
+export function databaseToolDescription(readTool: string, createTool: string): string {
+  return DESCRIPTION.replaceAll("get_page", readTool).replaceAll("create_page", createTool);
 }
 
-const DESCRIPTION = "Update a database schema or one entry property. Read get_page first. For schema, send the FULL schema preserving existing properties/options and its database_revision as revision; option ids are stable UUIDs, names are unique per property, colors are #RRGGBB. Removing a property or option clears its entry values. For value, use the entry page_id and exact previous value as expected (null when empty). Number values must be finite JSON numbers, select is one option id, multi_select an array of option ids, people an array of project member ids, date YYYY-MM-DD, checkbox boolean, text string; null clears. created_at is read-only metadata. To change a column type, use operation=convert with the database page_id, propertyId, targetType, revision, optional new name, and preview=true. Inspect totalCount and incompatibleCount; then apply the SAME settings with preview=false and the returned token. Set confirmLoss=true only after the user authorizes clearing incompatible values. Never change a type through schema. A stale edit is refused: reread and reapply, never overwrite blindly.";
+const DESCRIPTION = "Update a database schema or the properties of one entry. Read get_page first. For schema, send the FULL schema preserving existing properties/options and its database_revision as revision; option ids are stable UUIDs, names are unique per property, colors are #RRGGBB. Removing a property or option clears its entry values. For value, use the entry page_id and exact previous value as expected (null when empty). To set several properties of the same entry at once, use operation=values with the entry page_id, values mapping property ids to new values and expected mapping the SAME property ids to their exact previous values (null when empty); all cells are written together or none is. To create an entry with its properties, prefer create_page with parent_page_id set to the database and values. Number values must be finite JSON numbers, select is one option id, multi_select an array of option ids, people an array of project member ids, date YYYY-MM-DD, checkbox boolean, text string; null clears. created_at is read-only metadata. To change a column type, use operation=convert with the database page_id, propertyId, targetType, revision, optional new name, and preview=true. Inspect totalCount and incompatibleCount; then apply the SAME settings with preview=false and the returned token. Set confirmLoss=true only after the user authorizes clearing incompatible values. Never change a type through schema. A stale edit is refused: reread and reapply, never overwrite blindly.";
 
 const value = z.union([z.string(), z.number(), z.boolean(), z.array(z.string()), z.null()]);
+/** Entry cells keyed by property id, shared by operation=values and page creation. */
+export const DATABASE_ENTRY_VALUES = z.record(z.string().uuid(), value);
 const columnName = z.string().min(1).max(80);
 export const DATABASE_TOOL_SCHEMA = z.object({
   page_id: z.string().uuid(),
-  operation: z.enum(["schema", "value", "convert"]),
+  operation: z.enum(["schema", "value", "values", "convert"]),
   revision: z.number().int().nonnegative().optional(),
   titleName: columnName.nullable().optional(),
   schema: z.array(z.object({
@@ -29,7 +31,8 @@ export const DATABASE_TOOL_SCHEMA = z.object({
   })).max(30).optional(),
   propertyId: z.string().uuid().optional(),
   value: value.optional(),
-  expected: value.optional(),
+  values: DATABASE_ENTRY_VALUES.optional(),
+  expected: z.union([value, DATABASE_ENTRY_VALUES]).optional(),
   targetType: z.enum(DATABASE_PROPERTY_TYPES).optional(),
   preview: z.boolean().optional(),
   token: z.string().regex(/^[0-9a-f]{32}$/).optional(),

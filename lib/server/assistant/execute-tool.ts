@@ -3300,6 +3300,9 @@ async function executeCreatePage(
     markdown: typeof args.markdown === "string" ? args.markdown : undefined,
     parentPageId:
       typeof args.parent_page_id === "string" ? args.parent_page_id : null,
+    // Shape and contents are checked against the database schema by the core.
+    values: args.values === undefined || args.values === null
+      ? undefined : args.values as Record<string, unknown>,
   });
   return result.ok
     ? { result: result.data, success: true }

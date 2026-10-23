@@ -1006,3 +1006,25 @@ it("creates an empty database and full-page entries through MCP", async () => {
   const read = await call("minddy_get_page", { project_id: PROJECT, page_id: database.payload.page_id });
   expect(read).toMatchObject({ ok: true, payload: { database_schema: [], subpages: [{ page_id: entry.payload.page_id }] } });
 });
+
+it("creates a database entry with all its property values in one MCP call (MIN-784)", async () => {
+  const create = (args: Record<string, unknown>) =>
+    call("minddy_create_page", { project_id: PROJECT, ...args });
+  const email = "10000000-0000-4000-8000-000000000001";
+  const age = "10000000-0000-4000-8000-000000000002";
+  const active = "10000000-0000-4000-8000-000000000003";
+  const database = await create({ title: "Contacts", markdown: "", database: true });
+  Object.assign(h.rows.find((row) => row.id === database.payload.page_id)!, { database_schema: [
+    { id: email, name: "Email", type: "text" },
+    { id: age, name: "Age", type: "number" },
+    { id: active, name: "Active", type: "checkbox" },
+  ] });
+  const values = { [email]: "alice@example.com", [age]: 32, [active]: true };
+  const entry = await create({ title: "Alice", markdown: "",
+    parent_page_id: database.payload.page_id, values });
+  expect(entry).toMatchObject({ ok: true });
+  expect(h.rows.find((row) => row.id === entry.payload.page_id)!.property_values).toEqual(values);
+  const refused = await create({ title: "Bob", markdown: "",
+    parent_page_id: database.payload.page_id, values: { [age]: "32" } });
+  expect(refused.ok).toBe(false);
+});

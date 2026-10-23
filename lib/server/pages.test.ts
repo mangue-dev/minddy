@@ -640,6 +640,46 @@ describe("createPage", () => {
     });
   });
 
+  it("creates a database entry with all its property values in one insert (MIN-784)", async () => {
+    const text = "10000000-0000-4000-8000-000000000001";
+    const age = "10000000-0000-4000-8000-000000000002";
+    const role = "10000000-0000-4000-8000-000000000003";
+    const created = "10000000-0000-4000-8000-000000000004";
+    const admin = "10000000-0000-4000-8000-000000000005";
+    const database = await createPage({ projectId: PROJECT, actorId: ACTOR, input: {
+      title: "Contacts", database_schema: [
+        { id: text, name: "Email", type: "text" },
+        { id: age, name: "Age", type: "number" },
+        { id: role, name: "Role", type: "select", options: [{ id: admin, name: "Admin", color: "#22c55e" }] },
+        { id: created, name: "Created", type: "created_at" },
+      ] } });
+    if (!database.ok) throw new Error("database creation refused");
+    const parent_id = database.page.id;
+
+    const values = { [text]: "alice@example.com", [age]: 32, [role]: admin };
+    const entry = await createPage({ projectId: PROJECT, actorId: ACTOR,
+      input: { title: "Alice", parent_id, property_values: values } });
+    expect(entry).toMatchObject({ ok: true, page: { property_values: values } });
+
+    const before = h.rows.length;
+    for (const property_values of [
+      { [age]: "32" },
+      { [role]: "10000000-0000-4000-8000-000000000009" },
+      { [created]: "2026-01-01" },
+      { "10000000-0000-4000-8000-000000000009": "unknown" },
+      [],
+    ]) {
+      expect(await createPage({ projectId: PROJECT, actorId: ACTOR,
+        input: { title: "Refused", parent_id, property_values } }))
+        .toMatchObject({ ok: false, status: 400, errorKey: "pageDatabaseInvalid" });
+    }
+    const document = await create("Guide");
+    expect(await createPage({ projectId: PROJECT, actorId: ACTOR,
+      input: { title: "Not an entry", parent_id: document, property_values: { [age]: 1 } } }))
+      .toMatchObject({ ok: false, status: 400, errorKey: "pageDatabaseInvalid" });
+    expect(h.rows.length).toBe(before + 1);
+  });
+
   it("stores a new empty page as one identified paragraph, the canonical live basis", async () => {
     const result = await createPage({ projectId: PROJECT, actorId: ACTOR, input: {} });
     expect(result.ok).toBe(true);

@@ -94,6 +94,24 @@ describe("protected database option edits", () => {
     expect(h.commitBatch.mock.calls[0][0].edits[0].next.property_values[propertyId]).toBe("2026-10-12T00:00:00.000Z");
     expect(h.rpc).not.toHaveBeenCalled();
   });
+  it("writes every cell of a protected entry in one batch, or none when one is stale (MIN-784)", async () => {
+    const input = { operation: "values",
+      values: { [propertyId]: "2026-10-13", [single.id]: later.id, [multi.id]: [] },
+      expected: { [propertyId]: values[propertyId], [single.id]: ready.id, [multi.id]: values[multi.id] } };
+    expect(await updatePageDatabase("project", "entry", "actor", input)).toMatchObject({ ok: true });
+    expect(h.commitBatch).toHaveBeenCalledTimes(1);
+    const batch = h.commitBatch.mock.calls[0][0];
+    expect(batch.edits).toHaveLength(1);
+    expect(batch.edits[0].next.property_values).toEqual(input.values);
+    expect(batch.expected).toEqual([protectedDatabase, children[0]]);
+
+    h.commitBatch.mockClear();
+    expect(await updatePageDatabase("project", "entry", "actor", { ...input,
+      expected: { ...input.expected, [single.id]: later.id } }))
+      .toMatchObject({ ok: false, status: 409, errorKey: "pageDatabaseStale" });
+    expect(h.commitBatch).not.toHaveBeenCalled();
+    expect(h.rpc).not.toHaveBeenCalled();
+  });
 });
 
 describe("page database server boundary", () => {
@@ -180,6 +198,35 @@ describe("page database server boundary", () => {
       p_actor_id: "actor",
       p_input: { ...input, kind: "human", mcpKeyId: null },
     });
+  });
+  it("passes several cells and their previous values to one guarded write (MIN-784)", async () => {
+    const input = { operation: "values", values: { [propertyId]: "2026-01-01" },
+      expected: { [propertyId]: null } };
+    expect(await updatePageDatabase("project", "entry", "actor", input)).toMatchObject({ ok: true });
+    expect(h.rpc).toHaveBeenCalledTimes(1);
+    expect(h.rpc).toHaveBeenCalledWith("update_page_database_guarded", expect.objectContaining({
+      p_page_id: "entry", p_input: { ...input, kind: "human", mcpKeyId: null },
+    }));
+  });
+  it("refuses an entry batch whose cells or previous values do not match before RPC", async () => {
+    const other = "10000000-0000-4000-8000-000000000009";
+    for (const input of [
+      { operation: "values", values: {}, expected: {} },
+      { operation: "values", values: { [propertyId]: "2026-01-01" } },
+      { operation: "values", values: { [propertyId]: "2026-01-01" }, expected: {} },
+      { operation: "values", values: { [propertyId]: "2026-01-01" },
+        expected: { [propertyId]: null, [other]: null } },
+      { operation: "values", values: { [propertyId]: "2026-02-30" }, expected: { [propertyId]: null } },
+      { operation: "values", values: { [other]: "x" }, expected: { [other]: null } },
+      { operation: "values", values: [], expected: [] },
+    ]) {
+      expect(await updatePageDatabase("project", "entry", "actor", input))
+        .toMatchObject({ ok: false, status: 400 });
+    }
+    expect(await updatePageDatabase("project", "db", "actor", {
+      operation: "values", values: {}, expected: {},
+    })).toMatchObject({ ok: false, status: 400 });
+    expect(h.rpc).not.toHaveBeenCalled();
   });
   it("passes a timed date and its exact previous value through the guarded save", async () => {
     const input = { operation: "value", propertyId,
