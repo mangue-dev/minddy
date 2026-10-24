@@ -471,7 +471,7 @@
       ]
     },
     "capture_routine_event()": {
-      "sha256": "83d36785911df81f847f93e91cced0195de2bf8e0dd039960ac129bfc43eb80b",
+      "sha256": "59351f6abdebd4526014704561ccaac1698741183a1eeec94b8da3ef276366c8",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -480,6 +480,7 @@
       "relations": [
         "issues",
         "comments",
+        "projects",
         "feedback_posts",
         "routine_events",
         "issue_categories"
@@ -487,6 +488,7 @@
       "protectedRelations": [
         "issues",
         "comments",
+        "projects",
         "feedback_posts"
       ],
       "functionReferences": []
@@ -7014,7 +7016,7 @@
       "functionReferences": []
     },
     "ensure_numo_routine_occurrence(uuid,uuid,text,timestamp with time zone,uuid,text,uuid)": {
-      "sha256": "2e731f7a48101d9c7c587f9b7be0a8ca1cb2bd4937572d04971d670e505a80ac",
+      "sha256": "f58a4bfef4a0e758c317b3e8c71d853d5faf3b8a2ddc7023e589ba9dd90d684c",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""

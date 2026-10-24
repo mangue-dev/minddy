@@ -30,4 +30,13 @@ describe("Numo assistant conversation titles", () => {
     await expect(decodeConversationTitle("user-1", "conversation-1",
       stored!.replace("mdyn3:2:", "mdyn3:1:"))).rejects.toThrow();
   });
+
+  it("never fits in the 200 characters of a clear title, even for one character", async () => {
+    // The MIN-791 repair identifies titles cut to 200 characters by an old
+    // routine occurrence function; an intact ciphertext is always longer.
+    const stored = await encodeConversationTitle("user-1", "conversation-1", "x");
+    expect(stored!.length).toBeGreaterThan(200);
+    await expect(decodeConversationTitle("user-1", "conversation-1",
+      stored!.slice(0, 200))).rejects.toThrow();
+  });
 });
