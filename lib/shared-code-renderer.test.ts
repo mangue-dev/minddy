@@ -161,13 +161,13 @@ describe("PageCodeRenderer", () => {
     expect(dark).toContain("--code-block-foreground: #f5f5f5");
   });
 
-  it("stretches the Agent message container as well as the code block", () => {
+  it("renders every Numo answer's fenced code with the shared code block", () => {
     const source = readFileSync(
       join(process.cwd(), "components/assistant/chat-message.tsx"),
       "utf8",
     );
 
-    expect(source).toMatch(/usePageCodeBlock && "w-full"/);
+    expect(source).toMatch(/<MessageResponse components=\{PAGE_CODE_COMPONENTS\}>/);
   });
 
   it("keeps inline code inline", () => {

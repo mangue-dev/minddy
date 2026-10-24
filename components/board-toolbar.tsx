@@ -1,6 +1,7 @@
 "use client";
 
 import { FilterMenu, FilterItem, FilterSub, MenuToggleRow } from "@/components/filter-menu";
+import { ObjectivePill } from "@/components/objective-label";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
@@ -245,6 +246,10 @@ function FiltersPopover({
     () => buildFacetOptions(objectives, groupFacetsByName, (o) => o.color),
     [objectives, groupFacetsByName]
   );
+  const objectiveStatusById = useMemo(
+    () => new Map(objectives.map((o) => [o.id, o.status])),
+    [objectives]
+  );
   const integrationOptions = useMemo(
     () => buildFacetOptions(integrations, groupFacetsByName),
     [integrations, groupFacetsByName]
@@ -449,12 +454,14 @@ function FiltersPopover({
                   setFilters({ ...f, objective: toggleFacet(f.objective, o.ids) })
                 }
               >
-                <span
-                  className="size-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: o.color ?? "var(--muted-foreground)" }}
-                  aria-hidden
+                {/* The objective's pill, as everywhere it is named (MIN-785). */}
+                <ObjectivePill
+                  objective={{
+                    name: o.label,
+                    color: o.color ?? null,
+                    status: objectiveStatusById.get(o.ids[0]),
+                  }}
                 />
-                <span className="truncate">{o.label}</span>
               </MenuToggleRow>
             ))}
           </FilterSub>

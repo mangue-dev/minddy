@@ -74,6 +74,7 @@ import {
 import { BlockGutter } from "@/components/pages/block-gutter";
 import { BlockFlash } from "@/components/pages/block-flash";
 import { BlockComments } from "@/components/pages/block-comments";
+import { FileDrop, viewBlockGapAt } from "@/components/editor/file-drop";
 import {
   PageCommentBubble,
   type PageCommentAnchor,
@@ -456,6 +457,13 @@ export function RichEditor({
     [hasMentions]
   );
 
+  // Same rule as everywhere in this file: the `editorProps` do not change
+  // NEVER identity, otherwise tiptap reapplies everything each time it is rendered. THE
+  // uploaders change with each keystroke (their queue is a React state) —
+  // they therefore go through a ref, read at the time of the gesture.
+  const uploadsRef = useRef(uploads);
+  uploadsRef.current = uploads;
+
   const [fixedSurfaceExtensions] = useState(() => surfaceExtensions ?? []);
   const [fixedNodeExtensions] = useState(() => nodeExtensions);
 
@@ -512,6 +520,12 @@ export function RichEditor({
         // and for one more reason than blinking: a mark would be
         // content, therefore markdown projection (see block-comments.ts).
         BlockComments,
+        // A dragged file lands between top-level blocks, at the gap a line
+        // shows (file-drop.ts).
+        FileDrop.configure({
+          accepts: () =>
+            uploadsRef.current ? { imagesOnly: Boolean(uploadsRef.current.imagesOnly) } : null,
+        }),
         ...fixedSurfaceExtensions,
         // The transition to the TITLE, last and in low priority: it does not
         // takes ⌫ and ↑ only if no one else wanted them (title-bridge.ts).
@@ -539,12 +553,6 @@ export function RichEditor({
   const onBlurRef = useRef(onBlur);
   onBlurRef.current = onBlur;
 
-  // Same rule as everywhere in this file: the `editorProps` do not change
-  // NEVER identity, otherwise tiptap reapplies everything each time it is rendered. THE
-  // uploaders change with each keystroke (their queue is a React state) —
-  // they therefore go through a ref, read at the time of the gesture.
-  const uploadsRef = useRef(uploads);
-  uploadsRef.current = uploads;
   const liveEditorRef = useRef<Editor | null>(null);
 
   const [fixedSize] = useState(size);
@@ -566,9 +574,7 @@ export function RichEditor({
         return true;
       },
       handleDrop: (
-        view: {
-          posAtCoords(coords: { left: number; top: number }): { pos: number } | null;
-        },
+        view: EditorView,
         event: DragEvent,
         _slice: unknown,
         moved: boolean
@@ -579,10 +585,10 @@ export function RichEditor({
         const files = filesToUpload(event.dataTransfer, uploadsRef.current?.imagesOnly);
         if (!files || !uploadsRef.current) return false;
         event.preventDefault();
-        // At the DROP location, not at the end of the document: that's all that
-        // the gesture means.
-        const at = view.posAtCoords({ left: event.clientX, top: event.clientY });
-        uploadsRef.current.addFiles(files, { at: at?.pos });
+        // At the drop location, not at the end of the document — and between
+        // top-level blocks, the gap the drag line showed, never inside a task
+        // or a paragraph's text (file-drop.ts).
+        uploadsRef.current.addFiles(files, { at: viewBlockGapAt(view, event.clientY) });
         return true;
       },
     }),

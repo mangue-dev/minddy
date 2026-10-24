@@ -876,6 +876,8 @@ export interface PageBacklink {
   color: string | null;
   /** An objective's status, whose glyph its pill shows (MIN-785). */
   status?: ObjectiveStatus;
+  /** A ticket's workflow status, whose indicator its pill shows. */
+  issueStatus?: IssueStatus;
   /** When the quote was asked: order within a genre. */
   at: string;
 }

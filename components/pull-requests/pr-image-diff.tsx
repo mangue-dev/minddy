@@ -2,11 +2,12 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ImageNotFound01Icon } from "@hugeicons/core-free-icons";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
+import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Spinner } from "@/components/ui/spinner";
-import { ImageViewer } from "@/components/image-viewer";
+import { IMAGE_HERO_TRANSITION, ImageViewer } from "@/components/image-viewer";
 import { prFileRawUrl, type PrEndpoint, type PullRequestFile } from "@/lib/agent-api";
 
 /**
@@ -124,6 +125,12 @@ function ImagePane({
   // Keyed by the image it opened: a new version of the side closes the reader.
   const [openedUrl, setOpenedUrl] = useState<string | null>(null);
   const previewLabel = `${fileName} · ${label}`;
+  // The opened image flies from its pane and back, like an image in the
+  // notebook or a page (components/pages/blocks/image-view.tsx).
+  const heroId = useId();
+  const reducedMotion = useReducedMotion();
+  const layoutId = reducedMotion ? undefined : `pr-image-${heroId}`;
+  const zoomed = openedUrl !== null && openedUrl === version.url;
 
   const caption =
     version.status === "ready"
@@ -163,7 +170,7 @@ function ImagePane({
         {version.status === "loading" ? (
           <Spinner className="size-4 text-muted-foreground" />
         ) : version.status === "ready" && version.url ? (
-          <>
+          <LayoutGroup id={heroId}>
             <button
               type="button"
               aria-label={`${tResources("preview")}: ${previewLabel}`}
@@ -171,22 +178,31 @@ function ImagePane({
               className="block max-w-full cursor-zoom-in rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               onClick={() => setOpenedUrl(version.url ?? null)}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element -- local blob URL, outside the optimizer */}
-              <img
-                src={version.url}
-                alt={label}
-                className="max-h-72 max-w-full object-contain"
-                style={{ imageRendering: version.width && version.width < 64 ? "pixelated" : undefined }}
-              />
+              <motion.span
+                layoutId={layoutId}
+                layoutDependency={zoomed}
+                className="block"
+                animate={{ opacity: zoomed ? 0 : 1 }}
+                transition={{ ...IMAGE_HERO_TRANSITION, opacity: { duration: reducedMotion ? 0 : 0.12 } }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element -- local blob URL, outside the optimizer */}
+                <img
+                  src={version.url}
+                  alt={label}
+                  className="max-h-72 max-w-full object-contain"
+                  style={{ imageRendering: version.width && version.width < 64 ? "pixelated" : undefined }}
+                />
+              </motion.span>
             </button>
             <ImageViewer
               src={version.url}
               alt={label}
               label={previewLabel}
-              open={openedUrl === version.url}
+              layoutId={layoutId}
+              open={zoomed}
               onOpenChange={(open) => setOpenedUrl(open ? version.url ?? null : null)}
             />
-          </>
+          </LayoutGroup>
         ) : (
           <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
             <HugeiconsIcon icon={ImageNotFound01Icon} className="size-3.5" />

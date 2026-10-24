@@ -267,6 +267,11 @@ export function buildSharedRules(
   even when not stated: a reasoned estimate beats leaving the defaults. Attach the matching
   categories, and set assignee/objective/due_date when the request implies them (resolve ids
   with the list_* tools first). Only leave a field empty when nothing supports a reasoned choice.
+- When an issue you create comes from a file the user added to the conversation (a screenshot,
+  a log, a document), ALWAYS attach that file to the new issue with add_resource
+  (attachment_id from list_conversation_attachments), even when the user did not ask for it:
+  the file is the evidence the issue was written from. Skip it only when the user said not to
+  attach it.
 - **Starting a project (propose_backlog)** — when the point of the conversation is to turn a
   project into the backlog that starts it ("aide-moi à démarrer ce projet", a project whose
   board is still empty, a discussion that has converged on what to build), never open twenty

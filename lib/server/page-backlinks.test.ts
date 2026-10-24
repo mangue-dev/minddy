@@ -127,7 +127,7 @@ describe("pageBacklinks", () => {
         { page_id: "spec", source_kind: "issue", source_id: "i2", created_at: at("04") },
       ],
       issues: [
-        { id: "i1", number: 1, title: "Un", deleted_at: null },
+        { id: "i1", number: 1, status: "in_review", title: "Un", deleted_at: null },
         { id: "i2", number: 2, title: "Deux", deleted_at: null },
       ],
       objectives: [{ id: "o1", name: "L'objectif", description: null, color: "amber", status: "in_progress", deleted_at: null }],
@@ -135,9 +135,10 @@ describe("pageBacklinks", () => {
     });
 
     expect(found.map((row) => row.id)).toEqual(["i2", "i1", "o1", "pg"]);
-    // Chaque genre se nomme comme il se nomme partout ailleurs : un identifiant
-    // for a ticket, its color for a goal, its emoji for a page.
-    expect(found[1].identifier).toBe("MIN-1");
+    // Each kind is named the way it is everywhere else: an identifier and a
+    // status for a ticket, a color and a status for a goal, an emoji for a page.
+    expect(found[1]).toMatchObject({ identifier: "MIN-1", issueStatus: "in_review" });
+    expect(found[0].issueStatus).toBeUndefined();
     expect(found[2]).toMatchObject({ title: "L'objectif", color: "amber", status: "in_progress" });
     expect(found[3]).toMatchObject({ title: "L'autre page", icon: "📘" });
   });

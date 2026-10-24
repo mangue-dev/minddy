@@ -1,8 +1,9 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { FilterSub, MenuToggleRow } from "@/components/filter-menu";
+import { ObjectivePill } from "@/components/objective-label";
 import type { FeedbackPropertyFilters } from "@/lib/collection-filters";
 import type { Category, Objective } from "@/lib/types";
 import type { TeamFeedbackListItem } from "@/lib/server/feedback/team-queries";
@@ -21,8 +22,8 @@ export function FeedbackPropertyFilterItems({ filters, onChange, objectives, cat
     setAuthors((previous) => new Map([...previous, ...availableAuthors.map((a) => [a.id, a] as const),
       ...posts.filter((p) => p.author).map((p) => [p.author!.id, p.author!] as const)]));
   }, [posts, availableAuthors]);
-  const facets: { key: keyof FeedbackPropertyFilters; label: string; options: { value: string | null; label: string }[] }[] = [
-    { key: "objective", label: tf("objective"), options: [{ value: null, label: tf("noObjective") }, ...objectives.map((o) => ({ value: o.id, label: o.name }))] },
+  const facets: { key: keyof FeedbackPropertyFilters; label: string; options: { value: string | null; label: string; node?: ReactNode }[] }[] = [
+    { key: "objective", label: tf("objective"), options: [{ value: null, label: tf("noObjective") }, ...objectives.map((o) => ({ value: o.id, label: o.name, node: <ObjectivePill objective={o} /> }))] },
     { key: "category", label: tf("categories"), options: categories.map((c) => ({ value: c.id, label: c.name })) },
     { key: "author", label: t("author"), options: [{ value: null, label: tc("none") }, ...Array.from(authors.values()).map((a) => ({ value: a.id, label: a.name || a.email || a.pseudonym }))] },
     { key: "source", label: t("filterSource"), options: (["board", "api", "internal"] as const).map((value) => ({ value, label: t(`filterSource_${value}`) })) },
@@ -36,7 +37,7 @@ export function FeedbackPropertyFilterItems({ filters, onChange, objectives, cat
       const active = (selected as (string | null)[]).includes(option.value);
       return <MenuToggleRow key={option.value ?? "none"} active={active} onSelect={() => onChange({ ...filters,
           [key]: active ? selected.filter((id) => id !== option.value) : [...selected, option.value],
-        })}><span className="truncate">{option.label}</span></MenuToggleRow>;
+        })}>{option.node ?? <span className="truncate">{option.label}</span>}</MenuToggleRow>;
     })}
   </FilterSub>)}</>;
 }

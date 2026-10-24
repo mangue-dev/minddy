@@ -15,7 +15,6 @@ import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import { IconButton } from "@/components/ui/icon-button";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type {
   AssistantMention,
@@ -79,9 +78,6 @@ interface ChatMessageProps {
   showCopyButton?: boolean;
   /** Content placed between an assistant answer and its Copy button. */
   afterContent?: ReactNode;
-  /** Use the fenced-code component from Pages while preserving Streamdown for
-   * the rest of the response. Agent conversations opt into this renderer. */
-  usePageCodeBlock?: boolean;
 }
 
 // ── Copy button ───────────────────────────────────────────────────────
@@ -380,15 +376,11 @@ function UserText({
 // ── Assistant text renderer ───────────────────────────────────────────
 // For assistant responses: AI Elements Response (Streamdown).
 
-function AssistantText({
-  content,
-  usePageCodeBlock = false,
-}: {
-  content: string;
-  usePageCodeBlock?: boolean;
-}) {
+// Fenced code uses the app's code block, the one Pages and the notebook show;
+// Streamdown keeps the rest of the response.
+function AssistantText({ content }: { content: string }) {
   return (
-    <MessageResponse components={usePageCodeBlock ? PAGE_CODE_COMPONENTS : undefined}>
+    <MessageResponse components={PAGE_CODE_COMPONENTS}>
       {content}
     </MessageResponse>
   );
@@ -419,7 +411,6 @@ export const ChatMessage = memo(function ChatMessage({
   onSeedCreated,
   showCopyButton = true,
   afterContent,
-  usePageCodeBlock = false,
 }: ChatMessageProps) {
   const isUser = message.role === "user";
   const usageExhausted = parseNumoUsageExhausted(message.metadata);
@@ -471,15 +462,10 @@ export const ChatMessage = memo(function ChatMessage({
             {message.content && (
               <>
                 <MessageContent
-                  className={cn(
-                    "chat-selectable relative px-0 py-0 text-sm leading-relaxed text-foreground",
-                    usePageCodeBlock && "w-full",
-                  )}
+                  // Full width, so a code block stretches across the answer.
+                  className="chat-selectable relative w-full px-0 py-0 text-sm leading-relaxed text-foreground"
                 >
-                  <AssistantText
-                    content={message.content}
-                    usePageCodeBlock={usePageCodeBlock}
-                  />
+                  <AssistantText content={message.content} />
                 </MessageContent>
                 {afterContent ? <div className="w-full">{afterContent}</div> : null}
                 {showCopyButton && (

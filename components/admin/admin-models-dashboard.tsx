@@ -534,7 +534,7 @@ function ModelRow({
         /* The two lists one UNDER the other: side by side, they pushed the
  row beyond the width of the map (the control container of
  `SettingsRow` is `shrink-0`, nothing gives way). The shortcut is framed to the right, under the model it accompanies — the reading remains “this model, served like that”. */
-        <div className="flex min-w-0 flex-col items-stretch gap-2 sm:items-end">
+        <div className="flex flex-col items-stretch gap-2 sm:items-end">
           <div className="flex min-w-0 items-center gap-2">
             <ModelCombobox
               scope="platform"
@@ -613,7 +613,9 @@ function SuffixSelect({
       disabled={busy}
       onValueChange={(next) => void select(next)}
     >
-      <SelectTrigger className="w-full shrink-0 sm:w-auto sm:min-w-36" aria-label={t("suffix.label")}>
+      {/* As wide as its label (`w-max`): sized by the column, a long label
+          such as the French “no preference” was clipped. */}
+      <SelectTrigger className="w-full shrink-0 sm:w-max sm:min-w-36" aria-label={t("suffix.label")}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
