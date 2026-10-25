@@ -286,6 +286,14 @@ export function reducePullRequestReadiness(
     });
   }
 
+  const reportedChecks = new Set(input.checks?.map((check) => check.name));
+  const expectedChecks =
+    input.checksStatus === "loaded" && input.checks
+      ? (input.policy?.requiredCheckNames ?? []).filter(
+          (name) => !reportedChecks.has(name),
+        )
+      : [];
+
   if (input.checksStatus === "loading") {
     add({
       id: "checks-loading",
@@ -312,16 +320,25 @@ export function reducePullRequestReadiness(
     const failedRequired = input.checks.filter(
       (check) => check.state === "failure" && check.required === true,
     );
-    if (pending.length > 0) {
+    // A required check that has not reported yet (an aggregate job created
+    // once its dependencies finish, for example) is what GitHub waits for
+    // when it reports the pull request as blocked. Counting it as pending
+    // names the real reason instead of a generic repository-rule refusal.
+    if (expectedChecks.length > 0 || pending.length > 0) {
       add({
         id: "checks-pending",
         kind: "checks",
-        required: pending.some((check) => check.required !== false),
+        required:
+          expectedChecks.length > 0 ||
+          pending.some((check) => check.required !== false),
         status: "pending",
         source: "checks",
         action: "open_forge",
-        count: pending.length,
-        checkNames: pending.map((check) => check.name),
+        count: pending.length + expectedChecks.length,
+        checkNames: [
+          ...pending.map((check) => check.name),
+          ...expectedChecks,
+        ],
       });
     }
     if (failedRequired.length > 0 || input.mergeabilityReason === "checks") {
@@ -470,6 +487,7 @@ export function reducePullRequestReadiness(
       (check) => check.required === true,
     );
     if (
+      expectedChecks.length === 0 &&
       requiredChecks.every(
         (check) => check.state === "success" || check.state === "neutral",
       )

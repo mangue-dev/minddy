@@ -110,6 +110,39 @@ describe("reducePullRequestReadiness", () => {
     );
   });
 
+  it("waits for a required check that has not reported yet instead of blaming a repository rule", () => {
+    // GitHub reports `blocked` while an aggregate required job does not exist
+    // yet; only optional jobs are visible at that point.
+    const readiness = reducePullRequestReadiness(
+      input({
+        mergeabilityReason: "policy",
+        checks: [{ name: "lint", state: "pending", required: false }],
+      }),
+    );
+    expect(readiness.state).toBe("checks_running");
+    expect(readiness.mergeAllowed).toBe(false);
+    expect(readiness.blockers).toEqual([
+      expect.objectContaining({
+        id: "checks-pending",
+        required: true,
+        count: 2,
+        checkNames: ["lint", "test"],
+      }),
+    ]);
+    expect(readiness.passed.map((condition) => condition.kind)).not.toContain(
+      "checks",
+    );
+  });
+
+  it("keeps the repository rule when every required check has reported", () => {
+    const readiness = reducePullRequestReadiness(
+      input({ mergeabilityReason: "policy" }),
+    );
+    expect(readiness.blockers.map((blocker) => blocker.id)).toEqual([
+      "provider-policy",
+    ]);
+  });
+
   it("reports failed checks once no check is still running", () => {
     const readiness = reducePullRequestReadiness(
       input({
