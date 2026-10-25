@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 11,
+  "revision": 13,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-23",
+  "updatedAt": "2026-10-25",
   "compatibility": {
     "version": "0.20.1 (MIN-788 Supabase self-hosted/v0.8.3)",
     "editions": [
@@ -46,14 +46,15 @@
       "app/api/oauth/register/route.ts",
       "lib/server/oauth/metadata.ts",
       "components/documentation/documentation-navigation.tsx",
-      "components/documentation/documentation-article.tsx"
+      "components/documentation/documentation-article.tsx",
+      "desktop/src/local-installer.ts"
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog review recapture of install-a-server-wizard on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es figure update after the catalog review; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-788 changed passages; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-23"
+    "revision": 13,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog review recapture of install-a-server-wizard on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope); agent:claude-code (MIN-781 self-hosting from the desktop app: source review of components/desktop/server-choice.tsx, desktop/src/local-installer.ts and desktop/src/local-account.ts; the introduction now points a private instance on your own computer to the desktop app's built-in installer; no installation run, no screenshot recaptured, existing figures carried forward unchanged)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es figure update after the catalog review; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-788 changed passages; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-781 changed passages on local instances from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-25"
   },
   "related": [
     "authentication-and-email",
@@ -78,7 +79,7 @@
       "src": "/documentation/es/self-hosted-compatibility-flow.svg",
       "alt": "Diagrama: Tag de código anotado. Archivos y SHA256SUMS. Firma y digest OCI oficiales. Perfil de compatibilidad elegido.",
       "caption": "Sigue las etapas en este orden. Tag de código anotado. Archivos y `SHA256SUMS`. Firma y digest OCI oficiales. Perfil de compatibilidad elegido.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -110,7 +111,7 @@
       "src": "/documentation/es/install-a-server-flow.svg",
       "alt": "Diagrama: Release verificada y entorno protegido. Instalador: perfil full de referencia. Supabase oficial, app, tareas. Validación de cuenta, archivos y recuperación.",
       "caption": "Sigue las etapas en este orden. Release verificada y entorno protegido. Instalador: perfil full de referencia. Supabase oficial, app, tareas. Validación de cuenta, archivos y recuperación.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -142,7 +143,7 @@
       "src": "/documentation/es/install-a-server-wizard.png",
       "alt": "Asistente público de instalación con Supabase en el mismo servidor seleccionado.",
       "caption": "El perfil full mantiene la aplicación y Supabase en tu servidor. En este ejemplo, el acceso mediante red privada se limita a la red local.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -159,7 +160,7 @@
       "src": "/documentation/es/managed-or-source-installation-flow.svg",
       "alt": "Diagrama: Tu proyecto Supabase gestionado. PostgreSQL, Auth, Storage, Realtime. Perfil OCI O aplicación desde tag. Tareas y copia según el perfil.",
       "caption": "La aplicación y el backend deben corresponder al perfil elegido, incluidos los horarios de las tareas y el procedimiento de copia de seguridad.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -194,7 +195,7 @@
 }
 ---
 
-Instala la instancia desde una versión verificada con el perfil correspondiente: full, Supabase gestionado o código fuente. Comprueba primero la compatibilidad. Sigue después el procedimiento elegido y las pruebas de aceptación antes de admitir usuarios.
+Instala la instancia desde una versión verificada con el perfil correspondiente: full, Supabase gestionado o código fuente. Comprueba primero la compatibilidad. Sigue después el procedimiento elegido y las pruebas de aceptación antes de admitir usuarios. Para ejecutar en cambio una instancia privada en tu propio equipo, usa el instalador de la aplicación de escritorio descrito en [Instancias locales](/es/documentacion/install-locally#install-locally).
 
 ## Disponibilidad de MCP y acceso a la red {#mcp-network-access}
 

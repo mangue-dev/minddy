@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-25",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -34,14 +34,16 @@
       "content/knowledge/open-source.md",
       "docs/self-hosting-distribution.md",
       "app/(marketing)/self-hosting/install/page.tsx",
-      "lib/public-routes.ts"
+      "lib/public-routes.ts",
+      "desktop/src/local-installer.ts",
+      "desktop/src/local-account.ts"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 7,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-781 self-hosting from the desktop app: source review of components/desktop/server-choice.tsx, desktop/src/local-installer.ts and desktop/src/local-account.ts; the account paragraph and the next step now point local instances to the desktop app's built-in installer; no installation run, no screenshot recaptured, existing figures carried forward unchanged)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en MIN-781 changed passages on local instances from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-25"
   },
   "related": [
     "installation",
@@ -63,7 +65,7 @@
 
 minddy Cloud and self-hosted minddy run the same public core. Choose Cloud if you want minddy to operate the application, database, Storage and scheduler. Choose self-hosting if you need to select the hosting location, providers or upgrade schedule and can operate those services yourself.
 
-A Cloud account belongs to Cloud. On a self-hosted instance, create an account on that instance; a minddy Cloud account is not a prerequisite. Check the address before signing in or inviting someone. Accounts and credentials do not become shared merely because two instances run minddy.
+A Cloud account belongs to Cloud. On a self-hosted instance, create an account on that instance; a minddy Cloud account is not a prerequisite. A local instance installed by the desktop app creates that account for you. Check the address before signing in or inviting someone. Accounts and credentials do not become shared merely because two instances run minddy.
 
 
 ## Responsibilities and costs {#responsibilities}
@@ -87,4 +89,4 @@ Review provider permissions and data terms before enabling an integration. Git c
 
 ## Source and next step {#next-step}
 
-The canonical source is [`mangue-dev/minddy`](https://github.com/mangue-dev/minddy), under GNU AGPL v3.0 only. Keep the license and naming policy in mind for modified or hosted deployments. For installation, start with the [step-by-step self-hosting installer](/self-hosting/install). Use the [installation reference](/docs/installation) for technical details and additional checks. Before transferring existing work, check the [account-data transfer guide](/docs/transfer-between-instances): credentials and subscriptions are not transferred with account data.
+The canonical source is [`mangue-dev/minddy`](https://github.com/mangue-dev/minddy), under GNU AGPL v3.0 only. Keep the license and naming policy in mind for modified or hosted deployments. To run minddy on your own computer, use the desktop app: **Self-host minddy** › **Install on this computer** installs and starts a [local instance](/docs/install-locally#install-locally) for you. For a server, start with the [step-by-step self-hosting installer](/self-hosting/install). Use the [installation reference](/docs/installation) for technical details and additional checks. Before transferring existing work, check the [account-data transfer guide](/docs/transfer-between-instances): credentials and subscriptions are not transferred with account data.

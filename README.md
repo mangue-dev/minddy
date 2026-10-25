@@ -88,7 +88,9 @@ PostHog, or managed provider is required. The [edition guide](docs/editions.md)
 explains the choice, data flows, responsibilities, and costs in one place.
 To install your own instance, start with the
 [step-by-step self-hosting installer](https://www.minddy.app/self-hosting/install)
-for this computer or a shared server. Use
+for this computer or a shared server. On your own computer, the desktop app's
+**Self-host minddy › Install on this computer** runs the whole local
+installation for you. Use
 [docs/self-hosting.md](docs/self-hosting.md) as the technical reference for
 topology, configuration, and reproducible Supabase bootstrap. On a fresh local clone, use
 `pnpm bootstrap:supabase` before `pnpm dev` instead of manually applying SQL in

@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-25",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -32,14 +32,15 @@
     "evidence": [
       "docs/self-hosting.md",
       "scripts/self-hosting-encryption.mjs",
-      "lib/server/encryption/data-policy.json"
+      "lib/server/encryption/data-policy.json",
+      "desktop/src/local-installer.ts"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 8,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-781 self-hosting from the desktop app: source review of components/desktop/server-choice.tsx, desktop/src/local-installer.ts and desktop/src/local-account.ts; the local paragraph now distinguishes the desktop app's built-in installer, which keeps the default, from a clone you prepare yourself; no installation run, no screenshot recaptured, existing figures carried forward unchanged)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-781 changed passages on local instances from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-25"
   },
   "related": [
     "encryption-and-data-boundaries",
@@ -56,7 +57,7 @@
       "src": "/documentation/it/workspace-encryption-flow.svg",
       "alt": "Schema: Radice dedicata fuori PostgreSQL. Chiavi progetto, utente e sistema avvolte. Decifratura autorizzata sul server. Restore database + Storage + stesse chiavi.",
       "caption": "Conserva le chiavi radice fuori dal database e ripristina dati e file con le chiavi corrispondenti.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -95,7 +96,7 @@ Le opzioni `--encryption` del programma di installazione e del bootstrap descrit
 
 Il runtime di quella versione riconosce `MINDDY_CONTENT_ENCRYPTION_ENABLED`; il servizio Compose di riferimento carica il file protetto tramite `env_file`. Dopo una modifica esplicita del flag devi quindi ricreare il servizio dell’applicazione con lo stesso ambiente e verificare lo schema e il comportamento effettivo. Una chiave `MINDDY_DATA_ROOT_KEY` generata non dimostra che il contenuto dello spazio sia cifrato. Usa strumenti e configurazione corrispondenti, verificati esplicitamente per la versione scelta, prima di accogliere utenti o modificare un’istanza esistente.
 
-Le nuove installazioni locali e server attivano la cifratura per impostazione predefinita e generano una `MINDDY_DATA_ROOT_KEY` dedicata. Un server nuovo può scegliere `--encryption enabled` o `--encryption disabled`. Entrambe le scelte conservano la cifratura delle credenziali e generano una radice indipendente: l’opzione riguarda i contenuti. Per il desktop locale, prepara la configurazione con il comando seguente prima di aprire il clone. La radice casuale di 32 byte è rappresentata da esattamente 64 caratteri esadecimali e resta fuori da PostgreSQL.
+Le nuove installazioni locali e server attivano la cifratura per impostazione predefinita e generano una `MINDDY_DATA_ROOT_KEY` dedicata. Un server nuovo può scegliere `--encryption enabled` o `--encryption disabled`. Entrambe le scelte conservano la cifratura delle credenziali e generano una radice indipendente: l’opzione riguarda i contenuti. Il programma di installazione locale integrato nell’app desktop mantiene l’impostazione predefinita. Per un clone che prepari tu, registra la configurazione scelta con il comando seguente prima di aprire il clone nell’app. La radice casuale di 32 byte è rappresentata da esattamente 64 caratteri esadecimali e resta fuori da PostgreSQL.
 
 ```bash
 pnpm bootstrap:supabase -- --minimal --app-url http://localhost:6463 --encryption enabled

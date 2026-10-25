@@ -350,7 +350,9 @@ press **Alt** to reveal the hidden menu bar, then open **minddy**.
 
 The selected source is stored on that computer. Cookies are not copied between
 Minddy Cloud and a self-hosted server, so the first switch can require signing
-in or creating an account on the selected instance.
+in or creating an account on the selected instance. An instance installed with
+**Install on this computer** is the exception: the app signs its local account
+in by itself.
 
 The update, backup, and restore entry points are safety gates for the operation
 runbook. They verify the inputs they can safely verify but never guess a Storage
@@ -523,8 +525,9 @@ For a new server installation, pass `--encryption enabled` (the default) or
 independent `MINDDY_DATA_ROOT_KEY` in the mode-0600 deployment environment.
 The same choice applies to both managed and full Supabase profiles.
 
-For the local desktop flow, prepare the configuration before opening the clone
-in the desktop app:
+The desktop app's built-in local installer (**Install on this computer**) keeps
+the default. For a clone you prepare yourself, record the choice before opening
+the clone in the desktop app:
 
 ```sh
 pnpm bootstrap:supabase -- --minimal --app-url http://localhost:6463 --encryption enabled

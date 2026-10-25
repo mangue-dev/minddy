@@ -87,9 +87,9 @@ function reach(title: string) {
   expect(host.querySelector("h1")?.textContent).toBe(title);
 }
 
-function choose(path: "local" | "team", method: "agent" | "manual", full = false) {
+function choose(method: "agent" | "manual", full = false) {
   reach(copy.routeTitle);
-  clickCard(path === "local" ? copy.localTitle : copy.teamTitle);
+  clickCard(copy.teamTitle);
   reach(copy.encryptionReleaseTitle);
   expect(host.textContent).toContain(selfHostingRelease.tag);
   expect(host.textContent).toContain(copy.encryptionReleaseKeyNote);
@@ -97,7 +97,7 @@ function choose(path: "local" | "team", method: "agent" | "manual", full = false
   expect(host.textContent).not.toContain(copy.encryptionEnabled);
   reach(copy.migrateTitle);
   clickCard(copy.migrateNo);
-  if (path === "team" && full) {
+  if (full) {
     reach(copy.backendTitle);
     clickCard(copy.fullTitle);
   }
@@ -112,7 +112,7 @@ function copiedText() {
 describe("published self-hosting installation capabilities", () => {
   it("keeps help on the current step when navigating forward and back, without form values", () => {
     expect(setWizard).toHaveBeenLastCalledWith(expect.objectContaining({ stepId: "desktop-app", path: null }));
-    choose("team", "manual", true);
+    choose("manual", true);
     reach(copy.fullPreparationTitle);
     expect(setWizard).toHaveBeenLastCalledWith({ stepId: "team-installer", path: "team", method: "manual", serverAccess: "private", supabaseMode: "full", migrate: false });
     expect(JSON.stringify(setWizard.mock.calls)).not.toMatch(/192\.168|ops@example/);
@@ -120,15 +120,33 @@ describe("published self-hosting installation capabilities", () => {
     act(() => back.click());
     expect(setWizard).toHaveBeenLastCalledWith(expect.objectContaining({ stepId: "team-fetch" }));
   });
-  for (const path of ["local", "team", "full"] as const) {
+  it("installs a local instance from the desktop app, without commands or a sign-up", () => {
+    reach(copy.routeTitle);
+    clickCard(copy.localTitle);
+    reach(copy.migrateTitle);
+    clickCard(copy.migrateNo);
+    reach(copy.localAppTitle);
+    expect(setWizard).toHaveBeenLastCalledWith(expect.objectContaining({ stepId: "local-app", path: "local", method: null }));
+    for (const step of [copy.localAppStepOpen, copy.localAppStepInstall, copy.localAppStepWait, copy.localAppStepOpened]) {
+      expect(host.textContent).toContain(step);
+    }
+    expect(host.querySelector(`a[href="https://example.test/docs/install-locally#launch"]`)).toBeTruthy();
+    expect(copiedText()).toBe("");
+    reach(copy.verifyLocalTitle);
+    expect(host.textContent).not.toContain(copy.desktopServerAddressLabel);
+    expect(copiedText()).toBe("");
+    reach(copy.doneLocalTitle);
+    const titles = [...host.querySelectorAll("h1")].map((heading) => heading.textContent);
+    expect(titles).not.toContain(copy.methodTitle);
+  });
+  for (const path of ["team", "full"] as const) {
     it(`${path} manual commands omit the unsupported encryption flag`, () => {
-      choose(path === "full" ? "team" : path, "manual", path === "full");
-      reach(path === "local" ? copy.manualLocalTitle : path === "full" ? copy.fullPreparationTitle : copy.installerTitle);
+      choose("manual", path === "full");
+      reach(path === "full" ? copy.fullPreparationTitle : copy.installerTitle);
       const command = copiedText();
       expect(command).not.toContain("--encryption");
       expect(command).not.toContain("MINDDY_CONTENT_ENCRYPTION_ENABLED=");
-      expect(command).toContain(path === "local" ? "bootstrap:supabase" : "self-host:install");
-      if (path === "local") expect(command).toContain(`git clone --branch ${selfHostingRelease.tag}`);
+      expect(command).toContain("self-host:install");
       if (path === "full") {
         expect(command).toContain("--mode full --skip-start");
         expect(host.querySelector(`a[href="https://example.test/docs/install-a-server#install"]`)).toBeTruthy();
@@ -136,7 +154,7 @@ describe("published self-hosting installation capabilities", () => {
       }
     });
     it(`${path} assistant prompt names the exact release and its encryption choice`, () => {
-      choose(path === "full" ? "team" : path, "agent", path === "full");
+      choose("agent", path === "full");
       reach(copy.agentTitle);
       const prompt = copiedText();
       expect(prompt).not.toContain("MINDDY_CONTENT_ENCRYPTION_ENABLED=");

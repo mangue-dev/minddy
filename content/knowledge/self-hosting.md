@@ -5,7 +5,7 @@ summary: Choose a supported topology, install minddy, configure its services, an
 category: deployment
 audience: both
 tags: [self-hosting, self host, deployment, docker, supabase, installation, local, server, numo]
-lastReviewed: 2026-10-09
+lastReviewed: 2026-10-25
 ---
 
 minddy is open source under the GNU AGPL v3.0 only. The only supported distribution is the public `mangue-dev/minddy` repository and its immutable tagged release assets. Do not use a moving branch, an unofficial deployment repository, or a third-party image. The exact release row in `deploy/self-hosted/compatibility.json` is the source of truth for the supported image tag, Supabase Compose revision, host architectures, and Docker minimums; the immutable image digest comes from the matching GitHub Release manifest.
@@ -37,7 +37,7 @@ Minddy Cloud is not a dependency or fallback. A self-hosted instance does not si
 
 ## Prerequisites and secrets
 
-For the local path, install Node.js 24.22.1 or a later 24.x, pnpm 10.28.0 through Corepack, Git, the Supabase CLI, and Docker with a running daemon. For a server, also install `psql` and meet the selected release's Docker Engine and Docker Compose minimums. Keep secrets in a host secret manager or a mode-0600 environment file; never commit `.env.local`, `deploy/self-hosted/.env`, database URLs, service-role keys, private keys, or backups.
+For a local clone you prepare yourself, install Node.js 24.22.1 or a later 24.x, pnpm 10.28.0 through Corepack, Git, the Supabase CLI, and Docker with a running daemon; the desktop app's **Install on this computer** installs any of them that is missing. For a server, also install `psql` and meet the selected release's Docker Engine and Docker Compose minimums. Keep secrets in a host secret manager or a mode-0600 environment file; never commit `.env.local`, `deploy/self-hosted/.env`, database URLs, service-role keys, private keys, or backups.
 
 The deployed application needs these values:
 
@@ -55,7 +55,18 @@ An instance upgraded from an earlier release may still contain `AGENT_EXECUTION_
 
 ## Local installation
 
-Use a clean clone for a local single-user instance:
+For a local single-user instance, open **Self-host minddy** in the desktop app
+(under the sign-in and sign-up forms, or **minddy > Connect to a Server…**; on
+Windows or Linux, press **Alt** first) and choose **Install on this computer**.
+The app checks Git, Node.js 24, pnpm, the Supabase CLI, and Docker and installs
+whatever is missing, clones the published release into the chosen folder
+(default `~/minddy`), prepares minimal Supabase and the production build, starts
+minddy, and creates a local administrator account (`owner@local.minddy.app`)
+whose generated password stays in the system keychain. There is no sign-up or
+email step: the app opens the instance already signed in. A failed step shows
+its last output line, and **Try again** resumes in the same folder.
+
+To prepare the clone yourself instead, use a clean clone:
 
 ```bash
 git clone https://github.com/mangue-dev/minddy.git
@@ -66,13 +77,14 @@ pnpm install --frozen-lockfile
 ```
 
 Open **minddy > Connect to a Server… > Use an existing installation > On this
-computer** and select the clone (or choose **Install on this computer** to let the app
-install it). On Windows or Linux, press **Alt** first. The app invokes the
-local launcher with browser navigation disabled, starts the minimal Supabase
-stack, applies migrations and Storage configuration, builds minddy when needed,
-waits for health, and opens sign-up in its own window. It owns shutdown and later
-restarts. A terminal-owned `pnpm self-host:local` process is a troubleshooting
-fallback only and must be stopped before the app can reclaim the folder.
+computer** and select the clone. On Windows or Linux, press **Alt** first. The
+app invokes the local launcher with browser navigation disabled, starts the
+minimal Supabase stack, applies migrations and Storage configuration, builds
+minddy when needed, waits for health, and opens sign-up in its own window; a
+clone you prepared keeps its own accounts and normal sign-in. In both cases the
+app owns shutdown and later restarts. A terminal-owned `pnpm self-host:local`
+process is a troubleshooting fallback only and must be stopped before the app
+can reclaim the folder.
 
 `supabase db reset --local` destroys local data and is only for resetting an
 evaluation stack, never for recovery.
@@ -154,8 +166,8 @@ For a new server installation, pass `--encryption enabled` (the default) or
 independent `MINDDY_DATA_ROOT_KEY` in the mode-0600 deployment environment.
 The same choice applies to both managed and full Supabase profiles.
 
-For the local desktop flow, prepare the configuration before opening the clone
-in the desktop app:
+The desktop app's built-in local installer keeps the default. For a clone you
+prepare yourself, record the choice before opening the clone in the desktop app:
 
 ```sh
 pnpm bootstrap:supabase -- --minimal --app-url http://localhost:6463 --encryption enabled

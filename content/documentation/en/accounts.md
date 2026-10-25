@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 16,
-  "sourceRevision": 16,
+  "revision": 17,
+  "sourceRevision": 17,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-25",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -67,14 +67,16 @@
       "lib/settings-sections.ts",
       "components/app-sidebar.tsx",
       "components/mobile-account.tsx",
-      "lib/keyboard/shortcuts.ts"
+      "lib/keyboard/shortcuts.ts",
+      "desktop/src/local-installer.ts",
+      "desktop/src/local-account.ts"
     ]
   },
   "review": {
-    "revision": 16,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 17,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-781 self-hosting from the desktop app: source review of components/desktop/server-choice.tsx, desktop/src/local-installer.ts and desktop/src/local-account.ts; the account-access section now states that a local instance installed by the desktop app has no signup; no installation run, no screenshot recaptured, existing figures carried forward unchanged)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-781 changed passages on local instances from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-25"
   },
   "related": [
     "choose-an-instance",
@@ -106,7 +108,7 @@
       "src": "/documentation/en/account-security-workflow.png",
       "alt": "Two-factor authentication card with the Turn on button.",
       "caption": "Start enrollment here, then verify the authenticator and store recovery codes privately.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -123,7 +125,7 @@
       "src": "/documentation/en/profile-and-preferences-workflow.png",
       "alt": "Profile header with the avatar and its edit badge, the name and the read-only email.",
       "caption": "Select the avatar to generate or upload one, or the name to rename yourself; the email address stays read-only.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -140,7 +142,7 @@
       "src": "/documentation/en/profile-and-preferences-preferences-workflow.png",
       "alt": "Language selector, light, dark and system theme controls, the light and dark mode palette selectors and the transparency switch.",
       "caption": "Account appearance preferences are separate from the public website language.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -157,7 +159,7 @@
       "src": "/documentation/en/privacy-and-account-deletion-workflow.png",
       "alt": "Deletion preview listing owned projects, issues and members who lose access.",
       "caption": "Read the preview and export wanted data before opening the deletion confirmation.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -182,7 +184,7 @@ Your account belongs to the instance where you signed up. Manage sign-in, two-fa
 
 ## Create an account and sign in {#account-access}
 
-Open the login or signup screen on the instance you intend to use. Cloud and another self-hosted instance have separate accounts. Available sign-in methods and signup access depend on the instance's authentication configuration.
+Open the login or signup screen on the instance you intend to use. Cloud and another self-hosted instance have separate accounts. Available sign-in methods and signup access depend on the instance's authentication configuration. A local instance installed by the desktop app has no signup: the app creates your account and signs you in. See [local instances](/docs/install-locally#install-locally).
 
 For email signup:
 
