@@ -4277,5 +4277,20 @@
         "encryption_version"
       ]
     }
+  },
+  "upload_citation_checks": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "storage_path"
+      ],
+      "timestamp": [
+        "checked_at"
+      ]
+    }
   }
 }

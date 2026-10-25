@@ -291,7 +291,7 @@ revision would replay pending steps twice at the next materialization.
 | `exportPage` (Markdown, ZIP) | body, title | Materialized first (the project for a branch outline) |
 | `buildAccountExport` | body, title | Materialized first, for every owned project |
 | `getPublicShareTarget`, `getPublicPageBundle` (`/p/…`, `/share/…`) | body, title | Materialized first (the shown page and the branch) |
-| `sweepOrphanPageFiles` | body | Materialized first: a file cited only by pending typing is not an orphan |
+| `sweepOrphanPageFiles` | body (every page, version and other text that can cite a file, through `findCitedUploads`) | Materialized first for the candidates' pages: a file cited only by pending typing is not an orphan |
 | History snapshots (`stampPageWrite`) | body, title | A commit archives the live state it replaces; a materialization archives the stored state it covers |
 | Restore a version (`restorePageVersion` → `updatePage`) | body, title | Pending steps applied, then committed |
 | Search projection (`syncPagesSearchText`, protected search cache) and page links | body | Run after each materialization or commit; lag at most one materialization |

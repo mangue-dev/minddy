@@ -266,7 +266,7 @@ registrations; orphan cleanup then removes the object.
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 173 application tables and 1,534 columns, their primary
+- `schema.json` records 174 application tables and 1,536 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 144 encryption targets include the original content,

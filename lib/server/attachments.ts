@@ -24,6 +24,8 @@ import { blindIndex } from "@/lib/server/encryption/store";
 import { getBlindIndexKeys } from "@/lib/server/encryption/registry";
 import { decodeAttachmentRow, encodeAttachmentValue,
   shouldEncryptAttachmentMetadata } from "@/lib/server/attachment-content";
+import { findCitedUploads, recordCitedUploads,
+  uploadObjectId } from "@/lib/server/upload-citations";
 
 /** Retain the historical descriptor limit so existing stored files remain usable. */
 export const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024; // 20 MB
@@ -903,6 +905,13 @@ export async function removeUnretainedResources(
  things to remember instead of one. */
 export const ORPHAN_ATTACHMENT_DAYS = 7;
 
+/** Which candidate ids a document still cites; see `lib/server/upload-citations.ts`. */
+export type CitedUploadsFinder = (
+  service: SupabaseClient,
+  ids: Iterable<string>,
+  chatOwners: Iterable<string>
+) => Promise<Set<string>>;
+
 /**
  * Objects in the bucket that are no longer designated by any line, after the timeout.
  *
@@ -910,10 +919,20 @@ export const ORPHAN_ATTACHMENT_DAYS = 7;
  * Everything that happens
  * in between — a composer closed, a tab lost, a creation canceled —
  * leaves the object alone in the bucket. Nobody showed it anymore, nobody counted it, and nothing deleted it.
+ * The `chat/` family follows the same rule (MIN-792): Numo attachments and
+ * notebook images whose conversation or text is gone.
  *
  * Sorting is in SQL (`orphan_attachment_objects`): the object table lives in
  * the `storage` schema, which PostgREST does not expose, and "this path is cited
  * nowhere” is exactly what an anti-join can do and we can't.
+ *
+ * A row is not the only reference, though (MIN-792): editors write images
+ * into descriptions, plans, the notebook and pages by address, and that
+ * address travels with the text. Before deleting, every such text is read
+ * ({@link CitedUploadsFinder}); a candidate it still cites stays, and is
+ * recorded so the next nights move on to other candidates. An object whose
+ * name does not end with an opaque id cannot be matched in text, so it stays
+ * too. A failed read throws: nothing is deleted that night.
  *
  * Bounded batch like other nightly sweep purges; the next day resumes
  * the rest. Also retries retirement of metadata whose bytes are already gone.
@@ -922,7 +941,9 @@ export const ORPHAN_ATTACHMENT_DAYS = 7;
 export async function sweepOrphanAttachments(
   service: SupabaseClient,
   before: string,
-  limit = 500
+  limit = 500,
+  { findCited = findCitedUploads, now = new Date() }:
+    { findCited?: CitedUploadsFinder; now?: Date } = {}
 ): Promise<number> {
   const { data, error } = await service.rpc("orphan_attachment_objects", {
     p_before: before,
@@ -930,7 +951,24 @@ export async function sweepOrphanAttachments(
   });
   if (error) throw new Error(error.message);
 
-  const paths = ((data ?? []) as { name: string }[]).map((row) => row.name);
+  const candidates = ((data ?? []) as { name: string }[]).map((row) => row.name);
+  if (candidates.length === 0) return 0;
+
+  const ids = new Map<string, string>();
+  const owners = new Set<string>();
+  for (const path of candidates) {
+    const id = uploadObjectId(path);
+    if (id) ids.set(path, id);
+    const [family, owner] = path.split("/");
+    if (family === "chat" && owner) owners.add(owner);
+  }
+  const cited = await findCited(service, new Set(ids.values()), owners);
+  const isKept = (path: string) => {
+    const id = ids.get(path);
+    return !id || cited.has(id);
+  };
+  await recordCitedUploads(service, candidates.filter(isKept), now);
+  const paths = candidates.filter((path) => !isKept(path));
   if (paths.length === 0) return 0;
 
   // The RPC already checked both reference tables; do not repeat those reads.

@@ -167,9 +167,9 @@ export function filePreviewHref(src: string): string | null {
 /**
  * Files CITED by a page body, read on its JSON.
  *
- * On the JSON and not on a mounted ProseMirror document: the caller is the
- * housekeeping (lib/server/retention.ts), which reads baselines into a function
- * server and has neither DOM nor editor at its disposal. The crossing is blind to
+ * On the JSON and not on a mounted ProseMirror document, so a server reader
+ * without DOM or editor can use it. The nightly sweep searches file ids more
+ * widely still (lib/server/upload-citations.ts). The crossing is blind to
  * Node TYPE, intentionally — any `src` attribute that resembles the address
  * of a page file counts. One more block that would carry one (a video,
  * an attachment in a leaflet) is therefore covered in advance, and the worst case

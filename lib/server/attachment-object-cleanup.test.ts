@@ -130,10 +130,12 @@ describe("attachment object metadata retirement", () => {
   });
 
   it("retires only successfully removed nightly batches", async () => {
-    const paths = Array.from({ length: 150 }, (_, i) => `${prefix}/object-${i}`);
+    const paths = Array.from({ length: 150 }, (_, i) =>
+      `${prefix}/00000000-0000-4000-8000-${String(i).padStart(12, "0")}`);
     const state = fixture({ paths, failRemovalAt: 2 });
     paths.forEach((path, i) => state.aliases.set(`alias-${i}`, path));
-    expect(await sweepOrphanAttachments(state.client, "2026-09-01T00:00:00Z")).toBe(100);
+    expect(await sweepOrphanAttachments(state.client, "2026-09-01T00:00:00Z", 500,
+      { findCited: async () => new Set<string>() })).toBe(100);
     expect([...state.registry]).toEqual(paths.slice(100));
     expect([...state.objects]).toEqual(paths.slice(100));
     expect([...state.aliases.values()]).toEqual(paths.slice(100));
@@ -147,11 +149,13 @@ describe("attachment object metadata retirement", () => {
       const options: { metadataFailure?: typeof table } = { metadataFailure: table };
       const state = fixture(options);
       state.aliases.set("retained-alias", target);
-      await expect(sweepOrphanAttachments(state.client, "2026-09-01T00:00:00Z"))
+      await expect(sweepOrphanAttachments(state.client, "2026-09-01T00:00:00Z", 500,
+      { findCited: async () => new Set<string>() }))
         .rejects.toThrow(/retired attachment/);
       expect(state.registry.has(target)).toBe(true);
       delete options.metadataFailure;
-      expect(await sweepOrphanAttachments(state.client, "2026-09-01T00:00:00Z")).toBe(2);
+      expect(await sweepOrphanAttachments(state.client, "2026-09-01T00:00:00Z", 500,
+      { findCited: async () => new Set<string>() })).toBe(2);
       expect(state.registry.size).toBe(0);
       expect(state.aliases.size).toBe(0);
     },
