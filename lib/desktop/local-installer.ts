@@ -4,8 +4,9 @@
  * The app can install self-hosted minddy on the person's computer: check the
  * tools the local profile needs, clone the published release, install its
  * dependencies, record the administrator, then hand over to the existing local
- * runtime (`pnpm self-host:local`), which prepares Supabase, builds and starts
- * the app, and creates the account the app signs in with (`local-account.ts`). It runs the documented procedure of the `install-locally` article,
+ * runtime (`pnpm self-host:local`): Supabase and the build as their own step,
+ * then the start. Last, it creates the account the app signs in with
+ * (`local-account.ts`). It runs the documented procedure of the `install-locally` article,
  * not a second one: the same tools, the same release, the same launcher.
  *
  * Everything here is pure so it can be tested; `desktop/src/local-installer.ts`
@@ -90,13 +91,6 @@ export function evaluatePrerequisite(
   return { id, state: "ready", version };
 }
 
-export function prerequisitesReady(results: readonly LocalPrerequisiteResult[]): boolean {
-  return (
-    LOCAL_PREREQUISITES.every((id) => results.some((result) => result.id === id)) &&
-    results.every((result) => result.state === "ready")
-  );
-}
-
 /** The minddy steps, in the order they run after any tool installation. */
 export const LOCAL_INSTALL_STEPS = ["clone", "dependencies", "configure", "prepare", "start", "account"] as const;
 /** A tool installation (`local-toolchain.ts`) or a minddy step. */
@@ -121,6 +115,7 @@ export const INSTALL_MESSAGE_CODES = [
   "toolStillMissing",
   "installCanceled",
   "folderNotEmpty",
+  "folderIsInstallation",
   "folderRequired",
   "folderInvalid",
   "serverInvalid",
@@ -145,18 +140,36 @@ export interface LocalInstallProgress {
 
 /**
  * What the chosen folder already holds decides where the install starts. An
- * empty or absent folder is cloned; a minddy clone (a previous attempt that
- * stopped after downloading) resumes without a second download; anything
- * else is somebody's files and is never written into.
+ * empty or absent folder is cloned; a clone this installer made (a previous
+ * attempt that stopped after downloading, marked by `MANAGED_INSTALL_MARKER`)
+ * resumes without a second download. A minddy clone the person made
+ * themselves is theirs: its branch and `ADMIN_EMAILS` are never touched, it
+ * is opened with "Use an existing installation". Anything else is somebody's
+ * files and is never written into.
  */
-export type LocalInstallFolderState = "absent" | "empty" | "minddy" | "occupied";
+export type LocalInstallFolderState = "absent" | "empty" | "minddy" | "installation" | "occupied";
+
+/** Inside the clone's `.git`, so it never shows as a change in the worktree. */
+export const MANAGED_INSTALL_MARKER = ".git/minddy-desktop-install";
+
+/**
+ * Files whose presence tells what the cloned release can do. The installer
+ * clones the newest published release, which may predate the steps added
+ * with it (MIN-781): without `--prepare-only` the launcher prepares while it
+ * starts; without the auto sign-in page the person signs up on the instance.
+ */
+export const MANAGED_ACCOUNT_PAGE = "components/auth/desktop-local-sign-in.tsx";
+
+export function launcherSupportsPrepareOnly(launcherSource: string): boolean {
+  return launcherSource.includes('"--prepare-only"');
+}
 
 export function cloneNeeded(folder: LocalInstallFolderState): boolean {
   return folder === "absent" || folder === "empty";
 }
 
 export function folderAcceptable(folder: LocalInstallFolderState): boolean {
-  return folder !== "occupied";
+  return folder === "absent" || folder === "empty" || folder === "minddy";
 }
 
 export function cloneArguments(tag: string, folder: string): string[] {

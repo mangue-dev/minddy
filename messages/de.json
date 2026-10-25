@@ -5743,8 +5743,8 @@
     "desktopSetupDone": "die Desktop-App auf diesem Computer installiert ist und sich öffnen lässt.",
     "desktopAppTitle": "Desktop-App mit deiner Installation verbinden",
     "desktopAppBody": "Öffne mit den folgenden Schritten die minddy-Installation, die du gerade vorbereitet hast.",
-    "desktopMenuStepTitle": "Den Schritt „Selbst gehostet“ öffnen",
-    "desktopMenuStepBody": "Klicke in der App unter dem Anmeldeformular auf „minddy selbst hosten“ oder öffne das App-Menü (unter macOS oben auf dem Bildschirm; unter Windows oder Linux mit Alt) und wähle „Connect to a Server…“. Wähle dann „Bestehende Installation verwenden“.",
+    "desktopMenuStepTitle": "„minddy selbst hosten“ öffnen",
+    "desktopMenuStepBody": "Klicke in der App unter dem Anmeldeformular auf „minddy selbst hosten“ oder öffne das App-Menü (unter macOS oben auf dem Bildschirm; unter Windows oder Linux mit Alt), wähle „Connect to a Server…“ und dann „Bestehende Installation verwenden“.",
     "desktopLocalPathTitle": "Wähle die Option „Lokaler Ordner“",
     "desktopServerPathTitle": "Serveradresse eingeben",
     "desktopPickerTitle": "Bestehende Installation verwenden",
@@ -5754,8 +5754,8 @@
     "desktopConnectAction": "Verbinden",
     "desktopLocalBody": "Klicke auf „Auf diesem Computer“. Wähle im anschließenden Ordnerdialog den Ordner minddy aus, den du zuvor vorbereitet hast.",
     "desktopTeamBody": "Füge die HTTPS-Adresse deines Teams in „Serveradresse“ ein und klicke dann auf „Verbinden“.",
-    "desktopPrivateBody": "Füge die private HTTP-Adresse des Servers in „Serveradresse“ ein und klicke dann auf „Verbinden“. Diese Adresse funktioniert nur im selben privaten Netzwerk.",
-    "desktopLocalChoiceNote": "Du willst den Ordner nicht selbst vorbereiten? Geh zurück und wähle „Auf diesem Computer installieren“: Die App prüft die Werkzeuge und installiert minddy für dich.",
+    "desktopPrivateBody": "Damit du einen Server in einem privaten Netzwerk in der Desktop-App hinzufügen kannst, muss er über HTTPS erreichbar sein, zum Beispiel über einen Reverse Proxy mit Zertifikat. HTTP funktioniert nur für diesen Computer (localhost).",
+    "desktopLocalChoiceNote": "Wähle in der App stattdessen unter „minddy selbst hosten“ die Option „Auf diesem Computer installieren“: Die App prüft die Werkzeuge und installiert minddy für dich.",
     "desktopServerChoiceNote": "Klicke nicht auf „Auf diesem Computer“. Diese Option gilt nur für einen minddy-Ordner, der auf diesem Computer gespeichert ist.",
     "downloadDesktopApp": "Installiere die Desktop-App",
     "importTitle": "Cloud-Daten importieren",
@@ -6796,7 +6796,7 @@
   "DesktopWelcome": {
     "back": "Zurück",
     "selfHostHeading": "minddy selbst hosten",
-    "selfHostLead": "Installiere minddy auf diesem Computer oder auf einem Server, oder verwende eine bestehende Installation.",
+    "selfHostLead": "Installiere minddy auf diesem Computer oder auf einem Server oder verwende eine bestehende Installation.",
     "installTitle": "Auf diesem Computer installieren",
     "installBody": "minddy richtet Schritt für Schritt eine private Instanz für dich ein.",
     "existingTitle": "Bestehende Installation verwenden",
@@ -6860,9 +6860,10 @@
     "existingLead": "Öffne minddy auf diesem Computer oder verbinde dich mit einem Server, den du schon betreibst.",
     "localFolderTitle": "Auf diesem Computer",
     "localFolderBody": "Wähle den hier installierten minddy-Ordner. Die App startet ihn für dich.",
-    "breadcrumbLabel": "Position",
+    "breadcrumbLabel": "Navigationspfad",
     "backToApp": "Zurück zur App",
     "stepAccount": "Dein lokales Konto erstellen",
-    "accountNote": "Kein Konto und kein Passwort einzurichten: minddy erstellt deines auf diesem Computer und meldet dich selbst an."
+    "accountNote": "Du musst weder ein Konto noch ein Passwort einrichten: minddy erstellt deines auf diesem Computer und meldet dich selbst an.",
+    "folderIsInstallation": "Dieser Ordner enthält bereits eine minddy-Installation. Öffne sie mit „Bestehende Installation verwenden“ oder wähle einen anderen Ordner."
   }
 }

@@ -160,3 +160,14 @@ it("does not start another folder while the stopped launcher's port remains occu
   await next;
   expect(spawn).toHaveBeenCalledTimes(1);
 });
+
+it("tells whether the launcher it started for a folder is still alive", async () => {
+  const { lifecycle, healthy, process } = setup();
+  expect(lifecycle.ownsLiveRuntime("/clone")).toBe(false);
+  healthy.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+  await lifecycle.start("/clone");
+  expect(lifecycle.ownsLiveRuntime("/clone")).toBe(true);
+  expect(lifecycle.ownsLiveRuntime("/other")).toBe(false);
+  process.exitCode = 1;
+  expect(lifecycle.ownsLiveRuntime("/clone")).toBe(false);
+});

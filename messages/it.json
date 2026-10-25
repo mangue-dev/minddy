@@ -5743,8 +5743,8 @@
     "desktopSetupDone": "l'app desktop è installata e si apre su questo computer.",
     "desktopAppTitle": "Collega l’app alla tua installazione",
     "desktopAppBody": "Segui questi passaggi per aprire l’installazione di minddy appena preparata.",
-    "desktopMenuStepTitle": "Apri il passaggio self-hosted",
-    "desktopMenuStepBody": "Nell’app, fai clic su Ospita minddy in autonomia sotto il modulo di accesso, oppure apri il menu dell’app (in alto sullo schermo su macOS; premi Alt su Windows o Linux) e scegli Connect to a Server…. Poi scegli Usa un’installazione esistente.",
+    "desktopMenuStepTitle": "Apri Ospita minddy in autonomia",
+    "desktopMenuStepBody": "Nell’app, fai clic su Ospita minddy in autonomia sotto il modulo di accesso, oppure apri il menu dell’app (in alto sullo schermo su macOS; premi Alt su Windows o Linux), scegli Connect to a Server…, poi Usa un’installazione esistente.",
     "desktopLocalPathTitle": "Scegli l'opzione cartella locale",
     "desktopServerPathTitle": "Inserisci l'indirizzo del server",
     "desktopPickerTitle": "Usa un’installazione esistente",
@@ -5754,8 +5754,8 @@
     "desktopConnectAction": "Connetti",
     "desktopLocalBody": "Fai clic su Su questo computer e seleziona la cartella minddy preparata in precedenza.",
     "desktopTeamBody": "Incolla l’indirizzo HTTPS del tuo team in Indirizzo del server, poi fai clic su Connetti.",
-    "desktopPrivateBody": "Incolla l’indirizzo HTTP privato del server in Indirizzo del server, poi fai clic su Connetti. Questo indirizzo funziona solo sulla stessa rete privata.",
-    "desktopLocalChoiceNote": "Preferisci non preparare la cartella da solo? Torna indietro e scegli Installa su questo computer: l’app verifica gli strumenti e installa minddy per te.",
+    "desktopPrivateBody": "Per aggiungere un server di una rete privata nell’app desktop, rendilo raggiungibile via HTTPS, ad esempio tramite un reverse proxy con certificato. HTTP funziona solo per questo computer (localhost).",
+    "desktopLocalChoiceNote": "Nell’app, scegli invece Installa su questo computer in Ospita minddy in autonomia: l’app verifica gli strumenti e installa minddy per te.",
     "desktopServerChoiceNote": "Non fare clic su Su questo computer. Questa opzione serve solo per una cartella minddy archiviata su questo computer.",
     "downloadDesktopApp": "Installa l'app desktop",
     "importTitle": "Importa i dati da minddy Cloud",
@@ -6860,9 +6860,10 @@
     "existingLead": "Apri minddy installato su questo computer o connettiti a un server che gestisci già.",
     "localFolderTitle": "Su questo computer",
     "localFolderBody": "Scegli la cartella minddy installata qui. L’app la avvia per te.",
-    "breadcrumbLabel": "Posizione",
+    "breadcrumbLabel": "Percorso di navigazione",
     "backToApp": "Torna all’app",
     "stepAccount": "Crea il tuo account locale",
-    "accountNote": "Nessun account né password da configurare: minddy crea il tuo su questo computer e ti fa accedere da solo."
+    "accountNote": "Nessun account né password da configurare: minddy crea il tuo su questo computer e ti fa accedere da solo.",
+    "folderIsInstallation": "Questa cartella contiene già un’installazione di minddy. Aprila con Usa un’installazione esistente oppure scegli un’altra cartella."
   }
 }

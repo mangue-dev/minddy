@@ -5743,8 +5743,8 @@
     "desktopSetupDone": "la aplicación de escritorio está instalada y se abre en este ordenador.",
     "desktopAppTitle": "Conectar la aplicación a tu instalación",
     "desktopAppBody": "Sigue estos pasos para abrir la instalación de minddy que acabas de preparar.",
-    "desktopMenuStepTitle": "Abrir el paso autoalojado",
-    "desktopMenuStepBody": "En la app, haz clic en Autoalojar minddy bajo el formulario de inicio de sesión, o abre el menú de la app (en la parte superior de la pantalla en macOS; pulsa Alt en Windows o Linux) y elige Connect to a Server…. Luego elige Usar una instalación existente.",
+    "desktopMenuStepTitle": "Abrir Autoalojar minddy",
+    "desktopMenuStepBody": "En la app, haz clic en Autoalojar minddy bajo el formulario de inicio de sesión, o abre el menú de la app (en la parte superior de la pantalla en macOS; pulsa Alt en Windows o Linux), elige Connect to a Server… y luego Usar una instalación existente.",
     "desktopLocalPathTitle": "Elige la opción de carpeta local",
     "desktopServerPathTitle": "Introduce la dirección del servidor",
     "desktopPickerTitle": "Usar una instalación existente",
@@ -5754,8 +5754,8 @@
     "desktopConnectAction": "Conectar",
     "desktopLocalBody": "Haz clic en En este equipo. Se abrirá un selector de carpetas; elige la carpeta de minddy que preparaste antes.",
     "desktopTeamBody": "Pega la dirección HTTPS de tu equipo en Dirección del servidor y haz clic en Conectar.",
-    "desktopPrivateBody": "Pega la dirección HTTP privada del servidor en Dirección del servidor y haz clic en Conectar. Esta dirección solo funciona en la misma red privada.",
-    "desktopLocalChoiceNote": "¿Prefieres no preparar la carpeta tú mismo? Vuelve atrás y elige Instalar en este equipo: la app comprueba las herramientas e instala minddy por ti.",
+    "desktopPrivateBody": "Para añadir un servidor de una red privada en la aplicación de escritorio, haz que sea accesible por HTTPS, por ejemplo mediante un proxy inverso con certificado. HTTP solo funciona para este equipo (localhost).",
+    "desktopLocalChoiceNote": "En la app, elige mejor Instalar en este equipo en Autoalojar minddy: la app comprueba las herramientas e instala minddy por ti.",
     "desktopServerChoiceNote": "No hagas clic en En este equipo. Esa opción es solo para una carpeta de minddy almacenada en este equipo.",
     "downloadDesktopApp": "Instalar la aplicación de escritorio",
     "importTitle": "Importar tus datos de Cloud",
@@ -6860,9 +6860,10 @@
     "existingLead": "Abre minddy instalado en este equipo o conéctate a un servidor que ya gestionas.",
     "localFolderTitle": "En este equipo",
     "localFolderBody": "Elige la carpeta de minddy instalada aquí. La app la inicia por ti.",
-    "breadcrumbLabel": "Ubicación",
+    "breadcrumbLabel": "Ruta de navegación",
     "backToApp": "Volver a la app",
     "stepAccount": "Crear tu cuenta local",
-    "accountNote": "Sin cuenta ni contraseña que configurar: minddy crea la tuya en este equipo e inicia sesión por ti."
+    "accountNote": "Sin cuenta ni contraseña que configurar: minddy crea la tuya en este equipo e inicia sesión por ti.",
+    "folderIsInstallation": "Esta carpeta ya contiene una instalación de minddy. Ábrela con Usar una instalación existente o elige otra carpeta."
   }
 }

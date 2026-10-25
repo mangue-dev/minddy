@@ -5743,8 +5743,8 @@
     "desktopSetupDone": "o aplicativo de desktop está instalado e abre neste computador.",
     "desktopAppTitle": "Conecte o aplicativo de desktop à sua instalação",
     "desktopAppBody": "Siga as etapas abaixo para abrir a instalação do minddy que você acabou de preparar.",
-    "desktopMenuStepTitle": "Abrir a etapa self-hosted",
-    "desktopMenuStepBody": "No app, clique em Auto-hospedar o minddy abaixo do formulário de entrada, ou abra o menu do app (na parte superior da tela no macOS; pressione Alt no Windows ou Linux) e escolha Connect to a Server…. Depois escolha Usar uma instalação existente.",
+    "desktopMenuStepTitle": "Abrir Auto-hospedar o minddy",
+    "desktopMenuStepBody": "No app, clique em Auto-hospedar o minddy abaixo do formulário de entrada, ou abra o menu do app (na parte superior da tela no macOS; pressione Alt no Windows ou Linux), escolha Connect to a Server… e depois Usar uma instalação existente.",
     "desktopLocalPathTitle": "Escolha a opção de pasta local",
     "desktopServerPathTitle": "Insira o endereço do servidor",
     "desktopPickerTitle": "Usar uma instalação existente",
@@ -5754,8 +5754,8 @@
     "desktopConnectAction": "Conectar",
     "desktopLocalBody": "Clique em Neste computador. Um seletor de pasta é aberto em seguida; selecione a pasta minddy que você preparou anteriormente.",
     "desktopTeamBody": "Cole o endereço HTTPS da sua equipe em Endereço do servidor e clique em Conectar.",
-    "desktopPrivateBody": "Cole o endereço HTTP privado do servidor em Endereço do servidor e clique em Conectar. Este endereço funciona apenas na mesma rede privada.",
-    "desktopLocalChoiceNote": "Prefere não preparar a pasta você mesmo? Volte e escolha Instalar neste computador: o app verifica as ferramentas e instala o minddy para você.",
+    "desktopPrivateBody": "Para adicionar um servidor de uma rede privada no aplicativo de desktop, deixe-o acessível por HTTPS, por exemplo com um proxy reverso com certificado. HTTP só funciona para este computador (localhost).",
+    "desktopLocalChoiceNote": "Em vez disso, no app, escolha Instalar neste computador em Auto-hospedar o minddy: o app verifica as ferramentas e instala o minddy para você.",
     "desktopServerChoiceNote": "Não clique em Neste computador. Essa opção é apenas para uma pasta minddy armazenada neste computador.",
     "downloadDesktopApp": "Instale o aplicativo de desktop",
     "importTitle": "Traga seus dados do Cloud",
@@ -6860,9 +6860,10 @@
     "existingLead": "Abra o minddy instalado neste computador ou conecte-se a um servidor que você já administra.",
     "localFolderTitle": "Neste computador",
     "localFolderBody": "Escolha a pasta do minddy instalada aqui. O app a inicia para você.",
-    "breadcrumbLabel": "Localização",
+    "breadcrumbLabel": "Trilha de navegação",
     "backToApp": "Voltar ao app",
     "stepAccount": "Criar sua conta local",
-    "accountNote": "Nenhuma conta ou senha para configurar: o minddy cria a sua neste computador e faz o login por você."
+    "accountNote": "Nenhuma conta ou senha para configurar: o minddy cria a sua neste computador e faz o login por você.",
+    "folderIsInstallation": "Esta pasta já contém uma instalação do minddy. Abra-a com Usar uma instalação existente ou escolha outra pasta."
   }
 }

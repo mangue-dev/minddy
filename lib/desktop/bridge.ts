@@ -42,8 +42,8 @@ import type { DesktopServerChoiceState } from "@/lib/desktop/server-choice";
 import type { LocalAccountSession } from "@/lib/desktop/local-account";
 
 /**
- * The server-choice page's actions (MIN-781). The main process answers them
- * only from minddy Cloud's `/desktop/welcome` document. Like every member,
+ * The self-hosting page's actions (MIN-781). The main process answers them
+ * only from the app's own bundled document, `minddy-app://welcome/`. Like every member,
  * they never take a path: the installation folder is chosen in the native
  * dialog and stays in the main process.
  */
@@ -58,7 +58,7 @@ export interface DesktopServerChoiceBridge {
   cancelInstall(): void;
   onInstallProgress(handler: (progress: LocalInstallProgress) => void): () => void;
   openToolDownload(tool: LocalPrerequisiteId): void;
-  /** Leave the page for the selected server; refused while nothing was chosen. */
+  /** Leave the page for the selected server, cancelling an installation in progress. */
   close(): void;
 }
 
@@ -80,7 +80,7 @@ export interface DesktopBridge {
    * Optional because desktop shells released before 0.10.24 do not expose it.
    */
   readonly platform?: NodeJS.Platform;
-  /** Open the server choice (`/desktop/welcome`) on its self-hosted step. */
+  /** Open the app's bundled self-hosting page (`minddy-app://welcome/`). */
   openServerPicker?(): void;
   /** Present in shells that let the web page choose the server (MIN-781). */
   serverChoice?: DesktopServerChoiceBridge;

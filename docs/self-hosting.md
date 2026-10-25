@@ -33,9 +33,10 @@ app's self-hosting page, which works offline and offers three cards: install
 minddy on this computer, install it on a server (this guide), or use an
 existing installation, which groups an existing local clone and a server
 address on one screen. The same page opens from the native **minddy** menu
-(**Connect to a Server…**) and from **Settings › Account › Connected server**. The menu stays the recovery surface when a server cannot load: macOS
-shows it in the global menu bar; Windows and Linux reveal the hidden menu bar
-when you press **Alt**.
+(**Connect to a Server…**) and from **Account settings › Preferences › Desktop
+app › Connected server › Change…**. The menu stays the recovery surface when a
+server cannot load: macOS shows it in the global menu bar; Windows and Linux
+reveal the hidden menu bar when you press **Alt**.
 
 ## Supported topology
 
@@ -207,8 +208,8 @@ services stopped. If startup fails, use **Help > Copy Diagnostic Report** before
 falling back to a terminal.
 
 For troubleshooting only, `pnpm self-host:local` can run the same launcher in a
-terminal. Stop that process with `Ctrl+C` before returning to **Run local minddy
-on this computer**; the desktop app refuses to claim a server owned by another
+terminal. Stop that process with `Ctrl+C` before returning to **Use an existing
+installation › On this computer**; the desktop app refuses to claim a server owned by another
 process. `--keep-backend` deliberately leaves Supabase allocated and is not part
 of the normal desktop flow.
 
@@ -335,9 +336,11 @@ cannot load. On macOS, open the global **minddy** menu. On Windows or Linux,
 press **Alt** to reveal the hidden menu bar, then open **minddy**.
 
 - Choose **Connect to a Server… › Use an existing installation**, enter the
-  minddy application origin (for example, `https://tickets.example.com` or
-  `http://192.168.1.50`) in **Server address**, and select **Connect**. Public servers require HTTPS; HTTP is accepted only for localhost
-  and private-network IPv4 addresses.
+  minddy application origin (for example, `https://tickets.example.com`) in
+  **Server address**, and select **Connect**. Servers require HTTPS; HTTP is
+  accepted only for localhost (`localhost`, `127.0.0.1`, `[::1]`). Expose a
+  server on a private network over HTTPS, for example through a reverse proxy
+  with a certificate.
 - Choose **On this computer** on that screen only when the data source is a
   local clone. Stop any terminal-owned `pnpm self-host:local` process
   first, then select the clone's root folder; the app owns the local minddy and

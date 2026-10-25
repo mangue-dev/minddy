@@ -5743,8 +5743,8 @@
     "desktopSetupDone": "the desktop app is installed and opens on this computer.",
     "desktopAppTitle": "Connect the desktop app to your installation",
     "desktopAppBody": "Use the steps below to open the minddy installation you just prepared.",
-    "desktopMenuStepTitle": "Open the self-hosted step",
-    "desktopMenuStepBody": "In the app, click Self-host minddy under the sign-in form, or open the app menu (at the top of the screen on macOS; press Alt on Windows or Linux) and choose Connect to a Server…. Then choose Use an existing installation.",
+    "desktopMenuStepTitle": "Open Self-host minddy",
+    "desktopMenuStepBody": "In the app, click Self-host minddy under the sign-in form, or open the app menu (at the top of the screen on macOS; press Alt on Windows or Linux), choose Connect to a Server…, then Use an existing installation.",
     "desktopLocalPathTitle": "Choose the local folder option",
     "desktopServerPathTitle": "Enter the server address",
     "desktopPickerTitle": "Use an existing installation",
@@ -5754,8 +5754,8 @@
     "desktopConnectAction": "Connect",
     "desktopLocalBody": "Click On this computer. A folder picker opens next; select the minddy folder you prepared earlier.",
     "desktopTeamBody": "Paste your team's HTTPS address in Server address, then click Connect.",
-    "desktopPrivateBody": "Paste the server's private HTTP address in Server address, then click Connect. This address works only on the same private network.",
-    "desktopLocalChoiceNote": "Prefer not to prepare the folder yourself? Go back and choose Install on this computer: the app checks the tools and installs minddy for you.",
+    "desktopPrivateBody": "To add a server on a private network in the desktop app, make it reachable over HTTPS, for example through a reverse proxy with a certificate. HTTP works only for this computer (localhost).",
+    "desktopLocalChoiceNote": "In the app, choose Install on this computer under Self-host minddy instead: it checks the tools and installs minddy for you.",
     "desktopServerChoiceNote": "Do not click On this computer. That option is only for a minddy folder stored on this computer.",
     "downloadDesktopApp": "Install the desktop app",
     "importTitle": "Bring your Cloud data in",
@@ -6860,9 +6860,10 @@
     "existingLead": "Open minddy installed on this computer, or connect to a server you already run.",
     "localFolderTitle": "On this computer",
     "localFolderBody": "Choose the minddy folder installed here. The app starts it for you.",
-    "breadcrumbLabel": "Location",
+    "breadcrumbLabel": "Breadcrumb",
     "backToApp": "Back to the app",
     "stepAccount": "Create your local account",
-    "accountNote": "No account or password to set up: minddy creates yours on this computer and signs you in by itself."
+    "accountNote": "No account or password to set up: minddy creates yours on this computer and signs you in by itself.",
+    "folderIsInstallation": "This folder already holds a minddy installation. Open it with Use an existing installation, or choose another folder."
   }
 }

@@ -106,10 +106,12 @@ import {
   checkLocalPrerequisites,
   chooseInstallFolder,
   installFolder,
+  localInstallRunning,
   runLocalInstall,
 } from "./local-installer";
 import {
   LOCAL_SELF_HOST_ORIGIN,
+  ownsLocalRuntime,
   readLocalRuntimeRoot,
   startLocalRuntime,
   stopLocalRuntime,
@@ -341,6 +343,7 @@ function registerServerChoice(): void {
       cloudOrigin: DESKTOP_ORIGIN,
       isCustomServer: customServerOrigin !== null,
       installFolder: installFolder(),
+      installRunning: localInstallRunning(),
       release: LOCAL_INSTALL_RELEASE,
     }),
     useCloud: useMinddyCloud,
@@ -353,8 +356,9 @@ function registerServerChoice(): void {
       if (!result.root) return { error: result.error };
       writeLocalRuntimeRoot(result.root);
       writeDesktopServerOrigin(LOCAL_SELF_HOST_ORIGIN);
-      // The app signs its own account in on the way (`minddy:local-account:session`).
-      applyServerOrigin(LOCAL_SELF_HOST_ORIGIN);
+      // The app signs its own account in on the way (`minddy:local-account:session`);
+      // a release without that keeps its usual sign-up.
+      applyServerOrigin(LOCAL_SELF_HOST_ORIGIN, result.managedAccount ? DESKTOP_ENTRY_PATH : "/signup");
       return {};
     },
     cancelInstall: cancelLocalInstall,
@@ -1032,7 +1036,11 @@ function registerIpc(): void {
     ) {
       return null;
     }
-    return localAccountSession(readLocalRuntimeRoot());
+    const root = readLocalRuntimeRoot();
+    // Only while the launcher this app started is alive: whatever else might
+    // answer on the local port is not the instance the app installed.
+    if (!root || !ownsLocalRuntime(root)) return null;
+    return localAccountSession(root);
   });
 
   ipcMain.handle("minddy:update:check", () => checkForUpdatesManually());
@@ -1624,6 +1632,7 @@ if (!app.requestSingleInstanceLock()) {
   /** Close the shell and any desktop-managed self-hosted web process. */
   app.on("before-quit", () => {
     quitting = true;
+    cancelLocalInstall();
     stopLocalRuntime();
     const window = mainWindow;
     mainWindow = null;

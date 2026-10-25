@@ -104,7 +104,7 @@ const COQUILLE = {
   "window-chrome-store.ts":
     "reads and writes the last observed window frame; parsing and the startup decision live in @/lib/desktop/window-frame",
   "server-choice.ts":
-    "answers the server-choice page's bridge calls; the trusted document and launch decision live in " +
+    "serves the bundled self-hosting page and answers its bridge calls; the trusted document lives in " +
     "@/lib/desktop/server-choice",
   "local-account.ts":
     "creates the local instance's owner and signs it in, keeping the password in safeStorage; parsing and the " +

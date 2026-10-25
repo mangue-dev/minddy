@@ -112,7 +112,7 @@ function Choice({
         large && "h-full flex-col items-start gap-0 p-6",
       )}
     >
-      <span className="flex size-11 shrink-0 items-center justify-center rounded-md bg-white/70 dark:bg-white/10">
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-md bg-background/70">
         <HugeiconsIcon icon={icon} className="size-5" />
       </span>
       <span className={cn("min-w-0 flex-1", large && "mt-10")}>
@@ -134,7 +134,7 @@ function StateDot({ state }: { state: string }) {
   if (state === "running" || state === "checking") return <Spinner className="size-[18px]" />;
   const tone =
     state === "ready" || state === "done" || state === "skipped"
-      ? "bg-emerald-600 text-white"
+      ? "bg-success text-success-foreground"
       : state === "failed"
         ? "bg-destructive-button text-destructive-button-foreground"
         : state === "pending"
@@ -189,16 +189,31 @@ export function DesktopServerChoice({ env }: { env: AppEnv }) {
       setChoice(state);
       setFolder(state.installFolder);
       if (state.isCustomServer) setServerAddress(state.origin);
+      // A reload during an installation shows its progress again, with Cancel.
+      if (state.installRunning) {
+        setStep("progress");
+        setInstalling(true);
+      }
     });
-    return serverChoice.onInstallProgress((update) =>
-      setProgress((previous) => ({ ...previous, [update.step]: update })),
-    );
+    return serverChoice.onInstallProgress((update) => {
+      setProgress((previous) => ({ ...previous, [update.step]: update }));
+      // Also ends an installation this page did not start (after a reload).
+      if (update.state === "failed") {
+        setInstalling(false);
+        setInstallError(update.detail ?? { code: "localStartFailed" });
+      }
+    });
   }, []);
 
   const checkRequirements = useCallback(async () => {
     if (!bridge) return;
     setRequirements(null);
-    setRequirements(await bridge.prerequisites());
+    try {
+      setRequirements(await bridge.prerequisites());
+    } catch {
+      // Unknown states: Install still offers to install what is missing.
+      setRequirements([]);
+    }
   }, [bridge]);
 
   useEffect(() => {
@@ -211,9 +226,14 @@ export function DesktopServerChoice({ env }: { env: AppEnv }) {
     setInstallError(null);
     setStep("progress");
     setInstalling(true);
-    const result = await bridge.install();
-    setInstalling(false);
-    if (result.error) setInstallError(result.error);
+    try {
+      const result = await bridge.install();
+      if (result.error) setInstallError(result.error);
+    } catch {
+      setInstallError({ code: "localStartFailed" });
+    } finally {
+      setInstalling(false);
+    }
   };
 
   // Served only inside the desktop app, whose preload always brings it.
@@ -301,7 +321,7 @@ export function DesktopServerChoice({ env }: { env: AppEnv }) {
                   type="url"
                   required
                   spellCheck={false}
-                  className="h-10 bg-white/80 text-foreground dark:bg-white/10"
+                  className="h-10 bg-background/80 text-foreground"
                   placeholder="https://minddy.example.com"
                   value={serverAddress}
                   onChange={(event) => setServerAddress(event.target.value)}
@@ -451,7 +471,14 @@ export function DesktopServerChoice({ env }: { env: AppEnv }) {
               })}
             </ol>
           </Enter>
-          {installError && <p role="alert" className="mt-3 text-sm text-destructive">{t("installFailed")}</p>}
+          {installError && (
+            <p role="alert" className="mt-3 text-sm text-destructive">
+              {t("installFailed")}
+              {/* A failed step already shows its own line; an install refused
+                  before any step (folder, already running) says why here. */}
+              {!Object.values(progress).some((entry) => entry?.state === "failed") && ` — ${say(t, installError)}`}
+            </p>
+          )}
           <div className="mt-6 flex justify-end gap-2">
             {installing ? (
               <Button variant="outline" className="rounded-full" onClick={() => bridge.cancelInstall()}>
@@ -518,20 +545,28 @@ function Frame({ env, crumbs, onHome, children }: { env: AppEnv; crumbs: Crumb[]
         >
           <MinddyLogo className={cn("h-7 w-auto text-foreground", ENV_LOGO_TINT[env])} />
         </button>
-        {crumbs.map((crumb, index) => (
-          <span key={crumb.label} className="flex min-w-0 items-center gap-1">
-            <HugeiconsIcon icon={ArrowRight01Icon} aria-hidden className={cn("size-3.5 shrink-0 text-muted-foreground/60", index === 0 && "ml-2")} />
-            {crumb.onSelect ? (
-              <button type="button" onClick={crumb.onSelect} className={cn(crumbClass, "text-muted-foreground hover:bg-control-hover hover:text-foreground")}>
-                {crumb.label}
-              </button>
-            ) : (
-              <span aria-current="page" className={cn(crumbClass, "truncate font-medium text-foreground")}>
-                {crumb.label}
-              </span>
-            )}
-          </span>
-        ))}
+        <ol className="flex min-w-0 items-center gap-1">
+          {crumbs.map((crumb, index) => {
+            const current = index === crumbs.length - 1;
+            return (
+              <li key={crumb.label} className="flex min-w-0 items-center gap-1">
+                <HugeiconsIcon icon={ArrowRight01Icon} aria-hidden className={cn("size-3.5 shrink-0 text-muted-foreground/60", index === 0 && "ml-2")} />
+                {crumb.onSelect && !current ? (
+                  <button type="button" onClick={crumb.onSelect} className={cn(crumbClass, "text-muted-foreground hover:bg-control-hover hover:text-foreground")}>
+                    {crumb.label}
+                  </button>
+                ) : (
+                  <span
+                    aria-current={current ? "page" : undefined}
+                    className={cn(crumbClass, "truncate", current ? "font-medium text-foreground" : "text-muted-foreground")}
+                  >
+                    {crumb.label}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ol>
       </nav>
       <main className="relative mx-auto flex w-full max-w-[720px] flex-1 flex-col justify-center py-10">{children}</main>
     </div>

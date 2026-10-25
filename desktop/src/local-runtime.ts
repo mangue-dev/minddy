@@ -95,6 +95,11 @@ const lifecycle = createLocalRuntimeLifecycle({
   stop: stopProcess,
 });
 
+/** Whether the launcher this app started for that folder is still running. */
+export function ownsLocalRuntime(root: string): boolean {
+  return lifecycle.ownsLiveRuntime(validateLocalRuntimeRoot(root));
+}
+
 /** Lets the launcher stop both the web process and its local Supabase backend. */
 export function stopLocalRuntime(): void {
   lifecycle.stop();

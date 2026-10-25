@@ -59,9 +59,13 @@ describe("DesktopLocalSignIn", () => {
     expect(container.textContent).toBe("");
   });
 
-  it("does nothing in a browser or an older desktop app", async () => {
+  it("does nothing in a browser", async () => {
     state.bridge = null;
     await render();
+    expect(container.textContent).toBe("");
+  });
+
+  it("does nothing in an older desktop app", async () => {
     state.bridge = { version: "0.20.0" };
     await render();
     expect(container.textContent).toBe("");

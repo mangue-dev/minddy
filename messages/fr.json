@@ -5743,8 +5743,8 @@
     "desktopSetupDone": "l'app de bureau est installée et s'ouvre sur cet ordinateur.",
     "desktopAppTitle": "Connecter l’application à votre installation",
     "desktopAppBody": "Suivez les étapes ci-dessous pour ouvrir l’installation de minddy que vous venez de préparer.",
-    "desktopMenuStepTitle": "Ouvrir l’étape auto-hébergée",
-    "desktopMenuStepBody": "Dans l’app, cliquez sur Auto-héberger minddy sous le formulaire de connexion, ou ouvrez le menu de l’app (en haut de l’écran sous macOS ; appuyez sur Alt sous Windows ou Linux) et choisissez Connect to a Server…. Choisissez ensuite Utiliser une installation existante.",
+    "desktopMenuStepTitle": "Ouvrir Auto-héberger minddy",
+    "desktopMenuStepBody": "Dans l’app, cliquez sur Auto-héberger minddy sous le formulaire de connexion, ou ouvrez le menu de l’app (en haut de l’écran sous macOS ; appuyez sur Alt sous Windows ou Linux), choisissez Connect to a Server…, puis Utiliser une installation existante.",
     "desktopLocalPathTitle": "Choisir l'option dossier local",
     "desktopServerPathTitle": "Saisir l'adresse du serveur",
     "desktopPickerTitle": "Utiliser une installation existante",
@@ -5754,8 +5754,8 @@
     "desktopConnectAction": "Se connecter",
     "desktopLocalBody": "Cliquez sur Sur cet ordinateur. Un sélecteur de dossier s’ouvre ensuite ; choisissez le dossier minddy préparé plus tôt.",
     "desktopTeamBody": "Collez l’adresse HTTPS de votre équipe dans Adresse du serveur, puis cliquez sur Se connecter.",
-    "desktopPrivateBody": "Collez l’adresse HTTP privée du serveur dans Adresse du serveur, puis cliquez sur Se connecter. Elle fonctionne uniquement sur le même réseau privé.",
-    "desktopLocalChoiceNote": "Vous préférez ne pas préparer le dossier vous-même ? Revenez en arrière et choisissez Installer sur cet ordinateur : l’app vérifie les outils et installe minddy pour vous.",
+    "desktopPrivateBody": "Pour ajouter un serveur d’un réseau privé dans l’application de bureau, rendez-le accessible en HTTPS, par exemple derrière un proxy inverse doté d’un certificat. HTTP ne fonctionne que pour cet ordinateur (localhost).",
+    "desktopLocalChoiceNote": "Dans l’app, choisissez plutôt Installer sur cet ordinateur sous Auto-héberger minddy : l’app vérifie les outils et installe minddy pour vous.",
     "desktopServerChoiceNote": "Ne cliquez pas sur Sur cet ordinateur. Cette option sert uniquement à un dossier minddy présent sur cet ordinateur.",
     "downloadDesktopApp": "Installer l'app de bureau",
     "importTitle": "Ramener vos données du Cloud",
@@ -6860,9 +6860,10 @@
     "existingLead": "Ouvrez minddy installé sur cet ordinateur, ou connectez-vous à un serveur que vous gérez déjà.",
     "localFolderTitle": "Sur cet ordinateur",
     "localFolderBody": "Choisissez le dossier minddy installé ici. L’app le démarre pour vous.",
-    "breadcrumbLabel": "Emplacement",
+    "breadcrumbLabel": "Fil d’Ariane",
     "backToApp": "Revenir à l’app",
     "stepAccount": "Créer votre compte local",
-    "accountNote": "Aucun compte ni mot de passe à créer : minddy crée le vôtre sur cet ordinateur et vous connecte tout seul."
+    "accountNote": "Aucun compte ni mot de passe à créer : minddy crée le vôtre sur cet ordinateur et vous connecte tout seul.",
+    "folderIsInstallation": "Ce dossier contient déjà une installation de minddy. Ouvrez-la avec Utiliser une installation existante, ou choisissez un autre dossier."
   }
 }

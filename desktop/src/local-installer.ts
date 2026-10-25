@@ -8,6 +8,8 @@ import {
   LOCAL_INSTALL_STEPS,
   LOCAL_PREREQUISITES,
   LOCAL_PREREQUISITE_INFO,
+  MANAGED_ACCOUNT_PAGE,
+  MANAGED_INSTALL_MARKER,
   PREPARE_ARGUMENTS,
   cloneArguments,
   cloneNeeded,
@@ -15,6 +17,7 @@ import {
   folderAcceptable,
   installMessage,
   lastOutputLine,
+  launcherSupportsPrepareOnly,
   withAdminEmail,
   type InstallMessage,
   type LocalInstallFolderState,
@@ -50,7 +53,7 @@ function inspectFolder(folder: string): LocalInstallFolderState {
   if (!existsSync(folder)) return "absent";
   try {
     validateLocalRuntimeRoot(folder);
-    return "minddy";
+    return existsSync(path.join(folder, MANAGED_INSTALL_MARKER)) ? "minddy" : "installation";
   } catch {
     // Not a minddy clone: look at what else is there.
   }
@@ -99,6 +102,11 @@ export async function checkLocalPrerequisites(): Promise<LocalPrerequisiteResult
   );
 }
 
+/** Whether an installation runs, so a reloaded page shows its progress. */
+export function localInstallRunning(): boolean {
+  return current !== null;
+}
+
 export function cancelLocalInstall(): void {
   if (!current) return;
   current.controller.abort();
@@ -112,11 +120,13 @@ export function cancelLocalInstall(): void {
  */
 export async function runLocalInstall(
   report: (progress: LocalInstallProgress) => void,
-): Promise<{ root?: string; error?: InstallMessage }> {
+): Promise<{ root?: string; managedAccount?: boolean; error?: InstallMessage }> {
   if (current) return { error: installMessage("installBusy") };
   const folder = installFolder();
   const folderState = inspectFolder(folder);
-  if (!folderAcceptable(folderState)) return { error: installMessage("folderNotEmpty") };
+  if (!folderAcceptable(folderState)) {
+    return { error: installMessage(folderState === "installation" ? "folderIsInstallation" : "folderNotEmpty") };
+  }
 
   const attempt = { controller: new AbortController(), step: null as LocalInstallStep | null };
   current = attempt;
@@ -162,6 +172,7 @@ export async function runLocalInstall(
       begin("clone");
       mkdirSync(path.dirname(folder), { recursive: true });
       await run("clone", cloneArguments(`v${LOCAL_INSTALL_RELEASE}`, folder), path.dirname(folder));
+      writeFileSync(path.join(folder, MANAGED_INSTALL_MARKER), "", "utf8");
     } else {
       report({ step: "clone", state: "skipped" });
     }
@@ -171,24 +182,43 @@ export async function runLocalInstall(
 
     begin("configure");
     const root = validateLocalRuntimeRoot(folder);
-    const envFile = path.join(root, ".env.local");
-    const env = existsSync(envFile) ? readFileSync(envFile, "utf8") : "";
-    writeFileSync(envFile, withAdminEmail(env, LOCAL_ACCOUNT_EMAIL), { encoding: "utf8", mode: 0o600 });
+    // What the cloned release can do: it may predate the steps below.
+    const managedAccount = existsSync(path.join(root, MANAGED_ACCOUNT_PAGE));
+    const prepareOnly = launcherSupportsPrepareOnly(
+      readFileSync(path.join(root, "scripts", "self-hosting-local.mjs"), "utf8"),
+    );
+    if (managedAccount) {
+      const envFile = path.join(root, ".env.local");
+      const env = existsSync(envFile) ? readFileSync(envFile, "utf8") : "";
+      writeFileSync(envFile, withAdminEmail(env, LOCAL_ACCOUNT_EMAIL), { encoding: "utf8", mode: 0o600 });
+    }
     report({ step: "configure", state: "done" });
 
-    begin("prepare");
-    await run("prepare", PREPARE_ARGUMENTS, root);
+    // A local instance the app already runs holds the port and the build.
+    stopLocalRuntime();
+    if (prepareOnly) {
+      begin("prepare");
+      await run("prepare", PREPARE_ARGUMENTS, root);
+    } else {
+      report({ step: "prepare", state: "skipped" });
+    }
 
     begin("start");
     await startLocalRuntime(root);
     if (signal.aborted) throw new InstallFailure(installMessage("installCanceled"));
     report({ step: "start", state: "done" });
 
-    // The owner the app signs in with: no email, no password to type.
-    begin("account");
-    await ensureLocalAccount(root);
-    report({ step: "account", state: "done" });
-    return { root };
+    // The owner the app signs in with: no email, no password to type. A
+    // release without the auto sign-in page keeps its usual sign-up.
+    if (managedAccount) {
+      begin("account");
+      await ensureLocalAccount(root);
+      if (signal.aborted) throw new InstallFailure(installMessage("installCanceled"));
+      report({ step: "account", state: "done" });
+    } else {
+      report({ step: "account", state: "skipped" });
+    }
+    return { root, managedAccount };
   } catch (error) {
     const detail: InstallMessage =
       error instanceof InstallFailure

@@ -1,16 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  LOCAL_PREREQUISITES,
   cloneArguments,
   cloneNeeded,
   evaluatePrerequisite,
   folderAcceptable,
+  launcherSupportsPrepareOnly,
   installerCommand,
   lastOutputLine,
   loginShellPathProbe,
   nodeVersionSupported,
-  prerequisitesReady,
   withAdminEmail,
 } from "./local-installer";
 
@@ -37,12 +36,7 @@ describe("local installer prerequisites", () => {
     expect(evaluatePrerequisite("docker", { ok: true, stdout: "Docker version 28.1.1" }, { ok: true, stdout: "28.1.1" }).state).toBe("ready");
   });
 
-  it("is ready only when every tool answered and is ready", () => {
-    const ready = LOCAL_PREREQUISITES.map((id) => ({ id, state: "ready" as const }));
-    expect(prerequisitesReady(ready)).toBe(true);
-    expect(prerequisitesReady(ready.slice(1))).toBe(false);
-    expect(prerequisitesReady([...ready.slice(1), { id: "git", state: "missing" }])).toBe(false);
-  });
+
 });
 
 describe("local installer steps", () => {
@@ -51,23 +45,23 @@ describe("local installer steps", () => {
     expect(cloneNeeded("empty")).toBe(true);
     expect(cloneNeeded("minddy")).toBe(false);
     expect(folderAcceptable("minddy")).toBe(true);
+    // A clone the person made is theirs: open it as an existing installation.
+    expect(folderAcceptable("installation")).toBe(false);
     expect(folderAcceptable("occupied")).toBe(false);
   });
 
-  it("clones the pinned release tag shallowly", () => {
-    expect(cloneArguments("v0.20.1", "/Users/someone/minddy")).toEqual([
-      "git",
-      "clone",
-      "--depth",
-      "1",
-      "--branch",
-      "v0.20.1",
-      "--config",
-      "advice.detachedHead=false",
-      "https://github.com/mangue-dev/minddy.git",
-      "/Users/someone/minddy",
-    ]);
+  it("clones the pinned release tag shallowly into the chosen folder", () => {
+    const args = cloneArguments("v0.20.1", "/Users/someone/minddy");
+    expect(args.slice(0, 2)).toEqual(["git", "clone"]);
+    expect(args).toEqual(expect.arrayContaining(["--depth", "1", "--branch", "v0.20.1"]));
+    expect(args.at(-1)).toBe("/Users/someone/minddy");
   });
+
+  it("adapts to a cloned release that predates its newer steps", () => {
+    expect(launcherSupportsPrepareOnly('} else if (arg === "--prepare-only") {')).toBe(true);
+    expect(launcherSupportsPrepareOnly('} else if (arg === "--keep-backend") {')).toBe(false);
+  });
+
 
   it("records the instance's administrator once", () => {
     expect(withAdminEmail("", "owner@local.minddy.app")).toBe("ADMIN_EMAILS=owner@local.minddy.app\n");

@@ -109,9 +109,10 @@ becomes a second app to maintain.
 **Current implementation: one product `BrowserWindow` loads minddy Cloud or an
 explicitly selected self-hosted origin.** The product UI is never bundled in the
 app, so the desktop and web clients still render the same interface. The shell
-contains one isolated local form for selecting a server. It accepts HTTPS public
-origins and HTTP loopback or private-network IP origins, stores the choice in `userData/server.json`,
-and exposes no general-purpose bridge to that form.
+bundles one isolated local page for self-hosting, served from
+`minddy-app://welcome/`. It accepts HTTPS origins, and HTTP only for loopback
+(`localhost`, `127.0.0.1`, `[::1]`), stores the choice in
+`userData/server.json`, and exposes no general-purpose bridge to that page.
 
 Settings that cannot be discussed:
 
@@ -342,8 +343,8 @@ theme: there may be no account yet.
 The page talks to the shell through `DesktopBridge.serverChoice`. The main
 process (`desktop/src/server-choice.ts`) answers it only from the main window's
 top frame on `minddy-app://welcome/`, so no server's page, Cloud's included,
-can reach it. The bridge carries an address, an email and a tool id from a
-fixed list, never a path: the installer's folder is chosen in the native
+can reach it. The bridge carries an address and a tool id from a fixed list,
+never a path: the installer's folder is chosen in the native
 dialog and stays in the main process. Installer messages travel as
 `DesktopWelcome` catalog codes or raw command lines; the page translates them.
 

@@ -75,6 +75,8 @@ export interface DesktopServerChoiceState {
   isCustomServer: boolean;
   /** Shown only; the folder never travels from the page. */
   installFolder: string;
+  /** An installation runs: a reloaded page shows its progress, not a new form. */
+  installRunning: boolean;
   /** The release the installer clones, e.g. `0.20.1`. */
   release: string;
 }

@@ -5,6 +5,7 @@ import packageJson from "@/package.json";
 import {
   MANAGED_PNPM_VERSION,
   MANAGED_SUPABASE_CLI_VERSION,
+  DOCKER_CODE_REQUIREMENT,
   dockerDesktopUrl,
   downloadPercent,
   linuxPrivilegedScript,
@@ -83,6 +84,8 @@ describe("managed tool sources", () => {
     expect(dockerDesktopUrl("linux", "x64")).toBeNull();
     expect(signedByDocker("Identifier=com.docker.docker\nTeamIdentifier=9BNSXJN65R\n")).toBe(true);
     expect(signedByDocker("TeamIdentifier=ABCDE12345\nComment=9BNSXJN65R")).toBe(false);
+    // The team alone could be self-declared: the chain must lead to Apple.
+    expect(DOCKER_CODE_REQUIREMENT).toBe('anchor apple generic and certificate leaf[subject.OU] = "9BNSXJN65R"');
   });
 });
 
@@ -112,8 +115,9 @@ describe("toolchain on this computer", () => {
     expect(script).toContain(`sh '/tmp/minddy install/get-docker.sh'`);
     expect(script).toContain("systemctl enable --now docker");
     expect(script).toContain(`usermod -aG docker 'o'"'"'neil'`);
+    // An unreachable daemon is most often a missing group: start AND join it.
     expect(linuxPrivilegedScript({ git: false, docker: false, startDocker: true, user: "c", dockerScript: "" })).toBe(
-      "set -e\nsystemctl enable --now docker\n",
+      "set -e\nsystemctl enable --now docker\nusermod -aG docker 'c'\n",
     );
   });
 

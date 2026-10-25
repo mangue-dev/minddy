@@ -23,6 +23,7 @@ function serverChoice(overrides: Partial<DesktopServerChoiceBridge> = {}): Deskt
       cloudOrigin: "https://www.minddy.app",
       isCustomServer: false,
       installFolder: "/Users/camille/minddy",
+      installRunning: false,
       release: "0.20.1",
     }),
     useCloud: vi.fn().mockResolvedValue(undefined),
@@ -155,5 +156,35 @@ describe("DesktopServerChoice", () => {
     expect(container.textContent).not.toContain(messages.DesktopWelcome.stepGit);
     await click(messages.DesktopWelcome.installManually);
     expect(bridge.openToolDownload).toHaveBeenCalledWith("docker");
+  });
+
+  it("shows a running installation again after a reload, with Cancel", async () => {
+    const bridge = serverChoice({
+      state: vi.fn().mockResolvedValue({
+        origin: "https://www.minddy.app",
+        cloudOrigin: "https://www.minddy.app",
+        isCustomServer: false,
+        installFolder: "/Users/camille/minddy",
+        installRunning: true,
+        release: "0.20.1",
+      }),
+    });
+    state.bridge = { serverChoice: bridge, openExternal: vi.fn() };
+    await render();
+    expect(container.textContent).toContain(messages.DesktopWelcome.progressHeading);
+    await click(messages.DesktopWelcome.cancel);
+    expect(bridge.cancelInstall).toHaveBeenCalledOnce();
+    await act(async () => progress?.({ step: "start", state: "failed", detail: { text: "port 6463 is already in use" } }));
+    expect(container.textContent).toContain("port 6463 is already in use");
+    expect(container.textContent).toContain(messages.DesktopWelcome.retry);
+  });
+
+  it("says why an installation was refused before any step", async () => {
+    const bridge = serverChoice({ install: vi.fn().mockResolvedValue({ error: { code: "folderIsInstallation" } }) });
+    state.bridge = { serverChoice: bridge, openExternal: vi.fn() };
+    await render();
+    await click(messages.DesktopWelcome.installTitle);
+    await click(messages.DesktopWelcome.install);
+    expect(container.textContent).toContain(messages.DesktopWelcome.folderIsInstallation);
   });
 });

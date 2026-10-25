@@ -163,7 +163,11 @@ export async function main(argv = process.argv.slice(2)) {
     return;
   }
 
-  await assertPortAvailable(options.port).catch((error) => fail(error instanceof Error ? error.message : String(error)));
+  // Preparing binds no port: the desktop installer may run it while a local
+  // instance it manages is still up.
+  if (!options.prepareOnly) {
+    await assertPortAvailable(options.port).catch((error) => fail(error instanceof Error ? error.message : String(error)));
+  }
   const appUrl = `http://localhost:${options.port}`;
   console.log(`→ Preparing minddy for ${appUrl}.`);
   await bootstrapSupabase(["--minimal", "--app-url", appUrl]);

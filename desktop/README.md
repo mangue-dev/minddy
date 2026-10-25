@@ -71,9 +71,10 @@ MINDDY_DESKTOP_ORIGIN=http://localhost:3000 npm start
 The variable only exists for development. A packaged app ignores it. Installed
 users choose a source from the native **minddy > Connect to a Server…** menu;
 Windows and Linux users press **Alt** first because the menu bar is hidden by
-default. Remote origins must use HTTPS, while HTTP is accepted only for loopback
-and private-network IP addresses. This flow works on macOS, Windows, and Linux,
-including **Run local minddy on this computer** for a local clone folder.
+default. Remote origins must use HTTPS; HTTP is accepted only for loopback
+addresses (`localhost`, `127.0.0.1`, `[::1]`). This flow works on macOS,
+Windows, and Linux, including **Connect to a Server… > Use an existing
+installation > On this computer** for a local clone folder.
 
 ## Verify startup and recovery
 
@@ -119,21 +120,34 @@ Remove the override when electron-builder adopts this downloader upstream.
 
 ## The selected server
 
-The server picker stores one normalized origin in `userData/server.json` before
-loading it. A new selection opens `/signup`; later launches open `/home` as
-usual. Cookies are not copied between cloud and self-hosted origins.
+The app starts on minddy Cloud's sign-up. **Self-host minddy** under the auth
+forms, the native **Connect to a Server…** menu item, and Settings open the
+app's bundled self-hosting page, `components/desktop/server-choice.tsx`, served
+from `minddy-app://welcome/` so it works offline. It is styled with the
+product's Tailwind tokens (`components/desktop/server-choice.css`), compiled by
+`scripts/build-desktop.mjs`. The page offers **Install on this computer**,
+**Install on a server** (which opens the public guide) and **Use an existing
+installation**, which groups **On this computer** (a local clone folder) and
+**Server address** with **Connect**, plus **Use minddy Cloud** when a custom
+server is selected.
+
+The chosen origin is stored, normalized, in `userData/server.json` before it
+loads. A server entered by address and an existing local installation open
+`/signup`; the built-in installer opens `/home` and signs the local account in
+automatically when the installed release supports it. Later launches open
+`/home` as usual. Cookies are not copied between cloud and self-hosted origins.
 
 Choosing **Use minddy Cloud** removes the custom selection and returns to
 `www.minddy.app`.
 
 If the selected server cannot load, the shell replaces Chromium's network error
 with a local recovery screen. It names the configured server, preserves the
-failed route for **Try again**, and opens the server picker from **Check server
-settings**. The message refers to server availability and configuration, never
-to Internet access, because a valid minddy server can live on localhost or a
-private network.
+failed route for **Try again**, and opens the self-hosting page from **Check
+server settings**. The message refers to server availability and configuration,
+never to Internet access, because a valid minddy server can live on localhost or
+a private network.
 
-The unavailable screen and server picker share a small offline-safe design
+The server-unavailable and recovery documents use a small offline-safe design
 layer in `lib/desktop/shell-ui.ts`. It mirrors minddy's light and dark tokens,
 official SVG brandmark, pill buttons, inputs, and focus treatment. The packaged
 shell also carries the same Inter Latin subset as the site; these local surfaces

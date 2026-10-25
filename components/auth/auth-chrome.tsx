@@ -322,7 +322,7 @@ export function AuthColumn({
             (`.auth-stagger`, globals.css); the brand above never moves. */}
         <div className="auth-stagger w-full max-w-[380px]">{children}</div>
       </div>
-      {inDesktopApp && <DesktopServerFooter />}
+      <DesktopServerFooter />
     </div>
   );
 }
@@ -336,14 +336,14 @@ export function AuthColumn({
  */
 function DesktopServerFooter() {
   const t = useTranslations("DesktopWelcome");
-  const [bridge, setBridge] = useState<ReturnType<typeof getDesktopBridge>>(null);
-  useEffect(() => setBridge(getDesktopBridge()), []);
-  if (!bridge?.openServerPicker) return null;
+  // Shown by CSS from the first paint (`data-desktop-app`, set by the
+  // pre-paint script), not after an effect: arriving late, it would push the
+  // vertically centred form up mid-entrance.
   return (
-    <div className="flex justify-center">
+    <div className="hidden justify-center [html[data-desktop-app]_&]:flex">
       <button
         type="button"
-        onClick={() => bridge.openServerPicker?.()}
+        onClick={() => getDesktopBridge()?.openServerPicker?.()}
         className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-control-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <HugeiconsIcon icon={ServerStack01Icon} className="size-4" />

@@ -54,7 +54,6 @@ export function registerServerChoiceIpc(deps: ServerChoiceDependencies): void {
       isServerChoiceDocument(frame.url)
     );
   };
-  let existing: Promise<{ error?: InstallMessage }> | null = null;
 
   ipcMain.handle("minddy:server-choice:state", (event) => (trusted(event) ? deps.state() : null));
   ipcMain.handle("minddy:server-choice:cloud", (event) => {
@@ -71,9 +70,9 @@ export function registerServerChoiceIpc(deps: ServerChoiceDependencies): void {
   });
   ipcMain.handle("minddy:server-choice:existing", (event) => {
     if (!trusted(event)) return { error: installMessage("localStartFailed") };
-    // Repeated clicks share one folder dialog and one startup.
-    existing ??= deps.useExistingInstallation().finally(() => { existing = null; });
-    return existing;
+    // Repeated clicks share one folder dialog and one startup
+    // (`createLocalStartupSelection` behind `useExistingInstallation`).
+    return deps.useExistingInstallation();
   });
   ipcMain.handle("minddy:server-choice:prerequisites", (event) => (trusted(event) ? deps.prerequisites() : []));
   ipcMain.handle("minddy:server-choice:choose-folder", (event) =>

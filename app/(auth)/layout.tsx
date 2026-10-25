@@ -15,7 +15,8 @@ import { AuthShell } from "./auth-shell";
  * and reset-password forms toast on success and failure).
  *
  * The showcase pane is rendered here because it is a server component (its
- * capture is chosen by locale and theme on the server); the shell decides on
+ * capture is chosen by locale on the server, its light or dark variant by the
+ * system theme in the browser); the shell decides on
  * which screens it appears.
  */
 export default function AuthLayout({ children }: { children: React.ReactNode }) {

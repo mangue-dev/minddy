@@ -23,8 +23,6 @@
 import type { LocalPrerequisiteResult } from "./local-installer";
 import { posixQuote } from "./local-runtime-platform";
 
-export { posixQuote };
-
 /** pnpm as pinned by the repository's `packageManager` field. */
 export const MANAGED_PNPM_VERSION = "10.28.0";
 /** Supabase CLI as pinned by the release workflow (`SUPABASE_CLI_VERSION`). */
@@ -131,6 +129,13 @@ export function dockerDesktopUrl(platform: NodeJS.Platform, arch: Arch): string 
   return null;
 }
 
+/**
+ * The requirement Docker Desktop must satisfy: a certificate chain to Apple's
+ * Developer ID root AND Docker's team in the leaf. `codesign --verify` alone
+ * only checks the signature against the requirement its signer embedded.
+ */
+export const DOCKER_CODE_REQUIREMENT = `anchor apple generic and certificate leaf[subject.OU] = "${DOCKER_TEAM_ID}"`;
+
 /** `codesign -dv` reports the signing team on stderr. */
 export function signedByDocker(codesignOutput: string): boolean {
   return codesignOutput.split("\n").some((line) => line.trim() === `TeamIdentifier=${DOCKER_TEAM_ID}`);
@@ -191,8 +196,12 @@ export function linuxPrivilegedScript(options: {
     );
   }
   if (options.docker) lines.push(`sh ${posixQuote(options.dockerScript)}`);
-  if (options.docker || options.startDocker) lines.push("systemctl enable --now docker");
-  if (options.docker) lines.push(`usermod -aG docker ${posixQuote(options.user)}`);
+  if (options.docker || options.startDocker) {
+    lines.push("systemctl enable --now docker");
+    // Also when Docker was already there: a daemon the person cannot reach is
+    // most often a missing `docker` group, not a stopped service.
+    lines.push(`usermod -aG docker ${posixQuote(options.user)}`);
+  }
   return `${lines.join("\n")}\n`;
 }
 

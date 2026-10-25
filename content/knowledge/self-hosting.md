@@ -105,12 +105,14 @@ It checks redacted configuration, release compatibility, containers, scheduler, 
 
 To make a self-hosted server the desktop app's data source, open the native
 **minddy** menu on macOS or press **Alt** to reveal it on Windows and Linux. Choose
-**Connect to a Server…**, enter the application's HTTPS origin or a private IPv4
-HTTP origin, and connect. The menu remains usable if that origin fails to load.
-Choose **Use minddy Cloud** there to remove the custom source. Use **Run local
-minddy on this computer** only for a local clone folder, not for a remote server;
-stop a terminal-owned local launcher first. The source choice is stored on the
-computer, and Cloud and self-hosted sessions remain separate.
+**Connect to a Server…**, then **Use an existing installation**, enter the
+application's HTTPS origin in **Server address**, and connect. HTTP works only
+for this computer (`localhost`); reach a server on a private network over HTTPS.
+The menu remains usable if that origin fails to load. **Use minddy Cloud**, on
+the same screen or in the menu, removes the custom source. Use **Use an existing
+installation › On this computer** only for a local clone folder, not for a
+remote server; stop a terminal-owned local launcher first. The source choice is
+stored on the computer, and Cloud and self-hosted sessions remain separate.
 
 ## Supabase and application configuration
 

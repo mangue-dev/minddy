@@ -17,8 +17,9 @@ import {
   type InstallMessageCode,
   type ProbeOutput,
 } from "@/lib/desktop/local-installer";
-import { localRuntimeStopSpec } from "@/lib/desktop/local-runtime-platform";
+import { localRuntimeStopSpec, posixQuote } from "@/lib/desktop/local-runtime-platform";
 import {
+  DOCKER_CODE_REQUIREMENT,
   DOCKER_LINUX_SCRIPT_URL,
   MANAGED_PNPM_VERSION,
   MANAGED_SUPABASE_CLI_VERSION,
@@ -30,7 +31,6 @@ import {
   minGitAsset,
   nodeArchiveFromShasums,
   nodeArchiveUrl,
-  posixQuote,
   signedByDocker,
   toolchainArch,
   toolchainPathEntries,
@@ -38,7 +38,7 @@ import {
 } from "@/lib/desktop/local-toolchain";
 
 /** The app-owned folder of managed tools (see `lib/desktop/local-toolchain.ts`). */
-export function toolchainRoot(): string {
+function toolchainRoot(): string {
   return path.join(app.getPath("userData"), "toolchain");
 }
 
@@ -70,9 +70,12 @@ function resolveLoginPath(): Promise<string | undefined> {
 }
 
 /** The environment of every installer command: managed tools first on PATH. */
-export async function toolEnvironment(): Promise<NodeJS.ProcessEnv> {
+async function toolEnvironment(): Promise<NodeJS.ProcessEnv> {
   const base = await resolveLoginPath();
   const env: NodeJS.ProcessEnv = { ...process.env, COREPACK_ENABLE_DOWNLOAD_PROMPT: "0", FORCE_COLOR: "0" };
+  // `cmd.exe` would otherwise run a `git.exe` planted in the working folder
+  // (the parent of the chosen install folder) before the one on PATH.
+  if (process.platform === "win32") env.NoDefaultCurrentDirectoryInExePath = "1";
   // Windows names it `Path`; a second `PATH` key would leave the child guessing.
   const key = Object.keys(env).find((name) => name.toUpperCase() === "PATH") ?? "PATH";
   env[key] = [...toolchainPathPrefix(), base].filter(Boolean).join(path.delimiter);
@@ -93,6 +96,8 @@ export async function runTool(
     onOutput?: (line: string) => void;
   } = {},
 ): Promise<RunResult> {
+  // A cancel that landed between two steps starts nothing.
+  if (options.signal?.aborted) return { ok: false, stdout: "", output: "" };
   const env = await toolEnvironment();
   const spec = installerCommand(process.platform, argv);
   return new Promise((resolve) => {
@@ -112,11 +117,22 @@ export async function runTool(
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
       windowsVerbatimArguments: spec.windowsVerbatimArguments,
+      // Its own process group on POSIX, so a cancel stops what it started too
+      // (`supabase start`, `next build` under the launcher), not just itself.
+      detached: process.platform !== "win32",
     });
     const kill = () => {
       const stop = child.pid ? localRuntimeStopSpec(process.platform, child.pid) : null;
-      if (stop) spawn(stop.command, stop.args, { stdio: "ignore", windowsHide: true }).on("error", () => child.kill());
-      else child.kill("SIGTERM");
+      if (stop) {
+        spawn(stop.command, stop.args, { stdio: "ignore", windowsHide: true }).on("error", () => child.kill());
+        return;
+      }
+      try {
+        if (child.pid) process.kill(-child.pid, "SIGTERM");
+        else child.kill("SIGTERM");
+      } catch {
+        child.kill("SIGTERM");
+      }
     };
     const abort = () => { kill(); finish(false); };
     const timer = options.timeoutMs ? setTimeout(abort, options.timeoutMs) : undefined;
@@ -298,21 +314,21 @@ async function dockerResponds(): Promise<RunResult> {
 }
 
 async function waitForDocker(ctx: Context): Promise<void> {
-  let lastOutput = "";
+  let denied = false;
   const ready = await waitFor(
     ctx,
     async () => {
       const result = await dockerResponds();
-      lastOutput = result.output;
-      return result.ok;
+      // On Linux a refused socket will not change before a new sign-in:
+      // say so now rather than after twenty minutes.
+      denied = process.platform === "linux" && /permission denied/i.test(result.output);
+      return result.ok || denied;
     },
     20 * 60_000,
     "dockerWaiting",
   );
+  if (denied) throw fail("linuxSessionRestart");
   if (ready) return;
-  if (process.platform === "linux" && /permission denied/i.test(lastOutput)) {
-    throw fail("linuxSessionRestart");
-  }
   throw fail("dockerTimeout");
 }
 
@@ -335,7 +351,7 @@ async function installMacDocker(ctx: Context): Promise<void> {
   await must(runTool(["hdiutil", "attach", "-nobrowse", "-readonly", "-mountpoint", mount, dmg], { signal: ctx.signal }), "verifyFailed");
   try {
     const bundle = path.join(mount, "Docker.app");
-    await must(runTool(["codesign", "--verify", "--deep", "--strict", bundle]), "verifyFailed");
+    await must(runTool(["codesign", "--verify", "--deep", "--strict", `-R=${DOCKER_CODE_REQUIREMENT}`, bundle]), "verifyFailed");
     const identity = await runTool(["codesign", "-dv", "--verbose=2", bundle]);
     if (!signedByDocker(identity.output)) throw fail("verifyFailed");
     const copied = await runTool(["ditto", bundle, "/Applications/Docker.app"], { signal: ctx.signal });
@@ -365,7 +381,7 @@ async function installWindowsDocker(ctx: Context): Promise<void> {
       "powershell",
       "-NoProfile",
       "-Command",
-      `$s = Get-AuthenticodeSignature -LiteralPath '${literal}'; if ($s.Status -eq 'Valid' -and $s.SignerCertificate.Subject -like '*Docker Inc*') { exit 0 } else { exit 1 }`,
+      `$s = Get-AuthenticodeSignature -LiteralPath '${literal}'; if ($s.Status -eq 'Valid' -and $s.SignerCertificate.Subject -match '(^|, )CN=Docker Inc(,|$)') { exit 0 } else { exit 1 }`,
     ]),
     "verifyFailed",
   );
@@ -443,7 +459,9 @@ export async function installToolchain(
 ): Promise<void> {
   if (plan.length === 0) return;
   mkdirSync(toolchainRoot(), { recursive: true });
-  const temp = mkdtempSync(path.join(os.tmpdir(), "minddy-install-"));
+  // On the same volume as the toolchain: the extracted folders are moved in
+  // with a rename, which fails across volumes (a tmpfs `/tmp` on Linux).
+  const temp = mkdtempSync(path.join(toolchainRoot(), ".tmp-"));
   const linuxDone = new Set<ToolchainAction>();
   try {
     for (const action of plan) {

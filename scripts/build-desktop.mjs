@@ -117,14 +117,14 @@ for (const [file, output] of Object.entries(result.metafile.outputs)) {
     const inputs = Object.entries(output.inputs)
       .sort((a, b) => b[1].bytesInOutput - a[1].bytesInOutput)
       .slice(0, 5)
-      .map(([f, i]) => `  ${(i.bytesInOutput / 1024).toFixed(0)} Ko  ${f}`)
+      .map(([f, i]) => `  ${(i.bytesInOutput / 1024).toFixed(0)} KB  ${f}`)
       .join("\n");
     console.error(
       `[build:desktop] ${file} is ${(size / 1024).toFixed(0)} KB, above the ${(MAX_BUNDLE_BYTES / 1024).toFixed(0)} KB ceiling.\nLargest contributors:\n${inputs}`
     );
     process.exit(1);
   }
-  console.log(`[build:desktop] ${file} — ${(size / 1024).toFixed(1)} Ko`);
+  console.log(`[build:desktop] ${file} — ${(size / 1024).toFixed(1)} KB`);
 }
 
 /**
@@ -190,6 +190,6 @@ for (const file of Object.keys(welcome.metafile.outputs)) {
     console.error(`[build:desktop] ${file} is ${(size / 1024).toFixed(0)} KB, above the ${(MAX_WELCOME_BYTES / 1024).toFixed(0)} KB ceiling.`);
     process.exit(1);
   }
-  console.log(`[build:desktop] ${file} — ${(size / 1024).toFixed(1)} Ko`);
+  console.log(`[build:desktop] ${file} — ${(size / 1024).toFixed(1)} KB`);
 }
-console.log(`[build:desktop] ${path.relative(process.cwd(), path.join(WELCOME_DIR, "welcome.css"))} — ${(welcomeCss.css.length / 1024).toFixed(1)} Ko`);
+console.log(`[build:desktop] ${path.relative(process.cwd(), path.join(WELCOME_DIR, "welcome.css"))} — ${(welcomeCss.css.length / 1024).toFixed(1)} KB`);
