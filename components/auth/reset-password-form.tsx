@@ -14,6 +14,8 @@ import {
   Field,
   PasswordRules,
   useInDesktopApp,
+  AUTH_SUBMIT_CLASS,
+  SubmitArrow,
 } from "@/components/auth/auth-chrome";
 import { useAuth } from "@/lib/auth-context";
 import { useAnalytics } from "@/lib/use-analytics";
@@ -216,10 +218,11 @@ export function ResetPasswordForm() {
           <Button
             type="submit"
             disabled={busy || !passwordMeetsPolicy(password)}
-            className="h-10 w-full justify-center gap-2"
+            className={AUTH_SUBMIT_CLASS}
           >
             {busy && <Spinner />}
             {t("resetSubmit")}
+            {!busy && <SubmitArrow />}
           </Button>
         </form>
       </div>

@@ -24,6 +24,8 @@ import {
   SignupLegalNotice,
   useInDesktopApp,
   type OAuthProvider,
+  AUTH_SUBMIT_CLASS,
+  SubmitArrow,
 } from "@/components/auth/auth-chrome";
 import { useAuth } from "@/lib/auth-context";
 import { sanitizeInternalRedirectPath } from "@/lib/auth-redirect";
@@ -457,10 +459,11 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
             <Button
               type="submit"
               disabled={busy || issue !== null}
-              className="h-10 w-full justify-center gap-2"
+              className={AUTH_SUBMIT_CLASS}
             >
               {loading && <Spinner />}
               {step === "password" ? t("createAccount") : tCommon("continue")}
+              {!loading && <SubmitArrow />}
             </Button>
 
             {step === "password" && <SignupLegalNotice external={inDesktopApp} />}

@@ -29,7 +29,7 @@
 > agent sections below (notably §4) are kept as the historical design record;
 > the files they link under `lib/server/agent/vm/`, `app/api/agent-vm/` and
 > `app/api/desktop/` no longer exist. The desktop app remains the vehicle for the
-> web workspace, native notifications, the server picker and the local runtime.
+> web workspace, native notifications, the server choice and the local runtime.
 
 ---
 
@@ -109,9 +109,10 @@ becomes a second app to maintain.
 **Current implementation: one product `BrowserWindow` loads minddy Cloud or an
 explicitly selected self-hosted origin.** The product UI is never bundled in the
 app, so the desktop and web clients still render the same interface. The shell
-contains one isolated local form for selecting a server. It accepts HTTPS public
-origins and HTTP loopback or private-network IP origins, stores the choice in `userData/server.json`,
-and exposes no general-purpose bridge to that form.
+bundles one isolated local page for self-hosting, served from
+`minddy-app://welcome/`. It accepts HTTPS origins, and HTTP only for loopback
+(`localhost`, `127.0.0.1`, `[::1]`), stores the choice in
+`userData/server.json`, and exposes no general-purpose bridge to that page.
 
 Settings that cannot be discussed:
 
@@ -183,7 +184,7 @@ Linux, only a main document from the selected origin advertising
 `x-minddy-desktop-chrome: 1` opts into Electron's hidden title bar with a 44 px native title-bar overlay, theme
 synchronization, and Chromium's title-bar safe-area geometry. A bare Alt opens the
 main-process application menu, including server recovery actions, even when the
-remote server cannot load. The separate server-picker frame is unchanged.
+remote server cannot load.
 When the document capability changes, the shell replaces the window after the
 load completes, preserving committed session cookies, bounds, visibility, and
 maximized/fullscreen state. The replacement has the appropriate frame before it
@@ -320,6 +321,57 @@ not our instance, and a `open minddy://…` therefore achieves nothing. It's
 first real connection by external link is verified there.
 
 ---
+
+### Self-hosting from the app (MIN-781)
+
+The app starts on minddy Cloud, like the web: a first launch opens Cloud's
+sign-up. Self-hosting is chosen in the main window, on a page of the web app
+(`components/desktop/server-choice.tsx`) that ships INSIDE the desktop app:
+`scripts/build-desktop.mjs` bundles it without Next.js (`next-intl` resolves to
+`use-intl`, only the `DesktopWelcome` namespace of each catalog is imported)
+and compiles the product's Tailwind tokens for its files into
+`dist/welcome/`, which the shell serves from the privileged
+`minddy-app://welcome/` scheme (a closed list of four files). It works
+offline, so a local or self-hosted setup never depends on Cloud to choose or
+change its server. **Self-host minddy** under the auth forms
+(`DesktopServerFooter`), **Connect to a Server…** and Settings open it, and its
+breadcrumb leads back: each crumb to its step, the minddy logo (placed and
+tinted like the sign-in screens' brand, `.auth-logo-row`) to the selected
+server. It follows the system's language and
+theme: there may be no account yet.
+
+The page talks to the shell through `DesktopBridge.serverChoice`. The main
+process (`desktop/src/server-choice.ts`) answers it only from the main window's
+top frame on `minddy-app://welcome/`, so no server's page, Cloud's included,
+can reach it. The bridge carries an address and a tool id from a fixed list,
+never a path: the installer's folder is chosen in the native
+dialog and stays in the main process. Installer messages travel as
+`DesktopWelcome` catalog codes or raw command lines; the page translates them.
+
+The built-in installer (`desktop/src/local-installer.ts`, decisions in
+`lib/desktop/local-installer.ts`) installs missing tools first
+(`desktop/src/local-toolchain.ts`, decisions in `lib/desktop/local-toolchain.ts`):
+Node.js, pnpm and Supabase CLI without admin rights in `userData/toolchain`
+(Node.js checked against `SHASUMS256.txt`, the others through npm's registry
+integrity), Git and Docker through the system's own consent (Apple's command
+line tools dialog, portable MinGit, Docker Desktop with its code signature
+checked, or one `pkexec` prompt on Linux). The managed folders go first on PATH
+for minddy's processes only; the local runtime exports them after the login
+profile, which macOS's `path_helper` would otherwise reorder. It then runs the
+documented local procedure: it asks
+the login shell for `PATH` once, then runs Git and pnpm directly without a shell,
+clones the release tag of the newest compatibility row (injected at build time
+so the shell does not bundle the table), records `ADMIN_EMAILS`, runs the
+launcher's `--prepare-only` phase as its own step, hands over to the local
+runtime, and creates the instance's owner (`desktop/src/local-account.ts`,
+decisions in `lib/desktop/local-account.ts`): the service key in the clone's
+`.env.local` creates `owner@local.minddy.app`, or resets its password when the
+Supabase data survived a reinstall, and the generated password is kept with
+`safeStorage`. Whenever the window shows that instance, the auth screens ask
+`bridge.localSession()`; the main process answers only the managed origin's
+top frame while it is the selected server, performs the password grant itself
+and returns the session tokens, never the password. Leaving the page cancels
+an installation in progress.
 
 ### Cache size and renderer recovery (MIN-651)
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Mail01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, Mail01Icon, CheckIcon, ServerStack01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
@@ -29,6 +29,38 @@ import type { OAuthProvider } from "@/lib/auth-context";
  */
 
 export type { OAuthProvider } from "@/lib/auth-context";
+
+/**
+ * The main button of every auth screen (MIN-781): taller than the fields so it
+ * reads as the step's single action, with a soft shadow that lifts on hover.
+ * Shared so sign-in, sign-up, password and 2FA screens keep one button.
+ */
+export const AUTH_SUBMIT_CLASS =
+  "group/submit h-12 w-full justify-center gap-2 rounded-full text-[15px] font-semibold tracking-tight shadow-md shadow-black/10 transition-[transform,box-shadow,background-color] hover:-translate-y-px hover:shadow-lg active:translate-y-0 disabled:shadow-none dark:shadow-black/40";
+
+/** The arrow after a submit label; it nudges forward on hover. */
+export function SubmitArrow() {
+  return (
+    <HugeiconsIcon
+      icon={ArrowRight01Icon}
+      aria-hidden
+      className="size-4 transition-transform group-hover/submit:translate-x-0.5"
+    />
+  );
+}
+
+/**
+ * What an auth page shows while its form loads: the spinner in the middle of
+ * the form's column. The auth shell lays full-bleed screens out as a row (the
+ * form, then the showcase), so a bare spinner would sit in the top-left corner.
+ */
+export function AuthLoading() {
+  return (
+    <div className="flex flex-1 items-center justify-center">
+      <Spinner className="size-6" />
+    </div>
+  );
+}
 
 /** Multicolor Google logo (inline — no external asset). */
 export function GoogleGlyph() {
@@ -193,7 +225,7 @@ export function OAuthButtons({
         <Button
           type="button"
           variant="outline"
-          className="h-10 w-full justify-center gap-2.5"
+          className="h-11 w-full justify-center gap-2.5"
           disabled={disabled}
           onClick={() => onSelect("google")}
         >
@@ -205,7 +237,7 @@ export function OAuthButtons({
         <Button
           type="button"
           variant="outline"
-          className="h-10 w-full justify-center gap-2.5"
+          className="h-11 w-full justify-center gap-2.5"
           disabled={disabled}
           onClick={() => onSelect("github")}
         >
@@ -263,12 +295,12 @@ export function Field({
  * space, and a link that immediately bounces back to here is worth less than a
  * mark installed (MIN-291).
  *
- * **And it shifts to the RIGHT.** macOS buttons are drawn by the system
+ * **On macOS it shifts to the RIGHT.** macOS buttons are drawn by the system
  * above the web view, in the top left corner, and no `z-index` passes
  * in front: placed at `p-8`, the mark fell below. These screens do not have
  * sidebar to make a place for them in its brand line, therefore the corner
- * comes back to them in full and it is the brand that moves. The gesture is the same as
- * in the bar: a place swapped, nothing new on the screen.
+ * comes back to them in full and it is the brand that moves. Windows and Linux
+ * keep their window buttons on the right, so the mark stays on the left there.
  */
 export function AuthColumn({
   inDesktopApp,
@@ -279,12 +311,44 @@ export function AuthColumn({
 }) {
   return (
     <div className="flex w-full flex-1 flex-col p-8">
-      <div className={cn("flex", inDesktopApp && "justify-end")}>
+      {/* Placed by CSS (`.auth-logo-row`, globals.css), not by this
+          component: `data-desktop-platform` is set before the first paint,
+          so the mark never jumps once React knows it is in the app. */}
+      <div className="auth-logo-row flex">
         <LogoMark asLink={!inDesktopApp} />
       </div>
       <div className="flex flex-1 items-center justify-center py-10">
-        <div className="w-full max-w-[380px]">{children}</div>
+        {/* Each block of the form arrives in turn, with a short blur and fade
+            (`.auth-stagger`, globals.css); the brand above never moves. */}
+        <div className="auth-stagger w-full max-w-[380px]">{children}</div>
       </div>
+      <DesktopServerFooter />
+    </div>
+  );
+}
+
+/**
+ * The way into self-hosting from the desktop app (MIN-781). The app starts on
+ * minddy Cloud's sign-up, like the web; this button, under every auth form,
+ * opens the app's bundled self-hosting page (install on this computer or a
+ * server, or use an existing installation), which works offline. Builds whose
+ * bridge cannot open it show nothing.
+ */
+function DesktopServerFooter() {
+  const t = useTranslations("DesktopWelcome");
+  // Shown by CSS from the first paint (`data-desktop-app`, set by the
+  // pre-paint script), not after an effect: arriving late, it would push the
+  // vertically centred form up mid-entrance.
+  return (
+    <div className="hidden justify-center [html[data-desktop-app]_&]:flex">
+      <button
+        type="button"
+        onClick={() => getDesktopBridge()?.openServerPicker?.()}
+        className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-control-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <HugeiconsIcon icon={ServerStack01Icon} className="size-4" />
+        {t("selfHostHeading")}
+      </button>
     </div>
   );
 }

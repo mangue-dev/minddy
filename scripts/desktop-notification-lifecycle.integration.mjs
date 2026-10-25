@@ -94,13 +94,10 @@ try {
       show("previous-server", "/home?issue=previous-server");
       const previousServerBanner = banners.at(-1);
       send("minddy:server-picker:open");
-      let picker;
-      await waitFor(() => {
-        picker = BrowserWindow.getAllWindows().find(candidate => candidate !== window);
-        return picker && !picker.webContents.isLoading() && picker.webContents.getURL().startsWith("data:");
-      });
-      // Exercise the actual isolated server-picker preload and its IPC handler.
-      await picker.webContents.executeJavaScript('void window.minddyServerPicker.save(' + JSON.stringify(nextOrigin) + ')');
+      // The server choice is the app's bundled page; exercise the actual
+      // preload bridge and its trusted-document IPC handler from that page.
+      await waitFor(() => !window.webContents.isLoading() && window.webContents.getURL().startsWith("minddy-app://welcome/"));
+      await window.webContents.executeJavaScript('void window.minddy.serverChoice.connect(' + JSON.stringify(nextOrigin) + ')');
       await waitFor(() => !window.webContents.isLoading() && window.webContents.getURL() === nextOrigin + "/signup");
       assert.equal(previousServerBanner.closed, true, "Changing servers must dismiss old relative routes");
       previousServerBanner.emit("click");
@@ -111,7 +108,7 @@ try {
       await waitFor(() => !window.webContents.isLoading() && window.webContents.getURL() === nextOrigin + "/home?issue=current-server");
       finish({ electron: process.versions.electron, isolated: app.getPath("userData") === ${JSON.stringify(userData)}, checks: [
         "Late native close, failure and click events cannot remove or open a replacement banner",
-        "Switching through the actual server-picker preload dismisses banners from the prior server",
+        "Switching through the server-choice page bridge dismisses banners from the prior server",
         "An old banner click cannot open its relative issue on the newly selected server",
         "Current-server banner clicks still navigate to their intended route",
       ] });

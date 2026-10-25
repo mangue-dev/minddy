@@ -32,6 +32,35 @@ import type { DesktopLocalNotificationPayload } from "@/lib/desktop/local-notifi
 import type { LinuxBackgroundNotificationState } from "@/lib/desktop/linux-background";
 import type { DesktopNotificationCapabilities } from "@/lib/desktop/notification-capabilities";
 import type { DesktopUpdateStatus } from "@/lib/desktop/update-status";
+import type {
+  InstallMessage,
+  LocalInstallProgress,
+  LocalPrerequisiteId,
+  LocalPrerequisiteResult,
+} from "@/lib/desktop/local-installer";
+import type { DesktopServerChoiceState } from "@/lib/desktop/server-choice";
+import type { LocalAccountSession } from "@/lib/desktop/local-account";
+
+/**
+ * The self-hosting page's actions (MIN-781). The main process answers them
+ * only from the app's own bundled document, `minddy-app://welcome/`. Like every member,
+ * they never take a path: the installation folder is chosen in the native
+ * dialog and stays in the main process.
+ */
+export interface DesktopServerChoiceBridge {
+  state(): Promise<DesktopServerChoiceState | null>;
+  useCloud(): Promise<void>;
+  connect(origin: string): Promise<{ error?: InstallMessage }>;
+  useExistingInstallation(): Promise<{ error?: InstallMessage }>;
+  prerequisites(): Promise<LocalPrerequisiteResult[]>;
+  chooseInstallFolder(): Promise<{ folder?: string; error?: InstallMessage }>;
+  install(): Promise<{ error?: InstallMessage }>;
+  cancelInstall(): void;
+  onInstallProgress(handler: (progress: LocalInstallProgress) => void): () => void;
+  openToolDownload(tool: LocalPrerequisiteId): void;
+  /** Leave the page for the selected server, cancelling an installation in progress. */
+  close(): void;
+}
 
 export interface DesktopNativePushRegistration {
   transport: "apns" | "wns";
@@ -51,8 +80,16 @@ export interface DesktopBridge {
    * Optional because desktop shells released before 0.10.24 do not expose it.
    */
   readonly platform?: NodeJS.Platform;
-  /** Open the shell-owned server and local-folder picker. */
+  /** Open the app's bundled self-hosting page (`minddy-app://welcome/`). */
   openServerPicker?(): void;
+  /** Present in shells that let the web page choose the server (MIN-781). */
+  serverChoice?: DesktopServerChoiceBridge;
+  /**
+   * The session of the account the app manages on the minddy it installed on
+   * this computer, so that instance needs no sign-in (MIN-781). Null anywhere
+   * else: another server, or an installation the app did not create.
+   */
+  localSession?(): Promise<LocalAccountSession | null>;
   /** Run an explicitly requested shell update check. */
   checkForUpdates?(): Promise<void>;
   /** Explicit notification support. Optional only for older installed shells. */

@@ -1,0 +1,69 @@
+/*
+ * Styles of the server-choice page shipped inside the desktop app (MIN-781).
+ * The product's own tokens and utilities, compiled by
+ * `scripts/build-desktop.mjs` for the files below only, plus the pieces of
+ * `app/globals.css` the page shares: the brand's place and the landing's
+ * entrance.
+ */
+@import "tailwindcss" source(none);
+@import "../../app/tokens.css";
+
+@source "./server-choice.tsx";
+@source "../ui/button.tsx";
+@source "../ui/input.tsx";
+@source "../ui/spinner.tsx";
+@source "../ui/touch-target.ts";
+@source "../minddy-logo.tsx";
+@source "../marketing/card-tones.ts";
+@source "../../lib/env.ts";
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./inter-latin.woff2") format("woff2");
+}
+
+:root {
+  --font-inter: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  cursor: default;
+}
+
+/* Same place as the sign-in screens' brand (`app/globals.css`,
+   `.auth-logo-row`): the mark does not move between the two pages. */
+html[data-desktop-platform="darwin"] .auth-logo-row {
+  margin-top: -24px;
+  padding-left: 64px;
+}
+
+/* The landing's load-time cascade (`app/globals.css`, `.hero-reveal`). */
+@keyframes hero-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.hero-reveal {
+  animation: hero-fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: calc(var(--hero-d, 0) * 1s);
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-reveal {
+    animation: none;
+  }
+}

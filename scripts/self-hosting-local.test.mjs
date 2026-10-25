@@ -15,7 +15,12 @@ import {
 } from "./self-hosting-local.mjs";
 
 test("the local self-hosting command uses minddy's dedicated port", () => {
-  assert.deepEqual(parseArgs([]), { port: DEFAULT_LOCAL_PORT, open: true, stopBackendOnExit: true });
+  assert.deepEqual(parseArgs([]), {
+    port: DEFAULT_LOCAL_PORT,
+    open: true,
+    stopBackendOnExit: true,
+    prepareOnly: false,
+  });
   assert.equal(DEFAULT_LOCAL_PORT, 6463);
   assert.equal(parseArgs(["--", "--port", "16463"]).port, 16463);
   assert.match(help(), /6463/);
@@ -26,6 +31,7 @@ test("the local launcher opens the right client and owns backend shutdown", () =
     port: DEFAULT_LOCAL_PORT,
     open: false,
     stopBackendOnExit: false,
+    prepareOnly: false,
   });
   assert.deepEqual(browserCommand("http://localhost:6463/signup", "darwin"), {
     command: "open",
@@ -33,6 +39,11 @@ test("the local launcher opens the right client and owns backend shutdown", () =
   });
   assert.equal(browserCommand("http://localhost:6463/signup", "win32").command, "cmd.exe");
   assert.equal(browserCommand("http://localhost:6463/signup", "linux").command, "xdg-open");
+});
+
+test("the desktop installer can prepare the stack without starting the app", () => {
+  assert.equal(parseArgs(["--", "--no-open", "--prepare-only"]).prepareOnly, true);
+  assert.match(help(), /--prepare-only/);
 });
 
 test("the local port must be safe for an unprivileged process", () => {

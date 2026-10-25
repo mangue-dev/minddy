@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon, type AppIcon as AppIconType } from "@/components/icon";
-import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, BotIcon, CheckIcon, DatabaseIcon, Download01Icon, FolderOpenIcon, Globe02Icon as Globe2, HardDriveIcon, LaptopIcon, LinkSquare01Icon, Mail01Icon, Notification01Icon, ServerIcon as Server, ShieldCheckIcon as ShieldCheck, SquareTerminalIcon as TerminalSquare } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, BotIcon, CheckIcon, DatabaseIcon, Download01Icon, Globe02Icon as Globe2, HardDriveIcon, LaptopIcon, LinkSquare01Icon, Mail01Icon, Notification01Icon, ServerIcon as Server, ShieldCheckIcon as ShieldCheck, SquareTerminalIcon as TerminalSquare } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import type { Messages } from "next-intl";
@@ -328,18 +328,13 @@ function EmailConfiguration({
 
 function ClientAccess({
   serverOrigin,
-  local,
   privateNetwork,
   copy,
 }: {
   serverOrigin: string;
-  local: boolean;
   privateNetwork?: boolean;
   copy: SelfHostingInstallCopy;
 }) {
-  const destinationTitle = local ? copy.desktopLocalPathTitle : copy.desktopServerPathTitle;
-  const DestinationIcon: AppIconType = local ? FolderOpenIcon : Server;
-
   return (
     <section className="space-y-4" aria-labelledby="desktop-source-title">
       <div className={HIGHLIGHT_PANEL}>
@@ -382,47 +377,58 @@ function ClientAccess({
             <div className="flex items-start gap-3">
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground" aria-hidden>2</span>
               <div>
-                <h3 className="font-medium">{destinationTitle}</h3>
+                <h3 className="font-medium">{copy.desktopServerPathTitle}</h3>
                 <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                  {local ? copy.desktopLocalBody : privateNetwork ? copy.desktopPrivateBody : copy.desktopTeamBody}
+                  {privateNetwork ? copy.desktopPrivateBody : copy.desktopTeamBody}
                 </p>
               </div>
             </div>
 
             <div className="mt-5 rounded-xl border border-border bg-card p-4 shadow-sm">
               <p className="text-sm font-semibold">{copy.desktopPickerTitle}</p>
-              {local ? (
-                <div className="mt-4 space-y-3">
-                  <div className="flex items-center gap-2 rounded-lg border border-primary bg-primary px-3 py-2.5 text-sm font-medium text-primary-foreground">
-                    <HugeiconsIcon icon={HardDriveIcon} className="h-4 w-4 shrink-0" aria-hidden />
-                    <span>{copy.desktopLocalAction}</span>
-                  </div>
-                  <div className="flex items-center gap-2 rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground">
-                    <HugeiconsIcon icon={FolderOpenIcon} className="h-4 w-4 shrink-0 text-foreground" aria-hidden />
-                    <span>{copy.desktopFolderExample}</span>
-                  </div>
+              <div className="mt-4 space-y-3">
+                <div>
+                  <p className="text-xs font-medium text-foreground">{copy.desktopServerAddressLabel}</p>
+                  <div className="mt-1.5 rounded-lg border border-primary bg-background px-3 py-2.5 font-mono text-xs break-all text-foreground ring-2 ring-primary/15">{serverOrigin}</div>
                 </div>
-              ) : (
-                <div className="mt-4 space-y-3">
-                  <div>
-                    <p className="text-xs font-medium text-foreground">{copy.desktopServerAddressLabel}</p>
-                    <div className="mt-1.5 rounded-lg border border-primary bg-background px-3 py-2.5 font-mono text-xs break-all text-foreground ring-2 ring-primary/15">{serverOrigin}</div>
-                  </div>
-                  <div className="flex justify-end">
-                    <span className="rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground">{copy.desktopConnectAction}</span>
-                  </div>
+                <div className="flex justify-end">
+                  <span className="rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground">{copy.desktopConnectAction}</span>
                 </div>
-              )}
+              </div>
             </div>
 
             <div className="mt-4 flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
-              <AppIcon icon={DestinationIcon} className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden={true} />
-              <span>{local ? copy.desktopLocalChoiceNote : copy.desktopServerChoiceNote}</span>
+              <AppIcon icon={Server} className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden={true} />
+              <span>{copy.desktopServerChoiceNote}</span>
             </div>
           </li>
         </ol>
       </div>
     </section>
+  );
+}
+
+/** The local route: the desktop app's own installer does the work, step by step. */
+function LocalAppInstall({ copy, manualGuide }: { copy: SelfHostingInstallCopy; manualGuide: string }) {
+  const steps = [copy.localAppStepOpen, copy.localAppStepInstall, copy.localAppStepWait, copy.localAppStepOpened];
+  return (
+    <div className={HIGHLIGHT_PANEL}>
+      <ol className="space-y-3">
+        {steps.map((step, index) => (
+          <li key={step} className="flex items-start gap-3 rounded-xl bg-background/70 p-4">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground" aria-hidden>{index + 1}</span>
+            <p className="pt-0.5 text-sm leading-relaxed">{step}</p>
+          </li>
+        ))}
+      </ol>
+      <p className="mt-5 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground">
+        <AppIcon icon={ShieldCheck} className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+        {copy.localAppEncryption}
+      </p>
+      <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{copy.localAppManual}</p>
+      <div className="mt-3"><ResourceLink href={manualGuide}>{copy.localAppManualLink}</ResourceLink></div>
+      <CompletionNote copy={copy} criterion={copy.localAppDone} />
+    </div>
   );
 }
 
@@ -461,18 +467,15 @@ export function SelfHostingInstallWizard({
   const adminEmail = emailValid ? email.trim() : "ops@example.com";
   const serverOrigin = `${serverAccess === "private" ? "http" : "https"}://${host}`;
   const serverSetupValid = addressValid && emailValid;
-  const localOrigin = "http://localhost:6463";
 
   const encryptionReleaseNote = replaceTokens(copy.encryptionReleaseBody, { MINDDY_RELEASE_TAG: releaseTag });
   const encryptionKeyNote = copy.encryptionReleaseKeyNote;
-  const localBootstrap = `pnpm bootstrap:supabase -- --minimal --app-url ${localOrigin}`;
-  const installationGuide = path === "local" ? links.localInstallation : links.serverInstallation;
+  const installationGuide = links.serverInstallation;
   const releaseProcedureNote = replaceTokens(copy.releaseProcedureBody, { MINDDY_RELEASE_TAG: releaseTag });
   const fullPreparationNote = `${copy.fullPreparationBody}\n${copy.releaseProcedureGuide}: ${links.serverInstallation}#install`;
   const releasePrompt = `${releaseProcedureNote}\n${copy.releaseProcedureGuide}: ${installationGuide}`;
   const encryptionPrompt = `${encryptionReleaseNote}\n${encryptionKeyNote}\n${copy.encryptionReleaseGuide}: ${links.encryption}\n${releasePrompt}`;
 
-  const localInstall = `git clone --branch ${releaseTag} --depth 1 ${repositoryUrl}.git minddy\ncd minddy\ncorepack enable\ncorepack prepare pnpm@${pnpmVersion} --activate\npnpm install --frozen-lockfile\n${localBootstrap}`;
   const serverClone = `git clone --branch ${releaseTag} --depth 1 ${repositoryUrl}.git minddy\ncd minddy`;
   const verificationUrl = `${repositoryUrl}/blob/${releaseTag}/docs/container-image.md#verify-a-published-image`;
   const serverDependencies = `test "$(pnpm --version)" = ${pnpmVersion}\npnpm install --frozen-lockfile`;
@@ -487,7 +490,7 @@ export function SelfHostingInstallWizard({
   const networkSetup = serverAccess === "private"
     ? (supabaseMode === "full" ? copy.networkSetupFullPrivate : copy.networkSetupManagedPrivate)
     : `${copy.networkSetupPublic}${supabaseMode === "full" ? ` ${copy.dnsSupabase}: supabase.${host} → ${copy.dnsTarget}.` : ""}`;
-  const promptGuide = `${links.guide}?route=${path ?? "local"}`;
+  const promptGuide = `${links.guide}?route=team`;
   const transferPrompt = migrate
     ? `\n\n${copy.transferPromptTitle}\n- ${copy.transferPromptBefore}: ${copy.exportOne} ${copy.exportTwo}\n- ${copy.transferPromptAfter}: ${copy.importOne} ${copy.importTwo}`
     : "";
@@ -502,16 +505,6 @@ export function SelfHostingInstallWizard({
   const emailSetupPrompt = path === "team"
     ? `\n\n${copy.emailAgentInstruction}\n\n${copy.emailUrlsTitle}\n${supabaseMode === "managed" ? copy.emailCloudLocation : copy.emailFullLocation}\n${copy.emailSiteUrlLabel}=${serverOrigin}\n${copy.emailRedirectUrlLabel}=${serverOrigin}/auth/callback\n\n${copy.emailSmtpTitle}\n${supabaseMode === "managed" ? copy.emailSmtpCloudBody : copy.emailSmtpFullBody}\n${smtpFieldsFor(supabaseMode, copy)}${supabaseMode === "full" ? `\n${copy.emailRestartTitle}\n${FULL_AUTH_RESTART}` : ""}\n\n${copy.emailTemplatesTitle}\n${supabaseMode === "managed" ? copy.emailTemplatesManagedBody : copy.emailTemplatesFullBody}\n\n${copy.emailConfirmTitle}\n${copy.emailSubjectLabel}: ${emailTemplates.confirmSignup.subject}\n${copy.emailBodyLabel}:\n${emailTemplates.confirmSignup.body}\n\n${copy.emailResetTitle}\n${copy.emailSubjectLabel}: ${emailTemplates.resetPassword.subject}\n${copy.emailBodyLabel}:\n${emailTemplates.resetPassword.body}`
     : "";
-
-  const localPrompt = replaceTokens(copy.localPromptTemplate, {
-    MINDDY_GUIDE_URL: promptGuide,
-    MINDDY_REPOSITORY_URL: repositoryUrl,
-    MINDDY_RELEASE_TAG: releaseTag,
-    MINDDY_PNPM_VERSION: pnpmVersion,
-    MINDDY_LOCAL_ORIGIN: localOrigin,
-    MINDDY_ENCRYPTION_SETUP: `${encryptionPrompt}\n${localBootstrap}`,
-    MINDDY_DOWNLOAD_URL: links.download,
-  });
 
   const teamPrompt = replaceTokens(copy.teamPromptTemplate, {
     MINDDY_GUIDE_URL: promptGuide,
@@ -583,7 +576,7 @@ export function SelfHostingInstallWizard({
         </div>
       ),
     },
-    {
+    ...(path === "team" ? [{
       id: "encryption-choice" as const,
       title: copy.encryptionReleaseTitle,
       body: encryptionReleaseNote,
@@ -596,7 +589,7 @@ export function SelfHostingInstallWizard({
           <div className="mt-4"><ResourceLink href={installationGuide}>{copy.releaseProcedureGuide}</ResourceLink></div>
         </div>
       ),
-    },
+    }] : []),
     {
       id: "migration-choice" as const,
       title: copy.migrateTitle,
@@ -714,7 +707,15 @@ export function SelfHostingInstallWizard({
         </div>
       ),
     },
-    {
+    ...(path === "local" ? [{
+      id: "local-app" as const,
+      title: copy.localAppTitle,
+      body: copy.localAppBody,
+      canContinue: true,
+      continueLabel: copy.confirmLocalApp,
+      content: <LocalAppInstall copy={copy} manualGuide={`${links.localInstallation}#launch`} />,
+    }] : []),
+    ...(path === "team" ? [{
       id: "method" as const,
       title: copy.methodTitle,
       body: copy.methodBody,
@@ -725,56 +726,20 @@ export function SelfHostingInstallWizard({
           <OptionCard tone={CARD_TONES.peach} selected={method === "manual"} onSelect={() => setMethod("manual")} icon={TerminalSquare} title={copy.methodManualTitle} body={copy.methodManualBody} badge={copy.methodManualBadge} />
         </div>
       ),
-    },
-    ...(method === "agent" ? [{
+    }] : []),
+    ...(path === "team" && method === "agent" ? [{
       id: "agent" as const,
       title: copy.agentTitle,
-      body: path === "local" ? copy.agentLocalGoal : copy.agentTeamGoal,
+      body: copy.agentTeamGoal,
       canContinue: true,
       continueLabel: copy.confirmAgent,
       content: (
         <div>
-          <PromptCard prompt={path === "local" ? `${localPrompt}\n\n${copy.localAutostartPrompt}${transferPrompt}` : teamPrompt} body={path === "local" ? copy.agentLocalRun : copy.agentTeamRun} copy={copy} disabled={path === "team" && !serverSetupValid} />
-          <CompletionNote copy={copy} criterion={path === "local" ? copy.agentLocalDone : copy.agentTeamDone} />
+          <PromptCard prompt={teamPrompt} body={copy.agentTeamRun} copy={copy} disabled={!serverSetupValid} />
+          <CompletionNote copy={copy} criterion={copy.agentTeamDone} />
         </div>
       ),
     }] : []),
-    ...(method === "manual" && path === "local" ? [
-      {
-        id: "local-tools" as const,
-        title: copy.toolsTitle,
-        body: copy.toolsBody,
-        canContinue: true,
-        continueLabel: copy.confirmTools,
-        content: (
-          <div className={PANEL}>
-            <div className="flex flex-wrap gap-2">
-              <ResourceLink href="https://nodejs.org/en/download">{copy.installNode}</ResourceLink>
-              <ResourceLink href="https://docs.docker.com/get-started/get-docker/">{copy.installDocker}</ResourceLink>
-              <ResourceLink href="https://supabase.com/docs/guides/local-development/cli/getting-started">{copy.installSupabase}</ResourceLink>
-              <ResourceLink href="https://git-scm.com/downloads">{copy.installGit}</ResourceLink>
-            </div>
-            <CommandBlock command="node --version\ngit --version\ndocker --version\ndocker compose version\ndocker info\nsupabase --version" copy={copy} />
-            <CompletionNote copy={copy} criterion={copy.toolsDone} />
-          </div>
-        ),
-      },
-      {
-        id: "local-install" as const,
-        title: copy.manualLocalTitle,
-        body: copy.manualLocalBody,
-        canContinue: true,
-        continueLabel: copy.confirmLocalInstall,
-        content: (
-          <div className={HIGHLIGHT_PANEL}>
-            <CommandBlock command={localInstall} copy={copy} />
-            <p className="mt-4 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"><AppIcon icon={ShieldCheck} className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />{copy.minimalNote}</p>
-            <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{encryptionKeyNote}</p>
-            <CompletionNote copy={copy} criterion={copy.manualLocalDone} />
-          </div>
-        ),
-      },
-    ] : []),
     ...(method === "manual" && path === "team" ? [
       {
         id: "team-prepare" as const,
@@ -835,12 +800,9 @@ export function SelfHostingInstallWizard({
       canContinue: true,
       continueLabel: copy.confirmChecks,
       content: (
-        <div className="space-y-5">
-          <ClientAccess serverOrigin={localOrigin} local copy={copy} />
-          <div className={HIGHLIGHT_PANEL}>
-            <Checklist items={[copy.testAccount, copy.testProject, copy.testAttachment]} />
-            <CompletionNote copy={copy} criterion={copy.verifyLocalDone} />
-          </div>
+        <div className={HIGHLIGHT_PANEL}>
+          <Checklist items={[copy.testProject, copy.testAttachment]} />
+          <CompletionNote copy={copy} criterion={copy.verifyLocalDone} />
         </div>
       ),
     }] : []),
@@ -860,7 +822,7 @@ export function SelfHostingInstallWizard({
       continueLabel: copy.confirmOpen,
       content: (
         <div className="space-y-5">
-          <ClientAccess serverOrigin={serverOrigin} local={false} privateNetwork={serverAccess === "private"} copy={copy} />
+          <ClientAccess serverOrigin={serverOrigin} privateNetwork={serverAccess === "private"} copy={copy} />
           <CompletionNote copy={copy} criterion={copy.openTeamDone} />
         </div>
       ),
@@ -873,7 +835,7 @@ export function SelfHostingInstallWizard({
       continueLabel: copy.confirmImport,
       content: (
         <div className="space-y-5">
-          <ClientAccess serverOrigin={path === "local" ? localOrigin : serverOrigin} local={path === "local"} privateNetwork={serverAccess === "private"} copy={copy} />
+          {path === "team" && <ClientAccess serverOrigin={serverOrigin} privateNetwork={serverAccess === "private"} copy={copy} />}
           <div className={HIGHLIGHT_PANEL}>
             <p className="text-sm font-medium">{copy.importHeading}</p>
             <Checklist items={[copy.importOne, copy.importTwo]} />
@@ -983,7 +945,7 @@ export function SelfHostingInstallWizard({
           <div className="min-w-0">
             <div key={currentStage.id} className="animate-in fade-in duration-200 motion-reduce:animate-none">
               <h1 ref={headingRef} tabIndex={-1} className="max-w-3xl text-[clamp(2rem,3.8vw,3.25rem)] leading-[1.1] font-medium tracking-[-0.045em] text-balance outline-none">{currentStage.title}</h1>
-              {links.compatibility && <p className="mt-4 text-sm leading-relaxed"><a href={links.compatibility} className="underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-ring">{copy.releaseRequirements}</a></p>}
+              {links.compatibility && path !== "local" && <p className="mt-4 text-sm leading-relaxed"><a href={links.compatibility} className="underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-ring">{copy.releaseRequirements}</a></p>}
               {currentStage.body && <p className="mt-5 max-w-2xl text-base leading-relaxed text-pretty text-muted-foreground">{currentStage.body}</p>}
               <div className="mt-8 min-w-0">{currentStage.content}</div>
             </div>

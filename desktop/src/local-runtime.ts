@@ -8,8 +8,10 @@ import {
   localRuntimeStopSpec,
 } from "@/lib/desktop/local-runtime-platform";
 import { createLocalRuntimeLifecycle } from "@/lib/desktop/local-runtime-lifecycle";
+import { toolchainPathPrefix } from "./local-toolchain";
+import { LOCAL_INSTANCE_ORIGIN } from "@/lib/desktop/local-account";
 
-export const LOCAL_SELF_HOST_ORIGIN = "http://localhost:6463";
+export const LOCAL_SELF_HOST_ORIGIN = LOCAL_INSTANCE_ORIGIN;
 const LOCAL_RUNTIME_FILE = "local-runtime.json";
 
 function runtimeFile(): string {
@@ -82,11 +84,21 @@ const lifecycle = createLocalRuntimeLifecycle({
   healthy: isHealthy,
   spawn: (root: string) => {
     const validatedRoot = validateLocalRuntimeRoot(root);
-    const spec = localRuntimeProcessSpec(process.platform, process.env.SHELL);
-    return spawn(spec.command, spec.args, { cwd: validatedRoot, stdio: "ignore", windowsHide: spec.windowsHide });
+    const spec = localRuntimeProcessSpec(process.platform, process.env.SHELL, toolchainPathPrefix());
+    const env = { ...process.env };
+    if (spec.pathPrefix) {
+      const key = Object.keys(env).find((name) => name.toUpperCase() === "PATH") ?? "PATH";
+      env[key] = `${spec.pathPrefix};${env[key] ?? ""}`;
+    }
+    return spawn(spec.command, spec.args, { cwd: validatedRoot, env, stdio: "ignore", windowsHide: spec.windowsHide });
   },
   stop: stopProcess,
 });
+
+/** Whether the launcher this app started for that folder is still running. */
+export function ownsLocalRuntime(root: string): boolean {
+  return lifecycle.ownsLiveRuntime(validateLocalRuntimeRoot(root));
+}
 
 /** Lets the launcher stop both the web process and its local Supabase backend. */
 export function stopLocalRuntime(): void {

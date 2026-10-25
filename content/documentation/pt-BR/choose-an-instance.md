@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-25",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -34,14 +34,16 @@
       "content/knowledge/open-source.md",
       "docs/self-hosting-distribution.md",
       "app/(marketing)/self-hosting/install/page.tsx",
-      "lib/public-routes.ts"
+      "lib/public-routes.ts",
+      "desktop/src/local-installer.ts",
+      "desktop/src/local-account.ts"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-20"
+    "revision": 7,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-781 self-hosting from the desktop app: source review of components/desktop/server-choice.tsx, desktop/src/local-installer.ts and desktop/src/local-account.ts; the account paragraph and the next step now point local instances to the desktop app's built-in installer; no installation run, no screenshot recaptured, existing figures carried forward unchanged)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-781 changed passages on local instances from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-25"
   },
   "related": [
     "installation",
@@ -63,7 +65,7 @@
 
 O minddy Cloud e o minddy auto-hospedado executam o mesmo núcleo público. Escolha o Cloud se quiser que o minddy opere a aplicação, o banco de dados, o Storage e o agendador. Escolha a hospedagem própria se precisar controlar o local de hospedagem, os provedores ou o calendário de atualizações e puder operar esses serviços.
 
-Uma conta Cloud pertence ao Cloud. Em uma instância auto-hospedada, crie uma conta nessa instância; uma conta do minddy Cloud não é necessária. Confira o endereço antes de entrar ou convidar alguém. Duas instâncias do minddy não compartilham contas nem credenciais automaticamente.
+Uma conta Cloud pertence ao Cloud. Em uma instância auto-hospedada, crie uma conta nessa instância; uma conta do minddy Cloud não é necessária. Uma instância local instalada pelo aplicativo desktop cria essa conta para você. Confira o endereço antes de entrar ou convidar alguém. Duas instâncias do minddy não compartilham contas nem credenciais automaticamente.
 
 
 ## Responsabilidades e custos {#responsibilities}
@@ -87,4 +89,4 @@ Revise as permissões e os termos sobre dados antes de habilitar uma integraçã
 
 ## Fonte e próximo passo {#next-step}
 
-O repositório oficial é [`mangue-dev/minddy`](https://github.com/mangue-dev/minddy), sob GNU AGPL v3.0 exclusivamente. Respeite a licença e a política de nomes em instalações modificadas ou hospedadas. Para instalar, comece pelo [assistente de hospedagem própria passo a passo](/pt-br/auto-hospedagem/instalar). Consulte a [referência de instalação](/pt-br/documentacao/installation) para detalhes técnicos e verificações adicionais. Antes de transferir trabalho existente, consulte o guia de transferência entre instâncias: credenciais e assinaturas não são transferidas com os dados da conta.
+O repositório oficial é [`mangue-dev/minddy`](https://github.com/mangue-dev/minddy), sob GNU AGPL v3.0 exclusivamente. Respeite a licença e a política de nomes em instalações modificadas ou hospedadas. Para executar o minddy no seu próprio computador, use o aplicativo desktop: **Auto-hospedar o minddy** › **Instalar neste computador** instala e inicia uma [instância local](/pt-br/documentacao/install-locally#install-locally) para você. Para um servidor, comece pelo [assistente de hospedagem própria passo a passo](/pt-br/auto-hospedagem/instalar). Consulte a [referência de instalação](/pt-br/documentacao/installation) para detalhes técnicos e verificações adicionais. Antes de transferir trabalho existente, consulte o guia de transferência entre instâncias: credenciais e assinaturas não são transferidas com os dados da conta.

@@ -99,6 +99,14 @@ export function createLocalRuntimeLifecycle<Process extends RuntimeProcess>(opti
       });
       return attempt.promise;
     },
+    /**
+     * Whether the launcher this app started is still alive, for that folder.
+     * The local account's session is handed out only then (MIN-781): anything
+     * else answering the local port is not the instance the app installed.
+     */
+    ownsLiveRuntime(root: string): boolean {
+      return runtime !== null && isLive(runtime) && runtimeRoot === root;
+    },
     stop() {
       pending?.controller.abort();
       pending = null;

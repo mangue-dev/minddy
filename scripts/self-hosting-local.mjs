@@ -17,7 +17,7 @@ function fail(message) {
 }
 
 export function parseArgs(argv) {
-  const options = { port: DEFAULT_LOCAL_PORT, open: true, stopBackendOnExit: true };
+  const options = { port: DEFAULT_LOCAL_PORT, open: true, stopBackendOnExit: true, prepareOnly: false };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--") continue;
@@ -32,6 +32,8 @@ export function parseArgs(argv) {
       options.open = false;
     } else if (arg === "--keep-backend") {
       options.stopBackendOnExit = false;
+    } else if (arg === "--prepare-only") {
+      options.prepareOnly = true;
     } else if (arg === "--help" || arg === "-h") {
       options.help = true;
     } else {
@@ -42,7 +44,7 @@ export function parseArgs(argv) {
 }
 
 export function help() {
-  return `Usage: pnpm self-host:local [-- --port <port>] [--no-open] [--keep-backend]
+  return `Usage: pnpm self-host:local [-- --port <port>] [--no-open] [--keep-backend] [--prepare-only]
 
 Starts minddy's minimal local stack and binds the app to localhost only.
 
@@ -50,6 +52,8 @@ Options:
   --port <port>   Local app port (default: ${DEFAULT_LOCAL_PORT}).
   --no-open       Do not open the sign-up page in the default browser.
   --keep-backend  Keep Supabase running after minddy stops.
+  --prepare-only  Prepare Supabase and build the app, then exit without
+                  starting minddy. Supabase keeps running.
   -h, --help      Shows this help.`;
 }
 
@@ -159,7 +163,11 @@ export async function main(argv = process.argv.slice(2)) {
     return;
   }
 
-  await assertPortAvailable(options.port).catch((error) => fail(error instanceof Error ? error.message : String(error)));
+  // Preparing binds no port: the desktop installer may run it while a local
+  // instance it manages is still up.
+  if (!options.prepareOnly) {
+    await assertPortAvailable(options.port).catch((error) => fail(error instanceof Error ? error.message : String(error)));
+  }
   const appUrl = `http://localhost:${options.port}`;
   console.log(`→ Preparing minddy for ${appUrl}.`);
   await bootstrapSupabase(["--minimal", "--app-url", appUrl]);
@@ -183,6 +191,13 @@ export async function main(argv = process.argv.slice(2)) {
       `${JSON.stringify({ version: packageJson.version, appUrl }, null, 2)}\n`,
       "utf8",
     );
+  }
+  if (options.prepareOnly) {
+    // The desktop installer runs this phase as its own step: on a first
+    // installation, image pulls and the build can outlast the launcher's
+    // readiness deadline, and their output belongs on the progress list.
+    console.log(`✓ minddy is prepared for ${appUrl}.`);
+    return;
   }
   let result;
   try {

@@ -1,7 +1,7 @@
 /** Only public wizard choices belong in help context; hosts and credentials stay in the form. */
 export const SELF_HOSTING_HELP_STEPS = [
   "overview", "desktop-app", "route", "encryption-choice", "migration-choice", "migration-export",
-  "team-access", "team-backend", "capacity", "method", "agent", "local-tools", "local-install",
+  "team-access", "team-backend", "capacity", "local-app", "method", "agent",
   "team-prepare", "team-release", "team-fetch", "team-installer", "team-email", "local-verify",
   "team-verify", "team-open", "migration-import", "done",
 ] as const;

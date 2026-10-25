@@ -103,9 +103,18 @@ const COQUILLE = {
   "server-store.ts": "reads and writes the selected server; validation lives in @/lib/desktop/server-origin",
   "window-chrome-store.ts":
     "reads and writes the last observed window frame; parsing and the startup decision live in @/lib/desktop/window-frame",
-  "server-picker.ts":
-    "composes the native server picker window; validation lives in @/lib/desktop/server-origin",
-  "server-picker-preload.ts": "closed IPC bridge for the server picker window",
+  "server-choice.ts":
+    "serves the bundled self-hosting page and answers its bridge calls; the trusted document lives in " +
+    "@/lib/desktop/server-choice",
+  "local-account.ts":
+    "creates the local instance's owner and signs it in, keeping the password in safeStorage; parsing and the " +
+    "trust rule live in @/lib/desktop/local-account",
+  "local-toolchain.ts":
+    "downloads, verifies and runs the installers of missing tools; plans, URLs, checksums and scripts live in " +
+    "@/lib/desktop/local-toolchain",
+  "local-installer.ts":
+    "runs the local installation's commands and folder dialog; probes, steps and parsing live in " +
+    "@/lib/desktop/local-installer",
   "local-runtime.ts":
     "starts the local self-host launcher and waits for health; its contract lives in scripts/self-hosting-local.mjs",
   "local-repo.ts": "wires the system panel and storage; decisions live in @/lib/desktop/local-repo",
@@ -133,6 +142,9 @@ describe("the `desktop/src/` shell", () => {
     // can designate `~/.ssh` by writing a string.
     const preload = read("desktop/src/preload.ts");
     expect(preload).not.toMatch(/\b(path|filePath|dirPath|directory)\s*:\s*string/);
+    // The server choice's installer picks its folder in the native dialog
+    // (MIN-781): no member names a folder either.
+    expect(preload).not.toMatch(/\bfolder\s*:\s*string/);
   });
 
   it("keeps desktop settings actions argument-free", () => {

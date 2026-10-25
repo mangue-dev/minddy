@@ -1,5 +1,6 @@
 import { FullCatalogMessages } from "@/components/full-catalog-messages";
 import { LazyToaster } from "@/components/lazy-toaster";
+import { AuthShowcase } from "@/components/auth/auth-showcase";
 import { AuthShell } from "./auth-shell";
 
 /**
@@ -12,11 +13,16 @@ import { AuthShell } from "./auth-shell";
  * These screens have no bottom-bar status line (MIN-555): feedback stays on
  * the classic sonner toaster, mounted here for the whole segment (the login
  * and reset-password forms toast on success and failure).
+ *
+ * The showcase pane is rendered here because it is a server component (its
+ * capture is chosen by locale on the server, its light or dark variant by the
+ * system theme in the browser); the shell decides on
+ * which screens it appears.
  */
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <FullCatalogMessages>
-      <AuthShell>{children}</AuthShell>
+      <AuthShell showcase={<AuthShowcase />}>{children}</AuthShell>
       <LazyToaster />
     </FullCatalogMessages>
   );

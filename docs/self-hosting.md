@@ -27,10 +27,16 @@ installing a local instance or preparing a server, install the signed app from
 Windows installation goes through Microsoft Store; there is no `.exe` installer.
 macOS and Linux use the downloads shown for their platform.
 
-Keep the app installed throughout this guide. Its native **minddy** menu is the
-source-selection and recovery surface: macOS shows it in the global menu bar;
-Windows and Linux reveal the hidden menu bar when you press **Alt**. Later steps
-use **Connect to a Server…** to select either a local clone or a remote server.
+Keep the app installed throughout this guide. The app starts on minddy Cloud's
+sign-up; **Self-host minddy** under its sign-in and sign-up forms opens the
+app's self-hosting page, which works offline and offers three cards: install
+minddy on this computer, install it on a server (this guide), or use an
+existing installation, which groups an existing local clone and a server
+address on one screen. The same page opens from the native **minddy** menu
+(**Connect to a Server…**) and from **Account settings › Preferences › Desktop
+app › Connected server › Change…**. The menu stays the recovery surface when a
+server cannot load: macOS shows it in the global menu bar; Windows and Linux
+reveal the hidden menu bar when you press **Alt**.
 
 ## Supported topology
 
@@ -166,9 +172,30 @@ corepack prepare pnpm@10.28.0 --activate
 pnpm install --frozen-lockfile
 ```
 
-Open the native **minddy** menu, press **Alt** first on Windows or Linux, and
-choose **Connect to a Server… > Run local minddy on this computer**. Select the
-cloned folder. The desktop app invokes `self-host:local --no-open`, checks the
+The desktop app can do these steps itself: choose **Self-host minddy** under
+its sign-in form (or **Connect to a Server…**), then **Install on this
+computer**. It
+checks Git, Node.js 24, pnpm, Supabase CLI and a running Docker daemon and
+installs whatever is missing: Node.js (checksum-verified), pnpm and Supabase CLI
+in an app-owned `toolchain` folder under the app's user data, Git through
+Apple's command line tools dialog (macOS), portable MinGit (Windows) or the
+package manager (Linux), and Docker Desktop (signature-checked, macOS and
+Windows) or Docker Engine (Linux, one `pkexec` prompt; sign out and back in
+afterwards). It asks only for a folder (default `~/minddy`), clones the published
+release tag, runs `pnpm install --frozen-lockfile`, writes `ADMIN_EMAILS` to
+`.env.local`, runs `pnpm self-host:local -- --no-open --prepare-only` (minimal
+Supabase and the production build, without the startup deadline), then starts
+the instance as below. Its last step creates the instance's owner in the local
+Supabase (`owner@local.minddy.app`, administrator through `ADMIN_EMAILS`, named
+after the computer's account) with a generated password kept in the system
+keychain; from then on the app signs that account in by itself whenever the
+window shows this instance, so there is no email or password to type. A clone
+you prepared yourself keeps its own accounts and normal sign-in. A failed step
+shows its last output line; **Try again** resumes without downloading again.
+
+For a clone you prepared yourself, open the native **minddy** menu, press
+**Alt** first on Windows or Linux, and choose **Connect to a Server… > Use an
+existing installation > On this computer**. Select the cloned folder. The desktop app invokes `self-host:local --no-open`, checks the
 dedicated port, bootstraps the minimal Supabase stack, builds minddy when needed,
 waits for `/api/health`, and opens sign-up in its own window. It remembers the
 folder for later launches. Quitting minddy stops both the application and its
@@ -181,8 +208,8 @@ services stopped. If startup fails, use **Help > Copy Diagnostic Report** before
 falling back to a terminal.
 
 For troubleshooting only, `pnpm self-host:local` can run the same launcher in a
-terminal. Stop that process with `Ctrl+C` before returning to **Run local minddy
-on this computer**; the desktop app refuses to claim a server owned by another
+terminal. Stop that process with `Ctrl+C` before returning to **Use an existing
+installation › On this computer**; the desktop app refuses to claim a server owned by another
 process. `--keep-backend` deliberately leaves Supabase allocated and is not part
 of the normal desktop flow.
 
@@ -308,12 +335,14 @@ macOS, Windows, and Linux. It remains available even when the selected server
 cannot load. On macOS, open the global **minddy** menu. On Windows or Linux,
 press **Alt** to reveal the hidden menu bar, then open **minddy**.
 
-- Choose **Connect to a Server…**, enter the minddy application origin (for
-  example, `https://tickets.example.com` or `http://192.168.1.50`), and select
-  **Connect**. Public servers require HTTPS; HTTP is accepted only for localhost
-  and private-network IPv4 addresses.
-- Choose **Run local minddy on this computer** in that dialog only when the data
-  source is a local clone. Stop any terminal-owned `pnpm self-host:local` process
+- Choose **Connect to a Server… › Use an existing installation**, enter the
+  minddy application origin (for example, `https://tickets.example.com`) in
+  **Server address**, and select **Connect**. Servers require HTTPS; HTTP is
+  accepted only for localhost (`localhost`, `127.0.0.1`, `[::1]`). Expose a
+  server on a private network over HTTPS, for example through a reverse proxy
+  with a certificate.
+- Choose **On this computer** on that screen only when the data source is a
+  local clone. Stop any terminal-owned `pnpm self-host:local` process
   first, then select the clone's root folder; the app owns the local minddy and
   Supabase lifecycle from that point.
 - Choose **Use minddy Cloud** from the same **minddy** menu to remove the custom
@@ -321,7 +350,9 @@ press **Alt** to reveal the hidden menu bar, then open **minddy**.
 
 The selected source is stored on that computer. Cookies are not copied between
 Minddy Cloud and a self-hosted server, so the first switch can require signing
-in or creating an account on the selected instance.
+in or creating an account on the selected instance. An instance installed with
+**Install on this computer** is the exception: the app signs its local account
+in by itself.
 
 The update, backup, and restore entry points are safety gates for the operation
 runbook. They verify the inputs they can safely verify but never guess a Storage
@@ -494,8 +525,9 @@ For a new server installation, pass `--encryption enabled` (the default) or
 independent `MINDDY_DATA_ROOT_KEY` in the mode-0600 deployment environment.
 The same choice applies to both managed and full Supabase profiles.
 
-For the local desktop flow, prepare the configuration before opening the clone
-in the desktop app:
+The desktop app's built-in local installer (**Install on this computer**) keeps
+the default. For a clone you prepare yourself, record the choice before opening
+the clone in the desktop app:
 
 ```sh
 pnpm bootstrap:supabase -- --minimal --app-url http://localhost:6463 --encryption enabled

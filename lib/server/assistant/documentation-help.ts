@@ -15,7 +15,7 @@ const STEP_TITLES: Record<Exclude<SelfHostingHelpStep, "overview">, keyof Wizard
   "desktop-app": "desktopSetupTitle", route: "routeTitle", "encryption-choice": "encryptionReleaseTitle",
   "migration-choice": "migrateTitle", "migration-export": "exportTitle", "team-access": "accessTitle",
   "team-backend": "backendTitle", capacity: "capacityTeamTitle", method: "methodTitle", agent: "agentTitle",
-  "local-tools": "toolsTitle", "local-install": "manualLocalTitle", "team-prepare": "prepareTitle",
+  "local-app": "localAppTitle", "team-prepare": "prepareTitle",
   "team-release": "releaseTitle", "team-fetch": "fetchSupabaseTitle", "team-installer": "installerTitle",
   "team-email": "emailTitle", "local-verify": "verifyLocalTitle", "team-verify": "verifyTeamTitle",
   "team-open": "openTeamTitle", "migration-import": "importTitle", done: "doneTeamTitle",
@@ -37,7 +37,7 @@ Supported release: ${selfHostingRelease.tag}.
 Current public choices: ${JSON.stringify(selfHosting)}.
 Use this current step and these choices for the reader's next question, even if earlier messages refer to a different step.
 These choices describe the guide, not proof that commands have run or that any installation check passed.
-Local is the desktop-managed setup; team is a shared server. Private access requires a reachable LAN/VPN origin; public access requires HTTPS.
+Local is installed and run by the desktop app itself (Self-host minddy, then Install on this computer), with an account the app manages; team is a shared server. Private access requires a reachable LAN/VPN origin; public access requires HTTPS.
 Read the matching published installation guide with get_help before proposing steps. Do not ask for secrets or assume access to the reader's server.`;
   }
   return `You are Numo, the documentation assistant for minddy.

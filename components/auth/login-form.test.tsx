@@ -39,6 +39,8 @@ vi.mock("@/lib/use-analytics", () => ({ useAnalytics: () => ({ track: state.trac
 vi.mock("@/components/auth/auth-chrome", () => ({
   AuthColumn: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   AuthSeparator: () => null,
+  AUTH_SUBMIT_CLASS: "",
+  SubmitArrow: () => null,
   Field: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   OAuthButtons: ({ disabled, onSelect }: { disabled: boolean; onSelect: (provider: "google") => void }) =>
     <button type="button" data-oauth disabled={disabled} onClick={() => onSelect("google")}>Google</button>,
