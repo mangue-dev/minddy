@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { Spinner } from "@/components/ui/spinner";
+import { AuthLoading } from "@/components/auth/auth-chrome";
 import { SignupWizard } from "@/components/auth/signup-wizard";
 import { SignupClosed } from "@/components/auth/signup-closed";
 import { isPreviewEnv } from "@/lib/env";
@@ -31,7 +31,7 @@ export default async function SignupPage({
   const invite = token ? await resolveInvitationToken(token) : null;
 
   return (
-    <Suspense fallback={<Spinner className="size-6" />}>
+    <Suspense fallback={<AuthLoading />}>
       <SignupWizard invite={invite} />
     </Suspense>
   );

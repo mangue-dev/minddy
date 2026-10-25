@@ -24,7 +24,9 @@ to be checked back and forth rather than reread twice separately.
 | `src/main.ts` | window, navigation guard, `minddy://`, dock badge, IPC |
 | `src/channel-store.ts` | rewrites a retired preview channel in `userData/channel.json` to stable |
 | `src/server-store.ts` | the selected self-hosted origin (`userData/server.json`) |
-| `src/server-picker.ts` | the isolated server form and its validation bridge |
+| `src/server-choice.ts` | serves the bundled server-choice page (`minddy-app://welcome/`) and answers only it |
+| `src/local-installer.ts` | the built-in local installer: tool probes, clone, install, prepare, start |
+| `src/local-toolchain.ts` | installs missing tools: managed Node.js, pnpm, Supabase CLI, Git and Docker |
 | `src/local-runtime.ts` | the selected local clone and its owned Supabase + minddy process |
 | `src/preload.ts` | **entire** surface area exposed to the page (8 members) |
 | `src/menu.ts` | the application menu — it is mainly used to REMOVE ⌘W and ⌘R |
@@ -95,7 +97,7 @@ contact Supabase or authenticate a real account; the session regression tests
 exercise SDK refresh failures and API response cookies separately. The hang probe blocks a renderer and
 checks the native recovery prompt and local recovery document. Both probes remove
 their temporary profiles when they finish. The notification lifecycle probe runs
-the actual main process and server-picker preload against two local servers,
+the actual main process and the server-choice bridge against two local servers,
 using synthetic native banners. It checks delayed banner callbacks, replacement
 registrations, and server-switch routing without displaying OS notifications or
 contacting APNs/WNS.

@@ -13,6 +13,9 @@ interface ScriptEnv {
   /** Whether `prefers-color-scheme` resolves to dark in this fake OS. */
   osPrefersDark: boolean;
   localStorageThrows?: boolean;
+  /** The desktop preload's bridge, when the page runs in the app. */
+  desktopBridge?: { platform?: string };
+  navigatorPlatform?: string;
 }
 
 interface RunResult {
@@ -43,6 +46,8 @@ function run(scriptBody: string, env: ScriptEnv): RunResult {
   if (env.storedTheme !== null) storage.set("mangue-ui-theme", env.storedTheme);
 
   const sandbox: Record<string, unknown> = {
+    window: { minddy: env.desktopBridge },
+    navigator: { platform: env.navigatorPlatform ?? "MacIntel" },
     document: {
       documentElement: {
         classList: {
@@ -285,5 +290,38 @@ describe("buildThemeScript — inline script safety", () => {
     });
     expect(script).not.toMatch(/<|\u2028|\u2029/);
     expect(script).toContain('"nord-dark":"#272c36"');
+  });
+});
+
+describe("buildThemeScript — desktop app marking", () => {
+  it("marks the desktop app and its platform before the first paint", () => {
+    const result = run(buildThemeScript({ defaultTheme: "dark" }), {
+      storedTheme: null,
+      osPrefersDark: false,
+      desktopBridge: { platform: "darwin" },
+    });
+    expect(result.attributes["data-desktop-app"]).toBe("");
+    expect(result.attributes["data-desktop-platform"]).toBe("darwin");
+  });
+
+  it("falls back to the browser platform for older bridges and ignores unknown values", () => {
+    const older = run(buildThemeScript({ defaultTheme: "dark" }), {
+      storedTheme: null,
+      osPrefersDark: false,
+      desktopBridge: {},
+      navigatorPlatform: "Win32",
+    });
+    expect(older.attributes["data-desktop-platform"]).toBe("win32");
+    const odd = run(buildThemeScript({ defaultTheme: "dark" }), {
+      storedTheme: null,
+      osPrefersDark: false,
+      desktopBridge: { platform: '"><script>' },
+    });
+    expect(odd.attributes["data-desktop-platform"]).toBeUndefined();
+  });
+
+  it("leaves a browser page unmarked", () => {
+    const browser = run(buildThemeScript({ defaultTheme: "dark" }), { storedTheme: null, osPrefersDark: false });
+    expect(browser.attributes["data-desktop-app"]).toBeUndefined();
   });
 });

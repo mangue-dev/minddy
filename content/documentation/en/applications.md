@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
-  "sourceRevision": 15,
+  "revision": 16,
+  "sourceRevision": 16,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-25",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -61,14 +61,19 @@
       "lib/navigation-working-set.ts",
       "lib/query-storage-writes.test.ts",
       "lib/local-snapshot-security.test.ts",
-      "components/settings/account-settings-page.tsx"
+      "components/settings/account-settings-page.tsx",
+      "components/desktop/server-choice.tsx",
+      "components/desktop/server-choice-entry.tsx",
+      "lib/desktop/server-choice.ts",
+      "desktop/src/menu.ts",
+      "components/auth/auth-chrome.tsx"
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; 3 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 16,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; 3 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-781 desktop welcome window and server window: source review of lib/desktop/onboarding-copy.ts, lib/desktop/onboarding-page.ts, lib/desktop/onboarding-launch.ts, desktop/src/server-picker.ts, desktop/src/menu.ts and components/auth/auth-chrome.tsx; server picker paragraph rewritten; then the server choice moved from a separate window to a screen in the app window: wording, Cancel checked against components/desktop/server-choice.tsx, app/desktop/welcome/page.tsx, lib/desktop/server-choice.ts and desktop/src/main.ts; no desktop walkthrough; no screenshot recaptured); then the server choice bundled in the desktop app (offline, first screen), checked against components/desktop/server-choice-entry.tsx and desktop/src/server-choice.ts; then the self-hosted step regrouped into three cards and one existing-installation screen, checked against components/desktop/server-choice.tsx; then the first-launch welcome removed: the app starts on Cloud sign-up and Self-host minddy under the auth forms opens the self-hosting page, checked against desktop/src/main.ts, components/auth/auth-chrome.tsx and components/desktop/server-choice.tsx",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (en server window paragraph with onboarding window and catalog labels; self-reviewed; then window-to-screen wording, Cancel and Internet requirement with catalog labels; then the self-hosted step regrouped into three cards and one existing-installation screen, with catalog labels; then the first-launch welcome removed: the app starts on Cloud sign-up and Self-host minddy under the auth forms opens the self-hosting page, with catalog labels; agent review, not human acceptance)",
+    "date": "2026-10-25"
   },
   "related": [
     "issues"
@@ -93,7 +98,7 @@
       "src": "/documentation/en/web-and-mobile-workflow.png",
       "alt": "Mobile issue panel with localized title, description, properties and comment composer.",
       "caption": "On a narrow screen, issue details occupy a responsive panel. Use the close button to return to the project; Numo remains reachable through its floating button.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -110,7 +115,7 @@
       "src": "/documentation/en/install-the-pwa-workflow.png",
       "alt": "minddy’s illustrated Safari installation guide: Share, Add to Home Screen and confirm.",
       "caption": "The public guide illustrates the three Safari steps and keeping Open as Web App enabled. These are instructional illustrations rendered by minddy, not screenshots of a completed iOS installation.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -127,7 +132,7 @@
       "src": "/documentation/en/devices-and-notifications-workflow.png",
       "alt": "Push settings showing browser permission blocked and no registered device.",
       "caption": "This browser blocks notifications. Restore site permission before trying to register this device.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -144,7 +149,7 @@
       "src": "/documentation/en/devices-and-notifications-registered.png",
       "alt": "An active browser push device registered to the account, with its actual last-send date.",
       "caption": "The account has an active registered browser device. The list shows its registration and last-send dates. Browser permission and operating-system settings still determine whether a banner appears.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -161,7 +166,7 @@
       "src": "/documentation/en/desktop-renderer-recovery.png",
       "alt": "Local recovery page after a forced renderer crash, with Reload window and Check server settings controls.",
       "caption": "Recovery page in the macOS development app with an isolated profile and demonstration server. The native shell uses English labels in every language.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -217,7 +222,9 @@ Installation does not create an offline project copy. minddy's service worker ha
 
 Use the public download page. Choose Apple silicon or Intel on macOS; install through Microsoft Store on Windows; choose an AppImage or signed `deb`/`rpm` matching x64 or ARM64 on Linux. Follow the platform guide and verification instructions for the package. Windows does not provide an `exe` installer.
 
-At the server picker, choose minddy Cloud, a self-hosted server origin or the available local runtime. Check the destination before signing in: accounts belong to their instance. OAuth uses the system browser and returns to desktop.
+On the first launch, the app opens the minddy Cloud sign-up screen, where you create your account. To use your own instance instead, click **Self-host minddy** at the bottom of the sign-in and sign-up screens. It opens **Self-host minddy**, with three choices: **Install on this computer** sets up a [local instance](/docs/install-locally#install-locally), **Install on a server** opens the public server installation guide in your browser, and **Use an existing installation** opens a screen that groups the installations you already have. There, **On this computer** opens a minddy folder already on this computer and the app starts it; below it, **Server address** with **Connect** joins a server you run. Remote servers require HTTPS; `localhost` can use HTTP.
+
+To change server later, choose **Connect to a Server…** in the native minddy menu (press Alt on Windows and Linux to show the menu bar), **Change…** next to **Connected server** in **Account settings** → **Preferences** → **Desktop app**, or **Self-host minddy** at the bottom of the sign-in and sign-up screens. Each brings the app window to **Self-host minddy**; when a self-hosted server is connected, **Use minddy Cloud** in **Use an existing installation** returns to Cloud. The path at the top of the page leads back to each step, and the minddy logo returns to the app. This screen is built into the desktop app and opens without an Internet connection. Check the destination before signing in: accounts belong to their instance. OAuth uses the system browser and returns to desktop.
 
 ### Tabs, closing and updates {#desktop-app-operation}
 

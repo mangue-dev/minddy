@@ -1,7 +1,8 @@
 import { contextBridge, ipcRenderer } from "electron";
 
 import type { DesktopAuthLink } from "@/lib/desktop/auth-link";
-import type { DesktopBridge } from "@/lib/desktop/bridge";
+import type { DesktopBridge, DesktopServerChoiceBridge } from "@/lib/desktop/bridge";
+import type { LocalInstallProgress } from "@/lib/desktop/local-installer";
 import { notificationCapabilitiesForPlatform } from "@/lib/desktop/notification-capabilities";
 import type { DesktopUpdateStatus } from "@/lib/desktop/update-status";
 
@@ -93,6 +94,54 @@ const bridge: DesktopBridge = {
 
   openServerPicker() {
     ipcRenderer.send("minddy:server-picker:open");
+  },
+
+  localSession() {
+    return ipcRenderer.invoke("minddy:local-account:session") as ReturnType<NonNullable<DesktopBridge["localSession"]>>;
+  },
+
+  serverChoice: {
+    state() {
+      return ipcRenderer.invoke("minddy:server-choice:state") as ReturnType<DesktopServerChoiceBridge["state"]>;
+    },
+    useCloud() {
+      return ipcRenderer.invoke("minddy:server-choice:cloud") as Promise<void>;
+    },
+    connect(origin: string) {
+      return ipcRenderer.invoke("minddy:server-choice:connect", origin) as ReturnType<DesktopServerChoiceBridge["connect"]>;
+    },
+    useExistingInstallation() {
+      return ipcRenderer.invoke("minddy:server-choice:existing") as ReturnType<
+        DesktopServerChoiceBridge["useExistingInstallation"]
+      >;
+    },
+    prerequisites() {
+      return ipcRenderer.invoke("minddy:server-choice:prerequisites") as ReturnType<DesktopServerChoiceBridge["prerequisites"]>;
+    },
+    chooseInstallFolder() {
+      return ipcRenderer.invoke("minddy:server-choice:choose-folder") as ReturnType<
+        DesktopServerChoiceBridge["chooseInstallFolder"]
+      >;
+    },
+    install() {
+      return ipcRenderer.invoke("minddy:server-choice:install") as ReturnType<DesktopServerChoiceBridge["install"]>;
+    },
+    cancelInstall() {
+      ipcRenderer.send("minddy:server-choice:cancel-install");
+    },
+    onInstallProgress(handler) {
+      const listener = (_event: unknown, progress: LocalInstallProgress) => handler(progress);
+      ipcRenderer.on("minddy:server-choice:progress", listener);
+      return () => {
+        ipcRenderer.removeListener("minddy:server-choice:progress", listener);
+      };
+    },
+    openToolDownload(tool) {
+      ipcRenderer.send("minddy:server-choice:tool-download", tool);
+    },
+    close() {
+      ipcRenderer.send("minddy:server-choice:close");
+    },
   },
 
   checkForUpdates() {

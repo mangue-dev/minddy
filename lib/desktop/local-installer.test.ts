@@ -1,0 +1,103 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  LOCAL_PREREQUISITES,
+  cloneArguments,
+  cloneNeeded,
+  evaluatePrerequisite,
+  folderAcceptable,
+  installerCommand,
+  lastOutputLine,
+  loginShellPathProbe,
+  nodeVersionSupported,
+  prerequisitesReady,
+  withAdminEmail,
+} from "./local-installer";
+
+describe("local installer prerequisites", () => {
+  it("accepts Node.js 24.22.1 and later 24.x only", () => {
+    expect(nodeVersionSupported("24.22.1")).toBe(true);
+    expect(nodeVersionSupported("24.30.0")).toBe(true);
+    expect(nodeVersionSupported("24.22.0")).toBe(false);
+    expect(nodeVersionSupported("22.12.0")).toBe(false);
+    expect(nodeVersionSupported("25.0.0")).toBe(false);
+  });
+
+  it("tells a missing tool, an old Node.js and a stopped Docker daemon apart", () => {
+    expect(evaluatePrerequisite("git", { ok: false, stdout: "" })).toEqual({ id: "git", state: "missing" });
+    expect(evaluatePrerequisite("node", { ok: true, stdout: "v22.12.0\n" })).toEqual({
+      id: "node",
+      state: "outdated",
+      version: "22.12.0",
+    });
+    expect(evaluatePrerequisite("node", { ok: true, stdout: "v24.22.1" }).state).toBe("ready");
+    expect(
+      evaluatePrerequisite("docker", { ok: true, stdout: "Docker version 28.1.1, build 4eba377" }, { ok: false, stdout: "" }),
+    ).toEqual({ id: "docker", state: "stopped", version: "28.1.1" });
+    expect(evaluatePrerequisite("docker", { ok: true, stdout: "Docker version 28.1.1" }, { ok: true, stdout: "28.1.1" }).state).toBe("ready");
+  });
+
+  it("is ready only when every tool answered and is ready", () => {
+    const ready = LOCAL_PREREQUISITES.map((id) => ({ id, state: "ready" as const }));
+    expect(prerequisitesReady(ready)).toBe(true);
+    expect(prerequisitesReady(ready.slice(1))).toBe(false);
+    expect(prerequisitesReady([...ready.slice(1), { id: "git", state: "missing" }])).toBe(false);
+  });
+});
+
+describe("local installer steps", () => {
+  it("clones into an absent or empty folder, resumes a clone, and never writes into other files", () => {
+    expect(cloneNeeded("absent")).toBe(true);
+    expect(cloneNeeded("empty")).toBe(true);
+    expect(cloneNeeded("minddy")).toBe(false);
+    expect(folderAcceptable("minddy")).toBe(true);
+    expect(folderAcceptable("occupied")).toBe(false);
+  });
+
+  it("clones the pinned release tag shallowly", () => {
+    expect(cloneArguments("v0.20.1", "/Users/someone/minddy")).toEqual([
+      "git",
+      "clone",
+      "--depth",
+      "1",
+      "--branch",
+      "v0.20.1",
+      "--config",
+      "advice.detachedHead=false",
+      "https://github.com/mangue-dev/minddy.git",
+      "/Users/someone/minddy",
+    ]);
+  });
+
+  it("records the instance's administrator once", () => {
+    expect(withAdminEmail("", "owner@local.minddy.app")).toBe("ADMIN_EMAILS=owner@local.minddy.app\n");
+    expect(withAdminEmail("A=1\nADMIN_EMAILS=old@example.com\nB=2\n", " owner@local.minddy.app ")).toBe(
+      "A=1\nADMIN_EMAILS=owner@local.minddy.app\nB=2\n",
+    );
+  });
+});
+
+describe("local installer processes", () => {
+  it("asks the login shell for PATH on macOS and Linux only", () => {
+    expect(loginShellPathProbe("darwin")).toEqual({ command: "/bin/zsh", args: ["-lc", 'printf "%s" "$PATH"'] });
+    expect(loginShellPathProbe("linux", "/usr/bin/fish")?.command).toBe("/usr/bin/fish");
+    expect(loginShellPathProbe("win32")).toBeNull();
+  });
+
+  it("runs tools directly on POSIX and quotes them for cmd.exe on Windows", () => {
+    expect(installerCommand("darwin", ["git", "clone", "/Users/some one/minddy"])).toEqual({
+      command: "git",
+      args: ["clone", "/Users/some one/minddy"],
+    });
+    const windows = installerCommand("win32", ["git", "clone", "C:\\Users\\some one\\minddy"]);
+    expect(windows.command).toBe("cmd.exe");
+    expect(windows.windowsVerbatimArguments).toBe(true);
+    expect(windows.args.at(-1)).toBe('"git clone "C:\\Users\\some one\\minddy""');
+  });
+
+  it("keeps the last readable output line, without colours and bounded", () => {
+    expect(lastOutputLine("first\n\u001b[32mProgress: resolved 10\u001b[39m\n\n")).toBe("Progress: resolved 10");
+    expect(lastOutputLine("\n  \n")).toBeUndefined();
+    expect(lastOutputLine("x".repeat(400), 20)).toHaveLength(20);
+  });
+});

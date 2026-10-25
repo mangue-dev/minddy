@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { Spinner } from "@/components/ui/spinner";
+import { AuthLoading } from "@/components/auth/auth-chrome";
 import { LoginForm } from "@/components/auth/login-form";
 import { resolveInvitationToken } from "@/lib/server/invitation-token";
 import { preserveAuthParams } from "@/lib/signup-wizard";
@@ -36,7 +36,7 @@ export default async function LoginPage({
   const invite = token ? await resolveInvitationToken(token) : null;
 
   return (
-    <Suspense fallback={<Spinner className="size-6" />}>
+    <Suspense fallback={<AuthLoading />}>
       <LoginForm invite={invite} />
     </Suspense>
   );

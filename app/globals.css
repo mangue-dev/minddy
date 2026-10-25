@@ -87,6 +87,65 @@
    and become a web zone again; otherwise a hover of the top-left corner cannot
    never recall navigation. Once opened, it goes back under the panel
    itself and does not block any controls. */
+/* The auth screens' brand clears the macOS window buttons (MIN-781): top
+   left, centred on the buttons' row (trafficLightPosition 15,15; the group of
+   three 14px buttons spans about 15-75px across and is centred at 22px down)
+   with the breathing room of a toolbar item after them, at 96px. The column's
+   32px padding is the reference. Read from the attribute
+   the pre-paint script sets, so it is placed once. The desktop app's bundled
+   self-hosting page (`components/desktop/server-choice.css`) repeats this
+   rule, so the mark stays put between the two. */
+html[data-desktop-platform="darwin"] .auth-logo-row {
+  margin-top: -24px;
+  padding-left: 64px;
+}
+
+/* The auth screens' first appearance (MIN-781): the form's blocks (heading,
+   providers, separator, fields, button, footer link) arrive one after the
+   other, and the showcase pane eases in from the side behind them. The
+   landing's curve; `backwards` only, so nothing keeps a filter afterwards
+   (see `.reveal`). Stopped by `prefers-reduced-motion`. */
+@keyframes auth-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes auth-pane-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px) scale(0.985);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.auth-stagger > * > * {
+  animation: auth-rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+.auth-stagger > * > :nth-child(2) { animation-delay: 0.06s; }
+.auth-stagger > * > :nth-child(3) { animation-delay: 0.12s; }
+.auth-stagger > * > :nth-child(4) { animation-delay: 0.18s; }
+.auth-stagger > * > :nth-child(5) { animation-delay: 0.24s; }
+.auth-stagger > * > :nth-child(6) { animation-delay: 0.3s; }
+.auth-stagger > * > :nth-child(n + 7) { animation-delay: 0.36s; }
+.auth-showcase-enter {
+  animation: auth-pane-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.1s backwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-stagger > * > *,
+  .auth-showcase-enter {
+    animation: none;
+  }
+}
+
 html[data-desktop-app] .sidebar-nav-hotzone {
   -webkit-app-region: no-drag;
 }

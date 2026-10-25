@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { AuthProvider } from "@/lib/auth-context";
 import { DesktopAuthBridge } from "@/components/desktop-auth-bridge";
+import { DesktopLocalSignIn } from "@/components/auth/desktop-local-sign-in";
 import { PreviewEnvBanner } from "@/components/preview-env-banner";
 
 /**
@@ -23,6 +24,9 @@ import { PreviewEnvBanner } from "@/components/preview-env-banner";
  * background must be able to remain stationary behind a vertically centered form
  * whose height changes at each step — without hiding it, and without having to
  * mesurer.
+ *
+ * The wide-screen showcase (MIN-781) honours this: it is a separate pane BESIDE
+ * the column, never behind it, and the column keeps the plain background.
  */
 /** Screens that carry their own full-height column (`AuthColumn`). */
 const FULL_BLEED_ROUTES = new Set([
@@ -32,7 +36,14 @@ const FULL_BLEED_ROUTES = new Set([
   "/reset-password",
 ]);
 
-export function AuthShell({ children }: { children: React.ReactNode }) {
+export function AuthShell({
+  children,
+  showcase,
+}: {
+  children: React.ReactNode;
+  /** The wide-screen pane beside the form (MIN-781), full-bleed screens only. */
+  showcase: React.ReactNode;
+}) {
   const pathname = usePathname();
   // Login, Registration and the two Forgotten Password screens (MIN-297)
   // place their column themselves: the mark at the top left of the WINDOW, the
@@ -45,6 +56,8 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
       {/* Return of the system browser, in the desktop app (MIN-291). Born
  renders nothing outside the app, and nothing until a link arrives. */}
       <DesktopAuthBridge />
+      {/* The desktop app's own local instance needs no sign-in (MIN-781). */}
+      {(pathname === "/login" || pathname === "/signup") && <DesktopLocalSignIn />}
       {/* The window moving strip no longer lives here: it is in
  the root layout, therefore on ALL screens (MIN-292). These screens
  were just one of five that were missing. */}
@@ -53,7 +66,10 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
       <div className="auth-shell flex min-h-[100dvh] flex-col bg-background">
         <PreviewEnvBanner />
         {fullBleed ? (
-          children
+          <div className="flex flex-1">
+            <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+            {showcase}
+          </div>
         ) : (
           <div className="flex flex-1 items-center justify-center p-6">
             {children}

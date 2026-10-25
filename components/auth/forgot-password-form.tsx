@@ -12,6 +12,8 @@ import {
   Field,
   MailGlyph,
   useInDesktopApp,
+  AUTH_SUBMIT_CLASS,
+  SubmitArrow,
 } from "@/components/auth/auth-chrome";
 import { useAuth } from "@/lib/auth-context";
 import { isValidEmail, preserveAuthParams } from "@/lib/signup-wizard";
@@ -133,10 +135,11 @@ export function ForgotPasswordForm() {
           <Button
             type="submit"
             disabled={loading}
-            className="h-10 w-full justify-center gap-2"
+            className={AUTH_SUBMIT_CLASS}
           >
             {loading && <Spinner />}
             {t("forgotSubmit")}
+            {!loading && <SubmitArrow />}
           </Button>
         </form>
 

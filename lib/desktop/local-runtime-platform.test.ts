@@ -36,6 +36,18 @@ describe("localRuntimeProcessSpec", () => {
     });
     expect(localRuntimeProcessSpec("linux", "/usr/bin/fish").command).toBe("/usr/bin/fish");
   });
+
+  it("puts the installer's managed tools first, after the login profile ran", () => {
+    expect(
+      localRuntimeProcessSpec("darwin", undefined, ["/Users/c/Library/Application Support/minddy/toolchain/node/bin"]).args,
+    ).toEqual([
+      "-lc",
+      `export PATH='/Users/c/Library/Application Support/minddy/toolchain/node/bin':"$PATH"; exec pnpm self-host:local -- --no-open`,
+    ]);
+    expect(localRuntimeProcessSpec("win32", undefined, ["C:\\t\\node", "C:\\t\\pnpm"]).pathPrefix).toBe(
+      "C:\\t\\node;C:\\t\\pnpm",
+    );
+  });
 });
 
 describe("localRuntimeStopSpec", () => {

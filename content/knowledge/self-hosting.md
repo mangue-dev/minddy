@@ -65,8 +65,9 @@ corepack prepare pnpm@10.28.0 --activate
 pnpm install --frozen-lockfile
 ```
 
-Open **minddy > Connect to a Server… > Run local minddy on this computer** and
-select the clone. On Windows or Linux, press **Alt** first. The app invokes the
+Open **minddy > Connect to a Server… > Use an existing installation > On this
+computer** and select the clone (or choose **Install on this computer** to let the app
+install it). On Windows or Linux, press **Alt** first. The app invokes the
 local launcher with browser navigation disabled, starts the minimal Supabase
 stack, applies migrations and Storage configuration, builds minddy when needed,
 waits for health, and opens sign-up in its own window. It owns shutdown and later

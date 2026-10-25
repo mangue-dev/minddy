@@ -65,6 +65,9 @@ import { createWindowStallRecovery } from "@/lib/desktop/window-stall-recovery";
 import { loadLocalRecoveryDocument } from "@/lib/desktop/local-recovery-load";
 import { loadDesktopWindow } from "@/lib/desktop/window-load";
 import { createLocalStartupSelection } from "@/lib/desktop/local-startup-selection";
+import { installMessage, type InstallMessage } from "@/lib/desktop/local-installer";
+import { mayReceiveLocalSession } from "@/lib/desktop/local-account";
+import { isServerChoiceDocument, serverChoiceUrl } from "@/lib/desktop/server-choice";
 import { routeDisposition } from "@/lib/desktop/window-routes";
 import { parseWnsHelperChannel } from "@/lib/desktop/wns";
 import { parseWindowsStoreUpdateProbe } from "@/lib/desktop/windows-store-update";
@@ -95,7 +98,16 @@ import {
   localSkill,
 } from "./local-repo";
 import { buildAppMenu } from "./menu";
-import { openServerPicker } from "./server-picker";
+import { registerServerChoiceIpc, registerServerChoiceScheme, serveServerChoicePage } from "./server-choice";
+import { localAccountSession } from "./local-account";
+import {
+  LOCAL_INSTALL_RELEASE,
+  cancelLocalInstall,
+  checkLocalPrerequisites,
+  chooseInstallFolder,
+  installFolder,
+  runLocalInstall,
+} from "./local-installer";
 import {
   LOCAL_SELF_HOST_ORIGIN,
   readLocalRuntimeRoot,
@@ -302,21 +314,56 @@ function rebuildAppMenu(): void {
   buildAppMenu(mainWindow, {
     origin,
     isCustom: customServerOrigin !== null,
-    choose: openCurrentServerPicker,
+    // Wrapped: a menu click passes the menu item as first argument.
+    choose: () => showServerChoice(),
     useCloud: useMinddyCloud,
   });
 }
 
-/** Opens the same custom-server and local-runtime flow from every desktop platform. */
-function openCurrentServerPicker(): void {
+/**
+ * Shows the self-hosting choice in the main window: the app's own page at
+ * `minddy-app://welcome/`, bundled with the app so it works offline. Opened
+ * from **Self-host minddy** under the auth forms, the menu and Settings; the
+ * app itself starts on minddy Cloud. The main process only answers the page's
+ * bridge calls (`server-choice.ts`).
+ */
+function showServerChoice(): void {
   if (!mainWindow) return;
-  openServerPicker({
-    parent: mainWindow,
-    currentOrigin: origin,
-    isCustomServer: customServerOrigin !== null,
-    onSave: setCustomServer,
-    onUseLocal: useLocalMinddy,
-    onUseCloud: useMinddyCloud,
+  loadDesktopWindow(mainWindow, serverChoiceUrl(origin));
+  revealWindow(mainWindow);
+}
+
+function registerServerChoice(): void {
+  registerServerChoiceIpc({
+    contents: () => (mainWindow && !mainWindow.isDestroyed() ? mainWindow.webContents : null),
+    state: () => ({
+      origin,
+      cloudOrigin: DESKTOP_ORIGIN,
+      isCustomServer: customServerOrigin !== null,
+      installFolder: installFolder(),
+      release: LOCAL_INSTALL_RELEASE,
+    }),
+    useCloud: useMinddyCloud,
+    connect: setCustomServer,
+    useExistingInstallation: useLocalMinddy,
+    prerequisites: checkLocalPrerequisites,
+    chooseInstallFolder: () => (mainWindow ? chooseInstallFolder(mainWindow) : Promise.resolve({})),
+    install: async (report) => {
+      const result = await runLocalInstall(report);
+      if (!result.root) return { error: result.error };
+      writeLocalRuntimeRoot(result.root);
+      writeDesktopServerOrigin(LOCAL_SELF_HOST_ORIGIN);
+      // The app signs its own account in on the way (`minddy:local-account:session`).
+      applyServerOrigin(LOCAL_SELF_HOST_ORIGIN);
+      return {};
+    },
+    cancelInstall: cancelLocalInstall,
+    openExternal: (url) => void openDesktopExternal(url),
+    close: () => {
+      if (!mainWindow) return;
+      cancelLocalInstall();
+      loadDesktopWindow(mainWindow, `${origin}${DESKTOP_ENTRY_PATH}`);
+    },
   });
 }
 
@@ -328,29 +375,38 @@ function showLocalRuntimeStatus(message: string): void {
 
 const useLocalMinddy = createLocalStartupSelection(selectLocalMinddy);
 
-async function selectLocalMinddy(): Promise<{ error?: string }> {
-  if (!mainWindow) return { error: "The main window is unavailable." };
+async function selectLocalMinddy(): Promise<{ error?: InstallMessage }> {
+  if (!mainWindow) return { error: installMessage("localStartFailed") };
   let generation = localRuntimeGeneration;
+  const selection = await dialog.showOpenDialog(mainWindow, {
+    properties: ["openDirectory"],
+  });
+  if (selection.canceled || !selection.filePaths[0]) return { error: installMessage("folderRequired") };
+  if (generation !== localRuntimeGeneration || quitting) return { error: installMessage("installCanceled") };
+  let root: string;
   try {
-    const selection = await dialog.showOpenDialog(mainWindow, {
-      title: "Choose the minddy folder",
-      properties: ["openDirectory"],
-      buttonLabel: "Use this folder",
-    });
-    if (selection.canceled || !selection.filePaths[0]) return { error: "Choose the minddy folder to continue." };
-    if (generation !== localRuntimeGeneration || quitting) return { error: "Local startup was canceled." };
-    const root = validateLocalRuntimeRoot(selection.filePaths[0]);
-    generation = ++localRuntimeGeneration;
-    showLocalRuntimeStatus("Starting Supabase and the app. The first start can take several minutes.");
-    await startLocalRuntime(root);
-    if (generation !== localRuntimeGeneration || quitting) return { error: "Local startup was canceled." };
-    writeLocalRuntimeRoot(root);
-    writeDesktopServerOrigin(LOCAL_SELF_HOST_ORIGIN);
-    applyServerOrigin(LOCAL_SELF_HOST_ORIGIN, "/signup");
-    return {};
-  } catch (error) {
-    return { error: error instanceof Error ? error.message : "Could not start local minddy." };
+    root = validateLocalRuntimeRoot(selection.filePaths[0]);
+  } catch {
+    return { error: installMessage("folderInvalid") };
   }
+  generation = ++localRuntimeGeneration;
+  // From here the window shows the startup status, not the server choice:
+  // a failure comes back as a dialog, then the choice again.
+  showLocalRuntimeStatus("Starting Supabase and the app. The first start can take several minutes.");
+  try {
+    await startLocalRuntime(root);
+  } catch (error) {
+    if (generation !== localRuntimeGeneration || quitting) return { error: installMessage("installCanceled") };
+    const detail = error instanceof Error ? error.message : String(error);
+    dialog.showErrorBox("Local minddy could not start", detail);
+    showServerChoice();
+    return { error: { text: detail } };
+  }
+  if (generation !== localRuntimeGeneration || quitting) return { error: installMessage("installCanceled") };
+  writeLocalRuntimeRoot(root);
+  writeDesktopServerOrigin(LOCAL_SELF_HOST_ORIGIN);
+  applyServerOrigin(LOCAL_SELF_HOST_ORIGIN, "/signup");
+  return {};
 }
 
 function applyServerOrigin(next: string | null, entryPath = DESKTOP_ENTRY_PATH): void {
@@ -739,6 +795,11 @@ function createWindow(
     }
   });
   window.webContents.on("did-stop-loading", () => stallRecovery.loadingStopped());
+  // Leaving the server choice abandons an installation in progress; its
+  // success navigates away only once nothing is left to cancel.
+  window.webContents.on("did-navigate", (_event, url) => {
+    if (!isServerChoiceDocument(url)) cancelLocalInstall();
+  });
   window.on("unresponsive", () => stallRecovery.unresponsive());
   window.on("responsive", () => stallRecovery.responsive());
   window.on("closed", () => stallRecovery.stop());
@@ -953,7 +1014,26 @@ function registerIpc(): void {
   ipcMain.on("minddy:auth-link-ready", (event) => authLinkDelivery.ready(event.sender.id));
   ipcMain.on("minddy:auth-link-not-ready", (event) => authLinkDelivery.notReady(event.sender.id));
 
-  ipcMain.on("minddy:server-picker:open", () => openCurrentServerPicker());
+  ipcMain.on("minddy:server-picker:open", (event) => {
+    // A shell recovery document or the app's own pages; never a second window.
+    if (mainWindow && event.sender === mainWindow.webContents) showServerChoice();
+  });
+  registerServerChoice();
+
+  // The session of the account the app manages on the local instance it
+  // installed (MIN-781). Only that instance's top document, while it is the
+  // selected server, receives it; the password never leaves this process.
+  ipcMain.handle("minddy:local-account:session", (event) => {
+    if (
+      !mainWindow ||
+      event.sender !== mainWindow.webContents ||
+      event.senderFrame !== mainWindow.webContents.mainFrame ||
+      !mayReceiveLocalSession(event.senderFrame.url, LOCAL_SELF_HOST_ORIGIN, customServerOrigin)
+    ) {
+      return null;
+    }
+    return localAccountSession(readLocalRuntimeRoot());
+  });
 
   ipcMain.handle("minddy:update:check", () => checkForUpdatesManually());
 
@@ -1390,6 +1470,9 @@ function revealWindow(window: BrowserWindow, focus = true): void {
 
 // Single instance: the deep link must reach the app ALREADY opened, not in
 // launch a second which would have neither its session nor its window.
+// The bundled server-choice page's origin (MIN-781); must precede `ready`.
+registerServerChoiceScheme();
+
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
@@ -1465,6 +1548,7 @@ if (!app.requestSingleInstanceLock()) {
 
     applyAboutPanel();
     hardenSession();
+    serveServerChoicePage();
     registerIpc();
     const localSelected = customServerOrigin === LOCAL_SELF_HOST_ORIGIN;
     const localRoot = localSelected ? readLocalRuntimeRoot() : null;
@@ -1481,20 +1565,20 @@ if (!app.requestSingleInstanceLock()) {
       showLocalRuntimeStatus("Starting Supabase and the app. The first start can take several minutes.");
       void useLocalMinddy.run(() => startLocalRuntime(localRoot)
         .then(async () => {
-          if (generation !== localRuntimeGeneration || quitting) return { error: "Local startup was canceled." };
+          if (generation !== localRuntimeGeneration || quitting) return { error: installMessage("installCanceled") };
           await mainWindow?.loadURL(`${LOCAL_SELF_HOST_ORIGIN}${DESKTOP_ENTRY_PATH}`);
           return {};
         })
-        .catch((error) => {
-          if (!mainWindow || generation !== localRuntimeGeneration || quitting || error?.name === "AbortError") return { error: "Local startup was canceled." };
-          dialog.showErrorBox("Local minddy could not start", error instanceof Error ? error.message : String(error));
+        .catch((error): { error?: InstallMessage } => {
+          if (!mainWindow || generation !== localRuntimeGeneration || quitting || error?.name === "AbortError") return { error: installMessage("installCanceled") };
+          const detail = error instanceof Error ? error.message : String(error);
+          dialog.showErrorBox("Local minddy could not start", detail);
           rebuildAppMenu();
-          openCurrentServerPicker();
-          return { error: error instanceof Error ? error.message : "Could not start local minddy." };
+          showServerChoice();
+          return { error: { text: detail } };
         }));
     } else if (localSelected) {
-      showLocalRuntimeStatus("Choose the installed minddy folder to start the local instance.");
-      openCurrentServerPicker();
+      showServerChoice();
     }
     // When the app is running, macOS puts the load back on the process instead of displaying
     // the banner itself. We make it native here; when the app is exited,

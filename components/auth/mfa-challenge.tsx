@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { AUTH_SUBMIT_CLASS, SubmitArrow } from "@/components/auth/auth-chrome";
 import { useAuth } from "@/lib/auth-context";
 import { RECOVERY_CODE_LENGTH, mfaVerifyErrorKey } from "@/lib/mfa";
 import { OtpInput } from "@/components/otp-input";
@@ -132,10 +133,11 @@ export function MfaChallenge({
           <Button
             type="submit"
             disabled={busy || code.length !== 6 || !factorId}
-            className="h-10 w-full justify-center gap-2"
+            className={AUTH_SUBMIT_CLASS}
           >
             {busy && <Spinner />}
             {t("mfaVerify")}
+            {!busy && <SubmitArrow />}
           </Button>
         </form>
       ) : (
@@ -162,7 +164,7 @@ export function MfaChallenge({
             type="submit"
             variant="destructive"
             disabled={busy || recoveryCode.trim().length < RECOVERY_CODE_LENGTH}
-            className="h-10 w-full justify-center gap-2"
+            className={AUTH_SUBMIT_CLASS}
           >
             {busy && <Spinner />}
             {t("mfaRecoverySubmit")}

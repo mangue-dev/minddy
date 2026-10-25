@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { Spinner } from "@/components/ui/spinner";
+import { AuthLoading } from "@/components/auth/auth-chrome";
 import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
 
 /**
@@ -10,7 +10,7 @@ import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
  */
 export default function ForgotPasswordPage() {
   return (
-    <Suspense fallback={<Spinner className="size-6" />}>
+    <Suspense fallback={<AuthLoading />}>
       <ForgotPasswordForm />
     </Suspense>
   );

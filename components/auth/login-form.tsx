@@ -19,6 +19,8 @@ import {
   OAuthButtons,
   useInDesktopApp,
   type OAuthProvider,
+  AUTH_SUBMIT_CLASS,
+  SubmitArrow,
 } from "@/components/auth/auth-chrome";
 import { useAuth } from "@/lib/auth-context";
 import { sanitizeInternalRedirectPath } from "@/lib/auth-redirect";
@@ -305,10 +307,11 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
             <Button
               type="submit"
               disabled={busy}
-              className="h-10 w-full justify-center gap-2"
+              className={AUTH_SUBMIT_CLASS}
             >
               {loading && <Spinner />}
               {t("signIn")}
+              {!loading && <SubmitArrow />}
             </Button>
           </form>
 
