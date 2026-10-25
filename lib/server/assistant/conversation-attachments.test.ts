@@ -3,6 +3,7 @@ import type { ToolContext } from "./execute-tool";
 import { executeTool } from "./execute-tool";
 import { EncryptedStore } from "@/lib/server/encryption/store";
 import { encodeNumoUserMessage } from "@/lib/server/numo/user-message-content";
+import { encodeNumoToolMessage } from "@/lib/server/numo/tool-content";
 import { encodeAttachmentValue } from "@/lib/server/attachment-content";
 import { attachmentOffset, copyConversationAttachment, listConversationAttachments,
   readConversationAttachment, resolveConversationAttachment,
@@ -12,7 +13,7 @@ import { processChat, type ChatMessage } from "./loop";
 import { serializeToolResult, getToolResultCharLimit } from "./tool-result-serialization";
 
 const h = vi.hoisted(() => ({ access: vi.fn(), download: vi.fn(), upload: vi.fn(),
-  insert: vi.fn(), remove: vi.fn(), quota: vi.fn(), signed: vi.fn(), chat: vi.fn() }));
+  insert: vi.fn(), remove: vi.fn(), quota: vi.fn(), signed: vi.fn(), chat: vi.fn(), rpc: vi.fn() }));
 vi.mock("@/lib/server/project-access", async (original) => ({
   ...await original<typeof import("@/lib/server/project-access")>(), getProjectAccess: h.access,
 }));
@@ -50,7 +51,7 @@ let databaseError: { message: string } | null;
 let ranges: number[];
 let persisted: Row[];
 function database() {
-  return { from(table: string) {
+  return { rpc: h.rpc, from(table: string) {
     const filters: Array<(row: Row) => boolean> = [];
     let start = 0, end = Infinity;
     const rows = () => (tables[table] ?? []).filter((row) => filters.every((f) => f(row))).slice(start, end);
@@ -90,6 +91,7 @@ beforeEach(() => {
   h.signed.mockResolvedValue("https://signed.test/image");
   h.insert.mockResolvedValue([{ id: "resource", file_name: "notes.txt", mime_type: "text/plain", size_bytes: 5 }]);
   h.upload.mockResolvedValue(undefined); h.remove.mockResolvedValue(undefined);
+  h.rpc.mockResolvedValue({ data: true, error: null });
   tables = { conversations: [{ id: "current", user_id: USER }], assistant_messages: [message()],
     issues: [{ id: ISSUE, project_id: PROJECT }], objectives: [{ id: OBJECTIVE, project_id: PROJECT }],
     comments: [{ id: "comment", issue_id: ISSUE, objective_id: null, author_id: USER }] };
@@ -114,7 +116,8 @@ describe("conversation file references", () => {
     tables.assistant_messages = Array.from({ length: 201 }, (_, i) => message(
       `33333333-3333-4333-8333-${String(i).padStart(12, "0")}`));
     const result = await listConversationAttachments(ctx(), 190);
-    expect(ranges).toEqual([0, 200]);
+    // Two pages of user messages, then one page of Numo's create_file results.
+    expect(ranges).toEqual([0, 200, 0]);
     expect(result).toMatchObject({ total: 201, next_offset: null });
     expect(result.attachments).toHaveLength(11);
     const first = await listConversationAttachments(ctx());
@@ -315,5 +318,85 @@ describe("images in editor documents (view_image, MIN-728)", () => {
     const execution = await executeTool("view_image", { src: "https://images.example.com/a.png" }, ctx());
     expect(execution.result).toMatchObject({ kind: "external", url: "https://images.example.com/a.png" });
     expect(h.download).not.toHaveBeenCalled();
+  });
+});
+
+describe("files Numo writes (create_file, MIN-793)", () => {
+  /** Stores a create_file execution the way the loop does, protected or not. */
+  async function persist(execution: { result: unknown; modelResult?: unknown }, protect = true) {
+    const id = "66666666-6666-4666-8666-666666666666";
+    const payload = { role: "tool" as const, content: JSON.stringify(execution.modelResult),
+      tool_calls: null, context: null, metadata: { success: true, result: execution.result } };
+    const stored = protect ? await encodeNumoToolMessage(USER, id, payload) : payload;
+    tables.assistant_messages.push({ conversation_id: "current", tool_name: "create_file",
+      tool_call_id: "call", created_at: "2026-10-08T11:00:00Z", ...stored, id, role: "tool" });
+  }
+
+  it("stores the file in the user's chat storage and hides its object from the model", async () => {
+    const execution = await executeTool("create_file",
+      { file_name: "Bilan: mars/avril.csv", format: "csv", content: "Name,Usage\nCafé,16\n" }, ctx());
+    expect(execution.success).toBe(true);
+    const [, path, bytes, mime] = h.upload.mock.calls[0];
+    expect(path).toMatch(new RegExp(`^chat/${USER}/[0-9a-f-]{36}$`));
+    expect(mime).toBe("text/csv");
+    expect(new TextDecoder("utf-8", { ignoreBOM: true }).decode(bytes)).toBe("\ufeffName,Usage\nCafé,16\n");
+    expect(execution.result).toMatchObject({ file_name: "Bilan mars avril.csv", format: "csv",
+      storage_path: path, attachment_id: `numo:${path.split("/")[2]}` });
+    expect(JSON.stringify(execution.modelResult)).not.toContain("storage_path");
+    expect(h.rpc).toHaveBeenCalledWith("account_storage_quota_allows", expect.objectContaining({ p_user: USER }));
+  });
+
+  it.each([true, false])("lists, reads and attaches a written file by its reference (protected: %s)", async (protect) => {
+    const execution = await executeTool("create_file",
+      { file_name: "notes", format: "md", content: "# Notes" }, ctx());
+    await persist(execution, protect);
+    const reference = (execution.result as { attachment_id: string }).attachment_id;
+
+    const listed = await listConversationAttachments(ctx());
+    expect(listed.attachments.map((file) => [file.attachment_id, file.origin]))
+      .toEqual([[REF, "user"], [reference, "numo"]]);
+
+    h.download.mockResolvedValue(Buffer.from("# Notes"));
+    expect(await readConversationAttachment(ctx(), reference)).toMatchObject({ file_name: "notes.md", content: "# Notes" });
+
+    expect((await executeTool("add_resource", { project_id: PROJECT, issue_id: ISSUE,
+      comment_id: "comment", attachment_id: reference }, ctx())).success).toBe(true);
+    expect(h.insert.mock.calls[0][1]).toMatchObject({ issueId: ISSUE, commentId: "comment",
+      resources: [expect.objectContaining({ file_name: "notes.md", mime_type: "text/markdown" })] });
+  });
+
+  it("refuses a reference outside this conversation or another account's object", async () => {
+    const execution = await executeTool("create_file", { file_name: "a", format: "txt", content: "a" }, ctx());
+    const result = execution.result as { storage_path: string; attachment_id: string };
+    await persist({ ...execution, result: { ...result,
+      storage_path: result.storage_path.replace(USER, "77777777-7777-4777-8777-777777777777") } });
+    await expect(resolveConversationAttachment(ctx(), result.attachment_id)).rejects.toThrow("not found");
+    await expect(resolveConversationAttachment(ctx(), "numo:not-an-id")).rejects.toThrow();
+  });
+
+  it.each([
+    [{ format: "docx", content: "x" }, "format must be one of"],
+    [{ format: "json", content: "{nope" }, "not valid JSON"],
+    [{ format: "svg", content: "<div/>" }, "SVG document"],
+    [{ format: "txt", content: "  " }, "content is required"],
+  ])("returns a correctable error for %j", async (args, message) => {
+    const execution = await executeTool("create_file", { file_name: "x", ...args }, ctx());
+    expect(execution.success).toBe(false);
+    expect(JSON.stringify(execution.result)).toContain(message);
+    expect(h.upload).not.toHaveBeenCalled();
+  });
+
+  it("refuses to write past the account quota", async () => {
+    h.rpc.mockResolvedValue({ data: false, error: null });
+    const execution = await executeTool("create_file", { file_name: "x", format: "txt", content: "x" }, ctx());
+    expect(JSON.stringify(execution.result)).toContain("quota");
+    expect(h.upload).not.toHaveBeenCalled();
+  });
+
+  it("needs a conversation", async () => {
+    const execution = await executeTool("create_file", { file_name: "x", format: "txt", content: "x" },
+      { ...ctx(), conversationId: null });
+    expect(execution.success).toBe(false);
+    expect(h.upload).not.toHaveBeenCalled();
   });
 });

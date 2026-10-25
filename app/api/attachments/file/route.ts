@@ -8,6 +8,7 @@ import { downloadAttachment, resolveAttachmentObjectPath } from
 import { verifyAttachmentRead } from "@/lib/server/encryption/attachment-url-token";
 import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 import { attachmentPreviewKind, isCsvAttachment } from "@/lib/attachment-preview";
+import { generatedFileMimeType, withoutUnsafeNameCharacters } from "@/lib/generated-files";
 import { renderCsvPreview } from "@/lib/server/csv-preview";
 import {
   isInlineSafeMimeType,
@@ -32,6 +33,12 @@ export const PREVIEW_CSP = [
 
 function fileNameFromPath(path: string): string {
   return path.split("/").at(-1)?.trim() || "attachment";
+}
+
+/** A display name supplied by the owner's link: one line, no path. */
+function ownChatFileName(raw: string | null): string | null {
+  const name = raw && withoutUnsafeNameCharacters(raw).trim().slice(0, 200);
+  return name || null;
 }
 
 function contentDisposition(inline: boolean, fileName: string): string {
@@ -100,10 +107,18 @@ export async function GET(request: NextRequest) {
       .eq("storage_path", currentPath).limit(1).maybeSingle();
   const attachment = descriptor ? await decodeAttachmentRow("attachments", descriptor) : null;
   const pageFile = pageDescriptor ? await decodeAttachmentRow("page_files", pageDescriptor) : null;
+  // An object of the reader's own chat storage has no row to name it (a file
+  // they dropped into Numo, or one Numo wrote for them, MIN-793): the name
+  // comes from the link, and its type only from the fixed generated-file
+  // extensions, never from the link itself.
+  const ownName = family === "chat" && !signed && !descriptor && !pageDescriptor
+    ? ownChatFileName(params.get("name"))
+    : null;
   const storedMimeType = normalizeMimeType(attachment?.mime_type ||
-    pageFile?.mime_type || info?.contentType);
+    pageFile?.mime_type ||
+    (ownName && generatedFileMimeType(ownName)) || info?.contentType);
   const mimeType = sniffMimeType(bytes) ?? storedMimeType;
-  const fileName = attachment?.file_name || pageFile?.file_name ||
+  const fileName = attachment?.file_name || pageFile?.file_name || ownName ||
     fileNameFromPath(path);
   const inline = preview
     ? attachmentPreviewKind(mimeType, fileName) !== null

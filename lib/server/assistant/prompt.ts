@@ -272,6 +272,11 @@ export function buildSharedRules(
   (attachment_id from list_conversation_attachments), even when the user did not ask for it:
   the file is the evidence the issue was written from. Skip it only when the user said not to
   attach it.
+- When the user asks for a file (an export, a report, a CSV, a PDF, a document to download),
+  write it with create_file instead of pasting it in the reply; build it from the conversation's
+  files by reading them first. The file shows as a card under your answer, so the reply only
+  says what it contains. To put it on an issue, an objective or a comment, pass its
+  attachment_id to add_resource.
 - **Starting a project (propose_backlog)** — when the point of the conversation is to turn a
   project into the backlog that starts it ("aide-moi à démarrer ce projet", a project whose
   board is still empty, a discussion that has converged on what to build), never open twenty

@@ -64,11 +64,14 @@ const NUMO_TEXT_TOOLS: IssueTextTools = {
 import {
   addCommentToFeedbackPost,
   addCommentToIssue,
+  addCommentToObjective,
 } from "@/lib/server/add-comment";
+import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 import { setIssueCategories } from "@/lib/server/set-issue-categories";
 import { getServiceClient } from "@/lib/supabase-service";
 import { attachmentOffset, listConversationAttachments, readConversationAttachment,
-  copyConversationAttachment, viewDocumentImage } from "./conversation-attachments";
+  copyConversationAttachment, createGeneratedFile, viewDocumentImage } from "./conversation-attachments";
+import { GeneratedFileError } from "./generated-files";
 import { insertAttachments } from "@/lib/server/attachments";
 import { imagesIn } from "@/lib/server/document-images";
 import { readResultForReader } from "@/lib/server/mention-access";
@@ -1011,6 +1014,18 @@ async function executeToolUnlisted(
     if (toolName === "read_conversation_attachment") {
       return { result: await readConversationAttachment(ctx, args.attachment_id, attachmentOffset(args.offset)), success: true };
     }
+    if (toolName === "create_file") {
+      try {
+        const result = await createGeneratedFile(ctx, args);
+        // The thread needs the object to serve it; the model, like for the
+        // user's own files, only its reference.
+        const { storage_path: _path, ...modelResult } = result;
+        return { result, modelResult, success: true };
+      } catch (error) {
+        if (error instanceof GeneratedFileError) return toolError(error.message);
+        throw error;
+      }
+    }
     if (toolName === "view_image") {
       return { result: await viewDocumentImage(ctx, args.src), success: true };
     }
@@ -1109,14 +1124,58 @@ async function executeToolUnlisted(
           .maybeSingle();
         if (error) return toolError(error.message);
         if (!objective) return toolError("Objective not found in this project.");
-        const relations = await resolveEntityRelations(
-          ctx.supabase,
-          { projectId, projectKey: access.project.key },
-          objective.id,
-        );
+        // The objective's own comment thread, as on an issue: without it Numo
+        // believed objectives had none (MIN-793).
+        const [relations, { data: comments, error: commentsError }, { data: commentResources }] =
+          await Promise.all([
+            resolveEntityRelations(
+              ctx.supabase,
+              { projectId, projectKey: access.project.key },
+              objective.id,
+            ),
+            commentStore(ctx.supabase, "comments", ctx.userId)
+              .select("id, author_id, body, parent_id, via_assistant, via_mcp, api_key_id, created_at")
+              .eq("objective_id", objective.id)
+              .order("created_at", { ascending: true }),
+            ctx.supabase
+              .from("attachments")
+              .select(
+                "id, comment_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, project_id, title, encrypted_content, encryption_version)",
+              )
+              .eq("objective_id", objective.id)
+              .not("comment_id", "is", null)
+              .order("created_at", { ascending: true }),
+          ]);
+        if (commentsError) return toolError("Unable to read objective comments.");
+        const resourcesByComment = new Map<string, Record<string, unknown>[]>();
+        for (const stored of commentResources ?? []) {
+          const row = await decodeAttachmentRow("attachments", stored, ctx.userId, projectId);
+          const list = resourcesByComment.get(row.comment_id as string) ?? [];
+          list.push(resourceSummary(row));
+          resourcesByComment.set(row.comment_id as string, list);
+        }
+        const [authors, keyActors] = await Promise.all([
+          fetchAuthUsersById(ctx.service, (comments ?? []).map((c) => c.author_id as string)),
+          resolveApiKeyActors((comments ?? []).map((c) => c.api_key_id as string | null)),
+        ]);
         return {
           result: {
             objective,
+            comments: (comments ?? []).map((c) => {
+              const resources = resourcesByComment.get(c.id as string);
+              return {
+                id: c.id,
+                author: c.via_assistant
+                  ? "Numo"
+                  : c.via_mcp
+                    ? `${keyActors.get(c.api_key_id as string)?.name ?? "Agent"} (mcp)`
+                    : displayName(toNamed(authors.get(c.author_id as string)), "User"),
+                body: c.body,
+                parent_id: c.parent_id,
+                created_at: c.created_at,
+                ...(resources ? { resources } : {}),
+              };
+            }),
             linked_feedback: await listFeedbackForObjective(projectId, objective.id),
             relations: relations.map((r) => r.kind === "objective"
               ? {
@@ -1702,6 +1761,25 @@ async function executeToolUnlisted(
           issueId,
           actorId: ctx.userId,
           body,
+          viaAssistant: true,
+        });
+        if (!result.ok) return libError(result);
+        return { result: { comment: result.comment }, success: true };
+      }
+
+      case "add_objective_comment": {
+        const objectiveId = typeof args.objective_id === "string" ? args.objective_id.trim() : "";
+        const { data: objective } = await objectiveStore(ctx.supabase)
+          .select("id")
+          .is("deleted_at", null)
+          .eq("id", objectiveId)
+          .eq("project_id", projectId)
+          .maybeSingle();
+        if (!objective) return toolError("Objective not found in this project.");
+        const result = await addCommentToObjective({
+          objectiveId,
+          actorId: ctx.userId,
+          body: typeof args.body === "string" ? args.body : "",
           viaAssistant: true,
         });
         if (!result.ok) return libError(result);

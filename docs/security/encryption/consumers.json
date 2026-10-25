@@ -395,21 +395,21 @@
     "file": "app/api/attachments/file/route.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 88,
+    "line": 95,
     "storage": true
   },
   {
     "file": "app/api/attachments/file/route.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 95,
+    "line": 102,
     "storage": false
   },
   {
     "file": "app/api/attachments/file/route.ts",
     "operation": "from",
     "resource": "page_files",
-    "line": 99,
+    "line": 106,
     "storage": false
   },
   {
@@ -2369,91 +2369,112 @@
     "file": "lib/server/assistant/conversation-attachments.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 24,
+    "line": 32,
     "storage": false
   },
   {
     "file": "lib/server/assistant/conversation-attachments.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 73,
+    "line": 78,
     "storage": false
   },
   {
     "file": "lib/server/assistant/conversation-attachments.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 93,
+    "line": 117,
+    "storage": false
+  },
+  {
+    "file": "lib/server/assistant/conversation-attachments.ts",
+    "operation": "from",
+    "resource": "assistant_messages",
+    "line": 143,
+    "storage": false
+  },
+  {
+    "file": "lib/server/assistant/conversation-attachments.ts",
+    "operation": "rpc",
+    "resource": "account_storage_quota_allows",
+    "line": 193,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "views",
-    "line": 585,
+    "line": 588,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "views",
-    "line": 608,
+    "line": 611,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 644,
+    "line": 647,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 649,
+    "line": 652,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 666,
+    "line": 669,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 705,
+    "line": 708,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 1156,
+    "line": 1140,
+    "storage": false
+  },
+  {
+    "file": "lib/server/assistant/execute-tool.ts",
+    "operation": "from",
+    "resource": "attachments",
+    "line": 1215,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 1205,
+    "line": 1264,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 1768,
+    "line": 1846,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "numo_routine_occurrences",
-    "line": 1940,
+    "line": 2018,
     "storage": false
   },
   {
@@ -10405,35 +10426,42 @@
     "file": "lib/server/upload-citations.ts",
     "operation": "from",
     "resource": null,
-    "line": 127,
+    "line": 128,
     "storage": false
   },
   {
     "file": "lib/server/upload-citations.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 150,
+    "line": 152,
     "storage": false
   },
   {
     "file": "lib/server/upload-citations.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 159,
+    "line": 161,
+    "storage": false
+  },
+  {
+    "file": "lib/server/upload-citations.ts",
+    "operation": "from",
+    "resource": "assistant_messages",
+    "line": 174,
     "storage": false
   },
   {
     "file": "lib/server/upload-citations.ts",
     "operation": "from",
     "resource": "upload_citation_checks",
-    "line": 207,
+    "line": 222,
     "storage": false
   },
   {
     "file": "lib/server/upload-citations.ts",
     "operation": "from",
     "resource": "upload_citation_checks",
-    "line": 225,
+    "line": 240,
     "storage": false
   },
   {

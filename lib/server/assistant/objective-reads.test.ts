@@ -4,7 +4,17 @@ import { executeTool, type ToolContext } from "./execute-tool";
 import { resolveObjectiveRef } from "@/lib/server/issue-reads";
 import { CONVERSATION_ASSISTANT_TOOLS } from "./tools";
 
-const { getProjectAccess } = vi.hoisted(() => ({ getProjectAccess: vi.fn() }));
+const { getProjectAccess, addCommentToObjective } = vi.hoisted(() => ({
+  getProjectAccess: vi.fn(), addCommentToObjective: vi.fn(),
+}));
+vi.mock("@/lib/server/add-comment", async (original) => ({
+  ...await original<typeof import("@/lib/server/add-comment")>(), addCommentToObjective,
+}));
+vi.mock("@/lib/server/auth-users", async (original) => ({
+  ...await original<typeof import("@/lib/server/auth-users")>(),
+  fetchAuthUsersById: async () => new Map([["user-2", { id: "user-2", email: "lea@example.com",
+    user_metadata: { display_name: "Léa" } }]]),
+}));
 vi.mock("@/lib/server/project-access", async (original) => ({
   ...await original<typeof import("@/lib/server/project-access")>(), getProjectAccess,
 }));
@@ -34,6 +44,10 @@ function database(): SupabaseClient {
         },
         is(column: string, value: unknown) {
           filters.push((row) => (row[column] ?? null) === value);
+          return query;
+        },
+        not(column: string, _operator: string, value: unknown) {
+          filters.push((row) => (row[column] ?? null) !== value);
           return query;
         },
         in(column: string, values: unknown[]) {
@@ -97,6 +111,7 @@ describe("Numo get_objective", () => {
     expect(result).toEqual({
       success: true,
       result: {
+        comments: [],
         linked_feedback: [],
         objective: { id: objectiveId, name: "Release", description: "Ship it", status: "planned", lead_user_id: "user-1", target_date: null },
         relations: [
@@ -106,6 +121,31 @@ describe("Numo get_objective", () => {
       },
     });
     expect(getProjectAccess).toHaveBeenCalledWith("user-1", "project-1");
+  });
+
+  it("returns the objective's comment thread with authors and resources (MIN-793)", async () => {
+    tables.comments = [
+      { id: "c1", objective_id: objectiveId, author_id: "user-2", body: "Scope is frozen", parent_id: null,
+        via_assistant: false, via_mcp: false, api_key_id: null, created_at: "2026-10-20T10:00:00Z" },
+      { id: "c2", objective_id: objectiveId, author_id: "user-1", body: "Noted", parent_id: "c1",
+        via_assistant: true, via_mcp: false, api_key_id: null, created_at: "2026-10-20T11:00:00Z" },
+      { id: "c3", objective_id: otherObjectiveId, author_id: "user-2", body: "Elsewhere", parent_id: null,
+        via_assistant: false, via_mcp: false, api_key_id: null, created_at: "2026-10-20T12:00:00Z" },
+    ];
+    tables.attachments = [
+      { id: "a1", objective_id: objectiveId, comment_id: "c1", kind: "link", url: "https://example.com/spec",
+        file_name: "Spec", mime_type: null, size_bytes: null, page_id: null },
+      { id: "a2", objective_id: objectiveId, comment_id: null, kind: "link", url: "https://example.com/own",
+        file_name: "Own", mime_type: null, size_bytes: null, page_id: null },
+    ];
+    const result = await executeTool("get_objective", { project_id: "project-1", objective_id: objectiveId }, context());
+    const comments = (result.result as { comments: Row[] }).comments;
+    expect(comments.map((c) => [c.id, c.author, c.body, c.parent_id])).toEqual([
+      ["c1", "Léa", "Scope is frozen", null],
+      ["c2", "Numo", "Noted", "c1"],
+    ]);
+    expect(comments[0].resources).toEqual([expect.objectContaining({ kind: "link", url: "https://example.com/spec" })]);
+    expect(comments[1]).not.toHaveProperty("resources");
   });
 
   it.each([undefined, "obj:Release", "invalid"])("rejects invalid objective IDs: %s", async (id) => {
@@ -137,6 +177,33 @@ describe("Numo get_objective", () => {
   it("surfaces objective database errors", async () => {
     databaseError = { message: "Database unavailable" };
     expect(await executeTool("get_objective", { project_id: "project-1", objective_id: objectiveId }, context())).toEqual({ success: false, result: { error: "Unable to access objective content" } });
+  });
+});
+
+describe("Numo add_objective_comment", () => {
+  it("posts on the objective's thread as Numo", async () => {
+    addCommentToObjective.mockResolvedValue({ ok: true, comment: { id: "c9", body: "Done" } });
+    const result = await executeTool("add_objective_comment",
+      { project_id: "project-1", objective_id: objectiveId, body: "Done" }, context());
+    expect(result).toEqual({ success: true, result: { comment: { id: "c9", body: "Done" } } });
+    expect(addCommentToObjective).toHaveBeenCalledWith({ objectiveId, actorId: "user-1", body: "Done", viaAssistant: true });
+  });
+
+  it("refuses an objective of another project before writing", async () => {
+    tables.objectives[0].project_id = "project-2";
+    const result = await executeTool("add_objective_comment",
+      { project_id: "project-1", objective_id: objectiveId, body: "Done" }, context());
+    expect(result.success).toBe(false);
+    expect(addCommentToObjective).not.toHaveBeenCalled();
+  });
+
+  it("is refused to a reader who may not comment", async () => {
+    getProjectAccess.mockResolvedValue({ project: { id: "project-1", key: "MIN" }, isOwner: false, isMember: false,
+      role: "reader", canWrite: false, canComment: false });
+    const result = await executeTool("add_objective_comment",
+      { project_id: "project-1", objective_id: objectiveId, body: "Done" }, context());
+    expect(result.success).toBe(false);
+    expect(addCommentToObjective).not.toHaveBeenCalled();
   });
 });
 

@@ -212,17 +212,13 @@ export function formatFileSize(bytes: number, locale = "en"): string {
     unit += 1;
   }
   const maximumFractionDigits = value < 10 && unit > 0 ? 1 : 0;
-  if (unit === 0) {
-    // CLDR spells bytes out ("820 byte"); the symbol reads better. French
-    // writes octets.
-    const formatted = new Intl.NumberFormat(locale, { maximumFractionDigits }).format(value);
-    return `${formatted} ${locale.startsWith("fr") ? "o" : "B"}`;
-  }
-  // The locale's own symbols: kB and MB, ko and Mo in French (MIN-742).
+  // The locale's own symbols for kB and MB (ko and Mo in French, MIN-742),
+  // but bytes in full: "820 octets", "820 bytes", never a bare "o" or "B"
+  // (MIN-793).
   return new Intl.NumberFormat(locale, {
     style: "unit",
     unit: units[unit],
-    unitDisplay: "short",
+    unitDisplay: unit === 0 ? "long" : "short",
     maximumFractionDigits,
   }).format(value);
 }

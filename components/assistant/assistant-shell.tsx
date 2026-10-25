@@ -41,6 +41,10 @@ import {
 } from "@/components/assistant/chat-message";
 import { AskUserCard } from "@/components/assistant/ask-user-card";
 import { WorkAccordion } from "@/components/assistant/work-accordion";
+import {
+  GeneratedFileCards,
+  generatedFilesOf,
+} from "@/components/assistant/generated-file-cards";
 import { WorkEvents } from "@/components/assistant/work-events";
 import { workEventsRevealKey, type WorkEvent } from "@/lib/work-event-groups";
 import { liveSecretRevealKey } from "@/components/assistant/secret-callout";
@@ -530,7 +534,7 @@ export const AssistantShell = forwardRef<
     (state.activeToolCalls.length === 0 || allToolCallsComplete) &&
     !activeTurnHasWork;
 
-  const renderMessage = (msg: AssistantMessage) =>
+  const renderMessage = (msg: AssistantMessage, afterContent?: ReactNode) =>
     // Answer to an ask_user question: it is not displayed in a bubble, but in
     // the details of the question line (askUserReplies).
     askUserReplies.hiddenBubbleIds.has(msg.id) ? null : (
@@ -543,6 +547,7 @@ export const AssistantShell = forwardRef<
         seedLive={msg.id === activeSeedMessageId}
         onSeedCreated={handleSeedCreated}
         showCopyButton={copyButtonIds.has(msg.id)}
+        afterContent={afterContent}
       />
     );
 
@@ -952,6 +957,16 @@ export const AssistantShell = forwardRef<
                       }
                     }
                     const hasWork = events.length > 0;
+                    // The files Numo wrote close the turn, under its answer (MIN-793).
+                    const files = block.active ? [] : generatedFilesOf(
+                      [...block.work, ...(block.summary ? [block.summary] : [])]
+                        .flatMap((msg) => msg.tool_calls ?? []),
+                      state.toolCallResults,
+                    );
+                    const fileCards = files.length > 0
+                      ? <GeneratedFileCards files={files} />
+                      : null;
+                    const summaryCarriesFiles = Boolean(block.summary?.content);
                     return (
                       <div key={block.key} className="flex flex-col gap-3">
                         {hasWork && (
@@ -964,7 +979,10 @@ export const AssistantShell = forwardRef<
                             <WorkEvents events={events} />
                           </WorkAccordion>
                         )}
-                        {block.summary ? renderMessage(block.summary) : null}
+                        {block.summary
+                          ? renderMessage(block.summary, summaryCarriesFiles ? fileCards : undefined)
+                          : null}
+                        {summaryCarriesFiles ? null : fileCards}
                         {block.active &&
                         !streamingIsWork &&
                         state.streamingContent ? (
