@@ -37,6 +37,7 @@ import { DateTimePicker } from "@/components/date-time-picker";
 import { Dot } from "@/components/issue-property-fields";
 import { ObjectivePill } from "@/components/objective-label";
 import { useOrderedObjectives } from "@/lib/use-ordered-objectives";
+import { useUndoHistory } from "@/lib/undo/undo-context";
 import {
   allTargetsHaveCategory,
   allTargetsMatch,
@@ -269,6 +270,8 @@ export function IssueShortcutMenu({
   onSetCategories: (ids: string[], issueId: string) => void;
 }) {
   const writeTargets = targets ?? [issue];
+  // Category writes across several targets are one gesture for ⌘Z (MIN-795).
+  const { linked } = useUndoHistory();
   const tBulk = useTranslations("BulkActions");
   const tStatus = useTranslations("Status");
   const tPriority = useTranslations("Priority");
@@ -281,11 +284,12 @@ export function IssueShortcutMenu({
   const categoryCreate = useCategoryCreateOption({
     projectId: issue.project_id,
     categories,
-    onCreated: (category) => {
-      for (const target of writeTargets) {
-        onSetCategories([...target.category_ids, category.id], target.id);
-      }
-    },
+    onCreated: (category) =>
+      linked(() => {
+        for (const target of writeTargets) {
+          onSetCategories([...target.category_ids, category.id], target.id);
+        }
+      }),
   });
   const objectiveCreate = useObjectiveCreateOption({
     projectId: issue.project_id,
@@ -436,11 +440,12 @@ export function IssueShortcutMenu({
       );
       break;
     case "category": {
-      const toggle = (id: string) => {
-        for (const [issueId, ids] of toggleCategoryAcross(writeTargets, id)) {
-          onSetCategories(ids, issueId);
-        }
-      };
+      const toggle = (id: string) =>
+        linked(() => {
+          for (const [issueId, ids] of toggleCategoryAcross(writeTargets, id)) {
+            onSetCategories(ids, issueId);
+          }
+        });
       items = categories.map((c) => (
         <CommandItem
           key={c.id}

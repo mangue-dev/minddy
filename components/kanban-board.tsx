@@ -69,6 +69,7 @@ import { BulkIssueActions } from "@/components/bulk-issue-actions";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { AskNumoProvider } from "@/lib/ask-numo-context";
 import { IssueSelectionProvider } from "@/lib/issue-selection-context";
+import { useUndoHistory } from "@/lib/undo/undo-context";
 import {
   MarqueeOverlay,
   useMarqueeSelection,
@@ -255,6 +256,7 @@ export const KanbanBoard = memo(function KanbanBoard({
     [onUpdateIssue, selectedIssues],
   );
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+  const { linked } = useUndoHistory();
   // Lasso on the bottom of the board: same selection, one gesture less than thirty
   // ⇧-clicks. The column container serves as both a starting surface,
   // limit and autoscroll.
@@ -491,8 +493,9 @@ export const KanbanBoard = memo(function KanbanBoard({
     drop.end();
     if (!planned) return;
 
+    // Several cards dragged together undo together (MIN-795).
     void Promise.all(
-      planned.moves.map((m) => onMove(m.issue.id, m.patch)),
+      linked(() => planned.moves.map((m) => onMove(m.issue.id, m.patch))),
     ).catch((err) => toast.error((err as Error).message));
   };
 

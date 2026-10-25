@@ -91,6 +91,9 @@ export type UndoEntry = UndoAction & {
   settled?: Promise<unknown>;
   /** Set when the recorded write failed (entry retracted) — replays skip it. */
   dead?: boolean;
+  /** Shared by the entries of ONE gesture that edited several issues at once
+      (a selection, MIN-795): ⌘Z / ⌘⇧Z replay them together, as they were made. */
+  link?: string;
 };
 
 export function snapshotIssue(issue: Issue): IssueSnapshot {
@@ -167,6 +170,8 @@ export function pushEntry(stack: UndoEntry[], entry: UndoEntry): UndoEntry {
     entry.kind === "categories" &&
     last?.kind === "categories" &&
     last.issueId === entry.issueId &&
+    // Never merge across gestures: the merged entry would leave its group.
+    last.link === entry.link &&
     entry.at - last.at <= CATEGORY_COALESCE_MS
   ) {
     last.after = entry.after;
@@ -176,4 +181,31 @@ export function pushEntry(stack: UndoEntry[], entry: UndoEntry): UndoEntry {
   stack.push(entry);
   if (stack.length > UNDO_STACK_LIMIT) stack.shift();
   return entry;
+}
+
+/**
+ * Pop the next replayable step: the top live entry and, when it belongs to a
+ * linked gesture, every live entry of that gesture below it. Dead entries met
+ * on the way are discarded. Returned in pop order (newest first), so pushing
+ * them onto the opposite stack in that order replays them back in their
+ * original order. Empty when nothing is left to replay.
+ */
+export function popLinked(stack: UndoEntry[]): UndoEntry[] {
+  let top: UndoEntry | undefined;
+  do {
+    top = stack.pop();
+  } while (top?.dead);
+  if (!top) return [];
+  const step = [top];
+  if (top.link === undefined) return step;
+  while (stack.length > 0) {
+    const next = stack[stack.length - 1];
+    if (next.dead) {
+      stack.pop();
+      continue;
+    }
+    if (next.link !== top.link) break;
+    step.push(stack.pop() as UndoEntry);
+  }
+  return step;
 }

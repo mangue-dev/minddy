@@ -30,7 +30,7 @@ export interface RelationKinds {
 export function useIssueRelationsQuery(projectId: string | null) {
   const queryClient = useQueryClient();
   // Local undo history (MIN-35): relation edits record like issue edits do.
-  const { record } = useUndoHistory();
+  const { record, currentLink } = useUndoHistory();
 
   const enabled = !!projectId;
   const { data, isPending } = useQuery({
@@ -60,6 +60,9 @@ export function useIssueRelationsQuery(projectId: string | null) {
         source_type: kinds?.sourceType,
         target_type: kinds?.targetType,
       };
+      // Read before awaiting: the selection gesture that asked for it is over
+      // by the time the server answers (MIN-795).
+      const link = currentLink();
       const created = await addRelationOptimistically(queryClient, projectId, input, () => addIssueRelationApi(projectId, input));
       // Record the server-normalized row (blocked_by → inverted blocks).
       record({
@@ -73,15 +76,16 @@ export function useIssueRelationsQuery(projectId: string | null) {
           source_type: created.source_type,
           target_type: created.target_type,
         },
-      });
+      }, undefined, link);
       invalidate();
     },
-    [projectId, queryClient, invalidate, record]
+    [projectId, queryClient, invalidate, record, currentLink]
   );
 
   const removeRelation = useCallback(
     async (relationId: string) => {
       if (!projectId) return;
+      const link = currentLink();
       relationId = await persistedRelationId(queryClient, relationId);
       const key = relationsKey(projectId);
       const previous = queryClient.getQueryData<IssueRelation[]>(key);
@@ -103,7 +107,7 @@ export function useIssueRelationsQuery(projectId: string | null) {
               source_type: removed.source_type,
               target_type: removed.target_type,
             },
-          });
+          }, undefined, link);
         }
         invalidate();
       } catch (err) {
@@ -111,7 +115,7 @@ export function useIssueRelationsQuery(projectId: string | null) {
         throw err;
       }
     },
-    [projectId, queryClient, invalidate, record]
+    [projectId, queryClient, invalidate, record, currentLink]
   );
 
   return {

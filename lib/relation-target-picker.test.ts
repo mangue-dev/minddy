@@ -130,6 +130,7 @@ function cardSelection(
   const setRelationType = vi.fn();
   const addRelationFromTargets = evaluate(initializer("issue-card.tsx", "addRelationFromTargets"), {
     onAddRelation, hasDirectRelation,
+    linked: (run: () => void) => run(),
     relationTargets: () => targets,
     relationsOf: (id: string) => relationsById[id],
   });

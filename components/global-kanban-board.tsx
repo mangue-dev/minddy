@@ -69,6 +69,7 @@ import { IssuePrProvider } from "@/components/issue-pr-context";
 import { BulkIssueActions } from "@/components/bulk-issue-actions";
 import { AskNumoProvider } from "@/lib/ask-numo-context";
 import { IssueSelectionProvider } from "@/lib/issue-selection-context";
+import { useUndoHistory } from "@/lib/undo/undo-context";
 import {
   MarqueeOverlay,
   useMarqueeSelection,
@@ -282,6 +283,7 @@ export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
     [onUpdateIssue, selectedIssues],
   );
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+  const { linked } = useUndoHistory();
   // Lasso on the bottom of the board — same hook, same selection as the project board.
   const {
     ref: marqueeRef,
@@ -541,8 +543,11 @@ export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
     drop.end();
     if (!planned) return;
 
+    // Several cards dragged together undo together (MIN-795).
     void Promise.all(
-      planned.moves.map((m) => onMove(m.issue.id, m.patch, m.issue.project_id)),
+      linked(() =>
+        planned.moves.map((m) => onMove(m.issue.id, m.patch, m.issue.project_id)),
+      ),
     ).catch((err) => toast.error((err as Error).message));
   };
 

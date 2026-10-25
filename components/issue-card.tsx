@@ -48,6 +48,7 @@ import { LinkablePullRequestsProbe, PrLinkTargetPicker } from "@/components/pull
 import { useLinkIssuesToPullRequest } from "@/lib/use-link-issues-to-pull-request";
 import type { RelationKinds } from "@/lib/use-issue-relations-query";
 import { useIssueSelection } from "@/lib/issue-selection-context";
+import { useUndoHistory } from "@/lib/undo/undo-context";
 import {
   hasDirectRelation,
   shortcutTargets,
@@ -1008,6 +1009,8 @@ const IssueCardContent = memo(function IssueCardContent({
   // is read when a picker opens or applies, so selecting never re-renders
   // the cards.
   const selection = useIssueSelection();
+  // One picker choice on a selection is one gesture for ⌘Z.
+  const { linked } = useUndoHistory();
   const targetsFor = (field: ShortcutTargetField) =>
     selected ? shortcutTargets(issue, selection.getSelectedIssues(), field) : [issue];
 
@@ -1091,11 +1094,13 @@ const IssueCardContent = memo(function IssueCardContent({
     targetId: string,
     kinds: RelationKinds,
   ) => {
-    for (const target of relationTargets()) {
-      if (target.id === targetId) continue;
-      if (hasDirectRelation(relationsOf(target.id), type, targetId)) continue;
-      onAddRelation?.(target.id, type, targetId, kinds);
-    }
+    linked(() => {
+      for (const target of relationTargets()) {
+        if (target.id === targetId) continue;
+        if (hasDirectRelation(relationsOf(target.id), type, targetId)) continue;
+        onAddRelation?.(target.id, type, targetId, kinds);
+      }
+    });
   };
   const relationCandidates = useMemo(() => {
     const candidateIssues = relationType ? getCandidateIssues?.() : undefined;
@@ -1500,9 +1505,11 @@ const IssueCardContent = memo(function IssueCardContent({
         members={cardMemberList}
         categories={cardCategoryList}
         objectives={cardObjectiveList}
-        onUpdate={(patch) => {
-          for (const target of shortcutMenuTargets) onUpdateIssue(target.id, patch);
-        }}
+        onUpdate={(patch) =>
+          linked(() => {
+            for (const target of shortcutMenuTargets) onUpdateIssue(target.id, patch);
+          })
+        }
         onSetCategories={(ids, issueId) => onSetCategories(issueId, ids)}
       />
     </div>

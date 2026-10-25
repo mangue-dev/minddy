@@ -201,3 +201,55 @@ it("propagates an outage while checking whether the issue is gone (MIN-709)", as
     expect(toast.error).toHaveBeenCalledTimes(1);
   } finally { await close(); }
 });
+
+const recordUpdate = (history: ReturnType<typeof useUndoHistory>, issueId: string, link?: string) =>
+  history.record(
+    { kind: "update", projectId: "p1", issueId, before: { priority: "none" }, after: { priority: "high" } },
+    undefined,
+    link,
+  );
+
+it("undoes and redoes a linked gesture in one keystroke each (MIN-795)", async () => {
+  api.update.mockImplementation(async (id: string) => ({ ...row, id }));
+  const close = await replayKeys((history) => {
+    recordUpdate(history, "earlier");
+    history.linked(() => ["a", "b", "c"].forEach((id) => recordUpdate(history, id)));
+  }, ["undo"]);
+  try {
+    expect(api.update.mock.calls.map(([id]) => id)).toEqual(["c", "b", "a"]);
+    expect(toast.success).toHaveBeenCalledTimes(1);
+    expect(toast.success).toHaveBeenCalledWith("undoneLinked");
+  } finally { await close(); }
+});
+
+it("replays a linked gesture forward in its original order, then stops at the previous edit", async () => {
+  api.update.mockImplementation(async (id: string) => ({ ...row, id }));
+  const close = await replayKeys((history) => {
+    recordUpdate(history, "earlier");
+    history.linked(() => ["a", "b"].forEach((id) => recordUpdate(history, id)));
+  }, ["undo", "redo", "undo", "undo"]);
+  try {
+    expect(api.update.mock.calls.map(([id, patch]) => [id, patch.priority])).toEqual([
+      ["b", "none"], ["a", "none"],
+      ["a", "high"], ["b", "high"],
+      ["b", "none"], ["a", "none"],
+      ["earlier", "none"],
+    ]);
+  } finally { await close(); }
+});
+
+it("links an entry recorded after an await through the captured link", async () => {
+  api.update.mockImplementation(async (id: string) => ({ ...row, id }));
+  const close = await replayKeys((history) => {
+    let late: string | undefined;
+    history.linked(() => {
+      recordUpdate(history, "a");
+      late = history.currentLink();
+    });
+    expect(history.currentLink()).toBeUndefined();
+    recordUpdate(history, "b", late);
+  }, ["undo"]);
+  try {
+    expect(api.update.mock.calls.map(([id]) => id)).toEqual(["b", "a"]);
+  } finally { await close(); }
+});

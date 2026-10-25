@@ -17,6 +17,10 @@
 // wrappers directly (never the hooks), so applying an undo/redo is itself
 // never recorded. While focus is on a typing target, ⌘Z stays with the
 // native/TipTap undo.
+//
+// One gesture that edits several issues (a selection, MIN-795) runs inside
+// `linked()`: every entry it records shares a link, and ⌘Z / ⌘⇧Z replay the
+// whole gesture at once instead of one issue per keystroke.
 
 import {
   createContext,
@@ -54,6 +58,7 @@ import { forgetRelationWrite } from "@/lib/optimistic/relation-writes";
 import { isTypingTarget } from "@/lib/keyboard/keyboard-context";
 import { eventKey } from "@/lib/keyboard/event-key";
 import {
+  popLinked,
   pushEntry,
   resolveAliased,
   type IssueSnapshot,
@@ -79,12 +84,27 @@ export interface UndoRecord {
 
 interface UndoHistory {
   /** Record a user mutation the moment it's applied optimistically. `settled`
-      is the write's own promise (never-throwing) — replays order after it. */
-  record: (action: UndoAction, settled?: Promise<unknown>) => UndoRecord | null;
+      is the write's own promise (never-throwing) — replays order after it.
+      `link` defaults to the gesture running in `linked()`, if any. */
+  record: (
+    action: UndoAction,
+    settled?: Promise<unknown>,
+    link?: string
+  ) => UndoRecord | null;
+  /** Runs one gesture that edits several issues: the entries recorded while
+      `run` executes synchronously are undone and redone together. */
+  linked: <T>(run: () => T) => T;
+  /** The link of the gesture running now. A hook that records after an
+      `await` reads it before awaiting and hands it to `record`. */
+  currentLink: () => string | undefined;
 }
 
 // Safe default so the hook is a no-op outside the provider (tests, share pages).
-const UndoContext = createContext<UndoHistory>({ record: () => null });
+const UndoContext = createContext<UndoHistory>({
+  record: () => null,
+  linked: (run) => run(),
+  currentLink: () => undefined,
+});
 
 /** Recording facade for the mutation hooks. No-op outside an UndoProvider. */
 export function useUndoHistory(): UndoHistory {
@@ -121,6 +141,22 @@ export function UndoProvider({ children }: { children: ReactNode }) {
   const aliasRef = useRef(new Map<string, string>());
   /** Serial queue of replay writes — keeps them ordered without blocking UI. */
   const queueRef = useRef<Promise<void>>(Promise.resolve());
+  /** The link of the `linked()` gesture executing now. */
+  const linkRef = useRef<string | undefined>(undefined);
+  const nextLinkRef = useRef(0);
+
+  const currentLink = useCallback(() => linkRef.current, []);
+  const linked = useCallback(<T,>(run: () => T): T => {
+    // A nested gesture belongs to the outer one.
+    if (linkRef.current !== undefined) return run();
+    nextLinkRef.current += 1;
+    linkRef.current = `link-${nextLinkRef.current}`;
+    try {
+      return run();
+    } finally {
+      linkRef.current = undefined;
+    }
+  }, []);
 
   const retract = useCallback((entry: UndoEntry) => {
     entry.dead = true;
@@ -129,10 +165,11 @@ export function UndoProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const record = useCallback(
-    (action: UndoAction, settled?: Promise<unknown>): UndoRecord => {
+    (action: UndoAction, settled?: Promise<unknown>, link?: string): UndoRecord => {
       const entry = pushEntry(undoStackRef.current, {
         ...action,
         at: Date.now(),
+        link: link ?? linkRef.current,
       });
       entry.settled = settled;
       redoStackRef.current = [];
@@ -447,27 +484,9 @@ export function UndoProvider({ children }: { children: ReactNode }) {
     [queryClient, invalidate, restoreOrRecreate, readdRelation]
   );
 
-  const run = useCallback(
-    (direction: "undo" | "redo") => {
-      const [from, to] =
-        direction === "undo"
-          ? [undoStackRef.current, redoStackRef.current]
-          : [redoStackRef.current, undoStackRef.current];
-      let entry: UndoEntry | undefined;
-      do {
-        entry = from.pop();
-      } while (entry?.dead);
-      if (!entry) return;
-
-      // Instant feedback: patch the caches and toast now, write in the queue.
-      const pending = applyOptimistic(entry, direction);
-      to.push(entry);
-      const action = tRef.current(ACTION_KEYS[entry.kind]);
-      toast.success(
-        tRef.current(direction === "undo" ? "undone" : "redone", { action })
-      );
-
-      const queued = entry;
+  /** Queue the server write of one replayed entry, after the writes before it. */
+  const queueReplay = useCallback(
+    (queued: UndoEntry, pending: PendingHandle | null, direction: "undo" | "redo") => {
       queueRef.current = queueRef.current.then(async () => {
         if (queued.dead) {
           closePending(pending, "failed");
@@ -495,7 +514,36 @@ export function UndoProvider({ children }: { children: ReactNode }) {
         }
       });
     },
-    [applyOptimistic, applyServer, closePending, retract, invalidate]
+    [applyServer, closePending, retract, invalidate]
+  );
+
+  const run = useCallback(
+    (direction: "undo" | "redo") => {
+      const [from, to] =
+        direction === "undo"
+          ? [undoStackRef.current, redoStackRef.current]
+          : [redoStackRef.current, undoStackRef.current];
+      // A linked gesture comes off the stack whole (MIN-795).
+      const step = popLinked(from);
+      if (step.length === 0) return;
+
+      // Instant feedback: patch the caches and toast once, writes in the queue.
+      const action = tRef.current(ACTION_KEYS[step[0].kind]);
+      toast.success(
+        step.length > 1
+          ? tRef.current(direction === "undo" ? "undoneLinked" : "redoneLinked", {
+              action,
+              count: step.length,
+            })
+          : tRef.current(direction === "undo" ? "undone" : "redone", { action })
+      );
+      for (const entry of step) {
+        const pending = applyOptimistic(entry, direction);
+        to.push(entry);
+        queueReplay(entry, pending, direction);
+      }
+    },
+    [applyOptimistic, queueReplay]
   );
 
   useEffect(() => {
@@ -514,7 +562,10 @@ export function UndoProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKeyDown, true);
   }, [run]);
 
-  const value = useMemo<UndoHistory>(() => ({ record }), [record]);
+  const value = useMemo<UndoHistory>(
+    () => ({ record, linked, currentLink }),
+    [record, linked, currentLink]
+  );
 
   return <UndoContext.Provider value={value}>{children}</UndoContext.Provider>;
 }
