@@ -103,6 +103,22 @@ describe("findCitedUploads", () => {
     expect(cited).toEqual(new Set([IMAGE, NOTEBOOK, CHAT]));
   });
 
+  it("keeps a file Numo wrote while its create_file result exists (MIN-793)", async () => {
+    const result = (id: string) => JSON.stringify({ attachment_id: `numo:${id}`,
+      storage_path: `chat/${OWNER}/${id}` });
+    const db = database({
+      conversations: [{ id: "c1", user_id: OWNER }],
+      assistant_messages: [
+        { id: "t1", conversation_id: "c1", role: "tool", tool_name: "create_file",
+          content: result(CHAT), tool_calls: null, context: null, metadata: {} },
+        // Another tool's result naming an object is not its source.
+        { id: "t2", conversation_id: "c1", role: "tool", tool_name: "get_issue",
+          content: result(ORPHAN), tool_calls: null, context: null, metadata: {} },
+      ],
+    });
+    expect(await findCitedUploads(db.client, [CHAT, ORPHAN], [OWNER])).toEqual(new Set([CHAT]));
+  });
+
   it("reads trashed rows, since a restored ticket must find its images again", async () => {
     const db = database({
       issues: [{ ...issue(src(`projects/${PROJECT}/${IMAGE}`)), deleted_at: "2026-10-01T00:00:00Z" }],

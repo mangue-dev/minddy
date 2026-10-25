@@ -10,6 +10,7 @@ import { decodeRoutine } from "@/lib/server/routine-content";
 import { decodeHistoryRow } from "@/lib/server/encryption/history-content";
 import { decodeScratchpadRow } from "@/lib/server/encryption/scratchpad-content";
 import { decodeNumoUserMessage } from "@/lib/server/numo/user-message-content";
+import { decodeNumoToolMessage } from "@/lib/server/numo/tool-content";
 
 /**
  * Which uploads a document still cites (MIN-792).
@@ -139,7 +140,8 @@ async function scanSource(service: SupabaseClient, source: CitingSource,
 /**
  * The Numo messages of the owners of `chat/` candidates. A chat upload can
  * only be attached by its owner (`chat/<uid>/` is checked on upload and on
- * send), so other accounts' conversations cannot be its source. A deleted
+ * send), and Numo writes files only into the prefix of the person it answers,
+ * so other accounts' conversations cannot be its source. A deleted
  * conversation takes its messages with it, and its files become orphans.
  */
 async function scanNumoMessages(service: SupabaseClient, owners: readonly string[],
@@ -164,6 +166,19 @@ async function scanNumoMessages(service: SupabaseClient, owners: readonly string
         const rows = (data ?? []) as Row[];
         await decodeAll(rows, (row) => decodeNumoUserMessage(owner,
           row as Parameters<typeof decodeNumoUserMessage>[1], owner), wanted, found);
+        if (rows.length < PAGE_SIZE) break;
+      }
+      // A file Numo wrote (MIN-793) is described only by its `create_file`
+      // result, kept in the tool message as long as the conversation lives.
+      for (let offset = 0; ; offset += PAGE_SIZE) {
+        const { data, error } = await service.from("assistant_messages")
+          .select("id,role,content,tool_calls,context,metadata,tool_call_id,tool_name,tool_payload_version")
+          .in("conversation_id", ids).eq("role", "tool").eq("tool_name", "create_file")
+          .order("id").range(offset, offset + PAGE_SIZE - 1);
+        if (error) throw new Error(`citation scan failed (assistant_messages): ${error.message}`);
+        const rows = (data ?? []) as Row[];
+        await decodeAll(rows, (row) => decodeNumoToolMessage(owner,
+          row as Parameters<typeof decodeNumoToolMessage>[1], owner), wanted, found);
         if (rows.length < PAGE_SIZE) break;
       }
     }

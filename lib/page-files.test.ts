@@ -136,14 +136,15 @@ describe("files cited by a body", () => {
 describe("displayed size", () => {
   it("formats readable file sizes", () => {
     expect(formatFileSize(0)).toBe("");
-    expect(formatFileSize(820)).toBe("820 B");
+    expect(formatFileSize(820)).toBe("820 bytes");
     expect(formatFileSize(1_400)).toBe("1.4 kB");
     expect(formatFileSize(2_400_000)).toBe("2.4 MB");
     // Beyond ten units, the decimal no longer learns anything.
     expect(formatFileSize(24_000_000)).toBe("24 MB");
     // The locale's own symbols (MIN-742).
     expect(formatFileSize(312_000, "fr").replace(/\s/g, " ")).toBe("312 ko");
-    expect(formatFileSize(820, "fr")).toBe("820 o");
+    expect(formatFileSize(820, "fr").replace(/\s/g, " ")).toBe("820 octets");
+    expect(formatFileSize(1, "fr").replace(/\s/g, " ")).toBe("1 octet");
   });
 });
 

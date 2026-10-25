@@ -374,6 +374,13 @@ const TOOL_META: Record<string, ToolMeta> = {
       return success ? t("commentAdded") : t("addCommentFailed");
     },
   },
+  add_objective_comment: {
+    icon: Message01Icon,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("addingComment");
+      return success ? t("commentAdded") : t("addCommentFailed");
+    },
+  },
   list_conversation_attachments: {
     icon: FileStack,
     getLabel: (_a, _r, success, status, t) => status === "running"
@@ -383,6 +390,16 @@ const TOOL_META: Record<string, ToolMeta> = {
     icon: FileSearchIcon,
     getLabel: (_a, _r, success, status, t) => status === "running"
       ? t("readingConversationFile") : success ? t("conversationFileRead") : t("readConversationFileFailed"),
+  },
+  create_file: {
+    icon: FilePlus2,
+    getLabel: (_a, result, success, status, t) => {
+      if (status === "running") return t("creatingFile");
+      if (!success) return t("createFileFailed");
+      return typeof result?.file_name === "string"
+        ? t("fileCreatedWithName", { name: result.file_name })
+        : t("fileCreated");
+    },
   },
   view_image: {
     icon: Image01Icon,

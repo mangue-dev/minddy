@@ -5,12 +5,14 @@ summary: Work with Numo in minddy and connect external agents or personal MCP to
 category: automation
 audience: both
 tags: [agent, mcp, oauth, codex, claude, cursor]
-lastReviewed: 2026-10-17
+lastReviewed: 2026-10-25
 ---
 
 Numo is minddy's built-in conversation for understanding and acting on project work. The floating Numo button is the one place conversations live: it opens the Numo panel, adds the current page as context, and keeps every conversation reachable from its conversation list. Contextual actions such as **Ask Numo** enter this same conversation instead of opening a separate agent destination, and links to the retired dedicated Numo page open the panel too.
 
-Choose the conversation model and reasoning level in Numo's composer. Numo organizes and tracks work: it reads and updates issues, plans, pages, objectives, feedback, cycles and routines, and it can read, comment on, update and merge linked pull requests. Numo does not write code, push branches, run tests or open pull requests. To have code written, copy an issue's prompt for your own coding agent and connect that agent to minddy through MCP.
+Choose the conversation model and reasoning level in Numo's composer. Numo organizes and tracks work: it reads and updates issues, plans, pages, objectives (including their comment threads), feedback, cycles and routines, and it can read, comment on, update and merge linked pull requests. Numo does not write code, push branches, run tests or open pull requests. To have code written, copy an issue's prompt for your own coding agent and connect that agent to minddy through MCP.
+
+Numo can write a file to download (PDF, CSV, Markdown, text, HTML, JSON, XML, SVG or calendar), built from the conversation and the files added to it. The file shows as a card under its answer with **Download**, **Preview** and **Copy contents**, and selecting the card opens the preview; it stays in the user's private conversation storage until Numo is asked to attach it to an issue, an objective or a comment. PDFs use standard fonts, so characters outside Western European alphabets and emoji are left out.
 
 Stopping Numo stops its turn. An external action already sent may still complete. Conversations that were waiting on code work from an earlier version are stopped automatically and return to idle.
 

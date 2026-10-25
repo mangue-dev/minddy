@@ -382,4 +382,52 @@ describe("GET /api/attachments/file proxy", () => {
     expect(response.headers.get("content-type")).toBe("image/png");
     expect(response.headers.get("content-security-policy")).toContain("sandbox");
   });
+  describe("objects of the reader's own chat storage (MIN-793)", () => {
+    const CHAT = "chat/user-1/0f5a2a0c-7b8e-4d43-9c43-1b2f6a2c9d10";
+
+    beforeEach(() => {
+      info.mockResolvedValue({ data: { contentType: "application/octet-stream" }, error: null });
+      download.mockResolvedValue({ data: new Blob(["\uFEFFName,Usage\r\nA,1\r\n"]), error: null });
+    });
+
+    it("downloads under the name of the owner's link, typed by its extension", async () => {
+      const response = await GET(request(CHAT, "download=1&name=Export%20mars.csv"));
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-type")).toBe("text/csv");
+      expect(response.headers.get("content-disposition")).toBe(
+        "attachment; filename*=UTF-8''Export%20mars.csv",
+      );
+    });
+
+    it("previews the named file, and strips a path from the name", async () => {
+      const response = await GET(request(CHAT, "preview=1&name=../../report.csv"));
+
+      expect(response.headers.get("content-type")).toBe("text/html; charset=utf-8");
+      expect(response.headers.get("content-disposition")).toBe("inline");
+    });
+
+    it("never takes an active type from a name outside the generated formats", async () => {
+      const response = await GET(request(CHAT, "name=page.htm"));
+
+      expect(response.headers.get("content-type")).toBe("application/octet-stream");
+      expect(response.headers.get("content-disposition")).toContain("attachment");
+    });
+
+    it("keeps another account's chat object private", async () => {
+      const response = await GET(request("chat/user-2/0f5a2a0c-7b8e-4d43-9c43-1b2f6a2c9d10",
+        "download=1&name=x.csv"));
+
+      expect(response.status).toBe(404);
+      expect(from).not.toHaveBeenCalled();
+    });
+
+    it("ignores the name on a project object, which has its own row", async () => {
+      const response = await GET(request(PATH, "download=1&name=other.txt"));
+
+      expect(response.headers.get("content-disposition")).toBe(
+        "attachment; filename*=UTF-8''file.html",
+      );
+    });
+  });
 });

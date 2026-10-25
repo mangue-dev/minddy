@@ -31,6 +31,9 @@ export const NUMO_TOOL_CAPABILITIES: Record<string, NumoToolCapability> = {
   list_global_filter_options: "personal",
   list_conversation_attachments: "personal",
   read_conversation_attachment: "personal",
+  // Writes only the user's private chat storage, which the chat upload door
+  // opens to every role: a Reader may export what they can read.
+  create_file: "personal",
   // Access is decided from the image's own project or owner.
   view_image: "personal",
   list_inbox: "personal",
@@ -83,6 +86,7 @@ export const NUMO_TOOL_CAPABILITIES: Record<string, NumoToolCapability> = {
 
   // Internal comments.
   add_comment: "comment",
+  add_objective_comment: "comment",
   add_feedback_comment: "comment",
 
   // Content writes.

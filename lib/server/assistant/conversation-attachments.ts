@@ -12,12 +12,20 @@ import { downloadAttachment, insertAttachments, MAX_ATTACHMENT_BYTES,
   type AttachmentParent } from "@/lib/server/attachments";
 import { projectStorageAllowed } from "@/lib/server/storage-quota";
 import { resolveUploadedMimeType } from "@/lib/inline-safe";
+import { decodeNumoToolMessage } from "@/lib/server/numo/tool-content";
+import { GENERATED_FILE_FORMATS, generatedFileFromResult, isGeneratedFileFormat,
+  type GeneratedFile } from "@/lib/generated-files";
+import { GeneratedFileError, generatedFileName, MAX_GENERATED_FILE_CHARACTERS,
+  renderGeneratedFile } from "./generated-files";
 
 type MessageRow = { id: string; content: string | null; metadata: unknown;
   context: unknown; created_at: string; user_payload_version?: number };
 const MESSAGE_COLUMNS = "id,content,context,metadata,created_at,user_payload_version";
 const UUID = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 const REFERENCE = new RegExp(`^(${UUID}):(\\d+)$`);
+const GENERATED_REFERENCE = new RegExp(`^numo:(${UUID})$`);
+type ConversationFile = PromptAttachment & { attachment_id: string; created_at: string;
+  origin: "user" | "numo" };
 
 async function assertConversation(ctx: ToolContext) {
   if (!ctx.conversationId) throw new Error("No current conversation.");
@@ -30,7 +38,7 @@ async function messageFiles(ctx: ToolContext, stored: MessageRow) {
   const message = await decodeNumoUserMessage(ctx.userId, stored, ctx.userId);
   const raw = (message.metadata as { attachments?: unknown } | null)?.attachments;
   if (!Array.isArray(raw)) return [];
-  const files: Array<PromptAttachment & { attachment_id: string; created_at: string }> = [];
+  const files: ConversationFile[] = [];
   for (const [index, value] of raw.entries()) {
     if (!value || typeof value !== "object" || value.kind && value.kind !== "file"
       || typeof value.storage_path !== "string" || typeof value.file_name !== "string"
@@ -46,14 +54,51 @@ async function messageFiles(ctx: ToolContext, stored: MessageRow) {
     const decoded = file.id && file.project_id
       ? await decodeAttachmentRow("attachments", file as PromptAttachment & Record<string, unknown>, ctx.userId)
       : file;
-    files.push({ ...decoded, attachment_id: `${message.id}:${index}`, created_at: message.created_at });
+    files.push({ ...decoded, attachment_id: `${message.id}:${index}`, created_at: message.created_at,
+      origin: "user" });
   }
   return files;
 }
 
-function summary(file: PromptAttachment & { attachment_id: string; created_at: string }) {
+function summary(file: ConversationFile) {
   return { attachment_id: file.attachment_id, file_name: file.file_name,
-    mime_type: file.mime_type, size_bytes: file.size_bytes, created_at: file.created_at };
+    mime_type: file.mime_type, size_bytes: file.size_bytes, created_at: file.created_at,
+    origin: file.origin };
+}
+
+/**
+ * Files Numo wrote in this conversation (MIN-793). A `create_file` result,
+ * stored in its (encrypted) tool message, is the file's only descriptor, so
+ * the conversation's tool messages are where its name and type are read back.
+ * Only objects under the user's own chat prefix are accepted.
+ */
+async function generatedFiles(ctx: ToolContext, fileId?: string): Promise<ConversationFile[]> {
+  const files: ConversationFile[] = [];
+  for (let start = 0; ; start += 200) {
+    const { data, error } = await ctx.supabase.from("assistant_messages")
+      .select("id,role,content,tool_calls,context,metadata,tool_call_id,tool_name,tool_payload_version,created_at")
+      .eq("conversation_id", ctx.conversationId).eq("role", "tool").eq("tool_name", "create_file")
+      .order("created_at", { ascending: true }).order("id", { ascending: true })
+      .range(start, start + 199);
+    if (error) throw new Error("Unable to read the files of this conversation.");
+    for (const row of data ?? []) {
+      const message = await decodeNumoToolMessage(ctx.userId, row as Parameters<typeof decodeNumoToolMessage>[1], ctx.userId);
+      // The full result is kept in metadata; `content` is what the model read.
+      let file = generatedFileFromResult((message.metadata as { result?: unknown } | null)?.result);
+      if (!file) {
+        try {
+          file = generatedFileFromResult(JSON.parse(message.content ?? ""));
+        } catch { /* A failed call stores its error, not a file. */ }
+      }
+      if (!file || !file.storage_path.startsWith(`chat/${ctx.userId}/`)) continue;
+      if (fileId && file.attachment_id !== `numo:${fileId}`) continue;
+      files.push({ kind: "file", storage_path: file.storage_path, file_name: file.file_name,
+        mime_type: file.mime_type, size_bytes: file.size_bytes, attachment_id: file.attachment_id,
+        created_at: (row as { created_at: string }).created_at, origin: "numo" });
+    }
+    if ((data?.length ?? 0) < 200) break;
+  }
+  return files;
 }
 
 export function attachmentOffset(raw: unknown): number {
@@ -67,27 +112,32 @@ export function attachmentOffset(raw: unknown): number {
 /** Scan beyond prompt and PostgREST windows; expose bounded pages of stable references. */
 export async function listConversationAttachments(ctx: ToolContext, offset = 0) {
   await assertConversation(ctx);
-  const files: ReturnType<typeof summary>[] = [];
-  let total = 0;
+  const all: ConversationFile[] = [];
   for (let start = 0; ; start += 200) {
     const { data, error } = await ctx.supabase.from("assistant_messages").select(MESSAGE_COLUMNS)
       .eq("conversation_id", ctx.conversationId).eq("role", "user")
       .order("created_at", { ascending: true }).order("id", { ascending: true })
       .range(start, start + 199);
     if (error) throw new Error("Unable to read conversation attachments.");
-    for (const row of data ?? []) {
-      for (const file of await messageFiles(ctx, row as MessageRow)) {
-        if (total >= offset && files.length < 20) files.push(summary(file));
-        total++;
-      }
-    }
+    for (const row of data ?? []) all.push(...await messageFiles(ctx, row as MessageRow));
     if ((data?.length ?? 0) < 200) break;
   }
-  return { attachments: files, total, next_offset: offset + files.length < total ? offset + files.length : null };
+  all.push(...await generatedFiles(ctx));
+  // Stable: the user's files keep their order, Numo's slot in by date.
+  all.sort((a, b) => a.created_at.localeCompare(b.created_at));
+  const files = all.slice(offset, offset + 20).map(summary);
+  return { attachments: files, total: all.length,
+    next_offset: offset + files.length < all.length ? offset + files.length : null };
 }
 
 export async function resolveConversationAttachment(ctx: ToolContext, reference: unknown) {
   await assertConversation(ctx);
+  const generated = typeof reference === "string" ? GENERATED_REFERENCE.exec(reference) : null;
+  if (generated) {
+    const [file] = await generatedFiles(ctx, generated[1].toLowerCase());
+    if (!file) throw new Error("Attachment not found in this conversation.");
+    return file;
+  }
   const match = typeof reference === "string" ? REFERENCE.exec(reference) : null;
   if (!match) throw new Error("Use an attachment_id from list_conversation_attachments.");
   const { data, error } = await ctx.supabase.from("assistant_messages").select(MESSAGE_COLUMNS)
@@ -101,19 +151,62 @@ export async function resolveConversationAttachment(ctx: ToolContext, reference:
 
 export async function readConversationAttachment(ctx: ToolContext, reference: unknown, offset = 0) {
   const file = await resolveConversationAttachment(ctx, reference);
-  const textLike = !file.mime_type.startsWith("image/") && file.mime_type !== "application/pdf"
-    && (file.mime_type.startsWith("text/") || file.mime_type === "application/json"
-    || /\.(csv|txt|md|json|log)$/i.test(file.file_name));
+  const textLike = (!file.mime_type.startsWith("image/") || file.mime_type === "image/svg+xml")
+    && file.mime_type !== "application/pdf"
+    && (file.mime_type.startsWith("text/") || /^application\/(json|xml)$/.test(file.mime_type)
+    || /\.(csv|tsv|txt|md|json|log|xml|svg|html|ics)$/i.test(file.file_name));
   if (textLike) {
     const bytes = await downloadAttachment(ctx.service, file.storage_path!);
     if (!bytes) throw new Error("Attachment file is unavailable.");
-    const text = bytes.toString("utf8");
+    const text = bytes.toString("utf8").replace(/^\ufeff/, "");
     return { ...summary(file), content: text.slice(offset, offset + 3000), offset,
       total_characters: text.length, next_offset: offset + 3000 < text.length ? offset + 3000 : null };
   }
   if (offset) throw new Error("offset is only supported for text files.");
   return { ...summary(file), preview_attachment_id: file.attachment_id,
     note: "The file will be supplied as model input when its format, size and model capabilities permit; otherwise an explicit unavailable-format note is supplied." };
+}
+
+/**
+ * `create_file` (MIN-793): render a file and keep it in the user's private chat
+ * storage, like a file they drop into the composer — same encryption, same
+ * account quota, same door. The result is the file's descriptor: the loop
+ * stores it in the tool message, the thread draws the card from it, and
+ * `numo:<id>` lets the attachment tools read it or copy it to an issue, an
+ * objective or a comment.
+ */
+export async function createGeneratedFile(ctx: ToolContext, args: Record<string, unknown>) {
+  await assertConversation(ctx);
+  const format = typeof args.format === "string" ? args.format.trim().toLowerCase() : "";
+  if (!isGeneratedFileFormat(format)) {
+    throw new GeneratedFileError(`format must be one of: ${Object.keys(GENERATED_FILE_FORMATS).join(", ")}.`);
+  }
+  if (typeof args.content !== "string" || !args.content.trim()) {
+    throw new GeneratedFileError("content is required.");
+  }
+  if (args.content.length > MAX_GENERATED_FILE_CHARACTERS) {
+    throw new GeneratedFileError(`content is limited to ${MAX_GENERATED_FILE_CHARACTERS} characters.`);
+  }
+  const fileName = generatedFileName(args.file_name, format);
+  const bytes = await renderGeneratedFile(format, args.content, fileName);
+  if (bytes.byteLength > MAX_ATTACHMENT_BYTES) throw new GeneratedFileError("The file would exceed 20 MB.");
+  const quota = await ctx.service.rpc("account_storage_quota_allows", {
+    p_user: ctx.userId, p_additional_bytes: Math.ceil(bytes.byteLength * 1.4) + 4096,
+  });
+  if (quota.error || quota.data !== true) throw new GeneratedFileError("The user's storage quota is exceeded.");
+  const path = opaqueAttachmentPath(`chat/${ctx.userId}`);
+  const mimeType = GENERATED_FILE_FORMATS[format];
+  await uploadPrivateAttachmentObject(ctx.service, path, bytes, mimeType);
+  const file: GeneratedFile = {
+    attachment_id: `numo:${path.split("/").at(-1)}`,
+    file_name: fileName,
+    format,
+    mime_type: mimeType,
+    size_bytes: bytes.byteLength,
+    storage_path: path,
+  };
+  return { ...file,
+    note: "The user sees this file as a card under your answer, with its download options: do not paste its contents or a link. To put it on an issue, an objective or a comment, pass attachment_id to add_resource." };
 }
 
 /** A destination owns an independent encrypted object, surviving chat deletion. */
