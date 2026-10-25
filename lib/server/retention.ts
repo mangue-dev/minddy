@@ -18,6 +18,7 @@ import {
   ORPHAN_PAGE_FILE_DAYS,
   sweepOrphanPageFiles,
 } from "@/lib/server/page-files";
+import { pruneUploadCitationChecks } from "@/lib/server/upload-citations";
 
 /**
  * Application of retention periods (MIN-119, RGPD art. 5.1.e).
@@ -106,9 +107,11 @@ export const RETENTION_DAYS = {
   /**
  * Objects in bucket `attachments` ORPHANS (MIN-348): uploaded live
  * by browser, then never saved — one composer closed, one tab
- * lost. Same nature and same grace period as page files: this
+ * lost — or no longer cited by any row or text (MIN-792): a Numo
+ * conversation deleted with its files, an image removed from a
+ * description. Same nature and same grace period as page files: this
  * is not a retention period, it is the time we leave for a
- * resource to finally be attached.
+ * resource to finally be attached, or for an edit to be undone.
  */
   orphanAttachments: ORPHAN_ATTACHMENT_DAYS,
 } as const;
@@ -387,17 +390,21 @@ export async function runRetentionSweep(now: Date = new Date()): Promise<Retenti
     // page's stream; this catches the pages nobody edits anymore. Steps carry
     // text, deleted text included, and must not outlive their seven days.
     await step("page_collaboration_batches", () => pruneCollaborationJournal(service)),
+    // Citation checks older than the grace period no longer skip a candidate.
+    await step("upload_citation_checks", () =>
+      pruneUploadCitationChecks(service, cutoff(RETENTION_DAYS.orphanAttachments, now))
+    ),
     // BEFORE the trash, and the order has a reason: purging a page takes away its
     // files itself (lib/server/trash.ts). Going here first avoids
     // reread lines which will be sent in the second, and above all to count
     // twice the same bytes in the cron report.
     await step("orphan_page_files", () =>
-      sweepOrphanPageFiles(service, cutoff(RETENTION_DAYS.orphanPageFiles, now))
+      sweepOrphanPageFiles(service, cutoff(RETENTION_DAYS.orphanPageFiles, now), 500, { now })
     ),
     // Like scanning page files, and for the same reason: BEFORE the
     // trash, which itself takes the objects from the lines it purges.
     await step("orphan_attachments", () =>
-      sweepOrphanAttachments(service, cutoff(RETENTION_DAYS.orphanAttachments, now))
+      sweepOrphanAttachments(service, cutoff(RETENTION_DAYS.orphanAttachments, now), 500, { now })
     ),
     await step("trash", () => purgeTrash(service, now)),
   ];

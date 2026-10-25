@@ -5,16 +5,16 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
   MAX_PAGE_FILE_BYTES,
-  pageFileIdsInBody,
   pageFileStoragePrefix,
 } from "@/lib/page-files";
 import { resolveUploadedMimeType } from "@/lib/inline-safe";
 import { opaqueAttachmentPath, removeStorageObjects,
-  uploadPrivateAttachmentObject } from "@/lib/server/attachments";
+  uploadPrivateAttachmentObject, type CitedUploadsFinder } from "@/lib/server/attachments";
+import { findCitedUploads, recordCitedUploads,
+  uploadObjectId } from "@/lib/server/upload-citations";
 import { projectStorageAllowed } from "@/lib/server/storage-quota";
 import { decodeAttachmentRow, encodeAttachmentValue,
   shouldEncryptAttachmentMetadata } from "@/lib/server/attachment-content";
-import { decodePageProjection } from "@/lib/server/page-content";
 
 /**
  * One-page files, server side (MIN-280): sending, and HOUSEHOLD.
@@ -27,8 +27,8 @@ import { decodePageProjection } from "@/lib/server/page-content";
  * this is why the purge raises the paths BEFORE deleting
  * (lib/server/trash.ts);
  * - the orphan SCAN ({@link sweepOrphanPageFiles}) picks up what has
- * left the body without the page leaving: an image deleted with a stroke of
- * backspace, a cut block and never stuck again ;
+ * left every document without the page leaving: an image deleted with a
+ * stroke of backspace, a cut block and never stuck again;
  * - and nothing else. In particular, NO comparison on each write of the
  * body: it would delete the file with one undo/redo between two
  * keystrokes, and there is no backtracking on a deleted object.
@@ -180,17 +180,20 @@ export async function pageFilePathsForProjects(
 }
 
 /**
- * Files that no body is talking about anymore, after the grace period.
+ * Files that no document is talking about anymore, after the grace period.
  *
  * By SCANNING and not by difference when writing (the why is at the top of this
- * file). The comparison is done page by page: candidates are grouped
- * by `page_id`, the body of each page is read once, and any id that is no longer there
- * goes away — line and object.
+ * file). Pending typing is materialized first, then every text that can cite
+ * a file is read ({@link findCitedUploads}): not only the file's own page,
+ * because the address travels with the content — an image block pasted into
+ * another page, a page version, a ticket description (MIN-792). A file cited
+ * anywhere stays, and is recorded so the following nights examine other
+ * files instead of the same oldest ones.
  *
- * Reading the body is BLIND to the node type (`pageFileIdsInBody`): it
- * searches for the file address anywhere in the JSON. It's deliberately wide,
- * and the asymmetry is on the good side — the worst case is to keep one file too many,
- * never to delete one that the document still shows.
+ * Reading is BLIND to the node type: the file's id is searched anywhere in
+ * each decoded row. It's deliberately wide, and the asymmetry is on the good
+ * side — the worst case is to keep one file too many, never to delete one
+ * that a document still shows. A failed read throws: nothing is deleted.
  *
  * The batch is bounded like the other sweep purges; the next day resumes the
  * continuation. Returns the number of rows actually deleted.
@@ -198,14 +201,15 @@ export async function pageFilePathsForProjects(
 export async function sweepOrphanPageFiles(
   service: SupabaseClient,
   before: string,
-  limit = 500
+  limit = 500,
+  { findCited = findCitedUploads, now = new Date() }:
+    { findCited?: CitedUploadsFinder; now?: Date } = {}
 ): Promise<number> {
-  const { data, error } = await service
-    .from("page_files")
-    .select("id, page_id, storage_path")
-    .lt("created_at", before)
-    .limit(limit);
-  if (error) throw error;
+  const { data, error } = await service.rpc("orphan_page_file_candidates", {
+    p_before: before,
+    p_limit: limit,
+  });
+  if (error) throw new Error(error.message);
 
   const candidates = (data ?? []) as {
     id: string;
@@ -214,36 +218,21 @@ export async function sweepOrphanPageFiles(
   }[];
   if (candidates.length === 0) return 0;
 
-  const byPage = new Map<string, typeof candidates>();
-  for (const row of candidates) {
-    const list = byPage.get(row.page_id) ?? [];
-    list.push(row);
-    byPage.set(row.page_id, list);
-  }
-
   // A file cited only by typing still pending in the collaboration journal
   // is not an orphan: those steps are written into the rows first (MIN-688).
-  await materializePendingPages(service, [...byPage.keys()]);
-  const { data: pages, error: pagesError } = await service
-    .from("pages")
-    .select("id, project_id, content, encrypted_content, encryption_version")
-    .in("id", [...byPage.keys()]);
-  if (pagesError) throw pagesError;
+  await materializePendingPages(service, [...new Set(candidates.map((row) => row.page_id))]);
 
-  const orphans: typeof candidates = [];
-  const bodies = new Map((await Promise.all((pages ?? []).map((row) =>
-    decodePageProjection(row)))).map((page) => [page.id, page.content]));
-  for (const [pageId, rows] of byPage) {
-    // A page that has NOT returned from reading no longer exists (it just
-    // to be purged between two scans): its files are orphaned
-    // straight ahead, their lines having already left via the waterfall.
-    const cited = bodies.has(pageId)
-      ? pageFileIdsInBody(bodies.get(pageId))
-      : new Set<string>();
-    for (const row of rows) {
-      if (!cited.has(row.id)) orphans.push(row);
-    }
-  }
+  // A page cites a file by its row id (`/pages/files/<id>`); the object's own
+  // id is searched too, for a copy that kept the storage address.
+  const idsOf = (row: (typeof candidates)[number]) =>
+    [row.id.toLowerCase(), uploadObjectId(row.storage_path)].filter(
+      (id): id is string => !!id);
+  const cited = await findCited(service, new Set(candidates.flatMap(idsOf)), []);
+  const isCited = (row: (typeof candidates)[number]) =>
+    idsOf(row).some((id) => cited.has(id));
+
+  await recordCitedUploads(service, candidates.filter(isCited).map((row) => row.storage_path), now);
+  const orphans = candidates.filter((row) => !isCited(row));
   if (orphans.length === 0) return 0;
 
   const { count, error: deleteError } = await service

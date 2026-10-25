@@ -7,6 +7,7 @@ import {
   PageFileError,
   sweepOrphanPageFiles,
 } from "@/lib/server/page-files";
+import { collectCitedIds } from "@/lib/server/upload-citations";
 
 /** Pending collaboration typing is materialized before the sweep reads bodies (MIN-688). */
 const materialized = vi.hoisted(() => ({
@@ -46,11 +47,15 @@ function fakeService(options: {
   insertFails?: boolean;
   /** Whether the exact pending upload fits the account quota (MIN-348). */
   quotaOk?: boolean;
+  /** Other texts that cite files: tickets, other pages, versions (MIN-792). */
+  documents?: unknown[];
 } = {}) {
   const files = options.files ?? [];
   const pages = options.pages ?? [];
   const uploaded: string[] = [];
   const removed: string[] = [];
+  /** Paths the sweep recorded as still cited (`upload_citation_checks`). */
+  const checked: string[] = [];
   /** Actual operation order, used to assert row deletion precedes byte deletion. */
   const order: string[] = [];
 
@@ -70,6 +75,14 @@ function fakeService(options: {
   };
 
   const from = (table: string) => {
+    if (table === "upload_citation_checks") {
+      return {
+        upsert: async (rows: { storage_path: string }[]) => {
+          checked.push(...rows.map((r) => r.storage_path));
+          return { error: null };
+        },
+      };
+    }
     if (table === "attachment_object_encryption_scope" ||
         table === "attachment_metadata_encryption_scope") {
       return { select: () => ({ eq: () => ({ maybeSingle: async () =>
@@ -145,18 +158,39 @@ function fakeService(options: {
     throw new Error(`table inattendue: ${table}`);
   };
 
-  // SQL owns the quota verdict; the module only calls the RPC.
-  const rpc = async (name: string) => {
+  // SQL owns the quota verdict and the candidate order; the module only calls
+  // the RPCs.
+  const rpc = async (name: string, args: { p_before?: string }) => {
+    if (name === "orphan_page_file_candidates") {
+      return {
+        data: files
+          .filter((f) => f.created_at < (args.p_before ?? ""))
+          .map(({ id, page_id, storage_path }) => ({ id, page_id, storage_path })),
+        error: null,
+      };
+    }
     if (name !== "project_storage_quota_allows")
       throw new Error(`unexpected rpc: ${name}`);
     return { data: options.quotaOk ?? true, error: null };
   };
 
+  /** Reads `pages` and any other `documents` the way the real scanner does. */
+  const findCited = async (_client: SupabaseClient, ids: Iterable<string>) => {
+    const wanted = new Set(ids);
+    const found = new Set<string>();
+    for (const doc of [...pages, ...(options.documents ?? [])]) {
+      collectCitedIds(doc, wanted, found);
+    }
+    return found;
+  };
+
   return {
     client: { from, storage, rpc } as unknown as SupabaseClient,
+    findCited,
     files,
     uploaded,
     removed,
+    checked,
     order,
   };
 }
@@ -287,6 +321,10 @@ describe("sweepOrphanPageFiles", () => {
   const ORPHELIN = "33333333-3333-4333-8333-333333333333";
   const VEUF = "44444444-4444-4444-8444-444444444444";
   const FRAIS = "55555555-5555-4555-8555-555555555555";
+  const COLLE = "66666666-6666-4666-8666-666666666666";
+
+  const sweep = (service: ReturnType<typeof fakeService>, before = LATER) =>
+    sweepOrphanPageFiles(service.client, before, 500, { findCited: service.findCited });
 
   it("keeps objects still cited by content and removes the rest", async () => {
     const service = fakeService({
@@ -294,7 +332,7 @@ describe("sweepOrphanPageFiles", () => {
       pages: [{ id: PAGE, content: body([VIVANT, IMBRIQUE]) }],
     });
 
-    expect(await sweepOrphanPageFiles(service.client, LATER)).toBe(1);
+    expect(await sweep(service)).toBe(1);
     expect(service.removed).toEqual([
       `projects/${PROJECT}/pages/${PAGE}/${ORPHELIN}/f.png`,
     ]);
@@ -302,6 +340,31 @@ describe("sweepOrphanPageFiles", () => {
     // Typing still pending in the collaboration journal could cite a file:
     // the candidate pages are materialized before their bodies are read.
     expect(materialized.pages).toHaveBeenCalledWith(service.client, [PAGE]);
+    // The kept files are recorded, so the next nights examine other files.
+    expect(service.checked).toEqual([row(VIVANT).storage_path, row(IMBRIQUE).storage_path]);
+  });
+
+  it("keeps a file that only another document still shows", async () => {
+    // MIN-792: an image block pasted into a ticket description keeps the
+    // address of the page file, even once the original page dropped it.
+    const service = fakeService({
+      files: [row(COLLE)],
+      pages: [{ id: PAGE, content: body([]) }],
+      documents: [{ description: `![capture](${pageFileUrl(PROJECT, COLLE)})` }],
+    });
+    expect(await sweep(service)).toBe(0);
+    expect(service.removed).toEqual([]);
+  });
+
+  it("deletes nothing when a document cannot be read", async () => {
+    const service = fakeService({ files: [row(ORPHELIN)] });
+    await expect(
+      sweepOrphanPageFiles(service.client, LATER, 500, {
+        findCited: async () => { throw new Error("decode failed"); },
+      })
+    ).rejects.toThrow("decode failed");
+    expect(service.removed).toEqual([]);
+    expect(service.files).toHaveLength(1);
   });
 
   it("deletes the row before the bytes", async () => {
@@ -309,7 +372,7 @@ describe("sweepOrphanPageFiles", () => {
       files: [row(ORPHELIN)],
       pages: [{ id: PAGE, content: body([]) }],
     });
-    await sweepOrphanPageFiles(service.client, LATER);
+    await sweep(service);
     expect(service.order.map((step) => step.split(":")[0])).toEqual([
       "delete",
       "remove",
@@ -319,7 +382,7 @@ describe("sweepOrphanPageFiles", () => {
   it("removes files whose page no longer exists", async () => {
     // Cascades may have removed the rows before the next object sweep.
     const service = fakeService({ files: [row(VEUF)], pages: [] });
-    expect(await sweepOrphanPageFiles(service.client, LATER)).toBe(1);
+    expect(await sweep(service)).toBe(1);
     expect(service.removed).toHaveLength(1);
   });
 
@@ -330,17 +393,15 @@ describe("sweepOrphanPageFiles", () => {
       files: [row(FRAIS)],
       pages: [{ id: PAGE, content: body([]) }],
     });
-    expect(
-      await sweepOrphanPageFiles(service.client, "2025-01-01T00:00:00.000Z")
-    ).toBe(0);
+    expect(await sweep(service, "2025-01-01T00:00:00.000Z")).toBe(0);
     expect(service.removed).toEqual([]);
   });
 
   it("does nothing when there are no candidates", async () => {
     const service = fakeService();
     const spy = vi.spyOn(service.client, "from");
-    expect(await sweepOrphanPageFiles(service.client, LATER)).toBe(0);
-    // No candidates means page bodies do not need to be read.
-    expect(spy).toHaveBeenCalledTimes(1);
+    expect(await sweep(service)).toBe(0);
+    // No candidates means no document needs to be read.
+    expect(spy).not.toHaveBeenCalled();
   });
 });

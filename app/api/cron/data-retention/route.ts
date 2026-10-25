@@ -15,7 +15,9 @@ import { runRetentionSweep } from "@/lib/server/retention";
  * carries the detail by step, and `ok: false` indicates that you have to go and see.
  */
 
-export const maxDuration = 60;
+// The orphan-upload steps read every text that can cite an upload before
+// deleting one (MIN-792); 60 seconds no longer covers a large database.
+export const maxDuration = 300;
 
 export async function GET(request: NextRequest) {
   if (!verifyCronSecret(request)) {
