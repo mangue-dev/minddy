@@ -286,14 +286,42 @@ mac:
 dmg:
   # The `.dmg` window: the app on the left, the link to /Applications on the right.
   # It's the gesture that everyone knows, and it cannot be reinvented.
+  #
+  # THE WINDOW'S LOOK (MIN-789). The background is `build/background.tiff`, a
+  # HiDPI pair rendered from `build/background.svg` in the landing's pastel
+  # palette; it also sets the window frame (540×380 points), so there is no
+  # `window:` block. The plates of the SVG sit under the two icons: moving an
+  # icon means moving its plate. Finder picks the label color from the
+  # background, so the labels stay dark on it even when the Mac is in dark mode.
+  # `scripts/build-dmg-assets.mjs` renders the background and `volume.icns`.
+  background: build/background.tiff
+  # The volume icon electron-builder would compile from `icon.icon` anyway,
+  # committed so that the last content item below can name it.
+  icon: build/volume.icns
   contents:
     - x: 140
-      y: 190
+      y: 154
       type: file
     - x: 400
-      y: 190
+      y: 154
       type: link
       path: /Applications
+    # HIDDEN FILES, POSITIONED OUT OF SIGHT. With hidden files shown (⌘⇧.),
+    # Finder lays them out in the first free slots, on top of the composition.
+    # dmgbuild positions only what it copies, and the schema refuses its
+    # `position` type: so each one is copied again, over itself, from the
+    # identical file dmgbuild already wrote. The relative paths resolve from
+    # `desktop/`, where `npm run dist:mac` runs.
+    - x: 140
+      y: 640
+      type: file
+      path: build/background.tiff
+      name: .background.tiff
+    - x: 400
+      y: 640
+      type: file
+      path: build/volume.icns
+      name: .VolumeIcon.icns
 
 # The update feed. `generic` and not `github`: the deposit is private, and the
 # provider GitHub would require embedding a token in a distributed app.

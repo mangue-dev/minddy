@@ -58,6 +58,10 @@ const PACKAGING_INPUTS = [
   // The Icon Composer source is a FILE (`icon.json` + the SVG): it is
   // unfolded file by file, cf. `expandDirectories`.
   "desktop/build/icon.icon",
+  // The installer window (MIN-789): they change the `.dmg`, not the app, but
+  // the `.dmg` is published too.
+  "desktop/build/background.tiff",
+  "desktop/build/volume.icns",
   // The bundler options are part of what is produced.
   "scripts/build-desktop.mjs",
   "scripts/build-windows-store.mjs",

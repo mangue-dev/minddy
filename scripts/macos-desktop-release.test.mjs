@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
+import sharp from "sharp";
 
 import {
   macArtifactMetadata,
@@ -65,4 +67,46 @@ test("uses a dedicated child-entitlements file and strict release verification",
   assert.doesNotMatch(inherit, /com\.apple\.developer\.aps-environment/);
   assert.match(publisher, /--verify.*--deep.*--strict/);
   assert.match(publisher, /spctl/);
+});
+
+test("keeps the installer window's assets in step with its layout", async () => {
+  const config = await readFile(new URL("../desktop/electron-builder.yml", import.meta.url), "utf8");
+  const svg = await readFile(new URL("../desktop/build/background.svg", import.meta.url), "utf8");
+  const fingerprint = await readFile(new URL("./desktop-fingerprint.mjs", import.meta.url), "utf8");
+  const dmg = config.slice(config.indexOf("\ndmg:\n"), config.indexOf("\npublish:\n"));
+
+  // The background is a HiDPI pair: 540×380 points, and a 2× page behind it.
+  const background = fileURLToPath(new URL("../desktop/build/background.tiff", import.meta.url));
+  const base = await sharp(background).metadata();
+  const retina = await sharp(background, { page: 1 }).metadata();
+  assert.deepEqual([base.pages, base.width, base.height], [2, 540, 380]);
+  assert.deepEqual([retina.width, retina.height], [1080, 760]);
+
+  // Each visible icon sits on a card of the SVG, 212×204 points, with the icon
+  // 6 points above the card's center so that its label fits underneath.
+  const cards = [...svg.matchAll(/<rect x="(\d+)" y="(\d+)" width="212" height="204"/g)].map(
+    ([, x, y]) => `${Number(x) + 106},${Number(y) + 96}`
+  );
+  const icons = [...dmg.matchAll(/^ {4}- x: (\d+)\n {6}y: (\d+)\n {6}type: (?:file|link)$/gm)]
+    .map(([, x, y]) => `${x},${y}`)
+    .filter((position) => Number(position.split(",")[1]) < 380);
+  assert.deepEqual(icons, ["140,154", "400,154"]);
+  assert.deepEqual(cards, icons);
+
+  // The hidden files are copied over themselves from committed files, placed
+  // below the window, and fingerprinted like every other packaging input.
+  const hidden = [...dmg.matchAll(/^ {6}y: (\d+)\n {6}type: file\n {6}path: (\S+)\n {6}name: (\S+)$/gm)];
+  assert.deepEqual(
+    hidden.map(([, , path, name]) => [path, name]),
+    [
+      ["build/background.tiff", ".background.tiff"],
+      ["build/volume.icns", ".VolumeIcon.icns"],
+    ]
+  );
+  for (const [, y, path] of hidden) {
+    assert.ok(Number(y) > 380, `${path} must sit below the window`);
+    assert.ok(fingerprint.includes(`"desktop/${path}",`), `${path} must be fingerprinted`);
+  }
+  assert.match(dmg, /^ {2}background: build\/background\.tiff$/m);
+  assert.match(dmg, /^ {2}icon: build\/volume\.icns$/m);
 });

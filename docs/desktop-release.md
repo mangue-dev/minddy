@@ -47,7 +47,11 @@ lib/changelog.ts
 
 Plus what does not enter via esbuild but still produces the binary:
 `desktop/electron-builder.yml`, entitlements, icon, versions
-of Electron and electron-updater, and `scripts/build-desktop.mjs`.
+of Electron and electron-updater, and `scripts/build-desktop.mjs`. The `.dmg`
+window's `background.tiff` and `volume.icns` count too: they change only the
+installer, but the installer is published. Regenerate both with
+`node scripts/build-dmg-assets.mjs` (macOS with Xcode 26) after editing
+`desktop/build/background.svg` or the app icon.
 
 **The surprising line is `lib/public-routes.ts`.** Add a public page
 changes the binary: without republication, existing installations will not be able to
