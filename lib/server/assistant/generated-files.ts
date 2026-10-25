@@ -32,6 +32,26 @@ export function generatedFileName(raw: unknown, format: GeneratedFileFormat): st
   return `${stem || "numo"}.${format}`;
 }
 
+/**
+ * Whether the first element is `<svg>`, after an optional XML prolog and any
+ * comments. A linear scan: a regular expression repeating the comment group
+ * backtracks exponentially on a run of `--><!--`.
+ */
+export function startsWithSvgElement(content: string): boolean {
+  let rest = content.trimStart();
+  if (rest.startsWith("<?xml")) {
+    const end = rest.indexOf("?>");
+    if (end < 0) return false;
+    rest = rest.slice(end + 2).trimStart();
+  }
+  while (rest.startsWith("<!--")) {
+    const end = rest.indexOf("-->", 4);
+    if (end < 0) return false;
+    rest = rest.slice(end + 3).trimStart();
+  }
+  return /^<svg[\s>/]/i.test(rest);
+}
+
 /** UTF-8 byte order mark: spreadsheet apps otherwise misread accented CSV. */
 const BOM = "\ufeff";
 
@@ -53,7 +73,7 @@ export async function renderGeneratedFile(format: GeneratedFileFormat, content: 
       }
       break;
     case "svg":
-      if (!/^\s*(<\?xml[^>]*\?>\s*)?(<!--[\s\S]*?-->\s*)*<svg[\s>]/i.test(content)) {
+      if (!startsWithSvgElement(content)) {
         throw new GeneratedFileError("content must be an SVG document starting with <svg>.");
       }
       break;

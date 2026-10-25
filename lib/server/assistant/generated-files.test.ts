@@ -3,7 +3,7 @@ import { PDFDocument } from "pdf-lib";
 
 vi.mock("server-only", () => ({}));
 
-const { generatedFileName, renderGeneratedFile } = await import("./generated-files");
+const { generatedFileName, renderGeneratedFile, startsWithSvgElement } = await import("./generated-files");
 const { parseInline, parseMarkdownBlocks, renderMarkdownPdf, toWinAnsi } = await import("./markdown-pdf");
 const { generatedFileFromResult, generatedFileMimeType, generatedFileUrl } = await import("@/lib/generated-files");
 
@@ -33,6 +33,17 @@ describe("renderGeneratedFile", () => {
       .toBe("BEGIN:VCALENDAR\r\nEND:VCALENDAR");
     expect(await text(renderGeneratedFile("svg", '<?xml version="1.0"?>\n<svg xmlns="http://www.w3.org/2000/svg"/>', "a.svg")))
       .toContain("<svg");
+  });
+
+  it("finds the SVG element after a prolog and comments, in linear time", () => {
+    expect(startsWithSvgElement('<?xml version="1.0"?>\n<!-- a --><!-- b -->\n<svg width="1"/>')).toBe(true);
+    expect(startsWithSvgElement("<svg/>")).toBe(true);
+    expect(startsWithSvgElement("<!-- unclosed <svg>")).toBe(false);
+    expect(startsWithSvgElement("<svgx>")).toBe(false);
+    const hostile = `<!--${"--><!--".repeat(50_000)}`;
+    const started = performance.now();
+    expect(startsWithSvgElement(hostile)).toBe(false);
+    expect(performance.now() - started).toBeLessThan(1000);
   });
 
   it("refuses content that breaks its format's grammar", async () => {
