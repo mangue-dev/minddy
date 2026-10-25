@@ -47,6 +47,12 @@ import { RelationTargetPicker } from "@/components/relation-target-picker";
 import { LinkablePullRequestsProbe, PrLinkTargetPicker } from "@/components/pull-requests/pr-link-target-picker";
 import { useLinkIssuesToPullRequest } from "@/lib/use-link-issues-to-pull-request";
 import type { RelationKinds } from "@/lib/use-issue-relations-query";
+import { useIssueSelection } from "@/lib/issue-selection-context";
+import {
+  hasDirectRelation,
+  shortcutTargets,
+  type ShortcutTargetField,
+} from "@/lib/issue-shortcut-targets";
 import { useIssuePr, useIssuePrReadiness } from "@/components/issue-pr-context";
 import { PrReadinessIcon } from "@/components/pull-requests/pr-readiness";
 import type { IssuePrReadiness } from "@/lib/issue-pr-store";
@@ -997,6 +1003,14 @@ const IssueCardContent = memo(function IssueCardContent({
     [onSetCategories, issue.id],
   );
 
+  // A picker opened on a SELECTED card writes to the whole selection (MIN-795);
+  // see lib/issue-shortcut-targets.ts for the project scoping. The selection
+  // is read when a picker opens or applies, so selecting never re-renders
+  // the cards.
+  const selection = useIssueSelection();
+  const targetsFor = (field: ShortcutTargetField) =>
+    selected ? shortcutTargets(issue, selection.getSelectedIssues(), field) : [issue];
+
   // Apply the same memoization to the shortcut menu (MIN-316).
   const cardMemberList = useMemo(() => [...memberMap.values()], [memberMap]);
   const cardCategoryList = useMemo(
@@ -1067,33 +1081,46 @@ const IssueCardContent = memo(function IssueCardContent({
   // A plan already exists → the “plan” entries (⋯ menu, copied prompt, agent)
   // switch from “generate” to “verify”.
   const issueHasPlan = hasPlanTasks(issue.plan);
+  // Relations (R, right-click) follow the field pickers: a selected card adds
+  // the relation from every selected ticket of its project.
+  const relationTargets = () => targetsFor("relation");
+  const relationsOf = (issueId: string) =>
+    issueId === issue.id ? relations : selection.getRelations(issueId);
+  const addRelationFromTargets = (
+    type: IssueRelationType,
+    targetId: string,
+    kinds: RelationKinds,
+  ) => {
+    for (const target of relationTargets()) {
+      if (target.id === targetId) continue;
+      if (hasDirectRelation(relationsOf(target.id), type, targetId)) continue;
+      onAddRelation?.(target.id, type, targetId, kinds);
+    }
+  };
   const relationCandidates = useMemo(() => {
     const candidateIssues = relationType ? getCandidateIssues?.() : undefined;
-    if (!candidateIssues) return [];
-    const linked = new Set(
-      (relations ?? [])
-        .filter((r) => !r.inheritedObjectiveId && r.relation === relationType && r.otherType !== "objective")
-        .map((r) => r.otherId),
-    );
+    if (!relationType || !candidateIssues) return [];
+    const targets = relationTargets();
+    const targetIds = new Set(targets.map((target) => target.id));
+    // A candidate stays offered while at least one target can still gain it.
     return candidateIssues.filter(
       (i) =>
         i.project_id === issue.project_id &&
-        i.id !== issue.id && !linked.has(i.id),
+        !targetIds.has(i.id) &&
+        targets.some((target) => !hasDirectRelation(relationsOf(target.id), relationType, i.id)),
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the selection is read when the picker opens
   }, [getCandidateIssues, relationType, relations, issue.id, issue.project_id]);
   const relationObjectiveCandidates = useMemo(() => {
     if (!relationType || !objectiveMap) return [];
-    const linked = new Set(
-      (relations ?? [])
-        .filter((r) => !r.inheritedObjectiveId && r.relation === relationType && r.otherType === "objective")
-        .map((r) => r.otherId),
-    );
+    const targets = relationTargets();
     return [...objectiveMap.values()].filter(
       (objective) =>
         objective.project_id === issue.project_id &&
-        !linked.has(objective.id) &&
+        targets.some((target) => !hasDirectRelation(relationsOf(target.id), relationType, objective.id)) &&
         objective.status !== "done" && objective.status !== "canceled",
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the selection is read when the picker opens
   }, [objectiveMap, relationType, relations, issue.project_id]);
   // Context common to the two copyable prompts (implement the ticket, write
   // its plan): relations and categories, resolved into readable names.
@@ -1244,6 +1271,7 @@ const IssueCardContent = memo(function IssueCardContent({
         : {}),
     });
   const { ref: shortcutsRef, ...hoverProps } = containerProps;
+  const shortcutMenuTargets = menuState ? targetsFor(menuState.field) : [issue];
   const interactionOpen = !!(menuPosition || relationTypeAt || relationType || linkPrOpen || confirmDelete || customPromptOpen || menuState || uploads.pending.length);
   useLayoutEffect(() => {
     onInteractionChange?.(issue.id, interactionOpen);
@@ -1422,6 +1450,7 @@ const IssueCardContent = memo(function IssueCardContent({
       />
       <RelationTypePicker
         position={relationTypeAt}
+        targetCount={relationTypeAt ? relationTargets().length : 1}
         onClose={() => setRelationTypeAt(null)}
         onSelect={(type) => {
           pointerRef.current = relationTypeAt;
@@ -1436,7 +1465,7 @@ const IssueCardContent = memo(function IssueCardContent({
         projectKey={projectKey}
         onClose={() => setRelationType(null)}
         onSelect={(targetId, targetType) => {
-          if (relationType) onAddRelation?.(issue.id, relationType, targetId, { targetType });
+          if (relationType) addRelationFromTargets(relationType, targetId, { targetType });
           setRelationType(null);
         }}
       />
@@ -1467,11 +1496,14 @@ const IssueCardContent = memo(function IssueCardContent({
         state={menuState}
         onClose={closeMenu}
         issue={issue}
+        targets={shortcutMenuTargets}
         members={cardMemberList}
         categories={cardCategoryList}
         objectives={cardObjectiveList}
-        onUpdate={updateCard}
-        onSetCategories={setCardCategories}
+        onUpdate={(patch) => {
+          for (const target of shortcutMenuTargets) onUpdateIssue(target.id, patch);
+        }}
+        onSetCategories={(ids, issueId) => onSetCategories(issueId, ids)}
       />
     </div>
   );

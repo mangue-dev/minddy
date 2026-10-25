@@ -68,6 +68,7 @@ import type { BoardLandingPreview } from "@/components/board-drop-indicator";
 import { IssuePrProvider } from "@/components/issue-pr-context";
 import { BulkIssueActions } from "@/components/bulk-issue-actions";
 import { AskNumoProvider } from "@/lib/ask-numo-context";
+import { IssueSelectionProvider } from "@/lib/issue-selection-context";
 import {
   MarqueeOverlay,
   useMarqueeSelection,
@@ -560,117 +561,120 @@ export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
       {/* “@” on card hover or selection opens Numo with the same context as
           the button on the selection pill (MIN-105). */}
       <AskNumoProvider selectedIssues={selectedIssues} onAskNumo={onAskNumo}>
-        <DndContext
-          accessibility={{ announcements: dragAnnouncements }}
-          sensors={sensors}
-          collisionDetection={boardCollision}
-          onDragStart={handleDragStart}
-          // The drop side can change without the target changing, so the marker
-          // must track `onDragMove` as well as `onDragOver`.
-          onDragMove={handleDragMove}
-          onDragOver={handleDragMove}
-          onDragEnd={handleDragEnd}
-          onDragCancel={handleDragCancel}
-        >
-          {selectedIssues.length > 0 && (
-            <BulkIssueActions
-              count={selectedIssues.length}
-              issues={selectedIssues}
-              members={Array.from(memberMapByProject.values()).flatMap(
-                (members) => Array.from(members.values()),
-              )}
-              onUpdate={updateSelected}
-              onDelete={async () => {
-                await Promise.all(
-                  selectedIssues.map((issue) =>
-                    onDeleteIssue(issue.id, issue.project_id),
-                  ),
-                );
-                clearSelection();
-              }}
-              onClear={clearSelection}
-              onAskNumo={() => onAskNumo(selectedIssues)}
-              onCopyPrompt={() => void bulkPromptActions.copyPrompt()}
-              cycle={bulkCycle}
-              objectives={bulkObjectives}
-              onLink={bulkLink}
-            />
-          )}
-          {/* Edge fade NEXT to the scroller, not on it (MIN-319). */}
-          <div className="relative flex h-full min-h-0 flex-col">
-            <div
-              ref={setScrollerRef}
-              onScroll={(event) => {
-                preservedHorizontalScroll.current =
-                  event.currentTarget.scrollLeft;
-                scrollProps.onScroll();
-              }}
-              onPointerDown={onMarqueePointerDown}
-              style={isLanding ? { scrollSnapType: "none" } : undefined}
-              className={cn("mobile-kanban-scroller min-h-0 flex-1", BOARD_SCROLLER_CLASS)}
-            >
-              {columns.map(({ status, items }) => (
-                <GlobalKanbanColumn
-                  key={status.value}
-                  status={status}
-                  issues={items}
-                  projectMap={projectMap}
-                  issueMap={allIssueMap}
-                  relationsByIssue={relationsByIssue}
-                  getCandidateIssues={getCandidateIssues}
-                  memberMapByProject={memberMapByProject}
-                  categoryMapByProject={categoryMapByProject}
-                  objectiveMapByProject={objectiveMapByProject}
-                  onOpenIssue={onOpenIssue}
-                  onOpenIssueById={onOpenIssueById}
-                  onOpenPlan={onOpenPlan}
-                  onUpdateIssue={onUpdateIssue}
-                  onSetCategories={onSetCategories}
-                  onCreateIssue={onCreateIssue}
-                  onAddRelation={onAddRelation}
-                  onDeleteIssue={onDeleteIssue}
-                  buildMenuActions={buildMenuActions}
-                  currentCycleId={currentCycleId}
-                  selectedIds={selectedIds}
-                  draggingIds={draggingIds}
-                  dropPreview={
-                    preview?.status === status.value ? preview : undefined
-                  }
-                  landingPreview={landingPreview ?? undefined}
-                  onSelect={toggleSelection}
-                />
-              ))}
-            </div>
-            <ScrollFadeEdges edges={edges} axis="x" className="z-30" />
-            <BoardColumnDots statuses={columns.map((column) => column.status)} scroller={scrollerRef} />
-          </div>
-
-          <MarqueeOverlay overlayRef={marqueeOverlayRef} />
-
-          <DragOverlay
-            dropAnimation={dropAnimation.animation}
-            modifiers={dragModifiers}
-            style={{ pointerEvents: "none" }}
-            zIndex={20}
+        {/* A picker on a selected card edits the whole selection (MIN-795). */}
+        <IssueSelectionProvider selectedIssues={selectedIssues} relationsByIssue={relationsByIssue}>
+          <DndContext
+            accessibility={{ announcements: dragAnnouncements }}
+            sensors={sensors}
+            collisionDetection={boardCollision}
+            onDragStart={handleDragStart}
+            // The drop side can change without the target changing, so the marker
+            // must track `onDragMove` as well as `onDragOver`.
+            onDragMove={handleDragMove}
+            onDragOver={handleDragMove}
+            onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
           >
-            {activeId && dragPreviewHtmlRef.current ? (
-              <div className="relative w-full">
-                {/* The badge represents the rest of a multi-card bundle. */}
-                {draggingIds.size > 1 && (
-                  <span className="absolute -right-2 -top-2 z-10 flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground shadow-md">
-                    {draggingIds.size}
-                  </span>
+            {selectedIssues.length > 0 && (
+              <BulkIssueActions
+                count={selectedIssues.length}
+                issues={selectedIssues}
+                members={Array.from(memberMapByProject.values()).flatMap(
+                  (members) => Array.from(members.values()),
                 )}
-                <div
-                  aria-hidden
-                  dangerouslySetInnerHTML={{
-                    __html: dragPreviewHtmlRef.current,
-                  }}
-                />
+                onUpdate={updateSelected}
+                onDelete={async () => {
+                  await Promise.all(
+                    selectedIssues.map((issue) =>
+                      onDeleteIssue(issue.id, issue.project_id),
+                    ),
+                  );
+                  clearSelection();
+                }}
+                onClear={clearSelection}
+                onAskNumo={() => onAskNumo(selectedIssues)}
+                onCopyPrompt={() => void bulkPromptActions.copyPrompt()}
+                cycle={bulkCycle}
+                objectives={bulkObjectives}
+                onLink={bulkLink}
+              />
+            )}
+            {/* Edge fade NEXT to the scroller, not on it (MIN-319). */}
+            <div className="relative flex h-full min-h-0 flex-col">
+              <div
+                ref={setScrollerRef}
+                onScroll={(event) => {
+                  preservedHorizontalScroll.current =
+                    event.currentTarget.scrollLeft;
+                  scrollProps.onScroll();
+                }}
+                onPointerDown={onMarqueePointerDown}
+                style={isLanding ? { scrollSnapType: "none" } : undefined}
+                className={cn("mobile-kanban-scroller min-h-0 flex-1", BOARD_SCROLLER_CLASS)}
+              >
+                {columns.map(({ status, items }) => (
+                  <GlobalKanbanColumn
+                    key={status.value}
+                    status={status}
+                    issues={items}
+                    projectMap={projectMap}
+                    issueMap={allIssueMap}
+                    relationsByIssue={relationsByIssue}
+                    getCandidateIssues={getCandidateIssues}
+                    memberMapByProject={memberMapByProject}
+                    categoryMapByProject={categoryMapByProject}
+                    objectiveMapByProject={objectiveMapByProject}
+                    onOpenIssue={onOpenIssue}
+                    onOpenIssueById={onOpenIssueById}
+                    onOpenPlan={onOpenPlan}
+                    onUpdateIssue={onUpdateIssue}
+                    onSetCategories={onSetCategories}
+                    onCreateIssue={onCreateIssue}
+                    onAddRelation={onAddRelation}
+                    onDeleteIssue={onDeleteIssue}
+                    buildMenuActions={buildMenuActions}
+                    currentCycleId={currentCycleId}
+                    selectedIds={selectedIds}
+                    draggingIds={draggingIds}
+                    dropPreview={
+                      preview?.status === status.value ? preview : undefined
+                    }
+                    landingPreview={landingPreview ?? undefined}
+                    onSelect={toggleSelection}
+                  />
+                ))}
               </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+              <ScrollFadeEdges edges={edges} axis="x" className="z-30" />
+              <BoardColumnDots statuses={columns.map((column) => column.status)} scroller={scrollerRef} />
+            </div>
+
+            <MarqueeOverlay overlayRef={marqueeOverlayRef} />
+
+            <DragOverlay
+              dropAnimation={dropAnimation.animation}
+              modifiers={dragModifiers}
+              style={{ pointerEvents: "none" }}
+              zIndex={20}
+            >
+              {activeId && dragPreviewHtmlRef.current ? (
+                <div className="relative w-full">
+                  {/* The badge represents the rest of a multi-card bundle. */}
+                  {draggingIds.size > 1 && (
+                    <span className="absolute -right-2 -top-2 z-10 flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground shadow-md">
+                      {draggingIds.size}
+                    </span>
+                  )}
+                  <div
+                    aria-hidden
+                    dangerouslySetInnerHTML={{
+                      __html: dragPreviewHtmlRef.current,
+                    }}
+                  />
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        </IssueSelectionProvider>
       </AskNumoProvider>
     </IssuePrProvider>
   );

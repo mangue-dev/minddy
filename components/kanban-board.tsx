@@ -68,6 +68,7 @@ import { IssuePrProvider } from "@/components/issue-pr-context";
 import { BulkIssueActions } from "@/components/bulk-issue-actions";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { AskNumoProvider } from "@/lib/ask-numo-context";
+import { IssueSelectionProvider } from "@/lib/issue-selection-context";
 import {
   MarqueeOverlay,
   useMarqueeSelection,
@@ -508,129 +509,132 @@ export const KanbanBoard = memo(function KanbanBoard({
       {/* “@” on card hover or selection opens Numo with the same context as
           the button on the selection pill (MIN-105). */}
       <AskNumoProvider selectedIssues={selectedIssues} onAskNumo={onAskNumo}>
-        <DndContext
-          accessibility={{ announcements: dragAnnouncements }}
-          sensors={canWrite ? sensors : NO_SENSORS}
-          collisionDetection={boardCollision}
-          onDragStart={handleDragStart}
-          // The drop side can change without the target changing, so the marker
-          // must track `onDragMove` as well as `onDragOver`.
-          onDragMove={handleDragMove}
-          onDragOver={handleDragMove}
-          onDragEnd={handleDragEnd}
-          onDragCancel={handleDragCancel}
-        >
-          <div className="flex h-full flex-col">
-            {canWrite && selectedIssues.length > 0 && (
-              <BulkIssueActions
-                count={selectedIssues.length}
-                issues={selectedIssues}
-                members={members}
-                onUpdate={updateSelected}
-                onDelete={
-                  onDeleteIssue
-                    ? async () => {
-                        await Promise.all(
-                          selectedIssues.map((issue) =>
-                            onDeleteIssue(issue.id),
-                          ),
-                        );
-                        clearSelection();
-                      }
-                    : undefined
-                }
-                onClear={clearSelection}
-                onAskNumo={() => onAskNumo(selectedIssues)}
-                onCopyPrompt={() => void bulkPromptActions.copyPrompt()}
-                cycle={bulkCycle}
-                // A project-board selection always belongs to one project, so
-                // all of that project's objectives are available.
-                objectives={objectives}
-                onLink={bulkLink}
-              />
-            )}
-            {/* Draw the edge fade beside the scroller (MIN-319). A mask on the
-                scroller would be recomposited on every frame and nested inside
-                each column's mask. The relative parent anchors the fade. */}
-            <div className="relative flex min-h-0 flex-1 flex-col">
-              <div
-                ref={setScrollerRef}
-                onScroll={(e) => {
-                  preservedHorizontalScroll.current =
-                    e.currentTarget.scrollLeft;
-                  scrollProps.onScroll();
-                }}
-                onPointerDown={onMarqueePointerDown}
-                style={isLanding ? { scrollSnapType: "none" } : undefined}
-                className={cn("mobile-kanban-scroller min-h-0 flex-1", BOARD_SCROLLER_CLASS)}
-              >
-                {columns.map(({ status, items }) => (
-                  <KanbanColumn
-                    key={status.value}
-                    status={status}
-                    issues={items}
-                    issueMap={allIssueMap}
-                    relationsByIssue={relationsByIssue}
-                    getCandidateIssues={getCandidateIssues}
-                    projectId={projectId}
-                    projectKey={projectKey}
-                    memberMap={memberMap}
-                    categoryMap={categoryMap}
-                    objectiveMap={objectiveMap}
-                    onOpenIssue={onOpenIssue}
-                    onOpenIssueById={onOpenIssueById}
-                    onOpenPlan={onOpenPlan}
-                    onCreateIssue={canWrite ? onCreateIssue : undefined}
-                    onUpdateIssue={onUpdateIssue}
-                    onSetCategories={onSetCategories}
-                    onAddRelation={onAddRelation}
-                    onDeleteIssue={onDeleteIssue}
-                    buildMenuActions={buildMenuActions}
-                    currentCycleId={currentCycleId}
-                    selectedIds={selectedIds}
-                    draggingIds={draggingIds}
-                    dropPreview={
-                      preview?.status === status.value ? preview : undefined
-                    }
-                    landingPreview={landingPreview ?? undefined}
-                    onSelect={canWrite ? toggleSelection : undefined}
-                  />
-                ))}
-              </div>
-              <ScrollFadeEdges edges={edges} axis="x" className="z-30" />
-            </div>
-            <BoardColumnDots statuses={columns.map((column) => column.status)} scroller={scrollerRef} />
-          </div>
-
-          <MarqueeOverlay overlayRef={marqueeOverlayRef} />
-
-          {/* The custom animation measures the optimistic destination after the
-          move, then lands this fixed overlay there. The journey therefore stays
-          visible between columns instead of being clipped by either scroller. */}
-          <DragOverlay
-            dropAnimation={dropAnimation.animation}
-            modifiers={dragModifiers}
-            style={{ pointerEvents: "none" }}
-            zIndex={20}
+        {/* A picker on a selected card edits the whole selection (MIN-795). */}
+        <IssueSelectionProvider selectedIssues={selectedIssues} relationsByIssue={relationsByIssue}>
+          <DndContext
+            accessibility={{ announcements: dragAnnouncements }}
+            sensors={canWrite ? sensors : NO_SENSORS}
+            collisionDetection={boardCollision}
+            onDragStart={handleDragStart}
+            // The drop side can change without the target changing, so the marker
+            // must track `onDragMove` as well as `onDragOver`.
+            onDragMove={handleDragMove}
+            onDragOver={handleDragMove}
+            onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
           >
-            {activeId && dragPreviewHtmlRef.current ? (
-              <div className="relative w-full">
-                {/* The badge represents the rest of a multi-card bundle. */}
-                {draggingIds.size > 1 && (
-                  <span className="absolute -right-2 -top-2 z-10 flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground shadow-md">
-                    {draggingIds.size}
-                  </span>
-                )}
-                <div
-                  aria-hidden
-                  dangerouslySetInnerHTML={{
-                    __html: dragPreviewHtmlRef.current,
-                  }}
+            <div className="flex h-full flex-col">
+              {canWrite && selectedIssues.length > 0 && (
+                <BulkIssueActions
+                  count={selectedIssues.length}
+                  issues={selectedIssues}
+                  members={members}
+                  onUpdate={updateSelected}
+                  onDelete={
+                    onDeleteIssue
+                      ? async () => {
+                          await Promise.all(
+                            selectedIssues.map((issue) =>
+                              onDeleteIssue(issue.id),
+                            ),
+                          );
+                          clearSelection();
+                        }
+                      : undefined
+                  }
+                  onClear={clearSelection}
+                  onAskNumo={() => onAskNumo(selectedIssues)}
+                  onCopyPrompt={() => void bulkPromptActions.copyPrompt()}
+                  cycle={bulkCycle}
+                  // A project-board selection always belongs to one project, so
+                  // all of that project's objectives are available.
+                  objectives={objectives}
+                  onLink={bulkLink}
                 />
+              )}
+              {/* Draw the edge fade beside the scroller (MIN-319). A mask on the
+                  scroller would be recomposited on every frame and nested inside
+                  each column's mask. The relative parent anchors the fade. */}
+              <div className="relative flex min-h-0 flex-1 flex-col">
+                <div
+                  ref={setScrollerRef}
+                  onScroll={(e) => {
+                    preservedHorizontalScroll.current =
+                      e.currentTarget.scrollLeft;
+                    scrollProps.onScroll();
+                  }}
+                  onPointerDown={onMarqueePointerDown}
+                  style={isLanding ? { scrollSnapType: "none" } : undefined}
+                  className={cn("mobile-kanban-scroller min-h-0 flex-1", BOARD_SCROLLER_CLASS)}
+                >
+                  {columns.map(({ status, items }) => (
+                    <KanbanColumn
+                      key={status.value}
+                      status={status}
+                      issues={items}
+                      issueMap={allIssueMap}
+                      relationsByIssue={relationsByIssue}
+                      getCandidateIssues={getCandidateIssues}
+                      projectId={projectId}
+                      projectKey={projectKey}
+                      memberMap={memberMap}
+                      categoryMap={categoryMap}
+                      objectiveMap={objectiveMap}
+                      onOpenIssue={onOpenIssue}
+                      onOpenIssueById={onOpenIssueById}
+                      onOpenPlan={onOpenPlan}
+                      onCreateIssue={canWrite ? onCreateIssue : undefined}
+                      onUpdateIssue={onUpdateIssue}
+                      onSetCategories={onSetCategories}
+                      onAddRelation={onAddRelation}
+                      onDeleteIssue={onDeleteIssue}
+                      buildMenuActions={buildMenuActions}
+                      currentCycleId={currentCycleId}
+                      selectedIds={selectedIds}
+                      draggingIds={draggingIds}
+                      dropPreview={
+                        preview?.status === status.value ? preview : undefined
+                      }
+                      landingPreview={landingPreview ?? undefined}
+                      onSelect={canWrite ? toggleSelection : undefined}
+                    />
+                  ))}
+                </div>
+                <ScrollFadeEdges edges={edges} axis="x" className="z-30" />
               </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+              <BoardColumnDots statuses={columns.map((column) => column.status)} scroller={scrollerRef} />
+            </div>
+
+            <MarqueeOverlay overlayRef={marqueeOverlayRef} />
+
+            {/* The custom animation measures the optimistic destination after the
+            move, then lands this fixed overlay there. The journey therefore stays
+            visible between columns instead of being clipped by either scroller. */}
+            <DragOverlay
+              dropAnimation={dropAnimation.animation}
+              modifiers={dragModifiers}
+              style={{ pointerEvents: "none" }}
+              zIndex={20}
+            >
+              {activeId && dragPreviewHtmlRef.current ? (
+                <div className="relative w-full">
+                  {/* The badge represents the rest of a multi-card bundle. */}
+                  {draggingIds.size > 1 && (
+                    <span className="absolute -right-2 -top-2 z-10 flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground shadow-md">
+                      {draggingIds.size}
+                    </span>
+                  )}
+                  <div
+                    aria-hidden
+                    dangerouslySetInnerHTML={{
+                      __html: dragPreviewHtmlRef.current,
+                    }}
+                  />
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        </IssueSelectionProvider>
       </AskNumoProvider>
     </IssuePrProvider>
   );

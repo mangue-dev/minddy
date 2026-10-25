@@ -38,6 +38,12 @@ import { Dot } from "@/components/issue-property-fields";
 import { ObjectivePill } from "@/components/objective-label";
 import { useOrderedObjectives } from "@/lib/use-ordered-objectives";
 import {
+  allTargetsHaveCategory,
+  allTargetsMatch,
+  sharedValue,
+  toggleCategoryAcross,
+} from "@/lib/issue-shortcut-targets";
+import {
   StatusIndicator,
   PriorityIndicator,
   RelationIcon,
@@ -239,6 +245,7 @@ export function IssueShortcutMenu({
   state,
   onClose,
   issue,
+  targets,
   members,
   categories,
   objectives,
@@ -247,13 +254,22 @@ export function IssueShortcutMenu({
 }: {
   state: ShortcutMenuState | null;
   onClose: () => void;
+  /** The ticket the picker is anchored on: its project feeds the quick-create rows. */
   issue: Issue;
+  /** Every ticket the picker writes to (MIN-795), `issue` included — a board
+   *  selection when the card belongs to one. Defaults to `issue` alone. Check
+   *  marks only show values that ALL targets share. */
+  targets?: Issue[];
   members: Member[];
   categories: Category[];
   objectives: Objective[];
+  /** Applies the patch to every target. */
   onUpdate: (patch: IssueUpdateInput) => void;
-  onSetCategories: (ids: string[]) => void;
+  /** Sets ONE target's categories. */
+  onSetCategories: (ids: string[], issueId: string) => void;
 }) {
+  const writeTargets = targets ?? [issue];
+  const tBulk = useTranslations("BulkActions");
   const tStatus = useTranslations("Status");
   const tPriority = useTranslations("Priority");
   const tField = useTranslations("Field");
@@ -265,7 +281,11 @@ export function IssueShortcutMenu({
   const categoryCreate = useCategoryCreateOption({
     projectId: issue.project_id,
     categories,
-    onCreated: (category) => onSetCategories([...issue.category_ids, category.id]),
+    onCreated: (category) => {
+      for (const target of writeTargets) {
+        onSetCategories([...target.category_ids, category.id], target.id);
+      }
+    },
   });
   const objectiveCreate = useObjectiveCreateOption({
     projectId: issue.project_id,
@@ -278,6 +298,9 @@ export function IssueShortcutMenu({
 
   if (!state) return null;
   const { field, position } = state;
+
+  const all = <T,>(read: (target: Issue) => T, value: T) =>
+    checked(allTargetsMatch(writeTargets, read, value));
 
   // Single-select: apply then close. Multi-select (categories) keeps the menu open.
   const apply = (patch: IssueUpdateInput) => {
@@ -297,9 +320,9 @@ export function IssueShortcutMenu({
         stopPropagation
         onOpenChange={(o) => !o && onClose()}
         anchor={position}
-        value={issue.due_date}
+        value={sharedValue(writeTargets, (target) => target.due_date)}
         onChange={(due_date) => onUpdate({ due_date })}
-        recurrence={issue.recurrence}
+        recurrence={sharedValue(writeTargets, (target) => target.recurrence)}
         onRecurrenceChange={(next) => onUpdate(next)}
         ariaLabel={tIssue("changeDueDateAria")}
       />
@@ -315,7 +338,7 @@ export function IssueShortcutMenu({
           value={s.value}
           keywords={[tStatus(s.value)]}
           onSelect={() => apply({ status: s.value as IssueStatus })}
-          {...checked(issue.status === s.value)}
+          {...all((target) => target.status, s.value)}
         >
           <StatusIndicator status={s.value} className="size-4" />
           <span className="truncate">{tStatus(s.value)}</span>
@@ -329,7 +352,7 @@ export function IssueShortcutMenu({
           value={p.value}
           keywords={[tPriority(p.value)]}
           onSelect={() => apply({ priority: p.value as IssuePriority })}
-          {...checked(issue.priority === p.value)}
+          {...all((target) => target.priority, p.value)}
         >
           <PriorityIndicator priority={p.value} className="size-4" />
           <span className="truncate">{tPriority(p.value)}</span>
@@ -343,7 +366,7 @@ export function IssueShortcutMenu({
             value="__none__"
             keywords={[tField("effortNone")]}
             onSelect={() => apply({ effort: null })}
-            {...checked(issue.effort === null)}
+            {...all((target) => target.effort, null)}
           >
             <span className="truncate">{tField("effortNone")}</span>
           </CommandItem>
@@ -353,7 +376,7 @@ export function IssueShortcutMenu({
               value={eff.value}
               keywords={[eff.label]}
               onSelect={() => apply({ effort: eff.value as IssueEffort })}
-              {...checked(issue.effort === eff.value)}
+              {...all((target) => target.effort, eff.value)}
             >
               <HugeiconsIcon icon={TriangleIcon} className="size-4 text-muted-foreground" />
               <span className="truncate">{eff.label}</span>
@@ -369,7 +392,7 @@ export function IssueShortcutMenu({
             value="__none__"
             keywords={[tField("unassigned")]}
             onSelect={() => apply({ assignee_id: null })}
-            {...checked(issue.assignee_id === null)}
+            {...all((target) => target.assignee_id, null)}
           >
             <span className="truncate text-muted-foreground">
               {tField("unassigned")}
@@ -381,7 +404,7 @@ export function IssueShortcutMenu({
               value={m.user_id}
               keywords={[displayName(m), ...(m.email ? [m.email] : [])]}
               onSelect={() => apply({ assignee_id: m.user_id })}
-              {...checked(issue.assignee_id === m.user_id)}
+              {...all((target) => target.assignee_id, m.user_id)}
             >
               <UserAvatar
                 seed={m.avatar_seed}
@@ -400,33 +423,31 @@ export function IssueShortcutMenu({
             value="__none__"
             keywords={[tCommon("none")]}
             onSelect={() => apply({ objective_id: null })}
-            {...checked(issue.objective_id === null)}
+            {...all((target) => target.objective_id, null)}
           >
             <span className="truncate text-muted-foreground">{tCommon("none")}</span>
           </CommandItem>
           <ObjectiveShortcutItems
             objectives={objectives}
-            value={issue.objective_id}
+            value={sharedValue(writeTargets, (target) => target.objective_id)}
             onSelect={(objective_id) => apply({ objective_id })}
           />
         </>
       );
       break;
     case "category": {
-      const selected = new Set(issue.category_ids);
-      const toggle = (id: string) =>
-        onSetCategories(
-          selected.has(id)
-            ? issue.category_ids.filter((x) => x !== id)
-            : [...issue.category_ids, id]
-        );
+      const toggle = (id: string) => {
+        for (const [issueId, ids] of toggleCategoryAcross(writeTargets, id)) {
+          onSetCategories(ids, issueId);
+        }
+      };
       items = categories.map((c) => (
         <CommandItem
           key={c.id}
           value={c.id}
           keywords={[c.name]}
           onSelect={() => toggle(c.id)}
-          {...checked(selected.has(c.id))}
+          {...checked(allTargetsHaveCategory(writeTargets, c.id))}
         >
           <Dot color={c.color} />
           <span className="truncate">{c.name}</span>
@@ -453,7 +474,15 @@ export function IssueShortcutMenu({
       onSearchValueChange={create ? setQuery : undefined}
       hideEmpty={!!create && query.trim() !== ""}
     >
-      <CommandGroup>{items}</CommandGroup>
+      <CommandGroup
+        heading={
+          writeTargets.length > 1
+            ? tBulk("selected", { count: writeTargets.length })
+            : undefined
+        }
+      >
+        {items}
+      </CommandGroup>
       {create && (
         <PickerCreateRow
           create={create}
@@ -482,16 +511,22 @@ export function RelationTypePicker({
   position,
   onClose,
   onSelect,
+  targetCount = 1,
 }: {
   position: { x: number; y: number } | null;
   onClose: () => void;
   onSelect: (type: IssueRelationType) => void;
+  /** Tickets the relation is added from (MIN-795): a selection names its size. */
+  targetCount?: number;
 }) {
   const t = useTranslations("Relations");
+  const tBulk = useTranslations("BulkActions");
   if (!position) return null;
   return (
     <CommandAnchor position={position} onClose={onClose}>
-      <CommandGroup heading={t("relations")}>
+      <CommandGroup
+        heading={targetCount > 1 ? tBulk("selected", { count: targetCount }) : t("relations")}
+      >
         {RELATION_TYPES.map((type) => (
           <CommandItem
             key={type}
