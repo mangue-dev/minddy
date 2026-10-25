@@ -20,6 +20,7 @@ import { linkablePullRequests } from "@/components/pull-requests/pr-link-target-
 import { allPullRequestsQueryOptions } from "@/lib/use-agent-runs";
 import type { PullRequestListItem } from "@/lib/agent-api";
 import { bulkPullRequestLinks } from "@/lib/bulk-pull-request-links";
+import { useUndoHistory } from "@/lib/undo/undo-context";
 import { useLinkIssuesToPullRequest, useUnlinkIssuesFromPullRequests } from "@/lib/use-link-issues-to-pull-request";
 import type { IssueUpdateInput, Member, Objective } from "@/lib/types";
 import {
@@ -77,6 +78,9 @@ export function BulkIssueActions({
   const tPr = useTranslations("PullRequests");
   const [pendingUnlink, setPendingUnlink] = useState<{ count: number; run: () => void } | null>(null);
   const { requestBulkActions, registerSelectionActions } = useBulkActions();
+  // Each bulk action is one gesture: ⌘Z undoes it for the whole selection,
+  // not one issue per keystroke (MIN-795).
+  const { linked } = useUndoHistory();
 
   // Cross-project boards flatten every project's members, so the same person can
   // appear once per shared project — de-dupe by user id (also fixes the React
@@ -136,11 +140,15 @@ export function BulkIssueActions({
       count,
       surface,
       members: uniqueMembers,
-      onUpdate,
+      onUpdate: (patch) => linked(() => onUpdate(patch)),
       onDelete: requestDelete,
       onAskNumo,
       onCopyPrompt,
-      cycle,
+      cycle: cycle && {
+        ...cycle,
+        onAdd: () => linked(cycle.onAdd),
+        onRemove: () => linked(cycle.onRemove),
+      },
       objectives,
       onLink,
       pullRequestLinks: pullRequestLinks(openPullRequests),
@@ -211,7 +219,7 @@ export function BulkIssueActions({
           description={t("deleteConfirmDescription", { days: TRASH_RETENTION_DAYS })}
           confirmLabel={tCommon("moveToTrash")}
           cancelLabel={tCommon("cancel")}
-          onConfirm={onDelete}
+          onConfirm={() => linked(onDelete)}
         />
       )}
       <ConfirmDeleteDialog

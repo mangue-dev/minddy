@@ -2316,6 +2316,8 @@
   "Undo": {
     "undone": "Deshecho: {action}",
     "redone": "Rehecho: {action}",
+    "undoneLinked": "Deshecho: {action} ({count, plural, one {# cambio} other {# cambios}})",
+    "redoneLinked": "Rehecho: {action} ({count, plural, one {# cambio} other {# cambios}})",
     "undoFailed": "No se ha podido deshacer: {message}",
     "redoFailed": "No se ha podido rehacer: {message}",
     "actions": {

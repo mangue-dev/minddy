@@ -6,7 +6,7 @@ import { useIssueRelationsQuery } from "./use-issue-relations-query";
 import type { GlobalBoardResponse, IssueRelation } from "./types";
 
 const mocks = vi.hoisted(() => ({ add: vi.fn(), record: vi.fn() }));
-vi.mock("./undo/undo-context", () => ({ useUndoHistory: () => ({ record: mocks.record }) }));
+vi.mock("./undo/undo-context", () => ({ useUndoHistory: () => ({ record: mocks.record, currentLink: () => undefined }) }));
 vi.mock("./issue-relations-api", () => ({
   addIssueRelationApi: (...args: unknown[]) => mocks.add(...args),
   fetchIssueRelationsApi: vi.fn(),
@@ -46,7 +46,7 @@ it("updates both caches before the POST returns and records only the persisted r
   expect(mocks.record).toHaveBeenCalledWith({
     kind: "relation-add", projectId: "project", relationId: "server",
     relation: { source_id: "objective", source_type: "objective", target_id: "issue", target_type: "issue", type: "blocks" },
-  });
+  }, undefined, undefined);
 });
 
 it("removes a failed addition from both caches without recording undo", async () => {

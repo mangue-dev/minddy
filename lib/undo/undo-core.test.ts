@@ -3,6 +3,7 @@ import {
   CATEGORY_COALESCE_MS,
   UNDO_STACK_LIMIT,
   buildBeforePatch,
+  popLinked,
   pushEntry,
   resolveAliased,
   snapshotIssue,
@@ -185,5 +186,37 @@ describe("pushEntry", () => {
     expect(
       stack[0].kind === "update" ? stack[0].issueId : null
     ).toBe("issue-1");
+  });
+});
+
+describe("popLinked (MIN-795)", () => {
+  const linked = (issueId: string, at: number, link?: string): UndoEntry => ({
+    ...updateEntry(issueId, at),
+    link,
+  });
+
+  it("pops a lone entry, skipping retracted ones on top", () => {
+    const stack = [linked("a", 1), { ...linked("b", 2), dead: true }];
+    expect(popLinked(stack).map((e) => (e as { issueId: string }).issueId)).toEqual(["a"]);
+    expect(stack).toEqual([]);
+    expect(popLinked(stack)).toEqual([]);
+  });
+
+  it("pops every live entry of the top gesture and leaves the one below", () => {
+    const stack = [
+      linked("before", 1, "g1"),
+      linked("a", 2, "g2"),
+      { ...linked("dead", 3, "g2"), dead: true },
+      linked("b", 4, "g2"),
+    ];
+    expect(popLinked(stack).map((e) => (e as { issueId: string }).issueId)).toEqual(["b", "a"]);
+    expect(stack.map((e) => (e as { issueId: string }).issueId)).toEqual(["before"]);
+  });
+
+  it("does not merge category toggles across gestures", () => {
+    const stack: UndoEntry[] = [];
+    pushEntry(stack, { ...categoriesEntry("a", [], ["c1"], 1), link: "g1" });
+    pushEntry(stack, { ...categoriesEntry("a", ["c1"], [], 2), link: "g2" });
+    expect(stack).toHaveLength(2);
   });
 });

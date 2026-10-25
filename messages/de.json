@@ -2316,6 +2316,8 @@
   "Undo": {
     "undone": "Rückgängig gemacht: {action}",
     "redone": "Wiederholt: {action}",
+    "undoneLinked": "Rückgängig gemacht: {action} ({count, plural, one {# Änderung} other {# Änderungen}})",
+    "redoneLinked": "Wiederholt: {action} ({count, plural, one {# Änderung} other {# Änderungen}})",
     "undoFailed": "Konnte nicht rückgängig gemacht werden: {message}",
     "redoFailed": "Konnte nicht wiederholt werden: {message}",
     "actions": {

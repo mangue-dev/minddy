@@ -17,7 +17,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("./auth-context", () => ({ useAuth: () => ({ user: { id: "user" } }) }));
-vi.mock("./undo/undo-context", () => ({ useUndoHistory: () => ({ record: mocks.record }) }));
+vi.mock("./undo/undo-context", () => ({ useUndoHistory: () => ({ record: mocks.record, currentLink: () => undefined }) }));
 vi.mock("./issue-relations-api", () => ({
   addIssueRelationApi: (...args: unknown[]) => mocks.add(...args),
   removeIssueRelationApi: (...args: unknown[]) => mocks.remove(...args),
@@ -101,7 +101,7 @@ describe("global relation mutations", () => {
       const { id, ...snapshot } = created;
       expect(mocks.record).toHaveBeenCalledWith({
         kind: "relation-add", projectId: "project", relationId: id, relation: snapshot,
-      });
+      }, undefined, undefined);
       expect(client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)?.relations).toEqual([existing, created]);
       expect(invalidate).not.toHaveBeenCalledWith(expect.objectContaining({ queryKey: GLOBAL_BOARD_KEY }));
       expect(cancel).not.toHaveBeenCalledWith(expect.objectContaining({ queryKey: GLOBAL_BOARD_KEY }));
@@ -130,7 +130,7 @@ describe("global relation mutations", () => {
     const { id, ...snapshot } = existing;
     expect(mocks.record).toHaveBeenCalledWith({
       kind: "relation-remove", projectId: "project", relationId: id, relation: snapshot,
-    });
+    }, undefined, undefined);
     expect(client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)?.relations).toEqual([]);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["issue-relations", "project"] });
     expect(invalidate).not.toHaveBeenCalledWith(expect.objectContaining({ queryKey: GLOBAL_BOARD_KEY }));

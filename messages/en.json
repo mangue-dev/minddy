@@ -2316,6 +2316,8 @@
   "Undo": {
     "undone": "Undone: {action}",
     "redone": "Redone: {action}",
+    "undoneLinked": "Undone: {action} ({count, plural, one {# change} other {# changes}})",
+    "redoneLinked": "Redone: {action} ({count, plural, one {# change} other {# changes}})",
     "undoFailed": "Couldn't undo: {message}",
     "redoFailed": "Couldn't redo: {message}",
     "actions": {

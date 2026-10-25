@@ -14,6 +14,7 @@ import type { ChipRelation } from "@/components/relation-chips";
 import type { Issue, IssueRelationType, Objective } from "./types";
 import type { RelationKinds } from "./use-issue-relations-query";
 import { isClosedStatus } from "./issue-constants";
+import { hasDirectRelation } from "./issue-shortcut-targets";
 import en from "@/messages/en.json";
 
 vi.mock("next-intl", () => ({
@@ -96,11 +97,18 @@ const objective = { id: "objective", project_id: "project", name: "Target object
 const types: IssueRelationType[] = ["blocks", "blocked_by", "related"];
 const useMemo = (callback: () => unknown) => callback();
 
-function candidates(relationType: IssueRelationType | null, relations: ChipRelation[] = []) {
+function candidates(
+  relationType: IssueRelationType | null,
+  relations: ChipRelation[] = [],
+  targets: Issue[] = [issue],
+  relationsById: Record<string, ChipRelation[]> = {},
+) {
   const issues = [issue, other, { ...other, id: "closed", status: "done" }, { ...other, id: "foreign", project_id: "elsewhere" }];
   const objectives = [objective, { ...objective, id: "active", status: "in_progress" }, { ...objective, id: "done", status: "done" }, { ...objective, id: "canceled", status: "canceled" }, { ...objective, id: "foreign", project_id: "elsewhere" }];
   const scope = {
-    useMemo, relationType, relations, issue, isClosedStatus,
+    useMemo, relationType, relations, issue, isClosedStatus, hasDirectRelation,
+    relationTargets: () => targets,
+    relationsOf: (id: string) => (id === issue.id ? relations : relationsById[id]),
     getCandidateIssues: () => issues,
     objectiveMap: new Map(objectives.map((item) => [item.id, item])),
   };
@@ -113,10 +121,21 @@ function candidates(relationType: IssueRelationType | null, relations: ChipRelat
   };
 }
 
-function cardSelection(relationType: IssueRelationType | null, onAddRelation: CardAdd) {
+function cardSelection(
+  relationType: IssueRelationType | null,
+  onAddRelation: CardAdd,
+  targets: Issue[] = [issue],
+  relationsById: Record<string, ChipRelation[]> = {},
+) {
   const setRelationType = vi.fn();
+  const addRelationFromTargets = evaluate(initializer("issue-card.tsx", "addRelationFromTargets"), {
+    onAddRelation, hasDirectRelation,
+    linked: (run: () => void) => run(),
+    relationTargets: () => targets,
+    relationsOf: (id: string) => relationsById[id],
+  });
   const onSelect = evaluate<PickerProps["onSelect"]>(prop("issue-card.tsx", "RelationTargetPicker", "onSelect"), {
-    issue, relationType, onAddRelation, setRelationType,
+    issue, relationType, addRelationFromTargets, setRelationType,
   });
   return { onSelect, setRelationType };
 }
@@ -180,6 +199,33 @@ describe("card relation target picker", () => {
       }
       expect(onClose).toHaveBeenCalledTimes(2);
     }
+  });
+
+  it("offers a target while one selected ticket can still gain it, never a selected ticket (MIN-795)", () => {
+    const sibling = { ...issue, id: "sibling" };
+    const linkedToOther: ChipRelation[] = [{ id: "r", otherId: other.id, relation: "blocks", otherType: "issue", resolved: false }];
+    expect(candidates("blocks", linkedToOther, [issue, sibling]).issues.map((item) => item.id)).toEqual([other.id, "closed"]);
+    expect(candidates("blocks", linkedToOther, [issue, sibling], { sibling: linkedToOther }).issues.map((item) => item.id)).toEqual(["closed"]);
+    expect(candidates("blocks", [], [issue, other]).issues.map((item) => item.id)).toEqual(["closed"]);
+  });
+
+  it("adds the relation from every selected ticket that lacks it (MIN-795)", () => {
+    const sibling = { ...issue, id: "sibling" };
+    const linkedSibling = { ...issue, id: "linked-sibling" };
+    const add = vi.fn();
+    const { onSelect } = cardSelection("blocks", add, [issue, sibling, linkedSibling, other], {
+      [linkedSibling.id]: [{ id: "r", otherId: objective.id, relation: "blocks", otherType: "objective", resolved: false }],
+    });
+    onSelect(objective.id, "objective");
+    expect(add.mock.calls).toEqual([
+      [issue.id, "blocks", objective.id, { targetType: "objective" }],
+      [sibling.id, "blocks", objective.id, { targetType: "objective" }],
+      [other.id, "blocks", objective.id, { targetType: "objective" }],
+    ]);
+    add.mockClear();
+    // The target itself is never related to itself.
+    onSelect(other.id, "issue");
+    expect(add.mock.calls.map(([source]) => source)).toEqual([issue.id, sibling.id, linkedSibling.id]);
   });
 
   it("stays closed without a position or relation and handles no objectives", () => {

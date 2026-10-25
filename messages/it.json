@@ -2316,6 +2316,8 @@
   "Undo": {
     "undone": "Annullato: {action}",
     "redone": "Ripristinato: {action}",
+    "undoneLinked": "Annullato: {action} ({count, plural, one {# modifica} other {# modifiche}})",
+    "redoneLinked": "Ripristinato: {action} ({count, plural, one {# modifica} other {# modifiche}})",
     "undoFailed": "Impossibile annullare: {message}",
     "redoFailed": "Impossibile ripristinare: {message}",
     "actions": {

@@ -67,7 +67,7 @@ export function useGlobalBoardQuery() {
   const { user } = useAuth();
   // Local undo history (MIN-35) — mirrors useIssuesQuery: record after each
   // successful user write; undo/redo replays bypass the hook entirely.
-  const { record } = useUndoHistory();
+  const { record, currentLink } = useUndoHistory();
 
   const fastSyncOnMount = useRef<boolean | null>(null);
   if (fastSyncOnMount.current === null) {
@@ -382,6 +382,9 @@ export function useGlobalBoardQuery() {
         source_type: kinds?.sourceType,
         target_type: kinds?.targetType,
       };
+      // Read before awaiting: the selection gesture that asked for it is over
+      // by the time the server answers (MIN-795).
+      const link = currentLink();
       const created = await addRelationOptimistically(queryClient, projectId, input, () => addIssueRelationApi(projectId, input));
       // Record the server-normalized row (blocked_by is stored as an inverted
       // blocks), so a redo replays exactly what was persisted.
@@ -396,16 +399,17 @@ export function useGlobalBoardQuery() {
           source_type: created.source_type,
           target_type: created.target_type,
         },
-      });
+      }, undefined, link);
       // The board's relation slice already holds the server row: refetching
       // the whole aggregate would only confirm it.
       void queryClient.invalidateQueries({ queryKey: ["issue-relations", projectId] });
     },
-    [queryClient, record]
+    [queryClient, record, currentLink]
   );
 
   const removeRelation = useCallback(
     async (projectId: string, relationId: string) => {
+      const link = currentLink();
       relationId = await persistedRelationId(queryClient, relationId);
       const previous = queryClient.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY);
       const removed = previous?.relations.find((r) => r.id === relationId);
@@ -432,7 +436,7 @@ export function useGlobalBoardQuery() {
               source_type: removed.source_type,
               target_type: removed.target_type,
             },
-          });
+          }, undefined, link);
         }
         void queryClient.invalidateQueries({
           queryKey: ["issue-relations", projectId],
@@ -443,7 +447,7 @@ export function useGlobalBoardQuery() {
         throw err;
       }
     },
-    [queryClient, record]
+    [queryClient, record, currentLink]
   );
 
   // Add to / remove from the user's cycle (MIN-32). The optimistic patch
