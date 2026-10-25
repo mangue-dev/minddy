@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="540" height="380" viewBox="0 0 540 380">
+  <!--
+    Source of the macOS installer window (MIN-789). `scripts/build-dmg-assets.mjs`
+    renders it at 1× and 2× into `background.tiff`. It borrows the landing's
+    layout: a white page, pastel cards from `components/marketing/card-tones.ts`
+    (sage and sky) and a round white button.
+
+    The image sets the window frame, title bar included, so Finder shows less
+    than its 380 points: about 348 below the title bar, and about 292 when the
+    path and status bars are on. The composition is centered at y = 160, between
+    those two cases. The cards are centered on the icons that `dmg.contents`
+    places at (140, 154) and (400, 154) in `electron-builder.yml`; move them
+    together.
+  -->
+  <rect width="540" height="380" fill="#ffffff"/>
+
+  <!-- The landing's feature cards: one pastel card per icon, labels included. -->
+  <rect x="34" y="58" width="212" height="204" rx="24" fill="#eaf0e5"/>
+  <rect x="294" y="58" width="212" height="204" rx="24" fill="#e6edf5"/>
+
+  <!-- The gesture, as the landing's round card button, straddling the gap. -->
+  <circle cx="270" cy="154" r="21" fill="#ffffff" stroke="#33384a" stroke-opacity="0.12"/>
+  <path d="M261 154 H 278 M 272 147 L 279 154 L 272 161" fill="none" stroke="#33384a"
+    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
