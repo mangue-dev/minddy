@@ -139,6 +139,11 @@ const WELCOME_DIR = path.join(OUT_DIR, "welcome");
 const MAX_WELCOME_BYTES = 450_000;
 await mkdir(WELCOME_DIR, { recursive: true });
 const requireRoot = createRequire(path.join(repo, "package.json"));
+// `use-intl` as next-intl itself resolves it: it is next-intl's dependency, not
+// the app's, so pnpm does not necessarily hoist it to the root.
+const useIntlEntry = createRequire(requireRoot.resolve("next-intl")).resolve("use-intl");
+let useIntlDirectory = path.dirname(useIntlEntry);
+while (path.basename(useIntlDirectory) !== "use-intl") useIntlDirectory = path.dirname(useIntlDirectory);
 const welcome = await build({
   entryPoints: [path.join(repo, "components", "desktop", "server-choice-entry.tsx")],
   outfile: path.join(WELCOME_DIR, "welcome.js"),
@@ -149,7 +154,7 @@ const welcome = await build({
   jsx: "automatic",
   minify: true,
   sourcemap: false,
-  alias: { "next-intl": "use-intl" },
+  alias: { "next-intl": useIntlDirectory },
   define: { "process.env.NODE_ENV": JSON.stringify("production") },
   tsconfig: path.join(repo, "tsconfig.json"),
   logLevel: "warning",

@@ -238,6 +238,12 @@ export function installerCommand(
   argv: readonly string[],
 ): { command: string; args: string[]; windowsVerbatimArguments?: boolean } {
   if (platform !== "win32") return { command: argv[0], args: argv.slice(1) };
+  // `cmd.exe` still expands `%VAR%` and `!VAR!` and ends a quoted argument at
+  // `"`, even inside the quotes below. No fixed argument contains them, so
+  // one that does can only be a folder name: refuse it rather than let the
+  // shell read it.
+  const unsafe = argv.find((argument) => /["%!]/.test(argument));
+  if (unsafe !== undefined) throw new Error("This folder name cannot be used on Windows. Choose a folder without \", % or !.");
   const line = argv.map(quoteWindowsArgument).join(" ");
   return {
     command: "cmd.exe",

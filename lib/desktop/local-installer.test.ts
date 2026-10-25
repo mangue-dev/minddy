@@ -89,6 +89,14 @@ describe("local installer processes", () => {
     expect(windows.args.at(-1)).toBe('"git clone "C:\\Users\\some one\\minddy""');
   });
 
+  it("refuses on Windows an argument cmd.exe would still interpret", () => {
+    for (const folder of ["C:\\Users\\%USERPROFILE%\\minddy", 'C:\\a"&calc&"', "C:\\Users\\wow!\\minddy"]) {
+      expect(() => installerCommand("win32", ["git", "clone", folder])).toThrow(/cannot be used on Windows/);
+    }
+    // POSIX runs without a shell: the same names are plain arguments.
+    expect(installerCommand("linux", ["git", "clone", "/tmp/50%!"]).args.at(-1)).toBe("/tmp/50%!");
+  });
+
   it("keeps the last readable output line, without colours and bounded", () => {
     expect(lastOutputLine("first\n\u001b[32mProgress: resolved 10\u001b[39m\n\n")).toBe("Progress: resolved 10");
     expect(lastOutputLine("\n  \n")).toBeUndefined();

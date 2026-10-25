@@ -7,7 +7,7 @@
  * the bundle carries a few kilobytes of copy rather than six full catalogs.
  */
 import { createRoot } from "react-dom/client";
-import { IntlProvider } from "use-intl";
+import { IntlProvider } from "next-intl";
 import { DesktopWelcome as de } from "@/messages/de.json";
 import { DesktopWelcome as en } from "@/messages/en.json";
 import { DesktopWelcome as es } from "@/messages/es.json";
