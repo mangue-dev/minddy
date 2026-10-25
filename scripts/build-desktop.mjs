@@ -161,8 +161,11 @@ const welcome = await build({
   metafile: true,
 });
 const welcomeCssInput = path.join(repo, "components", "desktop", "server-choice.css");
-const { default: postcss } = await import(requireRoot.resolve("postcss"));
-const { default: tailwind } = await import(requireRoot.resolve("@tailwindcss/postcss"));
+// PostCSS as the Tailwind plugin resolves it: it is that plugin's dependency
+// (the root only pins its version in overrides), so pnpm may not hoist it.
+const tailwindPluginEntry = requireRoot.resolve("@tailwindcss/postcss");
+const { default: postcss } = await import(createRequire(tailwindPluginEntry).resolve("postcss"));
+const { default: tailwind } = await import(tailwindPluginEntry);
 const welcomeCss = await postcss([tailwind({ base: repo, optimize: { minify: true } })]).process(
   await readFile(welcomeCssInput, "utf8"),
   { from: welcomeCssInput, to: path.join(WELCOME_DIR, "welcome.css") },

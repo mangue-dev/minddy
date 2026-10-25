@@ -265,7 +265,8 @@ async function installNode(ctx: Context): Promise<void> {
   const shasums = await fetchText(NODE_SHASUMS_URL, ctx.signal);
   const archive = nodeArchiveFromShasums(shasums, process.platform, toolchainArch(process.arch));
   if (!archive) throw fail("verifyFailed");
-  const file = path.join(ctx.temp, archive.file);
+  // A fixed local name: nothing read from the network reaches a command line.
+  const file = path.join(ctx.temp, process.platform === "win32" ? "node.zip" : "node.tar.gz");
   await downloadVerified(ctx, nodeArchiveUrl(archive.file), file, archive.sha256);
   await extractInto(ctx, file, path.join(toolchainRoot(), "node"));
 }
