@@ -2,7 +2,7 @@
 // variant: while the selection pill is up, it is the current mode — the same
 // precedence “@” follows (lib/ask-numo-context.tsx). The card and panel
 // handlers (components/issue-field-shortcuts.tsx) consult
-// `selectionKeysActive()` at keystroke time and stand down on Shift combos,
+// `selectionKeysActive()` at keystroke time and stand down on ⇧P,
 // so the ONE window listener of lib/use-bulk-selection-actions.ts owns the
 // combo wherever the pointer rests; with no selection, nothing changes.
 //

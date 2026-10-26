@@ -39,6 +39,7 @@ import {
 } from "@/components/issue-property-fields";
 import { PriorityIndicator } from "@/components/issue-indicators";
 import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
+import { commentTarget, useCommentSurface } from "@/lib/comment-focus";
 import { BulkIssueActions } from "@/components/bulk-issue-actions";
 import { AskNumoProvider, useAskNumoTarget } from "@/lib/ask-numo-context";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the triage route —
@@ -142,6 +143,8 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   // only on the side where there is still something to discover.
   const detailFade = useScrollFade<HTMLDivElement>();
   const selected = triageIssues.find((i) => i.id === selectedId) ?? null;
+  // ⇧C (MIN-803): the open issue's comment field.
+  useCommentSurface(canComment && selected ? commentTarget("issue", selected.id) : null);
   // The description cites the selected ticket's own resources (MIN-742).
   const { resources: selectedResources } = useIssueResources(selected?.id ?? null);
   const descriptionMentions = useResourceMentions(mentions, selectedResources);
@@ -520,6 +523,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
 
       {/* ── Right: full issue view ─────────────────────────────────────── */}
       <div
+        data-comment-surface
         className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
         {selected ? (
@@ -725,6 +729,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
                 <CommentComposer
                   members={members}
                   projectId={projectId}
+                  commentTarget={commentTarget("issue", selected.id)}
                   onSubmit={(body, mentions, attachments) =>
                     addComment(body, mentions, null, attachments)
                   }
@@ -872,6 +877,7 @@ function TriageRow({
       ref={askNumoRef}
       type="button"
       data-navigation-href={`/projects/${issue.project_id}/triage?issue=${encodeURIComponent(issue.id)}`}
+      data-comment-target={commentTarget("issue", issue.id)}
       data-sidebar-filter-result
       aria-current={open ? "true" : undefined}
       aria-pressed={picked}

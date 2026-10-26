@@ -51,6 +51,7 @@ import {
 import { useNavigationContextActions } from "@/components/navigation-context-actions";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { AppTooltip } from "@/components/ui/app-tooltip";
+import { commentTarget } from "@/lib/comment-focus";
 
 /** Ligne d'arbre : 28 px de haut, 16 px de retrait par niveau. */
 const INDENT = 16;
@@ -457,6 +458,7 @@ function PageRow({
         href={href}
         prefetch={false}
         data-sidebar-filter-result
+        data-comment-target={commentTarget("page", page.id)}
         aria-current={active ? "page" : undefined}
         onMouseEnter={() => onPrefetch(page.id)}
         onFocus={() => onPrefetch(page.id)}

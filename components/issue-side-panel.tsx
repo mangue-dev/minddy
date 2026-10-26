@@ -110,6 +110,7 @@ import { IntegrationIndicator } from "@/components/integration-indicator";
 import { RemoteIssueIndicator } from "@/components/remote-issue-indicator";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import { useIssuePanelActions } from "@/lib/issue-panel-context";
+import { commentTarget, useCommentSurface } from "@/lib/comment-focus";
 import type {
   Category,
   CreateIssueInput,
@@ -597,7 +598,7 @@ export function IssueSidePanel({
   // the due-date picker here just like on board cards (voice dictation lives on
   // `v`, so nothing needs to be freed). ⇧P doubles the menu “⋯”, as on
   // cards; the hook never triggers them during an entry (title,
-  // description, commentaire).
+  // description, comment).
   // The “Custom” dialog suspends them: it covers the panel, and a key
   // hit in there should not open a picker on the ticket below.
   const { containerProps, menuState, openField, closeMenu } = useIssueFieldShortcuts(
@@ -609,6 +610,9 @@ export function IssueSidePanel({
       [RELATION_SHORTCUT_KEY]: () => setRelationsOpen(true),
     }
   );
+
+  // ⇧C (MIN-803), on the panel or on the issue's card: the comment field.
+  useCommentSurface(open && canComment && issue ? commentTarget("issue", issue.id) : null);
 
   // Apply a dictated patch: categories go through their own join-table
   // endpoint, everything else is one immediate issue update. Also sync the
@@ -895,6 +899,7 @@ export function IssueSidePanel({
       )}
       <SidePanel open={open} onOpenChange={handleOpenChange}>
         <SidePanelContent
+          data-comment-surface
           onInteractOutside={keepOverlayOpenForPopper}
           // Radix moves focus to the first tabbable element when the panel
           // opens; here that's the Dictate button, whose tooltip then pops up.
@@ -1347,6 +1352,7 @@ export function IssueSidePanel({
               <CommentComposer
                 members={members}
                 projectId={issue.project_id}
+                commentTarget={commentTarget("issue", issue.id)}
                 onSubmit={(body, mentions, attachments) =>
                   addComment(body, mentions, null, attachments)
                 }

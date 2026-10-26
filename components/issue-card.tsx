@@ -132,6 +132,7 @@ import type { RecurrenceCadence } from "@/lib/recurrence";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import { hasPlanTasks, planProgress, type PlanProgress } from "@/lib/plan";
 import { plainMarkdownParts } from "@/lib/plain-markdown";
+import { commentTarget, requestCommentFocus } from "@/lib/comment-focus";
 import { PlainPreview } from "@/components/typed-mention-chip";
 import { ObjectiveBadge } from "@/components/objective-label";
 import {
@@ -1373,14 +1374,19 @@ const IssueCardContent = memo(function IssueCardContent({
   });
 
   // Keyboard shortcuts on hover: S/P/E/A/L/D/O open the picker on cursor,
-  // Space opens the ticket (like a click), Shift+P copies the prompt, R adds a
-  // relation (type at the cursor, then the target picker at the same point).
+  // Space opens the ticket (like a click), Shift+P copies the prompt, Shift+C
+  // opens it with the comment field focused (MIN-803), R adds a relation
+  // (type at the cursor, then the target picker at the same point).
   // The “Custom” dialog suspends them: it covers the card, and a key
   // hit in there should not open a picker on the ticket below.
   const { containerProps, menuState, openField, closeMenu } =
     useIssueFieldShortcuts(!dragging && !customPromptOpen && canWrite, {
       " ": openIssue,
       "shift+p": () => void copyPrompt(),
+      "shift+c": () => {
+        requestCommentFocus(commentTarget("issue", issue.id));
+        openIssue();
+      },
       ...(onAddRelation
         ? { [RELATION_SHORTCUT_KEY]: (at: { x: number; y: number } | null) => at && setRelationTypeAt(at) }
         : {}),

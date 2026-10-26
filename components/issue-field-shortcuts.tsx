@@ -163,8 +163,9 @@ export function useIssueFieldShortcuts(
       // A ticket selection owns ⇧P while the pill is up (MIN-539): the
       // selection acts on every checked ticket, hover must not narrow the
       // action to one. Stand down WITHOUT consuming — the selection listener
-      // (lib/use-bulk-selection-actions.ts) takes it from here.
-      if (e.shiftKey && selectionKeysActive()) return;
+      // (lib/use-bulk-selection-actions.ts) takes it from here. Other Shift
+      // combos (⇧C, a comment on ONE ticket) have no selection variant.
+      if (e.shiftKey && key === "p" && selectionKeysActive()) return;
       // Capture phase + stopImmediatePropagation: while hovering, this owns
       // the combo — e.g. Shift+P copies here without touching the P picker.
       e.preventDefault();

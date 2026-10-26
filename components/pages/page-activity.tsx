@@ -54,6 +54,7 @@ import {
   pageEventsKey,
 } from "@/lib/page-activity-cache";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
+import { commentTarget } from "@/lib/comment-focus";
 
 export function PageActivity({
   projectId,
@@ -240,6 +241,7 @@ export function PageCommentBar({
       allowAttachments={false}
       placeholder={t("commentPagePlaceholder")}
       submitLabel={tTimeline("comment")}
+      commentTarget={commentTarget("page", pageId)}
       onSubmit={(body, mentionedUserIds) => add({ body, mentionedUserIds })}
     />
   );

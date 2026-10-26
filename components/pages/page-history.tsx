@@ -89,6 +89,7 @@ export function PageHistorySheet({
   pageId,
   open,
   initialTab = "activity",
+  tabRequest = 0,
   onOpenChange,
   onRestored,
 }: {
@@ -97,6 +98,9 @@ export function PageHistorySheet({
   open: boolean;
   /** Which question opened the panel: comments/activity, or saved versions. */
   initialTab?: PageHistoryTab;
+  /** Changes on every header request, so asking again for the tab already
+      named (⇧C while on versions, MIN-803) still switches to it. */
+  tabRequest?: number;
   onOpenChange: (open: boolean) => void;
   /**
    * The page has just been rewritten: the open editor behind is holding a document
@@ -122,7 +126,7 @@ export function PageHistorySheet({
   useEffect(() => {
     setSelected(null);
     if (open) setTab(initialTab);
-  }, [open, initialTab]);
+  }, [open, initialTab, tabRequest]);
 
   const versions = useQuery({
     queryKey: ["page-versions", pageId],
@@ -170,6 +174,7 @@ export function PageHistorySheet({
   return (
     <SidePanel open={open} onOpenChange={onOpenChange}>
       <SidePanelContent
+        data-comment-surface
         // A little wider than a ticket panel (460 px): what we read
         // here is a DOCUMENT, not a three line description. Enough for
         // that the titles and lists of the body keep their air, quite narrow

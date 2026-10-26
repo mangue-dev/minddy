@@ -2320,6 +2320,7 @@
       "objectiveColor": "Alterar cor",
       "askNumo": "Perguntar ao Numo (cartão ou seleção)",
       "copyPrompt": "Copiar como prompt",
+      "comment": "Comentar o item sob o ponteiro ou aberto",
       "selectionCopyPrompt": "Copiar o prompt combinado da seleção",
       "dictate": "Ditar (painel do ticket ou novo ticket)"
     }

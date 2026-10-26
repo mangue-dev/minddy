@@ -253,9 +253,13 @@ export function ForgeMarkdownField({
     lastEmittedRef.current = value;
     editorApiRef.current?.setMarkdown(value);
   }, [value]);
+  // A signal sent before the lazy editor is bound (⇧C switching to the
+  // Activity tab, MIN-803) waits for the bind.
+  const pendingFocusRef = useRef(false);
   useEffect(() => {
     if (!focusSignal) return;
-    editorApiRef.current?.focus();
+    if (editorApiRef.current) editorApiRef.current.focus();
+    else pendingFocusRef.current = true;
   }, [focusSignal]);
   const mentions = useMemo(() => ({
     // The LOGIN, never a displayed name: it is what the text carries and
@@ -287,6 +291,10 @@ export function ForgeMarkdownField({
       }}
       apiRef={(api) => {
         editorApiRef.current = api;
+        if (pendingFocusRef.current) {
+          pendingFocusRef.current = false;
+          api.focus();
+        }
       }}
       onSubmit={onSubmit}
       onEscape={onEscape}
