@@ -107,6 +107,8 @@ Conecta primero tu agente a minddy MCP para que pueda leer el plan y actualizar 
 3. Pega el prompt en tu agente, dentro de la copia de trabajo del repositorio. Copiar no ejecuta ningún modelo de IA ni consume cuota de IA.
 4. Sigue el progreso del plan en la incidencia mientras el agente actualiza sus tareas a través de MCP. Responde a sus preguntas en el agente o añade las decisiones a la incidencia para que el siguiente prompt las incluya.
 
+Cuando tu agente ha comentado la incidencia a través de MCP y llegan comentarios después, incluidos los traídos de una pull request vinculada, aparece sobre el campo de comentario el botón **Copiar prompt para N comentarios nuevos**. El prompt pide al agente que lea esos comentarios a través de MCP y atienda cada uno; no los copia. En un tablero, la tarjeta de la incidencia muestra cuántos comentarios esperan, un clic en ese número copia el mismo prompt y el menú del clic derecho ofrece **Copiar prompt para los comentarios nuevos**.
+
 El contenido del prompt, la rama sugerida y las reglas de idioma se describen en [Copiar un prompt para otro agente de código](/docs/issues#copy-issue-prompt).
 
 ### Mantener el trabajo vinculado a la incidencia {#link-work}

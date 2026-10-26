@@ -2695,6 +2695,25 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "issue_comment_follow_ups(uuid[])": {
+      "sha256": "a8a01cd5c1adf2da570c8278247eb52073dc74132d09c94420c35029ef1342f9",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "issues",
+        "comments",
+        "github_issue_comment_syncs"
+      ],
+      "protectedRelations": [
+        "issues",
+        "comments",
+        "github_issue_comment_syncs"
+      ],
+      "functionReferences": []
+    },
     "next_issue_numbers(uuid,integer)": {
       "sha256": "2eaac9349aec932c006a72f3b2abc9f64aa8af5d13784496ef1976bd8f75c2d4",
       "securityDefiner": true,
@@ -3530,19 +3549,6 @@
       ],
       "functionReferences": []
     },
-    "release_smart_fill_fields(uuid,text[])": {
-      "sha256": "2d1bcf93ffb090bbe44f4bf8698aef13c086082c1e990296e9a049ec642b16d3",
-      "securityDefiner": false,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [
-        "issue_smart_fill"
-      ],
-      "protectedRelations": [],
-      "functionReferences": []
-    },
     "reorder_categories(uuid,uuid,uuid[])": {
       "sha256": "f96551774ad6f9c4d682ad8c6e8a9757620011b3a6525c802432f231c32719e8",
       "securityDefiner": true,
@@ -3888,6 +3894,19 @@
       "protectedRelations": [
         "app_tabs"
       ],
+      "functionReferences": []
+    },
+    "release_smart_fill_fields(uuid,text[])": {
+      "sha256": "2d1bcf93ffb090bbe44f4bf8698aef13c086082c1e990296e9a049ec642b16d3",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "issue_smart_fill"
+      ],
+      "protectedRelations": [],
       "functionReferences": []
     },
     "reserve_forge_relay_mint(uuid,integer)": {
@@ -4502,6 +4521,27 @@
       ],
       "protectedRelations": [
         "page_files"
+      ],
+      "functionReferences": []
+    },
+    "replace_issue_categories(uuid,uuid,uuid[])": {
+      "sha256": "811fca9262539e570944654fd32e526227b7c464f1ad7235dc0d691aeeeae815",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "issues",
+        "projects",
+        "categories",
+        "project_members",
+        "issue_categories"
+      ],
+      "protectedRelations": [
+        "issues",
+        "projects",
+        "categories"
       ],
       "functionReferences": []
     },
@@ -5940,7 +5980,7 @@
       "functionReferences": []
     },
     "orphan_attachment_objects(timestamp with time zone,integer)": {
-      "sha256": "441ea1f711ad3f10e99242727e58aeedf970234de44713671a52cd7dbd1e0103",
+      "sha256": "4f1561f5f6eb48ba182a175f0197c48a88c8155450693fa142704c58ea4c90f5",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -5950,6 +5990,8 @@
         "projects",
         "page_files",
         "attachments",
+        "upload_citation_checks",
+        "attachment_object_aliases",
         "attachment_object_encrypted"
       ],
       "protectedRelations": [
@@ -6108,6 +6150,22 @@
       ],
       "functionReferences": []
     },
+    "orphan_page_file_candidates(timestamp with time zone,integer)": {
+      "sha256": "f362152d41d1bdf4a682eff509c05324d85c51823e902f3f7588fd6bb038bf6a",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "page_files",
+        "upload_citation_checks"
+      ],
+      "protectedRelations": [
+        "page_files"
+      ],
+      "functionReferences": []
+    },
     "write_page_collaboration_projection(uuid,jsonb,bigint,bigint)": {
       "sha256": "06ec8d40a75b3a059802fbe422afd6a2f03b98c4673be418d29d30b681d23ccd",
       "securityDefiner": true,
@@ -6228,21 +6286,6 @@
     },
     "migrate_attachment_metadata(uuid,text,text,text,text,text,text)": {
       "sha256": "4f71ee10963a8b6d1edb7de0a82f456001b0afc3acaa3400b708327151c018e7",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [
-        "attachments"
-      ],
-      "protectedRelations": [
-        "attachments"
-      ],
-      "functionReferences": []
-    },
-    "migrate_attachment_metadata_v2(uuid,text,text,text,text,text,text,text,text)": {
-      "sha256": "ac6dde6493768e517f06d9f102af9b559a0bfd6d55819b5604c18b2c0486e459",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -6757,6 +6800,21 @@
         "ai_usage"
       ],
       "protectedRelations": [],
+      "functionReferences": []
+    },
+    "migrate_attachment_metadata_v2(uuid,text,text,text,text,text,text,text,text)": {
+      "sha256": "ac6dde6493768e517f06d9f102af9b559a0bfd6d55819b5604c18b2c0486e459",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "attachments"
+      ],
+      "protectedRelations": [
+        "attachments"
+      ],
       "functionReferences": []
     },
     "migrate_feedback_user_identity(uuid,text,text,text,text,text,text,text,text)": {

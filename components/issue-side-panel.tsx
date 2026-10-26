@@ -45,6 +45,7 @@ import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { useIssuePullRequestQuery } from "@/lib/use-agent-runs";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import {
+  buildIssueCommentsPrompt,
   buildIssueCustomPrompt,
   buildIssuePlanPrompt,
   buildIssuePrompt,
@@ -67,6 +68,8 @@ import {
   useIssueFieldShortcuts,
 } from "@/components/issue-field-shortcuts";
 import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
+import { CommentFollowUpButton } from "@/components/comment-follow-up-button";
+import { commentFollowUp } from "@/lib/comment-follow-up";
 import { IssueResourcesSection } from "@/components/issue-resources-section";
 import { IssuePlan } from "@/components/issue-plan";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the board routes that mount
@@ -510,6 +513,37 @@ export function IssueSidePanel({
     toast.success(t("verifyPromptCopied"));
   }, [issue, promptContext, projectKey, t]);
 
+  // New comments since the ticket's MCP agent last commented (MIN-801):
+  // replies count too, since they are written to it as well.
+  const followUp = useMemo(
+    () => commentFollowUp(items.flatMap((item) =>
+      item.kind === "comment" ? [item.comment, ...item.replies] : [])),
+    [items],
+  );
+
+  // “Copy prompt for new comments”: the agent reads them through the MCP, the
+  // prompt only says how many and since when. No automatic start: the ticket
+  // is already under way.
+  const copyCommentsPrompt = useCallback(async () => {
+    if (!issue || !promptContext || !followUp) return;
+    const forge = await loadOneIssuePromptContext(issue.id);
+    await navigator.clipboard.writeText(
+      buildIssueCommentsPrompt(
+        {
+          issue,
+          projectId: issue.project_id,
+          projectKey,
+          categories: promptContext.categories,
+          relations: promptContext.relations,
+          resourceCount: issue.resource_count,
+          ...forge,
+        },
+        followUp
+      )
+    );
+    toast.success(t("commentsPromptCopied"));
+  }, [issue, promptContext, followUp, projectKey, t]);
+
   // “Custom”: the instruction entered in the dialog replaces the instruction
   // ready made — the context of the ticket remains provided by minddy (block
   // <issue> of the copied prompt). No automatic start: we do not know if this
@@ -546,6 +580,7 @@ export function IssueSidePanel({
     onCopyPlanPrompt: () => void copyPlanPrompt(),
     onCopyVerifyPrompt: () => void copyVerifyPrompt(),
     onCopyCustomPrompt: () => setCustomPromptOpen(true),
+    onCopyCommentsPrompt: followUp ? () => void copyCommentsPrompt() : undefined,
   });
 
   // Field shortcuts (S/P/E/A/L/D/O) — active while the pointer hovers the panel
@@ -1282,7 +1317,8 @@ export function IssueSidePanel({
           />
 
           {canComment && (
-            <SidePanelFooter className="border-t-0 pt-3 sm:flex-row">
+            <SidePanelFooter className="flex-col border-t-0 pt-3 sm:flex-col">
+              <CommentFollowUpButton followUp={followUp} onCopy={copyCommentsPrompt} />
               <CommentComposer
                 members={members}
                 projectId={issue.project_id}
