@@ -661,11 +661,11 @@ export async function getIssue(
       })(),
       (async () => {
         const first = await ctx.db.from("github_issue_comment_syncs")
-          .select("issue_id,remote_comment_id,comment_id,author_login,author_association,html_url,html_url_encryption_version,created_at_remote,updated_at_remote,deleted_at_remote")
+          .select("issue_id,remote_comment_id,comment_id,provider,pull_request_id,thread_key,author_login,author_association,html_url,html_url_encryption_version,created_at_remote,updated_at_remote,deleted_at_remote")
           .eq("issue_id", issue.id);
         return legacyGithubCommentUrlSchema(first.error)
           ? ctx.db.from("github_issue_comment_syncs")
-              .select("issue_id,remote_comment_id,comment_id,author_login,author_association,html_url,created_at_remote,updated_at_remote,deleted_at_remote")
+              .select("issue_id,remote_comment_id,comment_id,provider,pull_request_id,thread_key,author_login,author_association,html_url,created_at_remote,updated_at_remote,deleted_at_remote")
               .eq("issue_id", issue.id)
           : first;
       })(),
@@ -702,7 +702,7 @@ export async function getIssue(
     const githubComment = githubCommentById.get(c.id as string);
     const named = toNamed(users.get(c.author_id as string));
     const author = githubComment?.author_login
-      ? `GitHub @${githubComment.author_login}`
+      ? `${githubComment.provider === "gitlab" ? "GitLab" : "GitHub"} @${githubComment.author_login}`
       : c.via_assistant
       ? "Numo"
       : c.via_mcp
@@ -718,6 +718,12 @@ export async function getIssue(
       ...(githubComment
         ? {
             github: {
+              // Which forge, and the pull request a mirrored PR comment came
+              // from (MIN-802): agents can answer it there.
+              provider: githubComment.provider === "gitlab" ? "gitlab" : "github",
+              ...(githubComment.pull_request_id
+                ? { pull_request_id: githubComment.pull_request_id }
+                : {}),
               author_association: githubComment.author_association,
               url: githubComment.html_url,
               created_at: githubComment.created_at_remote,

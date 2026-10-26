@@ -32,18 +32,25 @@ import { loadEnv, ROOT } from "./env.mjs";
 /** The tables a seed may encode, with the repository functions that own them. */
 const CODECS = {
   objectives: { encode: "encodeObjective", decode: "decodeObjective" },
+  comments: { encode: "encodeIssueComment", decode: "decodeIssueComment" },
 };
 
+// The comment repository resolves the owning project through its parent
+// ticket with a client: the service client, like every other server writer.
 const ENTRY = `
 export { encodeObjective, decodeObjective } from "@/lib/server/objective-store";
 export { SupabaseKeyRegistry } from "@/lib/server/encryption/registry";
+import { encodeComment, decodeComment } from "@/lib/server/comment-store";
+import { getServiceClient } from "@/lib/supabase-service";
+export const encodeIssueComment = (row) => encodeComment(getServiceClient(), "comments", row);
+export const decodeIssueComment = (row) => decodeComment("comments", row);
 `;
 
 let bundled = null;
 
 async function loadBundle() {
   if (bundled) return bundled;
-  const outfile = resolve(ROOT, "output/.cache/capture-content-codec.mjs");
+  const outfile = resolve(ROOT, "output/.cache/capture-content-codec-v2.mjs");
   await mkdir(resolve(outfile, ".."), { recursive: true });
   await build({
     stdin: { contents: ENTRY, resolveDir: ROOT, loader: "ts" },

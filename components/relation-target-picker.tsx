@@ -9,7 +9,8 @@ import { SemanticIssueGroup } from "@/components/semantic-issue-group";
 import { StatusIndicator } from "@/components/issue-indicators";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { issueTierKeyword, orderIssuesForSearch } from "@/lib/issue-search-order";
-import type { Issue, IssueRelationType, Objective, RelationEndpointType } from "@/lib/types";
+import type { RelationMenuKind } from "@/lib/issue-hierarchy";
+import type { Issue, Objective, RelationEndpointType } from "@/lib/types";
 
 export function RelationTargetPicker({
   position,
@@ -21,7 +22,8 @@ export function RelationTargetPicker({
   onSelect,
 }: {
   position: { x: number; y: number } | null;
-  relation: IssueRelationType | null;
+  /** A hierarchy entry (MIN-804) lists issues only: pass no objectives. */
+  relation: RelationMenuKind | null;
   issues: Issue[];
   objectives: Objective[];
   projectKey: string;
