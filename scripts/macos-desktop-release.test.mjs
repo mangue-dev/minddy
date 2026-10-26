@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
+import os from "node:os";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
@@ -57,6 +59,27 @@ test("gates the update feed on the Darwin version of the bundle's macOS minimum"
   const regated = withMacMinimumSystemVersion(gated, "14.0");
   assert.equal(regated.match(/^minimumSystemVersion:/gm).length, 1);
   assert.match(regated, /^minimumSystemVersion: 23\.0\.0$/m);
+});
+
+test("the shipped electron-updater skips a gated release below its macOS minimum", (t) => {
+  // The desktop app's own updater: its feed parser and the check run before a download.
+  const desktopRequire = createRequire(new URL("../desktop/package.json", import.meta.url));
+  const { AppUpdater } = desktopRequire("electron-updater/out/AppUpdater.js");
+  const { parseUpdateInfo } = desktopRequire("electron-updater/out/providers/Provider.js");
+  const info = parseUpdateInfo(
+    withMacMinimumSystemVersion(manifest, "13.0"),
+    "latest-mac.yml",
+    new URL("https://feed.example/desktop/latest-mac.yml")
+  );
+  const updater = { _logger: { info() {}, warn() {} } };
+  const supportedOn = (darwin) => {
+    t.mock.method(os, "release", () => darwin);
+    return AppUpdater.prototype.checkIfUpdateSupported.call(updater, info);
+  };
+  assert.equal(supportedOn("20.6.0"), false, "macOS 11");
+  assert.equal(supportedOn("21.6.0"), false, "macOS 12");
+  assert.equal(supportedOn("22.1.0"), true, "macOS 13");
+  assert.equal(supportedOn("25.0.0"), true, "macOS 26");
 });
 
 test("rejects unsafe and incomplete macOS manifest entries", () => {
