@@ -37,6 +37,11 @@ beforeEach(() => {
     return (placeholder ? Number.parseFloat(placeholder.style.height) : this.dataset.boardRowId === "0" ? 900 : 100) + (Number.parseFloat(this.style.paddingBottom) || 0);
   });
   vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(320);
+  // The virtualizer reads the scroller's viewport from its client box.
+  vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(function(this: HTMLElement) {
+    return this.dataset.boardColumnScroller !== undefined ? 500 : 0;
+  });
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(320);
   vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function(this: HTMLElement) {
     return { height: this.offsetHeight, width: 320, top: 0, left: 0, bottom: this.offsetHeight, right: 320, x: 0, y: 0, toJSON: () => ({}) };
   });
