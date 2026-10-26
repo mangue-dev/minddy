@@ -152,7 +152,7 @@ mac:
   # and tinted. Since macOS 26 a bundle carries TWO icons, and they do not
   # do not replace — `Assets.car` + `CFBundleIconName` for 26 and beyond,
   # `icon.icns` + `CFBundleIconFile` for all of the above (here until
-  # Big Sur, cf. `minimumSystemVersion`). To remove the second is to leave without
+  # Ventura, cf. `minimumSystemVersion`). To remove the second is to leave without
   # icon all those who have not yet migrated.
   #
   # electron-builder 26 installs both from this single line
@@ -168,13 +168,14 @@ mac:
   # notarization for the machine (macOS), it is now for the tools.
   #
   # A reservation to be aware of: the `icns` that `actool` renders stops at 256 px. On
-  # macOS 11→15, a Finder view in large icons therefore enlarges by 256. This is the
+  # macOS 13→15, a Finder view in large icons therefore enlarges by 256. This is the
   # price of the official channel, and it is better than a very clear icon of
 # the wrong shape.
   icon: build/icon.icon
-  # Electron 43 no longer starts below (and Big Sur is the first version that
-  # runs on Apple Silicon).
-  minimumSystemVersion: "11.0"
+  # Electron 44 and later no longer start below Ventura. scripts/publish-desktop.mjs
+  # copies this minimum into latest-mac.yml, so an installed app on an older
+  # macOS keeps its working version instead of downloading one that cannot start.
+  minimumSystemVersion: "13.0"
   darkModeSupport: true
   # The `.dmg` is used for the FIRST download, the `.zip` for updates:
   # Squirrel.Mac can only read the second one. Publishing one without the other gives

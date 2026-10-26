@@ -5,8 +5,10 @@ import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 
 import {
+  darwinVersionForMacos,
   macArtifactMetadata,
   requireMacReleaseArtifacts,
+  withMacMinimumSystemVersion,
 } from "./macos-desktop-release.mjs";
 
 const manifest = `version: 1.2.3
@@ -41,6 +43,20 @@ test("requires every announced macOS archive before publication", () => {
     () => requireMacReleaseArtifacts(manifest, ["minddy-1.2.3-mac.zip"]),
     /minddy-1\.2\.3-arm64\.dmg/,
   );
+});
+
+test("gates the update feed on the Darwin version of the bundle's macOS minimum", () => {
+  assert.equal(darwinVersionForMacos("11.0"), "20.0.0");
+  assert.equal(darwinVersionForMacos("13.0"), "22.0.0");
+  assert.throws(() => darwinVersionForMacos("10.15"), /Unsupported macOS minimum/);
+  assert.throws(() => darwinVersionForMacos(""), /Unsupported macOS minimum/);
+
+  const gated = withMacMinimumSystemVersion(manifest, "13.0");
+  assert.match(gated, /^minimumSystemVersion: 22\.0\.0$/m);
+  assert.deepEqual(macArtifactMetadata(gated), macArtifactMetadata(manifest));
+  const regated = withMacMinimumSystemVersion(gated, "14.0");
+  assert.equal(regated.match(/^minimumSystemVersion:/gm).length, 1);
+  assert.match(regated, /^minimumSystemVersion: 23\.0\.0$/m);
 });
 
 test("rejects unsafe and incomplete macOS manifest entries", () => {
