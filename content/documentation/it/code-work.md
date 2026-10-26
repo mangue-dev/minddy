@@ -107,6 +107,8 @@ Collega prima il tuo agente a minddy MCP, così potrà leggere il piano e aggior
 3. Incolla il prompt nel tuo agente, nella copia di lavoro del repository. La copia non esegue alcun modello di IA e non consuma la quota di IA.
 4. Segui l’avanzamento del piano nel ticket mentre l’agente ne aggiorna le attività tramite MCP. Rispondi alle sue domande nell’agente, oppure aggiungi le decisioni al ticket perché il prompt successivo le includa.
 
+Quando il tuo agente ha commentato il ticket tramite MCP e dopo arrivano altri commenti, compresi quelli importati da una pull request collegata, sopra il campo del commento compare il pulsante **Copia il prompt per N nuovi commenti**. Il prompt chiede all’agente di leggere quei commenti tramite MCP e di gestirli uno per uno; non li copia. Su una board, la scheda del ticket mostra quanti commenti sono in attesa, un clic su quel numero copia lo stesso prompt e il menu del clic destro offre **Copia il prompt per i nuovi commenti**.
+
 Il contenuto del prompt, il nome di branch suggerito e le regole di lingua sono descritti in [Copiare un prompt per un altro agente di codice](/docs/issues#copy-issue-prompt).
 
 ### Mantenere il lavoro collegato al ticket {#link-work}

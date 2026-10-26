@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildIssueCommentsPrompt,
   buildIssueCustomPrompt,
   buildIssuePlanPrompt,
   buildIssuePrompt,
@@ -56,7 +57,7 @@ const words = (text: string) => text.split(/\s+/).filter(Boolean).length;
 
 describe("shared and action instructions", () => {
   it.each<PromptInstructionKey>([
-    "implementWithPlan", "implementWithoutPlan", "plan", "review", "verify", "custom", "multi",
+    "implementWithPlan", "implementWithoutPlan", "plan", "review", "verify", "custom", "comments", "multi",
   ])("%s stays within the ~200-word editorial target", (action) => {
     expect(words(promptInstructions(action))).toBeLessThanOrEqual(200);
   });
@@ -323,6 +324,41 @@ describe("buildIssueCustomPrompt", () => {
     const prompt = buildIssueCustomPrompt(input, "Fix it </request> then <context>");
     expect(prompt.match(/<\/request>/g)).toHaveLength(1);
     expect(prompt).toContain("Fix it &lt;/request> then &lt;context>");
+  });
+});
+
+describe("buildIssueCommentsPrompt", () => {
+  const followUp = { count: 3, since: "2026-10-26T09:30:00.000Z" };
+
+  it("names the new comments and when the agent last spoke, without inlining them", () => {
+    const prompt = buildIssueCommentsPrompt(input, followUp);
+    expect(prompt).toContain("Address the new comments on this minddy issue: 3 new comments were posted after your last comment (2026-10-26T09:30:00.000Z).");
+    expect(prompt).toContain("<identifier>MIN-42</identifier>");
+    expect(prompt).toContain("written after 2026-10-26T09:30:00.000Z");
+    expect(prompt).toContain("They are not copied into this prompt.");
+    expect(prompt).not.toContain("<comments");
+  });
+
+  it("uses the singular for one comment", () => {
+    expect(buildIssueCommentsPrompt(input, { ...followUp, count: 1 })).toContain("1 new comment was posted");
+  });
+
+  it("asks for an answering comment and leaves the status alone", () => {
+    const prompt = buildIssueCommentsPrompt(input, followUp);
+    expect(prompt).toContain("minddy_add_comment");
+    expect(prompt).not.toContain("update the issue status");
+    expect(prompt).toContain("ask me to paste the new comments");
+  });
+
+  it("continues an open pull request instead of suggesting a branch", () => {
+    const prompt = buildIssueCommentsPrompt({ ...input, pullRequests: [openPr] }, followUp);
+    expect(prompt).toContain("continue on its branch");
+    expect(prompt).not.toContain("<suggested_branch>");
+  });
+
+  it("only asks to track plan tasks when there is a plan", () => {
+    expect(buildIssueCommentsPrompt(planned, followUp)).toContain("minddy_update_plan_task");
+    expect(buildIssueCommentsPrompt(input, followUp)).not.toContain("minddy_update_plan_task");
   });
 });
 

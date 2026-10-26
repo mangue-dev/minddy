@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { CodeSimpleIcon as Code2, Copy01Icon, Edit01Icon, Search01Icon, TaskDone01Icon } from "@hugeicons/core-free-icons";
+import { CodeSimpleIcon as Code2, Comment01Icon, Copy01Icon, Edit01Icon, Search01Icon, TaskDone01Icon } from "@hugeicons/core-free-icons";
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
@@ -22,6 +22,10 @@ import type { ContextMenuAction } from "@/components/issue-context-menu";
  * The “plan” leaf tracks the ticket: “Generate a plan” when there is none,
  * “Check the plan” when it has one, and the underlying prompt switches the
  * same way.
+ *
+ * When people commented after the ticket's MCP agent last did (MIN-801), a
+ * top-level “Copy prompt for new comments” entry comes first: it is the one
+ * thing the ticket is waiting for.
  */
 export function useAgentMenuActions({
   hasPlan,
@@ -29,6 +33,7 @@ export function useAgentMenuActions({
   onCopyPlanPrompt,
   onCopyVerifyPrompt,
   onCopyCustomPrompt,
+  onCopyCommentsPrompt,
 }: {
   /** The ticket already has a plan (at least one task) → check, rather than write. */
   hasPlan: boolean;
@@ -38,6 +43,9 @@ export function useAgentMenuActions({
   onCopyVerifyPrompt: () => void;
   /** Opens the free instruction dialog, then copies the corresponding prompt. */
   onCopyCustomPrompt: () => void;
+  /** Copies the prompt for the comments the MCP agent has not answered;
+      absent when there are none. */
+  onCopyCommentsPrompt?: () => void;
 }): ContextMenuAction[] {
   const t = useTranslations("IssueUI");
 
@@ -108,6 +116,14 @@ export function useAgentMenuActions({
         },
       ],
     };
-    return [copyPrompt];
-  }, [hasPlan, onCopyPrompt, onCopyPlanPrompt, onCopyVerifyPrompt, onCopyCustomPrompt, t]);
+    if (!onCopyCommentsPrompt) return [copyPrompt];
+    const copyCommentsPrompt: ContextMenuAction = {
+      id: "copy-comments-prompt",
+      label: t("commentsPromptAction"),
+      keywords: ["comments", "commentaires", "reply", "répondre", "feedback", "prompt", "agent", "copy", "copier"],
+      icon: <HugeiconsIcon icon={Comment01Icon} className="size-4" />,
+      onSelect: onCopyCommentsPrompt,
+    };
+    return [copyCommentsPrompt, copyPrompt];
+  }, [hasPlan, onCopyPrompt, onCopyPlanPrompt, onCopyVerifyPrompt, onCopyCustomPrompt, onCopyCommentsPrompt, t]);
 }

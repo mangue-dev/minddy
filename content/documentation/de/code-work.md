@@ -107,6 +107,8 @@ Verbinde deinen Agenten zuerst mit minddy MCP, damit er den Plan lesen und desse
 3. Füge den Prompt in deinen Agenten ein, und zwar in der Arbeitskopie des Repositorys. Das Kopieren führt kein KI-Modell aus und verbraucht kein KI-Kontingent.
 4. Verfolge den Planfortschritt im Ticket, während der Agent dessen Aufgaben über MCP aktualisiert. Beantworte seine Fragen im Agenten, oder halte Entscheidungen im Ticket fest, damit der nächste Prompt sie enthält.
 
+Wenn dein Agent das Ticket über MCP kommentiert hat und danach weitere Kommentare eingehen, auch solche aus einem verknüpften Pull Request, erscheint über dem Kommentarfeld die Schaltfläche **Prompt für N neue Kommentare kopieren**. Der Prompt bittet den Agenten, diese Kommentare über MCP zu lesen und jeden davon zu bearbeiten; er kopiert sie nicht. Auf einem Board zeigt die Karte des Tickets, wie viele Kommentare warten. Ein Klick auf diese Zahl kopiert denselben Prompt, und das Rechtsklickmenü der Karte bietet **Prompt für neue Kommentare kopieren**.
+
 Inhalt des Prompts, Branch-Vorschlag und Sprachregeln beschreibt [Einen Prompt für einen anderen Coding-Agenten kopieren](/docs/issues#copy-issue-prompt).
 
 ### Die Arbeit mit dem Ticket verknüpft halten {#link-work}

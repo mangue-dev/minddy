@@ -749,6 +749,13 @@
     "storage": false
   },
   {
+    "file": "app/api/projects/[id]/comment-follow-ups/route.ts",
+    "operation": "rpc",
+    "resource": "issue_comment_follow_ups",
+    "line": 19,
+    "storage": false
+  },
+  {
     "file": "app/api/projects/[id]/dictate-feedback/route.ts",
     "operation": "from",
     "resource": "projects",

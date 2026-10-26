@@ -3,7 +3,7 @@
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { prefetchDescriptionSnapshot } from "@/lib/description-collaboration";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AiAutoRotateIcon, HierarchySquare01Icon, GitMergeIcon, GitPullRequestDraftIcon, GitPullRequestIcon, RepeatIcon, TaskDone01Icon, TriangleIcon, UserIcon } from "@hugeicons/core-free-icons";
+import { AiAutoRotateIcon, Comment01Icon, HierarchySquare01Icon, GitMergeIcon, GitPullRequestDraftIcon, GitPullRequestIcon, RepeatIcon, TaskDone01Icon, TriangleIcon, UserIcon } from "@hugeicons/core-free-icons";
 import {
   memo,
   useCallback,
@@ -95,6 +95,7 @@ import {
   type ShortcutField,
 } from "@/components/issue-field-shortcuts";
 import {
+  buildIssueCommentsPrompt,
   buildIssueCustomPrompt,
   buildIssuePlanPrompt,
   buildIssuePrompt,
@@ -105,6 +106,8 @@ import {
   prefetchIssuePromptContext,
 } from "@/lib/issue-prompt-context";
 import { useAskNumoTarget } from "@/lib/ask-numo-context";
+import type { CommentFollowUp } from "@/lib/comment-follow-up";
+import { useCommentFollowUp } from "@/lib/use-comment-follow-ups";
 import { useStableCallback } from "@/lib/use-stable-callback";
 import { useCategoryCreateOption } from "@/lib/use-picker-create";
 import { useAuth } from "@/lib/auth-context";
@@ -566,6 +569,51 @@ function PlanPick({
   );
 }
 
+/**
+ * New comments the ticket's MCP agent has not answered (MIN-801): the count,
+ * and a click copies the prompt that asks the agent to address them.
+ */
+function CommentFollowUpPick({
+  followUp,
+  onCopy,
+}: {
+  followUp: CommentFollowUp;
+  onCopy?: () => void;
+}) {
+  const t = useTranslations("IssueUI");
+  const label = t("commentsPendingLabel", { count: followUp.count });
+  const content = (
+    <>
+      <HugeiconsIcon icon={Comment01Icon} className="size-3.5 shrink-0" />
+      <span className="tabular-nums">{followUp.count}</span>
+    </>
+  );
+  const className = "flex items-center gap-1 rounded-md px-1 py-0.5 text-[11px] font-medium text-brand";
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        {onCopy ? (
+          <button
+            type="button"
+            aria-label={t("commentsPromptAction")}
+            onClick={(e) => {
+              stop(e);
+              onCopy();
+            }}
+            onPointerDown={stop}
+            className={cn(className, "outline-none transition-colors hover:bg-muted focus-visible:bg-muted")}
+          >
+            {content}
+          </button>
+        ) : (
+          <span className={className} aria-label={label}>{content}</span>
+        )}
+      </TooltipTrigger>
+      <TooltipContent>{onCopy ? `${label} · ${t("commentsPromptAction")}` : label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 /** The pull request in the card header, in place of the plan. Clicking opens
     its review. Read-only (a span without a handler) in the drag overlay / public board.
 
@@ -666,6 +714,8 @@ export const IssueCardBody = memo(function IssueCardBody({
   prReadiness,
   onOpenPr,
   onOpenObjective,
+  commentFollowUp,
+  onCopyCommentsPrompt,
 }: {
   /** The card declares what it reads, not what a ticket contains (MIN-342):
       a complete `Issue` remains assignable, and a public surface can pass only
@@ -703,6 +753,11 @@ export const IssueCardBody = memo(function IssueCardBody({
   prReadiness?: IssuePrReadiness | null;
   /** Opens the pull request review (clicking the “PR available” chip). */
   onOpenPr?: () => void;
+  /** Comments written since the ticket's MCP agent last commented (MIN-801);
+      absent on surfaces that do not read them. */
+  commentFollowUp?: CommentFollowUp | null;
+  /** Copies the prompt for those comments (clicking their indicator). */
+  onCopyCommentsPrompt?: () => void;
   /** When set, the status/priority/effort/assignee/due indicators become pickers. */
   onUpdate?: (patch: IssueUpdateInput) => void;
   /** When set, the category indicator becomes an inline multi-select picker. */
@@ -831,6 +886,9 @@ export const IssueCardBody = memo(function IssueCardBody({
           )}
         </span>
         <span className="flex shrink-0 items-center gap-1.5">
+          {commentFollowUp && (
+            <CommentFollowUpPick followUp={commentFollowUp} onCopy={onCopyCommentsPrompt} />
+          )}
           {/* An actionable PR takes the place of plan progress. */}
           {pr && isPrWorthShowing(pr) ? (
             <span className="flex items-center gap-0.5">
@@ -988,6 +1046,9 @@ const IssueCardContent = memo(function IssueCardContent({
   // One issue-scoped subscription drives the pull request chip.
   const pr = useIssuePr(issue.id);
   const prReadiness = useIssuePrReadiness(issue.id);
+  // One project-scoped request flags the tickets whose MCP agent has new
+  // comments to answer (MIN-801); each card selects its own entry.
+  const commentFollowUp = useCommentFollowUp(issue.project_id, issue.id);
 
   // Card bindings are made HERE rather than by the column (MIN-316).
   // The received props take the ticket as an argument and are therefore stable
@@ -1247,6 +1308,28 @@ const IssueCardContent = memo(function IssueCardContent({
     toast.success(t("promptCopied"));
   };
 
+  // “Copy prompt for new comments” (MIN-801): from the card's indicator or
+  // its menu, without opening the ticket. No automatic start.
+  const copyCommentsPrompt = async () => {
+    if (!commentFollowUp) return;
+    const forge = await loadOneIssuePromptContext(issue.id);
+    await navigator.clipboard.writeText(
+      buildIssueCommentsPrompt(
+        {
+          issue,
+          projectId,
+          projectKey,
+          resourceCount: issue.resource_count,
+          ...promptContext(),
+          ...forge,
+        },
+        commentFollowUp,
+      ),
+    );
+    toast.success(t("commentsPromptCopied"));
+  };
+  const copyCommentsPromptStable = useStableCallback(() => void copyCommentsPrompt());
+
   // ⚠ STABLE envelopes, not the handlers themselves (MIN-316).
   //
   // `useAgentMenuActions` has its parameters as dependencies of its `useMemo`.
@@ -1260,6 +1343,7 @@ const IssueCardContent = memo(function IssueCardContent({
     onCopyPlanPrompt: useStableCallback(() => void copyPlanPrompt()),
     onCopyVerifyPrompt: useStableCallback(() => void copyVerifyPrompt()),
     onCopyCustomPrompt: useStableCallback(() => setCustomPromptOpen(true)),
+    onCopyCommentsPrompt: commentFollowUp ? copyCommentsPromptStable : undefined,
   });
 
   // Keyboard shortcuts on hover: S/P/E/A/L/D/O open the picker on cursor,
@@ -1426,6 +1510,8 @@ const IssueCardContent = memo(function IssueCardContent({
             pr={pr}
             prReadiness={prReadiness}
             onOpenPr={openPr}
+            commentFollowUp={commentFollowUp}
+            onCopyCommentsPrompt={copyCommentsPromptStable}
             onUpdate={canWrite ? updateCard : undefined}
             onSetCategories={canWrite ? setCardCategories : undefined}
             inCurrentCycle={inCurrentCycle}
