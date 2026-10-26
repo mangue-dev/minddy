@@ -79,6 +79,12 @@ describe("forgeReplyResponse", () => {
     });
   });
 
+  it("posts minddy mentions as plain @names, never as minddy links", async () => {
+    await reply("Thanks [@Alice Fontaine](mention:member/5ad9b962-93e7-4a7c-a44b-f4925484ba93), done.");
+    expect(mocks.createPrReviewCommentResponse).toHaveBeenCalledWith(
+      { canWrite: true }, { body: "Thanks @Alice Fontaine, done.", inReplyTo: 900 }, "user-1");
+  });
+
   it("answers a GitHub conversation comment with a quoting comment", async () => {
     mocks.origin = { remoteCommentId: "41", provider: "github", pullRequestId: "pr-1", threadKey: null };
     await reply();

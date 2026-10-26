@@ -20,6 +20,7 @@ import {
   resolvePrScope,
 } from "./pr-actions";
 import { syncPrCommentToIssues } from "./pr-comment-sync";
+import { splitMentionLinks } from "@/lib/mention-link";
 import { findPullRequest } from "./pull-requests";
 
 const MAX_REPLY_LENGTH = 65_536;
@@ -36,6 +37,17 @@ interface PostedForgeComment {
   path?: string;
   line?: number | null;
   diff_hunk?: string;
+}
+
+/**
+ * A minddy reply as forge markdown. The composer writes a mention as a typed
+ * link (`[@Alice](mention:member/<id>)`) that only minddy can read: the forge
+ * gets the plain `@Alice` the author saw, never a minddy id.
+ */
+export function forgeMarkdown(text: string): string {
+  return splitMentionLinks(text)
+    .map((piece) => (typeof piece === "string" ? piece : `@${piece.label}`))
+    .join("");
 }
 
 /**
@@ -71,7 +83,7 @@ export async function forgeReplyResponse(opts: {
   body: unknown;
 }): Promise<NextResponse> {
   const t = await getTranslations("ApiErrors");
-  const text = typeof opts.body === "string" ? opts.body.trim() : "";
+  const text = typeof opts.body === "string" ? forgeMarkdown(opts.body).trim() : "";
   if (!text || text.length > MAX_REPLY_LENGTH) {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
@@ -106,7 +118,7 @@ export async function forgeReplyResponse(opts: {
       .eq("id", opts.commentId).eq("issue_id", opts.issueId).maybeSingle();
     response = await createPrCommentResponse(
       scope,
-      quoteForReply((original?.body as string | undefined) ?? "", text),
+      quoteForReply(forgeMarkdown((original?.body as string | undefined) ?? ""), text),
       opts.userId,
       opts.supabase,
     );

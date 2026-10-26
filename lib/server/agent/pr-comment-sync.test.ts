@@ -197,6 +197,20 @@ describe("backfillPendingPrComments", () => {
     expect(mocks.links[0].comments_backfilled_at).toBeNull();
   });
 
+  it("leaves the link pending when a comment could not be written", async () => {
+    mocks.links = [{ issue_id: "issue-a", comments_backfilled_at: null }];
+    mocks.mirrorGithubCommentToIssue.mockRejectedValueOnce(new Error("transient"));
+    await backfillPendingPrComments(PR as never);
+    expect(mocks.mirrorGithubCommentToIssue).toHaveBeenCalledTimes(4);
+    expect(mocks.links[0].comments_backfilled_at).toBeNull();
+  });
+
+  it("resolves the ticket's write actor once for the whole import", async () => {
+    mocks.links = [{ issue_id: "issue-a", comments_backfilled_at: null }];
+    await backfillPendingPrComments(PR as never);
+    expect(mocks.repoWriteActor).toHaveBeenCalledOnce();
+  });
+
   it("reads a merge request's discussions on GitLab", async () => {
     mocks.links = [{ issue_id: "issue-a", comments_backfilled_at: null }];
     mocks.resolveRepoCloneTarget.mockResolvedValue({ provider: "gitlab", token: "glpat" });

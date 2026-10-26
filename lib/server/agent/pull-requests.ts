@@ -764,13 +764,15 @@ export async function syncRepoPullRequests(opts: {
   // A ticket the sweep linked (its branch, title or closing line names it)
   // receives the comments the PR already carries, dated from the forge
   // (MIN-802). Each link is imported once, so a PR whose links are done costs
-  // one read. Imported lazily: the mirror module reads this one.
-  for (const { outcome } of applied) {
-    const row = outcome?.row;
-    if (!outcome?.applied || !row?.issue_id) continue;
+  // one read. One PR after the other, in a single background job: a first
+  // sweep can touch dozens of PRs, and parallel imports would trip the forge's
+  // rate limits. Imported lazily: the mirror module reads this one.
+  const linked = applied.flatMap(({ outcome }) =>
+    outcome?.applied && outcome.row?.issue_id ? [outcome.row] : []);
+  if (linked.length > 0) {
     afterOrNow(async () => {
       const { backfillPendingPrComments } = await import("./pr-comment-sync");
-      await backfillPendingPrComments(row);
+      for (const row of linked) await backfillPendingPrComments(row);
     });
   }
 

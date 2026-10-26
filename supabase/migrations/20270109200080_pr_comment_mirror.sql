@@ -23,8 +23,9 @@ CREATE INDEX idx_github_issue_comment_syncs_pull_request
   WHERE pull_request_id IS NOT NULL;
 
 -- When the PR's past comments were imported into this ticket. NULL = still to
--- do: the importer claims the link by setting it, and clears it again when the
--- forge read fails so a later PR event retries. Links that predate this column
--- start NULL on purpose: their PR history is imported on the next PR event.
+-- do: the importer sets it only once an import completed, so a failed or
+-- interrupted import is retried on a later PR event. Links that predate this
+-- column start NULL on purpose: their PR history is imported on the next PR
+-- event.
 ALTER TABLE public.pull_request_issues
   ADD COLUMN comments_backfilled_at timestamptz;

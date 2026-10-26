@@ -49,14 +49,10 @@ async function mirrorPrCommentToIssue(opts: {
   issueId: string;
   pr: PullRequestRow;
   mirror: PrCommentMirror;
+  /** The ticket's write actor (`writeActorFor`), resolved once per ticket. */
+  authorId: string;
 }): Promise<void> {
-  const { issueId, pr, mirror } = opts;
-  const authorId = await repoWriteActor({
-    provider: rowProvider(pr),
-    repoFullName: pr.repo_full_name,
-    issueId,
-  });
-  if (!authorId) return;
+  const { issueId, pr, mirror, authorId } = opts;
   const service = getServiceClient();
   const parentCommentId = await findSyncedThreadRoot(service, {
     issueId,
@@ -82,6 +78,11 @@ async function mirrorPrCommentToIssue(opts: {
   });
 }
 
+/** The member a ticket's mirrored rows belong to, or null when none can write them. */
+function writeActorFor(pr: PullRequestRow, issueId: string): Promise<string | null> {
+  return repoWriteActor({ provider: rowProvider(pr), repoFullName: pr.repo_full_name, issueId });
+}
+
 /**
  * Fans one PR comment out to every ticket linked to its pull request. A PR
  * without a linked ticket is normal (a human PR minddy does not track).
@@ -105,7 +106,8 @@ export async function syncPrCommentToIssues(opts: {
     if (!pr) return;
     for (const issueId of await pullRequestIssueIds(pr.id)) {
       try {
-        await mirrorPrCommentToIssue({ issueId, pr, mirror: opts.mirror });
+        const authorId = await writeActorFor(pr, issueId);
+        if (authorId) await mirrorPrCommentToIssue({ issueId, pr, mirror: opts.mirror, authorId });
       } catch {
         console.error("[pr-comment-sync] issue_mirror_failed");
       }
@@ -137,6 +139,9 @@ async function readPrMirrors(pr: PullRequestRow, token: string): Promise<PrComme
  * safe: the sidecar key makes an already mirrored comment an update, and a
  * stale copy is skipped. Each comment keeps the date it was written at, even
  * when that is before the ticket existed.
+ *
+ * Throws when ANY comment could not be written, after trying them all: the
+ * link then stays pending, and the next PR event imports the rest.
  */
 async function backfillPrCommentsToIssue(pr: PullRequestRow, issueId: string): Promise<void> {
   const { data: issue, error } = await issueStore(getServiceClient()).select("project_id")
@@ -146,13 +151,17 @@ async function backfillPrCommentsToIssue(pr: PullRequestRow, issueId: string): P
   if (!projectId) return;
   const target = await resolveRepoCloneTarget(projectId);
   if (!target || target.provider !== rowProvider(pr)) return;
+  const authorId = await writeActorFor(pr, issueId);
+  if (!authorId) return;
+  let failed = 0;
   for (const mirror of await readPrMirrors(pr, target.token)) {
     try {
-      await mirrorPrCommentToIssue({ issueId, pr, mirror });
+      await mirrorPrCommentToIssue({ issueId, pr, mirror, authorId });
     } catch {
-      console.error("[pr-comment-sync] backfill_mirror_failed");
+      failed += 1;
     }
   }
+  if (failed > 0) throw new Error("pr_comment_backfill_incomplete");
 }
 
 /**
@@ -160,9 +169,11 @@ async function backfillPrCommentsToIssue(pr: PullRequestRow, issueId: string): P
  * import — however the link was made: by hand, or automatically when a branch,
  * title or closing line names the ticket, possibly days into the discussion.
  *
- * Each link is CLAIMED (`comments_backfilled_at`) before the forge read, so two
- * deliveries of the same PR event never import twice; a failed read releases
- * the claim so the next PR event retries. Called off the response path.
+ * A link is marked imported (`comments_backfilled_at`) only once its import
+ * COMPLETED: a failed forge read, a comment that could not be written, or an
+ * invocation killed mid-way all leave it pending, and the next PR event
+ * retries. Two concurrent runs may both import; that is safe, the sidecar key
+ * makes the second an update. Called off the response path.
  */
 export async function backfillPendingPrComments(pr: PullRequestRow): Promise<void> {
   const service = getServiceClient();
@@ -173,17 +184,15 @@ export async function backfillPendingPrComments(pr: PullRequestRow): Promise<voi
     return;
   }
   for (const { issue_id: issueId } of (pending ?? []) as { issue_id: string }[]) {
-    const { data: claimed, error: claimError } = await service.from("pull_request_issues")
-      .update({ comments_backfilled_at: new Date().toISOString() })
-      .eq("pull_request_id", pr.id).eq("issue_id", issueId).is("comments_backfilled_at", null)
-      .select("issue_id");
-    if (claimError || !claimed?.length) continue;
     try {
       await backfillPrCommentsToIssue(pr, issueId);
     } catch {
       console.error("[pr-comment-sync] backfill_failed");
-      await service.from("pull_request_issues").update({ comments_backfilled_at: null })
-        .eq("pull_request_id", pr.id).eq("issue_id", issueId);
+      continue;
     }
+    const { error: stampError } = await service.from("pull_request_issues")
+      .update({ comments_backfilled_at: new Date().toISOString() })
+      .eq("pull_request_id", pr.id).eq("issue_id", issueId).is("comments_backfilled_at", null);
+    if (stampError) console.error("[pr-comment-sync] backfill_stamp_failed");
   }
 }
