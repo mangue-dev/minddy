@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { put } from "@vercel/blob";
 
 import { computeDesktopFingerprint } from "./desktop-fingerprint.mjs";
-import { requireMacReleaseArtifacts } from "./macos-desktop-release.mjs";
+import { requireMacReleaseArtifacts, withMacMinimumSystemVersion } from "./macos-desktop-release.mjs";
 import { verifyMacProvisioningProfile } from "./macos-provisioning-profile.mjs";
 
 /**
@@ -188,6 +188,26 @@ for (const artifact of artifacts) {
   }
 }
 
+// The feed carries the bundle's macOS minimum. Installed apps on an older
+// macOS then skip this release rather than download one that cannot start.
+const minimums = new Set();
+for (const app of apps) {
+  const plist = path.join(app, "Contents", "Info.plist");
+  try {
+    const { stdout } = await exec("plutil", ["-extract", "LSMinimumSystemVersion", "raw", plist]);
+    minimums.add(stdout.trim());
+  } catch {
+    fail(`${path.relative(repo, plist)} has no LSMinimumSystemVersion.`);
+  }
+}
+if (minimums.size !== 1) fail(`the macOS bundles disagree on their minimum version: ${[...minimums].join(", ")}.`);
+let gatedManifest;
+try {
+  gatedManifest = withMacMinimumSystemVersion(manifest, [...minimums][0]);
+} catch (error) {
+  fail(error.message);
+}
+
 // **It is the MANIFESTO that decides what goes, not the contents of the file.**
 // `desktop/release/` is not cleaned between two builds: the binaries of one
 // previous version remain there, and a scan of the folder would republish them — from
@@ -228,6 +248,8 @@ if (verifyOnly) {
   console.log(`[publish-desktop] verification only: ${files.length} files ready (${files.join(", ")}).`);
   process.exit(0);
 }
+
+await writeFile(path.join(RELEASE_DIR, "latest-mac.yml"), gatedManifest);
 
 for (const name of files) {
   const body = await readFile(path.join(RELEASE_DIR, name));

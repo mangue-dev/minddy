@@ -72,3 +72,30 @@ export function requireMacReleaseArtifacts(manifest, entries, manifestName = "la
   }
   return artifacts;
 }
+
+/**
+ * Converts the bundle's `LSMinimumSystemVersion` (macOS 11 or later) to the
+ * Darwin kernel version that electron-updater compares with `os.release()`.
+ * macOS 11 is Darwin 20, and each later major adds one.
+ */
+export function darwinVersionForMacos(macosVersion) {
+  const major = Number(/^(\d+)(?:\.\d+){0,2}$/.exec(String(macosVersion).trim())?.[1]);
+  if (!Number.isInteger(major) || major < 11) {
+    throw new Error(`Unsupported macOS minimum version: ${macosVersion}`);
+  }
+  return `${major + 9}.0.0`;
+}
+
+/**
+ * Writes the update gate into latest-mac.yml. electron-updater skips a release
+ * whose `minimumSystemVersion` exceeds the running Darwin version, so an
+ * installed app on an older macOS keeps its working version instead of
+ * downloading a build that would not start.
+ */
+export function withMacMinimumSystemVersion(manifest, macosVersion) {
+  const line = `minimumSystemVersion: ${darwinVersionForMacos(macosVersion)}`;
+  if (/^minimumSystemVersion:.*$/m.test(manifest)) {
+    return manifest.replace(/^minimumSystemVersion:.*$/m, line);
+  }
+  return `${manifest.replace(/\n*$/, "\n")}${line}\n`;
+}

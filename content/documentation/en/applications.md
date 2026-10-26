@@ -220,7 +220,7 @@ Installation does not create an offline project copy. minddy's service worker ha
 
 ## Install and manage the desktop app {#desktop-app}
 
-Use the public download page. Choose Apple silicon or Intel on macOS; install through Microsoft Store on Windows; choose an AppImage or signed `deb`/`rpm` matching x64 or ARM64 on Linux. Follow the platform guide and verification instructions for the package. Windows does not provide an `exe` installer.
+Use the public download page. Choose Apple silicon or Intel on macOS; install through Microsoft Store on Windows; choose an AppImage or signed `deb`/`rpm` matching x64 or ARM64 on Linux. Follow the platform guide and verification instructions for the package. Windows does not provide an `exe` installer. The macOS app requires macOS 13 (Ventura) or later; on an older version, an installed app keeps its current version and receives no further updates.
 
 On the first launch, the app opens the minddy Cloud sign-up screen, where you create your account. To use your own instance instead, click **Self-host minddy** at the bottom of the sign-in and sign-up screens. It opens **Self-host minddy**, with three choices: **Install on this computer** sets up a [local instance](/docs/install-locally#install-locally), **Install on a server** opens the public server installation guide in your browser, and **Use an existing installation** opens a screen that groups the installations you already have. There, **On this computer** opens a minddy folder already on this computer and the app starts it; below it, **Server address** with **Connect** joins a server you run. Remote servers require HTTPS; `localhost` can use HTTP.
 
