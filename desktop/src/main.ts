@@ -98,6 +98,7 @@ import {
   localSkill,
 } from "./local-repo";
 import { buildAppMenu } from "./menu";
+import { installEditContextMenu } from "./edit-context-menu";
 import { registerServerChoiceIpc, registerServerChoiceScheme, serveServerChoicePage } from "./server-choice";
 import { localAccountSession } from "./local-account";
 import {
@@ -733,11 +734,10 @@ function createWindow(
         `--minddy-windows-wns=${isWnsHelperAvailable() ? "1" : "0"}`,
       ],
       // The spell checker goes through `NSSpellChecker` on macOS, at
-      // each text modification, on the UI thread of the browser process —
-      // and none of its suggestions are reachable: `menu.ts` does not build
-      // no context menu and `main.ts` never listens to `context-menu`. He doesn't
-      // only the red underlines remained. Turning it back on one day asks
-      // first write this menu; that's the other half of the job (MIN-322).
+      // each text modification, on the UI thread of the browser process.
+      // The edit context menu (`edit-context-menu.ts`, MIN-797) offers no
+      // suggestions, so only the red underlines would remain. Turning it back
+      // on one day asks first to add suggestions to that menu (MIN-322).
       spellcheck: false,
       // The MIN-290 probe measured it: the Supabase WebSocket survives very well
       // at seven minutes in the background with throttling ACTIVE. We don't cut it
@@ -749,6 +749,7 @@ function createWindow(
   integratedFrames.set(window, integrated);
 
   guardNavigation(window);
+  installEditContextMenu(window);
   const rendererRecovery = createRendererRecovery({
     origin: () => origin,
     unavailable: () => quitting || quittingForUpdate || window.isDestroyed() || window.webContents.isDestroyed(),

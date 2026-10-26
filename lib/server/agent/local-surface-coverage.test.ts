@@ -95,6 +95,8 @@ const COQUILLE = {
   "updater-module.ts":
     "loads electron-updater on first use; load timing regressions live in @/lib/desktop/updater.test",
   "hide-window.ts": "wires hideWindowStep from @/lib/desktop/hide-window",
+  "edit-context-menu.ts":
+    "pops up the native edit menu on right-click; which items show lives in @/lib/desktop/edit-context-menu",
   "channel-store.ts":
     "rewrites a retired preview channel file to stable; the decision lives in @/lib/desktop/channel",
   "push-installation-store.ts":
