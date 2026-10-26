@@ -84,7 +84,7 @@ async function admin(keys: LocalSupabaseKeys, pathname: string, init: RequestIni
  * shows the step as failed rather than leaving a window that cannot sign in.
  */
 export async function ensureLocalAccount(root: string): Promise<void> {
-  if (!safeStorage.isEncryptionAvailable()) throw new Error("The system keychain is unavailable.");
+  if (!(await safeStorage.isAsyncEncryptionAvailable())) throw new Error("The system keychain is unavailable.");
   const keys = readKeys(root);
   if (!keys) throw new Error("The local Supabase keys are missing from .env.local.");
   const password = randomBytes(32).toString("base64url");
@@ -108,10 +108,14 @@ export async function ensureLocalAccount(root: string): Promise<void> {
     });
     if (!updated.ok) throw new Error(`The local account could not be updated (HTTP ${updated.status}).`);
   }
+  await writeStored({ email: LOCAL_ACCOUNT_EMAIL, root }, password);
+}
+
+/** Encrypts the password with the keychain and writes the account file. */
+async function writeStored(account: Omit<StoredAccount, "password">, password: string): Promise<void> {
   const stored: StoredAccount = {
-    email: LOCAL_ACCOUNT_EMAIL,
-    password: safeStorage.encryptString(password).toString("base64"),
-    root,
+    ...account,
+    password: (await safeStorage.encryptStringAsync(password)).toString("base64"),
   };
   writeFileSync(accountFile(), `${JSON.stringify(stored, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
 }
@@ -125,10 +129,16 @@ export async function localAccountSession(root: string | null): Promise<LocalAcc
   const stored = readStored();
   if (!root || !stored || path.resolve(stored.root) !== path.resolve(root)) return null;
   const keys = readKeys(root);
-  if (!keys || !safeStorage.isEncryptionAvailable()) return null;
+  if (!keys || !(await safeStorage.isAsyncEncryptionAvailable())) return null;
   let password: string;
   try {
-    password = safeStorage.decryptString(Buffer.from(stored.password, "base64"));
+    const decrypted = await safeStorage.decryptStringAsync(Buffer.from(stored.password, "base64"));
+    password = decrypted.result;
+    // The keychain rotated its key: store the password under the current one.
+    // A failed rewrite keeps the old copy, which still decrypts.
+    if (decrypted.shouldReEncrypt) {
+      await writeStored({ email: stored.email, root: stored.root }, password).catch(() => undefined);
+    }
   } catch {
     return null;
   }

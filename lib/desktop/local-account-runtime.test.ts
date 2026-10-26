@@ -9,12 +9,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * create or recover the owner, the keychain round trip, and the password grant.
  */
 const dirs = vi.hoisted(() => ({ userData: "" }));
+// Only the asynchronous keychain API exists here: Electron 46 removes the
+// synchronous methods, so a call to one of them fails the suite.
+const keychain = vi.hoisted(() => ({ available: true, rotated: false, prefix: "enc:" }));
 vi.mock("../../desktop/node_modules/electron", () => ({
   app: { getPath: () => dirs.userData },
   safeStorage: {
-    isEncryptionAvailable: () => true,
-    encryptString: (value: string) => Buffer.from(`enc:${value}`),
-    decryptString: (value: Buffer) => value.toString().replace(/^enc:/, ""),
+    isAsyncEncryptionAvailable: async () => keychain.available,
+    encryptStringAsync: async (value: string) => Buffer.from(`${keychain.prefix}${value}`),
+    decryptStringAsync: async (value: Buffer) => ({
+      result: value.toString().replace(/^(?:enc|v2):/, ""),
+      shouldReEncrypt: keychain.rotated,
+    }),
   },
 }));
 
@@ -25,6 +31,7 @@ let calls: string[];
 
 beforeEach(async () => {
   vi.resetModules();
+  Object.assign(keychain, { available: true, rotated: false, prefix: "enc:" });
   users = [];
   calls = [];
   dirs.userData = mkdtempSync(path.join(tmpdir(), "minddy-account-"));
@@ -100,5 +107,32 @@ describe("desktop local account runtime", () => {
     await ensureLocalAccount(root);
     await expect(localAccountSession(path.join(root, "elsewhere"))).resolves.toBeNull();
     await expect(localAccountSession(null)).resolves.toBeNull();
+  });
+  it("signs in with a password stored before the move to the asynchronous keychain", async () => {
+    const { ensureLocalAccount, localAccountSession } = await import("../../desktop/src/local-account");
+    await ensureLocalAccount(root);
+    const file = path.join(dirs.userData, "local-account.json");
+    const stored = JSON.parse(readFileSync(file, "utf8"));
+    // encryptString() and encryptStringAsync() write the same base64 blob.
+    writeFileSync(file, JSON.stringify({ ...stored, password: Buffer.from(`enc:${users[0].password}`).toString("base64") }));
+    await expect(localAccountSession(root)).resolves.toEqual({ access_token: "access", refresh_token: "refresh" });
+  });
+
+  it("re-encrypts the stored password when the keychain rotated its key", async () => {
+    const { ensureLocalAccount, localAccountSession } = await import("../../desktop/src/local-account");
+    await ensureLocalAccount(root);
+    const file = path.join(dirs.userData, "local-account.json");
+    Object.assign(keychain, { rotated: true, prefix: "v2:" });
+    await expect(localAccountSession(root)).resolves.not.toBeNull();
+    const stored = JSON.parse(readFileSync(file, "utf8"));
+    expect(Buffer.from(stored.password, "base64").toString()).toBe(`v2:${users[0].password}`);
+  });
+
+  it("refuses to create or sign in the account without a keychain", async () => {
+    const { ensureLocalAccount, localAccountSession } = await import("../../desktop/src/local-account");
+    await ensureLocalAccount(root);
+    keychain.available = false;
+    await expect(ensureLocalAccount(root)).rejects.toThrow("The system keychain is unavailable.");
+    await expect(localAccountSession(root)).resolves.toBeNull();
   });
 });

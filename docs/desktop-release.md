@@ -191,6 +191,9 @@ The feed also carries the bundle's macOS minimum: `publish-desktop.mjs` reads
 version as `minimumSystemVersion` into `latest-mac.yml`. electron-updater
 compares it with `os.release()`, so an app installed on an older macOS skips a
 release that would not start there and keeps its working version.
+`scripts/macos-desktop-release.test.mjs` runs the shipped electron-updater
+against a gated manifest. At release time, confirm that the published
+`latest-mac.yml` carries exactly one `minimumSystemVersion` line.
 
 Account → Preferences provides **Check for Updates…** as the primary manual
 check — the only check that has the right to answer "you are up to date",
