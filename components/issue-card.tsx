@@ -44,6 +44,14 @@ import {
 } from "@/components/issue-indicators";
 import { RelationChips, type ChipRelation } from "@/components/relation-chips";
 import { RelationTargetPicker } from "@/components/relation-target-picker";
+import {
+  HIERARCHY_RELATIONS,
+  hierarchyAvailable,
+  hierarchyCandidates,
+  hierarchyPatches,
+  isHierarchyRelation,
+  type RelationMenuKind,
+} from "@/lib/issue-hierarchy";
 import { LinkablePullRequestsProbe, PrLinkTargetPicker } from "@/components/pull-requests/pr-link-target-picker";
 import { useLinkIssuesToPullRequest } from "@/lib/use-link-issues-to-pull-request";
 import type { RelationKinds } from "@/lib/use-issue-relations-query";
@@ -1133,7 +1141,7 @@ const IssueCardContent = memo(function IssueCardContent({
   // the menu is open, null until known.
   const [hasLinkablePr, setHasLinkablePr] = useState<boolean | null>(null);
   const linkIssuesToPullRequest = useLinkIssuesToPullRequest();
-  const [relationType, setRelationType] = useState<IssueRelationType | null>(
+  const [relationType, setRelationType] = useState<RelationMenuKind | null>(
     null,
   );
   // R on the hovered card (MIN-749): where its relation-type menu opens.
@@ -1163,10 +1171,28 @@ const IssueCardContent = memo(function IssueCardContent({
       }
     });
   };
+  // Parent / sub-issue entries (MIN-804) the targets may take, read from the
+  // project's tickets when a menu opens.
+  const hierarchyRelations = () => {
+    const candidateIssues = getCandidateIssues?.();
+    if (!candidateIssues) return [];
+    const targets = relationTargets();
+    return HIERARCHY_RELATIONS.filter((kind) => hierarchyAvailable(kind, targets, candidateIssues));
+  };
+  const setParentFromTargets = (kind: RelationMenuKind, targetId: string) => {
+    if (!isHierarchyRelation(kind)) return;
+    const patches = hierarchyPatches(kind, relationTargets(), targetId, getCandidateIssues?.() ?? []);
+    linked(() => {
+      for (const { issueId, parent_id } of patches) onUpdateIssue(issueId, { parent_id });
+    });
+  };
   const relationCandidates = useMemo(() => {
     const candidateIssues = relationType ? getCandidateIssues?.() : undefined;
     if (!relationType || !candidateIssues) return [];
     const targets = relationTargets();
+    if (isHierarchyRelation(relationType)) {
+      return hierarchyCandidates(relationType, targets, candidateIssues);
+    }
     const targetIds = new Set(targets.map((target) => target.id));
     // A candidate stays offered while at least one target can still gain it.
     return candidateIssues.filter(
@@ -1178,7 +1204,7 @@ const IssueCardContent = memo(function IssueCardContent({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the selection is read when the picker opens
   }, [getCandidateIssues, relationType, relations, issue.id, issue.project_id]);
   const relationObjectiveCandidates = useMemo(() => {
-    if (!relationType || !objectiveMap) return [];
+    if (!relationType || isHierarchyRelation(relationType) || !objectiveMap) return [];
     const targets = relationTargets();
     return [...objectiveMap.values()].filter(
       (objective) =>
@@ -1423,6 +1449,7 @@ const IssueCardContent = memo(function IssueCardContent({
       pr,
       hasObjectives: !!objectiveMap?.size,
       onSelectRelation: onAddRelation ? setRelationType : undefined,
+      hierarchyRelations: onAddRelation && canWrite ? hierarchyRelations() : undefined,
       onOpenField: openFieldAtPointer,
       extraActions: canWrite ? buildMenuActions?.(issue) : undefined,
       onDelete: onDelete ? () => setConfirmDelete(true) : undefined,
@@ -1542,6 +1569,7 @@ const IssueCardContent = memo(function IssueCardContent({
       <RelationTypePicker
         position={relationTypeAt}
         targetCount={relationTypeAt ? relationTargets().length : 1}
+        hierarchy={relationTypeAt ? hierarchyRelations() : undefined}
         onClose={() => setRelationTypeAt(null)}
         onSelect={(type) => {
           pointerRef.current = relationTypeAt;
@@ -1556,7 +1584,8 @@ const IssueCardContent = memo(function IssueCardContent({
         projectKey={projectKey}
         onClose={() => setRelationType(null)}
         onSelect={(targetId, targetType) => {
-          if (relationType) addRelationFromTargets(relationType, targetId, { targetType });
+          if (relationType && isHierarchyRelation(relationType)) setParentFromTargets(relationType, targetId);
+          else if (relationType) addRelationFromTargets(relationType, targetId, { targetType });
           setRelationType(null);
         }}
       />

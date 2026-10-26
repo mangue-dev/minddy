@@ -14,7 +14,8 @@ import { usePrUnlinkConfirmation } from "@/components/pull-requests/pr-unlink-co
 import { issueIdentifier } from "@/lib/issue-constants";
 import { RELATION_TYPES } from "@/lib/relation-constants";
 import type { IssuePr } from "@/lib/agent-api";
-import type { Issue, IssueRelationType } from "@/lib/types";
+import type { HierarchyRelation, RelationMenuKind } from "@/lib/issue-hierarchy";
+import type { Issue } from "@/lib/types";
 import { DATE_ICON } from "@/components/feature-icons";
 
 export interface IssueMenuOptions {
@@ -23,7 +24,9 @@ export interface IssueMenuOptions {
   agentActions: ContextMenuAction[];
   pr: IssuePr | null;
   hasObjectives: boolean;
-  onSelectRelation?: (type: IssueRelationType) => void;
+  onSelectRelation?: (type: RelationMenuKind) => void;
+  /** The parent / sub-issue entries the ticket may take (MIN-804). */
+  hierarchyRelations?: readonly HierarchyRelation[];
   onOpenField: (field: ShortcutField) => void;
   extraActions?: ContextMenuAction[];
   onDelete?: () => void;
@@ -51,7 +54,7 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
   const { isPending, requestUnlink } = usePrUnlinkConfirmation();
 
   return useCallback(({
-    issue, projectKey, agentActions, pr, hasObjectives, onSelectRelation,
+    issue, projectKey, agentActions, pr, hasObjectives, onSelectRelation, hierarchyRelations = [],
     onOpenField, extraActions = [], onDelete, onLinkPullRequest, readOnly = false,
   }: IssueMenuOptions): ContextMenuAction[] => {
     const identifier = issueIdentifier(projectKey, issue.number);
@@ -137,7 +140,7 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
               keywords: ["relation", "link", "lier", "bloc", "block"],
               icon: <HugeiconsIcon icon={Link02Icon} className="size-4" />,
               shortcut: RELATION_SHORTCUT_HINT,
-              children: RELATION_TYPES.map((type) => ({
+              children: [...RELATION_TYPES, ...hierarchyRelations].map((type) => ({
                 id: `relation-${type}`,
                 label: tRel(`action_${type}`),
                 keywords: [tRel(type), "relation", "link", "lier"],

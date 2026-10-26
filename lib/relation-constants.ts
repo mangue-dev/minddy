@@ -7,7 +7,14 @@ import type {
   RelationEndpointType,
   ResolvedRelation,
 } from "./types";
-import { CancelCircleIcon as Ban, Link02Icon as Link2, OctagonXIcon as OctagonX } from "@hugeicons/core-free-icons";
+import {
+  CancelCircleIcon as Ban,
+  HierarchyIcon,
+  HierarchySquare01Icon,
+  Link02Icon as Link2,
+  OctagonXIcon as OctagonX,
+} from "@hugeicons/core-free-icons";
+import type { HierarchyRelation } from "./issue-hierarchy";
 import type { ObjectiveStatus } from "./objective-constants";
 import {
   endpointType,
@@ -39,6 +46,17 @@ export const RELATION_META: Record<IssueRelationType, RelationMeta> = {
   blocked_by: { value: "blocked_by", icon: Ban, color: "text-red-500!" },
   blocks: { value: "blocks", icon: OctagonX, color: "text-amber-500!" },
   related: { value: "related", icon: Link2, color: "text-muted-foreground!" },
+};
+
+/** Parent and sub-issue entries of the same menus (MIN-804): they set
+    `parent_id` rather than storing a relation, and stay neutral in tint.
+    `sub_issue_of` reuses the glyph a card shows on a sub-issue. */
+export const HIERARCHY_META: Record<
+  HierarchyRelation,
+  { icon: AppIcon; color: string }
+> = {
+  parent_of: { icon: HierarchyIcon, color: "text-muted-foreground!" },
+  sub_issue_of: { icon: HierarchySquare01Icon, color: "text-muted-foreground!" },
 };
 
 /** Priority order (most urgent first): which relation the compact card chip

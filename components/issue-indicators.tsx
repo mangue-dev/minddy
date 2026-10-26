@@ -13,7 +13,8 @@ import {
   OBJECTIVE_STATUS_MAP,
   type ObjectiveStatus,
 } from "@/lib/objective-constants";
-import { RELATION_META } from "@/lib/relation-constants";
+import { HIERARCHY_META, RELATION_META } from "@/lib/relation-constants";
+import { isHierarchyRelation, type HierarchyRelation } from "@/lib/issue-hierarchy";
 import type { IssueRelationType } from "@/lib/types";
 
 /* ── Status ─────────────────────────────────────────────────────────────
@@ -214,16 +215,19 @@ export function PriorityIndicator({
 
 /* ── Relation ────────────────────────────────────────────────────────────
    A lucide glyph tinted per relation type (MIN-25): blocked_by red, blocks
-   amber, related muted. Used by the card / side-panel relation chips. */
+   amber, related muted. Used by the card / side-panel relation chips, and
+   by the relation menus, whose parent / sub-issue entries (MIN-804) stay muted. */
 
 export function RelationIcon({
   relation,
   className,
 }: {
-  relation: IssueRelationType;
+  relation: IssueRelationType | HierarchyRelation;
   className?: string;
 }) {
-  const { icon: Icon, color } = RELATION_META[relation];
+  const { icon: Icon, color } = isHierarchyRelation(relation)
+    ? HIERARCHY_META[relation]
+    : RELATION_META[relation];
   return <AppIcon icon={Icon} className={cn("size-3.5 shrink-0", color, className)} />;
 }
 
