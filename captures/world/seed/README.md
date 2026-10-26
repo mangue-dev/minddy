@@ -54,3 +54,14 @@ seed encodes each new objective with the application's own codec through
 recognize them by name; that module refuses the production database and
 non-demo projects, and never creates a key. The default run only describes
 the change; `--apply` requires explicit user approval.
+
+`021-commentaires-pr.mjs` mirrors a short pull request discussion into Aurora's
+AUR-8 for the ticket-timeline screenshot of mirrored PR comments (MIN-802): a
+code review comment with its diff excerpt, a reply threaded under it, and an
+edited conversation comment, each with its GitHub provenance (login, thread,
+dates). No pull request, repository link or forge account is created, so
+nothing can reach GitHub. Aurora has a content key, so the comment bodies are
+encoded with the application's comment codec through
+`captures/lib/encrypted-content.mjs`. A comment already mirrored keeps its
+identity and has its text realigned with the script. The default run only
+describes the change; `--apply` requires explicit user approval.

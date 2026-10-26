@@ -3593,6 +3593,8 @@
     "replyPlaceholder": "Reply…",
     "replyPublicPlaceholder": "Reply on the public board…",
     "replyGoesPublic": "Goes on the public board",
+    "replyOnForgePlaceholder": "Reply on {forge}…",
+    "replyGoesToForge": "Posted on {forge} with your account",
     "edited": "(edited)",
     "commentActions": "Comment actions",
     "deleteCommentTitle": "Delete comment?",

@@ -6,6 +6,8 @@ import { OneLine } from "@/components/one-line";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon, Delete02Icon, GlobeIcon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, Edit04Icon, Plug01Icon } from "@hugeicons/core-free-icons";
 import { createContext, useContext, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations, useFormatter } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
@@ -55,6 +57,10 @@ import {
   useFileDrop,
 } from "@/components/resources";
 import { Markdown } from "@/components/markdown";
+import { parseMirroredCodeComment, parseMirroredRemoteId } from "@/lib/pr-comment-mirror";
+import { postForgeReplyApi } from "@/lib/agent-api";
+import { commentsKey } from "@/lib/issue-timeline-queries";
+import { ForgeThreadResolveButton, useForgeThread, type ForgeThread } from "@/components/forge-comment-thread";
 import { displayName } from "@/lib/display-name";
 import { UserAvatar } from "@/components/user-avatar";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
@@ -97,6 +103,16 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
+/**
+ * The code excerpt of a review comment mirrored from a pull request (MIN-802),
+ * rendered as the PR view renders it. Loaded on demand: the diff renderer is
+ * heavy, and most tickets never mirror a code comment.
+ */
+const PrHunk = dynamic(
+  () => import("@/components/pull-requests/pr-hunk").then((m) => m.PrHunk),
+  { ssr: false },
+);
 
 /**
  * What a message must carry to be rendered by `CommentBlock` — the
@@ -435,6 +451,7 @@ export function CommentBlock({
   deletesReplies,
   liveTable = "comments",
   isReply = false,
+  forgeThread = null,
 }: {
   comment: ThreadMessage;
   /** Members identify authors; the optional mention model expands body chips
@@ -454,6 +471,9 @@ export function CommentBlock({
       each line — the root and the tint of the card already say it, and five
       badges for a single idea read like noise. */
   isReply?: boolean;
+  /** Live forge state of the thread this root opens (MIN-802): its excerpt
+      shows the Resolved / Outdated badges of the PR view. */
+  forgeThread?: ForgeThread | null;
 }) {
   const t = useTranslations("Timeline");
   const tCommon = useTranslations("Common");
@@ -480,7 +500,7 @@ export function CommentBlock({
     : viaMcp
       ? mcpActorName(comment.api_key_agent, comment.api_key_name, t)
       : github?.author_login
-        ? `GitHub @${github.author_login}`
+        ? `${github.provider === "gitlab" ? "GitLab" : "GitHub"} @${github.author_login}`
       : visitor
         ? visitor.name?.trim() || visitor.email?.trim() || visitor.pseudonym
         : author;
@@ -503,7 +523,19 @@ export function CommentBlock({
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const mine = !!currentUserId && comment.author_id === currentUserId;
-  const edited = comment.updated_at !== comment.created_at;
+  // A mirrored GitHub comment is "edited" when GitHub says so: the local row is
+  // rewritten by every sync, its own timestamps say nothing about the author.
+  const edited = github
+    ? !!github.created_at && !!github.updated_at && github.updated_at !== github.created_at
+    : comment.updated_at !== comment.created_at;
+  // A code comment mirrored from a PR opens on its excerpt (MIN-802); only
+  // comments the mirror marked as code carry that header.
+  const onCode = !!github?.remote_comment_id &&
+    parseMirroredRemoteId(github.remote_comment_id)?.kind === "code";
+  const codeExcerpt = useMemo(
+    () => (onCode && comment.body ? parseMirroredCodeComment(comment.body) : null),
+    [onCode, comment.body],
+  );
   /**
    * What we can do to this comment, and the two rules do not overlap
    * not.
@@ -687,6 +719,30 @@ export function CommentBlock({
             </SendShortcutTooltip>
           </div>
         </div>
+      ) : codeExcerpt ? (
+        <div className="flex flex-col gap-2">
+          <PrHunk
+            path={codeExcerpt.path}
+            line={codeExcerpt.line}
+            startLine={codeExcerpt.startLine}
+            side={codeExcerpt.side}
+            diffHunk={codeExcerpt.diffHunk}
+            maxLines={0}
+            outdated={forgeThread?.outdated}
+            resolved={forgeThread?.resolved}
+            className="rounded-lg border border-border bg-muted/15"
+          />
+          {codeExcerpt.body && (
+            <Markdown
+              className="text-foreground"
+              members={ctx.members}
+              mentionScan={scopedMentions?.scan}
+              mentionLinks={scopedMentions?.links}
+            >
+              {codeExcerpt.body}
+            </Markdown>
+          )}
+        </div>
       ) : (
         comment.body && (
           <Markdown
@@ -775,6 +831,9 @@ export function ReplyComposer({
   rootId,
   threadIsPublic = false,
   allowAttachments = true,
+  placeholder,
+  destinationHint,
+  actions,
   onReply,
 }: {
   members: Member[];
@@ -802,6 +861,12 @@ export function ReplyComposer({
    * (MIN-280) — this is where the gesture has meaning.
    */
   allowAttachments?: boolean;
+  /** Overrides the default placeholder — a reply that leaves for a forge says so. */
+  placeholder?: string;
+  /** Where the reply goes, said beside the buttons while writing (like the public hint). */
+  destinationHint?: string;
+  /** Thread actions shown beside the collapsed affordance (Resolve, MIN-802). */
+  actions?: React.ReactNode;
   onReply: (
     parentId: string,
     body: string,
@@ -812,6 +877,8 @@ export function ReplyComposer({
   const t = useTranslations("Timeline");
   const tCommon = useTranslations("Common");
   const [open, setOpen] = useState(false);
+  const placeholderText = placeholder ??
+    (threadIsPublic ? t("replyPublicPlaceholder") : t("replyPlaceholder"));
   const [draft, setDraft] = useState("");
   const [posting, setPosting] = useState(false);
   const uploads = useAttachmentUploads(() => `projects/${projectId}`);
@@ -842,16 +909,22 @@ export function ReplyComposer({
   };
 
   if (!open) {
-    return (
+    const affordance = (
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex w-full items-center gap-2 rounded-b-lg px-3.5 py-2.5 text-left text-sm text-muted-foreground outline-none transition-colors hover:text-foreground"
+        className="flex w-full min-w-0 flex-1 items-center gap-2 rounded-b-lg px-3.5 py-2.5 text-left text-sm text-muted-foreground outline-none transition-colors hover:text-foreground"
       >
         <ActorAvatar members={members} id={currentUserId} name={meName} />
-        <span>{threadIsPublic ? t("replyPublicPlaceholder") : t("replyPlaceholder")}</span>
+        <span className="truncate">{placeholderText}</span>
       </button>
     );
+    return actions ? (
+      <div className="flex items-center gap-1 pr-2">
+        {affordance}
+        {actions}
+      </div>
+    ) : affordance;
   }
   return (
     <div
@@ -878,7 +951,7 @@ export function ReplyComposer({
         onEscape={() => {
           if (!draft.trim()) close();
         }}
-        placeholder={threadIsPublic ? t("replyPublicPlaceholder") : t("replyPlaceholder")}
+        placeholder={placeholderText}
         autoFocus={allowInputAutoFocus()}
         includeNumo
         className="rounded-none border-0 bg-transparent px-3.5 py-2.5 focus-within:border-0 focus-within:ring-0"
@@ -888,6 +961,11 @@ export function ReplyComposer({
           <span className="mr-auto inline-flex items-center gap-1.5 text-xs font-medium text-brand">
             <HugeiconsIcon icon={GlobeIcon} className="size-3.5" />
             {t("replyGoesPublic")}
+          </span>
+        )}
+        {destinationHint && !threadIsPublic && (
+          <span className="mr-auto min-w-0 truncate text-xs text-muted-foreground">
+            {destinationHint}
           </span>
         )}
         {allowAttachments && (
@@ -960,6 +1038,20 @@ function CommentCard({
   // Visibility is read on the ROOT: it is this from which any response inherits.
   const threadIsPublic = item.comment.visibility === "public";
   const permissions = useContext(CommentPermissionsContext);
+  const t = useTranslations("Timeline");
+  const queryClient = useQueryClient();
+  // A thread mirrored from a pull request answers ON THE FORGE (MIN-802), so
+  // the PR keeps the conversation and the webhook brings the answer back.
+  const forgeThread = useForgeThread(item.comment);
+  const issueId = "issue_id" in item.comment && typeof item.comment.issue_id === "string"
+    ? item.comment.issue_id : null;
+  const forgeName = forgeThread.provider === "gitlab" ? "GitLab" : "GitHub";
+  const replyOnForge = forgeThread.prId && issueId
+    ? async (parentId: string, body: string) => {
+        await postForgeReplyApi(issueId, parentId, body);
+        await queryClient.invalidateQueries({ queryKey: commentsKey(issueId) });
+      }
+    : null;
   // A reply in a public thread is a team reply on the public board.
   const canReply = threadIsPublic ? permissions.canModerate : permissions.canComment;
   return (
@@ -987,6 +1079,7 @@ function CommentCard({
           onRenameAttachment={onRenameAttachment}
           deletesReplies={item.replies.length > 0}
           liveTable={liveTable}
+          forgeThread={forgeThread}
         />
       </div>
       {item.replies.map((reply) => (
@@ -1014,8 +1107,11 @@ function CommentCard({
           projectId={projectId}
           rootId={item.comment.id}
           threadIsPublic={threadIsPublic}
-          allowAttachments={allowAttachments}
-          onReply={onReply}
+          allowAttachments={allowAttachments && !replyOnForge}
+          placeholder={replyOnForge ? t("replyOnForgePlaceholder", { forge: forgeName }) : undefined}
+          destinationHint={replyOnForge ? t("replyGoesToForge", { forge: forgeName }) : undefined}
+          actions={forgeThread.isCode ? <ForgeThreadResolveButton thread={forgeThread} /> : undefined}
+          onReply={replyOnForge ?? onReply}
         />
       </div>}
     </li>

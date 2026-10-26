@@ -3,7 +3,9 @@ import "server-only";
 import type { SyncableIssueStatus } from "@/lib/pr-issue-status";
 import { resolveRepoCloneTargetForRepo } from "./repo-access";
 import { parsePullRequestRef } from "./pr-ingest-core";
+import { afterOrNow } from "@/lib/server/after-safe";
 import { broadcastPrChanged } from "./pr-live";
+import { backfillPendingPrComments } from "./pr-comment-sync";
 import {
   issueStatusForPrState,
   syncIssueStatusFromPr,
@@ -79,6 +81,11 @@ export async function linkPullRequestToIssue(opts: {
     actorId,
     prState: pr.state,
   });
+
+  // The discussion that already happened on the PR joins the ticket (MIN-802);
+  // from now on the webhooks keep it in step. Off the response path: the
+  // forge reads are best effort and the link stands without them.
+  afterOrNow(() => backfillPendingPrComments(pr));
 
   return { ok: true, already: false, status };
 }

@@ -17,6 +17,7 @@ import { fromGitlabSystemNotes, type PrTimelineEvent } from "@/lib/pr-timeline";
 import { resolveDiffPosition } from "./mr-position";
 import { summarizeGitlabPipelines, type ChecksSummary, type RawPipeline } from "./checks-core";
 import { reviewFallbackPrefix } from "./review-copy";
+import type { GitlabNoteSource } from "@/lib/pr-comment-mirror";
 import {
   mapGitlabMergePolicy,
   type GitlabProjectPolicyInput,
@@ -1590,6 +1591,35 @@ async function listRawDiscussions(
     DISCUSSIONS_MAX_PAGES,
     stopWhen,
   );
+}
+
+/**
+ * Every human-written note of a merge request, with the discussion it belongs
+ * to — the source of the MR → ticket comment mirror when an MR gets linked to
+ * a ticket after its discussion started (MIN-802). Conversation notes and diff
+ * notes alike, oldest discussion first and each discussion in order, so a
+ * thread root is read before its replies. System notes are left to the mirror,
+ * which drops them.
+ */
+export async function listMergeRequestMirrorSources(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+}): Promise<GitlabNoteSource[]> {
+  const discussions = await listRawDiscussions(opts);
+  return discussions.flatMap((d) => (d.notes ?? []).map((n) => ({
+    id: n.id,
+    body: n.body ?? "",
+    system: n.system ?? false,
+    type: n.type ?? null,
+    position: n.position ?? null,
+    original_position: n.original_position ?? null,
+    authorLogin: n.author?.username ?? null,
+    url: noteUrl(opts.repoFullName, opts.number, n.id),
+    created_at: n.created_at,
+    updated_at: n.updated_at ?? null,
+    discussionId: d.id,
+  })));
 }
 
 /**

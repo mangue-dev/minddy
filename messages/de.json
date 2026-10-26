@@ -3593,6 +3593,8 @@
     "replyPlaceholder": "Antworten…",
     "replyPublicPlaceholder": "Auf dem öffentlichen Board antworten…",
     "replyGoesPublic": "Erscheint auf dem öffentlichen Board",
+    "replyOnForgePlaceholder": "Auf {forge} antworten…",
+    "replyGoesToForge": "Wird mit deinem Konto auf {forge} veröffentlicht",
     "edited": "(bearbeitet)",
     "commentActions": "Kommentaraktionen",
     "deleteCommentTitle": "Kommentar löschen?",

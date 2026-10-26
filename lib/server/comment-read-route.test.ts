@@ -53,6 +53,7 @@ describe("authorized comment read scheduling", () => {
     expect(mocks.sidecar).toHaveBeenCalledWith("comment_id", [comment.id]);
     actors.resolve(new Map([["key-1", { name: "Synthetic key", agent: "agent" }]]));
     expect(await (await response).json()).toEqual([{ ...comment, api_key_name: "Synthetic key", api_key_agent: "agent", github: {
+      provider: "github", pull_request_id: null, remote_comment_id: null, thread_key: null,
       author_login: "synthetic", author_association: null, url: "https://example.com/synthetic", created_at: null, updated_at: null, deleted_at: null,
     } }]);
     expect(mocks.decode).toHaveBeenCalledWith("project-1", expect.anything(), "actor-1");

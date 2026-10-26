@@ -1,5 +1,6 @@
 import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
+import { afterOrNow } from "@/lib/server/after-safe";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
@@ -758,6 +759,19 @@ export async function syncRepoPullRequests(opts: {
         at: observation.at,
       });
     }
+  }
+
+  // A ticket the sweep linked (its branch, title or closing line names it)
+  // receives the comments the PR already carries, dated from the forge
+  // (MIN-802). Each link is imported once, so a PR whose links are done costs
+  // one read. Imported lazily: the mirror module reads this one.
+  for (const { outcome } of applied) {
+    const row = outcome?.row;
+    if (!outcome?.applied || !row?.issue_id) continue;
+    afterOrNow(async () => {
+      const { backfillPendingPrComments } = await import("./pr-comment-sync");
+      await backfillPendingPrComments(row);
+    });
   }
 
   // Live catch-up (MIN-595): the sweep just repaired rows a lost webhook (or a

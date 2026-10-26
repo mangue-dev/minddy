@@ -756,6 +756,24 @@ export async function setPrReviewCommentReactionApi(
   );
 }
 
+/**
+ * Answers, from a ticket, a comment mirrored from its pull request: the answer
+ * is posted on the forge under the caller's git account (MIN-802).
+ */
+export async function postForgeReplyApi(
+  issueId: string,
+  commentId: string,
+  body: string,
+): Promise<unknown> {
+  return parseJson(
+    await fetch(`/api/issues/${issueId}/comments/${commentId}/forge-reply`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body }),
+    }),
+  );
+}
+
 /** Resolves/reopens a review thread (`threadId` comes from `threads` above). */
 export async function setPrReviewThreadResolvedApi(
   endpoint: PrEndpoint,
