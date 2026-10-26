@@ -135,7 +135,7 @@ async function main() {
   }
 
   const codec = await openContentCodec(world);
-  const ids = new Map([...existing]);
+  const ids = new Map(existing);
   for (const comment of missing) ids.set(comment.remote, randomUUID());
   // A reply may only hang under a comment of this seed (see config.mjs).
   const parentOf = (comment) => (comment.replyTo ? ids.get(comment.replyTo) : null);
