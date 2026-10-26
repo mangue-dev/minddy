@@ -78,6 +78,7 @@ import {
   deepLinkLensDecision,
   isTerminalPrState,
 } from "@/lib/sidebar-deep-link";
+import { commentTarget } from "@/lib/comment-focus";
 
 const PrDetail = dynamic(
   loadPullRequestDetailSurface,
@@ -215,6 +216,7 @@ function PrRow({
       type="button"
       data-sidebar-filter-result
       data-navigation-href={`/pull-requests?pr=${encodeURIComponent(pr.prId)}`}
+      data-comment-target={commentTarget("pr", pr.prId)}
       data-pr-id={pr.prId}
       onClick={onSelect}
       // The DERIVED selection of the page, not the CLICKS state: both

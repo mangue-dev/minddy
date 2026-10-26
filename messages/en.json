@@ -2320,6 +2320,7 @@
       "objectiveColor": "Change color",
       "askNumo": "Ask Numo (card or selection)",
       "copyPrompt": "Copy as prompt",
+      "comment": "Comment on the hovered or open item",
       "selectionCopyPrompt": "Copy the combined prompt of the selection",
       "dictate": "Dictate (issue panel or new issue)"
     }

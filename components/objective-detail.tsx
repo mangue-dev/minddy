@@ -49,6 +49,7 @@ import { ObjectiveResourcesSection } from "@/components/objective-resources-sect
 import { ObjectiveRelationsSection } from "@/components/objective-relations-section";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
+import { commentTarget, useCommentSurface } from "@/lib/comment-focus";
 import {
   DictateButton,
   type DictateButtonHandle,
@@ -262,6 +263,8 @@ export function ObjectiveDetail({
   useIdleDocumentEditorPreload();
   // Project readers (MIN-693) read the objective; comments follow their option.
   const { canWrite, canComment } = useProjectCapabilities(projectId);
+  // ⇧C (MIN-803): this objective's comment field.
+  useCommentSurface(canComment ? commentTarget("objective", objective.id) : null);
   const readOnly = !canWrite;
   // Field shortcuts (MIN-757): S/A/D like an issue's fields, C for the color.
   // Page-wide, as R for relations: the page shows a single objective.
@@ -724,6 +727,7 @@ export function ObjectiveDetail({
           <CommentComposer
             members={members}
             projectId={projectId}
+            commentTarget={commentTarget("objective", objective.id)}
             onSubmit={(body, mentionedUserIds, attachments) =>
               addComment(body, mentionedUserIds, null, attachments)
             }

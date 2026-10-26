@@ -64,6 +64,7 @@ import {
 } from "@/lib/use-pages-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
+import { commentTarget, useCommentSurface } from "@/lib/comment-focus";
 import { useAuth } from "@/lib/auth-context";
 import { displayName } from "@/lib/display-name";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
@@ -316,7 +317,7 @@ function PageSurface({
   const pagesLoaded = !pagesLoading;
   const { members, loading: membersLoading } = useMembersQuery(projectId, true);
   // Project readers (MIN-693) read the page: no editing, no document writes.
-  const { canWrite } = useProjectCapabilities(projectId);
+  const { canWrite, canComment } = useProjectCapabilities(projectId);
   const present = usePresentOn(pageId);
   // The watch heartbeat: while this surface holds the document open, the
   // server knows someone is reading it and stays quiet about agent writes.
@@ -747,10 +748,16 @@ function PageSurface({
   // for mentions and presence — never the raw email (lib/display-name).
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyTab, setHistoryTab] = useState<PageHistoryTab>("activity");
+  const [historyRequest, setHistoryRequest] = useState(0);
   const openHistory = useCallback((tab: PageHistoryTab) => {
     setHistoryTab(tab);
+    setHistoryRequest((n) => n + 1);
     setHistoryOpen(true);
   }, []);
+  // ⇧C (MIN-803): the page thread lives in the Activity tab, mounted on demand.
+  useCommentSurface(canComment ? commentTarget("page", pageId) : null, () =>
+    openHistory("activity")
+  );
   const lastWriterId =
     summary?.updated_by ?? page?.updated_by ?? summary?.created_by ?? page?.created_by ?? null;
   const lastWriterKind = summary?.updated_kind ?? page?.updated_kind ?? "human";
@@ -1168,6 +1175,7 @@ function PageSurface({
           pageId={pageId}
           open={historyOpen}
           initialTab={historyTab}
+          tabRequest={historyRequest}
           onOpenChange={setHistoryOpen}
           onRestored={onRestored}
         />

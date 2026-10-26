@@ -53,6 +53,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { commentTarget } from "@/lib/comment-focus";
 
 const ObjectiveDialog = dynamic(
   () => import("@/components/objective-dialog").then((m) => m.ObjectiveDialog),
@@ -220,6 +221,7 @@ function ObjectiveRow({
       type="button"
       data-sidebar-filter-result
       data-navigation-href={`/projects/${projectId}/objectives?open=${encodeURIComponent(objective.id)}`}
+      data-comment-target={commentTarget("objective", objective.id)}
       onClick={onSelect}
       aria-current={selected ? "true" : undefined}
       className={cn(
@@ -634,6 +636,7 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
 
       {/* ── Detail: the open lens ───────────────────────────────────── */}
       <div
+        data-comment-surface
         className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
         {selected ? (

@@ -36,6 +36,7 @@ import { DesktopAnalyticsPrompt } from "@/components/desktop-analytics-prompt";
 import { PushNotificationDismiss } from "@/components/push-notification-dismiss";
 import { ProjectDraftResume } from "@/components/project-draft-resume";
 import { ThemeAccountSync } from "@/components/theme-account-sync";
+import { CommentShortcut } from "@/components/comment-shortcut";
 import { loadScratchpadModal } from "@/lib/lazy-app-surfaces";
 
 // Deferred: keeps streamdown/shiki (markdown rendering) out of the initial bundle.
@@ -123,6 +124,8 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                             <AssistantPanel />
                             <ScratchpadModal />
                             <DeferredKeyboardCheatsheet />
+                            {/* ⇧C: an item's comment field (MIN-803). */}
+                            <CommentShortcut />
                             <AnalyticsProjectGroup />
                             <PushServiceWorker />
                             {/* The native counterpart in the desktop app (MIN-291):

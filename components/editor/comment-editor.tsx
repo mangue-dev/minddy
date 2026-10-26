@@ -46,7 +46,9 @@ export interface CommentEditorProps {
   /** Escape with no menu open. */
   onEscape?: () => void;
   /** Changing this value focuses the field, caret at the end: for a gesture
-   that writes into the draft from outside (a quote). */
+   that writes into the draft from outside (a quote) or asks for the field
+   (⇧C). Zero means no request; one made before the editor loads applies
+   once it does. */
   focusSignal?: number;
   placeholder?: string;
   ariaLabel?: string;
@@ -129,11 +131,19 @@ export function CommentEditor({
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
+  // A focus signal that arrives before the lazy editor is bound (the field
+  // mounting with the panel that ⇧C opened, MIN-803) waits here for the bind.
+  const pendingFocusRef = useRef(false);
+
   const bindApi = useCallback((api: DocumentEditorApi) => {
     apiRef.current = api;
     if (valueRef.current !== emittedRef.current) {
       emittedRef.current = valueRef.current;
       api.setMarkdown(valueRef.current);
+    }
+    if (pendingFocusRef.current) {
+      pendingFocusRef.current = false;
+      api.focus();
     }
   }, []);
 
@@ -151,8 +161,9 @@ export function CommentEditor({
   }, [value]);
 
   useEffect(() => {
-    if (focusSignal === undefined) return;
-    apiRef.current?.focus();
+    if (!focusSignal) return;
+    if (apiRef.current) apiRef.current.focus();
+    else pendingFocusRef.current = true;
   }, [focusSignal]);
 
   return (

@@ -6,6 +6,12 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { ArrowLeft01Icon, ArrowUp01Icon, Cancel01Icon, Copy01Icon, Edit04Icon, HistoryIcon, Link02Icon, LinkSquare01Icon, Message01Icon, MessageSquareQuoteIcon, MoreHorizontalIcon, CheckIcon, ViewIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  commentTarget,
+  revealLatestComment,
+  useCommentComposerFocus,
+  useCommentSurface,
+} from "@/lib/comment-focus";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
@@ -829,6 +835,20 @@ export function PrDetail({
   // DISAPPEARS — it’s the banner that explains, once, at the top.
   const canWrite = viewer?.capability === "write";
   const canComment = canWrite || viewer?.capability === "read";
+  // ⇧C (MIN-803): the conversation's comment field, on the Activity tab.
+  const prCommentTarget = canComment ? commentTarget("pr", item.prId) : null;
+  const commentRegionRef = useRef<HTMLDivElement | null>(null);
+  useCommentSurface(prCommentTarget, () => setTab("activity"));
+  const [revealSignal, setRevealSignal] = useState(0);
+  useCommentComposerFocus(prCommentTarget, () => {
+    setTab("activity");
+    setQuoteFocus((n) => n + 1);
+    setRevealSignal((n) => n + 1);
+  });
+  // After the commit that shows the Activity tab, so its region exists.
+  useEffect(() => {
+    if (revealSignal) revealLatestComment(commentRegionRef.current);
+  }, [revealSignal]);
   // React to thread (MIN-147): same hook, same chips, same palette as the diff —
   // only the road changes. `canComment` (therefore `read`) is enough: the withdrawal rereads
   // the reactions of the message with this token, like the review side.
@@ -1861,7 +1881,7 @@ export function PrDetail({
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="activity" className="mt-4 flex flex-col gap-6">
+            <TabsContent value="activity" data-comment-surface className="mt-4 flex flex-col gap-6">
               {!loading && prDescription ? (
                 <ThreadComment
                   presentation="description"
@@ -1907,7 +1927,7 @@ export function PrDetail({
                   // no vertical rail, no markers. The one line of an event reads
                   // from left to right, and a card is a card, like the ticket
                   // timeline.
-                  <div data-testid="pr-activity-timeline" className="flex flex-col gap-3">
+                  <div data-testid="pr-activity-timeline" data-comment-thread className="flex flex-col gap-3">
                     {feed.map((entry) => {
                       if (entry.kind === "event") {
                         return <PrTimelineRow key={entry.key} event={entry.event} />;
@@ -1968,7 +1988,7 @@ export function PrDetail({
                 {!loading && !commentsLoading && reviewCommentsLoading ? <PrActivitySkeleton /> : null}
 
                 {canComment ? (
-                  <div data-testid="pr-comment-composer-region" className="pt-1">
+                  <div ref={commentRegionRef} data-testid="pr-comment-composer-region" className="pt-1">
                     <PrCommentComposer
                       endpoint={prEndpoint(item.prId)}
                       value={commentBody}

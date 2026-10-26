@@ -2320,6 +2320,7 @@
       "objectiveColor": "Farbe ändern",
       "askNumo": "Numo fragen (Karte oder Auswahl)",
       "copyPrompt": "Als Prompt kopieren",
+      "comment": "Element unter dem Zeiger oder geöffnetes Element kommentieren",
       "selectionCopyPrompt": "Kombinierten Prompt der Auswahl kopieren",
       "dictate": "Diktieren (Ticket-Panel oder neues Ticket)"
     }

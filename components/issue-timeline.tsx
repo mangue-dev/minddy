@@ -5,7 +5,8 @@ import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { OneLine } from "@/components/one-line";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon, Delete02Icon, GlobeIcon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, Edit04Icon, Plug01Icon } from "@hugeicons/core-free-icons";
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useMemo, useRef, useState } from "react";
+import { revealLatestComment, useCommentComposerFocus } from "@/lib/comment-focus";
 import dynamic from "next/dynamic";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations, useFormatter } from "next-intl";
@@ -1268,7 +1269,7 @@ export function IssueActivity({
         (!readState || readState.phase === "fresh" || readState.phase === "refreshing") &&
         <p className="mt-2 text-xs text-muted-foreground">{t("noActivity")}</p>
       ) : (
-        <ol className="mt-2 flex flex-col gap-3">
+        <ol data-comment-thread className="mt-2 flex flex-col gap-3">
           {rows.map((row, i) => {
             if (row.type === "comment") {
               return (
@@ -1317,6 +1318,7 @@ export function CommentComposer({
   placeholder,
   submitLabel,
   autoFocus = false,
+  commentTarget = null,
 }: {
   members: Member[];
   projectId: string;
@@ -1329,6 +1331,10 @@ export function CommentComposer({
   /** The submit button wording, same reason. */
   submitLabel?: string;
   autoFocus?: boolean;
+  /** The item this field comments on, for ⇧C (`commentTarget()` in
+      lib/comment-focus): the shortcut focuses it and reveals the thread's
+      latest message. */
+  commentTarget?: string | null;
   onSubmit: (
     body: string,
     mentionedUserIds: string[],
@@ -1358,6 +1364,12 @@ export function CommentComposer({
   );
   const drop = useFileDrop(uploads.addFiles);
   const isPublic = visibility === "public";
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [focusSignal, setFocusSignal] = useState(0);
+  useCommentComposerFocus(commentTarget, () => {
+    setFocusSignal((n) => n + 1);
+    revealLatestComment(rootRef.current);
+  });
 
   const canPost = (draft.trim() || uploads.inputs.length > 0) && !uploads.uploading;
 
@@ -1388,6 +1400,7 @@ export function CommentComposer({
 
   return (
     <div
+      ref={rootRef}
       className={cn(
         "relative w-full rounded-lg bg-control transition-colors",
         allowAttachments && drop.dragging && "ring-2 ring-brand/20",
@@ -1415,6 +1428,7 @@ export function CommentComposer({
           (isPublic ? t("publicCommentPlaceholder") : t("commentPlaceholder"))
         }
         autoFocus={autoFocus}
+        focusSignal={focusSignal}
         includeNumo
         className="rounded-none border-0 bg-transparent px-3.5 py-2.5 focus-within:border-0 focus-within:ring-0"
       />

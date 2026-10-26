@@ -58,6 +58,7 @@ import { IssueSidePanel } from "@/components/issue-side-panel";
 import { CategoryValue, ObjectiveValue, PropertyRow, TRIGGER } from "@/components/issue-property-fields";
 import { ObjectivePill } from "@/components/objective-label";
 import { CommentComposer, IssueActivity } from "@/components/issue-timeline";
+import { commentTarget, useCommentSurface } from "@/lib/comment-focus";
 import { CreateIssueDialog } from "@/components/create-issue-dialog";
 import { AgentBeamOverlay } from "@/components/agent-beam";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
@@ -526,6 +527,7 @@ function FeedbackRow({
       type="button"
       data-sidebar-filter-result
       data-navigation-href={`/projects/${projectId}/feedback?post=${encodeURIComponent(post.id)}`}
+      data-comment-target={commentTarget("feedback", post.id)}
       onClick={onSelect}
       aria-current={selected ? "true" : undefined}
       className={cn(
@@ -1028,7 +1030,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
       {sidebar}
 
       {/* ── Detail ──────────────────────────── ──────────────────────────── */}
-      <div className="min-h-0 min-w-0 flex-1">
+      <div data-comment-surface className="min-h-0 min-w-0 flex-1">
         {isPending || selectedId || posts.length > 0 ? (
           selectedId ? (
           <FeedbackDetail
@@ -1187,6 +1189,8 @@ function FeedbackDetail({
   // Project readers (MIN-693): the feedback reads, internal comments follow
   // their option, and public team replies need write access.
   const { canWrite, canComment } = useProjectCapabilities(projectId);
+  // ⇧C (MIN-803): this feedback's comment field.
+  useCommentSurface(canComment ? commentTarget("feedback", postId) : null);
   const readOnly = !canWrite;
   const memberSeeds = useMemberSeeds(members);
   // The language the journal translates into. NULL in base = never entered
@@ -1916,6 +1920,7 @@ function FeedbackDetail({
           <CommentComposer
             members={members}
             projectId={projectId}
+            commentTarget={commentTarget("feedback", postId)}
             onSubmit={handleComment}
             // Without a published board, a public comment has nowhere to appear.
             // Keep the toggle visible but disabled so the missing setting is explicit.

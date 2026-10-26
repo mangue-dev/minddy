@@ -2320,6 +2320,7 @@
       "objectiveColor": "Changer la couleur",
       "askNumo": "Demander à Numo (carte ou sélection)",
       "copyPrompt": "Copier le prompt",
+      "comment": "Commenter l’élément survolé ou ouvert",
       "selectionCopyPrompt": "Copier le prompt combiné de la sélection",
       "dictate": "Dicter (panneau ou nouveau ticket)"
     }

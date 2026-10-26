@@ -117,6 +117,11 @@ export const CHEATSHEET: CheatsheetSection[] = [
       { id: "gen.undo", labelKey: "undo", keys: [["mod", "Z"]] },
       { id: "gen.redo", labelKey: "redo", keys: [["mod", "⇧", "Z"]] },
       { id: "gen.cheatsheet", labelKey: "cheatsheet", keys: [["?"]] },
+      // The comment field, ready to type, with the thread at its latest
+      // message (MIN-803): of the hovered issue card or sidebar row
+      // (objective, feedback, pull request, page, triage), else of the view
+      // on screen. One item, never a selection.
+      { id: "gen.comment", labelKey: "comment", keys: [["⇧", "C"]] },
     ],
   },
   {
