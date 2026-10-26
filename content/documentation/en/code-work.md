@@ -107,6 +107,8 @@ Connect your agent to minddy MCP first so it can read the plan and update its ta
 3. Paste the prompt into your agent in the repository's working copy. Copying runs no AI model and uses no AI allowance.
 4. Follow the plan progress in the issue as the agent updates its tasks through MCP. Answer its questions in the agent, or add decisions to the issue so the next prompt carries them.
 
+When your agent has commented on the issue through MCP and people comment after it, comments brought in from a linked pull request included, a **Copy prompt for N new comments** button appears above the comment field. The prompt asks the agent to read those comments through MCP and address each one; it does not copy them. On a board, the issue's card shows how many comments are waiting, clicking that number copies the same prompt, and the card's right-click menu offers **Copy prompt for new comments**.
+
 The prompt contents, branch suggestion and language rules are described in [Copy a prompt for another coding agent](/docs/issues#copy-issue-prompt).
 
 ### Keep the work linked to the issue {#link-work}
@@ -126,6 +128,8 @@ Read the description and activity, then inspect changed files and diff hunks. Op
 In a description, a comment or the diff of an image, click an image to open it across the whole window; an image diff opens its **Before** and **After** sides separately. Use **Close** or Escape to return to the pull request.
 
 Mention `@numo` in a pull request comment to ask Numo for a read-only review in a conversation. It reads the pull request and answers; it does not push commits. A mention written on the forge counts only when its author is linked to the owner or a Member (not a reader) of a project that links the repository, and its usage is charged to that project's owner.
+
+What people write on a linked pull request or merge request also appears in the comments of each issue it is linked to: conversation comments, the message of a submitted review, and comments on the code with the file, line and, on GitHub, the excerpt they refer to, replies grouped under them. Bot comments stay on the pull request, except comments on the code. An edit updates the copy, and a comment deleted on GitHub shows as deleted; GitLab does not report deletions. Whenever a pull request gets linked to an issue, by hand or because its branch, title or description names the issue, the comments it already has are brought in with the date they were written, even when that is before the issue existed. Reply under one of these comments to answer on the pull request with your own Git account, as in the pull request view; a code conversation also shows **Resolved** or **Outdated** and offers **Resolve** or **Reopen**. The copies themselves cannot be edited in Minddy.
 
 ![Changes tab of the open demonstration PR, with the greeting function diff and an unavailable GitHub authorization notice.](/documentation/en/review-pull-requests-workflow.png)
 

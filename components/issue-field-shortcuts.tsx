@@ -24,6 +24,7 @@ import { TriangleIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { RELATION_TYPES } from "@/lib/relation-constants";
+import type { HierarchyRelation, RelationMenuKind } from "@/lib/issue-hierarchy";
 import { useChordPrefixForEvents } from "@/lib/keyboard/keyboard-context";
 import { useHoverKeys } from "@/lib/keyboard/hover-keys";
 import { selectionKeysActive } from "@/lib/keyboard/selection-keys";
@@ -63,7 +64,6 @@ import {
 import type {
   Category,
   Issue,
-  IssueRelationType,
   IssueUpdateInput,
   Member,
   Objective,
@@ -517,12 +517,15 @@ export function RelationTypePicker({
   onClose,
   onSelect,
   targetCount = 1,
+  hierarchy = [],
 }: {
   position: { x: number; y: number } | null;
   onClose: () => void;
-  onSelect: (type: IssueRelationType) => void;
+  onSelect: (type: RelationMenuKind) => void;
   /** Tickets the relation is added from (MIN-795): a selection names its size. */
   targetCount?: number;
+  /** The parent / sub-issue entries these tickets may take (MIN-804). */
+  hierarchy?: readonly HierarchyRelation[];
 }) {
   const t = useTranslations("Relations");
   const tBulk = useTranslations("BulkActions");
@@ -532,7 +535,7 @@ export function RelationTypePicker({
       <CommandGroup
         heading={targetCount > 1 ? tBulk("selected", { count: targetCount }) : t("relations")}
       >
-        {RELATION_TYPES.map((type) => (
+        {[...RELATION_TYPES, ...hierarchy].map((type) => (
           <CommandItem
             key={type}
             value={type}

@@ -262,7 +262,7 @@ async function withoutBurstDuplicates(opts: {
  * Null when the ticket has disappeared, when no link joins this repository to
  * its project, or when the link has no author: we do not guess an actor.
  */
-async function repoWriteActor(opts: {
+export async function repoWriteActor(opts: {
   provider: ForgeProvider;
   repoFullName: string;
   issueId: string;

@@ -107,6 +107,8 @@ Conecta primero tu agente a minddy MCP para que pueda leer el plan y actualizar 
 3. Pega el prompt en tu agente, dentro de la copia de trabajo del repositorio. Copiar no ejecuta ningún modelo de IA ni consume cuota de IA.
 4. Sigue el progreso del plan en la incidencia mientras el agente actualiza sus tareas a través de MCP. Responde a sus preguntas en el agente o añade las decisiones a la incidencia para que el siguiente prompt las incluya.
 
+Cuando tu agente ha comentado la incidencia a través de MCP y llegan comentarios después, incluidos los traídos de una pull request vinculada, aparece sobre el campo de comentario el botón **Copiar prompt para N comentarios nuevos**. El prompt pide al agente que lea esos comentarios a través de MCP y atienda cada uno; no los copia. En un tablero, la tarjeta de la incidencia muestra cuántos comentarios esperan, un clic en ese número copia el mismo prompt y el menú del clic derecho ofrece **Copiar prompt para los comentarios nuevos**.
+
 El contenido del prompt, la rama sugerida y las reglas de idioma se describen en [Copiar un prompt para otro agente de código](/docs/issues#copy-issue-prompt).
 
 ### Mantener el trabajo vinculado a la incidencia {#link-work}
@@ -126,6 +128,8 @@ Lee la descripción y la actividad y después los archivos modificados y los blo
 En una descripción, un comentario o la diferencia de una imagen, haz clic en una imagen para abrirla en toda la ventana; la diferencia de una imagen abre por separado sus lados **Antes** y **Después**. Usa **Cerrar** o Escape para volver a la pull request.
 
 Menciona `@numo` en un comentario de la pull request para pedir a Numo una revisión de solo lectura en una conversación. Numo lee la pull request y responde; no sube commits. Una mención escrita en el proveedor Git solo cuenta si su autor está vinculado al propietario o a un Miembro (no a un lector) de un proyecto que vincula el repositorio, y su uso se imputa al propietario de ese proyecto.
+
+Lo que se escribe en una pull request o merge request vinculada también aparece en los comentarios de cada incidencia a la que está vinculada: los comentarios de la conversación, el mensaje de una revisión enviada y los comentarios sobre el código con el archivo, la línea y, en GitHub, el fragmento al que se refieren, con las respuestas agrupadas debajo. Los comentarios de bots se quedan en la pull request, salvo los comentarios sobre el código. Una edición actualiza la copia, y un comentario eliminado en GitHub aparece como eliminado; GitLab no notifica las eliminaciones. Cada vez que una pull request se vincula a una incidencia, a mano o porque su rama, su título o su descripción nombra la incidencia, se traen los comentarios que ya tiene con la fecha en que se escribieron, aunque sea anterior a la creación de la incidencia. Responde bajo uno de estos comentarios para contestar en la pull request con tu propia cuenta de Git, como en la vista de la pull request; una conversación sobre el código también muestra **Resuelta** u **Obsoleto** y ofrece **Resolver** o **Reabrir**. Las copias en sí no se pueden editar en Minddy.
 
 ![Pestaña Cambios de la PR de demostración abierta, con las diferencias de greeting y un aviso de autorización de GitHub no disponible.](/documentation/es/review-pull-requests-workflow.png)
 

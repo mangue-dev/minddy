@@ -110,6 +110,8 @@ const rules = [
       "captures/world/seed/018-statistiques.mjs",
       // Manual screenshots seed: reads demo ids, titles and positions to stay idempotent.
       "captures/world/seed/019-manuel-captures.mjs",
+      // Mirrored PR comments seed (MIN-802): finds AUR-8 by number, no content.
+      "captures/world/seed/021-commentaires-pr.mjs",
     ]),
   },
   {
@@ -122,7 +124,9 @@ const rules = [
     access: /\.\s*from\s*\(\s*["'`]github_issue_comment_syncs["'`]\s*\)/,
     allowed: new Set(["lib/server/comment-store.ts", "lib/server/git/issue-sync.ts",
       "lib/server/issue-reads.ts", "app/api/issues/[id]/comments/route.ts",
-      "lib/server/encryption/github-comment-url-backfill.ts"]),
+      "lib/server/encryption/github-comment-url-backfill.ts",
+      // Demo seed (MIN-802): reads remote ids and comment ids, never the URL.
+      "captures/world/seed/021-commentaires-pr.mjs"]),
   },
   {
     access: /\.\s*(?:from\s*\(\s*["'`]github_issue_comment_url_encryption_scopes["'`]|rpc\s*\(\s*["'`](?:migrate_github_comment_url|sync_github_issue_comment_encrypted_url)["'`])/,
@@ -198,7 +202,10 @@ const rules = [
   },
   {
     access: /\.\s*from\s*\(\s*["'`](?:comments|page_comments)["'`]\s*\)/,
-    allowed: new Set(["lib/server/comment-store.ts"]),
+    allowed: new Set(["lib/server/comment-store.ts",
+      // Demo seed (MIN-802): reads its own demo comments and decodes them with
+      // the application codec (captures/lib/encrypted-content.mjs).
+      "captures/world/seed/021-commentaires-pr.mjs"]),
   },
   {
     access: /\.\s*rpc\s*\(\s*["'`]sync_github_issue_comment_atomic["'`]/,

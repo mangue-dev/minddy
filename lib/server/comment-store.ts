@@ -249,17 +249,20 @@ export async function importComment(client: SupabaseClient, row: Row): Promise<v
   if (writeError || data?.length !== 1) throw new Error("Unable to import comment");
 }
 
-/** Keep the forge sidecar and content atomic, including simultaneous first delivery. */
+/**
+ * Keep the forge sidecar and content atomic, including simultaneous first
+ * delivery. Returns the minddy comment id, or null for a stale delivery.
+ */
 export async function syncGithubComment(client: SupabaseClient, parameters: {
   p_issue_id: string; p_remote_comment_id: string; p_author_id: string | null;
   p_body: string; p_author_login: string | null; p_author_association: string | null;
   p_html_url: string | null; p_created_at_remote: string | null;
   p_updated_at_remote: string | null; p_deleted_at_remote: string | null;
-}): Promise<void> {
+}): Promise<string | null> {
   if (legacyWrites()) {
-    const { error } = await client.rpc("sync_github_issue_comment_atomic", parameters);
+    const { data, error } = await client.rpc("sync_github_issue_comment_atomic", parameters);
     if (error) throw new Error("Unable to synchronize comment");
-    return;
+    return data?.state === "synced" && typeof data.comment_id === "string" ? data.comment_id : null;
   }
   const { data: issueScope, error: issueScopeError } = await client.from("issues")
     .select("project_id").eq("id", parameters.p_issue_id).maybeSingle();
@@ -290,8 +293,101 @@ export async function syncGithubComment(client: SupabaseClient, parameters: {
         })
       : await client.rpc("sync_github_issue_comment_atomic", values);
     if (writeError) throw new Error("Unable to synchronize comment");
-    if (data?.state === "synced" || data?.state === "stale") return;
+    if (data?.state === "synced") return typeof data.comment_id === "string" ? data.comment_id : id;
+    if (data?.state === "stale") return null;
     if (data?.state !== "conflict") throw new Error("Invalid comment synchronization result");
   }
   throw new Error("Comment synchronization conflict; retry delivery");
+}
+
+/**
+ * The ticket comment a mirrored forge comment answers, or null when it lands
+ * as a thread root (MIN-802). Two ways to know:
+ * - `replyToRemoteCommentId`: minddy posted this answer from the ticket, to
+ *   that comment (a GitHub conversation comment has no forge thread);
+ * - `threadKey`: the forge thread. Its root in the ticket is the earliest
+ *   mirrored top-level comment of that thread, written no later than this one.
+ * Replies stay one level deep: answering a reply threads under its root.
+ */
+export async function findSyncedThreadRoot(client: SupabaseClient, opts: {
+  issueId: string; remoteCommentId: string; threadKey: string | null;
+  replyToRemoteCommentId?: string | null; createdAt: string | null;
+}): Promise<string | null> {
+  if (opts.replyToRemoteCommentId) {
+    const { data: target, error } = await client.from("github_issue_comment_syncs").select("comment_id")
+      .eq("issue_id", opts.issueId).eq("remote_comment_id", opts.replyToRemoteCommentId).maybeSingle();
+    if (error) throw new Error("Unable to inspect synchronized comment");
+    if (!target?.comment_id) return null;
+    const { data: comment, error: commentError } = await client.from("comments").select("id, parent_id")
+      .eq("id", target.comment_id).eq("issue_id", opts.issueId).maybeSingle();
+    if (commentError) throw new Error("Unable to inspect synchronized comment");
+    return (comment?.parent_id as string | null | undefined) ?? (comment?.id as string | undefined) ?? null;
+  }
+  if (!opts.threadKey) return null;
+  const { data: siblings, error } = await client.from("github_issue_comment_syncs")
+    .select("comment_id, created_at_remote").eq("issue_id", opts.issueId).eq("thread_key", opts.threadKey)
+    .neq("remote_comment_id", opts.remoteCommentId).order("created_at_remote", { ascending: true });
+  if (error) throw new Error("Unable to inspect synchronized comment");
+  const before = (siblings ?? []).filter((row) => !opts.createdAt || !row.created_at_remote ||
+    Date.parse(row.created_at_remote as string) <= Date.parse(opts.createdAt));
+  if (before.length === 0) return null;
+  const { data: roots, error: rootError } = await client.from("comments").select("id")
+    .in("id", before.map((row) => row.comment_id as string)).eq("issue_id", opts.issueId).is("parent_id", null);
+  if (rootError) throw new Error("Unable to inspect synchronized comment");
+  const rootIds = new Set((roots ?? []).map((row) => row.id as string));
+  return (before.find((row) => rootIds.has(row.comment_id as string))?.comment_id as string | undefined) ?? null;
+}
+
+/**
+ * Records where a mirrored forge comment came from — its forge, its pull
+ * request and its thread — and threads it under `parentCommentId` (MIN-802).
+ * A comment already placed is never moved, and a comment that already has
+ * replies stays a root: the first placement wins over a late delivery.
+ */
+export async function finishSyncedForgeComment(client: SupabaseClient, opts: {
+  issueId: string; commentId: string; remoteCommentId: string; provider: "github" | "gitlab";
+  pullRequestId: string | null; threadKey: string | null; parentCommentId: string | null;
+}): Promise<void> {
+  let threadedAt: string | null = null;
+  if (opts.parentCommentId && opts.parentCommentId !== opts.commentId) {
+    const { data: children, error: childError } = await client.from("comments").select("id")
+      .eq("parent_id", opts.commentId).limit(1);
+    if (childError) throw new Error("Unable to inspect synchronized comment");
+    if ((children ?? []).length === 0) {
+      const { data: threaded, error: writeError } = await client.from("comments")
+        .update({ parent_id: opts.parentCommentId })
+        .eq("id", opts.commentId).eq("issue_id", opts.issueId).is("parent_id", null).select("updated_at");
+      if (writeError) throw new Error("Unable to thread synchronized comment");
+      threadedAt = (threaded?.[0]?.updated_at as string | undefined) ?? null;
+    }
+  }
+  // Threading bumps the comment's `updated_at`. The sync treats a comment
+  // changed after `synced_at` as edited locally and refuses older forge
+  // deliveries; stamping `synced_at` with that same (database) instant keeps
+  // our own threading from blocking the next forge edit or deletion.
+  const { error } = await client.from("github_issue_comment_syncs").update({
+    provider: opts.provider,
+    ...(opts.pullRequestId ? { pull_request_id: opts.pullRequestId } : {}),
+    ...(opts.threadKey ? { thread_key: opts.threadKey } : {}),
+    ...(threadedAt ? { synced_at: threadedAt } : {}),
+  }).eq("issue_id", opts.issueId).eq("remote_comment_id", opts.remoteCommentId);
+  if (error) throw new Error("Unable to record synchronized comment origin");
+}
+
+/** Where a mirrored forge comment of a ticket came from, or null for a minddy comment (MIN-802). */
+export async function readSyncedForgeComment(client: SupabaseClient, opts: {
+  issueId: string; commentId: string;
+}): Promise<{ remoteCommentId: string; provider: "github" | "gitlab";
+  pullRequestId: string | null; threadKey: string | null } | null> {
+  const { data, error } = await client.from("github_issue_comment_syncs")
+    .select("remote_comment_id, provider, pull_request_id, thread_key")
+    .eq("issue_id", opts.issueId).eq("comment_id", opts.commentId).maybeSingle();
+  if (error) throw new Error("Unable to inspect synchronized comment");
+  if (!data) return null;
+  return {
+    remoteCommentId: data.remote_comment_id as string,
+    provider: data.provider === "gitlab" ? "gitlab" : "github",
+    pullRequestId: (data.pull_request_id as string | null) ?? null,
+    threadKey: (data.thread_key as string | null) ?? null,
+  };
 }

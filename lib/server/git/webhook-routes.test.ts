@@ -125,6 +125,12 @@ vi.mock("@/lib/server/agent/pull-requests", () => ({
   upsertPullRequest: async () => null,
   upsertPullRequestWithOutcome,
 }));
+const syncPrCommentToIssues = vi.fn(async () => {});
+const backfillPendingPrComments = vi.fn(async () => {});
+vi.mock("@/lib/server/agent/pr-comment-sync", () => ({
+  syncPrCommentToIssues: (...a: unknown[]) => syncPrCommentToIssues(...(a as [])),
+  backfillPendingPrComments: (...a: unknown[]) => backfillPendingPrComments(...(a as [])),
+}));
 const handleForgeNumoMention = vi.fn(async () => {});
 vi.mock("@/lib/server/agent/pr-mention", () => ({
   handleForgeNumoMention: (...a: unknown[]) => handleForgeNumoMention(...(a as [])),
@@ -295,6 +301,35 @@ describe("POST /api/webhooks/gitlab", () => {
     expect(linkRows[0].repo_full_name).toBe("acme/app");
   });
 
+  it("mirrors a merge request note to the linked tickets, threaded by its discussion", async () => {
+    const secret = await ensureRepoWebhookSecret({ provider: "gitlab", externalRepoId: "1001" });
+    const response = await gitlabPOST(gitlabRequest(secret, {
+      body: {
+        object_kind: "note",
+        user: { id: 3, username: "jdoe" },
+        project: { id: 1001, path_with_namespace: "acme/app" },
+        merge_request: { iid: 7 },
+        object_attributes: {
+          id: 55, noteable_type: "MergeRequest", type: "DiffNote", note: "Can this be null?",
+          discussion_id: "d1", position: { new_path: "app/model.rb", new_line: 12 },
+          created_at: "2026-10-10 09:00:00 UTC", updated_at: "2026-10-10 09:00:00 UTC",
+        },
+      },
+    }));
+    expect(response.status).toBe(200);
+    expect(syncPrCommentToIssues).toHaveBeenCalledWith({
+      provider: "gitlab",
+      repoFullName: "acme/app",
+      prNumber: 7,
+      mirror: expect.objectContaining({
+        remoteCommentId: "gitlab_diff_note:55",
+        threadKey: "gitlab_discussion:d1",
+        codeHeader: "`app/model.rb:12`",
+        createdAt: "2026-10-10T09:00:00.000Z",
+      }),
+    });
+  });
+
   it("a missing token returns 401", async () => {
     await ensureRepoWebhookSecret({ provider: "gitlab", externalRepoId: "1001" });
     const response = await gitlabPOST(gitlabRequest(null));
@@ -446,6 +481,81 @@ describe("POST /api/webhooks/github", () => {
     expect(syncGithubIssueComment).toHaveBeenCalledWith(
       expect.objectContaining({ remoteCommentId: "22", number: 7 }),
     );
+  });
+
+  it("mirrors a human PR conversation comment to the linked tickets", async () => {
+    const response = await githubPOST(githubRequest({
+      event: "issue_comment",
+      body: {
+        action: "edited", repository: { id: 9001, full_name: "acme/app" },
+        issue: { number: 7, pull_request: {} },
+        comment: { id: 22, body: "Revised", user: { login: "octocat", type: "User" },
+          created_at: "2026-10-03T11:00:00Z", updated_at: "2026-10-04T11:00:00Z" },
+      },
+    }));
+    expect(response.status).toBe(200);
+    expect(syncPrCommentToIssues).toHaveBeenCalledWith({
+      provider: "github",
+      repoFullName: "acme/app",
+      prNumber: 7,
+      mirror: expect.objectContaining({ remoteCommentId: "22", action: "edited", body: "Revised" }),
+    });
+  });
+
+  it("leaves a bot's PR conversation comment off the tickets", async () => {
+    await githubPOST(githubRequest({
+      event: "issue_comment",
+      body: {
+        action: "created", repository: { id: 9001, full_name: "acme/app" },
+        issue: { number: 7, pull_request: {} },
+        comment: { id: 23, body: "Deployed to preview", user: { login: "vercel[bot]", type: "Bot" } },
+      },
+    }));
+    expect(syncPrCommentToIssues).toHaveBeenCalledWith(
+      expect.objectContaining({ mirror: null }),
+    );
+  });
+
+  it("mirrors a bot's code comment with its excerpt, and its deletion", async () => {
+    const comment = {
+      id: 900, body: "Possible null dereference.", user: { login: "review-bot[bot]", type: "Bot" },
+      path: "lib/probe.ts", line: 2, side: "RIGHT", diff_hunk: "@@ -1,1 +1,2 @@\n a\n+b",
+    };
+    for (const action of ["created", "deleted"]) {
+      await githubPOST(githubRequest({
+        event: "pull_request_review_comment",
+        body: { action, comment, pull_request: { number: 7 }, repository: { full_name: "acme/app" } },
+      }));
+    }
+    expect(syncPrCommentToIssues).toHaveBeenNthCalledWith(1, {
+      provider: "github",
+      repoFullName: "acme/app",
+      prNumber: 7,
+      mirror: expect.objectContaining({
+        remoteCommentId: "review_comment:900",
+        action: "created",
+        body: "Possible null dereference.",
+        codeHeader: expect.stringMatching(/^`lib\/probe\.ts:2`\n\n```diff\n@@/),
+      }),
+    });
+    expect(syncPrCommentToIssues).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      mirror: expect.objectContaining({ remoteCommentId: "review_comment:900", action: "deleted" }),
+    }));
+  });
+
+  it("mirrors the message of a submitted review, but not a dismissal", async () => {
+    const review = { id: 77, state: "commented", body: "See inline.", user: { login: "octocat", type: "User" },
+      submitted_at: "2026-10-04T12:00:00Z" };
+    for (const action of ["submitted", "dismissed"]) {
+      await githubPOST(githubRequest({
+        event: "pull_request_review",
+        body: { action, review, pull_request: { number: 7 }, repository: { full_name: "acme/app" } },
+      }));
+    }
+    expect(syncPrCommentToIssues).toHaveBeenCalledOnce();
+    expect(syncPrCommentToIssues).toHaveBeenCalledWith(expect.objectContaining({
+      mirror: expect.objectContaining({ remoteCommentId: "review:77", action: "created", body: "See inline." }),
+    }));
   });
 
   it("synchronizes a GitHub blocking dependency", async () => {

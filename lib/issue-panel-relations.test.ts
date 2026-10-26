@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { isClosedStatus } from "./issue-constants";
 import { resolveDisplayRelationsByIssue } from "./relation-constants";
 import type { ChipRelation } from "@/components/relation-chips";
+import { hierarchyCandidates, isHierarchyRelation } from "./issue-hierarchy";
 
 function source(file: string) {
   return ts.createSourceFile(file, readFileSync(resolve(import.meta.dirname, "..", file), "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
@@ -106,6 +107,7 @@ describe("sidebar menu relation targets", () => {
     ];
     const scope = {
       useMemo: memo, issue, relationType: "related", resolvedRelations: rows, isClosedStatus,
+      isHierarchyRelation, hierarchyCandidates,
       allIssues: [candidate("self"), candidate("linked"), candidate("inherited"), candidate("other-type"),
         candidate("done", "done"), candidate("canceled", "canceled"), candidate("duplicate", "duplicate"),
         candidate("foreign", "todo", "other-project")],
@@ -127,9 +129,33 @@ describe("sidebar menu relation targets", () => {
     const setRelationType = vi.fn();
     const handler = evaluate<(id: string, kind: string) => void>(expression.getText(root), {
       issue: { id: "source" }, relationType: "blocked_by", onAddRelation, setRelationType,
+      isHierarchyRelation, setParentLink: vi.fn(),
     });
     handler("target", "objective");
     expect(onAddRelation).toHaveBeenCalledWith("source", "blocked_by", "target", { targetType: "objective" });
     expect(setRelationType).toHaveBeenCalledWith(null);
+  });
+
+  it("routes the parent / sub-issue entries to a parent write, issues only (MIN-804)", () => {
+    const issue = { id: "self", project_id: "project", parent_id: null };
+    const allIssues = [issue, { id: "child", project_id: "project", parent_id: "other" },
+      { id: "other", project_id: "project", parent_id: null }];
+    const scope = { useMemo: memo, issue, relationType: "sub_issue_of", resolvedRelations: [], isClosedStatus,
+      isHierarchyRelation, hierarchyCandidates, allIssues, objectives: [{ id: "objective", project_id: "project", status: "planned" }] };
+    expect(evaluate<Array<{ id: string }>>(initializer("components/issue-side-panel.tsx", "relationCandidates"), scope)
+      .map((target) => target.id)).toEqual(["other"]);
+    expect(evaluate<unknown[]>(initializer("components/issue-side-panel.tsx", "relationObjectiveCandidates"), scope)).toEqual([]);
+
+    const root = source("components/issue-side-panel.tsx");
+    const picker = find(root, (node) => ts.isJsxSelfClosingElement(node) && node.tagName.getText(root) === "RelationTargetPicker") as ts.JsxSelfClosingElement;
+    const attribute = picker.attributes.properties.find((node) => ts.isJsxAttribute(node) && node.name.getText(root) === "onSelect") as ts.JsxAttribute;
+    const onAddRelation = vi.fn();
+    const setParentLink = vi.fn();
+    const handler = evaluate<(id: string, kind: string) => void>((attribute.initializer as ts.JsxExpression).expression!.getText(root), {
+      issue, relationType: "parent_of", onAddRelation, setRelationType: vi.fn(), isHierarchyRelation, setParentLink,
+    });
+    handler("child", "issue");
+    expect(setParentLink).toHaveBeenCalledWith("parent_of", "child");
+    expect(onAddRelation).not.toHaveBeenCalled();
   });
 });

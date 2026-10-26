@@ -41,10 +41,20 @@ import { IssueActionsMenu } from "@/components/issue-context-menu";
 import { useIssueMenuActions } from "@/components/use-issue-menu-actions";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { RelationTargetPicker } from "@/components/relation-target-picker";
+import {
+  HIERARCHY_RELATIONS,
+  hierarchyAvailable,
+  hierarchyCandidates,
+  hierarchyPatches,
+  isHierarchyRelation,
+  type HierarchyRelation,
+  type RelationMenuKind,
+} from "@/lib/issue-hierarchy";
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { useIssuePullRequestQuery } from "@/lib/use-agent-runs";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import {
+  buildIssueCommentsPrompt,
   buildIssueCustomPrompt,
   buildIssuePlanPrompt,
   buildIssuePrompt,
@@ -67,6 +77,8 @@ import {
   useIssueFieldShortcuts,
 } from "@/components/issue-field-shortcuts";
 import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
+import { CommentFollowUpButton } from "@/components/comment-follow-up-button";
+import { commentFollowUp } from "@/lib/comment-follow-up";
 import { IssueResourcesSection } from "@/components/issue-resources-section";
 import { IssuePlan } from "@/components/issue-plan";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the board routes that mount
@@ -182,7 +194,7 @@ export function IssueSidePanel({
   const buildIssueMenuActions = useIssueMenuActions();
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   const menuPointerRef = useRef<{ x: number; y: number } | null>(null);
-  const [relationType, setRelationType] = useState<IssueRelationType | null>(null);
+  const [relationType, setRelationType] = useState<RelationMenuKind | null>(null);
   useEffect(() => setRelationType(null), [issue?.id, open]);
   // The Relations row's add popover, opened by its button or by R.
   const [relationsOpen, setRelationsOpen] = useState(false);
@@ -510,6 +522,37 @@ export function IssueSidePanel({
     toast.success(t("verifyPromptCopied"));
   }, [issue, promptContext, projectKey, t]);
 
+  // New comments since the ticket's MCP agent last commented (MIN-801):
+  // replies count too, since they are written to it as well.
+  const followUp = useMemo(
+    () => commentFollowUp(items.flatMap((item) =>
+      item.kind === "comment" ? [item.comment, ...item.replies] : [])),
+    [items],
+  );
+
+  // “Copy prompt for new comments”: the agent reads them through the MCP, the
+  // prompt only says how many and since when. No automatic start: the ticket
+  // is already under way.
+  const copyCommentsPrompt = useCallback(async () => {
+    if (!issue || !promptContext || !followUp) return;
+    const forge = await loadOneIssuePromptContext(issue.id);
+    await navigator.clipboard.writeText(
+      buildIssueCommentsPrompt(
+        {
+          issue,
+          projectId: issue.project_id,
+          projectKey,
+          categories: promptContext.categories,
+          relations: promptContext.relations,
+          resourceCount: issue.resource_count,
+          ...forge,
+        },
+        followUp
+      )
+    );
+    toast.success(t("commentsPromptCopied"));
+  }, [issue, promptContext, followUp, projectKey, t]);
+
   // “Custom”: the instruction entered in the dialog replaces the instruction
   // ready made — the context of the ticket remains provided by minddy (block
   // <issue> of the copied prompt). No automatic start: we do not know if this
@@ -546,6 +589,7 @@ export function IssueSidePanel({
     onCopyPlanPrompt: () => void copyPlanPrompt(),
     onCopyVerifyPrompt: () => void copyVerifyPrompt(),
     onCopyCustomPrompt: () => setCustomPromptOpen(true),
+    onCopyCommentsPrompt: followUp ? () => void copyCommentsPrompt() : undefined,
   });
 
   // Field shortcuts (S/P/E/A/L/D/O) — active while the pointer hovers the panel
@@ -712,6 +756,16 @@ export function IssueSidePanel({
     finally { pendingWrites.current.delete(write); }
   };
 
+  // Parent / sub-issue links from the relation menus (MIN-804): the write
+  // lands on whichever end becomes the sub-issue.
+  const setParentLink = (kind: HierarchyRelation, targetId: string) => {
+    if (!issue) return;
+    for (const { issueId, parent_id } of hierarchyPatches(kind, [issue], targetId, allIssues)) {
+      if (issueId === issue.id) void patch({ parent_id });
+      else void onUpdate(issueId, { parent_id }).catch((err) => toast.error((err as Error).message));
+    }
+  };
+
   const commitTitle = () => {
     if (!issue) return;
     const trimmed = title.trim();
@@ -782,6 +836,7 @@ export function IssueSidePanel({
   // objective links remain eligible.
   const relationCandidates = useMemo(() => {
     if (!issue || !relationType) return [];
+    if (isHierarchyRelation(relationType)) return hierarchyCandidates(relationType, [issue], allIssues);
     const linked = new Set(resolvedRelations
       .filter((r) => !r.inheritedObjectiveId && r.relation === relationType && r.otherType !== "objective")
       .map((r) => r.otherId));
@@ -789,7 +844,7 @@ export function IssueSidePanel({
       target.id !== issue.id && !linked.has(target.id));
   }, [issue, relationType, resolvedRelations, allIssues]);
   const relationObjectiveCandidates = useMemo(() => {
-    if (!issue || !relationType) return [];
+    if (!issue || !relationType || isHierarchyRelation(relationType)) return [];
     const linked = new Set(resolvedRelations
       .filter((r) => !r.inheritedObjectiveId && r.relation === relationType && r.otherType === "objective")
       .map((r) => r.otherId));
@@ -817,6 +872,9 @@ export function IssueSidePanel({
     pr: pullRequest,
     hasObjectives: objectives.length > 0,
     onSelectRelation: setRelationType,
+    hierarchyRelations: readOnly
+      ? undefined
+      : HIERARCHY_RELATIONS.filter((kind) => hierarchyAvailable(kind, [issue], allIssues)),
     onOpenField: (field) => {
       if (menuPointerRef.current) openField(field, menuPointerRef.current);
     },
@@ -1156,6 +1214,7 @@ export function IssueSidePanel({
                     onOpenIssue={onOpenIssue}
                     onAddRelation={onAddRelation}
                     onRemoveRelation={onRemoveRelation}
+                    onSetParent={setParentLink}
                     readOnly={readOnly}
                     addOpen={relationsOpen}
                     onAddOpenChange={setRelationsOpen}
@@ -1261,7 +1320,8 @@ export function IssueSidePanel({
             projectKey={projectKey}
             onClose={() => setRelationType(null)}
             onSelect={(targetId, targetType) => {
-              if (relationType) onAddRelation(issue.id, relationType, targetId, { targetType });
+              if (relationType && isHierarchyRelation(relationType)) setParentLink(relationType, targetId);
+              else if (relationType) onAddRelation(issue.id, relationType, targetId, { targetType });
               setRelationType(null);
             }}
           />
@@ -1282,7 +1342,8 @@ export function IssueSidePanel({
           />
 
           {canComment && (
-            <SidePanelFooter className="border-t-0 pt-3 sm:flex-row">
+            <SidePanelFooter className="flex-col border-t-0 pt-3 sm:flex-col">
+              <CommentFollowUpButton followUp={followUp} onCopy={copyCommentsPrompt} />
               <CommentComposer
                 members={members}
                 projectId={issue.project_id}

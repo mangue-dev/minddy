@@ -107,6 +107,8 @@ Verbinde deinen Agenten zuerst mit minddy MCP, damit er den Plan lesen und desse
 3. Füge den Prompt in deinen Agenten ein, und zwar in der Arbeitskopie des Repositorys. Das Kopieren führt kein KI-Modell aus und verbraucht kein KI-Kontingent.
 4. Verfolge den Planfortschritt im Ticket, während der Agent dessen Aufgaben über MCP aktualisiert. Beantworte seine Fragen im Agenten, oder halte Entscheidungen im Ticket fest, damit der nächste Prompt sie enthält.
 
+Wenn dein Agent das Ticket über MCP kommentiert hat und danach weitere Kommentare eingehen, auch solche aus einem verknüpften Pull Request, erscheint über dem Kommentarfeld die Schaltfläche **Prompt für N neue Kommentare kopieren**. Der Prompt bittet den Agenten, diese Kommentare über MCP zu lesen und jeden davon zu bearbeiten; er kopiert sie nicht. Auf einem Board zeigt die Karte des Tickets, wie viele Kommentare warten. Ein Klick auf diese Zahl kopiert denselben Prompt, und das Rechtsklickmenü der Karte bietet **Prompt für neue Kommentare kopieren**.
+
 Inhalt des Prompts, Branch-Vorschlag und Sprachregeln beschreibt [Einen Prompt für einen anderen Coding-Agenten kopieren](/docs/issues#copy-issue-prompt).
 
 ### Die Arbeit mit dem Ticket verknüpft halten {#link-work}
@@ -126,6 +128,8 @@ Lies Beschreibung und Aktivität, danach geänderte Dateien und Diff-Blöcke. Ö
 Klicke in einer Beschreibung, einem Kommentar oder dem Diff eines Bildes auf ein Bild, um es im ganzen Fenster zu öffnen; der Diff eines Bildes öffnet die Seiten **Vorher** und **Nachher** einzeln. Mit **Schließen** oder Esc kehrst du zum Pull Request zurück.
 
 Erwähne `@numo` in einem Pull-Request-Kommentar, um Numo in einer Unterhaltung um ein Review ohne Schreibzugriff zu bitten. Numo liest den Pull Request und antwortet; es pusht keine Commits. Eine auf der Forge geschriebene Erwähnung zählt nur, wenn ihr Autor mit dem Eigentümer oder einem Mitglied (nicht einem Leser) eines Projekts verknüpft ist, das das Repository verknüpft; die Nutzung wird dem Eigentümer dieses Projekts angerechnet.
+
+Was auf einem verknüpften Pull Request oder Merge Request geschrieben wird, erscheint auch in den Kommentaren jedes Tickets, mit dem er verknüpft ist: Kommentare der Unterhaltung, die Nachricht eines eingereichten Reviews und Kommentare zum Code mit Datei, Zeile und, auf GitHub, dem Ausschnitt, auf den sie sich beziehen, die Antworten darunter gruppiert. Kommentare von Bots bleiben auf dem Pull Request, außer Kommentare zum Code. Eine Änderung aktualisiert die Kopie, und ein auf GitHub gelöschter Kommentar wird als gelöscht angezeigt; GitLab meldet keine Löschungen. Jedes Mal, wenn ein Pull Request mit einem Ticket verknüpft wird, von Hand oder weil sein Branch, Titel oder seine Beschreibung das Ticket nennt, werden seine bisherigen Kommentare mit dem Datum übernommen, an dem sie geschrieben wurden, auch wenn das vor der Erstellung des Tickets liegt. Antworte unter einem dieser Kommentare, um mit deinem eigenen Git-Konto auf dem Pull Request zu antworten, wie in der Pull-Request-Ansicht; eine Unterhaltung zum Code zeigt außerdem **Gelöst** oder **Veraltet** und bietet **Lösen** oder **Erneut öffnen** an. Die Kopien selbst lassen sich in Minddy nicht bearbeiten.
 
 ![Änderungsansicht des offenen Demonstrations-PR mit Diff der Funktion greeting und Hinweis auf fehlende GitHub-Autorisierung.](/documentation/de/review-pull-requests-workflow.png)
 

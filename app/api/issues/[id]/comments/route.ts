@@ -58,13 +58,13 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     resolveApiKeyActors((data ?? []).map((c) => c.api_key_id as string | null)),
     commentIds.length
       ? auth.supabase.from("github_issue_comment_syncs")
-          .select("issue_id,remote_comment_id,comment_id,author_login,author_association,html_url,html_url_encryption_version,created_at_remote,updated_at_remote,deleted_at_remote")
+          .select("issue_id,remote_comment_id,comment_id,provider,pull_request_id,thread_key,author_login,author_association,html_url,html_url_encryption_version,created_at_remote,updated_at_remote,deleted_at_remote")
           .in("comment_id", commentIds)
       : Promise.resolve({ data: [], error: null }),
   ]);
   const { data: githubRows, error: githubError } = legacyGithubCommentUrlSchema(firstGithub.error)
     ? await auth.supabase.from("github_issue_comment_syncs")
-        .select("issue_id,remote_comment_id,comment_id,author_login,author_association,html_url,created_at_remote,updated_at_remote,deleted_at_remote")
+        .select("issue_id,remote_comment_id,comment_id,provider,pull_request_id,thread_key,author_login,author_association,html_url,created_at_remote,updated_at_remote,deleted_at_remote")
         .in("comment_id", commentIds)
     : firstGithub;
   if (githubError) {
@@ -84,6 +84,11 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       ...(githubByComment.has(comment.id as string)
         ? {
             github: {
+              provider: githubByComment.get(comment.id as string)?.provider === "gitlab"
+                ? "gitlab" : "github",
+              pull_request_id: githubByComment.get(comment.id as string)?.pull_request_id ?? null,
+              remote_comment_id: githubByComment.get(comment.id as string)?.remote_comment_id ?? null,
+              thread_key: githubByComment.get(comment.id as string)?.thread_key ?? null,
               author_login: githubByComment.get(comment.id as string)?.author_login ?? null,
               author_association:
                 githubByComment.get(comment.id as string)?.author_association ?? null,
