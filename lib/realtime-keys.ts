@@ -474,7 +474,9 @@ export function keysForProjectEvent(
       // A comment hangs off an issue OR an objective OR a feedback post — route
       // to the right cache. Feedback comment keys carry the project id.
       const issueId = issueIdOf(change);
-      if (issueId) return [active(["comments", issueId])];
+      // The board cards flag tickets whose MCP agent has new comments to
+      // answer (MIN-801): any ticket comment may start or end that.
+      if (issueId) return [active(["comments", issueId]), active(["comment-follow-ups", projectId])];
       const objectiveId = objectiveIdOf(change);
       if (objectiveId) return [active(["objective-comments", objectiveId])];
       const postId = feedbackPostIdOf(change);
@@ -610,6 +612,7 @@ export const projectScopeKeys = (projectId: string): QueryKey[] => [
   ["views", projectId],
   ["members", projectId],
   ["comments"],
+  ["comment-follow-ups", projectId],
   ["events"],
   ["issue-resources"],
   ["objective-comments"],

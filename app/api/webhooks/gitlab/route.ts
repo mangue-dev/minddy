@@ -31,6 +31,8 @@ import {
   type PullRequestUpsertOutcome,
 } from "@/lib/server/agent/pull-requests";
 import { handleForgeNumoMention } from "@/lib/server/agent/pr-mention";
+import { backfillPendingPrComments, syncPrCommentToIssues } from "@/lib/server/agent/pr-comment-sync";
+import { mirrorFromGitlabNote, type GitlabNoteSource } from "@/lib/pr-comment-mirror";
 import {
   broadcastPrChanged,
   broadcastPrChangedByNumber,
@@ -68,7 +70,8 @@ import { getServiceClient } from "@/lib/supabase-service";
  * GitHub has no equivalent).
  * The hook `Note Hook` (object_kind `note`) carries COMMENTS: on a merge
  * request, they trace "commented the MR" (thread message) or "commented the code
- * of the MR" (note anchored in the diff), and trigger the replay of Numo if
+ * of the MR" (note anchored in the diff), are mirrored as comments on every
+ * linked ticket, threaded by their discussion (MIN-802), and trigger the replay of Numo if
  * the message MENTIONS it (MIN-162, cf. `lib/server/agent/pr-mention`). The `Issue Hook` (object_kind) hook
  * `issue`) carries the one-way synchronization of depot issues to
  * the projects that activated it (MIN-97) — one way: Minddy never writes
@@ -276,6 +279,11 @@ async function handleMergeRequest(
     : null;
   const ingested = ingestion?.row ?? null;
 
+  // A ticket linked by this event (a branch, title or closing line naming it)
+  // receives the notes the MR already carries, dated from GitLab (MIN-802).
+  // Off the response path; each link is imported once.
+  if (ingested) afterOrNow(() => backfillPendingPrComments(ingested));
+
   // Ignore an older or replayed delivery consistently across the PR row,
   // run state, issue status, activity, and notifications.
   if (ingestion && !ingestion.applied) return;
@@ -351,7 +359,16 @@ interface NoteEvent {
   object_attributes?: {
     id?: number;
     noteable_type?: string;
+    /** `DiffNote` for a note anchored to the diff. */
+    type?: string | null;
+    system?: boolean;
+    /** `update` when the note was edited; older GitLab versions omit it. */
+    action?: string;
+    discussion_id?: string | null;
+    url?: string | null;
+    updated_at?: string;
     position?: unknown;
+    original_position?: unknown;
     note?: string | null;
     /** THE TIME of the note — the activity line dates from it, not from the
         delivery of the hook (a replayed webhook must not say “just now”). */
@@ -383,6 +400,29 @@ async function handleNote(
   await broadcastGitlabPr(repoFullName, iid, [
     type === "pr_code_commented" ? "reviewComments" : "conversation",
   ]);
+  // Ticket mirror (MIN-802): the note reads on the linked tickets, threaded by
+  // its discussion. GitLab sends no event when a note is deleted, so the
+  // ticket copy stays; an edit arrives as `update` (or as a repeated note on
+  // older versions) and rewrites the same copy.
+  const attrs = payload.object_attributes ?? {};
+  await syncPrCommentToIssues({
+    provider: "gitlab",
+    repoFullName,
+    prNumber: iid,
+    mirror: mirrorFromGitlabNote({
+      id: attrs.id,
+      body: attrs.note,
+      system: attrs.system,
+      type: attrs.type ?? (attrs.position ? "DiffNote" : null),
+      position: attrs.position as GitlabNoteSource["position"],
+      original_position: attrs.original_position as GitlabNoteSource["original_position"],
+      authorLogin: payload.user?.username ?? null,
+      url: attrs.url,
+      created_at: attrs.created_at,
+      updated_at: attrs.updated_at,
+      discussionId: attrs.discussion_id,
+    }, attrs.action === "update" ? "edited" : "created"),
+  });
   await recordForgePrGesture({
     provider: "gitlab",
     repoFullName,

@@ -82,7 +82,7 @@ export interface IssuePromptInput {
   repository?: PromptRepository | null;
 }
 
-type CodeAction = "implement" | "plan" | "review" | "verify" | "custom";
+type CodeAction = "implement" | "plan" | "review" | "verify" | "custom" | "comments";
 
 // ── Escaping ────────────────────────────────────────────────────────────────
 
@@ -276,6 +276,8 @@ const ACTION_INSTRUCTIONS = {
     "Read the existing plan, then compare it with the issue, its comments and the current code. Correct inaccurate steps, missing impacts and verification gaps, and drop what the code no longer needs. Keep completed tasks (`- [x]`) and their markers as they are. Explain material changes, then stop: do not implement the plan.",
   verify:
     "Compare the actual implementation with the issue, its plan and its comments, where decisions and departures from the plan are recorded. Check tasks marked done, missed callers and surfaces, regressions, edge cases and security-sensitive behavior. Where code and plan disagree, say which is right. Fix only defects you can confirm from the code, within this issue's scope, and verify each fix with the repository's relevant checks. Report suspected problems separately instead of changing working code, and state what you could not check.",
+  comments:
+    "People commented on this issue after your last comment, possibly on its linked pull request. Read every comment written since then and address each one: make the changes it asks for, answer its questions, and say plainly when you disagree or when a request falls outside this issue. Follow the plan where it is still accurate. Run the repository's relevant checks for what you change. Report how you handled each new comment, what changed and what remains.",
   custom:
     "The request above is the task: follow its scope rather than assuming the whole issue has to be implemented.",
   multi:
@@ -352,7 +354,7 @@ function singleIssuePrompt(
   request?: string,
 ): string {
   const identifier = issueIdentifier(input.projectKey, input.issue.number);
-  const withBranch = action === "implement" || action === "custom";
+  const withBranch = action === "implement" || action === "custom" || action === "comments";
   const notes = [planLine(input.issue, action), branchLine(input, action)]
     .filter(Boolean)
     .join(" ");
@@ -400,6 +402,35 @@ export function buildIssuePrompt(input: IssuePromptInput): string {
           : `Read the issue and its comments with \`minddy_get_issue\`, save your plan to the issue's \`plan\` field with \`minddy_update_issues\` before changing code, then ${TRACK_TASKS}.`,
         "When you are done, report the outcome with `minddy_add_comment` and update the issue status with `minddy_update_issues`.",
       ],
+    },
+  );
+}
+
+/**
+ * “Copy prompt for new comments” (MIN-801): an MCP agent commented on the
+ * issue, and people — or the pull request mirror (MIN-802) — commented after
+ * it. The prompt names how many comments and since when, but never inlines
+ * them: the agent reads them through the MCP, or asks for them.
+ */
+export function buildIssueCommentsPrompt(
+  input: IssuePromptInput,
+  followUp: { count: number; since: string },
+): string {
+  const hasPlan = parsePlan(input.issue.plan).tasks.length > 0;
+  const comments = followUp.count === 1 ? "1 new comment was" : `${followUp.count} new comments were`;
+  return singleIssuePrompt(
+    input,
+    "comments",
+    `Address the new comments on this minddy issue: ${comments} posted after your last comment (${followUp.since}).`,
+    ACTION_INSTRUCTIONS.comments,
+    {
+      steps: [
+        `Read the issue and its comments with \`minddy_get_issue\`: the new ones are those written after ${followUp.since}. They are not copied into this prompt.`,
+        ...(hasPlan ? [`If you follow the plan, ${TRACK_TASKS}.`] : []),
+        "When you are done, reply with `minddy_add_comment`, saying how you handled each new comment.",
+      ],
+      fallback:
+        "Without them, ask me to paste the new comments before changing anything: don't guess what they say, and don't claim that anything was saved in minddy.",
     },
   );
 }

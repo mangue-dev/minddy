@@ -12,9 +12,11 @@ import type { GlobalKanbanBoard } from "@/components/global-kanban-board";
 import type { GlobalKanbanColumn } from "@/components/global-kanban-column";
 import type { ChipRelation } from "@/components/relation-chips";
 import type { Issue, IssueRelationType, Objective } from "./types";
+import type { RelationMenuKind } from "./issue-hierarchy";
 import type { RelationKinds } from "./use-issue-relations-query";
 import { isClosedStatus } from "./issue-constants";
 import { hasDirectRelation } from "./issue-shortcut-targets";
+import { hierarchyCandidates, hierarchyPatches, isHierarchyRelation } from "./issue-hierarchy";
 import en from "@/messages/en.json";
 
 vi.mock("next-intl", () => ({
@@ -98,7 +100,7 @@ const types: IssueRelationType[] = ["blocks", "blocked_by", "related"];
 const useMemo = (callback: () => unknown) => callback();
 
 function candidates(
-  relationType: IssueRelationType | null,
+  relationType: RelationMenuKind | null,
   relations: ChipRelation[] = [],
   targets: Issue[] = [issue],
   relationsById: Record<string, ChipRelation[]> = {},
@@ -107,6 +109,7 @@ function candidates(
   const objectives = [objective, { ...objective, id: "active", status: "in_progress" }, { ...objective, id: "done", status: "done" }, { ...objective, id: "canceled", status: "canceled" }, { ...objective, id: "foreign", project_id: "elsewhere" }];
   const scope = {
     useMemo, relationType, relations, issue, isClosedStatus, hasDirectRelation,
+    isHierarchyRelation, hierarchyCandidates,
     relationTargets: () => targets,
     relationsOf: (id: string) => (id === issue.id ? relations : relationsById[id]),
     getCandidateIssues: () => issues,
@@ -122,10 +125,11 @@ function candidates(
 }
 
 function cardSelection(
-  relationType: IssueRelationType | null,
+  relationType: RelationMenuKind | null,
   onAddRelation: CardAdd,
   targets: Issue[] = [issue],
   relationsById: Record<string, ChipRelation[]> = {},
+  setParentFromTargets = vi.fn(),
 ) {
   const setRelationType = vi.fn();
   const addRelationFromTargets = evaluate(initializer("issue-card.tsx", "addRelationFromTargets"), {
@@ -135,7 +139,7 @@ function cardSelection(
     relationsOf: (id: string) => relationsById[id],
   });
   const onSelect = evaluate<PickerProps["onSelect"]>(prop("issue-card.tsx", "RelationTargetPicker", "onSelect"), {
-    issue, relationType, addRelationFromTargets, setRelationType,
+    issue, relationType, addRelationFromTargets, setRelationType, isHierarchyRelation, setParentFromTargets,
   });
   return { onSelect, setRelationType };
 }
@@ -226,6 +230,26 @@ describe("card relation target picker", () => {
     // The target itself is never related to itself.
     onSelect(other.id, "issue");
     expect(add.mock.calls.map(([source]) => source)).toEqual([issue.id, sibling.id, linkedSibling.id]);
+  });
+
+  it("lists issues only for the parent / sub-issue entries and writes the parent (MIN-804)", () => {
+    // `other` and `closed` are top-level, without sub-issues: both ends fit.
+    expect(candidates("parent_of")).toEqual({ issues: [other, expect.objectContaining({ id: "closed" })], objectives: [] });
+    expect(candidates("sub_issue_of").objectives).toEqual([]);
+    const add = vi.fn();
+    const setParent = vi.fn();
+    cardSelection("sub_issue_of", add, [issue], {}, setParent).onSelect(other.id, "issue");
+    expect(setParent).toHaveBeenCalledWith("sub_issue_of", other.id);
+    expect(add).not.toHaveBeenCalled();
+
+    const writes = vi.fn();
+    const setParentFromTargets = evaluate<(kind: RelationMenuKind, targetId: string) => void>(
+      initializer("issue-card.tsx", "setParentFromTargets"),
+      { isHierarchyRelation, hierarchyPatches, relationTargets: () => [issue], getCandidateIssues: () => [issue, other],
+        linked: (run: () => void) => run(), onUpdateIssue: writes },
+    );
+    setParentFromTargets("parent_of", other.id);
+    expect(writes).toHaveBeenCalledWith(other.id, { parent_id: issue.id });
   });
 
   it("stays closed without a position or relation and handles no objectives", () => {

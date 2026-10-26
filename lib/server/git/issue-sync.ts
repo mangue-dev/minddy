@@ -642,8 +642,44 @@ async function applyGithubIssueComment(
     .eq("remote_number", remote.number)
     .maybeSingle();
   if (issueError || !issue) return;
+  await mirrorGithubCommentToIssue({
+    issueId: issue.id as string,
+    authorId: target.createdBy,
+    comment: remote,
+  });
+}
 
-  const issueId = issue.id as string;
+/** A mirrored forge comment: a GitHub issue comment, or a GitHub/GitLab pull request comment. */
+export interface MirroredGithubComment {
+  /** The forge that wrote it — names the deletion marker. GitHub when absent. */
+  provider?: "github" | "gitlab";
+  /** Sidecar key, unique per ticket — namespaced for PR objects (MIN-802). */
+  remoteCommentId: string;
+  action: "created" | "edited" | "deleted";
+  body: string;
+  authorLogin: string | null;
+  authorAssociation: string | null;
+  htmlUrl: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+/**
+ * Writes one GitHub comment to one ticket through the sidecar: the remote id
+ * is the deduplication key, an edit rewrites the same minddy comment, a
+ * deletion leaves a marker, and an older delivery never rolls a newer one
+ * back. Shared by issue comments and pull request comments (MIN-802).
+ *
+ * Returns the minddy comment id, or null when the delivery was stale.
+ */
+export async function mirrorGithubCommentToIssue(opts: {
+  issueId: string;
+  /** Member the comment row belongs to; the UI credits the GitHub author. */
+  authorId: string | null;
+  comment: MirroredGithubComment;
+}): Promise<string | null> {
+  const { issueId, comment: remote } = opts;
+  const service = getServiceClient();
   const { data: synced, error: syncedError } = await service
     .from("github_issue_comment_syncs")
     .select("comment_id, updated_at_remote, synced_at")
@@ -671,14 +707,16 @@ async function applyGithubIssueComment(
       previousSyncedAt: synced.synced_at,
     })
   ) {
-    return;
+    return null;
   }
 
-  const body = remote.action === "deleted" ? "[Deleted on GitHub]" : remote.body;
-  await syncGithubComment(service, {
+  const body = remote.action === "deleted"
+    ? remote.provider === "gitlab" ? "[Deleted on GitLab]" : "[Deleted on GitHub]"
+    : remote.body;
+  return syncGithubComment(service, {
     p_issue_id: issueId,
     p_remote_comment_id: remote.remoteCommentId,
-    p_author_id: target.createdBy,
+    p_author_id: opts.authorId,
     p_body: body,
     p_author_login: remote.authorLogin,
     p_author_association: remote.authorAssociation,

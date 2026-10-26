@@ -7,7 +7,9 @@
 // Adding is two steps in ONE popover: the link button opens the list of relation
 // types, and picking one advances the SAME popover to the searchable list of
 // candidate ends. Since MIN-513 the candidates mix tickets and objectives — a
-// relation can block through an objective, or link one.
+// relation can block through an objective, or link one. Since MIN-804 the
+// type list also sets the hierarchy (parent of, sub-issue of), whose second
+// step lists tickets only.
 //
 // (The board's right-click menu and the MCP tool are the other entry points;
 // the menu chains two overlays instead, which it can afford — there's no Dialog
@@ -42,6 +44,14 @@ import { issueIdentifier } from "@/lib/issue-constants";
 import { issueTierKeyword, orderIssuesForSearch } from "@/lib/issue-search-order";
 import { RELATION_PRIORITY, RELATION_TYPES } from "@/lib/relation-constants";
 import {
+  HIERARCHY_RELATIONS,
+  hierarchyAvailable,
+  hierarchyCandidates,
+  isHierarchyRelation,
+  type HierarchyRelation,
+  type RelationMenuKind,
+} from "@/lib/issue-hierarchy";
+import {
   FEEDBACK_TO_ISSUE_STATUS,
   type IssueLinkedFeedback,
 } from "@/lib/feedback/types";
@@ -66,6 +76,7 @@ export function RelationsSection({
   onOpenIssue,
   onAddRelation,
   onRemoveRelation,
+  onSetParent,
   readOnly = false,
   addOpen,
   onAddOpenChange,
@@ -88,6 +99,9 @@ export function RelationsSection({
     },
   ) => void;
   onRemoveRelation: (relationId: string) => void;
+  /** Sets a parent / sub-issue link (MIN-804); its entries follow the
+      relation types when given. */
+  onSetParent?: (kind: HierarchyRelation, targetId: string) => void;
   /** Project readers: relations are listed without add or remove controls. */
   readOnly?: boolean;
   /** Controlled add popover, so the panel's R shortcut can open it (MIN-749). */
@@ -123,7 +137,7 @@ export function RelationsSection({
   // of this type. The search is controlled to come up empty at each step —
   // otherwise “block” (typed to filter the types) would then filter the
   // tickets and would not show any.
-  const [step, setStep] = useState<IssueRelationType | null>(null);
+  const [step, setStep] = useState<RelationMenuKind | null>(null);
   const [query, setQuery] = useState("");
 
   const issueById = useMemo(
@@ -135,6 +149,9 @@ export function RelationsSection({
   // done/canceled work is pointless (a closed blocker doesn't block, and the
   // resolver would mark it spent immediately). Issues first, objectives after.
   const candidates = useMemo<Issue[]>(() => {
+    if (isHierarchyRelation(step)) {
+      return orderIssuesForSearch(hierarchyCandidates(step, [issue], allIssues), (i) => i.status);
+    }
     const linked = new Set(
       relations
         .filter((r) => !r.inheritedObjectiveId && r.relation === step)
@@ -152,6 +169,7 @@ export function RelationsSection({
   // Picker order (MIN-785): the most recently fed objectives first.
   const orderedObjectives = useOrderedObjectives(objectives);
   const objectiveCandidates = useMemo<Objective[]>(() => {
+    if (isHierarchyRelation(step)) return [];
     const linked = new Set(
       relations
         .filter((r) => !r.inheritedObjectiveId && r.relation === step)
@@ -172,10 +190,20 @@ export function RelationsSection({
     [relations],
   );
 
+  // The parent / sub-issue entries this ticket may take (MIN-804).
+  const hierarchy = onSetParent
+    ? HIERARCHY_RELATIONS.filter((kind) => hierarchyAvailable(kind, [issue], allIssues))
+    : [];
+
   const close = () => {
     setOpen(false);
     setStep(null);
     setQuery("");
+  };
+  const pickIssue = (kind: RelationMenuKind, targetId: string) => {
+    if (isHierarchyRelation(kind)) onSetParent?.(kind, targetId);
+    else onAddRelation(issue.id, kind, targetId);
+    close();
   };
 
   return (
@@ -219,7 +247,7 @@ export function RelationsSection({
             // the header already says "Relationships", and the next step continues on
             // “Block which ticket?” ". It remains searchable via keywords.
             <CommandGroup heading={t("relations")}>
-              {RELATION_TYPES.map((type) => (
+              {[...RELATION_TYPES, ...hierarchy].map((type) => (
                 <CommandItem
                   key={type}
                   value={type}
@@ -244,10 +272,7 @@ export function RelationsSection({
                       key={candidate.id}
                       value={candidate.id}
                       keywords={[id, candidate.title, issueTierKeyword(candidate.status)]}
-                      onSelect={() => {
-                        onAddRelation(issue.id, step, candidate.id);
-                        close();
-                      }}
+                      onSelect={() => pickIssue(step, candidate.id)}
                     >
                       <StatusIndicator
                         status={candidate.status}
@@ -269,6 +294,7 @@ export function RelationsSection({
                       value={objective.id}
                       keywords={[objective.name]}
                       onSelect={() => {
+                        if (isHierarchyRelation(step)) return;
                         onAddRelation(issue.id, step, objective.id, {
                           targetType: "objective",
                         });
@@ -290,10 +316,7 @@ export function RelationsSection({
                   value: candidate.id,
                   keywords: [issueIdentifier(projectKey, candidate.number), candidate.title],
                 })}
-                onSelect={(candidate) => {
-                  onAddRelation(issue.id, step, candidate.id);
-                  close();
-                }}
+                onSelect={(candidate) => pickIssue(step, candidate.id)}
                 renderItem={(candidate) => (
                   <>
                     <StatusIndicator status={candidate.status} className="size-4" />

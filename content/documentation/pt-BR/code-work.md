@@ -107,6 +107,8 @@ Primeiro, conecte seu agente ao MCP do minddy para que ele possa ler o plano e a
 3. Cole o prompt no agente, na cópia de trabalho do repositório. Copiar não executa nenhum modelo de IA nem consome sua cota de IA.
 4. Acompanhe o progresso do plano no ticket enquanto o agente atualiza as tarefas pelo MCP. Responda às perguntas dele no próprio agente ou registre as decisões no ticket para que o próximo prompt as inclua.
 
+Quando seu agente comentou o ticket pelo MCP e chegam comentários depois, incluindo os trazidos de um pull request vinculado, o botão **Copiar prompt para N novos comentários** aparece acima do campo de comentário. O prompt pede ao agente que leia esses comentários pelo MCP e trate cada um; ele não os copia. Em um quadro, o card do ticket mostra quantos comentários estão aguardando, um clique nesse número copia o mesmo prompt e o menu do clique direito oferece **Copiar prompt para os novos comentários**.
+
 O conteúdo do prompt, a sugestão de branch e as regras de idioma estão descritos em [Copiar um prompt para outro agente de código](/docs/issues#copy-issue-prompt).
 
 ### Manter o trabalho vinculado ao ticket {#link-work}
@@ -126,6 +128,8 @@ Leia a descrição e a atividade, depois os arquivos alterados e os trechos do d
 Em uma descrição, em um comentário ou no diff de uma imagem, clique em uma imagem para abri-la na janela inteira; o diff de uma imagem abre separadamente os lados **Antes** e **Depois**. Use **Fechar** ou Esc para voltar ao pull request.
 
 Mencione `@numo` em um comentário do pull request para pedir ao Numo uma revisão somente leitura em uma conversa. Ele lê o pull request e responde; não faz push de commits. Uma menção escrita na plataforma Git só conta quando o autor está vinculado ao proprietário ou a um Membro (não a um leitor) de um projeto que vincula o repositório, e o uso é cobrado do proprietário desse projeto.
+
+O que é escrito em um pull request ou merge request vinculado também aparece nos comentários de cada ticket ao qual ele está vinculado: os comentários da conversa, a mensagem de uma revisão enviada e os comentários sobre o código com o arquivo, a linha e, no GitHub, o trecho a que se referem, com as respostas agrupadas abaixo. Comentários de bots ficam no pull request, exceto os comentários sobre o código. Uma edição atualiza a cópia, e um comentário excluído no GitHub aparece como excluído; o GitLab não informa exclusões. Sempre que um pull request é vinculado a um ticket, manualmente ou porque a branch, o título ou a descrição dele cita o ticket, os comentários que ele já tem são trazidos com a data em que foram escritos, mesmo que seja anterior à criação do ticket. Responda sob um desses comentários para responder no pull request com sua própria conta do Git, como na visualização do pull request; uma conversa sobre o código também mostra **Resolvida** ou **Desatualizado** e oferece **Resolver** ou **Reabrir**. As cópias em si não podem ser editadas no Minddy.
 
 ![Aba Alterações do PR de demonstração aberto, com o diff de greeting e um aviso de autorização do GitHub indisponível.](/documentation/pt-BR/review-pull-requests-workflow.png)
 

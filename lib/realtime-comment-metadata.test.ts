@@ -25,7 +25,11 @@ describe("encrypted comment deletion metadata", () => {
   it("uses the current parent for INSERT and UPDATE", () => {
     for (const operation of ["INSERT", "UPDATE"] as const) {
       const event = { ...change("comments", { issue_id: "old-issue" }), operation, record: { issue_id: "current-issue" } };
-      expect(keysForProjectEvent(event, project)).toEqual([{ key: ["comments", "current-issue"], refetch: "active" }]);
+      expect(keysForProjectEvent(event, project)).toEqual([
+        { key: ["comments", "current-issue"], refetch: "active" },
+        // The board's comment follow-up flags (MIN-801) move with any ticket comment.
+        { key: ["comment-follow-ups", project], refetch: "active" },
+      ]);
     }
   });
 });

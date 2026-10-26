@@ -109,6 +109,29 @@ export const TABLE_SCOPES = {
     ],
   },
 
+  // ── Ticket comments mirrored from a pull request (MIN-802) ──────────────
+  // A comment is anchored by its demo ticket; its author must be a demo
+  // account. `parent_id` points to ANOTHER comment, like a page's parent: the
+  // seed generates the ids of the comments it creates and refuses any
+  // `parent_id` outside them. Aurora has a content key, so the body is
+  // encoded with the application's codec (`encrypted-content.mjs`).
+  comments: {
+    writable: true,
+    projectColumn: "project_id",
+    parents: [{ column: "issue_id", table: "issues" }],
+    userRefColumns: ["author_id"],
+  },
+  // The forge provenance of a mirrored comment (GitHub login, thread, dates):
+  // anchored by BOTH its demo ticket and its demo comment. No pull request
+  // row is seeded, so `pull_request_id` stays null and nothing reaches a forge.
+  github_issue_comment_syncs: {
+    writable: true,
+    parents: [
+      { column: "issue_id", table: "issues" },
+      { column: "comment_id", table: "comments" },
+    ],
+  },
+
   // ── Plan du compte ───────────────────────────────────────────────────────
   // `admin_override_plan_id` is the lever provided by the diagram to offer a
   // plan without going through Stripe (“offer Pro to a tester”), and it is

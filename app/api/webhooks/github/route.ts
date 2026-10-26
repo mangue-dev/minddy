@@ -42,6 +42,15 @@ import {
   type PullRequestUpsertOutcome,
 } from "@/lib/server/agent/pull-requests";
 import { recordPrCommentEditQuiet } from "@/lib/server/agent/pr-comment-edits";
+import { afterOrNow } from "@/lib/server/after-safe";
+import { backfillPendingPrComments, syncPrCommentToIssues } from "@/lib/server/agent/pr-comment-sync";
+import {
+  mirrorFromGithubConversationComment,
+  mirrorFromGithubReview,
+  mirrorFromGithubReviewComment,
+  type GithubPrReviewCommentSource,
+  type PrCommentMirrorAction,
+} from "@/lib/pr-comment-mirror";
 import { PR_BODY_COMMENT_ID } from "@/lib/pr-review-reactions";
 import { handleForgeNumoMention } from "@/lib/server/agent/pr-mention";
 import {
@@ -63,10 +72,13 @@ import type { PrActionEventType } from "@/lib/pr-events";
  *    push commits (`synchronize`), accept or reject (`closed`).
  * - `pull_request_review` → trace “approved the PR” / “requested changes”,
  * and “commented on the PR” when the review carries a message. Reviews
- * “dismissed” are ignored.
+ * “dismissed” are ignored. A human review's message is also MIRRORED as a
+ * comment on every linked ticket, and follows its edits (MIN-802).
  * - `pull_request_review_comment` → trace “commented the PR code”. A
  * review of N remarks arrives in N events: they are grouped in one line
- *    (`collapsesInBurst`).
+ *    (`collapsesInBurst`). Each remark — bots included — is also mirrored on
+ *    the linked tickets with its code excerpt; replies thread under their
+ *    root; edits and deletions follow (MIN-802).
  * - `pull_request_review_thread` (resolved/unresolved) → writes NOTHING: the
  * resolution of a thread lives at the forge (MIN-139), not at minddy. The event
  * is only there for live — without it, resolving a thread on github.com would not work.
@@ -75,7 +87,8 @@ import type { PrActionEventType } from "@/lib/pr-events";
  * (requested/rerequested/completed), `status`, `deployment_status` → same:
  * nothing to write, the CI is not in base. They push the direct so that the CI
  * banner updates without wait for the next poll round.
- * - `issue_comment` (on a PR) → traces “commented the PR”, and triggers the
+ * - `issue_comment` (on a PR) → mirrors a HUMAN comment on the linked tickets
+ * (created, edited, deleted — MIN-802), traces “commented the PR”, and triggers the
  * rereading of Numo if the message MENTIONS it (MIN-162). Write `@numo`
  * from github.com therefore does the same thing as writing it from minddy — except
  * that the expense is borne by the project owner of the linked ticket, due to lack of
@@ -139,6 +152,11 @@ function actorAccountId(actor: GithubActor | undefined | null): string | null {
     decides this case, on the event already traced by the road. */
 function isBot(actor: GithubActor | undefined | null): boolean {
   return actor?.type === "Bot";
+}
+
+/** Comment webhook action → ticket mirror action, or null for any other. */
+function prCommentMirrorAction(action: string | undefined): PrCommentMirrorAction | null {
+  return action === "created" || action === "edited" || action === "deleted" ? action : null;
 }
 
 /** The PR such as GitHub delivers it in a `pull_request` event. */
@@ -230,6 +248,10 @@ interface PullRequestReviewEvent {
   /** `body` separates the review which CARRYS a message from the simple envelope of
       remarques de ligne (cf. `prActionForReview`). */
   review?: {
+    /** The mirror key and provenance of the review on the ticket (MIN-802). */
+    id?: number;
+    html_url?: string | null;
+    author_association?: string | null;
     state?: string;
     body?: string | null;
     user?: GithubActor;
@@ -250,7 +272,15 @@ interface IssueCommentEvent {
   /** `body` serves the mention `@numo` (MIN-162): this is the only signal we have
       from a call to Numo written from github.com. */
   comment?:
-    | { id?: number; body?: string | null; user?: GithubActor; created_at?: string; updated_at?: string }
+    | {
+        id?: number;
+        body?: string | null;
+        user?: GithubActor;
+        author_association?: string | null;
+        html_url?: string | null;
+        created_at?: string;
+        updated_at?: string;
+      }
     | null;
   /** On `edited`, the previous values — `changes.body.from` is the body BEFORE
       the rewrite: the snapshot the edit history records (MIN-548). */
@@ -262,7 +292,8 @@ interface IssueCommentEvent {
 /** LINE note (review comment anchored in the diff). */
 interface PullRequestReviewCommentEvent {
   action?: string;
-  comment?: { user?: GithubActor; created_at?: string } | null;
+  /** The whole note: the ticket mirror needs its anchor and diff hunk (MIN-802). */
+  comment?: (GithubPrReviewCommentSource & { user?: GithubActor; created_at?: string }) | null;
   pull_request?: { number?: number };
   repository?: { full_name?: string };
   sender?: GithubActor;
@@ -284,6 +315,11 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
       ? await ingestPullRequest(repoFullName, number, payload.pull_request)
       : null;
   const ingested = ingestion?.row ?? null;
+
+  // A ticket linked by this event (a branch, title or closing line naming it)
+  // receives the comments the PR already carries, dated from GitHub (MIN-802).
+  // Off the response path; each link is imported once.
+  if (ingested) afterOrNow(() => backfillPendingPrComments(ingested));
 
   // Edit history (MIN-548): GitHub delivers the PREVIOUS body on `edited`
   // (`changes.body.from`), so the snapshot of the thread's opening message is
@@ -453,6 +489,23 @@ async function handlePullRequestReview(
     payload.pull_request?.number,
     ["conversation", "reviewComments", "pr"],
   );
+  // Ticket mirror (MIN-802): the written part of a review reads on the
+  // ticket, and follows its edits.
+  if (
+    (payload.action === "submitted" || payload.action === "edited") &&
+    payload.repository?.full_name &&
+    payload.pull_request?.number != null
+  ) {
+    await syncPrCommentToIssues({
+      provider: "github",
+      repoFullName: payload.repository.full_name,
+      prNumber: payload.pull_request.number,
+      mirror: mirrorFromGithubReview(
+        payload.review,
+        payload.action === "submitted" ? "created" : "edited",
+      ),
+    });
+  }
   if (payload.action !== "submitted") return;
   await recordGithubGesture({
     type: prActionForReview(payload.review ?? {}),
@@ -476,6 +529,18 @@ async function handleIssueComment(payload: IssueCommentEvent): Promise<void> {
 
   // Direct: posted, edited or deleted, thread has changed.
   await broadcastGithubPr(repoFullName, number, ["conversation"]);
+
+  // Ticket mirror (MIN-802): a human's words on the PR read on its ticket,
+  // and follow their edits and deletion.
+  const mirrorAction = prCommentMirrorAction(payload.action);
+  if (repoFullName && number != null && mirrorAction) {
+    await syncPrCommentToIssues({
+      provider: "github",
+      repoFullName,
+      prNumber: number,
+      mirror: mirrorFromGithubConversationComment(payload.comment, mirrorAction),
+    });
+  }
 
   // Edit history (MIN-548): GitHub delivers the PREVIOUS body on `edited`
   // (`changes.body.from`), so the snapshot is possible without a second read.
@@ -569,6 +634,17 @@ async function handlePullRequestReviewComment(
     payload.pull_request?.number,
     ["reviewComments"],
   );
+  // Ticket mirror (MIN-802): code comments land with their excerpt, bots
+  // included, and replies thread under their root.
+  const mirrorAction = prCommentMirrorAction(payload.action);
+  if (payload.repository?.full_name && payload.pull_request?.number != null && mirrorAction) {
+    await syncPrCommentToIssues({
+      provider: "github",
+      repoFullName: payload.repository.full_name,
+      prNumber: payload.pull_request.number,
+      mirror: mirrorFromGithubReviewComment(payload.comment, mirrorAction),
+    });
+  }
   if (payload.action !== "created") return;
   await recordGithubGesture({
     type: "pr_code_commented",

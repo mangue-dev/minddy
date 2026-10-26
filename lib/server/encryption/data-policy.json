@@ -1583,7 +1583,8 @@
     ],
     "clear": {
       "operational_configuration": [
-        "author_association"
+        "author_association",
+        "provider"
       ],
       "public_identity": [
         "author_login"
@@ -1591,7 +1592,9 @@
       "routing_identity": [
         "comment_id",
         "issue_id",
-        "remote_comment_id"
+        "pull_request_id",
+        "remote_comment_id",
+        "thread_key"
       ],
       "timestamp": [
         "created_at_remote",
@@ -3178,6 +3181,7 @@
         "issue_id"
       ],
       "timestamp": [
+        "comments_backfilled_at",
         "created_at"
       ]
     }
