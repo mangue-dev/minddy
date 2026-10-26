@@ -9,8 +9,8 @@ import type {
 } from "./types";
 import {
   CancelCircleIcon as Ban,
-  CornerLeftUpIcon,
   HierarchyIcon,
+  HierarchySquare01Icon,
   Link02Icon as Link2,
   OctagonXIcon as OctagonX,
 } from "@hugeicons/core-free-icons";
@@ -49,13 +49,14 @@ export const RELATION_META: Record<IssueRelationType, RelationMeta> = {
 };
 
 /** Parent and sub-issue entries of the same menus (MIN-804): they set
-    `parent_id` rather than storing a relation, and stay neutral in tint. */
+    `parent_id` rather than storing a relation, and stay neutral in tint.
+    `sub_issue_of` reuses the glyph a card shows on a sub-issue. */
 export const HIERARCHY_META: Record<
   HierarchyRelation,
   { icon: AppIcon; color: string }
 > = {
   parent_of: { icon: HierarchyIcon, color: "text-muted-foreground!" },
-  sub_issue_of: { icon: CornerLeftUpIcon, color: "text-muted-foreground!" },
+  sub_issue_of: { icon: HierarchySquare01Icon, color: "text-muted-foreground!" },
 };
 
 /** Priority order (most urgent first): which relation the compact card chip
