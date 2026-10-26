@@ -185,8 +185,11 @@ export function parseThreadKey(
  * the time it was WRITTEN, however late it is imported.
  */
 export function forgeTimestamp(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const iso = value.trim().replace(/^(\d{4}-\d{2}-\d{2}) (\d)/, "$1T$2").replace(/\s*UTC$/i, "Z");
+  // A forge timestamp is short; anything longer is not one.
+  if (typeof value !== "string" || value.length > 64) return null;
+  let iso = value.trim().replace(/^(\d{4}-\d{2}-\d{2}) (\d)/, "$1T$2");
+  // A suffix check, not `\s*UTC$`: that pattern backtracks on long runs of spaces.
+  if (iso.toUpperCase().endsWith("UTC")) iso = `${iso.slice(0, -3).trimEnd()}Z`;
   return normalizeForgeInstant(iso)?.toISOString() ?? null;
 }
 

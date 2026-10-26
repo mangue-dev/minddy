@@ -289,6 +289,7 @@ describe("sidecar keys and forge time", () => {
     expect(forgeTimestamp("2026-10-10 09:00:00 UTC")).toBe("2026-10-10T09:00:00.000Z");
     expect(forgeTimestamp("2026-10-10T09:00:00+02:00")).toBe("2026-10-10T07:00:00.000Z");
     expect(forgeTimestamp("not a date")).toBeNull();
+    expect(forgeTimestamp(`2026-10-10${" ".repeat(50_000)}x`)).toBeNull();
   });
 
   it("recognizes GitLab machine accounts by their fixed naming", () => {
