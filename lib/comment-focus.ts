@@ -127,18 +127,42 @@ export function useCommentComposerFocus(target: string | null, focus: () => void
   }, [target]);
 }
 
+/** The nearest ancestor of `el` that scrolls vertically. */
+function scrollerOf(el: Element): HTMLElement | null {
+  for (let node = el.parentElement; node; node = node.parentElement) {
+    const { overflowY } = getComputedStyle(node);
+    if (overflowY === "auto" || overflowY === "scroll") return node;
+  }
+  return null;
+}
+
 /**
- * Scrolls the thread of the surface holding `from` (a composer) to its latest
- * entry, then brings `from` itself into view. The thread may still be loading
- * when the panel has just opened: it stays pinned to its end while it grows,
- * for a moment, until the user scrolls on their own.
+ * Scrolls the thread of the surface holding `from` (a composer) to its end,
+ * then brings `from` itself into view. The scroller goes to its very bottom,
+ * past the list's own padding, rather than to the last entry's edge. The
+ * thread may still be loading when the panel has just opened, and the area
+ * around it may still change size (the comments prompt button appears in the
+ * footer once the thread is known): it stays pinned to its end for a moment,
+ * until the user scrolls on their own.
  */
 export function revealLatestComment(from: HTMLElement | null): void {
   const surface = from?.closest("[data-comment-surface]");
   if (!from || !surface) return;
+  const resizes = new ResizeObserver(() => reveal());
+  let watched: HTMLElement | null = null;
   const reveal = () => {
     const thread = surface.querySelector("[data-comment-thread]");
-    thread?.lastElementChild?.scrollIntoView({ block: "end" });
+    const scroller = thread ? scrollerOf(thread) : null;
+    if (scroller) {
+      scroller.scrollTop = scroller.scrollHeight;
+      if (watched !== scroller) {
+        resizes.disconnect();
+        resizes.observe(scroller);
+        watched = scroller;
+      }
+    } else {
+      thread?.lastElementChild?.scrollIntoView({ block: "end" });
+    }
     from.scrollIntoView({ block: "nearest" });
   };
   reveal();
@@ -146,6 +170,7 @@ export function revealLatestComment(from: HTMLElement | null): void {
   observer.observe(surface, { childList: true, subtree: true });
   const stop = () => {
     observer.disconnect();
+    resizes.disconnect();
     clearTimeout(timer);
     window.removeEventListener("wheel", stop, true);
     window.removeEventListener("touchmove", stop, true);
