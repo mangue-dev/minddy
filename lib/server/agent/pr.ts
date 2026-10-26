@@ -23,6 +23,11 @@ import {
   type PrTimelineEvent,
   type RawGithubTimelineEvent,
 } from "@/lib/pr-timeline";
+import type {
+  GithubPrCommentSource,
+  GithubPrReviewCommentSource,
+  GithubPrReviewSource,
+} from "@/lib/pr-comment-mirror";
 import type { CommitAuthor } from "@/lib/commit-authors";
 import { reviewFallbackPrefix } from "./review-copy";
 import {
@@ -2105,6 +2110,49 @@ function toReviewComment(c: RawReviewComment): PullRequestReviewComment {
 const REVIEW_COMMENTS_PER_PAGE = 100;
 /** Guardrail: 10 pages = 1000 review comments, far beyond reality. */
 const REVIEW_COMMENTS_MAX_PAGES = 10;
+
+/**
+ * Everything a pull request carries in writing, in the forge's own shapes —
+ * the source of the PR → ticket comment mirror when a PR gets linked to a
+ * ticket after its discussion started (MIN-802). Unlike the readers above it
+ * keeps the author TYPE (the mirror leaves bot conversation out) and the
+ * association, which the mapped shapes drop.
+ *
+ * Paginated with the same guardrail as the review comments: GitHub serves
+ * every list from the oldest entry, and a thread root must exist before its
+ * replies can hang under it.
+ */
+export async function listPullRequestMirrorSources(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+}): Promise<{
+  comments: GithubPrCommentSource[];
+  reviewComments: GithubPrReviewCommentSource[];
+  reviews: GithubPrReviewSource[];
+}> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const base = `${GITHUB_API_BASE}/repos/${owner}/${repo}`;
+  const all = async <T>(path: string): Promise<T[]> => {
+    const items: T[] = [];
+    for (let page = 1; page <= REVIEW_COMMENTS_MAX_PAGES; page++) {
+      const batch = await ghJson<T[]>(
+        `${base}/${path}?per_page=${REVIEW_COMMENTS_PER_PAGE}&page=${page}`,
+        opts.token,
+      );
+      items.push(...batch);
+      if (batch.length < REVIEW_COMMENTS_PER_PAGE) break;
+    }
+    return items;
+  };
+  const [comments, reviewComments, reviews] = await Promise.all([
+    all<GithubPrCommentSource>(`issues/${opts.number}/comments`),
+    all<GithubPrReviewCommentSource>(`pulls/${opts.number}/comments`),
+    all<GithubPrReviewSource>(`pulls/${opts.number}/reviews`),
+  ]);
+  return { comments, reviewComments, reviews };
+}
+
 
 /**
  * PR review comments — those anchored to one line of code.

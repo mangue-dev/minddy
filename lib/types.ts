@@ -161,8 +161,17 @@ export interface Comment {
   api_key_id?: string | null;
   api_key_name?: string | null;
   api_key_agent?: string | null;
-  /** GitHub provenance for a comment synchronized from a linked issue. */
+  /** Forge provenance of a mirrored comment: a GitHub issue comment, or a
+      GitHub/GitLab pull request comment (MIN-802). Named after its first use. */
   github?: {
+    /** Absent from rows written before MIN-802: GitHub. */
+    provider?: "github" | "gitlab";
+    /** The pull request the comment was written on, when it came from one. */
+    pull_request_id?: string | null;
+    /** Namespaced forge key (`lib/pr-comment-mirror`). */
+    remote_comment_id?: string | null;
+    /** Forge thread (review-thread root or GitLab discussion). */
+    thread_key?: string | null;
     author_login: string | null;
     author_association: string | null;
     url: string | null;

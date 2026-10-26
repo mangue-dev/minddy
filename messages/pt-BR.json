@@ -3593,6 +3593,8 @@
     "replyPlaceholder": "Responder…",
     "replyPublicPlaceholder": "Responder no quadro público…",
     "replyGoesPublic": "Vai para o quadro público",
+    "replyOnForgePlaceholder": "Responder no {forge}…",
+    "replyGoesToForge": "Publicado no {forge} com sua conta",
     "edited": "(editado)",
     "commentActions": "Ações do comentário",
     "deleteCommentTitle": "Excluir comentário?",

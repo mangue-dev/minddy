@@ -127,6 +127,8 @@ Em uma descrição, em um comentário ou no diff de uma imagem, clique em uma im
 
 Mencione `@numo` em um comentário do pull request para pedir ao Numo uma revisão somente leitura em uma conversa. Ele lê o pull request e responde; não faz push de commits. Uma menção escrita na plataforma Git só conta quando o autor está vinculado ao proprietário ou a um Membro (não a um leitor) de um projeto que vincula o repositório, e o uso é cobrado do proprietário desse projeto.
 
+O que é escrito em um pull request ou merge request vinculado também aparece nos comentários de cada ticket ao qual ele está vinculado: os comentários da conversa, a mensagem de uma revisão enviada e os comentários sobre o código com o arquivo, a linha e, no GitHub, o trecho a que se referem, com as respostas agrupadas abaixo. Comentários de bots ficam no pull request, exceto os comentários sobre o código. Uma edição atualiza a cópia, e um comentário excluído no GitHub aparece como excluído; o GitLab não informa exclusões. Sempre que um pull request é vinculado a um ticket, manualmente ou porque a branch, o título ou a descrição dele cita o ticket, os comentários que ele já tem são trazidos com a data em que foram escritos, mesmo que seja anterior à criação do ticket. Responda sob um desses comentários para responder no pull request com sua própria conta do Git, como na visualização do pull request; uma conversa sobre o código também mostra **Resolvida** ou **Desatualizado** e oferece **Resolver** ou **Reabrir**. As cópias em si não podem ser editadas no Minddy.
+
 ![Aba Alterações do PR de demonstração aberto, com o diff de greeting e um aviso de autorização do GitHub indisponível.](/documentation/pt-BR/review-pull-requests-workflow.png)
 
 ### Revisão e mesclagem {#decision}

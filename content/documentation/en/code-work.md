@@ -127,6 +127,8 @@ In a description, a comment or the diff of an image, click an image to open it a
 
 Mention `@numo` in a pull request comment to ask Numo for a read-only review in a conversation. It reads the pull request and answers; it does not push commits. A mention written on the forge counts only when its author is linked to the owner or a Member (not a reader) of a project that links the repository, and its usage is charged to that project's owner.
 
+What people write on a linked pull request or merge request also appears in the comments of each issue it is linked to: conversation comments, the message of a submitted review, and comments on the code with the file, line and, on GitHub, the excerpt they refer to, replies grouped under them. Bot comments stay on the pull request, except comments on the code. An edit updates the copy, and a comment deleted on GitHub shows as deleted; GitLab does not report deletions. Whenever a pull request gets linked to an issue, by hand or because its branch, title or description names the issue, the comments it already has are brought in with the date they were written, even when that is before the issue existed. Reply under one of these comments to answer on the pull request with your own Git account, as in the pull request view; a code conversation also shows **Resolved** or **Outdated** and offers **Resolve** or **Reopen**. The copies themselves cannot be edited in Minddy.
+
 ![Changes tab of the open demonstration PR, with the greeting function diff and an unavailable GitHub authorization notice.](/documentation/en/review-pull-requests-workflow.png)
 
 ### Review and merge {#decision}

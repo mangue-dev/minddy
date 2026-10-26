@@ -3593,6 +3593,8 @@
     "replyPlaceholder": "Rispondi…",
     "replyPublicPlaceholder": "Rispondi sulla bacheca pubblica…",
     "replyGoesPublic": "Visibile sulla bacheca pubblica",
+    "replyOnForgePlaceholder": "Rispondi su {forge}…",
+    "replyGoesToForge": "Pubblicato su {forge} con il tuo account",
     "edited": "(modificato)",
     "commentActions": "Azioni del commento",
     "deleteCommentTitle": "Eliminare il commento?",
