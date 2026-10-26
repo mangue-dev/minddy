@@ -41,6 +41,15 @@ import { IssueActionsMenu } from "@/components/issue-context-menu";
 import { useIssueMenuActions } from "@/components/use-issue-menu-actions";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { RelationTargetPicker } from "@/components/relation-target-picker";
+import {
+  HIERARCHY_RELATIONS,
+  hierarchyAvailable,
+  hierarchyCandidates,
+  hierarchyPatches,
+  isHierarchyRelation,
+  type HierarchyRelation,
+  type RelationMenuKind,
+} from "@/lib/issue-hierarchy";
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { useIssuePullRequestQuery } from "@/lib/use-agent-runs";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
@@ -185,7 +194,7 @@ export function IssueSidePanel({
   const buildIssueMenuActions = useIssueMenuActions();
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   const menuPointerRef = useRef<{ x: number; y: number } | null>(null);
-  const [relationType, setRelationType] = useState<IssueRelationType | null>(null);
+  const [relationType, setRelationType] = useState<RelationMenuKind | null>(null);
   useEffect(() => setRelationType(null), [issue?.id, open]);
   // The Relations row's add popover, opened by its button or by R.
   const [relationsOpen, setRelationsOpen] = useState(false);
@@ -747,6 +756,16 @@ export function IssueSidePanel({
     finally { pendingWrites.current.delete(write); }
   };
 
+  // Parent / sub-issue links from the relation menus (MIN-804): the write
+  // lands on whichever end becomes the sub-issue.
+  const setParentLink = (kind: HierarchyRelation, targetId: string) => {
+    if (!issue) return;
+    for (const { issueId, parent_id } of hierarchyPatches(kind, [issue], targetId, allIssues)) {
+      if (issueId === issue.id) void patch({ parent_id });
+      else void onUpdate(issueId, { parent_id }).catch((err) => toast.error((err as Error).message));
+    }
+  };
+
   const commitTitle = () => {
     if (!issue) return;
     const trimmed = title.trim();
@@ -817,6 +836,7 @@ export function IssueSidePanel({
   // objective links remain eligible.
   const relationCandidates = useMemo(() => {
     if (!issue || !relationType) return [];
+    if (isHierarchyRelation(relationType)) return hierarchyCandidates(relationType, [issue], allIssues);
     const linked = new Set(resolvedRelations
       .filter((r) => !r.inheritedObjectiveId && r.relation === relationType && r.otherType !== "objective")
       .map((r) => r.otherId));
@@ -824,7 +844,7 @@ export function IssueSidePanel({
       target.id !== issue.id && !linked.has(target.id));
   }, [issue, relationType, resolvedRelations, allIssues]);
   const relationObjectiveCandidates = useMemo(() => {
-    if (!issue || !relationType) return [];
+    if (!issue || !relationType || isHierarchyRelation(relationType)) return [];
     const linked = new Set(resolvedRelations
       .filter((r) => !r.inheritedObjectiveId && r.relation === relationType && r.otherType === "objective")
       .map((r) => r.otherId));
@@ -852,6 +872,9 @@ export function IssueSidePanel({
     pr: pullRequest,
     hasObjectives: objectives.length > 0,
     onSelectRelation: setRelationType,
+    hierarchyRelations: readOnly
+      ? undefined
+      : HIERARCHY_RELATIONS.filter((kind) => hierarchyAvailable(kind, [issue], allIssues)),
     onOpenField: (field) => {
       if (menuPointerRef.current) openField(field, menuPointerRef.current);
     },
@@ -1191,6 +1214,7 @@ export function IssueSidePanel({
                     onOpenIssue={onOpenIssue}
                     onAddRelation={onAddRelation}
                     onRemoveRelation={onRemoveRelation}
+                    onSetParent={setParentLink}
                     readOnly={readOnly}
                     addOpen={relationsOpen}
                     onAddOpenChange={setRelationsOpen}
@@ -1296,7 +1320,8 @@ export function IssueSidePanel({
             projectKey={projectKey}
             onClose={() => setRelationType(null)}
             onSelect={(targetId, targetType) => {
-              if (relationType) onAddRelation(issue.id, relationType, targetId, { targetType });
+              if (relationType && isHierarchyRelation(relationType)) setParentLink(relationType, targetId);
+              else if (relationType) onAddRelation(issue.id, relationType, targetId, { targetType });
               setRelationType(null);
             }}
           />

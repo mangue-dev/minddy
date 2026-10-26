@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 35,
-  "sourceRevision": 35,
+  "revision": 36,
+  "sourceRevision": 36,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-26",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation",
+    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -116,14 +116,15 @@
       "lib/server/assistant/prompt.ts",
       "components/drafts-tray.tsx",
       "lib/use-all-drafts.ts",
-      "lib/use-held-draft.ts"
+      "lib/use-held-draft.ts",
+      "lib/issue-hierarchy.ts"
     ]
   },
   "review": {
-    "revision": 35,
-    "fact": "agent:/root/min776 (drafts paragraph checked against components/create-issue-dialog.tsx, components/objective-dialog.tsx and lib/use-held-draft.ts: closing keeps the form, reopening resumes it, two minutes after a close it becomes a draft, another context saves it first, and the split menu offers Save as draft; rest of the article unchanged since the MIN-778 review; no figure changed); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min776 (en drafts paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 36,
+    "fact": "agent:claude-code (MIN-804 sub-issues paragraph checked against lib/issue-hierarchy.ts, components/issue-card.tsx, components/relations-section.tsx and the enforce_one_level_subissues trigger: R and the right-click Relations entry offer Parent of / Sub-issue of only where the one-level rule allows, re-parenting moves the issue, a selection uses Sub-issue of; no figure changed); agent:/root/min776 (drafts paragraph checked against components/create-issue-dialog.tsx, components/objective-dialog.tsx and lib/use-held-draft.ts: closing keeps the form, reopening resumes it, two minutes after a close it becomes a draft, another context saves it first, and the split menu offers Save as draft; rest of the article unchanged since the MIN-778 review; no figure changed); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:claude-code (en MIN-804 sub-issues paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:/root/min776 (en drafts paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-26"
   },
   "related": [
     "feedback",
@@ -168,7 +169,7 @@
       "src": "/documentation/en/new-issue.png",
       "alt": "Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-19 button.",
       "caption": "Describe the expected result, then choose the useful properties before creating the issue.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -184,7 +185,7 @@
       "src": "/documentation/en/triage-incoming.png",
       "alt": "Incoming demonstration issue AUR-19 with its report, properties and duplicate, Decline and Accept controls.",
       "caption": "Read the incoming report before accepting it, declining it or linking a duplicate.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -201,7 +202,7 @@
       "src": "/documentation/en/issue-statuses.png",
       "alt": "Eight issue statuses in the picker, with backlog currently selected.",
       "caption": "The check marks the current status. Choose the status that reflects the work’s actual state.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -217,7 +218,7 @@
       "src": "/documentation/en/work-resources.png",
       "alt": "Add-link dialog with an example contact URL.",
       "caption": "Review the destination before adding a resource. This example link has not been submitted.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -233,7 +234,7 @@
       "src": "/documentation/en/work-dependencies.png",
       "alt": "Search for a blocker by issue identifier.",
       "caption": "Choose the relation direction before selecting its endpoint. The picker is shown without submitting a relation.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -249,7 +250,7 @@
       "src": "/documentation/en/work-sub-issues.png",
       "alt": "Sub-issue creation field in a demonstration parent issue.",
       "caption": "The inline field creates a child under this parent; a child keeps its own status and discussion.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -265,7 +266,7 @@
       "src": "/documentation/en/work-implementation-plan.png",
       "alt": "Demonstration plan showing two of six work tasks complete.",
       "caption": "The saved demonstration plan separates completed, active and pending steps. Its progress does not prove the fictional code task was executed.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -281,7 +282,7 @@
       "src": "/documentation/en/issue-date-recurrence.png",
       "alt": "Due-date picker in recurring mode with a weekly Sunday preview and optional time.",
       "caption": "Recurring mode previews the weekly cadence. Confirm the first due date before creating the issue.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -297,7 +298,7 @@
       "src": "/documentation/en/import-issues-preview-workflow.png",
       "alt": "CSV preview with two localized demonstration rows and detected column mappings.",
       "caption": "CSV preview with two localized demonstration rows and detected column mappings. No import was submitted; optional AI planning was blocked for the capture.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -314,7 +315,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -486,6 +487,8 @@ Indexing and relation decisions use AI. They count toward the **Automations** sh
 ## Split an issue into sub-issues {#sub-issues}
 
 Open the parent issue and use its sub-issue controls to create smaller pieces of work. Give each child a distinct outcome. Inspect its project, properties and parent identifier after creation; a hierarchy should make the task easier to track, not replace the description of what each child must achieve.
+
+To attach issues that already exist, press R on a hovered card or in the issue panel, or open **Relations** from a card's right-click menu. **Parent of** lists the issues that can become a sub-issue of this one; **Sub-issue of** lists the top-level issues that can become its parent. Each list only offers what the one-level rule allows: a sub-issue has no **Parent of** entry, and an issue that already has sub-issues has no **Sub-issue of** entry. Choosing an issue that already has another parent moves it under the new one. From a selection of cards, **Sub-issue of** places every eligible selected issue under the chosen parent.
 
 The hierarchy permits one level: a parent must be a top-level issue in the same project, and a sub-issue cannot itself have children. When no objective is explicitly chosen during creation, the child inherits the parent’s objective; inspect the resulting properties rather than assuming that later parent edits propagate.
 
