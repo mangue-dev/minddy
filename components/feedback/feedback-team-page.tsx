@@ -821,9 +821,19 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   // reset the selection to zero on the next rendering — and `?post=` had already been
   // erased from the address, so nothing could restore it. The link
   // fell on the first return in the list.
+  //
+  // Each link settles ONCE (MIN-814): a retained app tab keeps `?post=` in its
+  // route as the published selection, and re-running the widening on every
+  // filter change made a lens that excludes the open post impossible to pick.
+  const settledPostRef = useRef<{ projectId: string; postId: string } | null>(null);
   useEffect(() => {
-    if (!postParam) return;
+    if (!postParam) {
+      settledPostRef.current = null;
+      return;
+    }
+    if (settledPostRef.current?.projectId === projectId && settledPostRef.current.postId === postParam) return;
     if (secondarySelectionId(posts, postParam) !== postParam) return;
+    settledPostRef.current = { projectId, postId: postParam };
     let nextProperties = properties;
     if (
       deepLinkNeedsAllFilter(
