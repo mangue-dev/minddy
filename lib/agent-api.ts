@@ -154,6 +154,8 @@ export type CheckState = "pending" | "success" | "failure" | "neutral";
 export interface PullRequestCheck {
   name: string;
   state: CheckState;
+  /** Pending but not started yet (waiting for a runner or a resource). */
+  queued?: boolean;
   url: string | null;
   /** The integration that produced the check (“GitHub Actions”, “Vercel”…),
       when the check name does not already have it. */
