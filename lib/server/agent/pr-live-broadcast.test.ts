@@ -14,21 +14,28 @@ const { broadcastPrChanged, broadcastPrChangedByNumber } = await import("./pr-li
 beforeEach(() => vi.clearAllMocks());
 
 describe("pull request live broadcast lifetime (MIN-817)", () => {
-  it("hands the send to the response lifetime instead of detaching it", async () => {
+  it("starts the send at once and hands it to the response lifetime", async () => {
+    let release!: () => void;
+    h.broadcastToTopic.mockImplementationOnce(() => new Promise<void>((resolve) => { release = resolve; }));
     broadcastPrChanged("pr-1", ["pr"]);
-    // Registered with `after`, so the platform keeps the invocation alive.
-    expect(h.after).toHaveBeenCalledOnce();
-    expect(h.broadcastToTopic).not.toHaveBeenCalled();
-    await h.after.mock.calls[0]![0]();
+    // Started now, so a streamed response does not hold it back…
     expect(h.broadcastToTopic).toHaveBeenCalledWith("pull-request:pr-1", "changed",
       { parts: ["pr"], at: expect.any(Number) });
+    // …and registered with `after`, which keeps the invocation alive until it lands.
+    expect(h.after).toHaveBeenCalledOnce();
+    let settled = false;
+    const kept = h.after.mock.calls[0]![0]().then(() => { settled = true; });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    release();
+    await kept;
+    expect(settled).toBe(true);
   });
 
   it("schedules the send of a webhook resolved by number before returning", async () => {
     h.findPullRequestByNumber.mockResolvedValue({ id: "pr-2" });
     await broadcastPrChangedByNumber({ provider: "github", repoFullName: "acme/app", number: 7, parts: ["pr"] });
     expect(h.after).toHaveBeenCalledOnce();
-    await h.after.mock.calls[0]![0]();
     expect(h.broadcastToTopic).toHaveBeenCalledWith("pull-request:pr-2", "changed",
       expect.objectContaining({ parts: ["pr"] }));
   });

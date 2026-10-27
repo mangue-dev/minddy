@@ -220,7 +220,9 @@ function PrRow({
   const showReadiness = shouldShowPullRequestReadiness(pr.pr_state) &&
     readiness?.state !== "merged" && readiness?.state !== "closed";
   // Hover intent warms the detail beyond the background cohort, so the
-  // click paints from cache. One read at a time, skipped while quota-paused.
+  // click paints from cache. It only fills a MISSING cache — the click
+  // revalidates anyway — so sweeping the list never re-reads the forge for
+  // prepared rows. One read at a time, skipped while quota-paused.
   const queryClient = useQueryClient();
   const intent = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const cancelIntent = () => { clearTimeout(intent.current); intent.current = undefined; };
@@ -231,6 +233,7 @@ function PrRow({
       type="button"
       onPointerEnter={() => {
         cancelIntent();
+        if (queryClient.getQueryData(["pull-request", pr.prId]) !== undefined) return;
         intent.current = setTimeout(() => { void prefetchPullRequestDetail(queryClient, pr.prId); }, ROW_INTENT_MS);
       }}
       onPointerLeave={cancelIntent}
@@ -819,7 +822,10 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
    * caches are watched directly — the shell's background reads refresh PRs
    * whose detail is not mounted.
    */
-  const reconcileStates = useCallback(() => {
+  // The latest inputs, read by one cache subscription for the page's life:
+  // `readinessByPrId` is a fresh object on most renders.
+  const reconcileRef = useRef(() => {});
+  reconcileRef.current = () => {
     const changes = pullRequestStatesToReconcile(pullRequests, {
       detail: (prId) => {
         const state = queryClient.getQueryState<AgentRunPrResponse>(["pull-request", prId]);
@@ -829,18 +835,18 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
       notBefore: (prId) => localWriteAtRef.current.get(prId) ?? 0,
     });
     for (const { prId, state } of changes) applyConfirmedState(prId, state);
-  }, [applyConfirmedState, pullRequests, queryClient, readinessByPrId]);
+  };
   useEffect(() => {
-    reconcileStates();
-    return queryClient.getQueryCache().subscribe((event) => {
-      // Forge reads only: `setQueryData` (this page's own writes, and the
-      // reconciliation itself) is `manual` and must not re-enter.
-      if (event.type === "updated" && event.action.type === "success" && !event.action.manual &&
-          event.query.queryKey[0] === "pull-request") {
-        queueMicrotask(reconcileStates);
-      }
-    });
-  }, [queryClient, reconcileStates]);
+    reconcileRef.current();
+  }, [pullRequests, readinessByPrId]);
+  useEffect(() => queryClient.getQueryCache().subscribe((event) => {
+    // Forge reads only: `setQueryData` (this page's own writes, and the
+    // reconciliation itself) is `manual` and must not re-enter.
+    if (event.type === "updated" && event.action.type === "success" && !event.action.manual &&
+        event.query.queryKey[0] === "pull-request") {
+      queueMicrotask(() => reconcileRef.current());
+    }
+  }), [queryClient]);
 
   const fmtDay = (at: string): string =>
     format.dateTime(new Date(at), { day: "numeric", month: "short" });
@@ -882,8 +888,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
           </div>
         ) : readFailed ? (
           <PrListReadFailed error={active.readError} onRetry={() => void active.refetch()} />
-        ) : groups.length === 0 || projects.length === 0 || repoCount === 0 || !anyPr
-          || (query.trim() && visible.length === 0) ? (
+        ) : groups.length === 0 || !anyPr || (query.trim() && visible.length === 0) ? (
           <EmptyScene
             size="compact"
             icon={GitPullRequestIcon}

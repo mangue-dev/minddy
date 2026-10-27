@@ -25,17 +25,19 @@ import { findPullRequestByNumber } from "./pull-requests";
  * Everything is best-effort: a failed broadcast should never cause a webhook
  * or a user gesture to fail. The residual polling and the refetch when
  * returning to the tab remain the net. Best-effort is not detached, though:
- * the send runs through `afterOrNow`, which keeps the invocation alive until
- * it completes. A bare `void` let Vercel freeze the function right after the
- * webhook's 200, before Supabase was ever called — the lost live updates
- * of MIN-817.
+ * the send starts at once and its promise is handed to `afterOrNow`, which
+ * keeps the invocation alive until it completes. A bare `void` let Vercel
+ * freeze the function right after the webhook's 200, before Supabase was
+ * ever called — the lost live updates of MIN-817. Starting it now, rather
+ * than inside `after`, keeps a streamed response (a Numo turn) from holding
+ * the broadcast back until the stream ends.
  */
 
 /** “These parts of this PR have moved. » */
 export function broadcastPrChanged(prId: string, parts: PrLivePart[]): void {
   if (parts.length === 0) return;
-  const at = Date.now();
-  afterOrNow(() => broadcastToTopic(pullRequestTopic(prId), "changed", { parts, at }));
+  const sending = broadcastToTopic(pullRequestTopic(prId), "changed", { parts, at: Date.now() });
+  afterOrNow(() => sending);
 }
 
 /**
@@ -44,7 +46,7 @@ export function broadcastPrChanged(prId: string, parts: PrLivePart[]): void {
  * no one can look at it, there is no one to warn.
  *
  * `await` on resolution, `afterOrNow` on sending: reading is what gives
- * the id, the send completes after the response. A caller that does not
+ * the id, the send may finish after the response. A caller that does not
  * await this either schedules it through `afterOrNow` itself.
  */
 export async function broadcastPrChangedByNumber(opts: {
