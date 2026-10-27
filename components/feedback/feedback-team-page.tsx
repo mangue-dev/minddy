@@ -17,7 +17,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppTabRouteBoundary, useAppTabActive, useAppTabRoute } from "@/lib/app-tab-route-context";
 import Link from "@/components/app-link";
-import { useLocale, useNow, useTranslations, useFormatter } from "next-intl";
+import { useLocale, useTranslations, useFormatter } from "next-intl";
+import { useTimeAgo } from "@/lib/use-live-now";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -614,8 +615,7 @@ export function FeedbackTeamPage({ browse }: { browse?: SidebarBrowseTarget } = 
 function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const t = useTranslations("FeedbackBoard");
   const tCommon = useTranslations("Common");
-  const format = useFormatter();
-  const now = useNow({ updateInterval: 60_000 });
+  const timeAgo = useTimeAgo();
   // Mounts with the page: warm the deferred editor chunk once painted, so a
   // team reply never waits on tiptap (components/editor/document-editor-lazy.tsx).
   useIdleDocumentEditorPreload();
@@ -1017,7 +1017,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
                     post={post}
                     selected={selectedId === post.id}
                     boardEnabled={boardEnabled}
-                    dateLabel={format.relativeTime(new Date(post.created_at), now)}
+                    dateLabel={timeAgo(post.created_at) ?? ""}
                     categoryMap={categoryMap}
                     memberSeeds={memberSeeds}
                     teamLanguage={teamLanguage}

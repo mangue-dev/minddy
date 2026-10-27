@@ -8,7 +8,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon, ArrowLeft01Icon, ArrowRight01Icon, Delete02Icon, MoreHorizontalIcon, PauseCircleIcon, Edit04Icon, PlayIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "@/components/app-link";
-import { useFormatter, useLocale, useNow, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
+import { useLiveNow } from "@/lib/use-live-now";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -768,7 +769,7 @@ function RoutinePrompt({
  * tomorrow at 9 a.m. is “tomorrow,” not “in 11 hours.” What changes from one
  * transition to the other, it's the name of the day, not a number of hours.
  *
- * `useNow` lives HERE rather than in the shutter: a clock that beats to the minute
+ * `useLiveNow` lives HERE rather than in the shutter: a clock that beats to the minute
  * should only re-render the line that reads it.
  *
  * A run late by a FULL day — the cron is dead — falls back on the date
@@ -777,7 +778,7 @@ function RoutinePrompt({
 function NextRunRow({ at }: { at: string }) {
   const t = useTranslations("Routines");
   const format = useFormatter();
-  const now = useNow({ updateInterval: 60_000 });
+  const now = useLiveNow();
 
   const date = new Date(at);
   const exact = format.dateTime(date, {

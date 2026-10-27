@@ -6,7 +6,8 @@ import { AtIcon, Delete02Icon, GitMergeIcon, GitPullRequestIcon, InboxIcon, Mail
 import { useMemo, useState, type ReactNode } from "react";
 import Link from "@/components/app-link";
 import { useAppRouter } from "@/lib/use-app-router";
-import { useFormatter, useNow, useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
+import { useTimeAgo } from "@/lib/use-live-now";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
   AlertDialog,
@@ -169,7 +170,7 @@ export default function InboxContent({ onNavigate }: { onNavigate: () => void })
   const tProjects = useTranslations("Projects");
   const tTimeline = useTranslations("Timeline");
   const format = useFormatter();
-  const now = useNow({ updateInterval: 60_000 });
+  const timeAgo = useTimeAgo();
   const contentFade = useScrollFade<HTMLDivElement>();
 
   const labels = {
@@ -497,10 +498,7 @@ export default function InboxContent({ onNavigate }: { onNavigate: () => void })
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span className="hidden shrink-0 text-xs tabular-nums text-muted-foreground transition-opacity sm:block group-hover:opacity-0 group-focus-within:opacity-0">
-                                  {format.relativeTime(
-                                    new Date(notification.created_at),
-                                    now,
-                                  )}
+                                  {timeAgo(notification.created_at)}
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent side="top">

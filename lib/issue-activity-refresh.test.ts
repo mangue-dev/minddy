@@ -4,7 +4,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, expect, it, vi } from "vitest";
 import { IssueActivity } from "@/components/issue-timeline";
 
-vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key, useFormatter: () => ({}) }));
+vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key, useFormatter: () => ({}), useNow: () => new Date() }));
 vi.mock("@/lib/use-mention-sources", () => ({ useDescriptionMentions: () => ({}) }));
 vi.mock("@/components/user-avatar", () => ({ UserAvatar: () => null }));
 vi.mock("@/components/markdown", () => ({ Markdown: () => null }));

@@ -4,7 +4,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, ArrowRight01Icon, ArrowTurnDownIcon, CheckIcon, Copy01Icon, SmilePlusIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useFormatter, useNow, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
+import { useTimeAgo } from "@/lib/use-live-now";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -365,8 +366,7 @@ function CommentBody({
   /** Absent when the forge has not been able to read them: nothing is then displayed. */
   reactions?: CommentReactions;
 }) {
-  const format = useFormatter();
-  const now = useNow();
+  const timeAgo = useTimeAgo();
   const list = reactions?.byComment.get(comment.id) ?? [];
   return (
     <div className="group flex flex-col gap-1">
@@ -380,7 +380,7 @@ function CommentBody({
           className="text-sm font-medium text-foreground"
         />
         <span className="shrink-0 text-xs text-muted-foreground/80">
-          {format.relativeTime(new Date(comment.created_at), now)}
+          {timeAgo(comment.created_at)}
         </span>
       </div>
       <div data-testid="review-comment-body" className="pl-7">

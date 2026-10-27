@@ -8,7 +8,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AuthorNames, AuthorStack } from "@/components/git/author-stack";
-import { useForgeNow } from "@/lib/use-forge-now";
+import { useLiveNow } from "@/lib/use-live-now";
 import { normalizeForgeInstant } from "@/lib/forge-time";
 import { PrCommitDiffSheet } from "@/components/pull-requests/pr-commit-diff-sheet";
 import { ShaButton } from "@/components/pull-requests/pr-sha-button";
@@ -122,7 +122,7 @@ function CommitRow({
 }) {
   const t = useTranslations("PullRequests");
   const format = useFormatter();
-  const now = useForgeNow();
+  const now = useLiveNow();
   const title = useMemo(() => commitTitle(commit.message), [commit.message]);
 
   // ALL authors, principal first (MIN-159): a co-signed commit has

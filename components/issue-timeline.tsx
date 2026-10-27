@@ -10,6 +10,7 @@ import { revealLatestComment, useCommentComposerFocus } from "@/lib/comment-focu
 import dynamic from "next/dynamic";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations, useFormatter } from "next-intl";
+import { useLiveNow } from "@/lib/use-live-now";
 import { Button } from "@/components/ui/button";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
@@ -176,8 +177,8 @@ type TimelineT = ReturnType<typeof useTranslations<"Timeline">>;
 export type ActivityEntity = "issue" | "objective" | "feedback" | "page";
 
 /** Compact localized relative time, e.g. "Il y a 7min" / "7min ago". */
-function timeAgo(iso: string, t: TimelineT): string {
-  const diff = Date.now() - new Date(iso).getTime();
+function timeAgo(iso: string, now: Date, t: TimelineT): string {
+  const diff = now.getTime() - new Date(iso).getTime();
   const s = Math.max(0, Math.round(diff / 1000));
   if (s < 60) return t("now");
   const m = Math.round(s / 60);
@@ -320,6 +321,7 @@ function EventRow({
 }) {
   const t = useTranslations("Timeline");
   const tr = useEventTranslators();
+  const now = useLiveNow();
   const viaSmartAssign = !!item.event.via_smart_assign;
   // Smart-fill (MIN-260): same rules as Smart Assign — functionality
   // takes the place of an actor. Tested BEFORE `via_assistant` and company for the same
@@ -431,7 +433,7 @@ function EventRow({
         <span className="text-muted-foreground">{summary}</span>
       </OneLine>
       <span className="shrink-0 text-xs text-muted-foreground/80">
-        {timeAgo(item.event.created_at, t)}
+        {timeAgo(item.event.created_at, now, t)}
       </span>
     </li>
   );
@@ -479,6 +481,7 @@ export function CommentBlock({
   const t = useTranslations("Timeline");
   const tCommon = useTranslations("Common");
   const tAssistant = useTranslations("Assistant");
+  const now = useLiveNow();
   const tToolCall = useTranslations("ToolCall");
   const tConnection = useTranslations("ServerUnavailable");
   // A comment's text cites its own attachments, and only those (MIN-742).
@@ -606,7 +609,7 @@ export function CommentBlock({
           </Tooltip>
         )}
         <span className="shrink-0 text-xs text-muted-foreground/80">
-          {timeAgo(comment.created_at, t)}
+          {timeAgo(comment.created_at, now, t)}
         </span>
         {(comment.optimisticEdit || comment.delivery?.state === "sending") && <Spinner className="size-3" aria-label={tCommon("loading")} />}
         {edited && !viaNumo && !visitor && (
