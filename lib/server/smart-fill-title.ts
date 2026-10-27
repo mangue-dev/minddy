@@ -54,6 +54,10 @@ export function cleanIssueTitle(raw: string): string | null {
   return (lastSpace > 0 ? cut.slice(0, lastSpace) : cut).replace(/[.…;:,]+$/, "");
 }
 
+/** How much of the description the fallback reads. */
+const MAX_FALLBACK_LINES = 50;
+const MAX_FALLBACK_LINE_CHARS = 1_000;
+
 /**
  * The title when no model answers: the description's first line of text,
  * stripped of its Markdown. `null` when the description holds no text at all
@@ -61,11 +65,15 @@ export function cleanIssueTitle(raw: string): string | null {
  */
 export function fallbackIssueTitle(description: string | null | undefined): string | null {
   if (!description) return null;
-  for (const line of description.split("\n")) {
+  // The description is the author's text, up to 64 KB: only its first lines
+  // are read, each cut short, and the link patterns below are bounded, so a
+  // crafted description cannot make these replacements slow.
+  for (const line of description.split("\n", MAX_FALLBACK_LINES)) {
     const text = line
+      .slice(0, MAX_FALLBACK_LINE_CHARS)
       // Images say nothing a title can use; links and mentions keep their label.
-      .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
-      .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+      .replace(/!\[[^\]\n]{0,200}\]\([^)\n]{0,500}\)/g, "")
+      .replace(/\[([^\]\n]{0,200})\]\([^)\n]{0,500}\)/g, "$1")
       // Block markers: headings, quotes, list bullets, numbers and checkboxes.
       .replace(/^\s*(?:#{1,6}\s+|>\s*|[-*+]\s+(?:\[[ xX~-]\]\s+)?|\d+[.)]\s+)/, "")
       .replace(/[*_~`]+/g, "")

@@ -58,6 +58,13 @@ describe("fallbackIssueTitle", () => {
     expect(fallbackIssueTitle("- [ ] Rename the `sync` job\n")).toBe("Rename the sync job");
   });
 
+  it("stays fast on a description crafted against its link patterns", () => {
+    const started = performance.now();
+    expect(fallbackIssueTitle("![".repeat(30_000))).toBe("![".repeat(40));
+    fallbackIssueTitle("![](".repeat(20_000));
+    expect(performance.now() - started).toBeLessThan(1_000);
+  });
+
   it("gives no title to a description without text", () => {
     expect(fallbackIssueTitle(null)).toBeNull();
     expect(fallbackIssueTitle("   \n![only](https://x/y.png)\n")).toBeNull();
