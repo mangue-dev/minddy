@@ -293,5 +293,9 @@
   "20270109200081_issue_comment_follow_ups.sql": "2d4721c3b0db03fe4a013a2904667b863e6d3327ace80e2e15b12db32f3d4dbb",
   "20270109200082_smart_fill_title.sql": "4ecc589be068587803ab830cc7e9f9d5f5176a13e63d5345b63f36e0f33497b3",
   "20270109200083_numo_history_last_answer_at.sql": "f8f6cca3fc59f79ce82453908271539cbca15322aed5c855f9b46722bd7cfb13",
-  "20270109200084_issue_comment_follow_up_threads.sql": "96ee610eb342c42ab21ea291f7edef19ba1f02830fd4c902dace0080ebf5823e"
+  "20270109200084_issue_comment_follow_up_threads.sql": "96ee610eb342c42ab21ea291f7edef19ba1f02830fd4c902dace0080ebf5823e",
+  "20270109200085_auth_check_plan_cache.sql": "a11031ac3387556bda766b7d37634ec2c3aea4670ae52fbf727a764afb7faf7d",
+  "20270109200086_definer_execute_grants.sql": "8939906e1316330caf99db8ec4495c734a623c10132177523b5baaad2e10f50b",
+  "20270109200087_function_search_path.sql": "cace871fd86ca878208dd905f9990ba7648eb1b1db8a4096d14f9e5953cd707b",
+  "20270109200088_project_scope_policy_reads.sql": "442a81f8f63b399d5c92dd5d4a06ed8bd5c0f8c7dd2cdcedcc3c9fc57ebdb0a7"
 }

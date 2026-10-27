@@ -49,7 +49,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": [
@@ -68,16 +68,18 @@
       "functionReferences": []
     },
     "topic_uuid(text)": {
-      "sha256": "a94ad6c8559f8bb90c1fed94c299f222540cfe462ad8c9b37979ca3aa307a67d",
+      "sha256": "e02c6cd89926fbb107d55afa60d47603869942a4306f978bea2859c002581dbb",
       "securityDefiner": false,
-      "configuration": null,
+      "configuration": [
+        "search_path=\"\""
+      ],
       "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
     },
     "enforce_mfa_aal()": {
-      "sha256": "2bc71f1322cbef3798a558a33b679723f9afc6b82d96214a64c3b065de1f6a91",
+      "sha256": "e1735ee13b255ebc10f41671bf8d53d99599a5db749b29a80610074eaf51f1d4",
       "securityDefiner": false,
       "configuration": [
         "search_path=\"\""
@@ -140,7 +142,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -196,7 +198,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -301,12 +303,12 @@
       "functionReferences": []
     },
     "is_project_owner(uuid)": {
-      "sha256": "83ca74e697331766ed2162cb105264096d0cc2efea89c094d64e63c7699bfed5",
+      "sha256": "f232cc7a8656a53f68bf06066c98a1b1c0136c40d56371dac6253b907674bb62",
       "securityDefiner": true,
       "configuration": [
         "search_path=public"
       ],
-      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
       "relations": [
         "projects"
       ],
@@ -356,7 +358,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
       "relations": [
         "plan_storage_quotas"
       ],
@@ -440,7 +442,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -451,18 +453,18 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
     },
     "can_write_project(uuid)": {
-      "sha256": "f962fb48946727564c84ea39167d5f6ba1a4eec1b89bd6a828a42c9abce4fb52",
+      "sha256": "0d9ee22919f482783e9499c840d70810f32d33287abc87ef8e244fee26f474e7",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}",
       "relations": [
         "project_members"
       ],
@@ -554,12 +556,12 @@
       "functionReferences": []
     },
     "is_project_member(uuid)": {
-      "sha256": "744b0e224a9eb37e71200f371c45eb881d54a7bcdfe022b423f1a63d93a81a6c",
+      "sha256": "b474883dc5b9bb91b09d85c7d58f3b2e9fc8b86362452e0c4a7193e67b96e5e1",
       "securityDefiner": true,
       "configuration": [
         "search_path=public"
       ],
-      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
       "relations": [
         "project_members"
       ],
@@ -623,13 +625,29 @@
         "rotate_project_realtime_generation"
       ]
     },
+    "accessible_project_ids()": {
+      "sha256": "6c2a6abe914215ee0d0842d99c8ca1e50c2bf01c969832eac186ee188bf6cbdc",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}",
+      "relations": [
+        "projects",
+        "project_members"
+      ],
+      "protectedRelations": [
+        "projects"
+      ],
+      "functionReferences": []
+    },
     "broadcast_event_scoped()": {
       "sha256": "727bd9c40c302a523a829f811c3aec06924239cfdb7114401ace304132141f60",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "issue_events"
       ],
@@ -644,7 +662,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "issues"
       ],
@@ -659,7 +677,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "project_members"
       ],
@@ -667,12 +685,12 @@
       "functionReferences": []
     },
     "can_access_project(uuid)": {
-      "sha256": "df2baa01971c2b916c0ea066e679df65eaaf462e9f2e69aba9bdf90b1080c478",
+      "sha256": "18e4f0671a315ef48c25dde6a69ede845f2792b628b28d8a383cead9570b3e6c",
       "securityDefiner": true,
       "configuration": [
         "search_path=public"
       ],
-      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": [
@@ -882,12 +900,12 @@
       "functionReferences": []
     },
     "can_comment_project(uuid)": {
-      "sha256": "35652c2cdbe2a4793f51fefa3c631370e366d5f94b17de22fd558355089e4570",
+      "sha256": "49ec0242028efa29f7bfa2bb656a94d1c142f65bc9ef4231f6d7c90edfe0dade",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}",
       "relations": [
         "project_members"
       ],
@@ -1036,7 +1054,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "feedback_posts"
       ],
@@ -1051,7 +1069,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -1335,7 +1353,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "issues",
         "objectives",
@@ -1518,7 +1536,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "project_git_links"
       ],
@@ -1556,7 +1574,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
       "relations": [
         "pull_requests",
         "project_git_links"
@@ -1766,7 +1784,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -1842,7 +1860,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -1868,7 +1886,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -2224,7 +2242,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": [
@@ -2252,7 +2270,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
       "relations": [
         "projects"
       ],
@@ -2392,7 +2410,7 @@
       "configuration": [
         "search_path=public"
       ],
-      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "feedback_posts"
       ],
@@ -2498,9 +2516,11 @@
       "functionReferences": []
     },
     "search_pages(text,uuid,integer)": {
-      "sha256": "ee33eb43942adf6159d621a3684a601ee70dbfd41d5f1835ea60af6d174186ed",
+      "sha256": "4e8a63c431ad4eb6462871e955d22eff76c12f7da6f7032aaa6e3327cd332ab5",
       "securityDefiner": false,
-      "configuration": null,
+      "configuration": [
+        "search_path=\"\""
+      ],
       "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
       "relations": [
         "pages"
@@ -3048,7 +3068,7 @@
       "functionReferences": []
     },
     "is_auth_session_active(uuid,uuid)": {
-      "sha256": "30233c7aa85fb1d651981860f536a149cf257e0986b56c038232ddfb26062932",
+      "sha256": "849ff33ddb8e0982c052b87be0b39678fc60d20269921c499ed8b7782646671d",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\"",
@@ -4191,7 +4211,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "issues",
         "objectives",
@@ -4321,7 +4341,7 @@
       "functionReferences": []
     },
     "mfa_aal_ok_for_user(uuid,uuid,text,jsonb)": {
-      "sha256": "f9afb7ba7fb265c152e09aa6d3accd393fd38f3e695d6f3d8f21c383d247e24c",
+      "sha256": "54abdb091a3020c6fa75391cf90cd2f3d0ae767b0dfa32eda5b0701582201651",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -4849,12 +4869,12 @@
       "functionReferences": []
     },
     "can_comment_on_parent(uuid,uuid,uuid,boolean)": {
-      "sha256": "32cfd62151f1b17e7e932ca3eb5bd3002881a7e1d38f49adef1ab1be0f2aac8e",
+      "sha256": "29f454b0fd9e7a649ba802091907f77c838da9973a507f67cb115b928f0a994c",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}",
       "relations": [
         "issues",
         "objectives",
