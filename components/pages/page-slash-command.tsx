@@ -215,7 +215,7 @@ export const PAGE_SLASH_MENU_ATTR = "data-page-slash-menu";
 const EDGE = 8;
 const GAP = 6;
 
-function renderSlashMenu() {
+export function renderSlashMenu() {
   let renderer: ReactRenderer<SlashMenuRef, SlashProps> | null = null;
   let menuEl: HTMLElement | null = null;
   let caretRect: (() => DOMRect | null) | null = null;

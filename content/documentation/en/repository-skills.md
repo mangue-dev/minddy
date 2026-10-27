@@ -79,7 +79,7 @@ Commit and push these files to the default branch of the linked GitHub or GitLab
 
 ## Select and inspect {#selection}
 
-Use `/`, `$` or the `+` menu and preview the instructions before sending. Select up to five skills; green badges show the selection. `$` lists repository skills only, while `/` also includes other commands.
+Use `/`, `$` or the `+` menu and preview the instructions before sending. Select up to five skills; green badges show the selection. `$` lists repository skills only, while `/` also includes other commands. In a routine's instruction, type `$` to insert a skill; `/` opens the editor's block menu.
 
 The selection applies to that user turn. Skills selected in a routine apply to every occurrence. They are repository files, not global account installations, and cannot override system or safety instructions. To create or revise one, edit the repository files yourself or with your own coding agent, then push the change before selecting the new version.
 

@@ -1,16 +1,12 @@
 "use client";
-import { RoutineTriggerFields, RoutineTriggerSummary } from "./routine-trigger-fields";
-import type { RoutineTrigger } from "@/lib/routine-triggers";
 
 
-import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Alert01Icon, ArrowLeft01Icon, ArrowRight01Icon, Delete02Icon, MoreHorizontalIcon, PauseCircleIcon, Edit04Icon, PlayIcon } from "@hugeicons/core-free-icons";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Alert01Icon, ArrowLeft01Icon, ArrowRight01Icon, Delete02Icon, MoreHorizontalIcon, PlayIcon } from "@hugeicons/core-free-icons";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "@/components/app-link";
-import { useFormatter, useLocale, useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { useLiveNow } from "@/lib/use-live-now";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -20,20 +16,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { AssistantShell } from "@/components/assistant/assistant-shell";
 import { AppContentHeader, APP_CONTENT_HEADER_LEADING_INSET } from "@/components/app-content-header";
 import { EmptyScene } from "@/components/empty-scene";
-import { Markdown } from "@/components/markdown";
 import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
-import { RoutinePromptField } from "@/components/routines/routine-prompt-field";
-import { SettingsRow } from "@/components/settings/settings-ui";
-import { RoutineScheduleFields } from "@/components/routines/routine-schedule-fields";
-import { SpendCapCombobox } from "@/components/routines/spend-cap-combobox";
-import { DEFAULT_MAX_SPEND_PERCENT } from "@/lib/routine-budget";
+import { RoutineInstruction, RoutineSettings, RoutineStateControl } from "@/components/routines/routine-detail-sections";
 import {
   updateRoutineApi,
   type Routine,
@@ -42,16 +31,8 @@ import { useRoutineRunsQuery } from "@/lib/use-routines-query";
 import { RoutineTrashDialog, useRoutineActions } from "@/components/routines/use-routine-actions";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import { useScrollFade } from "@/lib/use-scroll-fade";
-import type { AssistantMention } from "@/lib/assistant-types";
-import { useDescriptionMentions } from "@/lib/use-mention-sources";
-import { useMembersQuery } from "@/lib/use-members-query";
-import { useRepositorySkills } from "@/lib/use-repository-skills";
 import { calendarDaysBetween } from "@/lib/due-date";
-import {
-  describeSchedule,
-  weekdayName,
-  type RoutineSchedule,
-} from "@/lib/routine-schedule";
+import type { RoutineSchedule } from "@/lib/routine-schedule";
 import type { RoutineRunSummary } from "@/lib/routines-api";
 import type { MessageKey } from "@/lib/i18n-keys";
 import { formatRoutineRunDuration } from "@/lib/routine-run-metrics";
@@ -143,44 +124,21 @@ export function RoutineDetail({
    * what she is and what she has done, not reread a particular thread.
    */
   const [openRunId, setOpenRunId] = useState<string | null>(null);
-  /**
-   * The DRAFT edition, or `null` when reading. He lives HERE and not in the
-   * form because “Save” left the bottom of the form to
-   * the header, where it takes the place of the switch: the button and the fields
-   * are no longer in the same component, and this is the pane that holds them all
-   * both.
-   *
-   * Its presence IS the mode: no more boolean `editing` to agree with
-   * it.
-   */
-  const [draft, setDraft] = useState<RoutineDraft | null>(null);
-  const draftSource = useRef<Routine | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [busy, setBusy] = useState(false);
   // The fade from the bottom of the list, like everywhere where content overflows.
   const listFade = useScrollFade<HTMLDivElement>();
 
-  const editing = draft !== null && isOwner;
-  const gesturePending = busy || actions.isPending(routine.id);
+  // The instruction, which the sidebar's "Edit" brings into view and focuses.
+  const instructionRef = useRef<HTMLDivElement>(null);
+  const gesturePending = actions.isPending(routine.id);
 
   // Activity reconnects effects on return; only a different routine resets local work.
   const previousRoutineId = useRef(routine.id);
   useEffect(() => {
     if (previousRoutineId.current === routine.id) return;
     previousRoutineId.current = routine.id;
-    draftSource.current = null;
     setOpenRunId(null);
-    setDraft(null);
   }, [routine.id]);
-  // A clean edit form follows accepted remote fields; typing keeps its own draft.
-  useEffect(() => {
-    const source = draftSource.current;
-    if (!draft || !source || source === routine || source.id !== routine.id) return;
-    if (JSON.stringify(draft) === JSON.stringify(draftFrom(source))) {
-      draftSource.current = routine;
-      setDraft(draftFrom(routine));
-    }
-  }, [routine]); // eslint-disable-line react-hooks/exhaustive-deps
   const openRun: RoutineRunSummary | null =
     runs.find((r) => r.id === openRunId) ?? null;
   const openRoutineRun = (run: RoutineRunSummary) => {
@@ -193,9 +151,10 @@ export function RoutineDetail({
   useEffect(() => {
     if (!intent) return;
     if (intent === "edit") {
+      // The instruction is written in place: "Edit" brings it into view.
       if (isOwner) {
-        draftSource.current = routine;
-        setDraft(draftFrom(routine));
+        instructionRef.current?.scrollIntoView({ block: "nearest" });
+        instructionRef.current?.querySelector<HTMLElement>('[contenteditable="true"]')?.focus();
       }
       onIntentConsumed?.();
       return;
@@ -213,44 +172,16 @@ export function RoutineDetail({
    * (`next_run_at` null), and announcing one would be a lie on screen.
    */
   const nextRunAtIso = routine.enabled ? routine.next_run_at : null;
+  const schedule = useMemo(() => routineSchedule(routine), [routine]);
 
-  const patch = async (fields: Parameters<typeof updateRoutineApi>[1]) => {
-    setBusy(true);
+  // Saved in place, section by section: nothing is grayed while it writes.
+  const save = async (fields: Parameters<typeof updateRoutineApi>[1]) => {
     try {
       await updateRoutineApi(routine.id, fields);
       onChanged();
     } catch (err) {
       toast.error((err as Error).message);
-    } finally {
-      setBusy(false);
     }
-  };
-
-  /**
-   * Save the draft. DAY fields only exist for their
-   * cadence: sending them both would cause cadence to be refused on the server side.
-   */
-  const saveDraft = async () => {
-    if (!draft || !draft.prompt.trim()) return;
-    await patch({
-      prompt: draft.prompt.trim(),
-      promptMentions: draft.promptMentions,
-      maxSpendPercent: draft.spendCap,
-      trigger: draft.trigger,
-      ...(draft.trigger.type === "schedule" ? {
-      frequency: draft.schedule.frequency,
-      hour: draft.schedule.hour,
-      minute: draft.schedule.minute,
-      weekdays:
-        draft.schedule.frequency === "weekly" ? draft.schedule.weekdays : [],
-      daysOfMonth:
-        draft.schedule.frequency === "monthly"
-          ? draft.schedule.daysOfMonth
-          : [],
-      } : {}),
-      timezone: draft.schedule.timezone,
-    });
-    setDraft(null);
   };
 
   const runNow = () => actions.runNow(routine);
@@ -328,73 +259,20 @@ export function RoutineDetail({
           {routine.title}
         </span>
 
-        {/* THE STATE, alongside the gesture that changes it — and a badge, not a gloss in
-            end of cadence line: “this routine no longer runs” is the
-            first thing to see when you arrive, not the last to read. Nothing
-            when it turns: the absence of alert IS the normal state, and a
-            “active” badge on each routine would no longer distinguish anything.
-            Outside the owner block: a member cannot restart it, but
-            il doit savoir qu'elle dort. */}
-        {!routine.enabled ? (
-          <Badge
-            variant="secondary"
-            icon={<HugeiconsIcon icon={PauseCircleIcon} />}
-            // The amber product warning badges (the “Private” one
-            // return): a state which is not an error, but which we do not want
-            // discover by wondering why nothing happened.
-            className="shrink-0 bg-amber-500/10 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400"
-          >
-            {t("paused")}
-          </Badge>
-        ) : null}
+        {/* THE STATE and the gesture that changes it are one control: a badge
+            that opens Active / Paused, like a pull request's state. A reader
+            only sees it when the routine sleeps. No `disabled` during its own
+            writing: it is optimistic. */}
+        <RoutineStateControl
+          enabled={routine.enabled}
+          canChange={isOwner}
+          disabled={gesturePending || agentCapabilitiesLoading}
+          canResume={routineSchedulingConfigured}
+          onChange={toggleEnabled}
+        />
 
-        {/* DURING EDITING, “Cancel/Save” TAKES THE PLACE of
-            the switch and the menu — they are not added to it.
-            It's not just a question of space: a switch that writes
-            immediately, next to a form waiting to be saved,
-            these are two notions of “applied” on the same line. And “Throw
-            now" would start the routine as it is SAVED,
-            that is to say not the one we are currently writing. */}
-        {!isOwner ? null : editing ? (
+        {!isOwner ? null : (
           <div className="flex shrink-0 items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setDraft(null)}
-              disabled={busy}
-            >
-              {tCommon("cancel")}
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => void saveDraft()}
-              disabled={busy || !draft?.prompt.trim()}
-            >
-              {tCommon("save")}
-            </Button>
-          </div>
-        ) : (
-          <div className="flex shrink-0 items-center gap-2">
-            {/* The switch remains OUT: this is the state of the routine — it
-                is running, or it is on pause —, not a one-off gesture that we are going to
-                search in a menu. */}
-            <label className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
-              {t("enabledLabel")}
-              {/* No `disabled` during its own writing: it is
-                  optimistic, there is nothing to expect. `busy` only grays it
-                  for other gestures (a launch, a deletion in
-                  course), where the state could change on hand. */}
-              <Switch
-                checked={routine.enabled}
-                disabled={
-                  gesturePending ||
-                  agentCapabilitiesLoading ||
-                  (!routine.enabled &&
-                    !routineSchedulingConfigured)
-                }
-                onCheckedChange={toggleEnabled}
-              />
-            </label>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -413,10 +291,6 @@ export function RoutineDetail({
                   <HugeiconsIcon icon={PlayIcon} className="size-4" />
                   {t("runNow")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => { draftSource.current = routine; setDraft(draftFrom(routine)); }}>
-                  <HugeiconsIcon icon={Edit04Icon} className="size-4" />
-                  {tCommon("edit")}
-                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   variant="destructive"
@@ -431,28 +305,15 @@ export function RoutineDetail({
         )}
       </AppContentHeader>
 
-      {editing && draft ? (
-        <RoutineEditor
-          draft={draft}
-          onChange={setDraft}
-          projectId={routine.project_id}
-          busy={busy}
-        />
-      ) : (
-        <>
-          {/* ── The cadence, then WHAT IT DOES ────────────────────────
-              Instruction under cadence: without it, a routine was not
-              than a title of three words and an hour, all crammed at the top of
-              the screen — and “what she does” was precisely what we had come
-              check. */}
-          <div className="flex shrink-0 flex-col gap-1 px-4 pb-2">
-            <RoutineTriggerSummary trigger={routine.trigger} projectId={routine.project_id} />
-            {(!routine.trigger || routine.trigger.type === "schedule") ? <RoutineSummary schedule={routineSchedule(routine)} /> : <p className="text-xs text-muted-foreground">{t(routine.waiting_count ? "waitingConditions" : "listensForEvents")}</p>}
-
-            <p className="text-xs text-muted-foreground">
-              {t("executionEnvironment")}
-            </p>
-
+      {/* One column, as wide as an objective's page: what the routine does,
+          its settings, then what it has done. The whole page scrolls. */}
+      <div
+        ref={listFade.ref}
+        {...listFade.scrollProps}
+        className="min-h-0 flex-1 overflow-y-auto px-4 py-6 app-desktop:px-6"
+      >
+        <div className="mx-auto flex max-w-3xl flex-col gap-6">
+          <div className="flex flex-col gap-1 empty:hidden">
             {!agentCapabilitiesLoading &&
             !routineSchedulingConfigured ? (
               <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
@@ -480,42 +341,39 @@ export function RoutineDetail({
               </p>
             ) : null}
 
-            {/* The instruction, rendered and folded (see `RoutinePrompt`). */}
-            <RoutinePrompt
-              projectId={routine.project_id}
-              prompt={routine.prompt}
-              promptMentions={routine.prompt_mentions ?? []}
-            />
           </div>
-        </>
-      )}
+
+          <div ref={instructionRef}>
+            <RoutineInstruction key={routine.id} routine={routine} isOwner={isOwner} onSave={save} />
+          </div>
+
+          <RoutineSettings
+            key={routine.id}
+            routine={routine}
+            isOwner={isOwner}
+            schedule={schedule}
+            onSave={save}
+          />
 
       {/* The run history is a real table: date, measured work time, share of
           monthly usage, and outcome. The next occurrence stays immediately above
           it because it is a schedule, not a run with metrics. */}
-      {editing ? null : (
-        <div className="flex min-h-0 flex-1 flex-col">
-          <div className="shrink-0 px-4 pt-2 pb-1.5">
-            <h3 className="text-xs font-medium text-muted-foreground">
-              {t("runs")}
-            </h3>
-          </div>
+          <section className="flex flex-col gap-2">
+          <h3 className="text-xs font-medium text-muted-foreground">
+            {t("runs")}
+          </h3>
 
           {loading ? (
-            <div className="flex flex-col gap-2 px-4 py-2">
+            <div className="flex flex-col gap-2">
               {[0, 1].map((i) => (
                 <Skeleton key={i} className="h-10 rounded-md" />
               ))}
             </div>
           ) : (
-            <div
-              ref={listFade.ref}
-              {...listFade.scrollProps}
-              className="min-h-0 flex-1 overflow-y-auto"
-            >
+            <div>
               {/* Nothing is framed when there is neither a future nor a past run. */}
               {nextRunAtIso || runs.length > 0 ? (
-                <div className="border-t border-border">
+                <div className="overflow-hidden rounded-xl border border-border">
                   {nextRunAtIso ? <NextRunRow at={nextRunAtIso} /> : null}
                   {runs.length > 0 ? (
                     <div className="overflow-x-auto">
@@ -526,7 +384,7 @@ export function RoutineDetail({
                           <col className="w-[16%]" />
                           <col className="w-[30%]" />
                         </colgroup>
-                        <thead className="border-y border-border bg-muted/30 text-xs font-medium text-muted-foreground">
+                        <thead className="border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground">
                           <tr>
                             <th scope="col" className="px-4 py-2 font-medium">
                               {t("runDate")}
@@ -620,15 +478,15 @@ export function RoutineDetail({
                   turned" calls for "then spin it", not a detour through
                   the menu. Reserved for the owner, like the rest. He's staying
                   under the line of the next passage when it is there: both
-                  say different things — which did not happen, and which
-                  qu'on peut faire tout de suite sans attendre. */}
+                  say different things — what has not happened yet, and what
+                  can be done right away without waiting. */}
               {runs.length === 0 ? (
                 <div className="px-4 py-8">
                   <EmptyScene icon={PlayIcon} title={t("noRunsYet")} size="compact">
                     {isOwner ? (
                       <Button
                         size="sm"
-                        disabled={busy}
+                        disabled={gesturePending}
                         onClick={() => void runNow()}
                       >
                         <HugeiconsIcon icon={PlayIcon} className="size-4" />
@@ -640,8 +498,9 @@ export function RoutineDetail({
               ) : null}
             </div>
           )}
+          </section>
         </div>
-      )}
+      </div>
 
       <RoutineTrashDialog
         routine={routine}
@@ -649,103 +508,6 @@ export function RoutineDetail({
         onOpenChange={setConfirmingDelete}
         onConfirm={() => void remove()}
       />
-    </div>
-  );
-}
-
-/**
- * THE INSTRUCTION of the routine: rendered in markdown, folded, and unfolded.
- *
- * It IS markdown at the source — titles, lists, file paths in
- * `code` — and displaying it raw read `##` and `**` instead of
- * the structure they carry. It also commonly makes several thousand
- * signs: it is a specification, not a sentence. Hence two decisions which
- * vont ensemble :
- *
- * - **folded by default.** We open a routine to see what it has
- * product ; automatically unfolded, the instruction would push the list of
- * executions off screen, each time, for a text that we have written
- * yourself.
- * - **`line-clamp` can no longer be used.** It counts lines IN a block, and
- *    one Markdown render produces several (headings, paragraphs, lists): it
- * wouldn't cut anything anymore. It is therefore a HEIGHT which limits, and the fading of
- * `useScrollFade` which says that the text continues — on a clipping box,
- * its `edges.end` is exactly this signal, already measured, already damped.
- *
- * Unfolded, it still doesn't push anything: it parades IN its box, and the
- * list of executions remains on the screen below it.
- */
-function RoutinePrompt({
-  projectId,
-  prompt,
-  promptMentions,
-}: {
-  projectId: string;
-  prompt: string;
-  promptMentions: AssistantMention[];
-}) {
-  const t = useTranslations("Routines");
-  const { members } = useMembersQuery(projectId, true);
-  const mentionSupport = useDescriptionMentions(projectId, members);
-  const repositorySkills = useRepositorySkills(
-    projectId,
-    "cloud",
-    "routine-display",
-    null,
-  );
-  const [expanded, setExpanded] = useState(false);
-  /* A fade longer than a scroll edge (2 rem by default):
-     here it does not indicate a border, it turns off a cut end of text. */
-  const fade = useScrollFade<HTMLDivElement>("y", "3rem");
-  /**
-   * “See more” only exists if there is truly more to see: an instruction
-   * of two lines does not wear a button which would reveal nothing.
-   *
-   * The observation FREEZES once noted. Unfolded, `edges.end` responds to another
-   * question — “is there any left to scroll?” » — and falls back false as soon as we touch
-   * the bottom: the back button would disappear under the finger, at the precise moment
-   * where we want to fold.
-   */
-  const [truncated, setTruncated] = useState(false);
-  useEffect(() => {
-    if (!expanded && fade.edges.end) setTruncated(true);
-  }, [expanded, fade.edges.end]);
-
-  return (
-    <div className="mt-1 flex flex-col items-start gap-1">
-      <div
-        ref={fade.ref}
-        {...fade.scrollProps}
-        className={cn(
-          "w-full",
-          // Folded: the height of the six lines that `line-clamp-6` gave.
-          expanded
-            ? "max-h-[40vh] overflow-y-auto"
-            : "max-h-36 overflow-hidden",
-        )}
-      >
-        <Markdown
-          className="text-muted-foreground"
-          mentionScan={mentionSupport.scan}
-          mentionLinks={mentionSupport.links}
-          resolvedMentions={promptMentions}
-          skills={repositorySkills.skills}
-        >
-          {prompt}
-        </Markdown>
-      </div>
-      {truncated ? (
-        <Button
-          variant="link"
-          size="sm"
-          // Room around the label for its hover background, pulled back by
-          // the same amount so the text stays aligned with the prompt above.
-          className="-ml-1.5 h-auto px-1.5 py-0.5 text-xs"
-          onClick={() => setExpanded((e) => !e)}
-        >
-          {expanded ? t("promptShowLess") : t("promptShowMore")}
-        </Button>
-      ) : null}
     </div>
   );
 }
@@ -869,198 +631,4 @@ function routineErrorLabel(
     default:
       return t("lastError_launchFailed" as "lastError_quota");
   }
-}
-
-/**
- * HOW the routine is set, in one line: its cadence, and the model that
- * executes it. The two settings that decide what costs and what is worth
- * each execution, together because they answer the same question.
- *
- * The date of the next passage is not here: it lives in the list of
- * executions, in its chronological place. The three stood on this line, and
- * “Every day at 6 p.m. · next execution August 7” read like a
- * only information when there are two — a rule, and a date which
- * suit.
- *
- * In READING it describes the recorded routine, under the header. In EDITION it
- * describes the DRAFT, under the fields that make it: it is the sentence that
- * the settings produce, and reading it just below them avoids having to
- * translate “Monday, 9, 0, Europe/Paris” at the head. A FIXED model on routine
- * does not follow the default of the account, and that is why it reads instead
- * than guessing; without an explicit model, the badge says so instead of
- * disappear — “which one is spinning?” » arises especially in this case.
- */
-function RoutineSummary({
-  schedule,
-}: {
-  schedule: RoutineSchedule;
-}) {
-  const t = useTranslations("Routines");
-  const locale = useLocale();
-
-  // A cadence being edited may be temporarily invalid (no day
-  // checked): `describeSchedule` throws, and a summary line is not the place
-  // where to say it - the fields already indicate it.
-  let cadence: string | null = null;
-  try {
-    cadence = describeSchedule(schedule, (key, values) => t(key, values), {
-      locale,
-      weekdayLabel: (d) => weekdayName(d, locale),
-    });
-  } catch {
-    cadence = null;
-  }
-
-  return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-      {cadence ? (
-        <p className="text-xs text-muted-foreground">{cadence}</p>
-      ) : null}
-    </div>
-  );
-}
-
-/** The editing draft: everything that a routine exposes to adjustment. */
-interface RoutineDraft {
-  trigger: RoutineTrigger;
-  prompt: string;
-  promptMentions: AssistantMention[];
-  /** Share of the monthly budget that ONE passage can spend (1–100). */
-  spendCap: number;
-  schedule: RoutineSchedule;
-}
-
-/** The draft as a recorded routine gives it. */
-function draftFrom(routine: Routine): RoutineDraft {
-  return {
-    trigger: routine.trigger ?? { type: "schedule" },
-    prompt: routine.prompt,
-    promptMentions: routine.prompt_mentions ?? [],
-    // The routines placed before the ceiling do not already carry any in the cache
-    // loaded: the fault, the very one that the base gave them.
-    spendCap: routine.max_spend_percent ?? DEFAULT_MAX_SPEND_PERCENT,
-    schedule: routineSchedule(routine),
-  };
-}
-
-/**
- * Editing a routine: everything that decides what it does and what it costs —
- * its instruction, spending cap and cadence.
- *
- * No “name” field: the title is written by minddy from
- * the instruction, and rewrites as soon as it changes. No wizard replayed either —
- * we don't go through four screens to move an hour.
- *
- * No buttons either: “Cancel” and “Save” are in the header,
- * in place of the switch, where they remain visible whatever the
- * length of the instruction. This form only holds fields, and
- * this is the part that owns the draft.
- */
-function RoutineEditor({
-  draft,
-  onChange,
-  projectId,
-  busy,
-}: {
-  draft: RoutineDraft;
-  onChange: (draft: RoutineDraft) => void;
-  /** Anchoring the branch listing: a routine clones the project repository. */
-  projectId: string;
-  busy: boolean;
-}) {
-  const t = useTranslations("Routines");
-
-  const set = <K extends keyof RoutineDraft>(key: K, value: RoutineDraft[K]) =>
-    onChange({ ...draft, [key]: value });
-
-  return (
-    /**
-     * The form SCROLLS, and that's the only way to reach its bottom.
-     *
-     * It was `shrink-0` in a parent `overflow-hidden`: an instruction
-     * long pushed everything that followed her off the screen, without any means
-     * to catch up with him. `flex-1` + `min-h-0` gives it the remaining space, and
-     * `overflow-y-auto` makes it searchable.
-     */
-    <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 py-3">
-      {/* WHAT SHE DOES — top of mind, because it’s routine: the rest doesn’t
-          just say with what and when. */}
-      <EditorSection title={t("promptLabel")}>
-        {/* The SAME field as the `job` step of the wizard — it's literally the
-            same component: dictation, input ceiling and limited height. */}
-        <RoutinePromptField
-          autoFocus={allowInputAutoFocus()}
-          projectId={projectId}
-          baseBranch={null}
-          value={draft.prompt}
-          mentions={draft.promptMentions}
-          onChange={(value, mentions) =>
-            onChange({ ...draft, prompt: value, promptMentions: mentions })
-          }
-          disabled={busy}
-        />
-      </EditorSection>
-
-      {/* Worker model and reasoning come from Account settings. This section
-          only contains routine-specific execution settings. */}
-      <EditorSection title={t("sectionAgent")}>
-        <div className="divide-y divide-border/60">
-          <p className="py-3 text-xs leading-relaxed text-muted-foreground">
-            {t("workerModelHint")}
-          </p>
-          {/* WHAT A PASS CAN EXPEND. This is where we come to lower it
-              after seeing what routine really costs — hence its place at
-              side of the model, the other setting which decides the note. */}
-          <SettingsRow
-            label={t("spendCapLabel")}
-            help={t("spendCapHelp")}
-            control={
-              <SpendCapCombobox
-                value={draft.spendCap}
-                onChange={(value) => set("spendCap", value)}
-                disabled={busy}
-              />
-            }
-          />
-        </div>
-      </EditorSection>
-
-      {/* WHEN it starts. */}
-      <EditorSection title={t("triggerLabel")}>
-        <RoutineTriggerFields projectId={projectId} value={draft.trigger} onChange={value => set("trigger", value)} />
-        {draft.trigger.type === "schedule" ? <>
-        <RoutineScheduleFields
-          value={draft.schedule}
-          onChange={(value) => set("schedule", value)}
-        />
-        {/* What all the fields above give, in plain English. Under them, and not
-            at the bottom of the screen: it is their result which is read again before
-            d'enregistrer. */}
-        <RoutineSummary schedule={draft.schedule} />
-        </> : null}
-      </EditorSection>
-    </div>
-  );
-}
-
-/**
- * A section of the form: a title, and what it covers.
- *
- * The title takes up that of the “Executions” of the reading mode (`text-xs`,
- * `font-medium`, attenuated) — it is already the “section” level of this pane, and in
- * inventing a second one would have given two hierarchies in the same panel.
- */
-function EditorSection({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="flex flex-col gap-2">
-      <h3 className="text-xs font-medium text-muted-foreground">{title}</h3>
-      {children}
-    </section>
-  );
 }

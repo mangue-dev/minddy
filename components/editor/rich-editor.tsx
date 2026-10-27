@@ -380,9 +380,7 @@ export function RichEditor({
   const slashItems = useMemo(
     () => {
       const items = [
-        // A prompt has no block to insert: its "/" offers the surface's actions
-        // (repository skills) alone.
-        ...(blocks === "prompt" ? [] : pageSlashItems(t, { set: blocks, uploads: uploadKinds })),
+        ...pageSlashItems(t, { set: blocks, uploads: uploadKinds }),
         ...(slashActions ?? []),
       ];
       if (!slashFirst?.length) return items;

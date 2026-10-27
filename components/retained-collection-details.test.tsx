@@ -8,7 +8,7 @@ import { ObjectiveDetail } from "@/components/objective-detail";
 import type { Routine } from "@/lib/routines-api";
 import type { Objective } from "@/lib/types";
 
-const state = vi.hoisted(() => ({ reset: vi.fn(), toast: vi.fn(), push: vi.fn(),
+const state = vi.hoisted(() => ({ reset: vi.fn(), toast: vi.fn(), push: vi.fn(), updateRoutine: vi.fn(),
   runs: [] as { id: string; kind: string; numo_conversation_id?: string; created_at: string; status: string }[] }));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key, useLocale: () => "en", useNow: () => new Date("2026-10-13T00:00:00Z"), useFormatter: () => ({ dateTime: () => "October 13", number: (value: number) => String(value) }) }));
 vi.mock("@hugeicons/react", () => ({ HugeiconsIcon: () => null }));
@@ -66,9 +66,13 @@ vi.mock("@/components/markdown", () => ({ Markdown: ({ children }: { children: R
 vi.mock("@/components/routines/routine-prompt-field", () => ({ RoutinePromptField: ({ value, onChange }: { value: string; onChange: (text: string, mentions: []) => void }) => <textarea data-routine-draft value={value} onChange={(event) => onChange(event.target.value, [])} /> }));
 vi.mock("@/components/routines/routine-trigger-fields", () => ({ RoutineTriggerFields: () => null, RoutineTriggerSummary: () => null }));
 vi.mock("@/components/routines/routine-schedule-fields", () => ({ RoutineScheduleFields: () => null }));
-vi.mock("@/components/routines/spend-cap-combobox", () => ({ SpendCapCombobox: () => null }));
+vi.mock("@/components/routines/spend-cap-select", () => ({ SpendCapSelect: () => null }));
 vi.mock("@/components/settings/settings-ui", () => ({ SettingsRow: () => null }));
 vi.mock("@/components/assistant/assistant-shell", () => ({ AssistantShell: ({ embeddedConversationId }: { embeddedConversationId: string }) => <p data-open-run={embeddedConversationId}>{embeddedConversationId}</p> }));
+vi.mock("@/lib/routines-api", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  updateRoutineApi: (...args: unknown[]) => state.updateRoutine(...args),
+}));
 vi.mock("@/lib/use-agent-models-query", () => ({ useAgentModelsQuery: () => ({ routineSchedulingConfigured: true, loading: false }) }));
 vi.mock("@/lib/use-routines-query", () => ({ useRoutineRunsQuery: () => ({ runs: state.runs, loading: false }), routineRunsQueryKey: (id: string) => ["routines", id, "runs"], routinesQueryKey: () => ["routines"], patchRoutineInCache: vi.fn() }));
 vi.mock("@/lib/use-scroll-fade", () => ({ useScrollFade: () => ({ ref: null, scrollProps: {}, edges: { start: false, end: false } }) }));
@@ -144,19 +148,32 @@ async function type(field: HTMLTextAreaElement, value: string) {
 const button = (label: string) => [...host.querySelectorAll("button")].find((element) => element.textContent === label)!;
 
 it("preserves an unsaved routine draft through Activity returns and resets it only for a different routine", async () => {
-  await renderRoutine(); await act(() => button("edit").click());
+  // The instruction is written in place: no Edit gesture opens it.
+  await renderRoutine();
   const field = host.querySelector<HTMLTextAreaElement>("[data-routine-draft]")!; await type(field, "Unsent instruction");
   await renderRoutine(false); routine = { ...routine, title: "Remote renamed routine", prompt: "Remote instruction" }; await renderRoutine();
   expect(host.querySelector("[data-routine-draft]")).toBe(field); expect(field.value).toBe("Unsent instruction");
   expect(host.textContent).toContain("Remote renamed routine");
-  routine = { ...routine, id: "different" }; await renderRoutine(); expect(host.querySelector("[data-routine-draft]")).toBeNull();
-  expect(host.textContent).toContain("Remote instruction");
+  routine = { ...routine, id: "different" }; await renderRoutine();
+  expect(host.querySelector<HTMLTextAreaElement>("[data-routine-draft]")!.value).toBe("Remote instruction");
 });
 
-it("adopts accepted remote routine fields in an edit form that has not been changed", async () => {
-  await renderRoutine(); await act(() => button("edit").click());
+it("adopts accepted remote routine fields in an instruction that has not been changed", async () => {
+  await renderRoutine();
   routine = { ...routine, prompt: "Accepted remote instruction" }; await renderRoutine(false); await renderRoutine();
   expect(host.querySelector<HTMLTextAreaElement>("[data-routine-draft]")!.value).toBe("Accepted remote instruction");
+});
+
+it("saves the instruction written in place when it loses the focus, never an emptied one", async () => {
+  state.updateRoutine.mockReset().mockResolvedValue(undefined);
+  await renderRoutine();
+  const field = host.querySelector<HTMLTextAreaElement>("[data-routine-draft]")!;
+  await type(field, "   ");
+  await act(async () => { field.dispatchEvent(new FocusEvent("focusout", { bubbles: true })); });
+  expect(state.updateRoutine).not.toHaveBeenCalled();
+  await type(field, "Check the backlog every morning");
+  await act(async () => { field.dispatchEvent(new FocusEvent("focusout", { bubbles: true })); });
+  expect(state.updateRoutine).toHaveBeenCalledWith("routine", { prompt: "Check the backlog every morning", promptMentions: [] });
 });
 
 it("keeps an opened run on retained returns while preserving owner-only routine editing", async () => {
