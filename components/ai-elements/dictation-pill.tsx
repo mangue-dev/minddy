@@ -17,6 +17,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
+import { useContentPaneAnchor } from "@/lib/use-content-pane-anchor";
 import { cn } from "@/lib/utils";
 import { DictationWave } from "./dictation-wave";
 import type { DictationRecorder } from "./use-dictation-recorder";
@@ -85,6 +86,10 @@ export function DictationPill({ recorder }: { recorder: DictationRecorder }) {
   const receipt = done && status === "idle";
   // Keeps the closed dialog mounted after a first take, so it can animate out.
   const [used, setUsed] = useState(open);
+  // Above the bottom bar, at the selection pill's height and centered on the
+  // content pane like it, kept through the exit; the class keeps the
+  // window-bottom fallback.
+  const anchor = useContentPaneAnchor(used && !mobile, open);
   if (open && !used) setUsed(true);
   const recording = status === "recording";
   const processing = status === "processing";
@@ -240,6 +245,7 @@ export function DictationPill({ recorder }: { recorder: DictationRecorder }) {
       <DialogContent
         data-dictation-pill=""
         aria-describedby={undefined}
+        style={anchor}
         showCloseButton={false}
         onOpenAutoFocus={(event) => {
           // ✓ takes focus, so Enter validates and Tab reaches ✕.
