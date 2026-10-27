@@ -147,7 +147,9 @@ export const InlineSelect = forwardRef<HTMLButtonElement | HTMLInputElement, Inl
             </span>
           )}
           <span className={styles.inlineSelectValue}>
-            {isLoading ? (loadingText || placeholder || "Loading...") : (displayValue || placeholder)}
+            {isLoading
+              ? (loadingText || placeholder || "Loading...")
+              : (selectedOption?.labelNode ?? (displayValue || placeholder))}
           </span>
           {selectedOption?.description && !isLoading && (
             <span className={styles.inlineSelectDescription}>

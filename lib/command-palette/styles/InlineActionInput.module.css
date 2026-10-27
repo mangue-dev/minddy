@@ -432,6 +432,23 @@
   color: color-mix(in srgb, var(--cp-accent-fg) 80%, transparent);
 }
 
+/* Checkmark on the item's current value */
+.inlineOptionCheck {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  margin-left: auto;
+  color: var(--cp-muted);
+}
+
+.inlineOptionDescription + .inlineOptionCheck {
+  margin-left: var(--cp-space-2);
+}
+
+.inlineOptionActive .inlineOptionCheck {
+  color: inherit;
+}
+
 /* Select button icon prefix (for selected option icon) */
 .inlineSelectIconPrefix {
   display: flex;

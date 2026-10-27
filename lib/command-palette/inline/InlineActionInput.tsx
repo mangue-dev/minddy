@@ -25,7 +25,7 @@ import {
   useState,
 } from "react";
 import { usePaletteConfig } from "../config";
-import { ChevronLeftIcon } from "../icons";
+import { CheckIcon, ChevronLeftIcon } from "../icons";
 import { matchesSearch } from "../search/engine";
 import styles from "../styles/InlineActionInput.module.css";
 import { InlineSelect, type SelectOption } from "./InlineSelect";
@@ -503,9 +503,12 @@ export function InlineActionInput({
                         {option.icon}
                       </span>
                     )}
-                    <span className={styles.inlineOptionLabel}>{option.label}</span>
+                    <span className={styles.inlineOptionLabel}>{option.labelNode ?? option.label}</span>
                     {option.description && (
                       <span className={styles.inlineOptionDescription}>{option.description}</span>
+                    )}
+                    {option.selected && (
+                      <CheckIcon className={styles.inlineOptionCheck} aria-label={t("form.current")} />
                     )}
                   </button>
                 </li>

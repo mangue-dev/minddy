@@ -76,13 +76,18 @@ export interface ActionExecutionContext {
 /** Option of a select field. */
 export interface FormSelectOption {
   value: string;
+  /** Plain name: the search term, and the text shown without `labelNode`. */
   label: string;
+  /** Rendered in place of the label, e.g. an objective's colored pill. */
+  labelNode?: React.ReactNode;
   /** Color swatch displayed before the label. */
   color?: string;
   /** Icon displayed before the label. */
   icon?: React.ReactNode;
   /** Dimmed text displayed after the label. */
   description?: string;
+  /** The item's current value: a checkmark at the end of the row. */
+  selected?: boolean;
   disabled?: boolean;
 }
 

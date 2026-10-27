@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, CommandIcon } from "@hugeicons/core-free-icons";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "framer-motion";
@@ -25,6 +25,8 @@ import { bulkPullRequestLinks } from "@/lib/bulk-pull-request-links";
 import { useUndoHistory } from "@/lib/undo/undo-context";
 import { useLinkIssuesToPullRequest, useUnlinkIssuesFromPullRequests } from "@/lib/use-link-issues-to-pull-request";
 import type { IssueUpdateInput, Member, Objective } from "@/lib/types";
+import { ProjectsContext } from "@/lib/projects-context-store";
+import { smartAssignFillsEmptyAssignee } from "@/lib/smart-assign-config";
 import {
   Tooltip,
   TooltipContent,
@@ -87,8 +89,9 @@ export function BulkIssueActions({
   cycle?: BulkCycleActions;
   objectives?: Objective[];
   onLink?: () => void;
-  /** The selected tickets, for the pull request links. Absent: none offered. */
-  issues?: ReadonlyArray<{ id: string; project_id: string }>;
+  /** The selected tickets, for the pull request links and Smart Assign.
+      Absent: no pull request link offered. */
+  issues?: ReadonlyArray<{ id: string; project_id: string; status?: string }>;
   /** The screen from which the selection starts, for analytics (“board” default). */
   surface?: string;
 }) {
@@ -120,6 +123,18 @@ export function BulkIssueActions({
       return true;
     });
   }, [members]);
+
+  // The palette's clear option names Smart Assign only when it fills every
+  // selected ticket's empty assignee — the card's rule, applied to each.
+  const projects = useContext(ProjectsContext)?.projects;
+  const smartAssign =
+    !!issues?.length &&
+    issues.every((issue) =>
+      smartAssignFillsEmptyAssignee(
+        projects?.find((project) => project.id === issue.project_id)?.smart_assign_enabled,
+        issue.status
+      )
+    );
 
   const prStore = useIssuePrStore();
   const queryClient = useQueryClient();
@@ -167,6 +182,7 @@ export function BulkIssueActions({
       count,
       surface,
       members: uniqueMembers,
+      smartAssign,
       onUpdate: (patch) => linked(() => onUpdate(patch)),
       onDelete: requestDelete,
       onAskNumo,
