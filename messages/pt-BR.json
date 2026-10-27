@@ -1902,7 +1902,7 @@
     "smartFillOffHint": "Desativado para este ticket: você mesmo define suas propriedades e relações. Ative novamente para deixar o preenchimento inteligente fazer isso.",
     "smartFillOnHint": "Ativado: o preenchimento inteligente lê o ticket, define prioridade, esforço, categorias e objetivo, e depois o vincula a tickets relacionados quando ele é salvo. Desative para defini-los você mesmo.",
     "smartFillOnTitleHint": "Ativado: o preenchimento inteligente lê o ticket, escreve o título se você deixá-lo vazio, define prioridade, esforço, categorias e objetivo, e depois o vincula a tickets relacionados quando ele é salvo. Desative para defini-los você mesmo.",
-    "smartFillPendingToast": "O preenchimento inteligente está completando o ticket; o resultado aparecerá em alguns segundos.",
+    "smartFillPendingToast": "Smart Fill está preenchendo o ticket",
     "newIssueTitle": "Novo ticket",
     "createDescriptionPlaceholder": "Descrição do ticket",
     "createMore": "Criar mais",
@@ -2661,6 +2661,8 @@
   },
   "Picker": {
     "relatedByMeaning": "Relacionados pelo sentido",
+    "searchingByMeaning": "Buscando pelo sentido…",
+    "noRelatedByMeaning": "Nenhum ticket relacionado pelo sentido",
     "createNamed": "Criar “{name}”",
     "noResults": "Nenhum resultado",
     "search": "Pesquisar…"

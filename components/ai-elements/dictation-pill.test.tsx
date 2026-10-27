@@ -5,6 +5,7 @@ import * as React from "react";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
+import { DICTATION_DONE_HOLD_MS } from "@/components/ai-elements/dictation-pill";
 
 vi.mock("next-intl", () => ({ useLocale: () => "en", useTranslations: () => (key: string) => key }));
 vi.mock("sonner", async (importOriginal) => ({
@@ -56,6 +57,7 @@ beforeEach(() => {
 
 afterEach(async () => {
   await act(() => root.unmount());
+  vi.useRealTimers();
   document.body.replaceChildren();
   vi.unstubAllGlobals();
   Reflect.deleteProperty(navigator, "mediaDevices");
@@ -69,6 +71,13 @@ const byText = (text: string) =>
 async function click(element: Element | null | undefined) {
   expect(element).toBeTruthy();
   await act(async () => { (element as HTMLElement).click(); });
+}
+
+/** A validated take shows its checkmark receipt, then the pill leaves. */
+async function expectReceiptThenClose() {
+  expect(pill()?.querySelector("[data-dictation-done]")).not.toBeNull();
+  await act(() => vi.advanceTimersByTimeAsync(DICTATION_DONE_HOLD_MS + 300));
+  expect(pill()).toBeNull();
 }
 
 async function startTake() {
@@ -101,7 +110,8 @@ describe("dictation pill (MIN-773)", () => {
     expect(pill()).not.toBeNull();
   });
 
-  it("validates the take and inserts the transcription", async () => {
+  it("validates the take, inserts the transcription and shows a receipt", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     await startTake();
     await click(byLabel("validate"));
     expect(fetchMock).toHaveBeenCalledOnce();
@@ -109,7 +119,7 @@ describe("dictation pill (MIN-773)", () => {
     expect(body.get("context")).toBe("comment");
     expect(body.get("cleanup")).toBeNull();
     expect(onTranscription).toHaveBeenCalledWith("Revoir les filtres.");
-    expect(pill()).toBeNull();
+    await expectReceiptThenClose();
   });
 
   it("asks for the raw transcription when the account turned the cleanup off", async () => {
@@ -122,6 +132,7 @@ describe("dictation pill (MIN-773)", () => {
   });
 
   it("validates on ⌘/Ctrl+Enter from anywhere, while ✕ keeps its own Enter", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     await startTake();
     const discardButton = byLabel("discard")!;
     discardButton.focus();
@@ -132,7 +143,7 @@ describe("dictation pill (MIN-773)", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     await key({ ctrlKey: true });
     expect(fetchMock).toHaveBeenCalledOnce();
-    expect(pill()).toBeNull();
+    await expectReceiptThenClose();
   });
 
   it("keeps an auto-started take through React's dev double mount (⌘⇧D)", async () => {

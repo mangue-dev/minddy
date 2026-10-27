@@ -48,6 +48,9 @@ export interface SemanticIssueSearch {
   ids: string[];
   /** A request for the current query is in flight. */
   pending: boolean;
+  /** The search by meaning really ran for the current query (an empty `ids`
+      then means nothing related, not a timeout, an outage or indexing off). */
+  answered: boolean;
 }
 
 export function useSemanticIssueSearch(
@@ -58,10 +61,11 @@ export function useSemanticIssueSearch(
   const enabled = options.enabled !== false && isSemanticQuery(query);
   const normalized = normalizeSemanticQuery(query);
   const key = semanticCacheKey(projectId, normalized);
-  const [state, setState] = useState<{ key: string; ids: string[]; pending: boolean }>({
+  const [state, setState] = useState<{ key: string; ids: string[]; pending: boolean; answered: boolean }>({
     key: "",
     ids: [],
     pending: false,
+    answered: false,
   });
   const latest = useRef(key);
   latest.current = key;
@@ -70,10 +74,10 @@ export function useSemanticIssueSearch(
     if (!enabled) return;
     const cached = cache.get(key);
     if (cached) {
-      setState({ key, ids: cached, pending: false });
+      setState({ key, ids: cached, pending: false, answered: true });
       return;
     }
-    setState({ key, ids: [], pending: true });
+    setState({ key, ids: [], pending: true, answered: false });
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       const params = new URLSearchParams({ q: normalized });
@@ -87,10 +91,11 @@ export function useSemanticIssueSearch(
           | null;
         const ids = Array.isArray(body?.hits) ? body.hits.map((hit) => hit.id).filter((id) => typeof id === "string") : [];
         // Cache only real answers: a timeout or an outage may succeed next time.
-        if (response.ok && body?.status === "ok") remember(key, ids);
-        if (latest.current === key) setState({ key, ids, pending: false });
+        const answered = response.ok && body?.status === "ok";
+        if (answered) remember(key, ids);
+        if (latest.current === key) setState({ key, ids, pending: false, answered });
       } catch {
-        if (latest.current === key && !controller.signal.aborted) setState({ key, ids: [], pending: false });
+        if (latest.current === key && !controller.signal.aborted) setState({ key, ids: [], pending: false, answered: false });
       }
     }, DEBOUNCE_MS);
     return () => {
@@ -99,9 +104,9 @@ export function useSemanticIssueSearch(
     };
   }, [key, enabled, projectId, normalized]);
 
-  if (!enabled) return { ids: [], pending: false };
+  if (!enabled) return { ids: [], pending: false, answered: false };
   const cached = cache.get(key);
-  if (cached) return { ids: cached, pending: false };
-  if (state.key !== key) return { ids: [], pending: true };
-  return { ids: state.ids, pending: state.pending };
+  if (cached) return { ids: cached, pending: false, answered: true };
+  if (state.key !== key) return { ids: [], pending: true, answered: false };
+  return { ids: state.ids, pending: state.pending, answered: state.answered };
 }

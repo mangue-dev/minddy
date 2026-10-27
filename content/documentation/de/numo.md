@@ -255,7 +255,7 @@ Numo arbeitet mit dem Kontext deiner Unterhaltung und den Berechtigungen deines 
 Öffne das betreffende Ticket oder Projekt und klicke auf die schwebende Numo-Schaltfläche. Die aktuelle Seite wird zum Gesprächskontext. Kontextaktionen, die Arbeit an Numo übergeben, öffnen dasselbe Panel. Du benötigst Projektzugriff und verfügbares KI-Budget oder einen kompatiblen eigenen Schlüssel.
 
 1. Prüfe den Kontext im Eingabebereich. Nenne das Ticket ausdrücklich, wenn mehrere Einträge relevant sind. Um ein Ticket als Kontext hinzuzufügen, tippe `@` im Eingabebereich oder verwende **Kontext hinzufügen** → **Ticket**; eine Beschreibung listet auch [inhaltlich gefundene](/docs/navigation#search-by-meaning) Tickets unter **Inhaltlich verwandt** auf.
-2. Wähle Gesprächsmodell und Denkintensität. Diese Auswahl gilt für das Gespräch.
+2. Wähle Gesprächsmodell und Denkintensität über das Anbieterlogo neben dem Mikrofon; beim Darüberfahren siehst du das aktuelle Modell. Diese Auswahl gilt für das Gespräch.
 3. Sende einen begrenzten Auftrag, etwa: „Lies dieses Ticket und schlage Abnahmekriterien vor. Ändere seinen Status nicht.“
 4. Lies die Antwort und öffne Ticket- oder Quellenlinks. Prüfe nach einer Änderung das betroffene Objekt.
 

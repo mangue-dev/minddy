@@ -29,7 +29,7 @@ import { routinesQueryKey, useRoutinesQuery } from "@/lib/use-routines-query";
 import { describeSchedule } from "@/lib/routine-schedule";
 import { orderRoutinesWithinWeek } from "@/lib/routine-week-order";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
-import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
+import { SIDEBAR_HEADER_ACTION_CLASS } from "@/lib/sidebar-control-styles";
 import type { Routine } from "@/lib/routines-api";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 import type { RoutineDetailIntent } from "@/components/routines/routine-detail";
@@ -509,10 +509,10 @@ export function RoutinesPanel({
                   size="icon-sm"
                   variant="ghost"
                   onClick={() => openWizard()}
-                  className={cn(SIDEBAR_COMPACT_CONTROL_CLASS, "-mr-2")}
+                  className={SIDEBAR_HEADER_ACTION_CLASS}
                   aria-label={t("newRoutine")}
                 >
-                  <HugeiconsIcon icon={Add01Icon} className="size-[18px]" />
+                  <HugeiconsIcon icon={Add01Icon} className="size-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t("newRoutine")}</TooltipContent>

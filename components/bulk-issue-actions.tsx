@@ -2,8 +2,10 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, CommandIcon } from "@hugeicons/core-free-icons";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
+import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
@@ -28,6 +30,28 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
+/**
+ * Hosts the selection pill inside the content pane, so it floats within the
+ * rounded card instead of straddling its bottom edge, and keeps it mounted
+ * through its exit animation. Callers render the pill conditionally inside it.
+ */
+export function BulkIssueActionsPresence({ children }: { children: ReactNode }) {
+  const anchor = useRef<HTMLSpanElement>(null);
+  // Same anchor as the content toaster: the pane wraps <main>, and scrolling
+  // never moves what is portaled next to it.
+  const [pane, setPane] = useState<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    setPane(anchor.current?.closest("main")?.parentElement ?? null);
+  }, []);
+  const presence = <AnimatePresence>{children}</AnimatePresence>;
+  return (
+    <>
+      <span ref={anchor} hidden />
+      {pane ? createPortal(presence, pane) : presence}
+    </>
+  );
+}
 
 /**
  * Linear-style floating selection pill (MIN-75). It no longer carries its own
@@ -78,6 +102,9 @@ export function BulkIssueActions({
   const tPr = useTranslations("PullRequests");
   const [pendingUnlink, setPendingUnlink] = useState<{ count: number; run: () => void } | null>(null);
   const { requestBulkActions, registerSelectionActions } = useBulkActions();
+  const reducedMotion = useReducedMotion();
+  // An exiting pill still shows the last count, but no longer owns ⌘K.
+  const present = useIsPresent();
   // Each bulk action is one gesture: ⌘Z undoes it for the whole selection,
   // not one issue per keystroke (MIN-795).
   const { linked } = useUndoHistory();
@@ -160,14 +187,25 @@ export function BulkIssueActions({
   const openActionsRef = useRef(openActions);
   openActionsRef.current = openActions;
   useEffect(() => {
+    if (!present) return;
     registerSelectionActions(() => void openActionsRef.current());
     return () => registerSelectionActions(null);
-  }, [registerSelectionActions]);
+  }, [registerSelectionActions, present]);
 
   // No `backdrop-blur`: `bg-background/95` already completely hides the background,
   // the blur was not visible and cost a composition layer (MIN-323).
   return (
-    <div data-bulk-issue-actions className="fixed bottom-5 app-mobile:bottom-[var(--mobile-nav-clearance)] left-1/2 z-40 flex -translate-x-1/2 items-center gap-1 rounded-full border border-border bg-background/95 p-1.5 shadow-xl app-mobile:max-w-[calc(100%-2rem)]">
+    // Absolute inside the pane (see BulkIssueActionsPresence). Tailwind's
+    // `translate` composes with motion's `transform`, so the centering
+    // survives the animation.
+    <motion.div
+      data-bulk-issue-actions
+      className="absolute bottom-4 app-mobile:bottom-[var(--mobile-nav-clearance)] left-1/2 z-40 flex -translate-x-1/2 items-center gap-1 rounded-full border border-border bg-background/95 p-1.5 shadow-xl app-mobile:max-w-[calc(100%-2rem)]"
+      initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.96 }}
+      transition={{ type: "spring", duration: 0.28, bounce: 0.15 }}
+    >
       <span className="min-w-0 px-3 text-sm font-medium whitespace-nowrap app-mobile:truncate app-mobile:px-1">
         {t("selected", { count })}
       </span>
@@ -233,6 +271,6 @@ export function BulkIssueActions({
         cancelLabel={tCommon("cancel")}
         onConfirm={() => pendingUnlink?.run()}
       />
-    </div>
+    </motion.div>
   );
 }

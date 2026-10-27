@@ -9,7 +9,7 @@ const h = vi.hoisted(() => ({ ids: [] as string[], enabled: [] as boolean[] }));
 vi.mock("@/lib/use-semantic-issue-search", () => ({
   useSemanticIssueSearch: (_query: string, options: { enabled?: boolean }) => {
     h.enabled.push(options.enabled !== false);
-    return { ids: options.enabled === false ? [] : h.ids, pending: false };
+    return { ids: options.enabled === false ? [] : h.ids, pending: false, answered: false };
   },
 }));
 
@@ -26,7 +26,7 @@ const all: Option[] = [
 
 let result: (Option & { semantic?: boolean })[] = [];
 function Probe({ filtered }: { filtered: Option[] }) {
-  result = useSemanticMentions(filtered, all, "single sign-on login");
+  result = useSemanticMentions(filtered, all, "single sign-on login").options;
   return null;
 }
 

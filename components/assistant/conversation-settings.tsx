@@ -129,25 +129,22 @@ export function ConversationSettings() {
             variant="ghost"
             aria-label={t("sectionTitle")}
             aria-expanded={open}
-            // `shrink`: the Button primitive is `shrink-0`, so a long model name
-            // never truncated and widened the composer on a phone.
-            className="h-8 min-w-0 shrink gap-1.5 rounded-full border border-transparent bg-transparent px-1.5 text-xs font-medium hover:bg-muted/50"
+            // The composer shows the provider's logo and a chevron only
+            // (MIN-827): the model and its reasoning level are named on hover.
+            tooltip={
+              resolvedModel
+                ? `${formatModelName(resolvedModel)} · ${t(REASONING_LABEL_KEYS[displayedReasoning])}`
+                : t("modelSearchLoading")
+            }
+            className="h-8 shrink-0 gap-1 rounded-full border border-transparent bg-transparent px-2 text-xs font-medium hover:bg-muted/50"
           >
             {resolvedModel ? logoFor(resolvedModel) : null}
-            <span className="max-w-[9rem] truncate text-foreground/80">
-              {resolvedModel
-                ? formatModelName(resolvedModel)
-                : t("modelSearchLoading")}
-            </span>
-            <span className="shrink-0 text-muted-foreground">
-              {t(REASONING_LABEL_KEYS[displayedReasoning])}
-            </span>
-            <HugeiconsIcon icon={ArrowDown01Icon} className="size-3 shrink-0 text-muted-foreground" />
+            <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 shrink-0 text-muted-foreground" />
           </Button>
         </ResponsivePopoverTrigger>
         <ResponsivePopoverContent
           mobileTitle={t("sectionTitle")}
-          align="start"
+          align="end"
           side="top"
           sideOffset={8}
           className="w-[min(22rem,calc(100vw-2rem))] rounded-xl p-3 app-desktop:relative"

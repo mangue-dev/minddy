@@ -6,6 +6,7 @@ import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { semanticExtras } from "@/lib/issue-semantic-query";
 import { isExactIssueQuery, orderIssuesForSearch } from "@/lib/issue-search-order";
 import { useSemanticIssueSearch } from "@/lib/use-semantic-issue-search";
+import { SemanticSearchingHint } from "@/components/semantic-searching-hint";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { Add01Icon, Alert01Icon, ArrowRight01Icon, ArrowUp01Icon, Cancel01Icon, CancelCircleIcon as Ban, Clock01Icon, Copy01Icon, Delete02Icon, GitMergeIcon, GlobeIcon, LanguageCircleIcon, Link02Icon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, SentIcon, Shield01Icon, SparklesIcon, CheckIcon, Undo02Icon } from "@hugeicons/core-free-icons";
@@ -54,7 +55,7 @@ import { SearchSelect } from "@/components/search-select";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { usePublishCurrentView } from "@/lib/current-view-context";
 import { buildViewHref } from "@/lib/view-href";
-import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
+import { SIDEBAR_HEADER_ACTION_CLASS } from "@/lib/sidebar-control-styles";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { CategoryValue, ObjectiveValue, PropertyRow, TRIGGER } from "@/components/issue-property-fields";
 import { ObjectivePill } from "@/components/objective-label";
@@ -926,11 +927,11 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  className={cn(SIDEBAR_COMPACT_CONTROL_CLASS, "-mr-2")}
+                  className={SIDEBAR_HEADER_ACTION_CLASS}
                   aria-label={t("newFeedback")}
                   onClick={() => setCreateOpen(true)}
                 >
-                  <HugeiconsIcon icon={Add01Icon} className="size-[18px]" />
+                  <HugeiconsIcon icon={Add01Icon} className="size-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t("newFeedback")}</TooltipContent>
@@ -2211,7 +2212,7 @@ function LinkIssueDialog({
   ).slice(0, 30);
   // Issues found by meaning (MIN-718), after the text matches and among the
   // same eligible issues: a feedback post rarely reuses the issue's words.
-  const { ids: semanticIds } = useSemanticIssueSearch(search, { projectId, enabled: open });
+  const { ids: semanticIds, pending: semanticPending, answered: semanticAnswered } = useSemanticIssueSearch(search, { projectId, enabled: open });
   const semantic = orderIssuesForSearch(
     semanticExtras(
       semanticIds,
@@ -2277,6 +2278,9 @@ function LinkIssueDialog({
                 </button>
               ))}
             </>
+          )}
+          {semantic.length === 0 && (semanticPending || semanticAnswered) && (
+            <SemanticSearchingHint status={semanticPending ? "searching" : "none"} />
           )}
         </div>
       </DialogContent>

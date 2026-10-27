@@ -1902,7 +1902,7 @@
     "smartFillOffHint": "Off for this issue: you set its properties and relations yourself. Turn back on to let Smart-fill do it.",
     "smartFillOnHint": "On: Smart-fill reads the issue, sets its priority, effort, categories and objective, then links it to related issues once it is saved. Turn off to set them yourself.",
     "smartFillOnTitleHint": "On: Smart-fill reads the issue, writes its title if you leave it empty, sets its priority, effort, categories and objective, then links it to related issues once it is saved. Turn off to set them yourself.",
-    "smartFillPendingToast": "Smart-fill is filling the issue in, it will show up in a few seconds.",
+    "smartFillPendingToast": "Smart-fill is filling the issue in",
     "newIssueTitle": "New issue",
     "createDescriptionPlaceholder": "Issue description",
     "createMore": "Create more",
@@ -2661,6 +2661,8 @@
   },
   "Picker": {
     "relatedByMeaning": "Related by meaning",
+    "searchingByMeaning": "Searching by meaning…",
+    "noRelatedByMeaning": "No issue related by meaning",
     "createNamed": "Create “{name}”",
     "noResults": "No results",
     "search": "Search…"

@@ -259,7 +259,7 @@ export function SecondarySidebarHeader({ title, filter, actions }: {
   actions?: ReactNode;
 }) {
   return (
-    <div className="secondary-sidebar-header flex h-[var(--app-content-header-height)] shrink-0 items-center gap-2 border-b border-border px-4">
+    <div className="secondary-sidebar-header flex h-[var(--app-content-header-height)] shrink-0 items-center gap-2 border-b border-border pr-2.5 pl-[19px]">
       {filter ? (
         <SidebarFilterField {...filter} />
       ) : title ? (

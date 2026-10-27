@@ -353,7 +353,7 @@ Pour une création manuelle, désactivez Smart-fill si son bouton est affiché e
 
 Définissez les propriétés utiles avant de confirmer : état, priorité, effort, responsable, objectif, catégories, échéance et récurrence. Le responsable est le propriétaire du projet ou un Membre, jamais un lecteur ; l’objectif regroupe des tickets autour d’un résultat du projet. Laissez une propriété optionnelle vide plutôt que de la deviner. La priorité est **Non définie** ou va de basse à urgente, en passant par moyenne et haute ; l’effort est **Non défini** ou utilise XS, S, M, L et XL.
 
-Lorsque Smart Assign est activé dans le projet, le sélecteur de responsable affiche **Smart Assign** au lieu de **Non assigné**. Conservez ce choix : Smart Assign désigne le responsable dès que le ticket a quitté le triage. Dans le panneau du ticket, choisir **Smart Assign** retire le responsable actuel et laisse Smart Assign choisir à nouveau. Les tickets **Annulé** et **Doublon** conservent **Non assigné**.
+Lorsque Smart Assign est activé dans le projet, le sélecteur de responsable affiche **Smart Assign** au lieu de **Non assigné**. Les cartes de ticket et la palette de commandes suivent la même règle, et une carte sans responsable affiche l’icône de Smart Assign. Conservez ce choix : Smart Assign désigne le responsable dès que le ticket a quitté le triage. Dans le panneau du ticket, choisir **Smart Assign** retire le responsable actuel et laisse Smart Assign choisir à nouveau. Les tickets **Annulé** et **Doublon** conservent **Non assigné**.
 
 Confirmez la création et ouvrez le ticket. Vérifiez son identifiant et son projet. Modifiez ses propriétés à mesure que la tâche se précise. La description explique le travail ; le plan d’implémentation est séparé, dans l’onglet Plan.
 

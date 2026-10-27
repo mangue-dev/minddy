@@ -66,6 +66,7 @@ import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { useAuth } from "@/lib/auth-context";
 import { useDrafts } from "@/lib/use-drafts";
 import { useHeldDraft } from "@/lib/use-held-draft";
+import { useResetAfterClose } from "@/lib/use-dialog-close-content";
 import { useIssueDictation } from "@/lib/use-issue-dictation";
 import { useAnalytics } from "@/lib/use-analytics";
 import { useTrackView } from "@/lib/use-track-view";
@@ -194,7 +195,8 @@ export function CreateIssueDialog({
   const resuming = useHeldDraft({
     open,
     context: [projectId, initialDraftId, initialTitle, initialDescription].join("\n"),
-    hasContent: () => draftHasContent(),
+    // A form whose reset waits for the close animation is already empty.
+    hasContent: () => !resetPending.current && draftHasContent(),
     save: () => saveDraft(),
     clear: () => reset(),
     onLost: () => toast.error(tDrafts("autoSaveFailed")),
@@ -512,8 +514,10 @@ export function CreateIssueDialog({
     resetDictation();
   };
 
+  // The form keeps its content while the dialog fades out, then resets.
+  const { scheduleReset, resetPending, resets } = useResetAfterClose(open, reset);
   const closeAndReset = () => {
-    reset();
+    scheduleReset();
     onOpenChange(false);
   };
 
@@ -573,7 +577,7 @@ export function CreateIssueDialog({
     }
     // A form with content stays as it is, for the next opening or the
     // automatic draft (see useHeldDraft); a blank one starts over.
-    if (!next && !draftHasContent()) reset();
+    if (!next && !draftHasContent()) scheduleReset();
     if (!next) setOpenPicker(null);
     onOpenChange(next);
   };
@@ -866,6 +870,9 @@ export function CreateIssueDialog({
               {showsTitle && (<>
               <label htmlFor={titleId} className="creation-field-label">{tField("title")}</label>
               <AutoTextarea
+                // Remounted by a reset that lands as the dialog reopens, so
+                // its autoFocus follows the fresh form.
+                key={resets}
                 id={titleId}
                 ref={arrowTitle.ref}
                 enterKeyHint={mobile ? "next" : undefined}

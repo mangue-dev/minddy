@@ -70,15 +70,21 @@ function AlertDialogOverlay({
 function AlertDialogContent({
   className,
   size = "default",
+  overFloatingSurface = false,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Content> & {
   size?: "default" | "sm"
+  /** Opened from a popover or menu, which floating surfaces lift to z-index
+      1000 (app/globals.css): the scrim and the card rise above it. */
+  overFloatingSurface?: boolean
 }) {
+  const layer = overFloatingSurface ? "over-floating" : undefined
   return (
     <AlertDialogPortal>
-      <AlertDialogOverlay />
+      <AlertDialogOverlay data-layer={layer} />
       <AlertDialogPrimitive.Content
         data-slot="alert-dialog-content"
+        data-layer={layer}
         data-size={size}
         className={cn(
           "group/alert-dialog-content fixed top-1/2 left-1/2 z-50 grid w-full max-h-[calc(100dvh_-_2rem_-_env(safe-area-inset-top)_-_env(safe-area-inset-bottom))] overflow-y-auto -translate-x-1/2 -translate-y-1/2 gap-4 rounded-[2rem] bg-card p-6 ring-1 ring-foreground/10 duration-200 ease-out outline-none data-[size=default]:max-w-xs data-[size=sm]:max-w-xs data-[size=default]:sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-[0.98] data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-[0.98] data-closed:duration-150 data-closed:ease-in",

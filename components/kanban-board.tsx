@@ -65,7 +65,7 @@ import { ScrollFadeEdges } from "@/components/scroll-fade-edges";
 import { KanbanColumn } from "@/components/kanban-column";
 import type { BoardLandingPreview } from "@/components/board-drop-indicator";
 import { IssuePrProvider } from "@/components/issue-pr-context";
-import { BulkIssueActions } from "@/components/bulk-issue-actions";
+import { BulkIssueActions, BulkIssueActionsPresence } from "@/components/bulk-issue-actions";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { AskNumoProvider } from "@/lib/ask-numo-context";
 import { IssueSelectionProvider } from "@/lib/issue-selection-context";
@@ -527,34 +527,37 @@ export const KanbanBoard = memo(function KanbanBoard({
             onDragCancel={handleDragCancel}
           >
             <div className="flex h-full flex-col">
-              {canWrite && selectedIssues.length > 0 && (
-                <BulkIssueActions
-                  count={selectedIssues.length}
-                  issues={selectedIssues}
-                  members={members}
-                  onUpdate={updateSelected}
-                  onDelete={
-                    onDeleteIssue
-                      ? async () => {
-                          await Promise.all(
-                            selectedIssues.map((issue) =>
-                              onDeleteIssue(issue.id),
-                            ),
-                          );
-                          clearSelection();
-                        }
-                      : undefined
-                  }
-                  onClear={clearSelection}
-                  onAskNumo={() => onAskNumo(selectedIssues)}
-                  onCopyPrompt={() => void bulkPromptActions.copyPrompt()}
-                  cycle={bulkCycle}
-                  // A project-board selection always belongs to one project, so
-                  // all of that project's objectives are available.
-                  objectives={objectives}
-                  onLink={bulkLink}
-                />
-              )}
+              <BulkIssueActionsPresence>
+                {canWrite && selectedIssues.length > 0 && (
+                  <BulkIssueActions
+                    key="bulk-actions"
+                    count={selectedIssues.length}
+                    issues={selectedIssues}
+                    members={members}
+                    onUpdate={updateSelected}
+                    onDelete={
+                      onDeleteIssue
+                        ? async () => {
+                            await Promise.all(
+                              selectedIssues.map((issue) =>
+                                onDeleteIssue(issue.id),
+                              ),
+                            );
+                            clearSelection();
+                          }
+                        : undefined
+                    }
+                    onClear={clearSelection}
+                    onAskNumo={() => onAskNumo(selectedIssues)}
+                    onCopyPrompt={() => void bulkPromptActions.copyPrompt()}
+                    cycle={bulkCycle}
+                    // A project-board selection always belongs to one project, so
+                    // all of that project's objectives are available.
+                    objectives={objectives}
+                    onLink={bulkLink}
+                  />
+                )}
+              </BulkIssueActionsPresence>
               {/* Draw the edge fade beside the scroller (MIN-319). A mask on the
                   scroller would be recomposited on every frame and nested inside
                   each column's mask. The relative parent anchors the fade. */}

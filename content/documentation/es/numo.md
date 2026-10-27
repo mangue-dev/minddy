@@ -255,7 +255,7 @@ Numo trabaja con el contexto de tu conversación y los permisos de tu cuenta. Fo
 Abre la incidencia o el proyecto y usa el botón flotante de Numo. La página actual pasa a ser el contexto. Las acciones contextuales que delegan trabajo en Numo abren este mismo panel. Necesitas acceso al proyecto y uso de IA disponible o una clave personal compatible.
 
 1. Comprueba el contexto del cuadro de entrada. Indica la incidencia si hay varios elementos relevantes. Para añadir una incidencia como contexto, escribe `@` en el cuadro de entrada o usa **Añadir contexto** → **Incidencia**; una descripción también muestra incidencias encontradas [por el sentido](/docs/navigation#search-by-meaning) bajo **Relacionadas por significado**.
-2. Elige el modelo y el nivel de razonamiento de la conversación. Estas opciones afectan a la conversación.
+2. Elige el modelo y el nivel de razonamiento de la conversación con el logotipo del proveedor, junto al micrófono; al pasar el cursor se muestra el modelo actual. Estas opciones afectan a la conversación.
 3. Envía una petición acotada, por ejemplo: «Lee esta incidencia y propón criterios de aceptación. No cambies su estado».
 4. Lee la respuesta y abre sus enlaces a incidencias o fuentes. Si pediste una modificación, comprueba el objeto modificado.
 

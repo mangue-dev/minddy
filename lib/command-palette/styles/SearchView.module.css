@@ -24,6 +24,11 @@
   }
 }
 
+/* Status of the supplemental results, under the bar when nothing else shows. */
+.supplementalStatus {
+  padding: 4px 8px 8px;
+}
+
 /* =============================================================================
    RESULTS CONTAINER
    ============================================================================= */

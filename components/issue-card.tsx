@@ -65,7 +65,8 @@ import {
 import { useIssuePr, useIssuePrReadiness } from "@/components/issue-pr-context";
 import { PrReadinessIcon } from "@/components/pull-requests/pr-readiness";
 import type { IssuePrReadiness } from "@/lib/issue-pr-store";
-import { DATE_ICON } from "@/components/feature-icons";
+import { DATE_ICON, SMART_ASSIGN_ICON } from "@/components/feature-icons";
+import { useSmartAssignFillsEmpty } from "@/lib/use-smart-assign-empty";
 import {
   isPrWorthShowing,
   type IssuePr,
@@ -419,13 +420,21 @@ function AssigneePick({
   assignee,
   members,
   onChange,
+  projectId,
+  status,
 }: {
   assignee: Member | null;
   members: Member[];
   onChange?: (id: string | null) => void;
+  projectId: string;
+  status: string;
 }) {
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
+  // The project's Smart Assign fills an empty assignee (MIN-811): the empty
+  // state and the picker's clear option name it, as in the issue panel.
+  const smartAssign = useSmartAssignFillsEmpty(projectId, status);
+  const emptyLabel = tField(smartAssign ? "smartAssign" : "unassigned");
   const avatar = assignee ? (
     <UserAvatar
       seed={assignee.avatar_seed}
@@ -436,10 +445,10 @@ function AssigneePick({
     <Tooltip>
       <TooltipTrigger asChild>
         <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground/60">
-          <HugeiconsIcon icon={UserIcon} className="size-3.5" />
+          <HugeiconsIcon icon={smartAssign ? SMART_ASSIGN_ICON : UserIcon} className="size-3.5" />
         </span>
       </TooltipTrigger>
-      <TooltipContent>{tField("unassigned")}</TooltipContent>
+      <TooltipContent>{emptyLabel}</TooltipContent>
     </Tooltip>
   );
   if (!onChange) return avatar;
@@ -455,7 +464,12 @@ function AssigneePick({
       value={assignee?.user_id ?? null}
       onChange={onChange}
       options={options}
-      noneOption={{ label: tField("unassigned") }}
+      noneOption={{
+        label: emptyLabel,
+        icon: smartAssign ? (
+          <HugeiconsIcon icon={SMART_ASSIGN_ICON} strokeWidth={1.75} className="size-[18px] shrink-0 text-muted-foreground" />
+        ) : undefined,
+      }}
       align="end"
       tooltip={tField("assignee")}
       shortcutHint={KEY_FOR_FIELD.assignee}
@@ -913,6 +927,8 @@ export const IssueCardBody = memo(function IssueCardBody({
             assignee={assignee}
             members={memberList}
             onChange={setAssignee}
+            projectId={issue.project_id}
+            status={issue.status}
           />
         </span>
       </div>

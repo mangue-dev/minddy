@@ -66,7 +66,7 @@ import { ScrollFadeEdges } from "@/components/scroll-fade-edges";
 import { GlobalKanbanColumn } from "@/components/global-kanban-column";
 import type { BoardLandingPreview } from "@/components/board-drop-indicator";
 import { IssuePrProvider } from "@/components/issue-pr-context";
-import { BulkIssueActions } from "@/components/bulk-issue-actions";
+import { BulkIssueActions, BulkIssueActionsPresence } from "@/components/bulk-issue-actions";
 import { AskNumoProvider } from "@/lib/ask-numo-context";
 import { IssueSelectionProvider } from "@/lib/issue-selection-context";
 import { useUndoHistory } from "@/lib/undo/undo-context";
@@ -580,30 +580,33 @@ export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
             onDragEnd={handleDragEnd}
             onDragCancel={handleDragCancel}
           >
-            {selectedIssues.length > 0 && (
-              <BulkIssueActions
-                count={selectedIssues.length}
-                issues={selectedIssues}
-                members={Array.from(memberMapByProject.values()).flatMap(
-                  (members) => Array.from(members.values()),
-                )}
-                onUpdate={updateSelected}
-                onDelete={async () => {
-                  await Promise.all(
-                    selectedIssues.map((issue) =>
-                      onDeleteIssue(issue.id, issue.project_id),
-                    ),
-                  );
-                  clearSelection();
-                }}
-                onClear={clearSelection}
-                onAskNumo={() => onAskNumo(selectedIssues)}
-                onCopyPrompt={() => void bulkPromptActions.copyPrompt()}
-                cycle={bulkCycle}
-                objectives={bulkObjectives}
-                onLink={bulkLink}
-              />
-            )}
+            <BulkIssueActionsPresence>
+              {selectedIssues.length > 0 && (
+                <BulkIssueActions
+                  key="bulk-actions"
+                  count={selectedIssues.length}
+                  issues={selectedIssues}
+                  members={Array.from(memberMapByProject.values()).flatMap(
+                    (members) => Array.from(members.values()),
+                  )}
+                  onUpdate={updateSelected}
+                  onDelete={async () => {
+                    await Promise.all(
+                      selectedIssues.map((issue) =>
+                        onDeleteIssue(issue.id, issue.project_id),
+                      ),
+                    );
+                    clearSelection();
+                  }}
+                  onClear={clearSelection}
+                  onAskNumo={() => onAskNumo(selectedIssues)}
+                  onCopyPrompt={() => void bulkPromptActions.copyPrompt()}
+                  cycle={bulkCycle}
+                  objectives={bulkObjectives}
+                  onLink={bulkLink}
+                />
+              )}
+            </BulkIssueActionsPresence>
             {/* Edge fade NEXT to the scroller, not on it (MIN-319). */}
             <div className="relative flex h-full min-h-0 flex-col">
               <div

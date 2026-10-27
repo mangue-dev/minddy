@@ -6,6 +6,8 @@ import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { FilterIcon } from "@hugeicons/core-free-icons";
 import { FilterMenu, FilterSub, FilterItem, MenuToggleRow } from "@/components/filter-menu";
+import { SIDEBAR_HEADER_ACTION_CLASS } from "@/lib/sidebar-control-styles";
+import { cn } from "@/lib/utils";
 import { EFFORTS, PRIORITIES } from "@/lib/issue-constants";
 import { ME_ASSIGNEE } from "@/lib/view-filter";
 import { displayName } from "@/lib/display-name";
@@ -50,7 +52,7 @@ export function CollectionFilterMenu(props: CollectionFilterProps) {
   const tc = useTranslations("Common");
   const active = Object.values(props.filters).some((values) => values?.length);
   return <FilterMenu open={open} onOpenChange={setOpen} label={tc("filters")}
-    trigger={<Button variant="ghost" size="icon-sm" aria-label={tc("filters")}><HugeiconsIcon icon={FilterIcon} className={active ? "text-primary" : undefined} /></Button>}>
+    trigger={<Button variant="ghost" size="icon-sm" className={SIDEBAR_HEADER_ACTION_CLASS} aria-label={tc("filters")}><HugeiconsIcon icon={FilterIcon} className={cn("size-4", active && "text-primary")} /></Button>}>
     <CollectionFilterItems {...props} />
   </FilterMenu>;
 }

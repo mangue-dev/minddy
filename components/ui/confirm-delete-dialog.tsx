@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { Spinner } from "./spinner"
+import { useValueWhileOpen } from "@/lib/use-dialog-close-content"
 
 import {
   AlertDialog,
@@ -37,22 +38,30 @@ export interface ConfirmDeleteDialogProps {
   closeOnConfirm?: boolean
   /** Forwarded to the dialog content as `data-testid`. */
   testId?: string
+  /** Opened from a popover or menu: see `AlertDialogContent`. */
+  overFloatingSurface?: boolean
 }
 
 export function ConfirmDeleteDialog({
   open,
   onOpenChange,
-  title,
-  description,
-  confirmLabel,
+  title: titleProp,
+  description: descriptionProp,
+  confirmLabel: confirmLabelProp,
   cancelLabel,
   onConfirm,
   isLoading: isLoadingProp,
   closeOnConfirm = true,
   testId,
+  overFloatingSurface,
 }: ConfirmDeleteDialogProps) {
   const [isPending, setIsPending] = React.useState(false)
   const isLoading = isLoadingProp ?? isPending
+  // Callers often open this on a target they clear on close: the copy built
+  // from it stays as it was while the dialog fades out.
+  const title = useValueWhileOpen(open, titleProp)
+  const description = useValueWhileOpen(open, descriptionProp)
+  const confirmLabel = useValueWhileOpen(open, confirmLabelProp)
 
   async function handleConfirm(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault()
@@ -67,7 +76,7 @@ export function ConfirmDeleteDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent data-testid={testId}>
+      <AlertDialogContent data-testid={testId} overFloatingSurface={overFloatingSurface}>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           {description && (

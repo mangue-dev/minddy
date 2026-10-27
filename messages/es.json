@@ -1902,7 +1902,7 @@
     "smartFillOffHint": "Desactivado para esta incidencia: tú defines sus propiedades y relaciones. Vuelve a activarlo para que se encargue Smart Fill.",
     "smartFillOnHint": "Activado: Smart Fill lee la incidencia, define su prioridad, esfuerzo, categorías y objetivo, y la vincula con incidencias relacionadas una vez guardada. Desactívalo para hacerlo tú.",
     "smartFillOnTitleHint": "Activado: Smart Fill lee la incidencia, escribe su título si lo dejas vacío, define su prioridad, esfuerzo, categorías y objetivo, y la vincula con incidencias relacionadas una vez guardada. Desactívalo para hacerlo tú.",
-    "smartFillPendingToast": "Smart Fill está completando la incidencia; aparecerá dentro de unos segundos.",
+    "smartFillPendingToast": "Smart Fill está completando la incidencia",
     "newIssueTitle": "Nueva incidencia",
     "createDescriptionPlaceholder": "Descripción de la incidencia",
     "createMore": "Crear más",
@@ -2661,6 +2661,8 @@
   },
   "Picker": {
     "relatedByMeaning": "Relacionadas por significado",
+    "searchingByMeaning": "Buscando por significado…",
+    "noRelatedByMeaning": "Ninguna incidencia relacionada por significado",
     "createNamed": "Crear «{name}»",
     "noResults": "No hay resultados",
     "search": "Buscar…"

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { FormDialog } from "@/components/form-dialog";
+import { useResetAfterClose } from "@/lib/use-dialog-close-content";
 import type { DocumentationFeedbackContext } from "@/lib/documentation-feedback";
 import { DOCUMENTATION_FEEDBACK_DESCRIPTION_MAX } from "@/lib/documentation-feedback";
 import {
@@ -36,9 +37,13 @@ export function ProductFeedbackDialog({
   const [submitting, setSubmitting] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
 
-  const close = () => {
+  // The fields stay filled while the dialog fades out, then clear.
+  const { scheduleReset } = useResetAfterClose(open, () => {
     setTitle("");
     setDescription("");
+  });
+  const close = () => {
+    scheduleReset();
     onOpenChange(false);
   };
 

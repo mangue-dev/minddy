@@ -41,6 +41,8 @@ export interface DictationRecorder {
   stop: () => void;
   /** Ends the take and drops it: nothing is sent. */
   cancel: () => void;
+  /** Takes transcribed and handed over so far; it grows once per success. */
+  completedTakes: number;
 }
 
 export interface DictationRecorderOptions {
@@ -97,6 +99,7 @@ export function useDictationRecorder({
   const vocabularyJson = JSON.stringify(resolveDictationVocabulary(accountMeta));
 
   const [status, setStatus] = useState<DictationStatus>("idle");
+  const [completedTakes, setCompletedTakes] = useState(0);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [stream, setStream] = useState<MediaStream | null>(null);
 
@@ -162,8 +165,10 @@ export function useDictationRecorder({
           const text = (await upload(blob, locale, context))?.trim() ?? "";
           if (!mountedRef.current) return;
           // The caller has already reported its own failures (`null`).
-          if (hasSpeech(text)) onTranscriptionRef.current(text);
-          else if (text) toast.error(t("emptyResult"));
+          if (hasSpeech(text)) {
+            onTranscriptionRef.current(text);
+            setCompletedTakes((count) => count + 1);
+          } else if (text) toast.error(t("emptyResult"));
         } catch (err) {
           if (!mountedRef.current) return;
           console.error("[useDictationRecorder] upload failed", err);
@@ -211,6 +216,7 @@ export function useDictationRecorder({
         if (!mountedRef.current) return;
         if (hasSpeech(text)) {
           onTranscriptionRef.current(text);
+          setCompletedTakes((count) => count + 1);
           // `polished` is absent when the account turned the cleanup off.
           if (data.polished === false) toast.error(t("polishFailed"));
         } else {
@@ -383,5 +389,6 @@ export function useDictationRecorder({
     start: useCallback(() => void start(), [start]),
     stop,
     cancel,
+    completedTakes,
   };
 }

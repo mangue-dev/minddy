@@ -46,6 +46,7 @@ import {
   type MentionOption,
 } from "@/components/mention-suggest";
 import { useSemanticMentions } from "@/lib/use-semantic-mentions";
+import { SemanticSearchingHint } from "@/components/semantic-searching-hint";
 import type { MentionScan } from "@/lib/mention-scan";
 import { MentionNodeBase } from "@/components/mention-node";
 import { TypedMentionChip } from "@/components/typed-mention-chip";
@@ -259,7 +260,7 @@ const MentionMenu = forwardRef<MentionMenuRef, MentionProps>(function MentionMen
   // which only follows tiptap's own items.
   const allOptions = (props.editor.extensionManager.extensions.find((extension) => extension.name === "mentionSuggest")
     ?.options as MentionSuggestOptions | undefined)?.items() ?? [];
-  const items = useSemanticMentions(props.items, allOptions, props.query);
+  const { options: items, status: semanticStatus } = useSemanticMentions(props.items, allOptions, props.query);
   useEffect(() => setSelected(0), [props.items]);
   useEffect(() => {
     listRef.current
@@ -292,7 +293,7 @@ const MentionMenu = forwardRef<MentionMenuRef, MentionProps>(function MentionMen
     },
   }));
 
-  if (items.length === 0) return null;
+  if (items.length === 0 && !semanticStatus) return null;
 
   return (
     <div
@@ -311,6 +312,7 @@ const MentionMenu = forwardRef<MentionMenuRef, MentionProps>(function MentionMen
           />
         </MentionRowWithDivider>
       ))}
+      {semanticStatus && <SemanticSearchingHint status={semanticStatus} />}
     </div>
   );
 });

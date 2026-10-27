@@ -40,7 +40,7 @@ import {
 import { PriorityIndicator } from "@/components/issue-indicators";
 import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
 import { commentTarget, useCommentSurface } from "@/lib/comment-focus";
-import { BulkIssueActions } from "@/components/bulk-issue-actions";
+import { BulkIssueActions, BulkIssueActionsPresence } from "@/components/bulk-issue-actions";
 import { AskNumoProvider, useAskNumoTarget } from "@/lib/ask-numo-context";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the triage route —
 // see components/editor/document-editor-lazy.tsx. Warmed from idle time in TriagePage.
@@ -819,27 +819,30 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
         </DialogContent>
       </Dialog>
 
-      {canWrite && bulkIssues.length > 0 && (
-        <BulkIssueActions
-          surface="triage"
-          count={bulkIssues.length}
-          issues={bulkIssues}
-          members={members}
-          onUpdate={updateBulk}
-          onDelete={async () => {
-            await Promise.all(bulkIssues.map((issue) => deleteIssue(issue.id)));
-            clearBulk();
-          }}
-          onClear={clearBulk}
-          onAskNumo={() => handleAskNumo(bulkIssues)}
-          onCopyPrompt={() => void bulkPromptActions.copyPrompt()}
-          // Single-project screening: all of its objectives are possible. No
-          // cycle line on the other hand — a triage ticket is not there
-          // eligible (see CYCLE_INELIGIBLE_STATUSES).
-          objectives={objectives}
-          onLink={bulkLink}
-        />
-      )}
+      <BulkIssueActionsPresence>
+        {canWrite && bulkIssues.length > 0 && (
+          <BulkIssueActions
+            key="bulk-actions"
+            surface="triage"
+            count={bulkIssues.length}
+            issues={bulkIssues}
+            members={members}
+            onUpdate={updateBulk}
+            onDelete={async () => {
+              await Promise.all(bulkIssues.map((issue) => deleteIssue(issue.id)));
+              clearBulk();
+            }}
+            onClear={clearBulk}
+            onAskNumo={() => handleAskNumo(bulkIssues)}
+            onCopyPrompt={() => void bulkPromptActions.copyPrompt()}
+            // Single-project screening: all of its objectives are possible. No
+            // cycle line on the other hand — a triage ticket is not there
+            // eligible (see CYCLE_INELIGIBLE_STATUSES).
+            objectives={objectives}
+            onLink={bulkLink}
+          />
+        )}
+      </BulkIssueActionsPresence>
     </div>
     </AskNumoProvider>
   );

@@ -133,10 +133,66 @@ export const ConversationContent = ({
     },
     [fadeRef, scrollRef],
   );
+  // What the reader is looking at: the bottom, or the first visible message
+  // and its offset. A width change (the panel switching compact ⇄ expanded)
+  // reflows every message, and the thread would otherwise land elsewhere.
+  // Recorded on scroll, one frame at a time; restored only when the WIDTH
+  // changes, never when Numo's answer grows (the thread does not follow it).
+  const reading = useRef<{ atBottom: boolean; node: Element | null; offset: number }>({
+    atBottom: true,
+    node: null,
+    offset: 0,
+  });
+  const readingFrame = useRef<number | null>(null);
+  const rememberReading = useCallback(() => {
+    if (readingFrame.current !== null) return;
+    readingFrame.current = requestAnimationFrame(() => {
+      readingFrame.current = null;
+      const scroller = scrollRef.current;
+      const content = contentRef.current;
+      if (!scroller || !content) return;
+      const top = scroller.getBoundingClientRect().top;
+      const atBottom =
+        scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight <= BOTTOM_SLACK;
+      let node: Element | null = null;
+      let offset = 0;
+      for (const child of content.children) {
+        const rect = child.getBoundingClientRect();
+        if (rect.bottom > top) {
+          node = child;
+          offset = rect.top - top;
+          break;
+        }
+      }
+      reading.current = { atBottom, node, offset };
+    });
+  }, [contentRef, scrollRef]);
+  useEffect(() => () => {
+    if (readingFrame.current !== null) cancelAnimationFrame(readingFrame.current);
+  }, []);
+
+  useEffect(() => {
+    const scroller = scrollRef.current;
+    if (!scroller) return;
+    let width = scroller.clientWidth;
+    const observer = new ResizeObserver(() => {
+      if (scroller.clientWidth === width) return;
+      width = scroller.clientWidth;
+      const { atBottom, node, offset } = reading.current;
+      if (atBottom) scroller.scrollTop = scroller.scrollHeight;
+      else if (node?.isConnected) {
+        scroller.scrollTop += node.getBoundingClientRect().top - scroller.getBoundingClientRect().top - offset;
+      }
+    });
+    observer.observe(scroller);
+    return () => observer.disconnect();
+  }, [scrollRef]);
+
   const handleScroll = useCallback(() => {
     measure();
     updateFade();
-  }, [measure, updateFade]);
+    rememberReading();
+  }, [measure, updateFade, rememberReading]);
 
   // The content grows UNDER the user while Numo writes: without observing its
   // waist, “am I down?” » would only refresh with the next gesture of

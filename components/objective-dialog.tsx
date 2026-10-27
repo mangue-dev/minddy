@@ -55,6 +55,7 @@ import { useObjectiveDictation } from "@/lib/use-objective-dictation";
 import { useAnalytics } from "@/lib/use-analytics";
 import { useDrafts } from "@/lib/use-drafts";
 import { useHeldDraft } from "@/lib/use-held-draft";
+import { useResetAfterClose } from "@/lib/use-dialog-close-content";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { useSubmitShortcut } from "@/lib/keyboard/use-submit-shortcut";
 import { useTitleBodyLink } from "@/lib/use-title-body-link";
@@ -264,7 +265,8 @@ export function ObjectiveDialog({
   const resuming = useHeldDraft({
     open,
     context: [projectId, objective?.id, initialDraftId, initialName].join("\n"),
-    hasContent: () => composerEnabled && draftHasContent(),
+    // A form whose reset waits for the close animation is already empty.
+    hasContent: () => composerEnabled && !resetPending.current && draftHasContent(),
     save: () => saveDraft(),
     clear: () => resetForm(),
     onLost: () => toast.error(tDrafts("autoSaveFailed")),
@@ -416,8 +418,10 @@ export function ObjectiveDialog({
     resetDictation();
   };
 
+  // The form keeps its content while the dialog fades out, then resets.
+  const { scheduleReset, resetPending, resets } = useResetAfterClose(open, resetForm);
   const closeAndReset = () => {
-    resetForm();
+    scheduleReset();
     onOpenChange(false);
   };
 
@@ -682,6 +686,9 @@ export function ObjectiveDialog({
               )}
               <label htmlFor={titleId} className="creation-field-label">{tField("title")}</label>
               <AutoTextarea
+                // Remounted by a reset that lands as the dialog reopens, so
+                // its autoFocus follows the fresh form.
+                key={resets}
                 id={titleId}
                 enterKeyHint={mobile ? "next" : undefined}
                 autoFocus={!mobile && !focusDescription}

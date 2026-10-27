@@ -435,8 +435,9 @@ export const ChatMessage = memo(function ChatMessage({
             />
             {message.content && (
               <>
-                {/* Match the public documentation's pastel user-message surface. */}
-                <div className="chat-selectable relative min-w-0 max-w-full break-words rounded-xl bg-secondary px-4 py-2 text-sm leading-relaxed text-foreground [overflow-wrap:anywhere]">
+                {/* The accent, toned down to a readable surface; the public
+                    documentation's Numo uses the same one (MessageContent). */}
+                <div className="chat-selectable relative min-w-0 max-w-full break-words rounded-xl bg-[color-mix(in_oklab,var(--primary)_14%,var(--background))] px-4 py-2 text-sm leading-relaxed text-foreground [overflow-wrap:anywhere]">
                   <UserText
                     content={message.content}
                     mentions={

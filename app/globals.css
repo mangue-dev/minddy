@@ -216,6 +216,13 @@ html[data-desktop-app] .sidebar-nav-hotzone {
   z-index: 1000 !important;
 }
 
+/* A confirmation opened from a floating surface (the inbox popover's "Delete
+   read") covers it, scrim included. Opt-in, through `overFloatingSurface` on
+   the alert dialog: other dialogs keep their own z-index. */
+:is([data-slot="alert-dialog-overlay"], [data-slot="alert-dialog-content"])[data-layer="over-floating"] {
+  z-index: 1001 !important;
+}
+
 /* Tooltips float above every elevated surface, not only the page content:
    inside the inbox popover the icon-button tooltips (settings, delete, mark as
    read) open over the popover's own surface, which the rule above lifts to
@@ -1212,6 +1219,20 @@ button[data-variant="ghost"] {
 html[data-app-shell] {
   --app-overscroll: none;
   overscroll-behavior: none;
+}
+
+/* Hover lands at once and only its exit fades. With the usual 150 ms
+   `transition-colors`, gliding from one control to its neighbour (the
+   notebook gutter's `+` and handle, a toolbar, a row of icons) faded the first
+   out while the second faded in: for a few frames neither was lit, which read
+   as a flicker. The transition in force is the one of the NEW state, so a
+   zero duration under `:hover` makes the entry instant and leaves the exit
+   animated. Unlayered on purpose, to win over the `transition-*` utilities;
+   app only, so the marketing pages keep their hover animations. */
+@media (hover: hover) and (pointer: fine) {
+  html[data-app-shell] :is(button, a, [role="button"], [role="tab"], summary):hover {
+    transition-duration: 0s;
+  }
 }
 
 html[data-app-shell] body,

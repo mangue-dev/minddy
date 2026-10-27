@@ -131,9 +131,12 @@ describe("ConversationSettings", () => {
   it("combines the effective model and reasoning, and resets both overrides", async () => {
     await act(async () => root.render(createElement(ConversationSettings)));
 
-    expect(host.textContent).toContain("GLM 5.3 Flash");
+    // The composer trigger shows the logo only (MIN-827); the model and its
+    // reasoning level are named by its tooltip.
+    const trigger = host.querySelector('button[aria-label="sectionTitle"]');
+    expect(trigger?.textContent).not.toContain("GLM 5.3 Flash");
+    expect(trigger?.getAttribute("tooltip")).toBe("GLM 5.3 Flash · reasoningLow");
     expect(host.textContent).not.toContain("modelDefault");
-    expect(host.textContent).toContain("reasoningLow");
     expect(h.sliderProps).toMatchObject({ value: [1], min: 0, max: 1 });
     expect(h.update).toHaveBeenCalledWith({ reasoningLevel: "low" });
 
