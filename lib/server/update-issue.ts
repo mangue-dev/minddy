@@ -825,20 +825,28 @@ export async function updateIssueFields({
   // (opt-in per project; the run re-checks everything). WHEREAS, as in
   // creation: the deterministic case written before the response, only the call to
   // model restarts as `after()` (see the header of lib/server/smart-assign.ts).
+  //
+  // Clearing the assignee of an issue past triage hands it back to Smart
+  // Assign (MIN-811): with the toggle on, the pickers offer "Smart Assign"
+  // instead of "Unassigned", and the run picks someone again.
   const assigneeAfterUpdate =
     "assignee_id" in updates ? updates.assignee_id : before.assignee_id;
-  let smartAssignee: string | null = null;
-  if (
+  const statusAfterUpdate = "status" in updates ? updates.status : before.status;
+  const leavesTriage =
     "status" in updates &&
     before.status === "triage" &&
-    isSmartAssignEligibleStatus(updates.status) &&
-    assigneeAfterUpdate == null
-  ) {
+    isSmartAssignEligibleStatus(updates.status);
+  const clearsAssignee =
+    "assignee_id" in updates &&
+    before.assignee_id != null &&
+    isSmartAssignEligibleStatus(statusAfterUpdate);
+  let smartAssignee: string | null = null;
+  if (assigneeAfterUpdate == null && (leavesTriage || clearsAssignee)) {
     smartAssignee = await applySmartAssign({
       issueId,
       projectId: before.project_id as string,
       triggerActorId: actorId,
-      trigger: "triage_exit",
+      trigger: leavesTriage ? "triage_exit" : "unassign",
     });
   }
 

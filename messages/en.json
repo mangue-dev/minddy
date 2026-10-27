@@ -1525,6 +1525,7 @@
     "assignee": "Assignee",
     "assignedToMe": "Assigned to me",
     "unassigned": "Unassigned",
+    "smartAssign": "Smart Assign",
     "categories": "Categories",
     "noCategories": "No categories",
     "dueDate": "Due date",

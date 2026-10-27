@@ -4,7 +4,7 @@ import { Cancel01Icon, MoreHorizontalIcon } from "@hugeicons/core-free-icons";
 import { useAppTabDeparture } from "@/lib/app-tabs-context";
 import { useIssuePanelTab } from "@/lib/use-issue-panel-tab";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAppRouter } from "@/lib/use-app-router";
 import { useTranslations } from "next-intl";
@@ -101,6 +101,8 @@ import { AgentBeamOverlay } from "@/components/agent-beam";
 import { hasPlanTasks, planProgress } from "@/lib/plan";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { useAuth } from "@/lib/auth-context";
+import { ProjectsContext } from "@/lib/projects-context-store";
+import { smartAssignFillsEmptyAssignee } from "@/lib/smart-assign-config";
 import { useIssueTimeline } from "@/lib/use-issue-timeline";
 import { useIssueDictation } from "@/lib/use-issue-dictation";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
@@ -186,6 +188,8 @@ export function IssueSidePanel({
   // Project readers (MIN-693) see the ticket without editing controls; the
   // server rejects their writes regardless.
   const { canWrite, canComment } = useProjectCapabilities(issue?.project_id ?? null);
+  // Read without requiring the provider: some hosts render the panel outside it.
+  const issueProject = useContext(ProjectsContext)?.projects.find((p) => p.id === issue?.project_id);
   const readOnly = !canWrite;
   // The panel mounts with its board: warm the editor chunk once the page has
   // painted, so opening a ticket never shows the loading fallback.
@@ -1177,6 +1181,10 @@ export function IssueSidePanel({
                     <AssigneeValue
                       value={issue.assignee_id}
                       members={members}
+                      smartAssign={smartAssignFillsEmptyAssignee(
+                        issueProject?.smart_assign_enabled,
+                        issue.status,
+                      )}
                       onChange={(assignee_id) => void patch({ assignee_id })}
                     />
                   </PropertyRow>

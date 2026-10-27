@@ -24,3 +24,17 @@ export function hasAnyRule(
 ): boolean {
   return userIds.some((id) => !!rules?.[id]?.trim());
 }
+
+/**
+ * Whether an empty assignee means "Smart Assign will choose" rather than
+ * "nobody" (MIN-811), so the assignee pickers name it instead of offering
+ * "Unassigned". Triage counts: the issue is assigned when it leaves triage.
+ * Canceled and duplicate issues are never assigned by it, so they keep
+ * "Unassigned".
+ */
+export function smartAssignFillsEmptyAssignee(
+  enabled: boolean | null | undefined,
+  status: string | null | undefined
+): boolean {
+  return enabled === true && status !== "canceled" && status !== "duplicate";
+}

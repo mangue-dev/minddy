@@ -28,6 +28,7 @@ import {
 import { displayName } from "@/lib/display-name";
 import { UserAvatar } from "@/components/user-avatar";
 import { KEY_FOR_FIELD } from "@/components/issue-field-shortcuts";
+import { SMART_ASSIGN_ICON } from "@/components/feature-icons";
 import {
   useCategoryCreateOption,
   useObjectiveCreateOption,
@@ -172,6 +173,7 @@ export function AssigneeValue({
   open,
   onOpenChange,
   shortcutHint = KEY_FOR_FIELD.assignee,
+  smartAssign = false,
 }: {
   value: string | null;
   members: Member[];
@@ -180,10 +182,16 @@ export function AssigneeValue({
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   shortcutHint?: string;
+  /** The project's Smart Assign fills an empty assignee (MIN-811): the
+      "clear" option reads "Smart Assign" and choosing it lets it choose. */
+  smartAssign?: boolean;
 }) {
   const tField = useTranslations("Field");
   const t = useTranslations("IssueUI");
   const current = members.find((m) => m.user_id === value) ?? null;
+  const smartAssignIcon = (
+    <HugeiconsIcon icon={SMART_ASSIGN_ICON} strokeWidth={1.75} className="size-[18px] shrink-0 text-muted-foreground" />
+  );
   const options: PickerOption[] = members.map((m) => ({
     value: m.user_id,
     label: displayName(m),
@@ -200,7 +208,11 @@ export function AssigneeValue({
       value={value}
       onChange={onChange}
       options={options}
-      noneOption={{ label: tField("unassigned") }}
+      noneOption={
+        smartAssign
+          ? { label: tField("smartAssign"), icon: smartAssignIcon }
+          : { label: tField("unassigned") }
+      }
       align="end"
       tooltip={tField("assignee")}
       open={open}
@@ -215,6 +227,11 @@ export function AssigneeValue({
                 className="size-5"
               />
               <span className="truncate">{displayName(current)}</span>
+            </>
+          ) : smartAssign ? (
+            <>
+              {smartAssignIcon}
+              <span className="truncate text-muted-foreground">{tField("smartAssign")}</span>
             </>
           ) : (
             <span className="text-muted-foreground">{tField("unassigned")}</span>

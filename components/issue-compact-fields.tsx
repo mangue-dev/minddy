@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { useId } from "react";
 import { DateTimePicker } from "@/components/date-time-picker";
-import { SMART_FILL_ICON } from "@/components/feature-icons";
+import { SMART_ASSIGN_ICON, SMART_FILL_ICON } from "@/components/feature-icons";
 import {
   SearchSelect,
   SearchMultiSelect,
@@ -269,16 +269,22 @@ export function AssigneeCompact({
   shortcutHint,
   showValue = false,
   noneLabel,
+  smartAssign = false,
 }: {
   value: string | null;
   members: Member[];
   onChange: (v: string | null) => void;
   /** Overrides the "clear" option's label (e.g. "No lead" for objectives). */
   noneLabel?: string;
+  /** The project's Smart Assign fills an empty assignee (MIN-811): the
+      "clear" option reads "Smart Assign" instead of "Unassigned". */
+  smartAssign?: boolean;
 } & ShortcutControl) {
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
   const current = members.find((m) => m.user_id === value) ?? null;
+  const emptyLabel = smartAssign ? tField("smartAssign") : noneLabel ?? tField("unassigned");
+  const emptyIcon = smartAssign ? SMART_ASSIGN_ICON : UserCircleIcon;
   const options: PickerOption[] = members.map((m) => ({
     value: m.user_id,
     label: displayName(m),
@@ -295,7 +301,12 @@ export function AssigneeCompact({
       value={value}
       onChange={onChange}
       options={options}
-      noneOption={{ label: noneLabel ?? tField("unassigned") }}
+      noneOption={{
+        label: emptyLabel,
+        icon: smartAssign ? (
+          <HugeiconsIcon icon={SMART_ASSIGN_ICON} strokeWidth={1.75} className="size-[18px] shrink-0 text-muted-foreground" />
+        ) : undefined,
+      }}
       tooltip={tField("assignee")}
       open={open}
       onOpenChange={onOpenChange}
@@ -308,9 +319,9 @@ export function AssigneeCompact({
               className="size-5"
             />
           ) : (
-            <HugeiconsIcon icon={UserCircleIcon} strokeWidth={1.75} className="size-[18px] shrink-0 text-muted-foreground" />
+            <HugeiconsIcon icon={emptyIcon} strokeWidth={1.75} className="size-[18px] shrink-0 text-muted-foreground" />
           )}
-          {showValue && <span>{current ? displayName(current) : noneLabel ?? tField("unassigned")}</span>}
+          {showValue && <span>{current ? displayName(current) : emptyLabel}</span>}
         </button>
       }
     />

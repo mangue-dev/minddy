@@ -1525,6 +1525,7 @@
     "assignee": "Zuständig",
     "assignedToMe": "Mir zugewiesen",
     "unassigned": "Nicht zugewiesen",
+    "smartAssign": "Smart Assign",
     "categories": "Kategorien",
     "noCategories": "Keine Kategorien",
     "dueDate": "Fälligkeitsdatum",
