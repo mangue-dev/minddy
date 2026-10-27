@@ -138,7 +138,8 @@ type ActiveSlashQuery = ActiveComposerMenuQuery & {
   commandsAllowed: boolean;
 };
 
-function mentionFromNode(node: HTMLElement): MentionOption | null {
+/** Reads a composer pill back into its option (exported for tests). */
+export function mentionFromNode(node: HTMLElement): MentionOption | null {
   const type = node.dataset.mentionType;
   const id = node.dataset.mentionId;
   const label = node.dataset.mentionLabel;
@@ -161,10 +162,16 @@ function mentionFromNode(node: HTMLElement): MentionOption | null {
     ...(node.dataset.mentionStatus
       ? { status: node.dataset.mentionStatus as MentionOption["status"] }
       : {}),
+    // An objective's own status, so its pill shows it instead of the target
+    // once inserted, as the suggestion did (MIN-785).
+    ...(node.dataset.mentionObjectiveStatus
+      ? { objectiveStatus: node.dataset.mentionObjectiveStatus as MentionOption["objectiveStatus"] }
+      : {}),
   };
 }
 
-function createMentionNode(option: MentionOption): HTMLSpanElement {
+/** The composer pill an option becomes (exported for tests). */
+export function createMentionNode(option: MentionOption): HTMLSpanElement {
   const pill = document.createElement("span");
   pill.contentEditable = "false";
   pill.dataset.mentionType = option.type;
@@ -176,6 +183,7 @@ function createMentionNode(option: MentionOption): HTMLSpanElement {
   if (iconAttr) pill.dataset.mentionIcon = iconAttr;
   if (option.color) pill.dataset.mentionColor = option.color;
   if (option.status) pill.dataset.mentionStatus = option.status;
+  if (option.objectiveStatus) pill.dataset.mentionObjectiveStatus = option.objectiveStatus;
   pill.className = MENTION_SLOT_CLASS;
   return pill;
 }
