@@ -114,7 +114,11 @@ import {
 } from "@/lib/server/attachments";
 import { FaviconError } from "@/lib/server/favicon";
 import { resolveLinkResource } from "@/lib/server/link-resource";
-import { createObjective, updateObjective } from "@/lib/server/objectives";
+import {
+  createObjective,
+  patchObjectiveDescription,
+  updateObjective,
+} from "@/lib/server/objectives";
 import {
   createRoutine,
   deleteRoutine,
@@ -140,6 +144,7 @@ import {
 } from "@/lib/server/cycles";
 import { moveIssuesBetweenCycles } from "@/lib/server/cycle-issues";
 import {
+  editScratchpadText,
   getScratchpad,
   setScratchpad,
   mutateScratchpad,
@@ -154,6 +159,16 @@ import {
   type IssueStatus,
 } from "@/lib/issue-constants";
 import type { ProjectAccess } from "@/lib/server/project-access";
+import {
+  readTextEdits,
+  TEXT_EDIT_FIELDS,
+  TEXT_EDIT_LIST,
+  toPassageEdits,
+} from "./text-edit-input";
+import {
+  BULK_WRITE_CONCURRENCY,
+  mapWithConcurrency,
+} from "@/lib/map-with-concurrency";
 import { resolveProjectRole } from "@/lib/project-roles";
 import {
   mcpToolCapability,
@@ -469,6 +484,140 @@ const RECURRENCE_FIELD = z
       "(null, via minddy_update_issues) to stop the series.",
   );
 
+/** One relation of minddy_link_issues, alone or as an entry of `links`. */
+const LINK_FIELDS = z.object({
+  issue: ISSUE_REF.optional().describe(
+    "The ISSUE the relation is stated FROM (its perspective). Pass " +
+      "either `issue` or `objective`, never both.",
+  ),
+  objective: z
+    .string()
+    .optional()
+    .describe(
+      "The OBJECTIVE the relation is stated FROM (objective → issue, or " +
+        "objective → objective). UUID, or 'obj:<name>'.",
+    ),
+  relation: z
+    .enum(["blocks", "blocked_by", "related"])
+    .describe("Relation type from the source's perspective."),
+  target: z
+    .string()
+    .describe(
+      "The other end of the relation: an issue (UUID, identifier like " +
+        "'MIND-42', or bare issue number) or an objective (UUID, or " +
+        "'obj:<name>').",
+    ),
+  remove: z
+    .boolean()
+    .optional()
+    .describe("Remove the relation instead of adding it."),
+});
+
+type LinkInput = z.infer<typeof LINK_FIELDS>;
+
+/** Issues one bulk call may touch. */
+const MAX_BULK_ISSUES = 50;
+
+/** The editable fields of minddy_update_issues, shared by both of its shapes. */
+const ISSUE_UPDATE_FIELDS = z.object({
+  title: z.string().min(1).optional(),
+  description: z.string().nullable().optional(),
+  plan: PLAN_FIELD.nullable().optional(),
+  status: z.enum(ISSUE_STATUSES).optional(),
+  priority: z.enum(ISSUE_PRIORITIES).optional(),
+  effort: z.enum(ISSUE_EFFORTS).nullable().optional(),
+  assignee_id: z.string().nullable().optional(),
+  objective_id: z.string().uuid().nullable().optional(),
+  parent: ISSUE_REF.nullable().optional(),
+  duplicate_of: ISSUE_REF.nullable()
+    .optional()
+    .describe("With status 'duplicate': the issue this one duplicates."),
+  due_date: z.string().nullable().optional(),
+  recurrence: RECURRENCE_FIELD.nullable().optional(),
+  category_ids: z
+    .array(z.string().uuid())
+    .optional()
+    .describe(
+      "REPLACES the whole category set. Combines with category_names; " +
+        "an empty array clears every category.",
+    ),
+  category_names: z
+    .array(z.string().min(1))
+    .optional()
+    .describe(
+      "Same replacement, BY NAME (case-insensitive) — no " +
+        "minddy_list_categories round trip. Names matching nothing come " +
+        "back in `categories_unmatched`.",
+    ),
+});
+
+type IssueUpdateFieldsInput = z.infer<typeof ISSUE_UPDATE_FIELDS>;
+
+/** Update fields ready for the core: references resolved to ids. */
+interface PreparedIssueUpdate {
+  fields: Record<string, unknown>;
+  /** The replacement category set, or null when categories are untouched. */
+  categoryIds: string[] | null;
+  unmatched: string[];
+}
+
+/**
+ * Turns minddy_update_issues fields into what `updateIssueFields` and
+ * `setIssueCategories` take: issue references become ids and category names
+ * become category ids.
+ */
+async function prepareIssueUpdate(
+  access: ProjectAccess,
+  raw: IssueUpdateFieldsInput,
+  resolveCategories: ReturnType<typeof categoryResolver>,
+): Promise<PreparedIssueUpdate | { error: ToolResult }> {
+  const { category_ids, category_names, parent, duplicate_of, ...fields } =
+    raw as Record<string, unknown> & IssueUpdateFieldsInput;
+  // The two keys are a REPLACEMENT of the set of categories: their PRESENCE
+  // decides, not their content — `category_ids: []` erases everything.
+  const setsCategories = "category_ids" in raw || "category_names" in raw;
+  let categoryIds: string[] | null = null;
+  let unmatched: string[] = [];
+  if (setsCategories) {
+    const cats = await resolveCategories(category_ids, category_names);
+    if ("error" in cats) return cats;
+    categoryIds = cats.ids;
+    unmatched = cats.unmatched;
+  }
+  if ("parent" in raw) {
+    if (parent) {
+      const r = await resolveIssueRef(access, parent);
+      if ("error" in r) return r;
+      fields.parent_id = r.issue.id;
+    } else fields.parent_id = null;
+  }
+  if ("duplicate_of" in raw) {
+    if (duplicate_of) {
+      const r = await resolveIssueRef(access, duplicate_of);
+      if ("error" in r) return r;
+      fields.duplicate_of_id = r.issue.id;
+    } else fields.duplicate_of_id = null;
+  }
+  if (Object.keys(fields).length === 0 && !setsCategories) {
+    return {
+      error: fail("invalid_params", "fields must contain at least one field."),
+    };
+  }
+  return { fields, categoryIds, unmatched };
+}
+
+/** The message of a `fail()` result, for tools that report failures per item. */
+function toolErrorMessage(result: ToolResult): string {
+  try {
+    const parsed = JSON.parse(result.content[0]?.text ?? "") as {
+      error?: { message?: string };
+    };
+    return parsed.error?.message ?? "Request failed";
+  } catch {
+    return "Request failed";
+  }
+}
+
 function mcpReadCtx(access: ProjectAccess, actorId?: string): ReadContext {
   const service = getServiceClient();
   return {
@@ -636,15 +785,48 @@ async function resolveCategoryRefs(
   ids: string[] | undefined,
   names: string[] | undefined,
 ): Promise<{ ids: string[]; unmatched: string[] } | { error: ToolResult }> {
-  if (!ids?.length && !names?.length) return { ids: [], unmatched: [] };
-  const { data, error } = await categoryStore(getServiceClient())
-    .select("id, name")
-    .eq("project_id", projectId);
-  if (error) return { error: fail("database_error", error.message) };
-  const rows = data ?? [];
-  const knownIds = new Set(rows.map((c) => c.id as string));
+  return categoryResolver(projectId)(ids, names);
+}
+
+/**
+ * Category resolution that reads the project's categories at most once, for a
+ * call that resolves many category sets (one per issue of a bulk update).
+ */
+function categoryResolver(projectId: string) {
+  let rowsPromise: Promise<
+    { rows: Array<{ id: string; name: string }> } | { error: ToolResult }
+  > | null = null;
+  return async (
+    ids: string[] | undefined,
+    names: string[] | undefined,
+  ): Promise<{ ids: string[]; unmatched: string[] } | { error: ToolResult }> => {
+    if (!ids?.length && !names?.length) return { ids: [], unmatched: [] };
+    rowsPromise ??= (async () => {
+      const { data, error } = await categoryStore(getServiceClient())
+        .select("id, name")
+        .eq("project_id", projectId);
+      if (error) return { error: fail("database_error", error.message) };
+      return {
+        rows: (data ?? []).map((c) => ({
+          id: c.id as string,
+          name: c.name as string,
+        })),
+      };
+    })();
+    const loaded = await rowsPromise;
+    if ("error" in loaded) return loaded;
+    return matchCategoryRefs(loaded.rows, ids, names);
+  };
+}
+
+function matchCategoryRefs(
+  rows: Array<{ id: string; name: string }>,
+  ids: string[] | undefined,
+  names: string[] | undefined,
+): { ids: string[]; unmatched: string[] } {
+  const knownIds = new Set(rows.map((c) => c.id));
   const byName = new Map(
-    rows.map((c) => [(c.name as string).trim().toLowerCase(), c.id as string]),
+    rows.map((c) => [c.name.trim().toLowerCase(), c.id]),
   );
 
   const resolved = new Set<string>();
@@ -2159,8 +2341,13 @@ export function registerMinddyTools(
     {
       title: "Update issues",
       description:
-        "Apply the same field changes to 1–50 issues of a project (single edits: " +
-        "pass one issue). Only the fields you send change; null clears a nullable " +
+        "Edit 1–50 issues of a project in ONE call. `issues` + `fields` applies " +
+        "the same changes to every listed issue (close these five, move them to " +
+        "an objective); `updates` adds issues that each get their OWN fields " +
+        "([{ issue, fields }]) — triage a whole backlog, re-estimate a batch, " +
+        "assign each ticket to a different person. Plan the whole change, then " +
+        "send it once instead of one call per issue; the writes run in " +
+        "parallel. Only the fields you send change; null clears a nullable " +
         "field. category_ids (and category_names) REPLACE the issue's full " +
         "category set. So do " +
         "description and plan: every field here is a full replacement, which on a " +
@@ -2173,45 +2360,33 @@ export function registerMinddyTools(
         "that has no priority, no effort or no category, set them in the same " +
         "call — you already read it, nobody else will. Relations are not fields: " +
         "wire them with minddy_link_issues. " +
-        "Returns per-issue failures, so check `failed` in the result.",
+        "Issues are updated independently: one failure does not stop the others, " +
+        "so check `failed` in the result (`updated` lists the rest, in input order).",
       inputSchema: z.object({
         project_id: PROJECT_ID,
-        issues: z.array(ISSUE_REF).min(1).max(50),
-        fields: z
-          .object({
-            title: z.string().min(1).optional(),
-            description: z.string().nullable().optional(),
-            plan: PLAN_FIELD.nullable().optional(),
-            status: z.enum(ISSUE_STATUSES).optional(),
-            priority: z.enum(ISSUE_PRIORITIES).optional(),
-            effort: z.enum(ISSUE_EFFORTS).nullable().optional(),
-            assignee_id: z.string().nullable().optional(),
-            objective_id: z.string().uuid().nullable().optional(),
-            parent: ISSUE_REF.nullable().optional(),
-            duplicate_of: ISSUE_REF.nullable()
-              .optional()
-              .describe(
-                "With status 'duplicate': the issue this one duplicates.",
-              ),
-            due_date: z.string().nullable().optional(),
-            recurrence: RECURRENCE_FIELD.nullable().optional(),
-            category_ids: z
-              .array(z.string().uuid())
-              .optional()
-              .describe(
-                "REPLACES the whole category set. Combines with category_names; " +
-                  "an empty array clears every category.",
-              ),
-            category_names: z
-              .array(z.string().min(1))
-              .optional()
-              .describe(
-                "Same replacement, BY NAME (case-insensitive) — no " +
-                  "minddy_list_categories round trip. Names matching nothing come " +
-                  "back in `categories_unmatched`.",
-              ),
-          })
-          .describe("At least one field."),
+        issues: z
+          .array(ISSUE_REF)
+          .min(1)
+          .max(MAX_BULK_ISSUES)
+          .describe("Issues that all receive `fields`."),
+        fields: ISSUE_UPDATE_FIELDS.describe(
+          "At least one field, applied to every issue of `issues`.",
+        ),
+        updates: z
+          .array(
+            z.object({
+              issue: ISSUE_REF,
+              fields: ISSUE_UPDATE_FIELDS.describe("At least one field."),
+            }),
+          )
+          .min(1)
+          .max(MAX_BULK_ISSUES)
+          .optional()
+          .describe(
+            "MORE issues in the same call, each with its OWN fields (the " +
+              "first one goes in `issues` + `fields`). List each issue once " +
+              "across `issues` and `updates`; at most 50 in all.",
+          ),
       }),
       annotations: WRITE_IDEMPOTENT,
     },
@@ -2219,100 +2394,142 @@ export function registerMinddyTools(
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
 
-      // Resolve field issue references BEFORE the loop.
-      const { category_ids, category_names, parent, duplicate_of, ...fields } =
-        args.fields as Record<string, unknown> & {
-          category_ids?: string[];
-          category_names?: string[];
-          parent?: string | null;
-          duplicate_of?: string | null;
-        };
-      // The two keys are a REPLACEMENT of the set of categories: their PRESENCE
-      // decides, not their content — `category_ids: []` erases everything.
-      const setsCategories =
-        "category_ids" in args.fields || "category_names" in args.fields;
-      let resolvedCategoryIds: string[] = [];
-      let unmatchedCategories: string[] = [];
-      if (setsCategories) {
-        const cats = await resolveCategoryRefs(
-          scope.access.project.id,
-          category_ids,
-          category_names,
-        );
-        if ("error" in cats) return cats.error;
-        resolvedCategoryIds = cats.ids;
-        unmatchedCategories = cats.unmatched;
-      }
-      if ("parent" in args.fields) {
-        if (parent) {
-          const r = await resolveIssueRef(scope.access, parent);
-          if ("error" in r) return r.error;
-          fields.parent_id = r.issue.id;
-        } else fields.parent_id = null;
-      }
-      if ("duplicate_of" in args.fields) {
-        if (duplicate_of) {
-          const r = await resolveIssueRef(scope.access, duplicate_of);
-          if ("error" in r) return r.error;
-          fields.duplicate_of_id = r.issue.id;
-        } else fields.duplicate_of_id = null;
-      }
-      if (Object.keys(fields).length === 0 && !setsCategories) {
+      const sharedRefs = [...new Set(args.issues)];
+      const updates = args.updates ?? [];
+      if (sharedRefs.length + updates.length > MAX_BULK_ISSUES) {
         return fail(
           "invalid_params",
-          "fields must contain at least one field.",
+          `One call edits at most ${MAX_BULK_ISSUES} issues across issues and updates.`,
         );
       }
 
+      const resolveCategories = categoryResolver(scope.access.project.id);
+      const prepare = (raw: IssueUpdateFieldsInput) =>
+        prepareIssueUpdate(scope.access, raw, resolveCategories);
+
+      // The shared fields keep their historical contract: a field that can't
+      // be prepared (an unknown parent, say) refuses the whole call. A
+      // per-issue entry that can't be prepared only fails that entry.
+      const sharedPrepared = await prepare(args.fields);
+      if ("error" in sharedPrepared) return sharedPrepared.error;
+      const entries: Array<{
+        ref: string;
+        fields: IssueUpdateFieldsInput | null;
+      }> = [
+        ...sharedRefs.map((ref) => ({ ref, fields: null })),
+        ...updates.map((u) => ({ ref: u.issue, fields: u.fields })),
+      ];
+
+      // References first, so two refs naming one issue (MIN-4 and 4) are
+      // told apart in INPUT order: the later one is refused, never raced.
+      const resolvedRefs = await mapWithConcurrency(
+        entries,
+        BULK_WRITE_CONCURRENCY,
+        ({ ref }) => resolveIssueRef(scope.access, ref),
+      );
+      const seen = new Set<string>();
+      const duplicate = resolvedRefs.map((resolved) => {
+        if ("error" in resolved) return false;
+        if (seen.has(resolved.issue.id)) return true;
+        seen.add(resolved.issue.id);
+        return false;
+      });
+      // The one-level sub-issue trigger reads OTHER rows (the parent's parent,
+      // the issue's children): two parent changes written at once could both
+      // pass it. A batch that moves issues in the hierarchy runs one at a time.
+      const movesParents =
+        "parent" in args.fields || updates.some((u) => "parent" in u.fields);
+
+      const outcomes = await mapWithConcurrency(
+        entries,
+        movesParents ? 1 : BULK_WRITE_CONCURRENCY,
+        async ({ ref, fields: raw }, index): Promise<
+          | { updated: string; unmatched: string[] }
+          | { failed: { issue: string; error: string } }
+        > => {
+          const resolved = resolvedRefs[index];
+          if ("error" in resolved) {
+            return {
+              failed: {
+                issue: ref,
+                error: `Issue '${ref}' not found in this project.`,
+              },
+            };
+          }
+          const identifier = resolved.issue.identifier;
+          if (duplicate[index]) {
+            return {
+              failed: {
+                issue: identifier,
+                error: "Listed more than once in this call: merge its fields into one entry.",
+              },
+            };
+          }
+
+          let prepared = sharedPrepared;
+          if (raw) {
+            const own = await prepare(raw);
+            if ("error" in own) {
+              return {
+                failed: { issue: identifier, error: toolErrorMessage(own.error) },
+              };
+            }
+            prepared = own;
+          }
+
+          if (Object.keys(prepared.fields).length > 0) {
+            const result = await updateIssueFields({
+              issueId: resolved.issue.id,
+              actorId: scope.userId,
+              input: prepared.fields,
+              mcpKeyId: scope.keyId,
+            });
+            if (!result.ok) {
+              return {
+                failed: {
+                  issue: identifier,
+                  error: coreMessage(result, "update failed"),
+                },
+              };
+            }
+          }
+          if (prepared.categoryIds) {
+            const result = await setIssueCategories({
+              issueId: resolved.issue.id,
+              actorId: scope.userId,
+              categoryIds: prepared.categoryIds,
+              mcpKeyId: scope.keyId,
+            });
+            if (!result.ok) {
+              return {
+                failed: {
+                  issue: identifier,
+                  error: coreMessage(result, "categories update failed"),
+                },
+              };
+            }
+          }
+          return { updated: identifier, unmatched: prepared.unmatched };
+        },
+      );
+
       const updated: string[] = [];
       const failed: Array<{ issue: string; error: string }> = [];
-      for (const ref of args.issues) {
-        const resolved = await resolveIssueRef(scope.access, ref);
-        if ("error" in resolved) {
-          failed.push({
-            issue: ref,
-            error: `Issue '${ref}' not found in this project.`,
-          });
+      const unmatchedCategories = new Set<string>(sharedPrepared.unmatched);
+      for (const outcome of outcomes) {
+        if ("failed" in outcome) {
+          failed.push(outcome.failed);
           continue;
         }
-        if (Object.keys(fields).length > 0) {
-          const result = await updateIssueFields({
-            issueId: resolved.issue.id,
-            actorId: scope.userId,
-            input: fields,
-            mcpKeyId: scope.keyId,
-          });
-          if (!result.ok) {
-            failed.push({
-              issue: resolved.issue.identifier,
-              error: coreMessage(result, "update failed"),
-            });
-            continue;
-          }
-        }
-        if (setsCategories) {
-          const result = await setIssueCategories({
-            issueId: resolved.issue.id,
-            actorId: scope.userId,
-            categoryIds: resolvedCategoryIds,
-            mcpKeyId: scope.keyId,
-          });
-          if (!result.ok) {
-            failed.push({
-              issue: resolved.issue.identifier,
-              error: coreMessage(result, "categories update failed"),
-            });
-            continue;
-          }
-        }
-        updated.push(resolved.issue.identifier);
+        updated.push(outcome.updated);
+        for (const name of outcome.unmatched) unmatchedCategories.add(name);
       }
 
       return ok({
         updated,
         failed,
-        ...(unmatchedCategories.length
-          ? { categories_unmatched: unmatchedCategories }
+        ...(unmatchedCategories.size
+          ? { categories_unmatched: [...unmatchedCategories] }
           : {}),
       });
     },
@@ -2400,7 +2617,7 @@ export function registerMinddyTools(
   server.registerTool(
     "minddy_append_to_plan",
     {
-      title: "Append to plan",
+      title: "Append to plan or description",
       description:
         "Add a block to an issue's implementation plan WITHOUT touching a single " +
         "byte of what is already there — an extra task, a note, a precision that " +
@@ -2410,11 +2627,17 @@ export function registerMinddyTools(
         "`section`. Creates the plan when the issue has none. Prefer this to " +
         "minddy_update_issues { fields: { plan } }, which rewrites the whole plan " +
         "and drops everything you don't resend; to reword something already " +
-        "written, use minddy_edit_issue_text. Returns the refreshed plan_tasks " +
-        "and plan_progress.",
+        "written, use minddy_edit_issue_text. Pass field 'description' to add " +
+        "the block to the issue's DESCRIPTION instead (at its end, or under " +
+        "`section`), the same way. Returns the refreshed plan_tasks and " +
+        "plan_progress (for a plan).",
       inputSchema: z.object({
         project_id: PROJECT_ID,
         issue: ISSUE_REF,
+        field: z
+          .enum(["plan", "description"])
+          .optional()
+          .describe("Which text of the issue to add to. Default: plan."),
         markdown: z
           .string()
           .min(1)
@@ -2449,19 +2672,23 @@ export function registerMinddyTools(
       const current = await readIssueText(ref.issue.id, scope.access.project.id, scope.userId);
       if ("error" in current) return current.error;
 
-      const next = appendToPlan(current.plan, args.markdown, section);
+      const field: IssueTextField = args.field ?? "plan";
+      const next = appendToPlan(current[field], args.markdown, section, {
+        beforeQuestions: field === "plan",
+      });
       if (next === null) {
         return fail(
           "plan_section_not_found",
-          `The plan of ${ref.issue.identifier} has no "${section}" heading. ` +
+          `The ${field} of ${ref.issue.identifier} has no "${section}" heading. ` +
             "Read it with minddy_get_issue to see its headings, or omit " +
-            '"section" to append at the end of the plan.',
+            `"section" to append at the end of the ${field}.`,
         );
       }
-      if (next.length > MAX_PLAN_LENGTH) {
+      const cap = field === "plan" ? MAX_PLAN_LENGTH : MAX_DESCRIPTION_LENGTH;
+      if (next.length > cap) {
         return fail(
           "invalid_params",
-          `The plan is capped at ${MAX_PLAN_LENGTH} characters; this block would ` +
+          `The ${field} is capped at ${cap} characters; this block would ` +
             `take it to ${next.length}.`,
         );
       }
@@ -2469,7 +2696,7 @@ export function registerMinddyTools(
       const result = await updateIssueFields({
         issueId: ref.issue.id,
         actorId: scope.userId,
-        input: { plan: next },
+        input: { [field]: next },
         mcpKeyId: scope.keyId,
         expectedUpdatedAt: current.updatedAt || undefined,
       });
@@ -2477,7 +2704,9 @@ export function registerMinddyTools(
 
       return ok({
         issue: ref.issue.identifier,
-        ...planTaskSummary(result.issue.plan as string | null),
+        ...(field === "plan"
+          ? planTaskSummary(result.issue.plan as string | null)
+          : { field, length: next.length }),
       });
     },
   );
@@ -2487,7 +2716,7 @@ export function registerMinddyTools(
     {
       title: "Edit issue text",
       description:
-        "Rewrite ONE passage of an issue's plan or description IN PLACE, the way a " +
+        "Rewrite passages of an issue's plan or description IN PLACE, the way a " +
         "code editor patches a file: old_string → new_string, copied verbatim from " +
         "minddy_get_issue, and the match must be unique (add the surrounding lines, " +
         "or set replace_all). Every other byte is left alone. This is how a decision " +
@@ -2496,30 +2725,16 @@ export function registerMinddyTools(
         "rewrite silently overwrites whatever another client changed meanwhile, a " +
         "stale old_string fails loudly. To ADD to a plan use minddy_append_to_plan, " +
         "to flip a checkbox minddy_update_plan_task. Returns a unified diff of what " +
-        "changed (plus the refreshed plan_tasks when editing a plan).",
+        "changed (plus the refreshed plan_tasks when editing a plan). Several " +
+        "passages to change? Put the first in old_string/new_string and the " +
+        "others in `edits`: one call, one write.",
       inputSchema: z.object({
         project_id: PROJECT_ID,
         issue: ISSUE_REF,
         field: z
           .enum(["plan", "description"])
           .describe("Which text of the issue to patch."),
-        old_string: z
-          .string()
-          .min(1)
-          .describe(
-            "The exact passage to replace, copied VERBATIM from what " +
-              "minddy_get_issue returned — whitespace and line breaks included.",
-          ),
-        new_string: z
-          .string()
-          .describe("What replaces it. An empty string deletes the passage."),
-        replace_all: z
-          .boolean()
-          .optional()
-          .describe(
-            "Replace EVERY occurrence instead of requiring a unique match " +
-              "(default false). Use it for a term repeated throughout the text.",
-          ),
+        ...TEXT_EDIT_FIELDS,
       }),
       annotations: WRITE,
     },
@@ -2529,6 +2744,8 @@ export function registerMinddyTools(
       const ref = await resolveIssueRef(scope.access, args.issue);
       if ("error" in ref) return ref.error;
 
+      const edits = readTextEdits(args);
+
       const field: IssueTextField = args.field;
       const current = await readIssueText(ref.issue.id, scope.access.project.id, scope.userId);
       if ("error" in current) return current.error;
@@ -2536,9 +2753,7 @@ export function registerMinddyTools(
       const edit = editIssueText({
         field,
         current: current[field],
-        oldString: args.old_string,
-        newString: args.new_string,
-        replaceAll: args.replace_all ?? false,
+        edits,
         tools: MCP_TEXT_TOOLS,
       });
       if (!edit.ok) return fail(edit.code, edit.message);
@@ -2990,7 +3205,7 @@ export function registerMinddyTools(
       }
 
       const content: Array<Record<string, unknown>> = [
-        { type: "text", text: JSON.stringify(meta, null, 2) },
+        { type: "text", text: JSON.stringify(meta) },
       ];
       if (mime.startsWith("image/")) {
         content.push({
@@ -3108,7 +3323,7 @@ export function registerMinddyTools(
       }
       return {
         content: [
-          { type: "text", text: JSON.stringify(meta, null, 2) },
+          { type: "text", text: JSON.stringify(meta) },
           { type: "image", data: read.data.toString("base64"), mimeType: read.mimeType },
         ],
       } as unknown as ToolResult;
@@ -3131,159 +3346,179 @@ export function registerMinddyTools(
         "an issue and an objective, or two objectives; blocking through an " +
         "objective cascades to its issues in the cycle filler. On issues you " +
         "are CREATING, don't call this after the fact: minddy_create_issue " +
-        "takes `relations` in the same call, siblings included.",
+        "takes `relations` in the same call, siblings included. To wire " +
+        "SEVERAL relations (ordering a backlog, linking a batch to an " +
+        "objective), state the first one as usual and the others in `links` — " +
+        "one call, applied in order, each with its own result.",
       inputSchema: z.object({
         project_id: PROJECT_ID,
-        issue: ISSUE_REF.optional().describe(
-          "The ISSUE the relation is stated FROM (its perspective). Pass " +
-            "either `issue` or `objective`, never both.",
-        ),
-        objective: z
-          .string()
+        ...LINK_FIELDS.shape,
+        links: z
+          .array(LINK_FIELDS)
+          .min(1)
+          .max(MAX_BULK_ISSUES - 1)
           .optional()
           .describe(
-            "The OBJECTIVE the relation is stated FROM (objective → issue, or " +
-              "objective → objective). UUID, or 'obj:<name>'.",
+            "MORE relations in the same call, applied in order after the one " +
+              "the other fields state (index 0). The result then lists each in " +
+              "`results`, and the ones that could not be written in `failed`, " +
+              "by index.",
           ),
-        relation: z
-          .enum(["blocks", "blocked_by", "related"])
-          .describe("Relation type from the source's perspective."),
-        target: z
-          .string()
-          .describe(
-            "The other end of the relation: an issue (UUID, identifier like " +
-              "'MIND-42', or bare issue number) or an objective (UUID, or " +
-              "'obj:<name>').",
-          ),
-        remove: z
-          .boolean()
-          .optional()
-          .describe("Remove the relation instead of adding it."),
       }),
       annotations: WRITE_IDEMPOTENT,
     },
     async (args, extra) => {
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
-      if (Boolean(args.issue) === Boolean(args.objective)) {
-        return fail(
-          "invalid_params",
-          "Pass exactly one of `issue` or `objective` as the relation's source.",
-        );
-      }
 
-      type Endpoint =
-        | { kind: "issue"; id: string; label: string }
-        | { kind: "objective"; id: string; label: string };
+      const linkOne = async (
+        link: LinkInput,
+      ): Promise<{ payload: Record<string, unknown> } | { error: ToolResult }> => {
+        if (Boolean(link.issue) === Boolean(link.objective)) {
+          return { error: fail(
+            "invalid_params",
+            "Pass exactly one of `issue` or `objective` as the relation's source.",
+          ) };
+        }
+        if (!link.relation || !link.target) {
+          return { error: fail(
+            "invalid_params",
+            "A relation needs `relation` and `target`.",
+          ) };
+        }
+        const relation = link.relation;
 
-      const resolveEnd = async (
-        ref: string,
-        forceObjective: boolean
-      ): Promise<{ endpoint: Endpoint } | { error: ToolResult }> => {
-        if (forceObjective || /^obj:/i.test(ref)) {
-          const obj = await resolveObjectiveRef(scope.access, ref);
-          if ("error" in obj) return { error: obj.error };
+        type Endpoint =
+          | { kind: "issue"; id: string; label: string }
+          | { kind: "objective"; id: string; label: string };
+
+        const resolveEnd = async (
+          ref: string,
+          forceObjective: boolean
+        ): Promise<{ endpoint: Endpoint } | { error: ToolResult }> => {
+          if (forceObjective || /^obj:/i.test(ref)) {
+            const obj = await resolveObjectiveRef(scope.access, ref);
+            if ("error" in obj) return { error: obj.error };
+            return {
+              endpoint: {
+                kind: "objective",
+                id: obj.objective.id,
+                label: obj.objective.name,
+              },
+            };
+          }
+          const asIssue = await resolveIssueRef(scope.access, ref);
+          if (!("error" in asIssue)) {
+            return {
+              endpoint: {
+                kind: "issue",
+                id: asIssue.issue.id,
+                label: asIssue.issue.identifier,
+              },
+            };
+          }
+          // Not an issue: fall back to an objective (agents pass the UUID
+          // minddy_get_objective returned, with no marker).
+          const asObjective = await resolveObjectiveRef(scope.access, ref);
+          if ("error" in asObjective) return { error: asIssue.error };
           return {
             endpoint: {
               kind: "objective",
-              id: obj.objective.id,
-              label: obj.objective.name,
+              id: asObjective.objective.id,
+              label: asObjective.objective.name,
             },
           };
-        }
-        const asIssue = await resolveIssueRef(scope.access, ref);
-        if (!("error" in asIssue)) {
-          return {
-            endpoint: {
-              kind: "issue",
-              id: asIssue.issue.id,
-              label: asIssue.issue.identifier,
-            },
-          };
-        }
-        // Not an issue: fall back to an objective (agents pass the UUID
-        // minddy_get_objective returned, with no marker).
-        const asObjective = await resolveObjectiveRef(scope.access, ref);
-        if ("error" in asObjective) return { error: asIssue.error };
-        return {
-          endpoint: {
-            kind: "objective",
-            id: asObjective.objective.id,
-            label: asObjective.objective.name,
-          },
         };
-      };
 
-      const srcResolved = args.issue
-        ? await resolveEnd(args.issue, false)
-        : await resolveEnd(args.objective as string, true);
-      if ("error" in srcResolved) return srcResolved.error;
-      const src = srcResolved.endpoint;
-      const tgtResolved = await resolveEnd(args.target, false);
-      if ("error" in tgtResolved) return tgtResolved.error;
-      const tgt = tgtResolved.endpoint;
-      if (src.kind === tgt.kind && src.id === tgt.id) {
-        return fail(
-          "invalid_params",
-          "An entity can't be related to itself.",
-        );
-      }
+        const srcResolved = link.issue
+          ? await resolveEnd(link.issue, false)
+          : await resolveEnd(link.objective as string, true);
+        if ("error" in srcResolved) return srcResolved;
+        const src = srcResolved.endpoint;
+        const tgtResolved = await resolveEnd(link.target, false);
+        if ("error" in tgtResolved) return tgtResolved;
+        const tgt = tgtResolved.endpoint;
+        if (src.kind === tgt.kind && src.id === tgt.id) {
+          return { error: fail(
+            "invalid_params",
+            "An entity can't be related to itself.",
+          ) };
+        }
 
-      const sourceSpec = { id: src.id, type: src.kind };
-      const targetSpec = { id: tgt.id, type: tgt.kind };
+        const sourceSpec = { id: src.id, type: src.kind };
+        const targetSpec = { id: tgt.id, type: tgt.kind };
 
-      if (args.remove) {
-        const existing = await findIssueRelation(
-          scope.access.project.id,
-          sourceSpec,
-          args.relation,
-          targetSpec,
-        );
-        if (!existing) {
-          return ok({
-            removed: false,
+        if (link.remove) {
+          const existing = await findIssueRelation(
+            scope.access.project.id,
+            sourceSpec,
+            relation,
+            targetSpec,
+          );
+          if (!existing) {
+            return { payload: {
+              removed: false,
+              ...(src.kind === "issue" ? { issue: src.label } : {}),
+              source: src.label,
+              target: tgt.label,
+            } };
+          }
+          const result = await removeIssueRelation({
+            relationId: existing.id,
+            actorId: scope.userId,
+            mcpKeyId: scope.keyId,
+          });
+          if (!result.ok) return { error: coreFail(result) };
+          return { payload: {
+            removed: true,
+            relation,
             ...(src.kind === "issue" ? { issue: src.label } : {}),
             source: src.label,
+            source_kind: src.kind,
             target: tgt.label,
-          });
+            target_kind: tgt.kind,
+          } };
         }
-        const result = await removeIssueRelation({
-          relationId: existing.id,
+
+        const result = await addIssueRelation({
+          projectId: scope.access.project.id,
           actorId: scope.userId,
+          sourceId: src.id,
+          targetId: tgt.id,
+          type: relation,
+          sourceType: src.kind,
+          targetType: tgt.kind,
           mcpKeyId: scope.keyId,
         });
-        if (!result.ok) return coreFail(result);
-        return ok({
-          removed: true,
-          relation: args.relation,
+        if (!result.ok) return { error: coreFail(result) };
+        return { payload: {
+          added: true,
+          relation,
           ...(src.kind === "issue" ? { issue: src.label } : {}),
           source: src.label,
           source_kind: src.kind,
           target: tgt.label,
           target_kind: tgt.kind,
-        });
+        } };
+      };
+
+      if (args.links) {
+        const { links, project_id: _project, ...first } = args;
+        // In order, one at a time: a later link may undo an earlier one
+        // (remove after add), and their outcome must follow the list.
+        const results: Array<Record<string, unknown>> = [];
+        const failed: Array<{ index: number; error: string }> = [];
+        for (const [index, link] of [first, ...links].entries()) {
+          const outcome = await linkOne(link);
+          if ("error" in outcome) {
+            failed.push({ index, error: toolErrorMessage(outcome.error) });
+          } else results.push({ index, ...outcome.payload });
+        }
+        return ok({ results, failed });
       }
 
-      const result = await addIssueRelation({
-        projectId: scope.access.project.id,
-        actorId: scope.userId,
-        sourceId: src.id,
-        targetId: tgt.id,
-        type: args.relation,
-        sourceType: src.kind,
-        targetType: tgt.kind,
-        mcpKeyId: scope.keyId,
-      });
-      if (!result.ok) return coreFail(result);
-      return ok({
-        added: true,
-        relation: args.relation,
-        ...(src.kind === "issue" ? { issue: src.label } : {}),
-        source: src.label,
-        source_kind: src.kind,
-        target: tgt.label,
-        target_kind: tgt.kind,
-      });
+      const outcome = await linkOne(args);
+      return "error" in outcome ? outcome.error : ok(outcome.payload);
     },
   );
 
@@ -3353,12 +3588,32 @@ export function registerMinddyTools(
       title: "Update objective",
       description:
         "Update an objective's fields. Only the fields you send change; null " +
-        "clears lead_user_id / target_date / color.",
+        "clears lead_user_id / target_date / color. `description` REPLACES the " +
+        "whole text: to fix part of it, pass `description_edits` instead " +
+        "(old_string → new_string, copied verbatim from minddy_get_objective, " +
+        "applied in order, all or nothing), like minddy_edit_issue_text on an " +
+        "issue, and/or `description_append` to add a block at its end. Both are " +
+        "refused, rather than applied, if the objective changed meanwhile.",
       inputSchema: z.object({
         project_id: PROJECT_ID,
         objective_id: z.string().uuid(),
         name: z.string().min(1).optional(),
         description: z.string().nullable().optional(),
+        description_edits: TEXT_EDIT_LIST.optional().describe(
+          "Passages of the CURRENT description to rewrite in place, instead of " +
+            "`description`: each old_string copied verbatim from " +
+            "minddy_get_objective, unique match (or replace_all), an empty " +
+            "new_string deletes. If one does not match, nothing is written.",
+        ),
+        description_append: z
+          .string()
+          .min(1)
+          .optional()
+          .describe(
+            "A markdown block to ADD at the end of the current description " +
+              "(after description_edits when both are sent), instead of " +
+              "resending it. Only what is new.",
+          ),
         status: z.enum(OBJECTIVE_STATUS_VALUES).optional(),
         lead_user_id: z.string().nullable().optional(),
         target_date: z.string().nullable().optional(),
@@ -3370,9 +3625,31 @@ export function registerMinddyTools(
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
 
+      const {
+        description_edits: descriptionEdits,
+        description_append: descriptionAppend,
+        ...input
+      } = args;
+      const patches = Boolean(descriptionEdits || descriptionAppend);
+      if (patches && args.description !== undefined) {
+        return fail(
+          "invalid_params",
+          "Pass either description (the whole text) or description_edits / description_append, not both.",
+        );
+      }
+
+      // Edits match the text people see: fold pending live typing in first.
+      if (patches) {
+        await materializePendingDescription(
+          "objective",
+          args.objective_id,
+          scope.access.project.id,
+        );
+      }
       // Scope check: the objective must belong to the project in question.
+      // The description is only read (and decrypted) when it is patched.
       const { data: obj } = await objectiveStore(getServiceClient())
-        .select("id")
+        .select(patches ? "id, description, updated_at" : "id")
         .is("deleted_at", null)
         .eq("id", args.objective_id)
         .eq("project_id", scope.access.project.id)
@@ -3380,10 +3657,24 @@ export function registerMinddyTools(
       if (!obj)
         return fail("not_found", "Objective not found in this project.");
 
+      if (patches) {
+        const edit = patchObjectiveDescription(
+          (obj.description as string | null) ?? "",
+          {
+            edits: descriptionEdits ? toPassageEdits(descriptionEdits) : [],
+            append: descriptionAppend,
+          },
+          { read: "minddy_get_objective", replaceWhole: "minddy_update_objective { description }" },
+        );
+        if (!edit.ok) return fail(edit.code, edit.message);
+        input.description = edit.content;
+      }
+
       const result = await updateObjective({
         objectiveId: args.objective_id,
         actorId: scope.userId,
-        input: args,
+        input,
+        expectedUpdatedAt: patches ? (obj.updated_at as string) : null,
         mcpKeyId: scope.keyId,
       });
       if (!result.ok) return coreFail(result);
@@ -3510,7 +3801,10 @@ export function registerMinddyTools(
       title: "Set scratchpad",
       description:
         "Replace the ENTIRE scratchpad markdown for the key owner. This " +
-        "overwrites the whole notes doc. So call minddy_get_scratchpad FIRST and " +
+        "overwrites the whole notes doc, so keep it for restructuring: to reword " +
+        "or remove a few lines use minddy_edit_scratchpad_text, to tick tasks " +
+        "minddy_update_scratchpad_task, to add tasks minddy_add_scratchpad_tasks. " +
+        "Otherwise call minddy_get_scratchpad FIRST and " +
         "preserve the parts you are not changing (keep other sections; only tick " +
         "off the items you actually finished). Checkbox convention: '- [ ]' to " +
         "do, '- [~]' in progress, '- [x]' done, '- [-]' dropped; '##' for section " +
@@ -3597,8 +3891,9 @@ export function registerMinddyTools(
         "rewriting the whole doc: the precise way to tick items off. Tasks are " +
         "0-indexed in document order (the `tasks` array of minddy_get_scratchpad); " +
         "each task keeps its text, only its checkbox marker changes. States: " +
-        "pending, in_progress, completed, cancelled. To add/remove tasks or edit " +
-        "their text, use minddy_set_scratchpad instead. Indices are validated " +
+        "pending, in_progress, completed, cancelled. To add tasks use " +
+        "minddy_add_scratchpad_tasks; to edit their text or remove them, " +
+        "minddy_edit_scratchpad_text. Indices are validated " +
         "all-or-nothing: a single out-of-range index rejects the whole call. Pass " +
         "`expected_rev` (the `rev` from the get whose indices you're using) so a " +
         "concurrent edit can't make you flip the wrong task.",
@@ -3687,7 +3982,7 @@ export function registerMinddyTools(
         "to add them at the end of that section instead; an unknown section is " +
         "rejected (create it with minddy_set_scratchpad first). To change an " +
         "existing task's state use minddy_update_scratchpad_task; to edit task " +
-        "text or remove tasks use minddy_set_scratchpad. Use `depth` to nest: a " +
+        "text or remove tasks use minddy_edit_scratchpad_text. Use `depth` to nest: a " +
         "task at depth 1 becomes a sub-task of the task right before it.",
       inputSchema: z.object({
         tasks: z
@@ -3762,6 +4057,65 @@ export function registerMinddyTools(
           rev: saved.rev,
           progress: saved.progress,
           tasks: parsePlan(saved.content).tasks.map((t) => ({
+            index: t.index,
+            text: t.text,
+            state: t.state,
+            depth: t.depth,
+          })),
+        });
+      } catch (err) {
+        return fail("database_error", (err as Error).message);
+      }
+    },
+  );
+
+  server.registerTool(
+    "minddy_edit_scratchpad_text",
+    {
+      title: "Edit scratchpad text",
+      description:
+        "Rewrite passages of the scratchpad IN PLACE, the way a code editor " +
+        "patches a file: old_string → new_string, copied VERBATIM from " +
+        "minddy_get_scratchpad, unique match (add the surrounding lines, or set " +
+        "replace_all). Every other byte is left alone. This is how a task gets " +
+        "reworded, a line REMOVED (empty new_string — e.g. a note promoted to an " +
+        "issue) or a section renamed, without resending the whole note through " +
+        "minddy_set_scratchpad. The match is made on the note as it is when " +
+        "you write, so the user's concurrent edits elsewhere are kept, and a " +
+        "passage they changed fails loudly. Several passages? Put the first in " +
+        "old_string/new_string and the others in `edits`: one call, one write, " +
+        "all or nothing. Returns a unified diff, the new `rev` and the task list.",
+      inputSchema: z.object({ ...TEXT_EDIT_FIELDS }),
+      annotations: WRITE,
+    },
+    async (args, extra) => {
+      const auth = requireUser(extra);
+      if ("error" in auth) return auth.error;
+      try {
+        const result = await editScratchpadText(
+          getServiceClient(),
+          auth.userId,
+          readTextEdits(args),
+          { read: "minddy_get_scratchpad", replaceWhole: "minddy_set_scratchpad" },
+        );
+        if (result.status === "refused") return fail(result.code, result.message);
+        if (result.status === "conflict") {
+          return fail(
+            "conflict",
+            "The scratchpad is being edited concurrently; read it again and retry.",
+          );
+        }
+        const truncated = result.diff.length > MAX_EDIT_DIFF_CHARS;
+        return ok({
+          rev: result.state.rev,
+          progress: result.state.progress,
+          additions: result.additions,
+          deletions: result.deletions,
+          diff: truncated
+            ? `${result.diff.slice(0, MAX_EDIT_DIFF_CHARS)}\n…`
+            : result.diff,
+          ...(truncated ? { diff_truncated: true } : {}),
+          tasks: parsePlan(result.state.content).tasks.map((t) => ({
             index: t.index,
             text: t.text,
             state: t.state,
@@ -4392,10 +4746,22 @@ export function registerMinddyTools(
         "The status of a post LINKED TO AN ISSUE is not its own — it is copied from " +
         "that issue on every transition — so setting it here is refused: move the " +
         "issue instead, with minddy_update_issues. To answer the person rather than " +
-        "decide, use minddy_respond_feedback.",
+        "decide, use minddy_respond_feedback. Triaging a batch (mark these ten " +
+        "as spam, publish the reviewed ones)? Put the other posts in " +
+        "`feedback_post_ids`: they get the same changes in the same call.",
       inputSchema: z.object({
         project_id: PROJECT_ID,
         feedback_post_id: z.string().uuid(),
+        feedback_post_ids: z
+          .array(z.string().uuid())
+          .min(1)
+          .max(MAX_BULK_ISSUES - 1)
+          .optional()
+          .describe(
+            "MORE posts that receive the same changes, after feedback_post_id. " +
+              "The result then lists them in `updated` and the refused ones in " +
+              "`failed`; one refusal does not stop the others.",
+          ),
         status: z
           .enum(FEEDBACK_POST_STATUSES)
           .optional()
@@ -4414,11 +4780,6 @@ export function registerMinddyTools(
     async (args, extra) => {
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
-      const ref = await resolveFeedbackPost(
-        scope.access,
-        args.feedback_post_id,
-      );
-      if ("error" in ref) return ref.error;
 
       const input: Record<string, unknown> = {};
       if (args.status !== undefined) input.status = args.status;
@@ -4432,35 +4793,68 @@ export function registerMinddyTools(
         );
       }
 
-      // Same lock as the team view (`statusLocked`): a linked return holds its
-      // status of his ticket, which `status-sync` copies at each transition.
-      // Accepting it here would offer a gesture that the next transition overwrites.
-      if (args.status !== undefined && ref.post.issue_id) {
-        return fail(
-          "status_follows_issue",
-          "This feedback post is linked to an issue: its public status is copied " +
-            "from that issue on every transition, so it can't be set directly. " +
-            "Move the issue instead (minddy_update_issues), or detach the post " +
-            "with minddy_unlink_feedback first.",
-        );
-      }
+      const updateOne = async (
+        postId: string,
+      ): Promise<{ feedback: Record<string, unknown> } | { error: ToolResult }> => {
+        const ref = await resolveFeedbackPost(scope.access, postId);
+        if ("error" in ref) return ref;
 
-      const result = await updateFeedbackPostFields({
-        postId: ref.post.id,
-        actorId: scope.userId,
-        input,
-        mcpKeyId: scope.keyId,
-      });
-      if (!result.ok) return coreFail(result);
-      return ok({
-        feedback: {
-          id: result.post.id,
-          title: result.post.title,
-          status: result.post.status,
-          is_public: result.post.is_public,
-          review_state: result.post.review_state,
-        },
-      });
+        // Same lock as the team view (`statusLocked`): a linked return holds its
+        // status of his ticket, which `status-sync` copies at each transition.
+        // Accepting it here would offer a gesture that the next transition overwrites.
+        if (args.status !== undefined && ref.post.issue_id) {
+          return {
+            error: fail(
+              "status_follows_issue",
+              "This feedback post is linked to an issue: its public status is copied " +
+                "from that issue on every transition, so it can't be set directly. " +
+                "Move the issue instead (minddy_update_issues), or detach the post " +
+                "with minddy_unlink_feedback first.",
+            ),
+          };
+        }
+
+        const result = await updateFeedbackPostFields({
+          postId: ref.post.id,
+          actorId: scope.userId,
+          input,
+          mcpKeyId: scope.keyId,
+        });
+        if (!result.ok) return { error: coreFail(result) };
+        return {
+          feedback: {
+            id: result.post.id,
+            title: result.post.title,
+            status: result.post.status,
+            is_public: result.post.is_public,
+            review_state: result.post.review_state,
+          },
+        };
+      };
+
+      if (!args.feedback_post_ids) {
+        const outcome = await updateOne(args.feedback_post_id);
+        return "error" in outcome ? outcome.error : ok(outcome);
+      }
+      const postIds = [
+        ...new Set([args.feedback_post_id, ...args.feedback_post_ids]),
+      ];
+      const outcomes = await mapWithConcurrency(
+        postIds,
+        BULK_WRITE_CONCURRENCY,
+        updateOne,
+      );
+      const updated: Array<Record<string, unknown>> = [];
+      const failed: Array<{ feedback_post_id: string; error: string }> = [];
+      for (const [index, outcome] of outcomes.entries()) {
+        if ("error" in outcome) {
+          failed.push({
+            feedback_post_id: postIds[index],
+            error: toolErrorMessage(outcome.error),
+          });
+        } else updated.push(outcome.feedback);
+      }
+      return ok({ updated, failed });
     },
   );
 

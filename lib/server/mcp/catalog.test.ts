@@ -407,6 +407,12 @@ describe("catalogue MCP — les pages", () => {
       expect(param("minddy_edit_page_text", required).required).toBe(true);
     }
     expect(param("minddy_edit_page_text", "replace_all").required).toBe(false);
+    expect(param("minddy_edit_page_text", "edits").required).toBe(false);
+    // The notebook is patched like a page (MIN-800).
+    for (const required of ["old_string", "new_string"]) {
+      expect(param("minddy_edit_scratchpad_text", required).required).toBe(true);
+    }
+    expect(param("minddy_update_objective", "description_edits").required).toBe(false);
     // The empty string DELETES a passage — said where the model reads it.
     expect(param("minddy_edit_page_text", "new_string").description).toMatch(/empty/i);
     // Nothing is required beyond the target on total writing: we can only

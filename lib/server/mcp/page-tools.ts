@@ -1,6 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
+import { readTextEdits, TEXT_EDIT_FIELDS } from "./text-edit-input";
 import { DATABASE_ENTRY_VALUES, DATABASE_TOOL_SCHEMA, databaseToolDescription } from "@/lib/server/database-tool-schema";
 import type { McpServer } from "@modelcontextprotocol/server";
 import {
@@ -45,6 +46,9 @@ import {
  *
  * No deletion, voluntarily: the trash remains a human gesture.
  */
+
+/** Pages one minddy_create_page call may create. */
+const MAX_BULK_PAGES = 50;
 
 const PROJECT_ID = z
   .string()
@@ -246,7 +250,9 @@ export function registerPageTools(server: McpServer): void {
         "(minddy_create_issue), not here. Prefer a subpage of the right parent " +
         "over a new root page: a flat wiki stops being read. Nothing is added to " +
         "the parent's body — parent_page_id IS the nesting, and the page shows up " +
-        "in the sidebar tree.",
+        "in the sidebar tree. Several pages under the same parent (a database's " +
+        "entries, the chapters of a spec)? Pass the others in `pages`: one call " +
+        "creates them all, in order.",
       inputSchema: z.object({
         project_id: PROJECT_ID,
         title: z
@@ -278,12 +284,55 @@ export function registerPageTools(server: McpServer): void {
             "Nest the new page under this one (from minddy_list_pages). Omit for a " +
               "page at the root of the wiki."
           ),
+        pages: z
+          .array(
+            z.object({
+              title: z.string().describe("The page title, plain text."),
+              markdown: BODY,
+              icon: z.string().optional().describe("A single emoji."),
+              values: DATABASE_ENTRY_VALUES.optional().describe(
+                "Property values when the parent is a database, as `values` above."
+              ),
+            })
+          )
+          .min(1)
+          .max(MAX_BULK_PAGES - 1)
+          .optional()
+          .describe(
+            "MORE pages created in the same call, after this one and under the " +
+              "same parent_page_id — e.g. every entry of a database, each with its " +
+              "`values`. The result then lists the created pages in `pages` and " +
+              "the ones refused in `failed` (index 0 is the page above)."
+          ),
       }),
       annotations: WRITE,
     },
     async (args, extra) => {
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
+      if (args.pages) {
+        // In order, one at a time: siblings take their place in the tree in
+        // the order given.
+        const created: Array<Record<string, unknown>> = [];
+        const failed: Array<{ index: number; error: string }> = [];
+        const { pages: more, project_id: _project, parent_page_id, database, ...first } = args;
+        for (const [index, page] of [{ ...first, database }, ...more].entries()) {
+          const result = await createPageForAgent({
+            projectId: scope.access.project.id,
+            actorId: scope.userId,
+            title: page.title,
+            icon: page.icon,
+            markdown: page.markdown,
+            parentPageId: parent_page_id ?? null,
+            database: "database" in page && page.database === true,
+            values: page.values,
+            mcpKeyId: scope.keyId,
+          });
+          if (result.ok) created.push({ index, ...result.data });
+          else failed.push({ index, error: result.message });
+        }
+        return ok({ pages: created, failed });
+      }
       const result = await createPageForAgent({
         projectId: scope.access.project.id,
         actorId: scope.userId,
@@ -338,7 +387,9 @@ export function registerPageTools(server: McpServer): void {
         "leave untouched text byte-for-byte identical. When you do replace the " +
         "body, pass the version you got from minddy_get_page: the write is then " +
         "refused (page_stale) if a human or another agent wrote the page " +
-        "meanwhile, instead of silently overwriting them.",
+        "meanwhile, instead of silently overwriting them. It also MOVES a page " +
+        "in the wiki tree: parent_page_id nests it under another page, null " +
+        "brings it back to the root.",
       inputSchema: z.object({
         project_id: PROJECT_ID,
         page_id: PAGE_ID,
@@ -366,6 +417,16 @@ export function registerPageTools(server: McpServer): void {
           .nullable()
           .optional()
           .describe("New emoji icon; null clears it. Omit to leave it as it is."),
+        parent_page_id: z
+          .string()
+          .uuid()
+          .nullable()
+          .optional()
+          .describe(
+            "Move the page under this one (from minddy_list_pages); null moves it " +
+              "to the root of the wiki. Its subpages move with it. Omit to leave " +
+              "it where it is."
+          ),
       }),
       annotations: WRITE,
     },
@@ -380,6 +441,7 @@ export function registerPageTools(server: McpServer): void {
         icon: args.icon,
         markdown: args.markdown,
         version: args.version,
+        parentPageId: args.parent_page_id,
         mcpKeyId: scope.keyId,
       });
       if (!result.ok) return refusal(result);
@@ -431,7 +493,7 @@ export function registerPageTools(server: McpServer): void {
     {
       title: "Edit page text",
       description:
-        "Rewrite ONE passage of a page IN PLACE, the way a code editor patches a " +
+        "Rewrite passages of a page IN PLACE, the way a code editor patches a " +
         "file: old_string → new_string, copied VERBATIM from minddy_get_page, and " +
         "the match must be unique (add the surrounding lines, or set replace_all). " +
         "Every other byte is left alone. This is how a sentence gets corrected or " +
@@ -440,40 +502,26 @@ export function registerPageTools(server: McpServer): void {
         "changed meanwhile, a stale old_string fails loudly. Only the words you " +
         "change are written, merged with what people type meanwhile like a second " +
         "person editing in parallel; untouched blocks keep their formatting and anchors. " +
-        "To ADD text use minddy_append_to_page. Returns a unified diff of what changed.",
+        "To ADD text use minddy_append_to_page. Several passages to change (a " +
+        "renamed term, three sections to fix)? Put the first in old_string/" +
+        "new_string and the others in `edits`: one call, one write, all or " +
+        "nothing. Returns a unified diff of what changed.",
       inputSchema: z.object({
         project_id: PROJECT_ID,
         page_id: PAGE_ID,
-        old_string: z
-          .string()
-          .min(1)
-          .describe(
-            "The exact passage to replace, copied VERBATIM from the markdown " +
-              "minddy_get_page returned — whitespace and line breaks included."
-          ),
-        new_string: z
-          .string()
-          .describe("What replaces it. An empty string deletes the passage."),
-        replace_all: z
-          .boolean()
-          .optional()
-          .describe(
-            "Replace EVERY occurrence instead of requiring a unique match " +
-              "(default false). Use it for a term repeated throughout the page."
-          ),
+        ...TEXT_EDIT_FIELDS,
       }),
       annotations: WRITE,
     },
     async (args, extra) => {
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
+      const edits = readTextEdits(args);
       const result = await editPageTextForAgent({
         pageId: args.page_id,
         projectId: scope.access.project.id,
         actorId: scope.userId,
-        oldString: args.old_string,
-        newString: args.new_string,
-        replaceAll: args.replace_all ?? false,
+        edits,
         tools: {
           read: "minddy_get_page",
           replaceWhole: "minddy_update_page { markdown }",

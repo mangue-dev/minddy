@@ -181,11 +181,11 @@ export function buildScratchpadPrompt(
   const mcpBlock = isSection
     ? `Optionally, if the minddy MCP tools are available in your environment:
 - These notes are one section of a larger personal scratchpad. Read the full, current notes with \`minddy_get_scratchpad\` before changing anything.
-- If you update them, save the WHOLE document with \`minddy_set_scratchpad\` and preserve every other section — only tick off what you finished here.
+- Tick off what you finished here with \`minddy_update_scratchpad_task\`, and reword or remove lines with \`minddy_edit_scratchpad_text\`: both leave every other section untouched. Never rewrite the whole document for that.
 If the minddy MCP tools are not available, that's fine — just work from the section above, and don't claim the notes were updated.`
     : `Optionally, if the minddy MCP tools are available in your environment:
 - Read the current version of these notes with \`minddy_get_scratchpad\` first — they may have changed since this was copied.
-- As you finish items, tick them off and save the updated notes with \`minddy_set_scratchpad\` so the list stays in sync.
+- As you finish items, tick them off with \`minddy_update_scratchpad_task\` so the list stays in sync; reword or remove lines with \`minddy_edit_scratchpad_text\` rather than rewriting the whole notes.
 If the minddy MCP tools are not available, that's fine — just work from the notes above, and don't claim the notes were updated.`;
 
   return `Work through ${target}.

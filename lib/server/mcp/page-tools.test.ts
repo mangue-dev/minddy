@@ -1028,3 +1028,81 @@ it("creates a database entry with all its property values in one MCP call (MIN-7
     parent_page_id: database.payload.page_id, values: { [age]: "32" } });
   expect(refused.ok).toBe(false);
 });
+
+describe("batched page writes (MIN-800)", () => {
+  it("applies several passage edits in one write, in order", async () => {
+    const page = await createPage("Glossary", "## Terms\n\nA ticket is work.\n\n## Usage\n\nOpen a ticket.");
+
+    const { ok, payload } = await call("minddy_edit_page_text", {
+      project_id: PROJECT,
+      page_id: page,
+      old_string: "A ticket is work.",
+      new_string: "An issue is work.",
+      edits: [{ old_string: "Open a ticket.", new_string: "Open an issue." }],
+    });
+    expect(ok, JSON.stringify(payload)).toBe(true);
+    expect(payload.additions).toBe(2);
+
+    const read = await call("minddy_get_page", { project_id: PROJECT, page_id: page });
+    expect(read.payload.markdown).toBe("## Terms\n\nAn issue is work.\n\n## Usage\n\nOpen an issue.");
+    expect(read.payload.version).toBe(2);
+  });
+
+  it("writes nothing when one edit of the batch does not match", async () => {
+    const page = await createPage("Glossary", "First.\n\nSecond.");
+
+    const { ok, payload } = await call("minddy_edit_page_text", {
+      project_id: PROJECT,
+      page_id: page,
+      old_string: "First.",
+      new_string: "One.",
+      edits: [{ old_string: "Missing.", new_string: "Two." }],
+    });
+    expect(ok).toBe(false);
+    expect((payload.error as { code: string; message: string }).code).toBe("text_not_found");
+    expect((payload.error as { message: string }).message).toMatch(/^Edit 2 of 2/);
+
+    const read = await call("minddy_get_page", { project_id: PROJECT, page_id: page });
+    expect(read.payload.markdown).toBe("First.\n\nSecond.");
+  });
+
+  it("creates several pages under one parent, in order", async () => {
+    const parent = await createPage("Specs", "The specs.");
+
+    const { ok, payload } = await call("minddy_create_page", {
+      project_id: PROJECT,
+      parent_page_id: parent,
+      title: "Chapter 1",
+      markdown: "One.",
+      pages: [
+        { title: "Chapter 2", markdown: "Two." },
+        { title: "Chapter 3", markdown: "Three." },
+      ],
+    });
+    expect(ok, JSON.stringify(payload)).toBe(true);
+    expect(payload.failed).toEqual([]);
+    const pages = payload.pages as Array<{ index: number; title: string; parent_page_id: string }>;
+    expect(pages.map((p) => [p.index, p.title, p.parent_page_id])).toEqual([
+      [0, "Chapter 1", parent],
+      [1, "Chapter 2", parent],
+      [2, "Chapter 3", parent],
+    ]);
+  });
+
+  it("moves a page under another one, and back to the root", async () => {
+    const parent = await createPage("Archive", "Old things.");
+    const page = await createPage("Draft", "Text.");
+
+    const moved = await call("minddy_update_page", { project_id: PROJECT, page_id: page, parent_page_id: parent });
+    expect(moved.ok, JSON.stringify(moved.payload)).toBe(true);
+    expect(moved.payload.parent_page_id).toBe(parent);
+
+    const cycle = await call("minddy_update_page", { project_id: PROJECT, page_id: parent, parent_page_id: page });
+    expect(cycle.ok).toBe(false);
+    expect((cycle.payload.error as { code: string }).code).toBe("page_cycle");
+
+    const root = await call("minddy_update_page", { project_id: PROJECT, page_id: page, parent_page_id: null });
+    expect(root.ok, JSON.stringify(root.payload)).toBe(true);
+    expect(root.payload.parent_page_id).toBeNull();
+  });
+});

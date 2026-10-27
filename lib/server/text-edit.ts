@@ -67,25 +67,22 @@ const otherWay = (field: IssueTextField, tools: IssueTextTools): string =>
 export function editIssueText({
   field,
   current,
-  oldString,
-  newString,
-  replaceAll = false,
   tools,
+  ...change
 }: {
   field: IssueTextField;
   /** The field as it is stored NOW ("" when there is none). */
   current: string;
-  oldString: string;
-  newString: string;
-  replaceAll?: boolean;
   tools: IssueTextTools;
-}): IssueTextEditResult {
-  return editTextPassage({
+} & (
+  | TextPassageEdit
+  /** Several replacements, applied in order, all or nothing. */
+  | { edits: readonly TextPassageEdit[] }
+)): IssueTextEditResult {
+  return editTextPassages({
     field,
     current,
-    oldString,
-    newString,
-    replaceAll,
+    edits: "edits" in change ? change.edits : [change],
     read: tools.read,
     otherWay: otherWay(field, tools),
     subject: "issue",
@@ -189,4 +186,63 @@ export function editTextPassage({
         };
     }
   }
+}
+
+/** Replacements one batched edit may carry. */
+export const MAX_TEXT_EDITS = 50;
+
+/** One passage replacement of a batched edit. */
+export interface TextPassageEdit {
+  oldString: string;
+  newString: string;
+  replaceAll?: boolean;
+}
+
+/**
+ * Several passage replacements on one text, applied IN ORDER, each on the
+ * result of the previous one, and all or nothing: a refusal names the edit
+ * that failed and nothing is written. One call then fixes a term in three
+ * sections, the way Notion's `update_content` takes a list of replacements,
+ * instead of three reads and three writes.
+ */
+export function editTextPassages({
+  edits,
+  current,
+  ...rest
+}: Omit<Parameters<typeof editTextPassage>[0], "oldString" | "newString" | "replaceAll"> & {
+  edits: readonly TextPassageEdit[];
+}): IssueTextEditResult {
+  if (edits.length === 0 || edits.length > MAX_TEXT_EDITS) {
+    return {
+      ok: false,
+      code: "invalid_params",
+      message: `edits must hold between 1 and ${MAX_TEXT_EDITS} replacements.`,
+    };
+  }
+  let content = current;
+  const diffs: string[] = [];
+  let additions = 0;
+  let deletions = 0;
+  for (const [index, edit] of edits.entries()) {
+    const result = editTextPassage({
+      ...rest,
+      current: content,
+      oldString: edit.oldString,
+      newString: edit.newString,
+      replaceAll: edit.replaceAll ?? false,
+    });
+    if (!result.ok) {
+      return edits.length === 1
+        ? result
+        : {
+            ...result,
+            message: `Edit ${index + 1} of ${edits.length} (nothing was written): ${result.message}`,
+          };
+    }
+    content = result.content;
+    diffs.push(result.diff);
+    additions += result.additions;
+    deletions += result.deletions;
+  }
+  return { ok: true, content, diff: diffs.join("\n"), additions, deletions };
 }

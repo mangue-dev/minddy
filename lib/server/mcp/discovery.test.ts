@@ -31,6 +31,7 @@ const EXPECTED_TOOL_NAMES = [
   "minddy_delete_routine",
   "minddy_edit_issue_text",
   "minddy_edit_page_text",
+  "minddy_edit_scratchpad_text",
   "minddy_fill_cycle",
   "minddy_get_cycle",
   "minddy_get_feedback",

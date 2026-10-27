@@ -10,6 +10,7 @@ import {
 } from "@/lib/plan";
 import { MAX_SCRATCHPAD_LENGTH, tasksCheckedOff } from "@/lib/scratchpad";
 import { insertStatEvents } from "@/lib/server/stat-events";
+import { editTextPassages, type TextPassageEdit } from "@/lib/server/text-edit";
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeScratchpadRow, encodeScratchpadContent } from "./encryption/scratchpad-content";
 
@@ -221,6 +222,66 @@ export async function mutateScratchpad(
     if (!write.conflicted) return { status: "ok", state: write };
   }
   return { status: "conflict" };
+}
+
+export type ScratchpadTextEditResult =
+  | {
+      status: "ok";
+      state: ScratchpadState;
+      diff: string;
+      additions: number;
+      deletions: number;
+    }
+  /** The edit engine refused (no match, ambiguous match, empty note…). */
+  | { status: "refused"; code: string; message: string }
+  /** Exhausted CAS retries under sustained contention. */
+  | { status: "conflict" };
+
+/**
+ * Rewrites passages of the note IN PLACE (old → new, in order, all or
+ * nothing), the way pages and issue texts are patched — instead of resending
+ * the whole note to fix a task's wording or drop a line. The passages are
+ * matched on the FRESH note at each CAS attempt, so a concurrent edit by the
+ * user elsewhere in the note is kept; one that changed the passage itself
+ * makes the match fail loudly. Shared by the MCP and Numo.
+ */
+export async function editScratchpadText(
+  client: SupabaseClient,
+  userId: string,
+  edits: readonly TextPassageEdit[],
+  tools: { read: string; replaceWhole: string },
+): Promise<ScratchpadTextEditResult> {
+  let refusal: { code: string; message: string } | null = null;
+  let summary: { diff: string; additions: number; deletions: number } | null = null;
+  const result = await mutateScratchpad(client, userId, (content) => {
+    const edit = editTextPassages({
+      field: "scratchpad",
+      subject: "account",
+      current: content,
+      edits,
+      read: tools.read,
+      otherWay: `Use ${tools.replaceWhole} to write the whole note.`,
+    });
+    if (!edit.ok) {
+      refusal = { code: edit.code, message: edit.message };
+      return null;
+    }
+    if (edit.content.length > MAX_SCRATCHPAD_LENGTH) {
+      refusal = {
+        code: "invalid_params",
+        message: `The note is capped at ${MAX_SCRATCHPAD_LENGTH} characters; this edit would take it to ${edit.content.length}.`,
+      };
+      return null;
+    }
+    summary = { diff: edit.diff, additions: edit.additions, deletions: edit.deletions };
+    return edit.content;
+  });
+  if (result.status === "aborted") {
+    const { code, message } = refusal!;
+    return { status: "refused", code, message };
+  }
+  if (result.status === "conflict") return result;
+  return { status: "ok", state: result.state, ...summary! };
 }
 
 /** A requested state change: `task_index` 0-based in document order

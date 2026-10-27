@@ -32,6 +32,7 @@ export const MCP_TOOL_CAPABILITIES = {
   minddy_set_scratchpad: "user",
   minddy_update_scratchpad_task: "user",
   minddy_add_scratchpad_tasks: "user",
+  minddy_edit_scratchpad_text: "user",
   // The cycle core only reconciles and fills projects where the user can
   // still write, so the personal cycle tools stay open to everyone.
   minddy_get_cycle: "user",

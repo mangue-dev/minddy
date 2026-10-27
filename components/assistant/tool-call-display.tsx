@@ -264,7 +264,9 @@ const TOOL_META: Record<string, ToolMeta> = {
   update_issues: {
     icon: FilePen,
     getLabel: (args, result, success, status, t) => {
-      const ids = Array.isArray(args.issue_ids) ? args.issue_ids.length : 1;
+      const ids =
+        (Array.isArray(args.issue_ids) ? args.issue_ids.length : 0) +
+          (Array.isArray(args.updates) ? args.updates.length : 0) || 1;
       if (status === "running") return t("updatingIssues", { count: ids });
       if (!success) return t("updateIssuesFailed");
       const updated =
@@ -274,7 +276,11 @@ const TOOL_META: Record<string, ToolMeta> = {
   },
   append_to_plan: {
     icon: TaskDone01Icon,
-    getLabel: (_args, _result, success, status, t) => {
+    getLabel: (args, _result, success, status, t) => {
+      if (args.field === "description") {
+        if (status === "running") return t("appendingToDescription");
+        return success ? t("descriptionAppended") : t("appendToDescriptionFailed");
+      }
       if (status === "running") return t("appendingToPlan");
       return success ? t("planAppended") : t("appendToPlanFailed");
     },
@@ -325,9 +331,14 @@ const TOOL_META: Record<string, ToolMeta> = {
   get_page: PAGE_READ_META,
   create_page: {
     icon: Book01Icon,
-    getLabel: (args, _result, success, status, t) => {
+    getLabel: (args, result, success, status, t) => {
       const title = typeof args.title === "string" ? args.title.trim() : "";
       if (status === "running") return t("creatingPage");
+      if (Array.isArray(result?.pages)) {
+        return result.pages.length > 0
+          ? t("pagesCreated", { count: result.pages.length })
+          : t("createPageFailed");
+      }
       if (!success) return t("createPageFailed");
       return title ? t("pageCreatedWithTitle", { title }) : t("pageCreated");
     },
@@ -900,6 +911,13 @@ const TOOL_META: Record<string, ToolMeta> = {
   update_scratchpad_tasks: SCRATCHPAD_TASKS_META,
   update_scratchpad_task: SCRATCHPAD_TASKS_META,
   set_scratchpad: {
+    icon: Notebook01Icon,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("updatingScratchpad");
+      return success ? t("scratchpadUpdated") : t("updateScratchpadFailed");
+    },
+  },
+  edit_scratchpad_text: {
     icon: Notebook01Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("updatingScratchpad");

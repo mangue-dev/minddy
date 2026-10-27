@@ -50,6 +50,7 @@ export const NUMO_TOOL_CAPABILITIES: Record<string, NumoToolCapability> = {
   add_scratchpad_tasks: "personal_write",
   update_scratchpad_tasks: "personal_write",
   set_scratchpad: "personal_write",
+  edit_scratchpad_text: "personal_write",
   create_view: "personal_write",
   update_view: "personal_write",
   list_mcp_tools: "personal",
