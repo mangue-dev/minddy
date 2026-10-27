@@ -638,10 +638,11 @@ export function ObjectiveDialog({
           aria-describedby={undefined}
           // In creation, the extra top padding clears the "Create in" pill and
           // the close button.
-          // Every edge follows the "Create in" pill's 16 px inset, and the
-          // content starts 16 px below it (44 + 16 = 60). Without the pill,
-          // the name keeps clear of the close button on its right.
-          className={cn("creation-sheet p-4 max-sm:p-5 sm:max-w-2xl", showProjectSelect ? "pt-15 max-sm:pt-15" : "pr-14")}
+          // The text column starts where the "Create in" pill's label does
+          // (its 16 px inset + its 10 px padding), on both sides; the content
+          // starts 16 px below the pill (44 + 16 = 60). Without the pill, the
+          // name keeps clear of the close button on its right.
+          className={cn("creation-sheet px-[1.625rem] pt-4 pb-4 max-sm:p-5 sm:max-w-2xl", showProjectSelect ? "pt-15 max-sm:pt-15" : "pr-14")}
           onInteractOutside={keepOverlayOpenForPopper}
         >
           {/* Screen reader title: when editing, the name of the objective says
@@ -808,7 +809,7 @@ export function ObjectiveDialog({
               )}
               {/* No Cancel button: the dialog's own close X already does
                   that job. */}
-              <div className="creation-submit ml-auto flex items-center justify-end gap-2 app-mobile:w-full">
+              <div className="creation-submit ml-auto flex items-center justify-end gap-2 app-mobile:w-full app-desktop:-mr-2.5">
                 <SendShortcutTooltip scope="form" label={submitLabel}>
                   {composerEnabled ? (
                     /* The tooltip clings to the action: its props pass

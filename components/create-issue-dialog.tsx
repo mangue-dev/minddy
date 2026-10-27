@@ -824,9 +824,10 @@ export function CreateIssueDialog({
           ref={contentRef}
           onKeyDownCapture={submitShortcut.onKeyDownCapture}
           aria-describedby={undefined}
-          // Every edge follows the "Create in" pill's 16 px inset, and the
-          // content starts 16 px below it (44 + 16 = 60).
-          className="creation-sheet p-4 pt-15 max-sm:p-5 max-sm:pt-15 sm:max-w-2xl"
+          // The text column starts where the "Create in" pill's label does
+          // (its 16 px inset + its 10 px padding), on both sides; the content
+          // starts 16 px below the pill (44 + 16 = 60).
+          className="creation-sheet px-[1.625rem] pt-15 pb-4 max-sm:p-5 max-sm:pt-15 sm:max-w-2xl"
           onInteractOutside={keepOverlayOpenForPopper}
         >
           {/* "Create in" (MIN-741): level with the close button on desktop;
@@ -1102,7 +1103,7 @@ export function CreateIssueDialog({
               {/* The button in its own block: it is he who switches to a
   line, full width, when the bar passes the line. No Cancel button:
   the dialog's own close X already does that job. */}
-              <div className="creation-submit flex items-center justify-end gap-2 app-mobile:w-full app-desktop:ml-1">
+              <div className="creation-submit flex items-center justify-end gap-2 app-mobile:w-full app-desktop:ml-1 app-desktop:-mr-2.5">
                 {/* The tooltip clings to the action, not the chevron: its
                     props pass through `SplitButton` to the left button, the
                     only one that ⌘↵ activates. */}
