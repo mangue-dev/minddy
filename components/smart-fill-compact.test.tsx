@@ -1,0 +1,147 @@
+// @vitest-environment jsdom
+
+import React, { act } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import en from "@/messages/en.json";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import type { Category, Objective } from "@/lib/types";
+
+vi.mock("next-intl", () => ({
+  useTranslations: (namespace: keyof typeof en) => (key: string) =>
+    (en[namespace] as Record<string, string>)[key] ?? key,
+}));
+vi.mock("@hugeicons/react", () => ({ HugeiconsIcon: () => null }));
+// The real hook counts each objective's issues from the query cache; the menu
+// only needs the list back in some order.
+vi.mock("@/lib/use-ordered-objectives", () => ({ useOrderedObjectives: <T,>(objectives: T[]) => objectives }));
+vi.mock("@/components/objective-label", () => ({
+  OBJECTIVE_PILL_TRIGGER: "", objectivePickerOption: () => ({}),
+  ObjectivePill: ({ objective }: { objective: Objective }) => <span>{objective.name}</span>,
+}));
+vi.mock("@/components/search-select", () => ({ SearchSelect: () => null, SearchMultiSelect: () => null }));
+vi.mock("@/components/date-time-picker", () => ({ DateTimePicker: () => null }));
+vi.mock("@/lib/use-picker-create", () => ({ useCategoryCreateOption: () => null, useObjectiveCreateOption: () => null }));
+
+import { SmartFillCompact, type SmartFillManualFields } from "@/components/issue-compact-fields";
+
+const bug = { id: "cat-bug", name: "Bug", color: "red" } as Category;
+const ux = { id: "cat-ux", name: "UX", color: "blue" } as Category;
+const launch = { id: "obj-launch", name: "Launch", project_id: "p1" } as Objective;
+
+let host: HTMLDivElement;
+let root: Root;
+
+function manualFields(overrides: Partial<SmartFillManualFields> = {}): SmartFillManualFields {
+  return {
+    priority: "none", onPriorityChange: vi.fn(),
+    effort: null, onEffortChange: vi.fn(),
+    categories: [bug, ux], categoryIds: [], onCategoryIdsChange: vi.fn(),
+    objectives: [launch], objectiveId: null, onObjectiveChange: vi.fn(),
+    ...overrides,
+  };
+}
+
+function render(element: React.ReactElement) {
+  act(() => root.render(<TooltipProvider>{element}</TooltipProvider>));
+}
+
+function key(target: Element, name: string) {
+  act(() => {
+    target.dispatchEvent(new KeyboardEvent("keydown", { key: name, bubbles: true, cancelable: true }));
+  });
+}
+
+function menuItem(role: string, name: string): HTMLElement {
+  const item = [...document.querySelectorAll<HTMLElement>(`[role="${role}"]`)]
+    .find((element) => element.textContent?.trim() === name);
+  if (!item) throw new Error(`No ${role} named ${name}`);
+  return item;
+}
+
+/** Opens the chevron menu, then the submenu of one property, by keyboard. */
+function openSubmenu(label: string) {
+  const chevron = host.querySelector(`[aria-label="${en.IssueUI.smartFillManualAria}"]`)!;
+  key(chevron, "Enter");
+  const trigger = menuItem("menuitem", label);
+  act(() => trigger.focus());
+  key(trigger, "ArrowRight");
+}
+
+beforeEach(() => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  // Wide viewport: submenus are Radix flyouts, not the mobile inline rows.
+  vi.stubGlobal("matchMedia", (query: string) => ({
+    matches: false, media: query, addEventListener: () => {}, removeEventListener: () => {},
+    addListener: () => {}, removeListener: () => {}, onchange: null, dispatchEvent: () => false,
+  }));
+  vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
+  host = document.createElement("div");
+  document.body.append(host);
+  root = createRoot(host);
+});
+
+afterEach(() => {
+  act(() => root.unmount());
+  host.remove();
+  document.body.innerHTML = "";
+  vi.unstubAllGlobals();
+});
+
+describe("SmartFillCompact split button (MIN-809)", () => {
+  it("keeps the left half a toggle", () => {
+    const onChange = vi.fn();
+    render(<SmartFillCompact value onChange={onChange} manual={manualFields()} />);
+    const toggle = host.querySelector<HTMLButtonElement>("[aria-pressed]")!;
+    expect(toggle.getAttribute("aria-pressed")).toBe("true");
+    act(() => toggle.click());
+    expect(onChange).toHaveBeenCalledWith(false);
+  });
+
+  it("is a toggle alone without values to set by hand", () => {
+    render(<SmartFillCompact value onChange={vi.fn()} />);
+    expect(host.querySelector(`[aria-label="${en.IssueUI.smartFillManualAria}"]`)).toBeNull();
+  });
+
+  it("sets the priority from its submenu, without offering no priority", () => {
+    const fields = manualFields();
+    render(<SmartFillCompact value onChange={vi.fn()} manual={fields} />);
+    openSubmenu(en.Field.priority);
+    expect(() => menuItem("menuitemradio", en.Priority.none)).toThrow();
+    const high = menuItem("menuitemradio", en.Priority.high);
+    key(high, "Enter");
+    expect(fields.onPriorityChange).toHaveBeenCalledWith("high");
+  });
+
+  it("names each effort once", () => {
+    const fields = manualFields();
+    render(<SmartFillCompact value onChange={vi.fn()} manual={fields} />);
+    openSubmenu(en.Field.effort);
+    const m = menuItem("menuitemradio", "M");
+    key(m, "Enter");
+    expect(fields.onEffortChange).toHaveBeenCalledWith("m");
+  });
+
+  it("adds a category and keeps the others", () => {
+    const fields = manualFields({ categoryIds: [bug.id] });
+    render(<SmartFillCompact value onChange={vi.fn()} manual={fields} />);
+    openSubmenu(en.Field.categories);
+    expect(menuItem("menuitemcheckbox", "Bug").getAttribute("aria-checked")).toBe("true");
+    key(menuItem("menuitemcheckbox", "UX"), "Enter");
+    expect(fields.onCategoryIdsChange).toHaveBeenCalledWith([bug.id, ux.id]);
+  });
+
+  it("sets the objective and hides its submenu when the project has none", () => {
+    const fields = manualFields();
+    render(<SmartFillCompact value onChange={vi.fn()} manual={fields} />);
+    openSubmenu(en.Field.objective);
+    key(menuItem("menuitemradio", "Launch"), "Enter");
+    expect(fields.onObjectiveChange).toHaveBeenCalledWith(launch.id);
+
+    act(() => root.unmount());
+    root = createRoot(host);
+    render(<SmartFillCompact value onChange={vi.fn()} manual={manualFields({ objectives: [] })} />);
+    key(host.querySelector(`[aria-label="${en.IssueUI.smartFillManualAria}"]`)!, "Enter");
+    expect(() => menuItem("menuitem", en.Field.objective)).toThrow();
+  });
+});

@@ -1036,6 +1036,21 @@ export function CreateIssueDialog({
                         smartFillTouchedRef.current = true;
                         setSmartFill(value);
                       }}
+                      // Sets one property by hand without turning Smart Fill
+                      // off: the value wins and its field returns (MIN-809).
+                      manual={{
+                        priority: fields.priority,
+                        onPriorityChange: (priority) => setFields((f) => ({ ...f, priority })),
+                        effort: fields.effort,
+                        onEffortChange: (effort) => setFields((f) => ({ ...f, effort })),
+                        categories: scopedCategories,
+                        categoryIds,
+                        onCategoryIdsChange: setCategoryIds,
+                        objectives: scopedObjectives,
+                        objectiveId: fields.objective_id,
+                        onObjectiveChange: (objective_id) =>
+                          setFields((f) => ({ ...f, objective_id })),
+                      }}
                     />
                 )}
               </div>

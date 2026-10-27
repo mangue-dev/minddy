@@ -7,7 +7,7 @@
 // issue-property-fields.tsx.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Tag01Icon, Target01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, Tag01Icon, Target01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
@@ -48,6 +48,19 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // On the finger, the row of options is made of targets of 30 px, below the threshold of the
 // comfortable: under `sm` each trigger gains a few guard pixels.
@@ -397,40 +410,193 @@ export function ObjectiveCompact({
   );
 }
 
-/** Desktop uses a compact action; mobile creation uses a full-width labeled switch. */
+/**
+ * What the Smart Fill menu sets by hand (MIN-809). Smart Fill only fills what
+ * is still empty, so a value chosen here wins and brings its property back
+ * into the form row (MIN-746).
+ */
+export interface SmartFillManualFields {
+  priority: IssuePriority;
+  onPriorityChange: (v: IssuePriority) => void;
+  effort: IssueEffort | null;
+  onEffortChange: (v: IssueEffort) => void;
+  categories: Category[];
+  categoryIds: string[];
+  onCategoryIdsChange: (ids: string[]) => void;
+  objectives: Objective[];
+  objectiveId: string | null;
+  onObjectiveChange: (id: string) => void;
+}
+
+/**
+ * One submenu per property Smart Fill would fill. Only real values are
+ * offered: "no priority", "not set" and "no objective" are exactly what Smart
+ * Fill fills, so choosing them here would change nothing. Clearing a value
+ * stays in the property's own picker once it is back in the row.
+ */
+function SmartFillManualMenu({
+  priority,
+  onPriorityChange,
+  effort,
+  onEffortChange,
+  categories,
+  categoryIds,
+  onCategoryIdsChange,
+  objectives,
+  objectiveId,
+  onObjectiveChange,
+}: SmartFillManualFields) {
+  const t = useTranslations("IssueUI");
+  const tField = useTranslations("Field");
+  const tPriority = useTranslations("Priority");
+  const orderedObjectives = useOrderedObjectives(objectives);
+  return (
+    <>
+      <DropdownMenuLabel>{t("smartFillManualLabel")}</DropdownMenuLabel>
+      <DropdownMenuSub>
+        <DropdownMenuSubTrigger>
+          <PriorityIndicator priority={priority} className="size-4" />
+          {tField("priority")}
+        </DropdownMenuSubTrigger>
+        <DropdownMenuSubContent className="w-48">
+          <DropdownMenuRadioGroup
+            value={priority}
+            onValueChange={(v) => onPriorityChange(v as IssuePriority)}
+          >
+            {PRIORITIES.filter((p) => p.value !== "none").map((p) => (
+              <DropdownMenuRadioItem key={p.value} value={p.value}>
+                <PriorityIndicator priority={p.value} className="size-4" />
+                {tPriority(p.value)}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuSubContent>
+      </DropdownMenuSub>
+      <DropdownMenuSub>
+        <DropdownMenuSubTrigger>
+          <HugeiconsIcon icon={TriangleIcon} className="size-4 text-muted-foreground" />
+          {tField("effort")}
+        </DropdownMenuSubTrigger>
+        <DropdownMenuSubContent className="w-48">
+          <DropdownMenuRadioGroup
+            value={effort ?? ""}
+            onValueChange={(v) => onEffortChange(v as IssueEffort)}
+          >
+            {EFFORTS.map((e) => (
+              <DropdownMenuRadioItem key={e.value} value={e.value}>
+                <HugeiconsIcon icon={TriangleIcon} className="size-4 text-muted-foreground" />
+                {e.label}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuSubContent>
+      </DropdownMenuSub>
+      <DropdownMenuSub>
+        <DropdownMenuSubTrigger>
+          <HugeiconsIcon icon={Tag01Icon} className="size-4 text-muted-foreground" />
+          {tField("categories")}
+        </DropdownMenuSubTrigger>
+        <DropdownMenuSubContent className="w-56">
+          {categories.length === 0 ? (
+            <DropdownMenuItem disabled>{t("noCategoriesHint")}</DropdownMenuItem>
+          ) : (
+            categories.map((c) => (
+              <DropdownMenuCheckboxItem
+                key={c.id}
+                checked={categoryIds.includes(c.id)}
+                // Several categories can apply: the menu stays open.
+                onSelect={(event) => event.preventDefault()}
+                onCheckedChange={(checked) =>
+                  onCategoryIdsChange(
+                    checked
+                      ? [...categoryIds, c.id]
+                      : categoryIds.filter((id) => id !== c.id),
+                  )
+                }
+              >
+                <Dot color={c.color} />
+                <span className="min-w-0 truncate">{c.name}</span>
+              </DropdownMenuCheckboxItem>
+            ))
+          )}
+        </DropdownMenuSubContent>
+      </DropdownMenuSub>
+      {orderedObjectives.length > 0 && (
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <HugeiconsIcon icon={Target01Icon} className="size-4 text-muted-foreground" />
+            {tField("objective")}
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="w-64">
+            <DropdownMenuRadioGroup value={objectiveId ?? ""} onValueChange={onObjectiveChange}>
+              {orderedObjectives.map((o) => (
+                <DropdownMenuRadioItem key={o.id} value={o.id}>
+                  <ObjectivePill objective={o} />
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+      )}
+    </>
+  );
+}
+
+/**
+ * Desktop uses a split badge: the left half turns Smart Fill on or off, the
+ * chevron sets one of its properties by hand (MIN-809). Mobile creation uses a
+ * full-width labeled switch with the same menu beside it.
+ */
 export function SmartFillCompact({
   value,
   onChange,
   fullWidth = false,
   writesTitle = false,
+  manual,
 }: {
   value: boolean;
   onChange: (v: boolean) => void;
   fullWidth?: boolean;
   /** The account lets Smart Fill write an empty title (MIN-798). */
   writesTitle?: boolean;
+  /** Values the chevron menu sets by hand; without it, the badge is a toggle alone. */
+  manual?: SmartFillManualFields;
 }) {
   const t = useTranslations("IssueUI");
   const id = useId();
+  const menu = manual && (
+    <DropdownMenuContent align="end" className="w-52">
+      <SmartFillManualMenu {...manual} />
+    </DropdownMenuContent>
+  );
   if (fullWidth) return <div className="creation-smart-fill">
     <label htmlFor={id} className="flex min-w-0 flex-1 items-center gap-2 text-sm">
       <HugeiconsIcon icon={SMART_FILL_ICON} className="size-4 shrink-0" />{t("smartFillChip")}
     </label>
+    {menu && (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button type="button" aria-label={t("smartFillManualAria")} className={BARE}>
+            <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 text-muted-foreground" />
+          </button>
+        </DropdownMenuTrigger>
+        {menu}
+      </DropdownMenu>
+    )}
     <Switch id={id} checked={value} onCheckedChange={onChange} />
   </div>;
-  return (
+  // Both halves share the badge's tint, so on or off they read as one chip.
+  const tint = value
+    ? "bg-primary/10 text-primary hover:bg-primary/15 aria-expanded:bg-primary/15"
+    : "text-muted-foreground";
+  const toggle = (
     <Tooltip>
       <TooltipTrigger asChild>
         <button
           type="button"
           aria-pressed={value}
           onClick={() => onChange(!value)}
-          className={cn(
-            SMART_FILL_PILL,
-            value
-              ? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/15"
-              : "text-muted-foreground",
-          )}
+          className={cn(SMART_FILL_PILL, tint, menu && "rounded-r-none pr-2")}
         >
           <HugeiconsIcon icon={SMART_FILL_ICON} className="size-4 shrink-0" />
           <span>{t("smartFillChip")}</span>
@@ -442,5 +608,28 @@ export function SmartFillCompact({
           : t("smartFillOffHint")}
       </TooltipContent>
     </Tooltip>
+  );
+  if (!menu) return toggle;
+  return (
+    <div data-slot="smart-fill-split" className="inline-flex gap-px">
+      {toggle}
+      <DropdownMenu>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label={t("smartFillManualAria")}
+                className={cn(SMART_FILL_PILL, tint, "rounded-l-none px-2")}
+              >
+                <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 shrink-0" />
+              </button>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent>{t("smartFillManualAria")}</TooltipContent>
+        </Tooltip>
+        {menu}
+      </DropdownMenu>
+    </div>
   );
 }

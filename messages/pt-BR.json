@@ -1897,6 +1897,8 @@
     "changeObjectiveAria": "Alterar objetivo",
     "issueCreatedToast": "Ticket criado.",
     "smartFillChip": "Preenchimento inteligente",
+    "smartFillManualAria": "Definir uma propriedade manualmente",
+    "smartFillManualLabel": "Definir manualmente",
     "smartFillOffHint": "Desativado para este ticket: você mesmo define suas propriedades e relações. Ative novamente para deixar o preenchimento inteligente fazer isso.",
     "smartFillOnHint": "Ativado: o preenchimento inteligente lê o ticket, define prioridade, esforço, categorias e objetivo, e depois o vincula a tickets relacionados quando ele é salvo. Desative para defini-los você mesmo.",
     "smartFillOnTitleHint": "Ativado: o preenchimento inteligente lê o ticket, escreve o título se você deixá-lo vazio, define prioridade, esforço, categorias e objetivo, e depois o vincula a tickets relacionados quando ele é salvo. Desative para defini-los você mesmo.",

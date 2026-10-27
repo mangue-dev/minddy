@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 37,
-  "sourceRevision": 37,
+  "revision": 38,
+  "sourceRevision": 38,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-27",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles",
+    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles; MIN-809 Smart Fill split button",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -122,9 +122,9 @@
     ]
   },
   "review": {
-    "revision": 37,
-    "fact": "agent:claude-code (MIN-798 Smart-fill title section and preference bullet checked against lib/smart-fill.ts, lib/server/smart-fill-title.ts, lib/server/create-issue.ts, lib/server/smart-fill-reevaluation.ts, lib/server/update-issue.ts, components/create-issue-dialog.tsx and components/settings/account-smart-fill-section.tsx: on by default under the master switch, description focus, smaller empty title until focused or filled, and placeholders in the form, first-line fallback, ownership released by a manual edit, re-evaluation skipped for an editor who turned titles off; MCP requires a title; no figure changed); agent:claude-code (MIN-804 sub-issues paragraph checked against lib/issue-hierarchy.ts, components/issue-card.tsx, components/relations-section.tsx and the enforce_one_level_subissues trigger: R and the right-click Relations entry offer Parent of / Sub-issue of only where the one-level rule allows, re-parenting moves the issue, a selection uses Sub-issue of; no figure changed); agent:/root/min776 (drafts paragraph checked against components/create-issue-dialog.tsx, components/objective-dialog.tsx and lib/use-held-draft.ts: closing keeps the form, reopening resumes it, two minutes after a close it becomes a draft, another context saves it first, and the split menu offers Save as draft; rest of the article unchanged since the MIN-778 review; no figure changed); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:claude-code (en MIN-798 Smart-fill title section with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-804 sub-issues paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:/root/min776 (en drafts paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "revision": 38,
+    "fact": "agent:claude-code (MIN-809 manual-creation paragraph checked against components/issue-compact-fields.tsx and components/create-issue-dialog.tsx: the arrow next to the Smart-fill button lists priority, effort, categories and objective, each with a submenu of values, and the chosen value brings the property back to the form; property keys unchanged; new-issue figure recaptured on 2026-10-27 in six locales from the working tree on the local dev server against the preview demo account, Smart-fill off with its arrow visible, writes blocked, nothing submitted, each image inspected); agent:claude-code (MIN-798 Smart-fill title section and preference bullet checked against lib/smart-fill.ts, lib/server/smart-fill-title.ts, lib/server/create-issue.ts, lib/server/smart-fill-reevaluation.ts, lib/server/update-issue.ts, components/create-issue-dialog.tsx and components/settings/account-smart-fill-section.tsx: on by default under the master switch, description focus, smaller empty title until focused or filled, and placeholders in the form, first-line fallback, ownership released by a manual edit, re-evaluation skipped for an editor who turned titles off; MCP requires a title; no figure changed); agent:claude-code (MIN-804 sub-issues paragraph checked against lib/issue-hierarchy.ts, components/issue-card.tsx, components/relations-section.tsx and the enforce_one_level_subissues trigger: R and the right-click Relations entry offer Parent of / Sub-issue of only where the one-level rule allows, re-parenting moves the issue, a selection uses Sub-issue of; no figure changed); agent:/root/min776 (drafts paragraph checked against components/create-issue-dialog.tsx, components/objective-dialog.tsx and lib/use-held-draft.ts: closing keeps the form, reopening resumes it, two minutes after a close it becomes a draft, another context saves it first, and the split menu offers Save as draft; rest of the article unchanged since the MIN-778 review; no figure changed); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:claude-code (en MIN-809 manual-creation paragraph; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-798 Smart-fill title section with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-804 sub-issues paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:/root/min776 (en drafts paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-27"
   },
   "related": [
@@ -168,11 +168,11 @@
       "id": "create-an-issue-steps",
       "kind": "screenshot",
       "src": "/documentation/en/new-issue.png",
-      "alt": "Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-19 button.",
+      "alt": "Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-21 button.",
       "caption": "Describe the expected result, then choose the useful properties before creating the issue.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-27",
       "viewport": [
         720,
         396
@@ -186,7 +186,7 @@
       "src": "/documentation/en/triage-incoming.png",
       "alt": "Incoming demonstration issue AUR-19 with its report, properties and duplicate, Decline and Accept controls.",
       "caption": "Read the incoming report before accepting it, declining it or linking a duplicate.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -203,7 +203,7 @@
       "src": "/documentation/en/issue-statuses.png",
       "alt": "Eight issue statuses in the picker, with backlog currently selected.",
       "caption": "The check marks the current status. Choose the status that reflects the work’s actual state.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -219,7 +219,7 @@
       "src": "/documentation/en/work-resources.png",
       "alt": "Add-link dialog with an example contact URL.",
       "caption": "Review the destination before adding a resource. This example link has not been submitted.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -235,7 +235,7 @@
       "src": "/documentation/en/work-dependencies.png",
       "alt": "Search for a blocker by issue identifier.",
       "caption": "Choose the relation direction before selecting its endpoint. The picker is shown without submitting a relation.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -251,7 +251,7 @@
       "src": "/documentation/en/work-sub-issues.png",
       "alt": "Sub-issue creation field in a demonstration parent issue.",
       "caption": "The inline field creates a child under this parent; a child keeps its own status and discussion.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -267,7 +267,7 @@
       "src": "/documentation/en/work-implementation-plan.png",
       "alt": "Demonstration plan showing two of six work tasks complete.",
       "caption": "The saved demonstration plan separates completed, active and pending steps. Its progress does not prove the fictional code task was executed.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -283,7 +283,7 @@
       "src": "/documentation/en/issue-date-recurrence.png",
       "alt": "Due-date picker in recurring mode with a weekly Sunday preview and optional time.",
       "caption": "Recurring mode previews the weekly cadence. Confirm the first due date before creating the issue.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -299,7 +299,7 @@
       "src": "/documentation/en/import-issues-preview-workflow.png",
       "alt": "CSV preview with two localized demonstration rows and detected column mappings.",
       "caption": "CSV preview with two localized demonstration rows and detected column mappings. No import was submitted; optional AI planning was blocked for the capture.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -316,7 +316,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -349,7 +349,7 @@ An issue tracks a piece of work within a project, from its initial report to com
 
 You need to be the owner or a Member of the destination project; readers can open issues but not create or edit them. Open the project and its new-issue control. Enter a title that names the work, then add the context, expected result and constraints in the description. The title and description work as one text: on a computer, the Down arrow on the title's last line moves to the description's first line, the Up arrow comes back, and the cursor keeps about the same place across the line. Shift+Enter in the title moves to the description; Enter does too, unless you chose Enter as your send shortcut, in which case it creates the issue. Command/Ctrl+Enter creates it from either field. The same arrows and Enter link the title and description of an open issue, objective, page or feedback request. The form opens on the current project; choose another one in **Create in**, at the top left of the form (next to the **New issue** title on a phone), especially when creating from a personal or cross-project view. On a computer, Command/Ctrl+Shift+P opens that menu, even while you type the title or description; once you choose a project or close the menu, the cursor returns exactly where it was. The pill shows this shortcut, which exists only when more than one project can be chosen; a phone shows no shortcut hint. Changing it clears the categories, objective and relations picked for the previous project. The create button names the identifier the issue will receive, such as `MIN-42`, and follows issues created meanwhile; its menu creates the issue and copies that identifier.
 
-For manual creation, switch Smart-fill off if its button is shown and enabled. This reveals the priority, effort, category, objective and relations controls for you to set. To set only some of these properties, keep Smart-fill on and, outside the title and description, press the property's key: P for priority, E for effort, L for categories or O for objective. Its picker opens, and the value you choose stays visible. Smart-fill only infers the properties you left empty. The switch applies to this issue; reopening the creation form restores its account preference. It is independent of Smart Assign and routines. While Smart-fill is on, it also [links the issue to related issues](#smart-fill-relations) once it is saved, so the relations picker is hidden; R still opens it. Relations you already chose stay visible above the title and are created with the issue.
+For manual creation, switch Smart-fill off if its button is shown and enabled. This reveals the priority, effort, category, objective and relations controls for you to set. To set only some of these properties, keep Smart-fill on and open the arrow next to its button: choose a property, then its value. Outside the title and description, the property's key opens its picker directly: P for priority, E for effort, L for categories or O for objective. The value you choose stays visible in the form. Smart-fill only infers the properties you left empty. The switch applies to this issue; reopening the creation form restores its account preference. It is independent of Smart Assign and routines. While Smart-fill is on, it also [links the issue to related issues](#smart-fill-relations) once it is saved, so the relations picker is hidden; R still opens it. Relations you already chose stay visible above the title and are created with the issue.
 
 Set the useful properties before confirming: status, priority, effort, assignee, objective, categories, due date and recurrence. An assignee is the project owner or a Member, never a reader; an objective groups issues around a project outcome. You can leave optional properties unset instead of guessing. Priority is **Not set** or ranges from low through medium and high to urgent; effort is **Not set** or uses XS, S, M, L and XL.
 
@@ -358,7 +358,7 @@ Confirm creation and open the new issue. Check its identifier and project. Reope
 Closing the form keeps what you wrote: open it again to continue where you left off. If you do not reopen it within two minutes, its content is saved as a draft and the next form starts empty; until then it exists only in this window, so reloading or closing the window loses it. Opening a draft or a form prefilled from elsewhere first saves what you left as a draft. To save it yourself, open the menu beside the create button and choose **Save as draft**. Saved issue and objective drafts gather in **Drafts**, at the bottom right of the window between Numo and the task notebook; the button appears only while you have a draft and shows how many. Its list gives each draft's title and first description line. Choose a draft to reopen it in its creation form and finish it; creating the issue removes the draft. The delete button beside a draft asks for confirmation first, and the deletion cannot be undone. On a phone, open the command palette and search for the draft's title. Drafts are kept on this device for 30 days, ten of each kind at most; the list shows only drafts of projects where you can still create issues.
 
 
-![Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-19 button.](/documentation/en/new-issue.png)
+![Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-21 button.](/documentation/en/new-issue.png)
 
 The description, comments and the new-issue dialog use the same editor as project pages, without the block handles. Type `/` to insert a heading, list, task, quote, **Callout**, code block, **Toggle** or divider, and `@` to mention a person, issue, objective or page. The `@` menu also lists the resources attached to what you are writing: the issue or objective for its description and plan, a comment for its own files, or a creation dialog for the files added in it. A mention of a resource attached elsewhere shows as **Unavailable**. Several people can edit the same description at once: each person's caret appears with their name and color, and changes made by Numo or a connected agent appear as they are saved. Numo, connected agents and CSV exports read the text as Markdown, which follows a few seconds after typing stops. Select text to make it bold, italic, struck through or code, or to add a link. Paste or drop an image, or choose **Image** in the `/` menu, to insert it in the description; other kinds of files belong in the issue's resources. A mention points at its target, not at its name: it follows a rename and survives editing and copy-paste into another description, comment, page or the Numo composer. A reader who cannot open the target sees an **Unavailable** mention, without its name or project.
 
