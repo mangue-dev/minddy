@@ -10,6 +10,7 @@ import {
   autoUpdater as nativeAutoUpdater,
   dialog,
   ipcMain,
+  nativeTheme,
   powerMonitor,
   pushNotifications,
   session,
@@ -70,6 +71,14 @@ import { mayReceiveLocalSession } from "@/lib/desktop/local-account";
 import { isServerChoiceDocument, serverChoiceUrl } from "@/lib/desktop/server-choice";
 import { routeDisposition } from "@/lib/desktop/window-routes";
 import { parseWnsHelperChannel } from "@/lib/desktop/wns";
+import {
+  OPAQUE_WINDOW_BACKGROUND,
+  TRANSPARENT_WINDOW_BACKGROUND,
+  desktopWindowMaterial,
+  windowMaterialFlag,
+  windowMaterialOptions,
+  type DesktopWindowMaterialState,
+} from "@/lib/desktop/window-material";
 import { parseWindowsStoreUpdateProbe } from "@/lib/desktop/windows-store-update";
 import {
   desktopWindowFrameOptions,
@@ -124,6 +133,7 @@ import {
   writeDesktopServerOrigin,
 } from "./server-store";
 import { readWindowChrome, writeWindowChrome } from "./window-chrome-store";
+import { readWindowMaterialEnabled, writeWindowMaterialEnabled } from "./window-material-store";
 import { desktopShellFontDataUrl } from "./shell-font";
 import {
   checkForUpdatesManually,
@@ -167,6 +177,40 @@ function rememberWindowChrome(next: RememberedWindowChrome | null): void {
   if (rememberedChrome?.origin === next.origin && rememberedChrome.integrated === next.integrated) return;
   rememberedChrome = next;
   writeWindowChrome(next);
+}
+/**
+ * The blurred material behind the window chrome (MIN-810). Read once before
+ * the first window; the preference and the system's reduced-transparency or
+ * high-contrast settings then change it live on every window.
+ */
+let windowMaterialEnabled = true;
+function currentWindowMaterial(): DesktopWindowMaterialState {
+  return desktopWindowMaterial(process.platform, os.release(), {
+    enabled: windowMaterialEnabled,
+    reducedTransparency: nativeTheme.prefersReducedTransparency || nativeTheme.shouldUseHighContrastColors,
+  });
+}
+let appliedWindowMaterial: DesktopWindowMaterialState["kind"] = "none";
+
+/** Repaints every window with the material in force and tells their pages. */
+function applyWindowMaterial(): void {
+  const state = currentWindowMaterial();
+  const changed = state.kind !== appliedWindowMaterial;
+  appliedWindowMaterial = state.kind;
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (window.isDestroyed()) continue;
+    if (changed) {
+      // The material first, the transparent color last: the window never
+      // shows the desktop unblurred in between.
+      if (process.platform === "darwin") {
+        window.setVibrancy(state.kind === "vibrancy" ? "sidebar" : null);
+      } else if (process.platform === "win32" && state.supported) {
+        window.setBackgroundMaterial(state.kind === "acrylic" ? "acrylic" : "none");
+      }
+      window.setBackgroundColor(state.kind === "none" ? OPAQUE_WINDOW_BACKGROUND : TRANSPARENT_WINDOW_BACKGROUND);
+    }
+    if (!window.webContents.isDestroyed()) window.webContents.send("minddy:window-material-state", state);
+  }
 }
 const localNotifications = new DesktopLocalNotificationRegistry();
 /** Electron closes windows before `before-quit` during an updater relaunch. */
@@ -710,7 +754,8 @@ function createWindow(
     // keep native title-bar controls while auto-hiding the fallback application
     // menu until the user presses Alt.
     ...desktopWindowFrameOptions(process.platform, integrated),
-    backgroundColor: "#000000",
+    // Opaque black, or transparent over the native material (MIN-810).
+    ...windowMaterialOptions(currentWindowMaterial().kind),
     show: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -732,6 +777,7 @@ function createWindow(
         `--minddy-packaged=${app.isPackaged ? "1" : "0"}`,
         `--minddy-native-notifications=${nativeNotificationsAvailable ? "1" : "0"}`,
         `--minddy-windows-wns=${isWnsHelperAvailable() ? "1" : "0"}`,
+        windowMaterialFlag(currentWindowMaterial()),
       ],
       // The spell checker goes through `NSSpellChecker` on macOS, at
       // each text modification, on the UI thread of the browser process.
@@ -1170,10 +1216,37 @@ function registerIpc(): void {
     applyWindowButtons();
   });
 
-  ipcMain.on("minddy:window-chrome", (event, theme: unknown) => {
-    if (!mainWindow || event.sender !== mainWindow.webContents || process.platform === "darwin" || !integratedFrames.get(mainWindow)) return;
+  ipcMain.on("minddy:window-chrome", (event, theme: unknown, followsSystem: unknown) => {
+    if (!mainWindow || event.sender !== mainWindow.webContents) return;
     if (theme !== "light" && theme !== "dark") return;
+    // The native material is tinted by the app's appearance, not the page's:
+    // it must follow the page's theme or dark text lands on a dark blur. A
+    // page that follows the system leaves the app on the system, so its own
+    // `prefers-color-scheme` keeps tracking the OS. Older pages send no
+    // second argument and keep the previous behavior.
+    if (typeof followsSystem === "boolean") {
+      const source = followsSystem ? "system" : theme;
+      if (nativeTheme.themeSource !== source) nativeTheme.themeSource = source;
+    }
+    if (process.platform === "darwin" || !integratedFrames.get(mainWindow)) return;
     mainWindow.setTitleBarOverlay(desktopTitleBarOverlay(process.platform, theme));
+  });
+
+  // The device preference (MIN-810). Only the app's own pages on the selected
+  // origin reach it, and only a boolean is accepted.
+  ipcMain.handle("minddy:window-material:set", (event, enabled: unknown) => {
+    if (!mainWindow || event.sender !== mainWindow.webContents || typeof enabled !== "boolean") {
+      return currentWindowMaterial();
+    }
+    if (enabled !== windowMaterialEnabled) {
+      windowMaterialEnabled = enabled;
+      writeWindowMaterialEnabled(enabled);
+      applyWindowMaterial();
+    }
+    return currentWindowMaterial();
+  });
+  ipcMain.on("minddy:window-material-ready", (event) => {
+    event.sender.send("minddy:window-material-state", currentWindowMaterial());
   });
 
   // Status replay, TARGETED at the requesting subscriber (MIN-310).
@@ -1551,6 +1624,10 @@ if (!app.requestSingleInstanceLock()) {
     // catch up. Installations that had switched to the retired preview channel
     // come back to stable here (MIN-765).
     if (resetRetiredDesktopChannel()) trace("channel", { reset: "stable" });
+    windowMaterialEnabled = readWindowMaterialEnabled();
+    appliedWindowMaterial = currentWindowMaterial().kind;
+    // "Reduce transparency" and high contrast win over the preference, live.
+    nativeTheme.on("updated", applyWindowMaterial);
     customServerOrigin = readDesktopServerOrigin();
     origin = customServerOrigin ?? DESKTOP_ORIGIN;
     trace("origin", { origin, customServer: customServerOrigin !== null });

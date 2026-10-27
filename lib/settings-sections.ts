@@ -2,6 +2,7 @@ import type { AppIcon } from "@/components/icon";
 import { useMemo } from "react";
 import { Mic01Icon, AppWindowIcon as AppWindow, AiAutoRotateIcon as CycleIcon, Analytics01Icon, BlurIcon, ChartLineData01Icon, Copy01Icon, LaptopIcon, Link01Icon, Moon02Icon, PlayIcon, SearchList01Icon, Sun01Icon, UserCheck01Icon, BellRingIcon as BellRing, CalendarClockIcon, CodeSimpleIcon as Code2, Download, GitBranchIcon as GitBranch, ImportIcon, InboxIcon as Inbox, Keyboard, KeyRoundIcon as KeyRound, Languages, ListPlus, LockIcon, LogOut, MessageMultiple01Icon as MessagesSquare, Palette, PlugIcon as Plug, RepeatIcon as Repeat, Settings02Icon as Settings2, ShieldOff, Sparkles, TagsIcon as Tags, TicketIcon as Ticket, Trash2, TriangleAlertIcon, Upload04Icon as Upload, ViewOffIcon, UserGroupIcon as Users, UserIcon as User } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
+import { useDesktopWindowMaterial } from "@/lib/desktop/use-window-material";
 import { SMART_ASSIGN_ICON, SMART_FILL_ICON } from "@/components/feature-icons";
 
 /**
@@ -77,6 +78,7 @@ export const SETTINGS_SECTIONS = {
   accountThemeLight: "account-theme-light",
   accountThemeDark: "account-theme-dark",
   accountTransparency: "account-transparency",
+  accountDesktopTransparency: "account-desktop-transparency",
   accountKeyboard: "account-keyboard",
   accountDictation: "account-dictation",
   accountDictationVocabulary: "account-dictation-vocabulary",
@@ -196,6 +198,7 @@ export function useSettingsSections(): SettingsSection[] {
   const tRecurrence = useTranslations("Recurrence");
   const tSettings = useTranslations("Settings");
   const tLanguage = useTranslations("Language");
+  const desktopMaterialSupported = useDesktopWindowMaterial().state?.supported === true;
   const tStats = useTranslations("Stats");
 
   return useMemo(() => {
@@ -358,6 +361,19 @@ export function useSettingsSections(): SettingsSection[] {
           "vibrancy",
         ],
       }),
+      // A device setting of the desktop app (MIN-810): listed only where the
+      // window can paint its material, like the row it lands on.
+      ...(desktopMaterialSupported ? [account({
+        id: SETTINGS_SECTIONS.accountDesktopTransparency,
+        tab: "preferences",
+        icon: BlurIcon,
+        title: tAccount("desktopTransparencyTitle"),
+        parentTitle: tNav("appearance"),
+        keywords: [
+          "transparence", "transparency", "flou", "blur", "vibrancy",
+          "acrylic", "bureau", "desktop", "fenêtre", "fenetre", "window",
+        ],
+      })] : []),
       account({
         id: SETTINGS_SECTIONS.accountKeyboard,
         tab: "preferences",
@@ -846,5 +862,6 @@ export function useSettingsSections(): SettingsSection[] {
     tSettings,
     tLanguage,
     tStats,
+    desktopMaterialSupported,
   ]);
 }

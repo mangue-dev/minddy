@@ -226,6 +226,8 @@ On the first launch, the app opens the minddy Cloud sign-up screen, where you cr
 
 To change server later, choose **Connect to a Server…** in the native minddy menu (press Alt on Windows and Linux to show the menu bar), **Change…** next to **Connected server** in **Account settings** → **Preferences** → **Desktop app**, or **Self-host minddy** at the bottom of the sign-in and sign-up screens. Each brings the app window to **Self-host minddy**; when a self-hosted server is connected, **Use minddy Cloud** in **Use an existing installation** returns to Cloud. The path at the top of the page leads back to each step, and the minddy logo returns to the app. This screen is built into the desktop app and opens without an Internet connection. Check the destination before signing in: accounts belong to their instance. OAuth uses the system browser and returns to desktop.
 
+On macOS and Windows 11, the sidebar, tabs and window edges show your desktop, blurred, behind the opaque content. To keep the window opaque on this device, turn off **Desktop app transparency** in **Account settings** → **Preferences** → [Appearance](/docs/accounts#preferences).
+
 ### Tabs, closing and updates {#desktop-app-operation}
 
 Use the desktop tab controls and command palette to move between work. Follow the displayed platform shortcuts; macOS uses Command where Windows/Linux commonly use Control. Closing the window hides it and keeps the app running. Use Quit to end the application; macOS offers Cmd+Q. Background notification behavior depends on the package and platform capabilities.

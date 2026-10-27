@@ -22,6 +22,7 @@ import {useAccountPreference} from "@/components/settings/use-account-preference
 import {DICTATION_CLEANUP_META_KEY, resolveDictationCleanup} from "@/lib/dictation-context";
 import {DictationVocabularySection} from "@/components/settings/dictation-vocabulary-section";
 import {useAccountTheme} from "@/lib/use-account-theme";
+import {useDesktopWindowMaterial} from "@/lib/desktop/use-window-material";
 import {ThemePresetPicker} from "@/components/settings/theme-preset-picker";
 import type {ThemeMode, ThemePresetId} from "@/lib/theme-presets";
 
@@ -51,6 +52,8 @@ export function AccountPreferencesSection() {
   // The theme is an ACCOUNT setting: the hook persists the choice to
   // user_metadata so it follows the account to every device.
   const { theme, setTheme, appearance, setPreset, setTransparency } = useAccountTheme();
+  // A DEVICE setting, unlike the theme: the blur depends on the machine.
+  const desktopMaterial = useDesktopWindowMaterial();
   const modKey = useModKey();
   const [switchingLocale, setSwitchingLocale] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -195,6 +198,24 @@ export function AccountPreferencesSection() {
             />
           }
         />
+        {desktopMaterial.state?.supported && (
+          <SettingsRow
+            anchor={SETTINGS_SECTIONS.accountDesktopTransparency}
+            htmlFor="account-desktop-transparency"
+            label={ta("desktopTransparencyTitle")}
+            hint={ta(desktopMaterial.state.reducedTransparency
+              ? "desktopTransparencySystemHint"
+              : "desktopTransparencyHint")}
+            control={
+              <Switch
+                id="account-desktop-transparency"
+                checked={desktopMaterial.state.enabled && !desktopMaterial.state.reducedTransparency}
+                disabled={desktopMaterial.state.reducedTransparency}
+                onCheckedChange={desktopMaterial.setEnabled}
+              />
+            }
+          />
+        )}
       </SettingsGroup>
 
       {/* Keyboard — only one setting for now, but a subject of its own: the

@@ -32,6 +32,7 @@ import type { DesktopLocalNotificationPayload } from "@/lib/desktop/local-notifi
 import type { LinuxBackgroundNotificationState } from "@/lib/desktop/linux-background";
 import type { DesktopNotificationCapabilities } from "@/lib/desktop/notification-capabilities";
 import type { DesktopUpdateStatus } from "@/lib/desktop/update-status";
+import type { DesktopWindowMaterialState } from "@/lib/desktop/window-material";
 import type {
   InstallMessage,
   LocalInstallProgress,
@@ -71,8 +72,18 @@ export interface DesktopNativePushRegistration {
 export interface DesktopBridge {
   /** Actual frame mode; older shells do not negotiate this capability. */
   readonly integratedWindowChrome?: boolean;
-  /** Match integrated caption controls to the page theme; absent in older shells. */
-  setWindowChrome?(theme: "light" | "dark"): void;
+  /**
+   * Match integrated caption controls and the native material's tint to the
+   * page theme; absent in older shells. `followsSystem` leaves the app on the
+   * system appearance when the page's own setting is "system".
+   */
+  setWindowChrome?(theme: "light" | "dark", followsSystem?: boolean): void;
+  /** The blurred window material when the window was created (MIN-810); absent in older shells. */
+  readonly windowMaterial?: DesktopWindowMaterialState;
+  /** Saves the device preference and applies it live; resolves with the new state. */
+  setWindowMaterialEnabled?(enabled: boolean): Promise<DesktopWindowMaterialState>;
+  /** Follows the preference and the system's transparency settings; replays the current state. */
+  onWindowMaterialChange?(handler: (state: DesktopWindowMaterialState) => void): () => void;
   /** The version of the shell (`app.getVersion()`), to display it. */
   readonly version: string;
   /**

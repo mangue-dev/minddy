@@ -125,8 +125,10 @@ export function buildThemeScript({
   // its preload exposes `window.minddy` before any page script, so layout that
   // depends on the window (the macOS buttons in the top-left corner) is right
   // from the first frame instead of moving once React mounts. Same attributes
-  // `components/desktop-chrome.tsx` sets; the platform is allowlisted.
-  const desktop = `try{var b=window.minddy;if(b){r.setAttribute("data-desktop-app","");var n=navigator.platform,q=b.platform||(/^mac/i.test(n)?"darwin":/^win/i.test(n)?"win32":/linux/i.test(n)?"linux":"");if(q==="darwin"||q==="win32"||q==="linux")r.setAttribute("data-desktop-platform",q);}}catch(e){}`;
+  // `components/desktop-chrome.tsx` sets; the platform is allowlisted. The
+  // window material (MIN-810) is marked here too, so the chrome is transparent
+  // from the first frame instead of flashing opaque over the blur.
+  const desktop = `try{var b=window.minddy;if(b){r.setAttribute("data-desktop-app","");var n=navigator.platform,q=b.platform||(/^mac/i.test(n)?"darwin":/^win/i.test(n)?"win32":/linux/i.test(n)?"linux":"");if(q==="darwin"||q==="win32"||q==="linux")r.setAttribute("data-desktop-platform",q);var w=b.windowMaterial&&b.windowMaterial.kind;if(w==="vibrancy"||w==="acrylic")r.setAttribute("data-desktop-material",w);}}catch(e){}`;
   return `(function(){var r=document.documentElement;${desktop}var C=${scriptLiteral(CHROME_COLORS)};function p(){var d=r.classList.contains("dark");var m=document.querySelector('meta[name="theme-color"]');if(!m){m=document.createElement("meta");m.setAttribute("name","theme-color");document.head.appendChild(m);}m.setAttribute("content",C[r.getAttribute(d?"${THEME_PRESET_ATTRIBUTES.dark}":"${THEME_PRESET_ATTRIBUTES.light}")]||(d?"${DEFAULT_CHROME.dark}":"${DEFAULT_CHROME.light}"));}${appearanceStatements(appearance)}try{var t=${source};${mirrorBack}var d=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);r.classList.toggle("dark",d);}catch(e){r.classList.toggle("dark",${
     fallbackExpression(defaultTheme)
   });}p();try{new MutationObserver(p).observe(r,{attributes:true,attributeFilter:["class","${THEME_PRESET_ATTRIBUTES.light}","${THEME_PRESET_ATTRIBUTES.dark}"]});}catch(e){}})();`;
