@@ -704,10 +704,12 @@ export function ObjectiveDialog({
                   titleBody.onTitleKeyDown(e, { submit: () => void submit(), mobile });
                 }}
                 placeholder={t("namePlaceholder")}
-                className="creation-title w-full title-field bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50 sm:text-2xl"
+                className="creation-title w-full title-field bg-transparent text-lg leading-snug font-semibold outline-none placeholder:text-muted-foreground/50"
               />
               <div className="creation-field-label">{tField("description")}</div>
-              <div ref={titleBody.bodyRef}>
+              {/* The title's gap: the description is this wrapper's first child,
+                  where its own margin does not apply. */}
+              <div ref={titleBody.bodyRef} className="app-desktop:mt-3">
               {objective && storedDocument === undefined ? (
                 <DocumentEditorFallback
                   value={form.description}
