@@ -16,12 +16,14 @@ import {
   SMART_FILL_TRIAGE_META_KEY,
   SMART_FILL_RELATIONS_META_KEY,
   SMART_FILL_REEVALUATE_META_KEY,
+  SMART_FILL_TITLE_META_KEY,
   ISSUE_INDEXING_META_KEY,
   resolveIssueIndexing,
   resolveSmartFill,
   resolveSmartFillReevaluation,
   resolveSmartFillRelations,
   resolveSmartFillScope,
+  resolveSmartFillTitle,
 } from "@/lib/smart-fill";
 import {
   AUTO_ASSIGN_ON_START_META_KEY,
@@ -108,6 +110,8 @@ export interface AccountSettings {
   smart_fill_triage: boolean;
   /** Smart Fill re-evaluation (MIN-750): read an issue again after its text changes. */
   smart_fill_reevaluate: boolean;
+  /** Smart Fill title (MIN-798): write an empty title from the description. */
+  smart_fill_title: boolean;
   /** Smart Fill relations (MIN-717): link related issues and dependencies after save. */
   smart_fill_relations: boolean;
   /** Issue indexing (MIN-717): embedding vectors of the account's issues, independent of Smart Fill. */
@@ -161,6 +165,7 @@ function toSettings(
     smart_fill_created: resolveSmartFillScope(meta, "created"),
     smart_fill_triage: resolveSmartFillScope(meta, "triage"),
     smart_fill_reevaluate: resolveSmartFillReevaluation(meta),
+    smart_fill_title: resolveSmartFillTitle(meta),
     smart_fill_relations: resolveSmartFillRelations(meta),
     issue_indexing: resolveIssueIndexing(meta),
     cycles: resolveCyclePrefs(meta),
@@ -302,6 +307,7 @@ export async function updateAccountSettings({
     SMART_FILL_CREATED_META_KEY,
     SMART_FILL_TRIAGE_META_KEY,
     SMART_FILL_REEVALUATE_META_KEY,
+    SMART_FILL_TITLE_META_KEY,
     SMART_FILL_RELATIONS_META_KEY,
     ISSUE_INDEXING_META_KEY,
   ]) {
@@ -399,6 +405,7 @@ export async function updateAccountSettings({
     SMART_FILL_CREATED_META_KEY,
     SMART_FILL_TRIAGE_META_KEY,
     SMART_FILL_REEVALUATE_META_KEY,
+    SMART_FILL_TITLE_META_KEY,
     SMART_FILL_RELATIONS_META_KEY,
     ISSUE_INDEXING_META_KEY,
     // Without it, a call carrying ONLY the preset came out here as “nothing to

@@ -123,6 +123,16 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   // is only inserted once completed): it therefore needs a FAST model, not
   // a clever model — the task is tidying up, not reasoning.
   { key: "smart_fill_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations" },
+  // Smart Fill titles (lib/server/smart-fill-title.ts, MIN-798): one call per
+  // issue created without a title, side by side with the property pass, and
+  // again on a re-evaluation that owns the title. Short output, someone
+  // waiting: a fast model, kept apart so titles can use a better writer.
+  {
+    key: "smart_fill_title_model",
+    kind: "model",
+    fallback: "deepseek/deepseek-v4-flash",
+    group: "automations",
+  },
   // Smart Fill relations (lib/server/issue-relation-inference.ts, MIN-717):
   // issues are indexed AFTER they are saved, and a bounded decision pass
   // confirms whether an embedding-retrieved candidate is related, blocks or

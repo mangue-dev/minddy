@@ -2981,6 +2981,17 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 
 .creation-field-label { display: none; }
 .creation-title { display: block; }
+/* An empty title Smart Fill will write steps back behind the description
+   (MIN-798). A scale, not a font size: the field keeps its layout box, so the
+   dialog keeps its height when the title shrinks or grows back. */
+.creation-title {
+  transform-origin: left center;
+  transition: scale 150ms ease;
+}
+.creation-title[data-recedes] { scale: 0.67; }
+@media (prefers-reduced-motion: reduce) {
+  .creation-title { transition: none; }
+}
 
 :root[data-app-layout="mobile"] {
   .creation-sheet[data-slot="sheet-content"] {
@@ -3018,6 +3029,13 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   }
   .creation-description { min-height: 6rem; }
   .creation-description .ProseMirror { font-size: 1rem; }
+  /* The bordered phone field cannot be scaled: only its text shrinks, on the
+     line height of the normal size so the field keeps its height. */
+  .creation-title[data-recedes] {
+    scale: none;
+    font-size: 0.875rem;
+    line-height: 1.5rem;
+  }
   .creation-title:focus, .creation-description:focus-within { border-color: var(--ring); }
   .creation-properties {
     display: grid;

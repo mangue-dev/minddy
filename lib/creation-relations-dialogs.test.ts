@@ -13,7 +13,7 @@ import type { Issue, Objective, PendingRelationInput, Project } from "./types";
 const fixture = vi.hoisted(() => ({
   issues: [] as Issue[], objectives: [] as Objective[],
   drafts: [] as (IssueDraft | ObjectiveDraft)[], save: vi.fn(), remove: vi.fn(),
-  mobile: false, smartFill: true, smartFillCreated: true, smartFillRelations: true, queryProjects: [] as (string | null)[],
+  mobile: false, smartFill: true, smartFillCreated: true, smartFillRelations: true, smartFillTitle: true, queryProjects: [] as (string | null)[],
   editorDocuments: [] as unknown[], editorAutoFocus: [] as boolean[],
 }));
 vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => fixture.mobile }));
@@ -118,7 +118,7 @@ vi.mock("@/components/creation-project-select", () => ({ CreationProjectSelect: 
 // render without a QueryClient, so the hook keeps the fixture order.
 vi.mock("@/lib/use-ordered-objectives", () => ({ useOrderedObjectives: <T,>(objectives: T[]) => objectives }));
 vi.mock("@/lib/use-objectives-query", () => ({ useObjectivesQuery: (project: string | null) => ({ objectives: project ? fixture.objectives : [], loading: false }) }));
-vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: { id: "user", user_metadata: { smart_fill: fixture.smartFill, smart_fill_created: fixture.smartFillCreated, smart_fill_relations: fixture.smartFillRelations } } }) }));
+vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: { id: "user", user_metadata: { smart_fill: fixture.smartFill, smart_fill_created: fixture.smartFillCreated, smart_fill_relations: fixture.smartFillRelations, smart_fill_title: fixture.smartFillTitle } } }) }));
 vi.mock("@/lib/use-analytics", () => ({ useAnalytics: () => ({ track: vi.fn() }) }));
 vi.mock("@/lib/use-track-view", () => ({ useTrackView: vi.fn() }));
 vi.mock("@/lib/use-mention-sources", () => ({ useDescriptionMentions: () => [] }));
@@ -189,7 +189,7 @@ beforeEach(() => {
   fixture.issues = [issue, { ...issue, id: "closed", title: "Closed issue", status: "done" }, { ...issue, id: "foreign", project_id: "other", title: "Foreign issue" }];
   fixture.objectives = [objective, { ...objective, id: "closed-goal", name: "Closed objective", status: "done" }, { ...objective, id: "foreign-goal", name: "Foreign objective", project_id: "other" }];
   fixture.mobile = false;
-  fixture.drafts = []; fixture.editorDocuments = []; fixture.editorAutoFocus = []; fixture.smartFill = true; fixture.smartFillCreated = true; fixture.smartFillRelations = true; fixture.queryProjects = [];
+  fixture.drafts = []; fixture.editorDocuments = []; fixture.editorAutoFocus = []; fixture.smartFill = true; fixture.smartFillCreated = true; fixture.smartFillRelations = true; fixture.smartFillTitle = true; fixture.queryProjects = [];
   fixture.save.mockImplementation(async (draft) => { fixture.drafts = [draft]; });
   fixture.remove.mockImplementation(async (id) => { fixture.drafts = fixture.drafts.filter((draft) => draft.id !== id); return true; });
   host = document.createElement("div"); document.body.append(host); root = createRoot(host);
@@ -455,6 +455,8 @@ describe("creation relation controls", () => {
   });
 
   it.each(["issue", "objective"] as const)("resumes a %s form with the caret in its description", async (kind) => {
+    // Without Smart Fill titles, a fresh issue form starts in the title.
+    fixture.smartFillTitle = false;
     const dialog = await mountDialog(kind);
     // A fresh form starts in the title.
     expect(document.activeElement).toBe(host.querySelector("textarea"));
@@ -469,6 +471,22 @@ describe("creation relation controls", () => {
     await dialog.reopen();
     expect(fixture.editorAutoFocus.at(-1)).toBe(false);
     expect(document.activeElement).toBe(host.querySelector("textarea"));
+  });
+
+  it("starts in the description and shrinks the empty title while Smart Fill writes it (MIN-798)", async () => {
+    await mountDialog("issue");
+    const title = host.querySelector("textarea")!;
+    expect(fixture.editorAutoFocus.at(-1)).toBe(true);
+    expect(document.activeElement).not.toBe(title);
+    expect(title.placeholder).toBe(en.IssueUI.titlePlaceholderSmartFill);
+    expect(title.hasAttribute("data-recedes")).toBe(true);
+    // Focus brings it back to its size, and so does a typed title.
+    await act(() => title.focus());
+    expect(title.hasAttribute("data-recedes")).toBe(false);
+    await act(() => title.blur());
+    expect(title.hasAttribute("data-recedes")).toBe(true);
+    await typeTitle("Named by hand");
+    expect(title.hasAttribute("data-recedes")).toBe(false);
   });
 
   it.each(["issue", "objective"] as const)("saves a held %s form when its dialog unmounts", async (kind) => {

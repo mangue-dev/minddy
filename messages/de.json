@@ -62,6 +62,7 @@
     "smartFillObjective": "das Ziel",
     "smartFillPriority": "die Priorität",
     "smartFillProperties": "seine Eigenschaften",
+    "smartFillTitle": "den Titel",
     "smartFilled": "hat {fields} ausgefüllt",
     "objectiveChanged": "hat das Ziel geändert: {from} → {to}",
     "dueDateChanged": "hat das Fälligkeitsdatum geändert: {from} → {to}",
@@ -1880,6 +1881,7 @@
   },
   "IssueUI": {
     "titlePlaceholder": "Tickettitel",
+    "titlePlaceholderSmartFill": "Tickettitel (optional, Smart-Fill schreibt ihn)",
     "descriptionPlaceholder": "Beschreibung hinzufügen…",
     "issueDeletedToast": "Ticket in den Papierkorb verschoben.",
     "deleteDialogTitle": "„{title}“ in den Papierkorb verschieben?",
@@ -1897,9 +1899,11 @@
     "smartFillChip": "Smart-Fill",
     "smartFillOffHint": "Aus für dieses Ticket: Du legst seine Eigenschaften und Beziehungen selbst fest. Schalte es wieder ein, damit Smart-Fill das erledigt.",
     "smartFillOnHint": "Ein: Smart-Fill liest das Ticket, legt Priorität, Aufwand, Kategorien und Ziel fest und verknüpft es nach dem Speichern mit verwandten Tickets. Schalte die Option aus, um das selbst zu tun.",
+    "smartFillOnTitleHint": "Ein: Smart-Fill liest das Ticket, schreibt seinen Titel, wenn du ihn leer lässt, legt Priorität, Aufwand, Kategorien und Ziel fest und verknüpft es nach dem Speichern mit verwandten Tickets. Schalte die Option aus, um das selbst zu tun.",
     "smartFillPendingToast": "Smart-Fill füllt das Ticket aus, es wird in wenigen Sekunden angezeigt.",
     "newIssueTitle": "Neues Ticket",
     "createDescriptionPlaceholder": "Ticketbeschreibung",
+    "createDescriptionPlaceholderSmartFill": "Beschreibe das Ticket, Smart-Fill gibt ihm einen Titel",
     "createMore": "Weitere erstellen",
     "createTicket": "Ticket erstellen",
     "createIdentifier": "{identifier} erstellen",
@@ -2801,6 +2805,8 @@
     "smartFillCreatedLabel": "Erstellte Tickets ausfüllen",
     "smartFillTriageDesc": "Ergänzt fehlende Werte bei Triage-Tickets in deinen Projekten.",
     "smartFillTriageLabel": "Triage-Tickets ausfüllen",
+    "smartFillWriteTitleLabel": "Fehlende Titel schreiben",
+    "smartFillWriteTitleDesc": "Lass den Titel eines Tickets leer, dann schreibt Smart Fill ihn aus der Beschreibung und aktualisiert ihn nach Änderungen, bis du ihn selbst änderst.",
     "smartFillReevaluateLabel": "Bearbeitete Tickets neu bewerten",
     "smartFillReevaluateDesc": "Liest ein Ticket fünf Minuten nach der letzten Änderung von Titel oder Beschreibung erneut und aktualisiert Priorität, Aufwand, Kategorien oder Ziel, die niemand von Hand gesetzt hat.",
     "smartFillRelationsLabel": "Verwandte Tickets verknüpfen",
@@ -4580,6 +4586,10 @@
       "smart_fill_model": {
         "label": "Smart-Fill-Modell",
         "desc": "Liest Titel und Beschreibung eines neuen Tickets und füllt seine Felder aus. Jemand wartet darauf: Wähle ein schnelles Modell."
+      },
+      "smart_fill_title_model": {
+        "label": "Smart-Fill-Titel",
+        "desc": "Schreibt den Titel eines ohne Titel erstellten Tickets aus seiner Beschreibung. Jemand wartet darauf: Wähle ein schnelles Modell."
       },
       "issue_embedding_model": {
         "label": "Ticket-Embeddings",

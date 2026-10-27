@@ -62,6 +62,7 @@
     "smartFillObjective": "the objective",
     "smartFillPriority": "the priority",
     "smartFillProperties": "its properties",
+    "smartFillTitle": "the title",
     "smartFilled": "filled in {fields}",
     "objectiveChanged": "changed objective: {from} → {to}",
     "dueDateChanged": "changed due date: {from} → {to}",
@@ -1880,6 +1881,7 @@
   },
   "IssueUI": {
     "titlePlaceholder": "Issue title",
+    "titlePlaceholderSmartFill": "Issue title (optional, Smart-fill writes it)",
     "descriptionPlaceholder": "Add a description…",
     "issueDeletedToast": "Issue moved to trash.",
     "deleteDialogTitle": "Move “{title}” to the trash?",
@@ -1897,9 +1899,11 @@
     "smartFillChip": "Smart-fill",
     "smartFillOffHint": "Off for this issue: you set its properties and relations yourself. Turn back on to let Smart-fill do it.",
     "smartFillOnHint": "On: Smart-fill reads the issue, sets its priority, effort, categories and objective, then links it to related issues once it is saved. Turn off to set them yourself.",
+    "smartFillOnTitleHint": "On: Smart-fill reads the issue, writes its title if you leave it empty, sets its priority, effort, categories and objective, then links it to related issues once it is saved. Turn off to set them yourself.",
     "smartFillPendingToast": "Smart-fill is filling the issue in, it will show up in a few seconds.",
     "newIssueTitle": "New issue",
     "createDescriptionPlaceholder": "Issue description",
+    "createDescriptionPlaceholderSmartFill": "Describe the issue, Smart-fill titles it",
     "createMore": "Create more",
     "createTicket": "Create issue",
     "createIdentifier": "Create {identifier}",
@@ -2801,6 +2805,8 @@
     "smartFillCreatedLabel": "Fill created issues",
     "smartFillTriageDesc": "Fills missing values on triage issues you own.",
     "smartFillTriageLabel": "Fill triage issues",
+    "smartFillWriteTitleLabel": "Write missing titles",
+    "smartFillWriteTitleDesc": "Leave an issue's title empty and Smart Fill writes it from the description, then updates it after edits until you change it yourself.",
     "smartFillReevaluateLabel": "Re-evaluate edited issues",
     "smartFillReevaluateDesc": "Five minutes after an issue's title or description stops changing, reads it again and updates the priority, effort, categories or objective nobody set by hand.",
     "smartFillRelationsLabel": "Link related issues",
@@ -4580,6 +4586,10 @@
       "smart_fill_model": {
         "label": "Smart-fill model",
         "desc": "Reads a new issue's title and description and fills its fields. Someone is waiting on it: pick a fast model."
+      },
+      "smart_fill_title_model": {
+        "label": "Smart-fill titles",
+        "desc": "Writes the title of an issue created without one, from its description. Someone is waiting on it: pick a fast model."
       },
       "issue_embedding_model": {
         "label": "Issue embeddings",

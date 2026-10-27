@@ -62,6 +62,7 @@
     "smartFillObjective": "el objetivo",
     "smartFillPriority": "la prioridad",
     "smartFillProperties": "sus propiedades",
+    "smartFillTitle": "el título",
     "smartFilled": "ha completado {fields}",
     "objectiveChanged": "ha cambiado el objetivo: {from} → {to}",
     "dueDateChanged": "ha cambiado la fecha límite: {from} → {to}",
@@ -1880,6 +1881,7 @@
   },
   "IssueUI": {
     "titlePlaceholder": "Título de la incidencia",
+    "titlePlaceholderSmartFill": "Título de la incidencia (opcional, Smart Fill lo escribe)",
     "descriptionPlaceholder": "Añadir una descripción…",
     "issueDeletedToast": "Incidencia movida a la papelera.",
     "deleteDialogTitle": "¿Mover «{title}» a la papelera?",
@@ -1897,9 +1899,11 @@
     "smartFillChip": "Smart Fill",
     "smartFillOffHint": "Desactivado para esta incidencia: tú defines sus propiedades y relaciones. Vuelve a activarlo para que se encargue Smart Fill.",
     "smartFillOnHint": "Activado: Smart Fill lee la incidencia, define su prioridad, esfuerzo, categorías y objetivo, y la vincula con incidencias relacionadas una vez guardada. Desactívalo para hacerlo tú.",
+    "smartFillOnTitleHint": "Activado: Smart Fill lee la incidencia, escribe su título si lo dejas vacío, define su prioridad, esfuerzo, categorías y objetivo, y la vincula con incidencias relacionadas una vez guardada. Desactívalo para hacerlo tú.",
     "smartFillPendingToast": "Smart Fill está completando la incidencia; aparecerá dentro de unos segundos.",
     "newIssueTitle": "Nueva incidencia",
     "createDescriptionPlaceholder": "Descripción de la incidencia",
+    "createDescriptionPlaceholderSmartFill": "Describe la incidencia, Smart Fill le pone título",
     "createMore": "Crear más",
     "createTicket": "Crear incidencia",
     "createIdentifier": "Crear {identifier}",
@@ -2801,6 +2805,8 @@
     "smartFillCreatedLabel": "Completar incidencias creadas",
     "smartFillTriageDesc": "Completa los valores que falten en las incidencias en Clasificación de tus proyectos.",
     "smartFillTriageLabel": "Completar incidencias en Clasificación",
+    "smartFillWriteTitleLabel": "Escribir los títulos que falten",
+    "smartFillWriteTitleDesc": "Deja vacío el título de una incidencia y Smart Fill lo escribe a partir de la descripción; luego lo actualiza tras cada edición hasta que lo cambies tú.",
     "smartFillReevaluateLabel": "Reevaluar incidencias editadas",
     "smartFillReevaluateDesc": "Cinco minutos después de que el título o la descripción de una incidencia dejen de cambiar, la vuelve a leer y actualiza la prioridad, el esfuerzo, las categorías o el objetivo que nadie haya definido a mano.",
     "smartFillRelationsLabel": "Vincular incidencias relacionadas",
@@ -4580,6 +4586,10 @@
       "smart_fill_model": {
         "label": "Modelo de llenado inteligente",
         "desc": "Lee el título y la descripción de una incidencia nueva y completa sus campos. Hay alguien esperando el resultado: elige un modelo rápido."
+      },
+      "smart_fill_title_model": {
+        "label": "Títulos de llenado inteligente",
+        "desc": "Escribe el título de una incidencia creada sin título, a partir de su descripción. Hay alguien esperando el resultado: elige un modelo rápido."
       },
       "issue_embedding_model": {
         "label": "Embeddings de incidencias",

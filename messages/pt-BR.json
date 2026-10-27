@@ -62,6 +62,7 @@
     "smartFillObjective": "o objetivo",
     "smartFillPriority": "a prioridade",
     "smartFillProperties": "suas propriedades",
+    "smartFillTitle": "o título",
     "smartFilled": "preencheu {fields}",
     "objectiveChanged": "alterou o objetivo: {from} → {to}",
     "dueDateChanged": "alterou a data de vencimento: {from} → {to}",
@@ -1880,6 +1881,7 @@
   },
   "IssueUI": {
     "titlePlaceholder": "Título do ticket",
+    "titlePlaceholderSmartFill": "Título do ticket (opcional, o preenchimento inteligente escreve)",
     "descriptionPlaceholder": "Adicione uma descrição…",
     "issueDeletedToast": "Ticket movido para a lixeira.",
     "deleteDialogTitle": "Mover “{title}” para a lixeira?",
@@ -1897,9 +1899,11 @@
     "smartFillChip": "Preenchimento inteligente",
     "smartFillOffHint": "Desativado para este ticket: você mesmo define suas propriedades e relações. Ative novamente para deixar o preenchimento inteligente fazer isso.",
     "smartFillOnHint": "Ativado: o preenchimento inteligente lê o ticket, define prioridade, esforço, categorias e objetivo, e depois o vincula a tickets relacionados quando ele é salvo. Desative para defini-los você mesmo.",
+    "smartFillOnTitleHint": "Ativado: o preenchimento inteligente lê o ticket, escreve o título se você deixá-lo vazio, define prioridade, esforço, categorias e objetivo, e depois o vincula a tickets relacionados quando ele é salvo. Desative para defini-los você mesmo.",
     "smartFillPendingToast": "O preenchimento inteligente está completando o ticket; o resultado aparecerá em alguns segundos.",
     "newIssueTitle": "Novo ticket",
     "createDescriptionPlaceholder": "Descrição do ticket",
+    "createDescriptionPlaceholderSmartFill": "Descreva o ticket, o preenchimento inteligente dá o título",
     "createMore": "Criar mais",
     "createTicket": "Criar ticket",
     "createIdentifier": "Criar {identifier}",
@@ -2801,6 +2805,8 @@
     "smartFillCreatedLabel": "Preencher tickets criados",
     "smartFillTriageDesc": "Preenche valores ausentes nos tickets em triagem que são seus.",
     "smartFillTriageLabel": "Preencher tickets na triagem",
+    "smartFillWriteTitleLabel": "Escrever títulos ausentes",
+    "smartFillWriteTitleDesc": "Deixe vazio o título de um ticket e o Smart Fill o escreve a partir da descrição, depois o atualiza após edições até você mesmo alterá-lo.",
     "smartFillReevaluateLabel": "Reavaliar tickets editados",
     "smartFillReevaluateDesc": "Cinco minutos depois que o título ou a descrição de um ticket param de mudar, lê o ticket de novo e atualiza a prioridade, o esforço, as categorias ou o objetivo que ninguém definiu manualmente.",
     "smartFillRelationsLabel": "Vincular tickets relacionados",
@@ -4580,6 +4586,10 @@
       "smart_fill_model": {
         "label": "Modelo de preenchimento inteligente",
         "desc": "Lê o título e a descrição de um novo ticket e preenche seus campos. Alguém está esperando pelo resultado: escolha um modelo rápido."
+      },
+      "smart_fill_title_model": {
+        "label": "Títulos do preenchimento inteligente",
+        "desc": "Escreve o título de um ticket criado sem título, a partir da descrição. Alguém está esperando pelo resultado: escolha um modelo rápido."
       },
       "issue_embedding_model": {
         "label": "Embeddings de tickets",

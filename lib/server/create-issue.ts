@@ -23,6 +23,7 @@ import {
 import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
 import { decodeIssue, encodeIssue } from "@/lib/server/issue-store";
 import { resolveSmartFillPayer, runSmartFill } from "@/lib/server/smart-fill";
+import { fallbackIssueTitle, generateIssueTitle } from "@/lib/server/smart-fill-title";
 import {
   recordSmartFillOwnership,
   type SmartFillOwnedField,
@@ -165,7 +166,14 @@ export async function createIssueForProject({
 }): Promise<CreateIssueResult> {
   const title =
     typeof input.title === "string" ? input.title.trim().slice(0, MAX_TITLE_LENGTH) : "";
-  if (!title) {
+  // An issue without a title may still be born when Smart Fill writes it from
+  // the description (MIN-798). Whether the creator allows it is only known
+  // once the Smart Fill payer is resolved below; a description without any
+  // text could not be titled even then, so it is refused right away.
+  const fallbackTitle = title
+    ? null
+    : fallbackIssueTitle(typeof input.description === "string" ? input.description : null);
+  if (!title && !fallbackTitle) {
     return { ok: false, status: 400, errorKey: "titleRequired" };
   }
 
@@ -330,6 +338,7 @@ export async function createIssueForProject({
   const smartFilled: string[] = [];
   // The properties the author left empty — the only ones Smart-fill may set.
   const emptySmartFillFields: SmartFillOwnedField[] = [];
+  if (!title) emptySmartFillFields.push("title");
   if (row.priority == null || row.priority === "none") emptySmartFillFields.push("priority");
   if (row.effort == null) emptySmartFillFields.push("effort");
   if (row.objective_id == null) emptySmartFillFields.push("objective_id");
@@ -351,6 +360,11 @@ export async function createIssueForProject({
         excluded: remote !== null || recurrenceSeriesId !== null,
       })
     : null;
+  // No title and nobody to write it: the creator turned titles off, or Smart
+  // Fill is off for this issue.
+  if (!title && !smartFillPayer?.title) {
+    return { ok: false, status: 400, errorKey: "titleRequired" };
+  }
   // What Smart Fill owns from now on (MIN-750): every field the author left
   // empty, whether or not this first pass fills it, except an objective it
   // may not infer. A later edit of the title or description lets Smart Fill
@@ -359,13 +373,34 @@ export async function createIssueForProject({
     ? emptySmartFillFields.filter((field) => inferObjective || field !== "objective_id")
     : [];
   if (smartFillPayer) {
-    const patch = await runSmartFill({
-      projectId,
-      projectName: projectName ?? "this project",
-      billToUserId: smartFillPayer.userId,
-      title: row.title as string,
-      description: (row.description as string | null) ?? null,
-    });
+    const description = (row.description as string | null) ?? null;
+    // The title and the properties are two calls side by side, so writing the
+    // title adds no wait. The property pass reads the fallback title, the
+    // description's first line, which is what the generated one summarizes.
+    const [patch, generatedTitle] = await Promise.all([
+      runSmartFill({
+        projectId,
+        projectName: projectName ?? "this project",
+        billToUserId: smartFillPayer.userId,
+        title: title || (fallbackTitle as string),
+        description,
+      }),
+      title
+        ? null
+        : generateIssueTitle({
+            projectId,
+            projectName: projectName ?? "this project",
+            billToUserId: smartFillPayer.userId,
+            description,
+          }),
+    ]);
+    // A creation never fails because the title could not be written: the
+    // first line of the description stands in, and stays Smart Fill's to
+    // rewrite on a later re-evaluation.
+    if (!title) {
+      row.title = (generatedTitle ?? fallbackTitle as string).slice(0, MAX_TITLE_LENGTH);
+      if (generatedTitle) smartFilled.push("title");
+    }
     // “none” is the default of the form, not a choice: a ticket that arrives
     // without priority did not refuse one.
     if (patch.priority && (row.priority == null || row.priority === "none")) {

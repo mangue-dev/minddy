@@ -5,11 +5,12 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { issueStore } from "@/lib/server/issue-store";
 import { decodeProjectName } from "@/lib/server/project-content";
 import { runSmartFill, type SmartFillPatch } from "@/lib/server/smart-fill";
+import { generateIssueTitle } from "@/lib/server/smart-fill-title";
 import { updateIssueFields } from "@/lib/server/update-issue";
 import { setIssueCategories } from "@/lib/server/set-issue-categories";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { readSmartFillOwnership } from "@/lib/server/smart-fill-ownership";
-import { resolveSmartFillReevaluation } from "@/lib/smart-fill";
+import { resolveSmartFillReevaluation, resolveSmartFillTitle } from "@/lib/smart-fill";
 
 /**
  * SMART FILL RE-EVALUATION (MIN-750) — an issue whose title or description
@@ -36,6 +37,12 @@ import { resolveSmartFillReevaluation } from "@/lib/smart-fill";
  *
  * The latest editor pays, and their `smart_fill_reevaluate` preference is read
  * when the pass runs, so turning it off cancels what is still waiting.
+ *
+ * A title Smart Fill wrote (MIN-798) is re-evaluated like the other
+ * properties, with one more gate: the editor must not have turned Smart Fill
+ * titles off. The model reads the
+ * current title and keeps it while it still fits, so a description that only
+ * grows does not rename its issue at every pass.
  */
 
 /** Passes one worker run takes on; each one is a model call. */
@@ -51,6 +58,7 @@ const START_BUDGET_MS = 30_000;
 const LEASE_MS = 5 * 60_000;
 
 export interface ReevaluationState {
+  title: string;
   priority: string;
   effort: string | null;
   objective_id: string | null;
@@ -59,7 +67,7 @@ export interface ReevaluationState {
 
 export interface ReevaluationChanges {
   /** Scalar fields for `updateIssueFields`, empty when none changes. */
-  fields: Partial<Pick<ReevaluationState, "priority" | "effort" | "objective_id">>;
+  fields: Partial<Pick<ReevaluationState, "title" | "priority" | "effort" | "objective_id">>;
   /** The new category set, or `null` to leave categories alone. */
   categoryIds: string[] | null;
 }
@@ -77,9 +85,12 @@ export interface ReevaluationChanges {
 export function reevaluationChanges(
   current: ReevaluationState,
   owned: ReadonlySet<string>,
-  patch: SmartFillPatch,
+  patch: SmartFillPatch & { title?: string | null },
 ): ReevaluationChanges {
   const fields: ReevaluationChanges["fields"] = {};
+  if (owned.has("title") && patch.title && patch.title !== current.title) {
+    fields.title = patch.title;
+  }
   if (owned.has("priority") && patch.priority && patch.priority !== current.priority) {
     fields.priority = patch.priority;
   }
@@ -181,9 +192,13 @@ async function reevaluateIssue(service: SupabaseClient, row: DueRow): Promise<Re
 
   const { data: account, error: accountError } = await service.auth.admin.getUserById(editorId);
   if (accountError || !account.user) return "no_editor";
-  if (!resolveSmartFillReevaluation((account.user.user_metadata ?? {}) as Record<string, unknown>)) {
-    return "disabled";
-  }
+  const editorMeta = (account.user.user_metadata ?? {}) as Record<string, unknown>;
+  if (!resolveSmartFillReevaluation(editorMeta)) return "disabled";
+  // A title is rewritten only for an editor who keeps Smart Fill titles on;
+  // an issue where Smart Fill owns nothing else costs no call then.
+  const writesTitle = owned.has("title") && resolveSmartFillTitle(editorMeta);
+  const ownsProperty = [...owned].some((field) => field !== "title");
+  if (!writesTitle && !ownsProperty) return "disabled";
   // The editor pays and the issue's text goes to their model: someone who
   // has since lost write access to the project gets neither.
   const access = await getProjectAccess(editorId, row.project_id);
@@ -192,14 +207,27 @@ async function reevaluateIssue(service: SupabaseClient, row: DueRow): Promise<Re
   const issue = await readState(service, row.issue_id, row.project_id, editorId);
   if (!issue) return "issue_unavailable";
 
-  const patch = await runSmartFill({
-    projectId: row.project_id,
-    projectName: issue.projectName,
-    billToUserId: editorId,
-    title: issue.title,
-    description: issue.description,
-  });
-  const changes = reevaluationChanges(issue.state, owned, patch);
+  const [patch, title] = await Promise.all([
+    ownsProperty
+      ? runSmartFill({
+          projectId: row.project_id,
+          projectName: issue.projectName,
+          billToUserId: editorId,
+          title: issue.title,
+          description: issue.description,
+        })
+      : ({} satisfies SmartFillPatch),
+    writesTitle
+      ? generateIssueTitle({
+          projectId: row.project_id,
+          projectName: issue.projectName,
+          billToUserId: editorId,
+          description: issue.description,
+          currentTitle: issue.title,
+        })
+      : null,
+  ]);
+  const changes = reevaluationChanges(issue.state, owned, { ...patch, title });
   const hasFields = Object.keys(changes.fields).length > 0;
   if (!hasFields && !changes.categoryIds) return "unchanged";
 
@@ -279,6 +307,7 @@ async function readState(
     updatedAt: issue.updated_at as string,
     projectName,
     state: {
+      title: issue.title as string,
       priority: issue.priority as string,
       effort: (issue.effort as string | null) ?? null,
       objective_id: (issue.objective_id as string | null) ?? null,

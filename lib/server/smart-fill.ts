@@ -7,7 +7,12 @@ import { hasUsageBudget } from "@/lib/server/usage";
 import { runDecision } from "@/lib/server/decisions/runner";
 import { buildSmartFillSpec } from "@/lib/server/decisions/prepare";
 import type { DecisionAnswers } from "@/lib/server/decisions/types";
-import { resolveSmartFill, resolveSmartFillScope, type SmartFillScope } from "@/lib/smart-fill";
+import {
+  resolveSmartFill,
+  resolveSmartFillScope,
+  resolveSmartFillTitle,
+  type SmartFillScope,
+} from "@/lib/smart-fill";
 import {
   ISSUE_EFFORTS,
   ISSUE_PRIORITIES,
@@ -91,10 +96,12 @@ export interface SmartFillPayerInput {
  * Numo/direct web creations use the acting user, and unattributed triage belongs
  * to the project owner. An explicit per-ticket opt-in can re-enable a disabled
  * automatic scope, but it never overrides the account-wide master switch.
+ * `title` says whether that account lets Smart Fill write empty titles
+ * (MIN-798), which no per-ticket toggle can switch on by itself.
  */
 export async function resolveSmartFillPayer(
   input: SmartFillPayerInput,
-): Promise<{ userId: string; scope: SmartFillScope } | null> {
+): Promise<SmartFillPayer | null> {
   try {
     return await resolveSmartFillPayerUnsafe(input);
   } catch (err) {
@@ -103,9 +110,15 @@ export async function resolveSmartFillPayer(
   }
 }
 
+export interface SmartFillPayer {
+  userId: string;
+  scope: SmartFillScope;
+  title: boolean;
+}
+
 async function resolveSmartFillPayerUnsafe(
   input: SmartFillPayerInput,
-): Promise<{ userId: string; scope: SmartFillScope } | null> {
+): Promise<SmartFillPayer | null> {
   if (input.explicit === false || input.excluded) return null;
   const resolved = await resolveCreationAccount(input);
   if (!resolved) return null;
@@ -115,7 +128,7 @@ async function resolveSmartFillPayerUnsafe(
     input.explicit === true &&
     (!input.ownerBilledTriage || input.actorId === userId);
   if (!canOverrideScope && !resolveSmartFillScope(meta, scope)) return null;
-  return { userId, scope };
+  return { userId, scope, title: resolveSmartFillTitle(meta) };
 }
 
 /**

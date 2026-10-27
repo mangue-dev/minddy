@@ -8,8 +8,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 interface Row extends Record<string, unknown> {}
 
-const { runSmartFill, updateIssueFields, setIssueCategories, getProjectAccess } = vi.hoisted(() => ({
+const { runSmartFill, generateIssueTitle, updateIssueFields, setIssueCategories, getProjectAccess } = vi.hoisted(() => ({
   getProjectAccess: vi.fn(),
+  generateIssueTitle: vi.fn(),
   runSmartFill: vi.fn(),
   updateIssueFields: vi.fn(),
   setIssueCategories: vi.fn(),
@@ -79,6 +80,7 @@ vi.mock("@/lib/supabase-service", () => ({
 vi.mock("@/lib/server/issue-store", () => ({ issueStore: () => makeQuery("issues") }));
 vi.mock("@/lib/server/project-content", () => ({ decodeProjectName: async () => "Project" }));
 vi.mock("@/lib/server/smart-fill", () => ({ runSmartFill }));
+vi.mock("@/lib/server/smart-fill-title", () => ({ generateIssueTitle }));
 vi.mock("@/lib/server/update-issue", () => ({ updateIssueFields }));
 vi.mock("@/lib/server/set-issue-categories", () => ({ setIssueCategories }));
 vi.mock("@/lib/server/project-access", () => ({ getProjectAccess }));
@@ -89,6 +91,7 @@ const { reevaluationChanges, runDueSmartFillReevaluations } = await import(
 
 const ALL = new Set(["priority", "effort", "category_ids", "objective_id"]);
 const state = {
+  title: "Export fails",
   priority: "medium",
   effort: "s",
   objective_id: "objective-a",
@@ -118,6 +121,16 @@ describe("reevaluationChanges", () => {
     expect(reevaluationChanges(state, ALL, { category_ids: ["category-a"] }).categoryIds).toBeNull();
     expect(reevaluationChanges(state, ALL, { category_ids: ["category-a", "category-b"] }).categoryIds)
       .toEqual(["category-a", "category-b"]);
+  });
+
+  it("rewrites an owned title only when the answer differs", () => {
+    expect(reevaluationChanges(state, ALL, { title: "PDF export fails" }).fields).toEqual({});
+    const owned = new Set([...ALL, "title"]);
+    expect(reevaluationChanges(state, owned, { title: "Export fails" }).fields).toEqual({});
+    expect(reevaluationChanges(state, owned, { title: null }).fields).toEqual({});
+    expect(reevaluationChanges(state, owned, { title: "PDF export fails" }).fields).toEqual({
+      title: "PDF export fails",
+    });
   });
 
   it("changes nothing on an empty answer", () => {
@@ -187,6 +200,31 @@ describe("runDueSmartFillReevaluations", () => {
     expect((await runDueSmartFillReevaluations()).outcomes).toEqual({ unchanged: 1 });
     expect(updateIssueFields).not.toHaveBeenCalled();
     expect(setIssueCategories).not.toHaveBeenCalled();
+  });
+
+  it("rewrites a title it owns for an editor who keeps titles on (MIN-798)", async () => {
+    queue[0].fields = ["title"];
+    generateIssueTitle.mockResolvedValue("PDF export leaves pages blank");
+
+    expect((await runDueSmartFillReevaluations()).outcomes).toEqual({ applied: 1 });
+    expect(runSmartFill).not.toHaveBeenCalled();
+    expect(generateIssueTitle).toHaveBeenCalledWith(expect.objectContaining({
+      billToUserId: "editor-1",
+      currentTitle: "Title",
+    }));
+    expect(updateIssueFields).toHaveBeenCalledWith(expect.objectContaining({
+      input: { title: "PDF export leaves pages blank" },
+      viaSmartFill: true,
+    }));
+  });
+
+  it("leaves an owned title alone for an editor who turned titles off", async () => {
+    queue[0].fields = ["title"];
+    editorMeta = { smart_fill_title: false };
+
+    expect((await runDueSmartFillReevaluations()).outcomes).toEqual({ disabled: 1 });
+    expect(generateIssueTitle).not.toHaveBeenCalled();
+    expect(runSmartFill).not.toHaveBeenCalled();
   });
 
   it("does not spend when the editor turned re-evaluation off", async () => {

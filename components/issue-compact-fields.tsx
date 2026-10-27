@@ -402,10 +402,13 @@ export function SmartFillCompact({
   value,
   onChange,
   fullWidth = false,
+  writesTitle = false,
 }: {
   value: boolean;
   onChange: (v: boolean) => void;
   fullWidth?: boolean;
+  /** The account lets Smart Fill write an empty title (MIN-798). */
+  writesTitle?: boolean;
 }) {
   const t = useTranslations("IssueUI");
   const id = useId();
@@ -434,7 +437,9 @@ export function SmartFillCompact({
         </button>
       </TooltipTrigger>
       <TooltipContent>
-        {value ? t("smartFillOnHint") : t("smartFillOffHint")}
+        {value
+          ? writesTitle ? t("smartFillOnTitleHint") : t("smartFillOnHint")
+          : t("smartFillOffHint")}
       </TooltipContent>
     </Tooltip>
   );

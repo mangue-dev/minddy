@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 37,
-  "sourceRevision": 36,
+  "revision": 38,
+  "sourceRevision": 37,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-26",
+  "updatedAt": "2026-10-27",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations",
+    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -49,6 +49,7 @@
       "lib/smart-fill-fields.ts",
       "lib/server/smart-fill-reevaluation.ts",
       "lib/server/smart-fill-ownership.ts",
+      "lib/server/smart-fill-title.ts",
       "app/(app)/projects/[id]/triage/page.tsx",
       "components/triage/triage-page.tsx",
       "lib/smart-triage.ts",
@@ -121,10 +122,10 @@
     ]
   },
   "review": {
-    "revision": 37,
-    "fact": "agent:claude-code (MIN-804 sub-issues paragraph checked against lib/issue-hierarchy.ts, components/issue-card.tsx, components/relations-section.tsx and the enforce_one_level_subissues trigger: R and the right-click Relations entry offer Parent of / Sub-issue of only where the one-level rule allows, re-parenting moves the issue, a selection uses Sub-issue of; no figure changed); agent:/root/min776 (drafts paragraph checked against components/create-issue-dialog.tsx, components/objective-dialog.tsx and lib/use-held-draft.ts: closing keeps the form, reopening resumes it, two minutes after a close it becomes a draft, another context saves it first, and the split menu offers Save as draft; rest of the article unchanged since the MIN-778 review; no figure changed); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of create-an-issue-steps, issue-statuses-steps, sub-issues-steps, implementation-plans-steps, recurring-issues-steps, import-issues-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:claude-code (pt-BR MIN-804 sub-issues paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:/root/min776 (pt-BR drafts paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-26"
+    "revision": 38,
+    "fact": "agent:claude-code (MIN-798 Smart-fill title section and preference bullet checked against lib/smart-fill.ts, lib/server/smart-fill-title.ts, lib/server/create-issue.ts, lib/server/smart-fill-reevaluation.ts, lib/server/update-issue.ts, components/create-issue-dialog.tsx and components/settings/account-smart-fill-section.tsx: on by default under the master switch, description focus, smaller empty title until focused or filled, and placeholders in the form, first-line fallback, ownership released by a manual edit, re-evaluation skipped for an editor who turned titles off; MCP requires a title; no figure changed); agent:claude-code (MIN-804 sub-issues paragraph checked against lib/issue-hierarchy.ts, components/issue-card.tsx, components/relations-section.tsx and the enforce_one_level_subissues trigger: R and the right-click Relations entry offer Parent of / Sub-issue of only where the one-level rule allows, re-parenting moves the issue, a selection uses Sub-issue of; no figure changed); agent:/root/min776 (drafts paragraph checked against components/create-issue-dialog.tsx, components/objective-dialog.tsx and lib/use-held-draft.ts: closing keeps the form, reopening resumes it, two minutes after a close it becomes a draft, another context saves it first, and the split menu offers Save as draft; rest of the article unchanged since the MIN-778 review; no figure changed); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of create-an-issue-steps, issue-statuses-steps, sub-issues-steps, implementation-plans-steps, recurring-issues-steps, import-issues-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:claude-code (pt-BR MIN-798 Smart-fill title section with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-804 sub-issues paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:/root/min776 (pt-BR drafts paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-27"
   },
   "related": [
     "feedback",
@@ -170,7 +171,7 @@
       "src": "/documentation/pt-BR/new-issue.png",
       "alt": "Rascunho não enviado no projeto Aurora com título, descrição, propriedades que podem ser escolhidas manualmente e o botão Criar AUR-19.",
       "caption": "Descreva o resultado esperado e escolha as propriedades úteis antes de criar o ticket.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -187,7 +188,7 @@
       "src": "/documentation/pt-BR/triage-incoming.png",
       "alt": "Ticket recebido de demonstração AUR-19 com relato, propriedades e controles de duplicado, Recusar e Aceitar.",
       "caption": "Leia o relato recebido antes de aceitar, recusar ou vincular um duplicado.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -204,7 +205,7 @@
       "src": "/documentation/pt-BR/issue-statuses.png",
       "alt": "Os oito estados do ticket no seletor, com Backlog selecionado.",
       "caption": "A marca indica o estado atual. Escolha o que representa a situação real do trabalho.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -221,7 +222,7 @@
       "src": "/documentation/pt-BR/work-resources.png",
       "alt": "Janela para adicionar um link com um endereço de contato de exemplo.",
       "caption": "Confira o destino antes de adicionar o recurso. Este link de exemplo não foi enviado.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -237,7 +238,7 @@
       "src": "/documentation/pt-BR/work-dependencies.png",
       "alt": "Busca de um ticket bloqueador pelo identificador.",
       "caption": "Escolha o sentido da relação antes do destino. O seletor é mostrado sem enviar a relação.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -253,7 +254,7 @@
       "src": "/documentation/pt-BR/work-sub-issues.png",
       "alt": "Campo de criação de um subticket em um ticket pai de demonstração.",
       "caption": "O campo cria um filho deste ticket; cada filho mantém seu próprio status e discussão.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -270,7 +271,7 @@
       "src": "/documentation/pt-BR/work-implementation-plan.png",
       "alt": "Plano de demonstração com duas tarefas de trabalho concluídas de seis.",
       "caption": "O plano salvo distingue etapas concluídas, ativas e pendentes. O progresso não comprova a execução da tarefa fictícia de código.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -287,7 +288,7 @@
       "src": "/documentation/pt-BR/issue-date-recurrence.png",
       "alt": "Seletor de prazo no modo recorrente com prévia semanal aos domingos e horário opcional.",
       "caption": "O modo recorrente mostra a frequência semanal. Confirme o primeiro prazo antes de criar o ticket.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -304,7 +305,7 @@
       "src": "/documentation/pt-BR/import-issues-preview-workflow.png",
       "alt": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas.",
       "caption": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas. A importação não foi enviada; o planejamento opcional com IA foi bloqueado para a captura.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -321,7 +322,7 @@
       "src": "/documentation/pt-BR/file-preview.png",
       "alt": "Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar, Renomear e Remover.",
       "caption": "O visualizador compartilhado mantém Fechar abaixo da prévia. O menu Ações do arquivo oferece Baixar e, quando permitido, Renomear e Remover.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -378,7 +379,7 @@ Se a criação ou o salvamento falhar, preserve o texto, leia o erro e confira s
 As preferências do Preenchimento inteligente pertencem à sua conta. Abra **Configurações da conta** → **Smart Fill**. Cada opção tem seu próprio cartão:
 
 - No cartão **Smart Fill**, **Ativar o Smart Fill** liga ou desliga o Preenchimento inteligente na sua conta. Ele completa prioridade, esforço, categorias e objetivo ausentes; estado, responsável e prazo continuam por sua conta. Os interruptores dos dois cartões seguintes dependem dele.
-- Em **Tickets a preencher**, **Preencher tickets criados** e **Preencher tickets na triagem** escolhem quais tickets novos ele completa: os que você cria e os tickets em triagem pelos quais você é responsável. **Reavaliar tickets editados**, ativado por padrão, permite que o Preenchimento inteligente [leia um ticket de novo](#smart-fill-reevaluation) depois que o título ou a descrição muda.
+- Em **Tickets a preencher**, **Preencher tickets criados** e **Preencher tickets na triagem** escolhem quais tickets novos ele completa: os que você cria e os tickets em triagem pelos quais você é responsável. **Reavaliar tickets editados**, ativado por padrão, permite que o Preenchimento inteligente [leia um ticket de novo](#smart-fill-reevaluation) depois que o título ou a descrição muda. **Escrever títulos ausentes**, ativado por padrão, permite que o Preenchimento inteligente [escreva o título](#smart-fill-title) de um ticket que você só descreve.
 - Em **Tickets relacionados**, **Vincular tickets relacionados**, ativado por padrão, permite que o Preenchimento inteligente [adicione relações](#smart-fill-relations) depois que um ticket é salvo.
 - Em **Indexação de tickets**, **Indexar tickets**, ativado por padrão e independente do Preenchimento inteligente, transforma o título e a descrição dos tickets que você cria ou edita em vetores privados usados para encontrar tickets relacionados e para [buscar tickets pelo sentido](/docs/navigation#search-by-meaning). A indexação em segundo plano dos tickets existentes de um projeto respeita tanto o interruptor do proprietário do projeto quanto o do autor: um ticket cujo autor o desligou nunca é indexado. Os vetores são criptografados com o projeto, como o ticket; os salvos antes de o projeto passar a criptografar são convertidos pela tarefa em segundo plano. Com o interruptor desligado, nenhum vetor é criado para os seus tickets, mesmo quando outra pessoa os edita, e a busca de tickets relacionados compara apenas palavras. Suas próprias buscas passam então a usar só o texto, sem busca pelo sentido. Os vetores já criados permanecem enquanto o texto não muda; são excluídos assim que o texto muda, ou junto com o ticket.
 
@@ -391,6 +392,14 @@ Com **Reavaliar tickets editados** ativado, um ticket criado com o Preenchimento
 Ele só altera as propriedades que ninguém escolheu manualmente: as que ficaram vazias na criação do ticket e que ninguém mudou desde então. Assim que você, o Numo ou um agente conectado muda uma delas, o Preenchimento inteligente deixa de mexer nela. Ele nunca remove o objetivo nem todas as categorias; pode limpar o esforço quando o texto não descreve mais um trabalho estimável. Tickets criados antes deste recurso, com o Preenchimento inteligente desligado ou com todas as propriedades já definidas nunca são lidos de novo.
 
 Cada alteração aparece na atividade do ticket com o Preenchimento inteligente como autor, e um ticket movido para outro objetivo aparece também na atividade dos dois objetivos. Uma execução que não encontra nada para mudar não grava nada. A execução conta na parte **Automações** da pessoa que fez a última edição, segue a preferência **Reavaliar tickets editados** dessa pessoa e é ignorada quando o orçamento dela acabou ou o provedor falha.
+
+### Deixar o Preenchimento inteligente escrever o título {#smart-fill-title}
+
+Com **Escrever títulos ausentes** ativado, você cria um ticket descrevendo-o. A opção vem ativada por padrão e depende de **Ativar o Smart Fill**. Enquanto o Preenchimento inteligente estiver ligado para o ticket, o formulário de criação abre com o cursor na descrição, e o campo de título vazio fica menor que o normal e indica que o preenchimento inteligente o escreve; ele volta ao tamanho normal assim que você clica nele ou digita um título. Deixe-o vazio, descreva o trabalho e crie o ticket. O título continua editável, e um título que você digitar é mantido como está. Isso vale para o formulário de criação; o Numo, o servidor MCP e a importação CSV escrevem os próprios títulos.
+
+O Preenchimento inteligente escreve um título curto que resume a descrição e diferencia o ticket de outros parecidos, no idioma da descrição. O ticket aparece quando o título e as propriedades estão preenchidos, e a atividade dele nomeia o Preenchimento inteligente. Se nenhum título puder ser escrito, porque o provedor falha ou o seu orçamento de **Automações** acabou, o ticket recebe a primeira linha da descrição. Uma descrição que contém só uma imagem ainda precisa de um título.
+
+Um título escrito assim continua sendo do Preenchimento inteligente até alguém alterá-lo. Com **Reavaliar tickets editados** ativado, uma [nova leitura](#smart-fill-reevaluation) posterior pode substituí-lo quando a descrição passa a descrever outro trabalho, e o mantém enquanto ele servir. Essa execução só reescreve o título se a pessoa que fez a última edição não tiver desativado **Escrever títulos ausentes**. Assim que você, o Numo ou um agente conectado edita o título, o Preenchimento inteligente não mexe mais nele.
 
 ## Analisar trabalho recebido na triagem {#triage-incoming-work}
 

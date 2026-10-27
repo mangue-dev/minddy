@@ -569,7 +569,7 @@ export async function updateIssueFields({
   // Fill is no longer its to re-evaluate. Before the answer, like the write
   // it follows: lost afterwards, a later pass could overwrite this choice.
   if (!viaSmartFill) {
-    const released: SmartFillOwnedField[] = (["priority", "effort", "objective_id"] as const).filter(
+    const released: SmartFillOwnedField[] = (["title", "priority", "effort", "objective_id"] as const).filter(
       (field) => field in updates && (updates[field] ?? null) !== (before[field] ?? null),
     );
     await releaseSmartFillFields(service, issueId, released);

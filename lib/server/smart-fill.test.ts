@@ -425,22 +425,22 @@ describe("resolveSmartFillPayer", () => {
     });
 
   it("bills direct and Numo-style creations to their actor", async () => {
-    await expect(resolve()).resolves.toEqual({ userId: "user-1", scope: "created" });
+    await expect(resolve()).resolves.toEqual({ userId: "user-1", scope: "created", title: true });
     expect(getUserByIdMock).toHaveBeenCalledWith("user-1");
   });
 
   it("bills integrations and MCP agents to the users who created them", async () => {
     await expect(resolve({ actorId: null, integrationId: "integration-1", status: "triage" }))
-      .resolves.toEqual({ userId: "integration-owner", scope: "triage" });
+      .resolves.toEqual({ userId: "integration-owner", scope: "triage", title: true });
     await expect(resolve({ actorId: "request-user", mcpKeyId: "key-1" }))
-      .resolves.toEqual({ userId: "mcp-owner", scope: "created" });
+      .resolves.toEqual({ userId: "mcp-owner", scope: "created", title: true });
   });
 
   it("bills unattributed triage and promoted feedback to the project owner", async () => {
     await expect(resolve({ actorId: null, status: "triage" }))
-      .resolves.toEqual({ userId: "project-owner", scope: "triage" });
+      .resolves.toEqual({ userId: "project-owner", scope: "triage", title: true });
     await expect(resolve({ actorId: "member-1", ownerBilledTriage: true }))
-      .resolves.toEqual({ userId: "project-owner", scope: "triage" });
+      .resolves.toEqual({ userId: "project-owner", scope: "triage", title: true });
   });
 
   it("does not let a promoting member override the owner's triage opt-out", async () => {
@@ -462,7 +462,7 @@ describe("resolveSmartFillPayer", () => {
         explicit: true,
         ownerBilledTriage: true,
       }),
-    ).resolves.toEqual({ userId: "project-owner", scope: "triage" });
+    ).resolves.toEqual({ userId: "project-owner", scope: "triage", title: true });
   });
 
   it("does not bill unattributed non-triage or excluded system copies", async () => {
@@ -479,6 +479,7 @@ describe("resolveSmartFillPayer", () => {
     await expect(resolve({ explicit: true })).resolves.toEqual({
       userId: "user-1",
       scope: "created",
+      title: true,
     });
 
     getUserByIdMock.mockResolvedValue({

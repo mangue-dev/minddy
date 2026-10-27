@@ -50,6 +50,7 @@ export interface EventTranslators {
  * An unknown field (name since removed) is skipped rather than rendered as is.
  */
 const SMART_FILL_LABELS: Record<string, string> = {
+  title: "smartFillTitle",
   priority: "smartFillPriority",
   effort: "smartFillEffort",
   category_ids: "smartFillCategories",

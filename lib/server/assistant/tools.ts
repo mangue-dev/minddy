@@ -1697,6 +1697,11 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             description:
               "Let Smart Fill read an issue again five minutes after its title or description stops changing, and update the priority, effort, categories or objective nobody set by hand. Requires smart_fill.",
           },
+          smart_fill_title: {
+            type: "boolean",
+            description:
+              "Let Smart Fill write the title of an issue created with an empty title, from its description, and keep it up to date on re-evaluation until someone edits it. On by default. Requires smart_fill.",
+          },
           smart_fill_relations: {
             type: "boolean",
             description:

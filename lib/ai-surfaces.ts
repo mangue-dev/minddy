@@ -22,6 +22,7 @@ export const BYOK_MODEL_KEYS = [
   "web_search_model",
   "smart_assign_model",
   "smart_fill_model",
+  "smart_fill_title_model",
   "import_map_model",
   "brief_model",
   "issue_embedding_model",
@@ -53,6 +54,7 @@ export const AI_SURFACE_DEFINITIONS: readonly AiSurfaceDefinition[] = [
     modelKeys: [
       "smart_assign_model",
       "smart_fill_model",
+      "smart_fill_title_model",
       "import_map_model",
       "brief_model",
       "issue_embedding_model",

@@ -12,10 +12,12 @@ import {
   resolveSmartFillReevaluation,
   resolveSmartFillRelations,
   resolveSmartFillScope,
+  resolveSmartFillTitle,
   SMART_FILL_CREATED_META_KEY,
   SMART_FILL_META_KEY,
   SMART_FILL_REEVALUATE_META_KEY,
   SMART_FILL_RELATIONS_META_KEY,
+  SMART_FILL_TITLE_META_KEY,
   SMART_FILL_TRIAGE_META_KEY,
 } from "@/lib/smart-fill";
 
@@ -26,9 +28,10 @@ const resolveTriage = (meta: Metadata) => resolveSmartFillScope(meta, "triage");
 /**
  * Account → Smart Fill (MIN-737): one card per option, so each one is a
  * destination of its own in ⌘K and in the settings filter. Smart Fill fills
- * only priority, effort, categories and objective (MIN-260), at creation and
- * again after an edit of the text (MIN-750); the scopes, the re-evaluation and
- * relations depend on the master switch, while issue indexing also serves
+ * priority, effort, categories and objective (MIN-260), and on request an
+ * empty title (MIN-798), at creation and again after an edit of the text
+ * (MIN-750); the scopes, the title, the re-evaluation and relations depend on
+ * the master switch, while issue indexing also serves
  * search and stands on its own (MIN-717).
  */
 export function AccountSmartFillSection() {
@@ -44,6 +47,10 @@ export function AccountSmartFillSection() {
   const [triage, setTriage] = useAccountPreference(
     SMART_FILL_TRIAGE_META_KEY,
     resolveTriage,
+  );
+  const [writeTitle, setWriteTitle] = useAccountPreference(
+    SMART_FILL_TITLE_META_KEY,
+    resolveSmartFillTitle,
   );
   const [reevaluate, setReevaluate] = useAccountPreference(
     SMART_FILL_REEVALUATE_META_KEY,
@@ -105,6 +112,19 @@ export function AccountSmartFillSection() {
               id="account-smart-fill-triage"
               checked={triage}
               onCheckedChange={(v) => void setTriage(v)}
+              disabled={!ready || !smartFill}
+            />
+          }
+        />
+        <SettingsRow
+          htmlFor="account-smart-fill-title"
+          label={ta("smartFillWriteTitleLabel")}
+          hint={ta("smartFillWriteTitleDesc")}
+          control={
+            <Switch
+              id="account-smart-fill-title"
+              checked={writeTitle}
+              onCheckedChange={(v) => void setWriteTitle(v)}
               disabled={!ready || !smartFill}
             />
           }
