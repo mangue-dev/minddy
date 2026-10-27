@@ -92,6 +92,27 @@ describe("pull request activation authority", () => {
     stop(); client.clear();
   });
 
+  it("opens a prepared pull request on its prepared content while the mount read revalidates (MIN-817)", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    let release!: (response: Response) => void;
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(Response.json({ pr: { headSha: "prepared-head" }, files: [] }))
+      .mockImplementationOnce(() => new Promise<Response>((resolve) => { release = resolve; })));
+    const options = pullRequestQueryOptions("pr1");
+    await client.prefetchQuery({ ...options, staleTime: 5_000 });
+    const activationSequence = nextReadActivationSequence();
+    const observer = new QueryObserver(client, options);
+    const stop = observer.subscribe(() => {});
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    const opened = observer.getCurrentResult();
+    expect(opened.fetchStatus).toBe("fetching");
+    expect(opened.data?.pr?.headSha).toBe("prepared-head");
+    expect(pullRequestReadState(opened, activationSequence)).not.toBe("loading");
+    expect(pullRequestDisplayReadState(opened, activationSequence)).toBe("fresh");
+    release(Response.json({ pr: { headSha: "prepared-head" }, files: [] }));
+    stop(); client.clear();
+  });
+
   it("keeps authoritative content visible during routine polling", () => {
     expect(pullRequestReadState({ isPending: false, isError: false, fetchStatus: "fetching",
       data: { readSequence: 11, readSession: readActivationSession } }, 10)).toBe("fresh");

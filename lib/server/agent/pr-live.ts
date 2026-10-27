@@ -2,6 +2,7 @@ import "server-only";
 
 import { pullRequestTopic, type PrLivePart } from "@/lib/pr-live";
 import type { RepoProviderId } from "@/lib/repo-providers";
+import { afterOrNow } from "@/lib/server/after-safe";
 import { broadcastToTopic } from "./live";
 import { findPullRequestByNumber } from "./pull-requests";
 
@@ -21,18 +22,20 @@ import { findPullRequestByNumber } from "./pull-requests";
  * looks at the same PR would not see anything before the webhook echo — and on the GitHub side there
  * is NO echo for reactions, the event does not exist.
  *
- * Everything is best-effort and fire-and-forget: a failed broadcast should never
- * cause a webhook or a user gesture to fail. The residual polling and
- * the refetch when returning to the tab remain the net.
+ * Everything is best-effort: a failed broadcast should never cause a webhook
+ * or a user gesture to fail. The residual polling and the refetch when
+ * returning to the tab remain the net. Best-effort is not detached, though:
+ * the send runs through `afterOrNow`, which keeps the invocation alive until
+ * it completes. A bare `void` let Vercel freeze the function right after the
+ * webhook's 200, before Supabase was ever called — the lost live updates
+ * of MIN-817.
  */
 
 /** “These parts of this PR have moved. » */
 export function broadcastPrChanged(prId: string, parts: PrLivePart[]): void {
   if (parts.length === 0) return;
-  void broadcastToTopic(pullRequestTopic(prId), "changed", {
-    parts,
-    at: Date.now(),
-  });
+  const at = Date.now();
+  afterOrNow(() => broadcastToTopic(pullRequestTopic(prId), "changed", { parts, at }));
 }
 
 /**
@@ -40,8 +43,9 @@ export function broadcastPrChanged(prId: string, parts: PrLivePart[]): void {
  * that a webhook carries. Silent if the PR is not (yet) at minddy —
  * no one can look at it, there is no one to warn.
  *
- * `await` on resolution, `void` on sending: reading is what gives
- * the id, the sending is what we don't expect.
+ * `await` on resolution, `afterOrNow` on sending: reading is what gives
+ * the id, the send completes after the response. A caller that does not
+ * await this either schedules it through `afterOrNow` itself.
  */
 export async function broadcastPrChangedByNumber(opts: {
   provider: RepoProviderId;

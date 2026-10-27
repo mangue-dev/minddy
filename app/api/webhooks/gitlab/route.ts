@@ -633,8 +633,16 @@ export async function POST(request: NextRequest) {
       await handleIssue(payload, repoId, repoFullName);
     }
   } catch (err) {
-    // Handler failures remain best-effort to preserve the existing webhook contract.
-    console.error("[webhooks/gitlab] handling failed:", (err as Error).message);
+    // Handler failures remain best-effort to preserve the existing webhook
+    // contract. The log names the event and the delivery, never the payload.
+    console.error(
+      "[webhooks/gitlab] handling_failed",
+      JSON.stringify({
+        event: payload.object_kind ?? null,
+        delivery: request.headers.get("x-gitlab-event-uuid"),
+        error: (err as Error).message,
+      }),
+    );
   }
 
   return NextResponse.json({ ok: true });

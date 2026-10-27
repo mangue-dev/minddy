@@ -11,6 +11,8 @@ import { loadPullRequestDetailSurface, preparedPullRequestDetailSurface } from "
 import { useRouter } from "next/navigation";
 import { useOptionalAppTabNavigation } from "@/lib/app-tab-navigation-context";
 import { canConsumePrDeepLink } from "@/lib/pr-navigation";
+import { prefetchPullRequestDetail } from "@/lib/prefetch-tab-destination";
+import { pullRequestStatesToReconcile } from "@/lib/pull-request-state-sync";
 import { AppTabRouteBoundary, useAppTabActive, useAppTabRoute } from "@/lib/app-tab-route-context";
 import { useFormatter, useTranslations } from "next-intl";
 import { type InfiniteData, useQueryClient } from "@tanstack/react-query";
@@ -184,6 +186,9 @@ function PrFilterMenu({
   );
 }
 
+/** A hover shorter than this is a pointer passing over the list, not an intent. */
+const ROW_INTENT_MS = 120;
+
 /**
  * A pull request in the list. She says what she was already saying — identifying,
  * linked ticket, status, date, title, author — LESS his project, which is written
@@ -209,11 +214,26 @@ function PrRow({
   const identifier = prIdentifier(pr.provider, pr.pr_number);
   const linkedIssue =
     pr.issue && pr.project ? issueIdentifier(pr.project.key, pr.issue.number) : null;
-  const showReadiness = shouldShowPullRequestReadiness(pr.pr_state);
+  // A readiness that already reads the PR as finished is newer than the row:
+  // the page moves the row (see `pullRequestStatesToReconcile`), and until
+  // then the row shows no icon that contradicts its badge (MIN-817).
+  const showReadiness = shouldShowPullRequestReadiness(pr.pr_state) &&
+    readiness?.state !== "merged" && readiness?.state !== "closed";
+  // Hover intent warms the detail beyond the background cohort, so the
+  // click paints from cache. One read at a time, skipped while quota-paused.
+  const queryClient = useQueryClient();
+  const intent = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const cancelIntent = () => { clearTimeout(intent.current); intent.current = undefined; };
+  useEffect(() => cancelIntent, []);
 
   return (
     <button
       type="button"
+      onPointerEnter={() => {
+        cancelIntent();
+        intent.current = setTimeout(() => { void prefetchPullRequestDetail(queryClient, pr.prId); }, ROW_INTENT_MS);
+      }}
+      onPointerLeave={cancelIntent}
       data-sidebar-filter-result
       data-navigation-href={`/pull-requests?pr=${encodeURIComponent(pr.prId)}`}
       data-comment-target={commentTarget("pr", pr.prId)}
@@ -321,6 +341,9 @@ function PrGroupRows({
   const tCommon = useTranslations("Common");
   const t = useTranslations("PullRequests");
   const prs = group.items;
+  // A checked section with nothing in it is a bare header, folded; it opens
+  // by itself when a PR arrives, unless the reader folded it (MIN-817).
+  const empty = prs.length === 0 && !(group.key === "completed" && loadingInitialPage);
 
   // The OPEN PR remains visible: if it is beyond the first five, the
   // cut goes down to it rather than hiding it.
@@ -334,8 +357,8 @@ function PrGroupRows({
       project={null}
       fallbackLabel={t(SECTION_LABELS[group.key])}
       headerIcon={<PrSectionIcon section={group.key} />}
-      open={open}
-      collapsible={collapsible}
+      open={open && !empty}
+      collapsible={collapsible && !empty}
       onToggle={onToggle}
       hiddenCount={prs.length - shown.length}
       onShowAll={onShowAll}
@@ -463,6 +486,10 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
    * jumped to the newest PR when one was opened.
    */
   const [heldPrId, setHeldPrId] = useState<string | null>(null);
+  // A terminal action the forge has not confirmed yet: its PR keeps the
+  // detail even when nothing else is left in the filter, so the reader sees
+  // the merge finish (or fail) instead of an empty pane.
+  const [settlingPrId, setSettlingPrId] = useState<string | null>(null);
   const selectedIdRef = useRef<string | null>(null);
   // The last row seen for the selection: the held PR must still have a row
   // to render when a refetch no longer returns it.
@@ -477,6 +504,18 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
     }
     return [...rows.values()];
   }, [active.pullRequests, completed.pullRequests, heldPrId]);
+  // When the page last wrote each PR's state: a forge read received before
+  // that instant says nothing about the write (see `pullRequestStatesToReconcile`).
+  const localWriteAtRef = useRef(new Map<string, number>());
+  /**
+   * The held row is a copy taken from an earlier render: a state change must
+   * reach it too, or a merged PR the list no longer returns would come back
+   * under its old state — and its old section (MIN-817).
+   */
+  const restateHeldRow = useCallback((prId: string, state: PullRequestListItem["pr_state"]) => {
+    const row = selectedRowRef.current;
+    if (row?.prId === prId) selectedRowRef.current = { ...row, pr_state: state };
+  }, []);
   const selectPr = useCallback((prId: string) => {
     setSelectedPrId(prId);
   }, []);
@@ -548,24 +587,33 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
         "pull-request",
         prId,
       ]);
+      localWriteAtRef.current.set(prId, Date.now());
+      const previousHeldRow = selectedRowRef.current;
+      restateHeldRow(prId, state);
       updateCachedPullRequestState(queryClient, prId, state);
       // The held PR stays on screen as it leaves the lens: merging never
       // moves the focus to another PR.
       if (isTerminalPrState(state) && prId === selectedIdRef.current) {
         setSelectedPrId(prId);
         setHeldPrId(prId);
+        setSettlingPrId(prId);
       }
       return () => {
+        setSettlingPrId((current) => (current === prId ? null : current));
+        if (previousHeldRow?.prId === prId) selectedRowRef.current = previousHeldRow;
         for (const [key, data] of previous) queryClient.setQueryData(key, data);
         queryClient.setQueryData(["pull-request", prId], previousDetail);
       };
     },
-    [queryClient],
+    [queryClient, restateHeldRow],
   );
 
   const applyConfirmedState = useCallback(
     (prId: string, state: PullRequestListItem["pr_state"]) => {
+      localWriteAtRef.current.set(prId, Date.now());
+      restateHeldRow(prId, state);
       updateCachedPullRequestState(queryClient, prId, state);
+      setSettlingPrId((current) => (current === prId ? null : current));
       // A terminal target fulfills the link; consume it to stop pinning the
       // excluded row into refetches. Wait for confirmation so a refused merge
       // (branch protection, lost rights) keeps the link.
@@ -573,13 +621,17 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
         consumeDeepLink();
       }
     },
-    [consumeDeepLink, queryClient],
+    [consumeDeepLink, queryClient, restateHeldRow],
   );
 
+  /**
+   * Only rows of checked sections (MIN-817). The held PR keeps its row while
+   * its section stays checked; once a merge moves it to an unchecked section
+   * it loses the row, and only the detail may keep it (see `selectedId`).
+   */
   const filtered = useMemo(
-    () => pullRequests.filter((pr) =>
-      pr.prId === heldPrId || sections.has(pullRequestSection(pr))),
-    [pullRequests, heldPrId, sections],
+    () => pullRequests.filter((pr) => sections.has(pullRequestSection(pr))),
+    [pullRequests, sections],
   );
 
   /**
@@ -652,14 +704,21 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
    * flight, otherwise we would open a defect just before the good PR arrives.
    *
    * The PR on screen is HELD (`heldPrId`): it keeps its row in the list
-   * even after it leaves the lens or the data, so neither a refetch nor a
-   * newer PR moves the focus. The filter stays where it is — widening it is
-   * the READER's gesture (the filter menu), never a side effect of a merge.
+   * even after it leaves the data, so neither a refetch nor a newer PR moves
+   * the focus. The filter stays where it is — widening it is the READER's
+   * gesture (the filter menu), never a side effect of a merge.
+   *
+   * A held PR that a merge moved OUT of the checked sections keeps the
+   * detail but no row: an unchecked section never shows a line (MIN-817).
+   * When nothing else matches the filter, nothing is selected at all.
    */
   const clicked =
     selectedPrId && filtered.some((p) => p.prId === selectedPrId) ? selectedPrId : null;
   const held =
     heldPrId && filtered.some((p) => p.prId === heldPrId) ? heldPrId : null;
+  const heldOutsideLens = !held && heldPrId && (filtered.length > 0 || heldPrId === settlingPrId)
+    ? pullRequests.find((p) => p.prId === heldPrId) ?? null
+    : null;
   // A background refetch should never close the panel: it was the source of the
   // flashing each time you return to the window. Only a deep connection yet
   // being resolved, with nothing on screen, waits for its response before
@@ -668,10 +727,19 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const selectedId =
     clicked ??
     held ??
+    heldOutsideLens?.prId ??
     (waitingForDeepLink ? null : (filtered[0]?.prId ?? null));
-  const selected = filtered.find((p) => p.prId === selectedId) ?? null;
+  const selected = filtered.find((p) => p.prId === selectedId) ?? heldOutsideLens;
   selectedIdRef.current = selectedId;
   if (selected) selectedRowRef.current = selected;
+
+  // A held PR that left the lens with nothing else to show yields for good:
+  // the next PR to enter the filter is picked normally, not the merged one.
+  const heldYields = !!heldPrId && !held && filtered.length === 0 && !fetching
+    && heldPrId !== settlingPrId;
+  useEffect(() => {
+    if (heldYields) setHeldPrId(null);
+  }, [heldYields]);
 
   // Hold what is on screen, and commit a default pick (the first row) as the
   // selection: a newer PR arriving on top must not take its place. A pending
@@ -712,13 +780,10 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
       : null,
   );
 
-  const groups = useMemo(() => {
-    const grouped = groupPullRequestsBySection(visible);
-    if (sections.has("completed") && completed.isPending && !grouped.some((group) => group.key === "completed")) {
-      grouped.push({ key: "completed", items: [] });
-    }
-    return grouped;
-  }, [visible, sections, completed.isPending]);
+  const groups = useMemo(
+    () => groupPullRequestsBySection(visible, sections),
+    [visible, sections],
+  );
   // A filter in progress UNFOLDS everything and lifts the cup of five: searching is
   // ask to see what fits, not to know where it is stored.
   const filtering = query.trim().length > 0;
@@ -746,6 +811,36 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
     unavailablePrIds,
     error: readinessError,
   } = usePullRequestReadinessBatchQuery(readinessPrIds);
+
+  /**
+   * The list, the grouped readiness and the detail caches agree on one state
+   * per PR (MIN-817): a newer observation from any of them is written into
+   * the list, so a row never says "Open" next to a merged detail. Detail
+   * caches are watched directly — the shell's background reads refresh PRs
+   * whose detail is not mounted.
+   */
+  const reconcileStates = useCallback(() => {
+    const changes = pullRequestStatesToReconcile(pullRequests, {
+      detail: (prId) => {
+        const state = queryClient.getQueryState<AgentRunPrResponse>(["pull-request", prId]);
+        return state?.data ? { pr: state.data.pr, fetchedAt: state.dataUpdatedAt } : undefined;
+      },
+      readinessByPrId,
+      notBefore: (prId) => localWriteAtRef.current.get(prId) ?? 0,
+    });
+    for (const { prId, state } of changes) applyConfirmedState(prId, state);
+  }, [applyConfirmedState, pullRequests, queryClient, readinessByPrId]);
+  useEffect(() => {
+    reconcileStates();
+    return queryClient.getQueryCache().subscribe((event) => {
+      // Forge reads only: `setQueryData` (this page's own writes, and the
+      // reconciliation itself) is `manual` and must not re-enter.
+      if (event.type === "updated" && event.action.type === "success" && !event.action.manual &&
+          event.query.queryKey[0] === "pull-request") {
+        queueMicrotask(reconcileStates);
+      }
+    });
+  }, [queryClient, reconcileStates]);
 
   const fmtDay = (at: string): string =>
     format.dateTime(new Date(at), { day: "numeric", month: "short" });
@@ -787,7 +882,8 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
           </div>
         ) : readFailed ? (
           <PrListReadFailed error={active.readError} onRetry={() => void active.refetch()} />
-        ) : groups.length === 0 ? (
+        ) : groups.length === 0 || projects.length === 0 || repoCount === 0 || !anyPr
+          || (query.trim() && visible.length === 0) ? (
           <EmptyScene
             size="compact"
             icon={GitPullRequestIcon}
