@@ -21,6 +21,7 @@ import { getAppConfigValue } from "@/lib/server/app-config";
 import { aiModelFallback } from "@/lib/ai-model-config";
 import { parseRecommendedModels } from "@/lib/recommended-models";
 import { dedupeModelVariants } from "@/lib/model-variants";
+import { anthropicModelReasoning } from "@/lib/ai-chat";
 import {
   getAgentProvider,
   isLocalAgentProvider,
@@ -246,7 +247,10 @@ async function listAnthropic(
   };
   const models = (body.data ?? [])
     .filter((m) => !!m.id)
-    .map((m) => ({ id: m.id, name: m.display_name ?? m.id }));
+    .map((m) => {
+      const reasoning = anthropicModelReasoning(m.id);
+      return { id: m.id, name: m.display_name ?? m.id, ...(reasoning ? { reasoning } : {}) };
+    });
   return sortById(models);
 }
 
