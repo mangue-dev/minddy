@@ -114,7 +114,9 @@ export function RoutinesPanel({
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardMounted, setWizardMounted] = useState(false);
   const [query, setQuery] = useMobileCollectionState("/routines", "query", "");
-  const [collapsedGroups, setCollapsedGroups] = useMobileCollectionState<ReadonlySet<string>>("/routines", "collapsedGroups",
+  // The groups the user toggled away from their default: a project with
+  // routines starts open, an empty one starts collapsed.
+  const [toggledGroups, setToggledGroups] = useMobileCollectionState<ReadonlySet<string>>("/routines", "collapsedGroups",
     () => new Set(),
   );
 
@@ -384,7 +386,7 @@ export function RoutinesPanel({
   );
 
   const list = loading ? (
-    <div className="flex flex-col gap-2 px-2 pt-2">
+    <div className="flex flex-col gap-2 pt-2">
       {[0, 1].map((g) => (
         <div key={g} className="flex flex-col gap-1">
           <Skeleton className="h-6 w-32 rounded-md" />
@@ -418,15 +420,15 @@ export function RoutinesPanel({
       {tCommon("noFilterMatch")}
     </p>
   ) : (
-    <div className="flex flex-col gap-2 px-2 pt-2 pb-4">
+    <div className="flex flex-col gap-2 pt-2 pb-4">
       {groups.map((g) => (
         <SidebarProjectGroup
           key={g.key}
           project={g.project}
           fallbackLabel={tCommon("noProjectGroup")}
-          open={!collapsedGroups.has(g.key)}
+          open={(g.items.length > 0) !== toggledGroups.has(g.key)}
           collapsible
-          onToggle={() => setCollapsedGroups((prev) => toggledSet(prev, g.key))}
+          onToggle={() => setToggledGroups((prev) => toggledSet(prev, g.key))}
           hiddenCount={0}
           onShowAll={() => {}}
           showMoreLabel={tCommon("showMore")}
