@@ -16,7 +16,7 @@ vi.mock("@/components/ui/button", async (importOriginal) => ({
 vi.mock("@/components/ui/command", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   CommandGroup: ({ children }: { children: ReactNode }) => children,
-  CommandItem: ({ children }: { children: ReactNode }) => children,
+  CommandItem: ({ children, value, onSelect }: { children: ReactNode; value?: string; onSelect?: () => void }) => <button data-command={value} onClick={onSelect}>{children}</button>,
 }));
 vi.mock("@/components/ui/skeleton", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
@@ -26,7 +26,7 @@ vi.mock("sonner", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   toast: { info: vi.fn() },
 }));
-vi.mock("@/components/search-menu", () => ({ SearchMenu: () => null }));
+vi.mock("@/components/search-menu", () => ({ SearchMenu: ({ children }: { children: ReactNode }) => <div>{children}</div> }));
 vi.mock("@/components/search-select", () => ({ checkedProps: () => ({}) }));
 vi.mock("@/components/user-avatar", () => ({ UserAvatar: () => null }));
 vi.mock("@/components/objective-progress", () => ({ ObjectiveProgressStat: () => null }));
@@ -42,7 +42,7 @@ vi.mock("@/lib/use-issues-query", () => ({ useIssuesQuery: () => ({ issues: [] }
 vi.mock("@/lib/use-members-query", () => ({ useMembersQuery: () => ({ members: [] }) }));
 vi.mock("@/lib/assistant-panel-context", () => ({ useAssistantContext: () => {}, useAssistantPanelActions: () => ({ open: vi.fn() }) }));
 vi.mock("@/lib/current-view-context", () => ({ usePublishCurrentView: (value: unknown) => { state.publication = value; } }));
-vi.mock("@/components/secondary-sidebar", () => ({ CollectionSidebar: ({ children }: { children: ReactNode }) => <aside>{children}</aside> }));
+vi.mock("@/components/secondary-sidebar", () => ({ CollectionSidebar: ({ children, actions }: { children: ReactNode; actions?: ReactNode }) => <aside>{actions}{children}</aside> }));
 vi.mock("@/components/objective-detail", () => ({ ObjectiveDetail: ({ objective, projectId }: { objective: { id: string }; projectId: string }) => <p data-objective={objective.id} data-project={projectId}>{objective.id}</p> }));
 vi.mock("@/lib/mobile-collection-state", async () => {
   const { useState } = await import("react");
@@ -70,6 +70,16 @@ it("consumes a completed objective deep link through native history and publishe
   expect(state.publication).toEqual({ href: "/projects/p/objectives?open=done" });
   await render({ search: "" }); await render({ active: false, search: "" }); await render({ search: "" });
   expect(host.querySelector('[data-objective="done"]')).not.toBeNull();
+});
+
+it("lets the reader pick a lens that excludes the open objective while the route still carries it (MIN-814)", async () => {
+  // A retained tab keeps `?open=` in its route: it is the published selection.
+  await render();
+  expect(host.querySelector('[data-objective="done"]')).not.toBeNull();
+  await act(() => (host.querySelector('[data-command="state-active"]') as HTMLButtonElement).click());
+  await render();
+  expect(host.querySelector('[data-objective="done"]')).toBeNull();
+  expect(host.querySelector('[data-objective="first"]')).not.toBeNull();
 });
 
 it("does not consume selection parameters while its route is hidden", async () => {

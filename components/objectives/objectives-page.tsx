@@ -4,7 +4,7 @@ import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, FilterIcon, Target01Icon } from "@hugeicons/core-free-icons";
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { AppTabRouteBoundary, useAppTabActive, useAppTabRoute } from "@/lib/app-tab-route-context";
 import { useOptionalAppTabNavigation } from "@/lib/app-tab-navigation-context";
@@ -411,9 +411,21 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
   //
   // Keep the current lens when it already contains the target. Completed or
   // canceled objectives still widen it so the deep link always opens.
+  //
+  // Each link settles ONCE (MIN-814). A retained app tab keeps `?open=` in its
+  // route — it is the published selection — so without this guard every lens
+  // change re-ran the widening: picking "Active" while a completed objective
+  // was open snapped the filter straight back to "All". Once settled, the
+  // filter is the reader's, and the effect above picks a matching objective.
+  const settledOpenRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!active || !openParam) return;
+    if (!openParam) {
+      settledOpenRef.current = null;
+      return;
+    }
+    if (!active || settledOpenRef.current === openParam) return;
     if (secondarySelectionId(objectives, openParam) !== openParam) return;
+    settledOpenRef.current = openParam;
     if (
       deepLinkNeedsAllFilter(
         objectives,
