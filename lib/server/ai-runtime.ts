@@ -21,7 +21,7 @@ import {
   getUserByok,
   LocalEndpointRequiresLocalRunError,
 } from "@/lib/server/agent/model";
-import { chatCompletionsUrl } from "@/lib/agent-providers";
+import { chatCompletionsUrl, normalizeBaseUrl } from "@/lib/agent-providers";
 import {
   aiChatProviderHeaders,
   repairRejectedAiChatBody,
@@ -32,6 +32,12 @@ import { fetchOpenRouterWithSuffixFallback } from "@/lib/server/model-config";
 import { isManagedAiEnabled, managedAiKeyMode } from "@/lib/managed-services";
 import { PlanLimitError } from "@/lib/server/plan-limit-error";
 import { fetchAiProvider } from "@/lib/server/ai-provider-request";
+import { providerErrorFromResponse, reportProviderError } from "@/lib/server/ai-provider-errors";
+import {
+  ANTHROPIC_API_VERSION,
+  toAnthropicMessagesBody,
+  toChatCompletionsResponse,
+} from "@/lib/server/anthropic-messages";
 import { providerSupportsModelKey } from "@/lib/model-catalog-capability";
 import { modelCatalogCapabilityForKey } from "@/lib/model-catalog-capability";
 
@@ -295,6 +301,30 @@ async function retryRejectedChatRequest(
 }
 
 /**
+ * Anthropic through its native Messages API (MIN-826): the chat body built for
+ * every provider is converted, and the reply converted back, so callers keep
+ * parsing one shape.
+ */
+async function fetchAnthropicMessages(
+  runtime: ResolvedAiRuntime,
+  chatRequest: RequestInit,
+  http: (url: string, init: RequestInit) => Promise<Response>,
+): Promise<Response> {
+  const chatBody = JSON.parse(String(chatRequest.body)) as Record<string, unknown>;
+  const body = toAnthropicMessagesBody(chatBody);
+  const response = await http(`${normalizeBaseUrl(runtime.baseUrl)}/messages`, {
+    ...chatRequest,
+    headers: {
+      "x-api-key": runtime.apiKey,
+      "anthropic-version": ANTHROPIC_API_VERSION,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  return toChatCompletionsResponse(response, body.stream === true);
+}
+
+/**
  * Fetch chat OpenAI-compatible, with the particularities of the provider resolved.
  *
  * Profiles choose the documented contract. Only two 400s are
@@ -342,13 +372,19 @@ export async function fetchAiChat(
         await result.response.clone().text().catch(() => ""),
       );
     }
-    return result;
+    return reportFailedChat(runtime, result, logPrefix);
   }
   const http = (url: string, options: RequestInit) =>
     fetchAiProvider(runtime.provider, url, options);
+  if (runtime.provider === "anthropic") {
+    return reportFailedChat(runtime, {
+      response: await fetchAnthropicMessages(runtime, request(model), http),
+      model,
+    }, logPrefix);
+  }
   const firstRequest = request(model);
   const firstResponse = await http(endpoint, firstRequest);
-  return {
+  return reportFailedChat(runtime, {
     response: await retryRejectedChatRequest(
       endpoint,
       firstResponse,
@@ -356,5 +392,23 @@ export async function fetchAiChat(
       http,
     ),
     model,
-  };
+  }, logPrefix);
+}
+
+/**
+ * Logs and reports a final provider rejection (after the documented replays),
+ * for every surface that calls a model. The response is returned untouched.
+ */
+async function reportFailedChat(
+  runtime: ResolvedAiRuntime,
+  result: { response: Response; model: string },
+  logPrefix: string,
+): Promise<{ response: Response; model: string }> {
+  if (!result.response.ok) {
+    reportProviderError(
+      await providerErrorFromResponse(runtime.provider, result.model, result.response),
+      logPrefix.replace(/^\[|\]$/g, "") || "ai",
+    );
+  }
+  return result;
 }

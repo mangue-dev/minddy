@@ -3,10 +3,20 @@ import {
   type AgentProviderId,
 } from "./agent-providers";
 import {
+  nearestReasoningLevel,
   reasoningRequestFields,
   reasoningTokenBudget,
   type ReasoningLevel,
 } from "./agent-reasoning";
+import {
+  anthropicModelReasoning,
+  geminiModelReasoning,
+  isAdaptiveClaude,
+  isAlwaysThinkingClaude,
+  isClaude46,
+  isManualThinkingClaude,
+  openAiModelReasoning,
+} from "./model-reasoning-rules";
 import { SITE_URL } from "./site";
 
 /**
@@ -42,30 +52,27 @@ function positiveInt(value: unknown): number | undefined {
   return Math.trunc(value);
 }
 
-function isAdaptiveClaude(model: string): boolean {
-  return (
-    /^claude-(?:opus|sonnet|fable|mythos)-5(?:-|$)/i.test(model) ||
-    /^claude-(?:opus|sonnet)-4-(?:[6-9]|\d{2,})(?:-|$)/i.test(model) ||
-    /^claude-mythos-preview(?:-|$)/i.test(model)
-  );
-}
-
-function isManualThinkingClaude(model: string): boolean {
-  return /^claude-(?:opus|sonnet|haiku)-4-(?:5|6)(?:-|$)/i.test(model);
+/**
+ * Claude 4.7 and later return a 400 for any `temperature` below 1
+ * ("`temperature` is deprecated for this model"), so the sampling field is
+ * dropped on those families.
+ */
+function rejectsSamplingTemperature(model: string): boolean {
+  return isAdaptiveClaude(model) && !isClaude46(model);
 }
 
 /**
- * Families that reject `thinking: {type: "disabled"}` with a 400. At "off",
- * omit the field and retain their default thinking behavior.
- * Sonnet 5.5 also supports `between_tools` at effort `high` or below;
- * this adapter conservatively preserves the family's default at "off".
+ * Thinking takes its share of the output ceiling. A ceiling sized for the
+ * visible answer would let a high effort consume it and end the round on
+ * `max_tokens`; only generated tokens are billed, so the floor is free on
+ * short answers.
  */
-function isAlwaysThinkingClaude(model: string): boolean {
-  return (
-    /^claude-(?:fable|mythos)-5(?:-|$)/i.test(model) ||
-    /^claude-(?:opus|sonnet)-5-5(?:-|$)/i.test(model) ||
-    /^claude-mythos-preview(?:-|$)/i.test(model)
-  );
+const ADAPTIVE_CLAUDE_MIN_OUTPUT_TOKENS = 16_000;
+
+/** A level folded to what the family accepts (`minimal` → `low`, `xhigh` → `high` on 4.6). */
+function anthropicEffort(model: string, level: ReasoningLevel): ReasoningLevel {
+  const allowed = anthropicModelReasoning(model)?.efforts ?? [];
+  return nearestReasoningLevel(level === "off" ? "low" : level, allowed);
 }
 
 function isGpt56(model: string): boolean {
@@ -106,29 +113,65 @@ function normalizeProviderToolChoice(
   }
 }
 
+/**
+ * Final Anthropic adjustments once the body is assembled: drops the sampling
+ * temperature recent families reject, drops a manual budget when the tool
+ * choice is forced ("Thinking may not be enabled when tool_choice forces tool
+ * use", 400), and lifts the ceiling when adaptive thinking runs.
+ */
+function normalizeAnthropicBody(
+  body: Record<string, unknown>,
+  provider: AgentProviderId,
+): void {
+  if (provider !== "anthropic" || typeof body.model !== "string") return;
+  if (rejectsSamplingTemperature(body.model)) delete body.temperature;
+  const thinking = (body.thinking as { type?: unknown } | undefined)?.type;
+  if (thinking === "enabled" && isForcedOpenAiToolChoice(body.tool_choice)) {
+    delete body.thinking;
+  }
+  if (thinking === "adaptive") {
+    const ceiling = body.max_tokens;
+    if (typeof ceiling !== "number" || ceiling < ADAPTIVE_CLAUDE_MIN_OUTPUT_TOKENS) {
+      body.max_tokens = ADAPTIVE_CLAUDE_MIN_OUTPUT_TOKENS;
+    }
+  }
+}
+
+/**
+ * Native Messages API reasoning (`lib/server/anthropic-messages.ts` carries
+ * these fields as they are). Adaptive families get `thinking: adaptive` with a
+ * readable summary for the reasoning feed, and the level as
+ * `output_config.effort`; 4.5 families get a manual budget.
+ */
 function anthropicReasoningFields(params: {
   model: string;
   effort?: ReasoningLevel;
   fixedTokens?: number;
   maxOutputTokens?: number;
 }): Record<string, unknown> {
+  const { model } = params;
   if (params.effort === "off") {
     // Fable 5 / Mythos 5 / Mythos Preview and the Claude 5.5 families refuse
-    // `thinking: {type: "disabled"}` (400): reasoning cannot be turned off on
-    // these families, so we send no field — the model falls back on its
-    // default (adaptive thinking).
-    if (isAlwaysThinkingClaude(params.model)) return {};
-    return isAdaptiveClaude(params.model) || isManualThinkingClaude(params.model)
+    // `thinking: {type: "disabled"}` (400): the cheapest effort is the
+    // closest request they accept.
+    if (isAlwaysThinkingClaude(model)) {
+      return { output_config: { effort: anthropicEffort(model, "off") } };
+    }
+    return isAdaptiveClaude(model) || isManualThinkingClaude(model)
       ? { thinking: { type: "disabled" } }
       : {};
   }
 
-  // An explicit budget keeps manual mode on families who accept it.
-  // Without a fixed budget, the current recommended path is adaptive mode.
-  if (params.fixedTokens === undefined && isAdaptiveClaude(params.model)) {
-    return { thinking: { type: "adaptive" } };
+  // A fixed budget keeps manual mode where the family still accepts one.
+  const manual = isManualThinkingClaude(model) &&
+    (params.fixedTokens !== undefined || !isAdaptiveClaude(model));
+  if (!manual) {
+    if (!isAdaptiveClaude(model) || !params.effort) return {};
+    return {
+      thinking: { type: "adaptive", display: "summarized" },
+      output_config: { effort: anthropicEffort(model, params.effort) },
+    };
   }
-  if (!isManualThinkingClaude(params.model)) return {};
 
   const requested =
     params.fixedTokens ??
@@ -141,6 +184,22 @@ function anthropicReasoningFields(params: {
     maxOutput !== undefined ? Math.min(requested, maxOutput - 1) : requested,
   );
   return { thinking: { type: "enabled", budget_tokens: budget } };
+}
+
+/** `reasoning_effort` for OpenAI and Gemini, folded to what the model takes. */
+function compatEffortFields(
+  provider: "openai" | "google",
+  model: string,
+  level: ReasoningLevel,
+): Record<string, unknown> {
+  const reasoning = provider === "openai" ? openAiModelReasoning(model) : geminiModelReasoning(model);
+  if (!reasoning) return {};
+  if (level === "off") {
+    // A mandatory model has no "off": the server already lowers it, and the
+    // model's own default is the safe fallback for any other caller.
+    return reasoning.mandatory ? {} : { reasoning_effort: "none" };
+  }
+  return { reasoning_effort: nearestReasoningLevel(level, reasoning.efforts) };
 }
 
 function providerReasoningFields(
@@ -166,6 +225,15 @@ function providerReasoningFields(
     return {};
   }
   const fixedTokens = positiveInt(reasoning?.maxTokens);
+  if ((provider === "openai" || provider === "google") && reasoning.effort) {
+    return compatEffortFields(provider, model, reasoning.effort);
+  }
+  // "Off" really disables optional reasoning: omitting the field ran the
+  // model at its default effort (MIN-826). A mandatory model answers 400,
+  // which `repairRejectedAiChatBody` replays without the field.
+  if (provider === "openrouter" && reasoning.effort === "off") {
+    return { reasoning: { enabled: false } };
+  }
   if (provider === "anthropic") {
     return anthropicReasoningFields({
       model,
@@ -182,6 +250,28 @@ function providerReasoningFields(
     : {};
 }
 
+/**
+ * Gemini 3 returns a `thought_signature` in each tool call's `extra_content`,
+ * and requires it back on the next round. The loop keeps it in history; any
+ * other provider receives the tool calls without that Gemini-only field.
+ */
+function withoutGeminiToolExtras(messages: unknown[]): unknown[] {
+  return messages.map((message) => {
+    const calls = (message as { tool_calls?: unknown } | null)?.tool_calls;
+    if (!Array.isArray(calls) || !calls.some((call) => call && typeof call === "object" && "extra_content" in call)) {
+      return message;
+    }
+    return {
+      ...(message as Record<string, unknown>),
+      tool_calls: calls.map((call) => {
+        if (!call || typeof call !== "object" || !("extra_content" in call)) return call;
+        const { extra_content: _extra, ...rest } = call as Record<string, unknown>;
+        return rest;
+      }),
+    };
+  });
+}
+
 /** Translates the minddy contract to the exact JSON of the provider. Pure function. */
 export function translateAiChatRequest(
   request: AiChatRequest,
@@ -192,7 +282,7 @@ export function translateAiChatRequest(
 
   const body: Record<string, unknown> = {
     model: request.model,
-    messages: request.messages,
+    messages: provider === "google" ? request.messages : withoutGeminiToolExtras(request.messages),
     ...(request.stream !== undefined ? { stream: request.stream } : {}),
     ...(request.tools ? { tools: request.tools } : {}),
     ...(request.toolChoice !== undefined ? { tool_choice: request.toolChoice } : {}),
@@ -223,6 +313,7 @@ export function translateAiChatRequest(
   );
 
   normalizeProviderToolChoice(body, provider);
+  normalizeAnthropicBody(body, provider);
 
   if (profile.usageAccounting) body.usage = { include: true };
   if (request.stream && profile.streamUsage) {
@@ -279,9 +370,10 @@ export function alternateOutputTokenBody(
 }
 
 /**
- * Repairs the only two compatibility 400s that we know how to replay without risk:
- * a denied cap alias, or GPT-5.6 Chat Completions that denies the couple
- * function tools + reasoning. Any other error keeps the initial body.
+ * Repairs the only compatibility 400s that we know how to replay without risk:
+ * a denied cap alias, a reasoning disable refused by a model that must reason,
+ * or GPT-5.6 Chat Completions that denies the couple function tools +
+ * reasoning. Any other error keeps the initial body.
  */
 export function repairRejectedAiChatBody(
   bodyText: string,
@@ -289,6 +381,22 @@ export function repairRejectedAiChatBody(
 ): string | null {
   const outputAliasRepair = alternateOutputTokenBody(bodyText, errorText);
   if (outputAliasRepair !== null) return outputAliasRepair;
+
+  // "Off" sent to a model whose catalog entry did not say it must reason:
+  // replay at the model's own default rather than failing the turn.
+  if (/reasoning is mandatory|(?:reasoning|thinking)[^\n]{0,80}cannot be (?:turned off|disabled)/i.test(errorText)) {
+    try {
+      const body = JSON.parse(bodyText) as Record<string, unknown>;
+      const reasoning = body.reasoning as { enabled?: unknown } | undefined;
+      if (reasoning?.enabled === false || body.reasoning_effort === "none") {
+        delete body.reasoning;
+        delete body.reasoning_effort;
+        return JSON.stringify(body);
+      }
+    } catch {
+      return null;
+    }
+  }
 
   if (
     !/function tools[^\n]{0,160}reasoning_effort[^\n]{0,160}(?:not supported|unsupported)/i.test(
@@ -347,6 +455,7 @@ export function translateLegacyAiChatBody(
   }
 
   normalizeProviderToolChoice(body, provider);
+  normalizeAnthropicBody(body, provider);
 
   if (profile.usageAccounting && body.usage === undefined) body.usage = { include: true };
   // This border is only used by the opencode client, which streams all its rounds.

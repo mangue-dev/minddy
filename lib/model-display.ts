@@ -69,10 +69,31 @@ function formatToken(tok: string): string {
     if (letters.toLowerCase() === "o") return `o${version}`;
     return `${capitalize(letters)}${version}`;
   }
-  // Un token qui COMMENCE par un chiffre se garde intact : « 4o » de GPT-4o,
-  // « 70b » d'un Llama, « 2.5 » d'un Gemini.
+  // A token that STARTS with a digit stays intact: the "4o" of GPT-4o, the
+  // "70b" of a Llama, the "2.5" of a Gemini.
   if (/\d/.test(tok)) return tok;
   return capitalize(tok);
+}
+
+/**
+ * Native Anthropic ids spell versions with hyphens (`claude-opus-5-5`,
+ * `claude-opus-4-5-20251101`) where OpenRouter writes `claude-opus-5.5`.
+ * Consecutive one- or two-digit tokens are therefore one dotted version;
+ * longer numbers such as a date suffix stay separate words.
+ */
+function joinVersionParts(tokens: string[]): string[] {
+  const isVersionPart = (tok: string) => /^\d{1,2}$/.test(tok);
+  const joined: string[] = [];
+  for (const tok of tokens) {
+    const last = joined.length - 1;
+    const previous = joined[last];
+    if (previous !== undefined && isVersionPart(tok) && /^\d{1,2}(?:\.\d{1,2})*$/.test(previous)) {
+      joined[last] = `${previous}.${tok}`;
+    } else {
+      joined.push(tok);
+    }
+  }
+  return joined;
 }
 
 /**
@@ -85,6 +106,6 @@ export function formatModelName(modelId: string | null | undefined): string {
   if (known) return known;
   const base = baseId(modelId);
   const slug = base.includes("/") ? base.slice(base.indexOf("/") + 1) : base;
-  const name = slug.split(/[-_]/).map(formatToken).join(" ").trim();
+  const name = joinVersionParts(slug.split(/[-_]/)).map(formatToken).join(" ").trim();
   return name || modelId;
 }

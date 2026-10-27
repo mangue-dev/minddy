@@ -93,14 +93,15 @@ describe("Numo conversation configuration", () => {
       .rejects.toMatchObject({ code: "model_unavailable", status: 422 });
   });
 
-  it("lets every Numo model disable explicit reasoning", async () => {
+  it("runs Off at the lowest level of a model that must reason (MIN-826)", async () => {
+    // The slider always starts at Off; a mandatory model cannot honor it.
     await expect(resolveNumoTurnConfiguration({
       userId: "user",
       model: "chosen-model",
       reasoningLevel: "off",
     })).resolves.toMatchObject({
       model: "chosen-model",
-      reasoningLevel: "off",
+      reasoningLevel: "low",
     });
   });
 

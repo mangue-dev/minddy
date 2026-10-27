@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { DEFAULT_AGENT_PROVIDER, type AgentProviderId } from "@/lib/agent-providers";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
+import { catalogModelReasoning } from "@/lib/model-reasoning-rules";
 import {
   reasoningLevelsFor,
   type ModelReasoning,
@@ -194,7 +195,7 @@ export function useReasoningLevelsFor(
   modelId: string | null | undefined,
   scope: AgentModelsScope = "user",
 ): ReasoningLevel[] {
-  const { models } = useAgentModelsQuery(scope);
+  const { models, provider } = useAgentModelsQuery(scope);
   const entry = modelId ? models.find((m) => m.id === modelId) : undefined;
-  return reasoningLevelsFor(entry?.reasoning);
+  return reasoningLevelsFor(catalogModelReasoning(provider, modelId, entry));
 }

@@ -324,7 +324,7 @@ describe("fetchAiChat", () => {
       ...runtime,
       provider: "openai" as const,
       baseUrl: "https://api.openai.com/v1",
-      model: "gpt-future",
+      model: "gpt-5.7",
     };
     const fetchMock = safeFetchResponse
       .mockResolvedValueOnce(
@@ -332,7 +332,7 @@ describe("fetchAiChat", () => {
           JSON.stringify({
             error: {
               message:
-                "Function tools with reasoning_effort are not supported for gpt-future",
+                "Function tools with reasoning_effort are not supported for gpt-5.7",
             },
           }),
           { status: 400 },

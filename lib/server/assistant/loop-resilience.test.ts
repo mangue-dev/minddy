@@ -681,6 +681,10 @@ describe("Numo chat loop resilience", () => {
         service: fakeService(),
         locale: "en",
       },
-    )).rejects.toThrow("Provider disconnected unexpectedly");
+    )).rejects.toMatchObject({
+      name: "ProviderRequestError",
+      status: null,
+      providerMessage: "Provider disconnected unexpectedly",
+    });
   });
 });

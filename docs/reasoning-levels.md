@@ -1,6 +1,6 @@
 # Numo reasoning levels, provider by provider
 
-> **Date**: 2026-07-29, reviewed on 2026-10-05 and 2026-10-16 · **Tickets**: MIN-122, MIN-721
+> **Date**: 2026-07-29, reviewed on 2026-10-05, 2026-10-16 and 2026-10-28 · **Tickets**: MIN-122, MIN-721, MIN-826
 >
 > What the user chooses, what really goes on the wire, and what happens
 > when the model in front does not accept it.
@@ -24,7 +24,15 @@ declare one, and two of them are rarely the same:
 | `openai/gpt-5.1-codex-max` | `low` · `medium` · `high` · **`xhigh`**, and `mandatory` (no “no reasoning”) |
 | `google/gemini-3.6-flash` | **`minimal`** · `low` · `medium` · `high`, `mandatory` |
 | `anthropic/claude-*` | he reasons, but publishes **no** enumeration |
-| a model without an object `reasoning` | nothing: the selector remains inert |
+
+Direct BYOK providers have no index either. Their levels come from the
+documented per-model rules in `nativeModelReasoning` (`lib/ai-chat.ts`), the
+same rules the translator applies, so the picker never offers a level the
+request would drop (MIN-826). A model with `reasoning: null` has no level at
+all and the Numo slider stays on "Off": a non-reasoning OpenRouter model, an
+OpenAI chat model (`gpt-4o`), a non-thinking Gemini, and every model of an
+endpoint without a reasoning field (OpenCode gateways, generic, LM Studio,
+Ollama).
 
 The internal vocabulary therefore expands to that of OpenRouter — `off`, `minimal`,
 `low`, `medium`, `high`, `xhigh`, `max` — except for one word: their `none` is our
@@ -59,23 +67,29 @@ no longer carries a decision specific to a surface.
 
 ## The table
 
-| Provider | Endpoint | `reasoningField` | What goes on the wire |
+| Provider | Endpoint | Levels (picker = wire) | At `off` |
 | --- | --- | --- | --- |
-| **OpenRouter** (quota minddy + BYOK) | `openrouter.ai/api/v1/chat/completions` | `reasoning` | `reasoning: { effort: "low"\|"medium"\|"high", exclude: false }` |
-| **OpenAI** (BYOK) | `api.openai.com/v1/chat/completions` | `reasoning_effort` | `reasoning_effort: "low"\|"medium"\|"high"` |
-| **Anthropic** (BYOK) | `api.anthropic.com/v1/chat/completions` | `thinking` | adaptive on current families; manual budget limited only when the family accepts it |
-| **Google / Gemini** (BYOK) | `…/v1beta/openai/chat/completions` | `reasoning_effort` | `reasoning_effort: "low"\|"medium"\|"high"` |
-| **Generic** (OpenAI-compatible) | base URL entered | *(none)* | **nothing, never** |
+| **OpenRouter** (quota minddy + BYOK) | `openrouter.ai/api/v1/chat/completions` | `reasoning: { effort, exclude: false }`, levels published per model | `reasoning: { enabled: false }` |
+| **OpenAI** (BYOK) | `api.openai.com/v1/chat/completions` | `reasoning_effort` on reasoning models only (o-series, GPT-5): `low`/`medium`/`high`, plus `minimal` on GPT-5 | `"none"` on GPT-5.1+; GPT-5 and o-series always reason |
+| **Anthropic** (BYOK) | native `api.anthropic.com/v1/messages` | adaptive families: `thinking: { type: "adaptive", display: "summarized" }` + `output_config: { effort }` (`low`…`max`, no `xhigh` on 4.6); 4.5: `budget_tokens` | `thinking: { type: "disabled" }`; Opus/Sonnet 5.5, Fable, Mythos: effort `low` |
+| **Google / Gemini** (BYOK) | `…/v1beta/openai/chat/completions` | `reasoning_effort`: 2.5 Flash / Pro and Gemini 3 `low`/`medium`/`high`, Gemini 3 Pro `low`/`high` | `"none"` on 2.5 Flash; 2.5 Pro and Gemini 3 always reason |
+| **OpenCode, generic, local** | gateway or base URL entered | *(none)*: no level offered | nothing |
 
-At `off`, no fields are sent to OpenRouter/OpenAI/Gemini/generic. On a
-Claude family that accepts it, the adapter explicitly sends
-`thinking: { type: "disabled" }`, because Claude 5 can reason by default.
-The families that refuse the field with a 400 (Fable 5, Mythos 5, Mythos
-Preview, Claude Opus 5.5, Claude Sonnet 5.5) get no field at all: their
-default thinking stays on. Claude Opus 5.5, Sonnet 5.5, Fable 5.1, and Mythos 5.1
-also reject forced tool use on every request. The shared chat adapter downgrades forced `tool_choice` to `auto`
-on those families; non-forced choices remain unchanged. Earlier Fable 5 and
-Mythos 5 keep forced tool use. See the
+**`off` means off** where the model allows it (MIN-826). It used to send no
+field, which ran most models at their default effort: on OpenRouter a
+DeepSeek V4.1 Flash call still produced 38 reasoning tokens at "off", and
+OpenAI GPT-5.x and Gemini 2.5 Flash default to `medium`. The Numo slider
+keeps "Off" as its first stop; on a model that must reason,
+`resolveNumoTurnConfiguration` runs its lowest level instead. When a catalog
+did not say a model must reason, the provider's 400 ("Reasoning is
+mandatory…", "cannot be turned off") is replayed once without the field by
+`repairRejectedAiChatBody`.
+
+Claude Opus 5.5, Sonnet 5.5, Fable 5.1, and Mythos 5.1 reject forced tool use
+on every request. The shared chat adapter downgrades forced `tool_choice` to
+`auto` on those families; non-forced choices remain unchanged. A forced tool
+call also drops a manual thinking budget ("Thinking may not be enabled when
+tool_choice forces tool use"). See the
 [Anthropic thinking reference](https://platform.claude.com/docs/en/build-with-claude/thinking).
 
 OpenAI GPT-5.6 exception: as soon as Chat Completions contains function tools,
@@ -144,19 +158,38 @@ assumption. We don't do it.
 
 ## Anthropic and Gemini particularities
 
-The OpenAI-compatible Anthropic layer ignores `reasoning_effort`, but accepts the
-Anthropic `thinking` setting. The adapter therefore chooses the mode according to
-the family: adaptive for current models, manual only on
-4.5/4.6 families who accept it when a fixed budget is requested. The budget
-manual always remains at least at 1024 and strictly under the output ceiling.
-An unknown family receives no experimental fields.
+Anthropic is the one provider not reached through an OpenAI-compatible layer.
+Its compatibility endpoint cannot carry Claude's reasoning, as checked against
+the API with a BYOK key on 2026-10-27: `thinking: { type: "adaptive" }`
+returns 400 "Adaptive thinking is not available via the OpenAI compatibility
+endpoint" on every model (every Numo turn on Claude 4.7+ and Claude 5 failed),
+and `reasoning_effort` / `output_config.effort` are accepted and ignored.
 
-Gemini instead documents `reasoning_effort` and its translation to
-`thinking_level`/`thinking_budget`. You should not send the field directly
-native `thinkingConfig` on the OpenAI-compatible surface.
+`fetchAiChat` therefore converts the chat body to the native Messages API and
+converts the reply back (`lib/server/anthropic-messages.ts`): system messages
+are hoisted, tool calls become `tool_use` / `tool_result` blocks, images and
+PDFs become `image` / `document` blocks, `response_format` with a JSON schema
+becomes `output_config.format`, and the event stream becomes chat chunks.
+Thinking summaries stream as `delta.reasoning`, the field the Numo reasoning
+feed already reads. Callers see no difference. The native API accepts tool
+history without the earlier thinking blocks, which the chat history does not
+keep. Every request also sets top-level `cache_control` (automatic prompt
+caching of the system prompt and tools Numo resends each round). Numo now
+sends images and PDFs to Claude, which every current model reads.
 
-The provider-specific contract and its compatibility boundaries are enforced in
-[`lib/ai-chat.ts`](../lib/ai-chat.ts) and covered by its tests.
+Thinking takes its share of `max_tokens`: when adaptive thinking runs, the
+ceiling is lifted to at least 16,000 tokens (only generated tokens are billed).
+`temperature` is dropped on Claude 4.7 and later, which reject it.
+
+Gemini 3 returns a `thought_signature` in each tool call's `extra_content`
+and expects it back on the next round. The loop keeps `extra_content` on the
+stored tool calls; the translator strips it for every other provider.
+Gemini thought summaries need `extra_body.google.thinking_config`, which is
+not sent yet, so Gemini's reasoning feed stays empty, as OpenAI's does
+(Chat Completions returns no reasoning text).
+
+The loop reads `delta.reasoning` (OpenRouter, the Anthropic transport) and
+`delta.reasoning_content` (DeepSeek-style upstreams behind OpenCode or vLLM).
 
 ## What each level means in concrete terms
 
@@ -254,7 +287,7 @@ would only be cost.
 ## Check
 
 ```bash
-npx vitest run lib/agent-reasoning.test.ts   # forms per provider, generic gate, ceiling
+npx vitest run lib/agent-reasoning.test.ts lib/ai-chat.test.ts lib/server/anthropic-messages.test.ts
 ```
 
 ### What was verified on real (2026-07-29)
@@ -268,14 +301,27 @@ by replaying the body that `streamCompletionOnce` constructs:
 | `low` | 81 | 304 characters, 1.3 sec | $0.002592 |
 | `high` | 83 | 311 characters, 1.7 sec | $0.002727 |
 
-Three things confirmed at once: the field is **transmitted**, it is **respected**
-(`off` literally produces no reflection tokens), and the trace returns fine
-in `delta.reasoning` — so the loop timer has something to measure.
+Three things confirmed at once: the field is **transmitted**, it is
+**respected**, and the trace returns fine in `delta.reasoning`, so the loop
+timer has something to measure. `off` produced no reflection tokens on that
+model only because it does not reason by default; see the `off` rule above.
+
+### What was verified on real (2026-10-28, Anthropic BYOK)
+
+Through `fetchAiChat` and the native transport, with a BYOK key: Claude Opus
+5.5 at `low` answered a counting problem with 155 output tokens and a short
+thinking summary, at `max` with 520 tokens and a summary five times longer,
+and at `off` with no thinking. Opus 4.7, Opus 4.6 (`xhigh` folded to
+`high`) and Haiku 4.5 (manual budget) answered with their summaries streamed;
+a tool round trip, forced tool calls without streaming, an image, and a 404
+passed through in the chat error shape all behaved.
 
 ### What remains to be seen by provider
 
-BYOK **OpenAI / Anthropic / Gemini direct** have not been probed (no key
-test on hand). The most interesting case is OpenAI + a **non** model
-reasoner (`gpt-4o-mini`): this is the expected trigger of the 400 guardrail.
-What to check then is not that the level applies, but that the turn **still
-ends**.
+BYOK **OpenAI and Gemini direct** have not been probed (no key on hand):
+their rules follow the providers' documentation (developers.openai.com
+reasoning guide, ai.google.dev OpenAI compatibility and thinking pages). The
+ones to confirm first: a GPT-5.x turn at "off" (`"none"`), a Gemini 3 turn
+with two tool rounds (the `thought_signature` echo), and Ollama, which
+documents `reasoning_effort` but is left without a field until a local model
+confirms it.

@@ -62,6 +62,8 @@ independent gates:
 | Server (handled preference read) | `captureServerException` from `/api/assistant/models` | Personal Numo preference read failures; the model catalog remains available with an unknown default |
 | Server (handled preference read, settings) | `captureServerException` from `GET /api/account/numo-preferences` | The same read failure behind the AI settings alert, answered with a 503 |
 | Server (background) | `enableExceptionAutocapture` on the shared `posthog-node` client | Uncaught exceptions and unhandled rejections outside requests (crons, agent code) |
+| Server (AI providers) | `reportProviderError` in `lib/server/ai-provider-errors.ts`, called by `fetchAiChat` and the direct OpenRouter callers (web search, FAQ answer, demo dictation) | Every final non-OK provider response and in-stream provider error, after the documented replays |
+| Server (Numo turns) | `captureBackgroundException` from `lib/server/numo/turns.ts` | A turn that ends `failed` or `retryable` for a reason other than a provider rejection (completion repairs exhausted, idle stream, internal error) |
 
 Server exception context carries template facts: `route_path` (the route
 template, never the concrete URL or query), `route_type`, `http_method`, and
@@ -70,6 +72,14 @@ an optional revalidate reason. `DatabaseOperationError` also supplies
 and an optional HTTP `failure_status`. Its exception message names the operation;
 the wrapper does not retain upstream database messages, hints or row values.
 These fields distinguish a missing migration from a permission error or timeout.
+Provider failures (MIN-826) carry `surface`, `provider`, `model`,
+`provider_status` (HTTP status, null for an in-stream error) and
+`provider_error_type`. The exception message is structural
+(`anthropic 400 invalid_request_error for claude-opus-5-5`); the provider's
+own message may quote request content, so it stays in the server log
+(`[ai-provider] request_failed`) and in the user's encrypted turn error. Numo
+turn failures carry `surface: numo_turn`, `turn_status` and `model`.
+Background captures attach to no distinct id and create no person profile.
 A client that leaves mid-response (`AbortError`, Next.js `ResponseAborted`, or
 React's generic `The destination stream closed early.`) is not reported: it is
 navigation noise, not a server failure (MIN-763).

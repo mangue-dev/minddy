@@ -34,6 +34,11 @@ import {
 } from "@/lib/agent-reasoning";
 import type { AssistantReasoning } from "@/lib/assistant-reasoning";
 import { AssistantReasoningStream } from "./reasoning-stream";
+import {
+  ProviderRequestError,
+  providerErrorFromResponse,
+  reportProviderError,
+} from "@/lib/server/ai-provider-errors";
 
 // ── OpenRouter streaming agent loop (ported from AutoKap's assistant) ───
 
@@ -212,6 +217,19 @@ export async function getModelInputModalities(
 ): Promise<Set<string>> {
   const info = await getOpenRouterModelInfo(model, apiKey);
   return new Set(info?.inputModalities ?? ["text"]);
+}
+
+/**
+ * Input modalities for a runtime's provider: OpenRouter publishes them per
+ * model; the native Anthropic transport carries images and PDFs, which every
+ * current Claude model reads; the other endpoints receive text only.
+ */
+export async function providerInputModalities(
+  runtime: Pick<ResolvedAiRuntime, "provider" | "apiKey">,
+  model: string,
+): Promise<Set<string>> {
+  if (runtime.provider === "openrouter") return getModelInputModalities(model, runtime.apiKey);
+  return new Set(runtime.provider === "anthropic" ? ["text", "image", "file"] : ["text"]);
 }
 
 export interface ProcessChatContext extends ToolContext {
@@ -428,7 +446,7 @@ export async function processChat(
     let malformedToolDelta = false;
     const toolCallAccumulators: Map<
       number,
-      { id: string; name: string; arguments: string }
+      { id: string; name: string; arguments: string; extraContent?: unknown }
     > = new Map();
     let roundReasoning: AssistantReasoning | null = resumingTools
       ? resumeCheckpoint?.assistantReasoning ?? null
@@ -441,6 +459,7 @@ export async function processChat(
           id: call?.id,
           name: call?.function?.name,
           arguments: call?.function?.arguments,
+          ...(call?.extra_content !== undefined ? { extraContent: call.extra_content } : {}),
         });
       }
       if (!toolCallAccumulators.size || malformedNativeCalls(toolCallAccumulators.values())) {
@@ -488,9 +507,7 @@ export async function processChat(
           break;
         }
         const modelMessages = await withConversationAttachmentPreviews(messages, context, () =>
-          aiRuntime.provider === "openrouter"
-            ? getModelInputModalities(requestModel, aiRuntime.apiKey)
-            : Promise.resolve(new Set(["text"])));
+          providerInputModalities(aiRuntime, requestModel));
         // Some providers end normally after reasoning without any visible text.
         // Change that request during repair only when the catalog explicitly
         // permits disabling reasoning; mandatory and unknown models keep theirs.
@@ -534,16 +551,18 @@ export async function processChat(
       // These early exits precede the stream's watchdog cleanup. Keep the
       // turn's stop observer armed until the entire execution finishes.
       if (!response.ok) {
-        let errorText: string;
+        // `fetchAiChat` already logged and reported it; the turn decides from
+        // its status whether a retry can help.
+        let providerError: ProviderRequestError;
         try {
-          errorText = await response.text();
+          providerError = await providerErrorFromResponse(aiRuntime.provider, requestModel, response);
         } catch (error) {
           if (stopObserved) break;
           throw error;
         } finally {
           closeRound();
         }
-        throw new Error(`LLM error (${response.status}): ${errorText.slice(0, 200)}`);
+        throw providerError;
       }
       const reader = response.body?.getReader();
       if (!reader) {
@@ -609,15 +628,25 @@ export async function processChat(
                 ? { message: "The provider disconnected mid-stream" }
                 : null);
             if (streamError) {
-              throw new Error(
-                `LLM stream error: ${String(streamError.message ?? "unknown provider error").slice(0, 200)}`,
-              );
+              const providerError = new ProviderRequestError({
+                provider: aiRuntime.provider,
+                model: requestModel,
+                status: null,
+                providerErrorType: typeof streamError.type === "string" ? streamError.type
+                  : typeof streamError.code === "string" ? streamError.code : null,
+                providerMessage: String(streamError.message ?? "unknown provider error"),
+              });
+              reportProviderError(providerError, "assistant");
+              throw providerError;
             }
             const delta = parsed.choices?.[0]?.delta;
             if (!delta) continue;
-            if (typeof delta.reasoning === "string" && delta.reasoning) {
-              reasoningStream.push(delta.reasoning);
-            }
+            // `reasoning` on OpenRouter and the Anthropic transport;
+            // `reasoning_content` on DeepSeek-style upstreams (OpenCode, vLLM).
+            const reasoningDelta = typeof delta.reasoning === "string" && delta.reasoning
+              ? delta.reasoning
+              : typeof delta.reasoning_content === "string" ? delta.reasoning_content : "";
+            if (reasoningDelta) reasoningStream.push(reasoningDelta);
             if (delta.content) {
               roundReasoning = reasoningStream.finish();
               rawContent += delta.content;
@@ -654,6 +683,7 @@ export async function processChat(
                 }
                 const acc = toolCallAccumulators.get(idx)!;
                 if (tc.id) acc.id = tc.id;
+                if (tc.extra_content !== undefined) acc.extraContent = tc.extra_content;
                 if (tc.function?.name) acc.name = tc.function.name;
                 if (tc.function?.arguments) {
                   acc.arguments += tc.function.arguments;
@@ -746,6 +776,7 @@ export async function processChat(
           id: acc.id,
           type: "function",
           function: { name: acc.name, arguments: acc.arguments },
+          ...(acc.extraContent !== undefined ? { extra_content: acc.extraContent } : {}),
         });
       }
 

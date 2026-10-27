@@ -3,6 +3,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { ProviderRequestError, captureBackgroundException } from "@/lib/server/ai-provider-errors";
 
 import type {
   AssistantMention,
@@ -45,7 +46,7 @@ import { readerToolSet } from "@/lib/server/assistant/tool-capabilities";
 import {
   AmbiguousToolExecutionError,
   NumoCompletionError,
-  getModelInputModalities,
+  providerInputModalities,
   modelSupportsCaching,
   processChat,
   type ChatContentPart,
@@ -543,9 +544,7 @@ async function buildExecutionInput(input: {
     -1,
   );
   const modalities = history.some((message) => rowAttachments(message).length > 0)
-    ? runtime.provider === "openrouter"
-      ? await getModelInputModalities(runtime.model, runtime.apiKey)
-      : new Set(["text"])
+    ? await providerInputModalities(runtime, runtime.model)
     : null;
   const recoveringAssistantMessageId = turn.checkpoint?.phase === "tools"
     ? turn.checkpoint.assistantMessageId
@@ -1265,9 +1264,28 @@ async function executeClaimedNumoTurn(input: {
       return { status: current.status, turn: current };
     }
 
-    const message = error instanceof NumoCompletionError ? error.message : "Numo turn failed";
+    // A provider rejection names its cause in the conversation, and fails at
+    // once when retrying cannot change the answer (a 400 used to be retried
+    // three times behind a spinner, then shown as "Numo turn failed").
+    const providerError = error instanceof ProviderRequestError ? error : null;
+    const message = providerError ? providerError.userMessage
+      : error instanceof NumoCompletionError ? error.message : "Numo turn failed";
     const status: "retryable" | "failed" = error instanceof NumoCompletionError
+      || (providerError && !providerError.retryable)
       ? "failed" : claimed.attempts < 3 ? "retryable" : "failed";
+    if (!providerError) {
+      // Provider rejections were already reported by the transport.
+      console.error("[numo-turn] failed", {
+        turnId: claimed.id,
+        status,
+        error: error instanceof Error ? error.name : typeof error,
+      });
+      captureBackgroundException(error, {
+        surface: "numo_turn",
+        turn_status: status,
+        model: claimed.model ?? null,
+      });
+    }
     const { data: currentClaim, error: currentClaimError } = await service
       .from("numo_assistant_turns")
       .select("checkpoint")

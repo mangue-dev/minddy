@@ -119,10 +119,14 @@ describe("reasoningMaxTokens", () => {
 
 describe("reasoningLevelsFor — what the selector offers", () => {
   it("without metadata, the four historical levels", () => {
-    // A direct BYOK, a non-index model: we know nothing, we promise nothing
-    // more than what worked before.
-    expect(reasoningLevelsFor(null)).toEqual(GENERIC_REASONING_LEVELS);
+    // A non-index model or a catalog still loading: we know nothing, we
+    // promise nothing more than what worked before.
     expect(reasoningLevelsFor(undefined)).toEqual(GENERIC_REASONING_LEVELS);
+  });
+
+  it("no level at all when no reasoning control reaches the model", () => {
+    // A model without reasoning, or an endpoint that drops every field.
+    expect(reasoningLevelsFor(null)).toEqual([]);
   });
 
   it("the levels PUBLISHED by the model, preceded by « no reasoning »", () => {

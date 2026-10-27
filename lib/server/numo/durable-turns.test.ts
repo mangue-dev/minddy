@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ProviderRequestError } from "@/lib/server/ai-provider-errors";
 import { resolveAiRuntime } from "@/lib/server/ai-runtime";
 
 vi.mock("server-only", () => ({}));
@@ -540,6 +541,38 @@ describe("durable Numo execution", () => {
       p_status: "retryable",
       p_checkpoint: { phase: "tools", completedToolCallIds: ["call-1"] },
     });
+  });
+
+  it("fails a turn the provider rejected, with its cause, instead of retrying (MIN-826)", async () => {
+    h.processChat.mockRejectedValue(new ProviderRequestError({
+      provider: "anthropic",
+      model: "claude-opus-5-5",
+      status: 400,
+      providerErrorType: "invalid_request_error",
+      providerMessage: "Adaptive thinking is not available via the OpenAI compatibility endpoint.",
+    }));
+
+    const result = await executeNumoTurn({
+      turnId: h.turn!.id as string, readClient: service, aiRuntime: runtime,
+    });
+
+    expect(result.status).toBe("failed");
+    expect(h.checkpoints.at(-1)).toMatchObject({
+      p_status: "failed",
+      p_error_message: expect.stringContaining("Adaptive thinking is not available"),
+    });
+  });
+
+  it("keeps retrying a provider failure that may pass later", async () => {
+    h.processChat.mockRejectedValue(new ProviderRequestError({
+      provider: "openrouter", model: "m", status: 529, providerMessage: "Overloaded",
+    }));
+
+    const result = await executeNumoTurn({
+      turnId: h.turn!.id as string, readClient: service, aiRuntime: runtime,
+    });
+
+    expect(result.status).toBe("retryable");
   });
 
   it("reports exhausted completion repairs as failure while preserving the durable checkpoint", async () => {

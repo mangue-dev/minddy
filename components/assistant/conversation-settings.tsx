@@ -22,6 +22,7 @@ import {
   useReasoningLevelsFor,
 } from "@/lib/use-agent-models-query";
 import { formatModelName } from "@/lib/model-display";
+import { catalogModelReasoning } from "@/lib/model-reasoning-rules";
 import {
   conversationReasoningIndex,
   conversationReasoningLevels,
@@ -101,7 +102,11 @@ export function ConversationSettings() {
         ? catalog.models.find((entry) => entry.id === defaultModel)
         : undefined;
     const nextLevels = conversationReasoningLevels(
-      reasoningLevelsFor(nextEntry?.reasoning),
+      reasoningLevelsFor(catalogModelReasoning(
+        catalog.provider,
+        nextModel ?? defaultModel,
+        nextEntry,
+      )),
     );
     const nextReasoning = state.conversationReasoningLevel === null
       ? null
@@ -204,6 +209,7 @@ export function ConversationSettings() {
               min={0}
               max={Math.max(0, reasoningLevels.length - 1)}
               step={1}
+              disabled={reasoningLevels.length < 2}
               aria-label={t("reasoning")}
               onValueChange={(values) => {
                 selectReasoningIndex(values[0] ?? 0);
