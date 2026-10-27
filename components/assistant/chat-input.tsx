@@ -1035,13 +1035,28 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const expandedLayout = textWraps;
     const expandedLayoutRef = useRef(expandedLayout);
     expandedLayoutRef.current = expandedLayout;
+    // What the compact row takes from the grid's width besides the text
+    // itself, measured while compact. Folding back compares the text with
+    // exactly the room it wrapped in: an estimate wider than that room let
+    // the two layouts disagree, and the composer flipped on every render.
+    const compactOverheadRef = useRef<number | null>(null);
     const measureComposerLayout = useCallback(() => {
       const editor = editorRef.current;
       const grid = composerGridRef.current;
-      if (!editor || !grid) return;
-      const lineHeight = parseFloat(getComputedStyle(editor).lineHeight) || 22;
+      // A hidden composer (a closed panel) has nothing to measure.
+      if (!editor || !grid || grid.clientWidth === 0) return;
+      // An empty composer is compact, whatever its placeholder does.
+      if (!editor.textContent?.trim() && !editor.querySelector("[contenteditable=false]")) {
+        setTextWraps(false);
+        return;
+      }
+      const style = getComputedStyle(editor);
+      const lineHeight = parseFloat(style.lineHeight) || 22;
       const multiLine = editor.scrollHeight > lineHeight * 1.5;
       if (!expandedLayoutRef.current) {
+        const textRoom =
+          editor.clientWidth - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0);
+        compactOverheadRef.current = grid.clientWidth - textRoom;
         setTextWraps(multiLine);
         return;
       }
@@ -1049,11 +1064,13 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       range.selectNodeContents(editor);
       const textWidth = range.getBoundingClientRect().width;
       const compactRoom =
-        grid.clientWidth -
-        (leadControlsRef.current?.offsetWidth ?? 0) -
-        (trailControlsRef.current?.offsetWidth ?? 0) -
-        24;
-      setTextWraps(multiLine || textWidth > compactRoom);
+        compactOverheadRef.current !== null
+          ? grid.clientWidth - compactOverheadRef.current
+          : grid.clientWidth -
+            (leadControlsRef.current?.offsetWidth ?? 0) -
+            (trailControlsRef.current?.offsetWidth ?? 0) -
+            24;
+      setTextWraps(multiLine || textWidth > compactRoom - 1);
     }, []);
     useEffect(() => {
       const editor = editorRef.current;
