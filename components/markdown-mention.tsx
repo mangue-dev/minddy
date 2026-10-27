@@ -47,6 +47,8 @@ import {
 } from "@/components/mention-suggest";
 import { useSemanticMentions } from "@/lib/use-semantic-mentions";
 import { SemanticSearchingHint } from "@/components/semantic-searching-hint";
+import { MENU_SCROLL_CLASS, MENU_SURFACE_CLASS } from "@/components/ui/menu-surface";
+import { cn } from "@/lib/utils";
 import type { MentionScan } from "@/lib/mention-scan";
 import { MentionNodeBase } from "@/components/mention-node";
 import { TypedMentionChip } from "@/components/typed-mention-chip";
@@ -300,7 +302,7 @@ const MentionMenu = forwardRef<MentionMenuRef, MentionProps>(function MentionMen
       ref={listRef}
       role="listbox"
       data-floating-surface
-      className="scrollbar-quiet max-h-56 w-72 overflow-y-auto overscroll-contain rounded-xl border border-border bg-popover p-1 shadow-lg"
+      className={cn("scrollbar-quiet max-h-56 w-72", MENU_SURFACE_CLASS, MENU_SCROLL_CLASS)}
     >
       {items.map((option, index) => (
         <MentionRowWithDivider key={`${option.type}:${option.id}`} options={items} index={index}>

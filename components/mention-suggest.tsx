@@ -23,6 +23,7 @@ import { NumoFace } from "@/components/numo-face";
 import { filterMentionItems } from "@/lib/mention-menu";
 import { StatusIndicator } from "@/components/issue-indicators";
 import { SemanticSearchingHint, type SemanticSearchStatus } from "@/components/semantic-searching-hint";
+import { MENU_ROW_ACTIVE_CLASS, MENU_ROW_CLASS, MENU_SCROLL_CLASS, MENU_SURFACE_CLASS } from "@/components/ui/menu-surface";
 import type { IssueStatus } from "@/lib/issue-constants";
 import type { ObjectiveStatus } from "@/lib/objective-validation";
 
@@ -208,8 +209,8 @@ export function MentionOptionRow({
         if (event.movementX !== 0 || event.movementY !== 0) onHover();
       }}
       className={cn(
-        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm",
-        active && "bg-muted",
+        MENU_ROW_CLASS,
+        active && MENU_ROW_ACTIVE_CLASS,
       )}
     >
       <MentionFigure option={option} />
@@ -260,7 +261,9 @@ export function MentionSuggestions({
       data-floating-surface
       style={style}
       className={cn(
-        "scrollbar-quiet absolute bottom-full z-50 mb-1 max-h-56 w-64 overflow-y-auto overscroll-contain rounded-lg border border-border bg-popover p-1 shadow-md",
+        "scrollbar-quiet absolute bottom-full z-50 mb-1 max-h-56 w-64",
+        MENU_SURFACE_CLASS,
+        MENU_SCROLL_CLASS,
         className,
       )}
     >
