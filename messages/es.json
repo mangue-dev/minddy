@@ -1525,6 +1525,7 @@
     "assignee": "Responsable",
     "assignedToMe": "Asignadas a mí",
     "unassigned": "Sin asignar",
+    "smartAssign": "Smart Assign",
     "categories": "Categorías",
     "noCategories": "Sin categorías",
     "dueDate": "Fecha límite",

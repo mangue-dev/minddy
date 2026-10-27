@@ -22,7 +22,8 @@ import type { SmartAssignConfigWarning } from "@/lib/types";
 /**
  * Smart Assign (MIN-31) — guarantees no active issue stays unassigned on
  * projects that opted in. Triggered after an issue is created past triage
- * without an assigned, or when an unassigned issue leaves triage.
+ * without an assigned, when an unassigned issue leaves triage, or when someone
+ * clears the assignee of an issue past triage (MIN-811).
  *
  * - Single-member project (owner only): deterministic, no AI.
  * - Multi-member with no rule written for anyone: deterministic too, the owner —
@@ -88,7 +89,7 @@ export interface SmartAssignParams {
   /** `sweep` = cron catch-up. It has no response to give, so it
       WAITS for the decision instead of deferring it — deferring is precisely
       what caused the assignment it is repairing to be lost. */
-  trigger: "create" | "triage_exit" | "sweep";
+  trigger: "create" | "triage_exit" | "unassign" | "sweep";
 }
 
 /**

@@ -86,6 +86,7 @@ import {
   resolveSmartFillTitle,
 } from "@/lib/smart-fill";
 import { smartFillFieldVisible, type SmartFillField } from "@/lib/smart-fill-fields";
+import { smartAssignFillsEmptyAssignee } from "@/lib/smart-assign-config";
 import type { RecurrenceCadence } from "@/lib/recurrence";
 import type {
   Category,
@@ -975,6 +976,10 @@ export function CreateIssueDialog({
                       setFields((f) => ({ ...f, assignee_id }))
                     }
                     members={scopedMembers}
+                    smartAssign={smartAssignFillsEmptyAssignee(
+                      activeProject?.smart_assign_enabled,
+                      fields.status,
+                    )}
                     open={openPicker === "assignee"}
                     onOpenChange={(o) => setOpenPicker(o ? "assignee" : null)}
                     shortcutHint={KEY_FOR_FIELD.assignee}
