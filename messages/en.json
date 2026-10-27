@@ -1897,6 +1897,8 @@
     "changeObjectiveAria": "Change objective",
     "issueCreatedToast": "Issue created.",
     "smartFillChip": "Smart-fill",
+    "smartFillManualAria": "Set a property by hand",
+    "smartFillManualLabel": "Set by hand",
     "smartFillOffHint": "Off for this issue: you set its properties and relations yourself. Turn back on to let Smart-fill do it.",
     "smartFillOnHint": "On: Smart-fill reads the issue, sets its priority, effort, categories and objective, then links it to related issues once it is saved. Turn off to set them yourself.",
     "smartFillOnTitleHint": "On: Smart-fill reads the issue, writes its title if you leave it empty, sets its priority, effort, categories and objective, then links it to related issues once it is saved. Turn off to set them yourself.",

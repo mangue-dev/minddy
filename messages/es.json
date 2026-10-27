@@ -1897,6 +1897,8 @@
     "changeObjectiveAria": "Cambiar el objetivo",
     "issueCreatedToast": "Incidencia creada.",
     "smartFillChip": "Smart Fill",
+    "smartFillManualAria": "Definir una propiedad a mano",
+    "smartFillManualLabel": "Definir a mano",
     "smartFillOffHint": "Desactivado para esta incidencia: tú defines sus propiedades y relaciones. Vuelve a activarlo para que se encargue Smart Fill.",
     "smartFillOnHint": "Activado: Smart Fill lee la incidencia, define su prioridad, esfuerzo, categorías y objetivo, y la vincula con incidencias relacionadas una vez guardada. Desactívalo para hacerlo tú.",
     "smartFillOnTitleHint": "Activado: Smart Fill lee la incidencia, escribe su título si lo dejas vacío, define su prioridad, esfuerzo, categorías y objetivo, y la vincula con incidencias relacionadas una vez guardada. Desactívalo para hacerlo tú.",

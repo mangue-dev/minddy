@@ -1897,6 +1897,8 @@
     "changeObjectiveAria": "Cambia obiettivo",
     "issueCreatedToast": "Ticket creato.",
     "smartFillChip": "Smart Fill",
+    "smartFillManualAria": "Imposta una proprietà a mano",
+    "smartFillManualLabel": "Imposta a mano",
     "smartFillOffHint": "Disattivato per questo ticket: imposti tu proprietà e relazioni. Riattivalo per lasciarlo fare a Smart Fill.",
     "smartFillOnHint": "Attivo: Smart Fill legge il ticket, ne imposta priorità, impegno, categorie e obiettivo, poi lo collega ai ticket correlati dopo il salvataggio. Disattivalo per impostarli tu.",
     "smartFillOnTitleHint": "Attivo: Smart Fill legge il ticket, ne scrive il titolo se lo lasci vuoto, ne imposta priorità, impegno, categorie e obiettivo, poi lo collega ai ticket correlati dopo il salvataggio. Disattivalo per impostarli tu.",

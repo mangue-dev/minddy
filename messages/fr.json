@@ -1897,6 +1897,8 @@
     "changeObjectiveAria": "Changer l'objectif",
     "issueCreatedToast": "Ticket créé.",
     "smartFillChip": "Smart-fill",
+    "smartFillManualAria": "Définir une propriété à la main",
+    "smartFillManualLabel": "Définir à la main",
     "smartFillOffHint": "Coupé pour ce ticket : vous renseignez ses propriétés et ses relations vous-même. Réactivez pour laisser Smart-fill le faire.",
     "smartFillOnHint": "Actif : Smart-fill lit le ticket, pose sa priorité, son effort, ses catégories et son objectif, puis le relie aux tickets liés une fois enregistré. Coupez pour les renseigner vous-même.",
     "smartFillOnTitleHint": "Actif : Smart-fill lit le ticket, rédige son titre si vous le laissez vide, pose sa priorité, son effort, ses catégories et son objectif, puis le relie aux tickets liés une fois enregistré. Coupez pour les renseigner vous-même.",

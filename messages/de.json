@@ -1897,6 +1897,8 @@
     "changeObjectiveAria": "Ziel ändern",
     "issueCreatedToast": "Ticket erstellt.",
     "smartFillChip": "Smart-Fill",
+    "smartFillManualAria": "Eine Eigenschaft von Hand festlegen",
+    "smartFillManualLabel": "Von Hand festlegen",
     "smartFillOffHint": "Aus für dieses Ticket: Du legst seine Eigenschaften und Beziehungen selbst fest. Schalte es wieder ein, damit Smart-Fill das erledigt.",
     "smartFillOnHint": "Ein: Smart-Fill liest das Ticket, legt Priorität, Aufwand, Kategorien und Ziel fest und verknüpft es nach dem Speichern mit verwandten Tickets. Schalte die Option aus, um das selbst zu tun.",
     "smartFillOnTitleHint": "Ein: Smart-Fill liest das Ticket, schreibt seinen Titel, wenn du ihn leer lässt, legt Priorität, Aufwand, Kategorien und Ziel fest und verknüpft es nach dem Speichern mit verwandten Tickets. Schalte die Option aus, um das selbst zu tun.",
