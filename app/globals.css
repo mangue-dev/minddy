@@ -2671,6 +2671,49 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     -webkit-app-region: drag;
   }
 }
+/* ── Desktop window material (MIN-810) ─────────────────────────────────────
+   In the desktop app on macOS and Windows 11, the window is transparent and
+   the system paints a blurred view of the desktop behind it
+   (`lib/desktop/window-material.ts`). The chrome around the content pane
+   (tab strip, sidebar, the right and bottom bands, the Windows caption area)
+   lets it through; the floating content pane keeps its opaque background.
+
+   `--sidebar` becomes transparent inside the workspace only, so every
+   `bg-sidebar` surface of the chrome clears at once without stacking veils.
+   A single veil on <body> — painted on the canvas — keeps the chrome's tint
+   and its text contrast on a very light or very dark wallpaper; the native
+   material follows the page theme (`nativeTheme.themeSource`), so the veil
+   never fights it. A navigation panel floating over the pane stays opaque.
+
+   The desktop layout and the app shell only: auth pages, public pages and
+   the narrow mobile shell keep their opaque full-bleed surface. High-contrast
+   palettes, forced colors and reduced transparency keep the opaque window
+   too, whatever the device setting says. */
+@media not ((forced-colors: active) or (prefers-reduced-transparency: reduce)) {
+  html[data-desktop-material][data-app-shell][data-app-layout="desktop"]:is(
+    :not(.dark):not([data-theme-light="high-contrast-light"]),
+    .dark:not([data-theme-dark="high-contrast-dark"])
+  ) {
+    --desktop-sidebar-solid: var(--sidebar);
+    /* The light material is itself near white, like light sidebars: the same
+       veil as in dark mode would hide it. Dark mode needs more veil to keep
+       the blur from reading as see-through. */
+    --desktop-material-veil: 35%;
+    &.dark {
+      --desktop-material-veil: 70%;
+    }
+
+    & body {
+      background: color-mix(in oklab, var(--desktop-sidebar-solid) var(--desktop-material-veil), transparent);
+    }
+    & .app-workspace {
+      --sidebar: transparent;
+    }
+    & .sidebar-nav-panel[data-floating="true"] {
+      background: var(--desktop-sidebar-solid);
+    }  }
+}
+
 .app-update-slot button { max-width: 100%; }
 @media print {
   .app-top-bar { display: none !important; }

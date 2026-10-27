@@ -5,6 +5,11 @@ import type { DesktopBridge, DesktopServerChoiceBridge } from "@/lib/desktop/bri
 import type { LocalInstallProgress } from "@/lib/desktop/local-installer";
 import { notificationCapabilitiesForPlatform } from "@/lib/desktop/notification-capabilities";
 import type { DesktopUpdateStatus } from "@/lib/desktop/update-status";
+import {
+  isDesktopWindowMaterialState,
+  parseWindowMaterialFlag,
+  type DesktopWindowMaterialState,
+} from "@/lib/desktop/window-material";
 
 /**
  * THE SURFACE, in full (MIN-291, APNs added in MIN-356).
@@ -85,8 +90,26 @@ const bridge: DesktopBridge = {
   version: readVersion(),
   platform: process.platform,
   integratedWindowChrome: process.argv.includes("--minddy-integrated-chrome=1"),
-  setWindowChrome(theme: "light" | "dark") {
-    ipcRenderer.send("minddy:window-chrome", theme);
+  setWindowChrome(theme: "light" | "dark", followsSystem?: boolean) {
+    ipcRenderer.send("minddy:window-chrome", theme, followsSystem);
+  },
+  // The material in force when this window was created (MIN-810): the theme
+  // script marks the document with it before the first paint.
+  windowMaterial: parseWindowMaterialFlag(process.argv) ?? undefined,
+  setWindowMaterialEnabled(enabled: boolean) {
+    return ipcRenderer.invoke("minddy:window-material:set", enabled === true) as Promise<DesktopWindowMaterialState>;
+  },
+  onWindowMaterialChange(handler: (state: DesktopWindowMaterialState) => void) {
+    const listener = (_event: unknown, state: unknown) => {
+      if (isDesktopWindowMaterialState(state)) handler(state);
+    };
+    ipcRenderer.on("minddy:window-material-state", listener);
+    // The command line is fixed for the window's life: after a toggle and a
+    // reload it is stale, so the main process replays the current state.
+    ipcRenderer.send("minddy:window-material-ready");
+    return () => {
+      ipcRenderer.removeListener("minddy:window-material-state", listener);
+    };
   },
   notificationCapabilities,
   ...nativePushBridge,

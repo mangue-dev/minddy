@@ -7,6 +7,7 @@ import {
   getDesktopBridge,
 } from "@/lib/desktop/bridge";
 import { startDesktopTrace } from "@/lib/desktop/trace";
+import { useTheme } from "@/components/theme-provider";
 
 /**
  * Marks the document when it is rendered IN the desktop app (MIN-291).
@@ -32,15 +33,40 @@ export function DesktopChrome() {
     root.setAttribute("data-desktop-app", "");
     if (platform) root.setAttribute("data-desktop-platform", platform);
     if (bridge.integratedWindowChrome ?? Boolean(bridge.setWindowChrome)) root.setAttribute("data-integrated-caption-controls", "");
-    const syncTheme = () => bridge.setWindowChrome?.(root.classList.contains("dark") ? "dark" : "light");
-    syncTheme();
-    const observer = new MutationObserver(syncTheme);
-    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
     return () => {
-      observer.disconnect();
       root.removeAttribute("data-integrated-caption-controls");
       root.removeAttribute("data-desktop-app");
       root.removeAttribute("data-desktop-platform");
+    };
+  }, []);
+
+  // The caption controls and the native material follow the page theme. The
+  // setting matters too: "system" leaves the app's appearance on the OS.
+  const followsSystem = useTheme().theme === "system";
+  useEffect(() => {
+    const bridge = getDesktopBridge();
+    if (!bridge?.setWindowChrome) return;
+    const root = document.documentElement;
+    const syncTheme = () => bridge.setWindowChrome?.(root.classList.contains("dark") ? "dark" : "light", followsSystem);
+    syncTheme();
+    const observer = new MutationObserver(syncTheme);
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, [followsSystem]);
+
+  // The window material (MIN-810): the theme script marks the first frame;
+  // this follows the preference and the system's transparency settings.
+  useEffect(() => {
+    const bridge = getDesktopBridge();
+    if (!bridge?.onWindowMaterialChange) return;
+    const root = document.documentElement;
+    const unsubscribe = bridge.onWindowMaterialChange(({ kind }) => {
+      if (kind === "none") root.removeAttribute("data-desktop-material");
+      else root.setAttribute("data-desktop-material", kind);
+    });
+    return () => {
+      unsubscribe();
+      root.removeAttribute("data-desktop-material");
     };
   }, []);
 

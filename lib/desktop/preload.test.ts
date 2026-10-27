@@ -48,3 +48,28 @@ describe("desktop preload storage flush", () => {
     expect(invoke).toHaveBeenCalledExactlyOnceWith("minddy:storage:flush");
   });
 });
+
+describe("desktop preload window material", () => {
+  it("subscribes before asking for a replay and drops malformed states", () => {
+    const handler = vi.fn();
+    const unsubscribe = bridge.onWindowMaterialChange!(handler);
+    const [channel, listener] = mocks.on.mock.calls[0];
+    expect(channel).toBe("minddy:window-material-state");
+    expect(mocks.send).toHaveBeenCalledWith("minddy:window-material-ready");
+    expect(mocks.on.mock.invocationCallOrder[0]).toBeLessThan(mocks.send.mock.invocationCallOrder[0]);
+    listener({}, { kind: "mica" });
+    expect(handler).not.toHaveBeenCalled();
+    const state = { supported: true, enabled: false, reducedTransparency: false, kind: "none" };
+    listener({}, state);
+    expect(handler).toHaveBeenCalledExactlyOnceWith(state);
+    unsubscribe();
+    expect(mocks.removeListener).toHaveBeenCalledExactlyOnceWith(channel, listener);
+  });
+
+  it("sends only a boolean preference", async () => {
+    const invoke = vi.fn(async () => undefined);
+    Object.assign(mocks, { invoke });
+    await bridge.setWindowMaterialEnabled?.("yes" as unknown as boolean);
+    expect(invoke).toHaveBeenCalledExactlyOnceWith("minddy:window-material:set", false);
+  });
+});

@@ -105,6 +105,9 @@ const COQUILLE = {
   "server-store.ts": "reads and writes the selected server; validation lives in @/lib/desktop/server-origin",
   "window-chrome-store.ts":
     "reads and writes the last observed window frame; parsing and the startup decision live in @/lib/desktop/window-frame",
+  "window-material-store.ts":
+    "reads and writes the device's window material preference; parsing and the platform decision live in " +
+    "@/lib/desktop/window-material",
   "server-choice.ts":
     "serves the bundled self-hosting page and answers its bridge calls; the trusted document lives in " +
     "@/lib/desktop/server-choice",

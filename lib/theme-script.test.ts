@@ -14,7 +14,7 @@ interface ScriptEnv {
   osPrefersDark: boolean;
   localStorageThrows?: boolean;
   /** The desktop preload's bridge, when the page runs in the app. */
-  desktopBridge?: { platform?: string };
+  desktopBridge?: { platform?: string; windowMaterial?: { kind: string } };
   navigatorPlatform?: string;
 }
 
@@ -318,6 +318,18 @@ describe("buildThemeScript — desktop app marking", () => {
       desktopBridge: { platform: '"><script>' },
     });
     expect(odd.attributes["data-desktop-platform"]).toBeUndefined();
+  });
+
+  it("marks the window material before the first paint, and only a known one", () => {
+    const material = (kind: string) => run(buildThemeScript({ defaultTheme: "dark" }), {
+      storedTheme: null,
+      osPrefersDark: false,
+      desktopBridge: { platform: "darwin", windowMaterial: { kind } },
+    }).attributes["data-desktop-material"];
+    expect(material("vibrancy")).toBe("vibrancy");
+    expect(material("acrylic")).toBe("acrylic");
+    expect(material("none")).toBeUndefined();
+    expect(material('"><script>')).toBeUndefined();
   });
 
   it("leaves a browser page unmarked", () => {
