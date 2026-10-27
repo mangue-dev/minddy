@@ -10,6 +10,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { RoutineDetailSkeleton } from "@/components/routines/routine-detail-skeleton";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { EmptyScene } from "@/components/empty-scene";
@@ -45,12 +46,7 @@ const RoutineDetail = dynamic(
   () => import("@/components/routines/routine-detail").then((m) => m.RoutineDetail),
   {
     ssr: false,
-    loading: () => (
-      <div className="flex h-full min-h-0 flex-1 flex-col gap-4 p-4">
-        <Skeleton className="h-9 w-full rounded-lg" />
-        <Skeleton className="min-h-0 flex-1 rounded-xl" />
-      </div>
-    ),
+    loading: () => <RoutineDetailSkeleton />,
   },
 );
 
@@ -386,11 +382,22 @@ export function RoutinesPanel({
   );
 
   const list = loading ? (
-    <div className="flex flex-col gap-2 pt-2">
-      {[0, 1].map((g) => (
+    // The rows' own shape: a project, then its routines on two lines. Tinted
+    // with the foreground like the code review list's, since the default
+    // skeleton gray disappears on the sidebar's background.
+    <div aria-busy="true" data-testid="routine-list-skeleton" className="flex flex-col gap-2 pt-2">
+      {[2, 1].map((rows, g) => (
         <div key={g} className="flex flex-col gap-1">
-          <Skeleton className="h-6 w-32 rounded-md" />
-          <Skeleton className="ml-8 h-5 rounded-md" />
+          <div className="flex items-center gap-2 py-1.5 pl-2">
+            <Skeleton className="size-4 rounded-full bg-foreground/10" />
+            <Skeleton className="h-4 w-24 rounded-md bg-foreground/10" />
+          </div>
+          {Array.from({ length: rows }, (_, row) => (
+            <div key={row} className={cn("flex flex-col gap-1.5 py-1.5", PROJECT_GROUP_INDENT)}>
+              <Skeleton className="h-3.5 w-40 rounded-md bg-foreground/10" />
+              <Skeleton className="h-3 w-28 rounded-md bg-foreground/10" />
+            </div>
+          ))}
         </div>
       ))}
     </div>
@@ -562,10 +569,10 @@ export function RoutinesPanel({
             onIntentConsumed={onIntentConsumed}
           />
         ) : loading ? (
-          /* Nothing while loading: the column already shows its skeletons,
- and announcing "no routine" before having the answer would cause
- to flash an empty state on a list that is not empty. */
-          null
+          /* The page's own skeleton while loading: announcing "no routine"
+             before having the answer would flash an empty state on a list
+             that is not empty, and a blank pane read as nothing coming. */
+          <RoutineDetailSkeleton />
         ) : routines.length === 0 ? (
           /* NO routine: the pane says the SAME thing as the column, en
  large. This is the surface we look at when arriving at the tab —
