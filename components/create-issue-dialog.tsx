@@ -824,8 +824,9 @@ export function CreateIssueDialog({
           ref={contentRef}
           onKeyDownCapture={submitShortcut.onKeyDownCapture}
           aria-describedby={undefined}
-          // The extra top padding clears the "Create in" pill and the close button.
-          className="creation-sheet p-8 pt-15 max-sm:p-5 max-sm:pt-15 sm:max-w-2xl"
+          // Every edge follows the "Create in" pill's 16 px inset, and the
+          // content starts 16 px below it (44 + 16 = 60).
+          className="creation-sheet p-4 pt-15 max-sm:p-5 max-sm:pt-15 sm:max-w-2xl"
           onInteractOutside={keepOverlayOpenForPopper}
         >
           {/* "Create in" (MIN-741): level with the close button on desktop;
@@ -918,12 +919,12 @@ export function CreateIssueDialog({
                   editorNonEmptyRef.current = !empty;
                 }}
                 placeholder={t("createDescriptionPlaceholder")}
-                className="creation-description mt-2 min-h-16"
+                className="creation-description mt-2 min-h-16 first:mt-0"
               />
               </div>
 
               {/* Property values stay compact on desktop and receive labels on mobile. */}
-              <div className="creation-properties mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+              <div className="creation-properties mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 app-desktop:-ml-1.5">
                 <CreationProperty mobile={mobile} label={tField("status")}>
                   <StatusCompact
                     showValue={mobile}

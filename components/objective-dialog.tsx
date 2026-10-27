@@ -638,7 +638,10 @@ export function ObjectiveDialog({
           aria-describedby={undefined}
           // In creation, the extra top padding clears the "Create in" pill and
           // the close button.
-          className={cn("creation-sheet p-8 max-sm:p-5 sm:max-w-2xl", showProjectSelect && "pt-15 max-sm:pt-15")}
+          // Every edge follows the "Create in" pill's 16 px inset, and the
+          // content starts 16 px below it (44 + 16 = 60). Without the pill,
+          // the name keeps clear of the close button on its right.
+          className={cn("creation-sheet p-4 max-sm:p-5 sm:max-w-2xl", showProjectSelect ? "pt-15 max-sm:pt-15" : "pr-14")}
           onInteractOutside={keepOverlayOpenForPopper}
         >
           {/* Screen reader title: when editing, the name of the objective says
@@ -707,7 +710,7 @@ export function ObjectiveDialog({
               {objective && storedDocument === undefined ? (
                 <DocumentEditorFallback
                   value={form.description}
-                  className="creation-description mt-2 min-h-16"
+                  className="creation-description mt-2 min-h-16 first:mt-0"
                 />
               ) : (
               <LazyDocumentEditor
@@ -733,13 +736,13 @@ export function ObjectiveDialog({
                   editorNonEmptyRef.current = !empty;
                 }}
                 placeholder={t("createDescriptionPlaceholder")}
-                className="creation-description mt-2 min-h-16"
+                className="creation-description mt-2 min-h-16 first:mt-0"
               />
               )}
               </div>
 
               {/* Property values stay compact on desktop and receive labels on mobile. */}
-              <div className="creation-properties mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+              <div className="creation-properties mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 app-desktop:-ml-1.5">
                 <CreationProperty mobile={mobile} label={t("statusFieldLabel")}>
                   <ObjectiveStatusCompact
                     value={form.status}
