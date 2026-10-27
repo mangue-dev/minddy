@@ -4,7 +4,7 @@ import { act, createElement, type PropsWithChildren } from "react";
 import { hydrateRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { NextIntlClientProvider } from "next-intl";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectiveMomentum } from "@/components/objective-momentum";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import en from "@/messages/en.json";
@@ -52,7 +52,14 @@ function render(source = objective, locale: "en" | "fr" = "en", timeZone = "Euro
 }
 
 describe("objective momentum card", () => {
+  // The card reads the live device clock after hydration (MIN-819), so the
+  // provider `now` alone no longer pins it.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(NOW);
+  });
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
     document.body.innerHTML = "";

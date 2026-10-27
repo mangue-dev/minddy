@@ -28,8 +28,9 @@ const listeners = new Set<() => void>();
 function snapshot() {
   // Without subscribers the timer is stopped, so the stored instant can be
   // hours old when a popover mounts later. Refresh it once; the next call
-  // returns the same value, which `useSyncExternalStore` requires.
-  if (!timer && Date.now() - instant >= TICK_MS) instant = Date.now();
+  // returns the same value, which `useSyncExternalStore` requires. The
+  // absolute gap also covers a device clock that was set back.
+  if (!timer && Math.abs(Date.now() - instant) >= TICK_MS) instant = Date.now();
   return instant;
 }
 const serverSnapshot = () => null;
