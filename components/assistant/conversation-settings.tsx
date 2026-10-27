@@ -22,7 +22,7 @@ import {
   useReasoningLevelsFor,
 } from "@/lib/use-agent-models-query";
 import { formatModelName } from "@/lib/model-display";
-import { catalogModelReasoning } from "@/lib/ai-chat";
+import { catalogModelReasoning } from "@/lib/model-reasoning-rules";
 import {
   conversationReasoningIndex,
   conversationReasoningLevels,

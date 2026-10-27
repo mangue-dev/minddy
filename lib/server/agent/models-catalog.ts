@@ -21,7 +21,7 @@ import { getAppConfigValue } from "@/lib/server/app-config";
 import { aiModelFallback } from "@/lib/ai-model-config";
 import { parseRecommendedModels } from "@/lib/recommended-models";
 import { dedupeModelVariants } from "@/lib/model-variants";
-import { nativeModelReasoning } from "@/lib/ai-chat";
+import { nativeModelReasoning } from "@/lib/model-reasoning-rules";
 import {
   getAgentProvider,
   isLocalAgentProvider,

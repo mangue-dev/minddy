@@ -15,7 +15,7 @@ import {
   type ResolvedAiRuntime,
 } from "@/lib/server/ai-runtime";
 import { isLocalAgentProvider } from "@/lib/agent-providers";
-import { catalogModelReasoning } from "@/lib/ai-chat";
+import { catalogModelReasoning } from "@/lib/model-reasoning-rules";
 import { getAssistantReasoningLevel } from "@/lib/server/assistant/reasoning";
 import { conversationReasoningLevels } from "@/lib/conversation-settings";
 

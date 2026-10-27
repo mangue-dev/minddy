@@ -2,14 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import {
   alternateOutputTokenBody,
-  anthropicModelReasoning,
-  catalogModelReasoning,
-  nativeModelReasoning,
   aiChatProviderHeaders,
   repairRejectedAiChatBody,
   translateAiChatRequest,
   translateLegacyAiChatBody,
 } from "./ai-chat";
+import {
+  anthropicModelReasoning,
+  catalogModelReasoning,
+  nativeModelReasoning,
+} from "./model-reasoning-rules";
 import { SITE_URL } from "./site";
 
 const base = {

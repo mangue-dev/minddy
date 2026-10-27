@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { DEFAULT_AGENT_PROVIDER, type AgentProviderId } from "@/lib/agent-providers";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
-import { catalogModelReasoning } from "@/lib/ai-chat";
+import { catalogModelReasoning } from "@/lib/model-reasoning-rules";
 import {
   reasoningLevelsFor,
   type ModelReasoning,
