@@ -14,6 +14,14 @@ export type CheckState = "pending" | "success" | "failure" | "neutral";
 export interface PullRequestCheck {
   name: string;
   state: CheckState;
+  /**
+   * A pending check that has not started yet: waiting for a runner, an
+   * approval or a resource. Running and queued checks share the `pending`
+   * state — both keep the suite unfinished — but only a running one has a
+   * clock to show. Absent on reads cached before the field existed, and
+   * always false for commit statuses, whose API cannot tell the two apart.
+   */
+  queued?: boolean;
   /** Check page at the forge, when it exists. */
   url: string | null;
   /** The integration that produced the check — “GitHub Actions”, “Socket
@@ -164,6 +172,12 @@ function checkRunState(run: RawCheckRun): CheckState {
   }
 }
 
+/** GitHub statuses of a check run that has not started yet. */
+const GITHUB_QUEUED_STATUSES = new Set(["queued", "waiting", "requested", "pending"]);
+
+/** GitLab pipeline statuses before its first job runs. */
+const GITLAB_QUEUED_STATUSES = new Set(["created", "waiting_for_resource", "preparing", "pending", "scheduled"]);
+
 function commitStatusState(status: RawCommitStatus): CheckState {
   switch (status.state) {
     case "success":
@@ -311,6 +325,7 @@ export function summarizeGithubChecks(
     byName.set(name, {
       name,
       state: commitStatusState(s),
+      queued: false,
       url: s.target_url ?? null,
       // The context of a status already NAMES its integration (“Vercel – ui”):
       // repeating the login of the bot that installed it (“vercel[bot]”) adds nothing.
@@ -328,15 +343,19 @@ export function summarizeGithubChecks(
   for (const r of runs) {
     const name = text(r.name);
     if (!name) continue;
+    const queued = GITHUB_QUEUED_STATUSES.has(r.status ?? "");
     byName.set(name, {
       name,
       state: checkRunState(r),
+      queued,
       url: r.html_url ?? r.details_url ?? null,
       appName: text(r.app?.name),
       appAvatarUrl: githubAppAvatar(r.app),
       description: text(r.output?.title),
       durationMs: elapsedMs(r.started_at, r.completed_at),
-      startedAt: r.started_at ?? null,
+      // GitHub stamps `started_at` when a run is created, even while it waits
+      // for a runner: a queued run has not started, whatever that field says.
+      startedAt: queued ? null : r.started_at ?? null,
       completedAt: r.completed_at ?? null,
       required: required?.has(name) ?? null,
       rerunRef: r.check_suite?.id
@@ -364,10 +383,12 @@ export function summarizeGitlabPipelines(
 ): ChecksSummary {
   const latest = pipelines[0];
   if (!latest?.id) return summarize([]);
+  const queued = GITLAB_QUEUED_STATUSES.has(latest.status ?? "");
   return summarize([
     {
       name: `#${latest.id}`,
       state: pipelineState(latest.status),
+      queued,
       url: latest.web_url ?? null,
       appName: GITLAB_CI_APP,
       appAvatarUrl: null,
@@ -375,7 +396,7 @@ export function summarizeGitlabPipelines(
       // its name when the project gives one, otherwise the branch.
       description: text(latest.name) ?? text(latest.ref),
       durationMs: null,
-      startedAt: latest.started_at ?? latest.created_at ?? null,
+      startedAt: queued ? null : latest.started_at ?? latest.created_at ?? null,
       completedAt: latest.finished_at ?? null,
       required,
       rerunRef: { kind: "gitlab_pipeline", id: latest.id },

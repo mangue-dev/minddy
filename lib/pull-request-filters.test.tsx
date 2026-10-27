@@ -261,6 +261,12 @@ describe("Pull Requests completed filter", () => {
     await flush();
     await openFilters();
     expectCompleted(false);
+    // Checked sections always show, empty or not: the empty state only
+    // appears once the reader unchecks every section.
+    expect(container.querySelector<HTMLButtonElement>("button")).not.toBeNull();
+    for (const label of [en.PullRequests.sectionCreatedByMe, en.PullRequests.sectionMyReview, en.PullRequests.sectionTeamReview]) {
+      await toggle(label);
+    }
     const showAll = [...container.querySelectorAll("button")].find((button) => button.textContent === en.PullRequests.emptyShowAll)!;
     expect(showAll).toBeDefined();
     await act(() => showAll.click());
@@ -358,6 +364,97 @@ describe("Pull Requests selection stability (MIN-786)", () => {
     expect(shown()).toEqual(["Merge b"]);
     await act(() => row("a")!.click());
     expect(shown()).toEqual(["Merge a"]);
+  });
+});
+
+describe("Pull Requests sections follow the filter (MIN-817)", () => {
+  function shown() {
+    return [...container.querySelectorAll("[data-dynamic-detail] button")].map((button) => button.textContent);
+  }
+  function headers() {
+    return [...container.querySelectorAll("aside span.flex-1.font-medium")].map((node) => node.textContent);
+  }
+  async function until(assertion: () => void) {
+    await vi.waitFor(async () => {
+      await act(async () => {});
+      assertion();
+    });
+  }
+  const activeHeaders = [en.PullRequests.sectionCreatedByMe, en.PullRequests.sectionMyReview, en.PullRequests.sectionTeamReview];
+
+  it("shows every checked section, empty ones as folded headers", async () => {
+    search = "";
+    await render();
+    await flush();
+    await until(() => expect(headers()).toEqual(activeHeaders));
+    const empty = [...container.querySelectorAll("aside span.flex-1.font-medium")]
+      .find((node) => node.textContent === en.PullRequests.sectionTeamReview)!;
+    // A bare header: no toggle button, nothing listed under it.
+    expect(empty.closest("button")).toBeNull();
+    expect(container.querySelector('[data-navigation-href="/pull-requests?pr=pr"]')).not.toBeNull();
+  });
+
+  it("drops the merged pull request from an unchecked section and clears the selection", async () => {
+    search = "";
+    let confirm!: () => void;
+    h.merge.mockImplementation(() => new Promise<void>((resolve) => { confirm = resolve; }));
+    await render();
+    await flush();
+    await until(() => expect(shown()).toEqual(["Merge pr"]));
+    const merge = [...container.querySelectorAll("button")].find((button) => button.textContent === "Merge pr")!;
+    await act(() => merge.click());
+    // While the forge confirms, the detail stays; the row is already gone.
+    expect(shown()).toEqual(["Merge pr"]);
+    expect(container.querySelector('[data-navigation-href="/pull-requests?pr=pr"]')).toBeNull();
+    rows = [item("merged")];
+    await act(async () => { confirm(); });
+    await refetch();
+    await until(() => expect(shown()).toEqual([]));
+    expect(headers()).toEqual(activeHeaders);
+    expect(headers()).not.toContain(en.PullRequests.sectionCompleted);
+    expect(container.textContent).toContain(en.PullRequests.noSelection);
+
+    // The next pull request entering the filter is picked, not the merged one.
+    rows = [item("merged"), item("open", "next")];
+    await refetch();
+    await until(() => expect(shown()).toEqual(["Merge next"]));
+  });
+
+  it("keeps the merged pull request in the detail, without a row, while others remain", async () => {
+    search = "";
+    rows = [item("open", "a"), item("open", "b")];
+    await render();
+    await flush();
+    await until(() => expect(shown()).toEqual(["Merge a"]));
+    h.merge.mockResolvedValue();
+    rows = [item("merged", "a"), item("open", "b")];
+    const merge = [...container.querySelectorAll("button")].find((button) => button.textContent === "Merge a")!;
+    await act(() => merge.click());
+    await flush();
+    expect(shown()).toEqual(["Merge a"]);
+    expect(container.querySelector('[data-navigation-href="/pull-requests?pr=a"]')).toBeNull();
+    expect(container.querySelector('[data-navigation-href="/pull-requests?pr=b"]')).not.toBeNull();
+    expect(headers()).not.toContain(en.PullRequests.sectionCompleted);
+  });
+});
+
+describe("Pull Requests list follows a newer detail state (MIN-817)", () => {
+  it("moves a row out of the open sections when a background detail read says merged", async () => {
+    search = "";
+    rows = [item("open", "a"), item("open", "b")];
+    await render();
+    await flush();
+    const row = (prId: string) => container.querySelector(`[data-navigation-href="/pull-requests?pr=${prId}"]`);
+    await vi.waitFor(async () => { await act(async () => {}); expect(row("b")).not.toBeNull(); });
+    // The shell's background refresh reads b's detail from the forge.
+    await act(async () => {
+      await client.fetchQuery({
+        queryKey: ["pull-request", "b"],
+        queryFn: async () => ({ pr: { state: "closed", merged: true, draft: false, updatedAt: "2026-10-02T00:00:00Z" } }),
+      });
+    });
+    await vi.waitFor(async () => { await act(async () => {}); expect(row("b")).toBeNull(); });
+    expect(row("a")).not.toBeNull();
   });
 });
 

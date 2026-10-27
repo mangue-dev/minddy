@@ -372,6 +372,10 @@ function buildInsights(
     const states = checks.checks.map((check) => check.state);
     const passed = states.filter((state) => state === "success").length;
     const pending = states.filter((state) => state === "pending").length;
+    // A queued check has not started: it is waiting, not running, and has
+    // no clock of its own (`queued` on `PullRequestCheck`).
+    const queued = checks.checks.filter((check) => check.state === "pending" && check.queued).length;
+    const running = pending - queued;
     const failed = states.filter((state) => state === "failure").length;
     const durationMs =
       checks.startedAt && checks.completedAt
@@ -382,13 +386,15 @@ function buildInsights(
       tone: failed > 0 ? "danger" : pending > 0 ? "progress" : states.every((state) => state === "neutral") ? "neutral" : "success",
       title: failed > 0
         ? t("cardChecksFailed", { count: failed })
-        : pending > 0
-          ? t("cardChecksRunning", { count: pending })
+        : running > 0
+          ? t("cardChecksRunning", { count: running })
+          : queued > 0
+            ? t("cardChecksQueued", { count: queued })
           : states.every((state) => state === "neutral")
             ? t("checkStateNeutral")
             : t("cardChecksPassed", { count: passed }),
       donutParts: states,
-      startedAt: pending > 0 ? checks.startedAt : null,
+      startedAt: running > 0 ? checks.startedAt : null,
       durationMs: pending > 0 ? null : durationMs,
       iconKind: "checks",
     });
@@ -834,24 +840,30 @@ function ChecksDetails({ checks, provider, now }: { checks: ChecksSummary | null
   }
   return (
     <ul data-testid="pr-checks-details" className="flex max-h-80 flex-col gap-1 overflow-y-auto">
-      {checks.checks.map((check) => (
-        <li key={`${check.appName ?? provider}-${check.name}`} data-testid="pr-check-row" className={cn("flex items-center gap-2 rounded-md px-2 py-2", CHECK_ROW_BG[check.state])}>
+      {checks.checks.map((check) => {
+        // A queued check reads as waiting, not as work in progress: muted,
+        // labelled "Queued", and without a clock.
+        const queued = check.state === "pending" && !!check.queued;
+        const tone: CheckState = queued ? "neutral" : check.state;
+        return (
+        <li key={`${check.appName ?? provider}-${check.name}`} data-testid="pr-check-row" data-check-queued={queued ? "" : undefined} className={cn("flex items-center gap-2 rounded-md px-2 py-2", CHECK_ROW_BG[tone])}>
           <CheckLogo url={check.appAvatarUrl} provider={provider} />
           <div className="min-w-0 flex-1">
-            <p className={cn("break-words text-sm font-medium", CHECK_ROW_TEXT[check.state])}>{check.name}</p>
-            <p className={cn("text-xs", CHECK_ROW_TEXT[check.state])}>
-              {t(stateLabels[check.state])}
+            <p className={cn("break-words text-sm font-medium", CHECK_ROW_TEXT[tone])}>{check.name}</p>
+            <p className={cn("text-xs", queued ? "text-muted-foreground" : CHECK_ROW_TEXT[check.state])}>
+              {queued ? t("checkStateQueued") : t(stateLabels[check.state])}
               {check.required ? ` · ${t("checkRequired")}` : ""}
             </p>
             {check.description ? <p className="break-words text-xs text-muted-foreground">{check.description}</p> : null}
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1 text-xs">
-            <span className={cn("font-mono tabular-nums", CHECK_ROW_TEXT[check.state])}>
-              {formatRunDuration(t, check.state === "pending" && check.startedAt ? Math.max(now.getTime() - Date.parse(check.startedAt), 0) : check.durationMs)}
+            <span className={cn("font-mono tabular-nums", CHECK_ROW_TEXT[tone])}>
+              {queued ? null : formatRunDuration(t, check.state === "pending" && check.startedAt ? Math.max(now.getTime() - Date.parse(check.startedAt), 0) : check.durationMs)}
             </span>
           </div>
         </li>
-      ))}
+        );
+      })}
     </ul>
   );
 }

@@ -131,6 +131,29 @@ describe("pull request insight properties", () => {
     expect(reviewLabel.classList.contains("text-destructive")).toBe(false);
   });
 
+  it("tells a queued check from a running one", async () => {
+    const queue = (summary: ChecksSummary, ...queued: number[]) => ({
+      ...summary,
+      checks: summary.checks.map((check, index) => queued.includes(index) ? { ...check, queued: true, startedAt: null } : check),
+    });
+    props.checks = queue(checks("pending", "pending"), 1);
+    await render();
+    expect(trigger("checks").getAttribute("aria-label")).toContain("1 check in progress");
+    props.checks = queue(checks("pending", "pending"), 0, 1);
+    props.checksOpen = true;
+    await render();
+    expect(trigger("checks").getAttribute("aria-label")).toContain("2 checks queued");
+    const rows = [...document.querySelectorAll<HTMLElement>('[data-testid="pr-check-row"]')];
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      expect(row.hasAttribute("data-check-queued")).toBe(true);
+      expect(row.textContent).toContain(messages.PullRequests.checkStateQueued);
+      expect(row.textContent).not.toContain(messages.PullRequests.checkStatePending);
+      // No clock: the check has not started.
+      expect(row.querySelector(".font-mono")?.textContent).toBe("");
+    }
+  });
+
   it("retains the checks row and completion circle when a suite settles", async () => {
     props.checks = checks("pending", "success");
     await render();

@@ -104,6 +104,9 @@ export function usePullRequestQuery(prId: string, enabled: boolean) {
   };
 }
 
+/** Stable when nothing is loaded, so consumers can depend on the identity. */
+const NO_READINESS: Readonly<Awaited<ReturnType<typeof fetchPullRequestReadinessBatchApi>>["readiness"]> = Object.freeze({});
+
 export function usePullRequestReadinessBatchQuery(
   prIds: readonly string[],
   /** Lower bound on polling: boards read readiness as a hint and rely on
@@ -129,7 +132,7 @@ export function usePullRequestReadinessBatchQuery(
     },
   });
   return {
-    readinessByPrId: data?.readiness ?? {},
+    readinessByPrId: data?.readiness ?? NO_READINESS,
     unavailablePrIds: new Set(data?.unavailablePrIds ?? []),
     loading: enabled && isPending,
     error: enabled && isError,

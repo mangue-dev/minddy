@@ -247,6 +247,28 @@ describe("summarizeGithubChecks", () => {
     expect(s.deploymentUrl).toBeNull();
   });
 
+  it("tells a queued run from a running one, and gives a queued run no start", () => {
+    const s = summarizeGithubChecks(
+      [
+        run({ name: "build", status: "in_progress", conclusion: null, started_at: "2026-10-27T10:00:00Z" }),
+        run({ name: "deploy", status: "queued", conclusion: null, started_at: "2026-10-27T10:00:05Z" }),
+        run({ name: "approval", status: "waiting", conclusion: null }),
+        run({ name: "lint" }),
+      ],
+      [{ context: "Vercel", state: "pending" }],
+    );
+    const byName = Object.fromEntries(s.checks.map((check) => [check.name, check]));
+    expect(s.state).toBe("pending");
+    expect(byName.build).toMatchObject({ state: "pending", queued: false, startedAt: "2026-10-27T10:00:00Z" });
+    expect(byName.deploy).toMatchObject({ state: "pending", queued: true, startedAt: null });
+    expect(byName.approval).toMatchObject({ state: "pending", queued: true });
+    expect(byName.lint).toMatchObject({ state: "success", queued: false });
+    // The commit status API cannot tell waiting from running.
+    expect(byName.Vercel).toMatchObject({ state: "pending", queued: false });
+    // The suite's clock starts with its first RUNNING check.
+    expect(s.startedAt).toBe("2026-10-27T10:00:00Z");
+  });
+
   it("ignores entries without a usable name", () => {
     const s = summarizeGithubChecks([run({ name: "  " })], [{ context: "", state: "success" }]);
     expect(s.total).toBe(0);
@@ -288,6 +310,15 @@ describe("summarizeGitlabPipelines", () => {
     expect(summarizeGitlabPipelines([{ id: 1, status: "skipped" }]).checks[0].state).toBe(
       "neutral",
     );
+  });
+
+  it("marks a pipeline waiting for its first job as queued", () => {
+    for (const status of ["created", "waiting_for_resource", "preparing", "pending", "scheduled"]) {
+      const check = summarizeGitlabPipelines([{ id: 1, status, created_at: "2026-10-27T10:00:00Z" }]).checks[0];
+      expect(check).toMatchObject({ state: "pending", queued: true, startedAt: null });
+    }
+    const running = summarizeGitlabPipelines([{ id: 1, status: "running", started_at: "2026-10-27T10:01:00Z" }]).checks[0];
+    expect(running).toMatchObject({ state: "pending", queued: false, startedAt: "2026-10-27T10:01:00Z" });
   });
 
   it("keeps no pipeline distinct from success", () => {

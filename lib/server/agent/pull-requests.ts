@@ -782,8 +782,9 @@ export async function syncRepoPullRequests(opts: {
   // commits, new checks and fresh timeline entries, a new title alone only the
   // header and the conversation. State-only drift already reconciles below; the
   // broadcast is per-part, so a row that only flipped state stays quiet here.
-  // Fire-and-forget, like every `pr-live` emitter: a failed broadcast never
-  // fails the sweep.
+  // Scheduled through `afterOrNow`, like every `pr-live` emitter: the sweep
+  // does not wait for it, a failed broadcast never fails it, and the platform
+  // still keeps the invocation alive until it is sent.
   for (const { observation, outcome } of applied) {
     if (!outcome?.applied || !observation.before) continue;
     const input = observation.input;
@@ -792,19 +793,19 @@ export async function syncRepoPullRequests(opts: {
     const metadataMoved = input.updatedAt != null &&
       Date.parse(input.updatedAt) > Date.parse(observation.before.updated_at);
     if (headMoved) {
-      void broadcastPrChangedByNumber({
+      afterOrNow(() => broadcastPrChangedByNumber({
         provider: opts.provider,
         repoFullName: opts.repoFullName,
         number: input.number,
         parts: ["pr", "conversation", "commits"],
-      });
+      }));
     } else if (metadataMoved) {
-      void broadcastPrChangedByNumber({
+      afterOrNow(() => broadcastPrChangedByNumber({
         provider: opts.provider,
         repoFullName: opts.repoFullName,
         number: input.number,
         parts: ["pr", "conversation"],
-      });
+      }));
     }
   }
 

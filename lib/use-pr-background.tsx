@@ -7,21 +7,18 @@ import { createPrDiffRuntimePreparation, type PreparedPrDiffRuntime } from "./pr
 import { useAllPullRequestsQuery } from "./use-agent-runs";
 import { createPrBackgroundRefresh } from "./pr-background-refresh";
 import { usePrLive } from "./use-pr-live";
-
-export const PR_BACKGROUND_LIMIT = 5;
+import { firstDisplayedOpenPullRequestIds, PR_BACKGROUND_LIMIT } from "./pull-request-sections";
 
 function LiveDetail({ prId }: { prId: string }) {
   usePrLive(prId);
   return null;
 }
 
-/** The account shell maintains five recent open PRs while the window is visible. */
+/** The account shell maintains the first five open PRs of the list while the window is visible. */
 export function PrBackgroundSync() {
   const client = useQueryClient();
   const { pullRequests } = useAllPullRequestsQuery();
-  const ids = [...new Set(pullRequests
-    .filter((pr) => pr.pr_state === "open" || pr.pr_state === "draft")
-    .map((pr) => pr.prId))].slice(0, PR_BACKGROUND_LIMIT);
+  const ids = firstDisplayedOpenPullRequestIds(pullRequests, PR_BACKGROUND_LIMIT);
   const identity = ids.join("|");
   const [diffRuntime, setDiffRuntime] = useState<PreparedPrDiffRuntime | null>(null);
   const refresh = useRef<ReturnType<typeof createPrBackgroundRefresh> | null>(null);

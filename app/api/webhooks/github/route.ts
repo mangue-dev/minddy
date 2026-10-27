@@ -108,12 +108,16 @@ import type { PrActionEventType } from "@/lib/pr-events";
  * too much forge for the author of the gesture, absorbed by customer coalescing.
  *
  * INSTALLATION PREREQUISITES — events the GitHub App subscribes to
- * (App settings page). None require permission beyond Pull
- * requests already granted; without them, the event is never delivered:
+ * (App settings, "Permissions & events"). Without them, the event is never
+ * delivered. GitHub only lists an event once the App holds its permission:
  * `issue_comment`, `pull_request_review_comment` — comments, otherwise
  * the corresponding activity lines do not appear;
  * `pull_request_review_thread` — the resolution of a live thread;
- * `check_run`, `check_suite`, `status`, `deployment_status` — the live CI.
+ * `issues`, `issue_dependencies` — the issue sync (Issues permission);
+ * `check_run`, `check_suite` (Checks), `status` (Commit statuses),
+ * `deployment_status` (Deployments) — the live CI and deployment card.
+ * `check_suite` alone is not enough: GitHub Actions sends it only when the
+ * suite completes, so checks in progress move live only with `check_run`.
  *
  * Anti-duplicate: minddy in-app actions (merge/close/request changes)
  * are already drawn on the road side with the precise HUMAN actor. Their webhook echo is
@@ -1010,10 +1014,17 @@ export async function POST(request: NextRequest) {
       await handleIssues(JSON.parse(rawBody));
     }
   } catch (err) {
-    // Best effort: we still pay so that GitHub does not re-deliver.
+    // Best effort: we still answer 200, since the delivery is already marked
+    // and a re-delivery would be absorbed as a replay. The log names the
+    // event and the delivery id, never the payload, so a lost update can be
+    // traced back to the delivery in the App's settings (MIN-817).
     console.error(
-      `[webhooks/github] ${event} handling failed:`,
-      (err as Error).message,
+      "[webhooks/github] handling_failed",
+      JSON.stringify({
+        event,
+        delivery: request.headers.get("x-github-delivery"),
+        error: (err as Error).message,
+      }),
     );
   }
 

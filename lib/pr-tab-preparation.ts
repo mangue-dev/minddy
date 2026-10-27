@@ -12,6 +12,8 @@ import { adjacentProjectDestination } from "./project-navigation-working-set";
 import { pullRequestAccountRetryAt } from "./pull-request-query";
 import { createNavigationWorkingSet } from "./navigation-working-set";
 import { createProjectBootstrapPair, ProjectBootstrapLimitError } from "./project-bootstrap-api";
+import { firstDisplayedOpenPullRequestIds, PR_BACKGROUND_LIMIT } from "./pull-request-sections";
+import type { PullRequestListItem } from "./agent-api";
 
 const PASSIVE_SHELL_READS = new Set([
   ["me", "summary"], ["me", "triage-counts"], ["me", "smart-assign-warnings"],
@@ -40,8 +42,9 @@ function isAccountForgeList(query: Pick<Query, "queryKey">): boolean {
 
 /** Recent visible detail activities precede optional lists for old pinned PRs. */
 function recentActivityQueries(client: QueryClient) {
-  const list = client.getQueryData<{ pullRequests: { prId: string; pr_state: string }[] }>(allPullRequestsQueryOptions().queryKey);
-  const recent = [...new Set((list?.pullRequests ?? []).filter((pr) => ["open", "draft"].includes(pr.pr_state)).map((pr) => pr.prId))].slice(0, 5);
+  const list = client.getQueryData<{ pullRequests: PullRequestListItem[] }>(allPullRequestsQueryOptions().queryKey);
+  // The same cohort as the shell's background sync (`PrBackgroundSync`).
+  const recent = firstDisplayedOpenPullRequestIds(list?.pullRequests ?? [], PR_BACKGROUND_LIMIT);
   return recent.flatMap((id) => {
     const detail = client.getQueryState<{ pr: unknown }>(["pull-request", id]);
     return detail?.status === "success" && detail.data?.pr ? prActivityPreparationQueries(id) : [];

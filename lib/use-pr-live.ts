@@ -42,6 +42,15 @@ import {
  request */
 const INVALIDATE_COALESCE_MS = 500;
 
+/**
+ * A second read, later (MIN-817). Right after a webhook the forge API can
+ * still return the previous state — mergeability and checks are computed
+ * asynchronously — and the first reread then settles on it with nothing to
+ * correct it. One follow-up per key, pushed back by each new message, so a
+ * burst still ends in a single late read.
+ */
+export const INVALIDATE_FOLLOW_UP_MS = 4_000;
+
 interface Listener {
   onChanged: (parts: ReturnType<typeof parsePrLiveParts>) => void;
 }
@@ -99,11 +108,18 @@ function subscribePr(prId: string, listener: Listener): () => void {
             for (const l of fresh.listeners) l.onChanged(parts);
           });
           channel.on("broadcast", { event: "rekey" }, signalRealtimeRekey);
-          channel.subscribe();
+          channel.subscribe((status, error) => {
+            // The polling net still covers the PR, but a channel that never
+            // joins must be visible: it is why live updates go missing.
+            if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+              console.warn("[pr-live] subscribe_failed", status, error?.message ?? "");
+            }
+          });
           fresh.channel = channel;
           fresh.topic = topic;
-        } catch {
+        } catch (error) {
           // Forge-backed queries refresh on focus and remain authoritative.
+          console.warn("[pr-live] subscribe_failed", (error as Error)?.message ?? "");
         }
       })();
     };
@@ -134,8 +150,14 @@ export function usePrLive(prId: string | null, enabled = true) {
     // Coalescing in TRAILS, like the provider's bridge: the first message
     // program the invalidation, those in the window go up in it.
     const timers = new Map<string, ReturnType<typeof setTimeout>>();
+    const followUps = new Map<string, ReturnType<typeof setTimeout>>();
     const invalidate = (key: QueryKey) => {
       const hash = JSON.stringify(key);
+      clearTimeout(followUps.get(hash));
+      followUps.set(hash, setTimeout(() => {
+        followUps.delete(hash);
+        void queryClient.invalidateQueries({ queryKey: key });
+      }, INVALIDATE_FOLLOW_UP_MS));
       if (timers.has(hash)) return;
       timers.set(
         hash,
@@ -154,8 +176,9 @@ export function usePrLive(prId: string | null, enabled = true) {
 
     return () => {
       stop();
-      for (const t of timers.values()) clearTimeout(t);
+      for (const t of [...timers.values(), ...followUps.values()]) clearTimeout(t);
       timers.clear();
+      followUps.clear();
     };
   }, [prId, enabled, queryClient]);
 }
