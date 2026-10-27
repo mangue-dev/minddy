@@ -97,3 +97,45 @@ it("keeps a line that wraps in the compact row on its own row, without flipping 
   expect(editor().textContent).toBe("Summarize the open triage");
   expect(compact(editor())).toBe(false);
 });
+
+it("folds an expanded placeholder back once the controls leave it room again", async () => {
+  // The controls take 160 px of the 260 px row while Numo replies, then 80 px.
+  const geometry = { trail: 120 };
+  const observers: Array<() => void> = [];
+  vi.stubGlobal("ResizeObserver", class {
+    constructor(callback: () => void) { observers.push(callback); }
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  });
+  const textRoom = () => 260 - 40 - geometry.trail - 20;
+  vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(function (this: HTMLElement) {
+    if (this.className.includes("[grid-area:lead]")) return 40;
+    if (this.className.includes("[grid-area:trail]")) return geometry.trail;
+    return 0;
+  });
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (this: HTMLElement) {
+    return this.getAttribute("role") === "textbox" ? (compact(this) ? textRoom() : 240) : 260;
+  });
+  // The 150 px placeholder wraps in the compact row whenever it lacks room.
+  vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockImplementation(function (this: HTMLElement) {
+    return this.getAttribute("role") === "textbox" && compact(this) && textRoom() < 150 ? 44 : 22;
+  });
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+    font: "", measureText: () => ({ width: 150 }),
+  } as unknown as CanvasRenderingContext2D);
+  vi.spyOn(window, "getComputedStyle").mockReturnValue({
+    font: "14px sans-serif", lineHeight: "22px", paddingLeft: "0px", paddingRight: "0px",
+  } as CSSStyleDeclaration);
+  await act(async () => {
+    root.render(createElement(TooltipProvider, {
+      children: createElement(ChatInput, { onSend: vi.fn(), hideAttach: true }),
+    }));
+  });
+  expect(compact(editor())).toBe(false);
+
+  // The reply ends: Stop gives way to the narrower Send.
+  geometry.trail = 40;
+  await act(async () => { for (const notify of observers) notify(); });
+  expect(compact(editor())).toBe(true);
+});

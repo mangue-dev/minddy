@@ -1053,11 +1053,15 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const expandedLayout = textWraps;
     const expandedLayoutRef = useRef(expandedLayout);
     expandedLayoutRef.current = expandedLayout;
-    // What the compact row takes from the grid's width besides the text
-    // itself, measured while compact. Folding back compares the text with
-    // exactly the room it wrapped in: an estimate wider than that room let
-    // the two layouts disagree, and the composer flipped on every render.
-    const compactOverheadRef = useRef<number | null>(null);
+    // What the compact row takes from the grid's width besides the text and
+    // the controls (gaps and paddings), measured while compact. Folding back
+    // compares the text with exactly the room it wrapped in, minus the
+    // controls as they are NOW: an estimate wider than that room let the two
+    // layouts disagree, and room recorded with other controls (Stop while
+    // Numo replies) kept the composer expanded once they shrank.
+    const compactGapsRef = useRef<number | null>(null);
+    const controlsWidth = () =>
+      (leadControlsRef.current?.offsetWidth ?? 0) + (trailControlsRef.current?.offsetWidth ?? 0);
     const measureComposerLayout = useCallback(() => {
       const editor = editorRef.current;
       const grid = composerGridRef.current;
@@ -1069,7 +1073,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       if (!expandedLayoutRef.current) {
         const textRoom =
           editor.clientWidth - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0);
-        compactOverheadRef.current = grid.clientWidth - textRoom;
+        compactGapsRef.current = grid.clientWidth - textRoom - controlsWidth();
         setTextWraps(multiLine);
         return;
       }
@@ -1082,13 +1086,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       const textWidth = empty
         ? placeholderWidth(editor.getAttribute("aria-placeholder") ?? "", style)
         : range.getBoundingClientRect().width;
-      const compactRoom =
-        compactOverheadRef.current !== null
-          ? grid.clientWidth - compactOverheadRef.current
-          : grid.clientWidth -
-            (leadControlsRef.current?.offsetWidth ?? 0) -
-            (trailControlsRef.current?.offsetWidth ?? 0) -
-            24;
+      const compactRoom = grid.clientWidth - controlsWidth() - (compactGapsRef.current ?? 24);
       setTextWraps(multiLine || textWidth > compactRoom - 1);
     }, []);
     useEffect(() => {
@@ -1099,6 +1097,11 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       // changes the editor's size without an input event.
       const editorObserver = new ResizeObserver(() => measureComposerLayout());
       editorObserver.observe(editor);
+      // The controls change width on their own (Stop gives way to Send when
+      // a reply ends): the room they leave the text is weighed again.
+      for (const controls of [leadControlsRef.current, trailControlsRef.current]) {
+        if (controls) editorObserver.observe(controls);
+      }
       const contentObserver = new ResizeObserver(() => setSurfaceHeight(content.offsetHeight));
       contentObserver.observe(content);
       return () => {
