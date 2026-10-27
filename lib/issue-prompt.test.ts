@@ -328,19 +328,31 @@ describe("buildIssueCustomPrompt", () => {
 });
 
 describe("buildIssueCommentsPrompt", () => {
-  const followUp = { count: 3, since: "2026-10-26T09:30:00.000Z" };
+  const followUp = { count: 3, since: "2026-10-26T09:30:00.000Z", threads: [] };
+  const threaded = { ...followUp, threads: ["c-root-1", "c-root-2"] };
 
   it("names the new comments and when the agent last spoke, without inlining them", () => {
     const prompt = buildIssueCommentsPrompt(input, followUp);
-    expect(prompt).toContain("Address the new comments on this minddy issue: 3 new comments were posted after your last comment (2026-10-26T09:30:00.000Z).");
+    expect(prompt).toContain("Address the new comments on this minddy issue: 3 new comments are waiting for your answer.");
     expect(prompt).toContain("<identifier>MIN-42</identifier>");
-    expect(prompt).toContain("written after 2026-10-26T09:30:00.000Z");
+    expect(prompt).toContain("written after your last comment (2026-10-26T09:30:00.000Z)");
     expect(prompt).toContain("They are not copied into this prompt.");
     expect(prompt).not.toContain("<comments");
+    expect(prompt).not.toContain("parent_comment_id");
   });
 
   it("uses the singular for one comment", () => {
-    expect(buildIssueCommentsPrompt(input, { ...followUp, count: 1 })).toContain("1 new comment was posted");
+    expect(buildIssueCommentsPrompt(input, { ...followUp, count: 1 })).toContain("1 new comment is waiting");
+  });
+
+  it("points at the agent's threads and asks to answer inside them", () => {
+    const prompt = buildIssueCommentsPrompt(input, threaded);
+    expect(prompt).toContain("in the threads under comments `c-root-1`, `c-root-2`");
+    expect(prompt).toContain("any other comment written after your last comment (2026-10-26T09:30:00.000Z)");
+    expect(prompt).toContain("answer each reply inside its thread");
+    expect(prompt).toContain("`parent_comment_id`");
+    expect(buildIssueCommentsPrompt(input, { ...threaded, threads: ["c-root-1"] }))
+      .toContain("in the thread under comment `c-root-1`");
   });
 
   it("asks for an answering comment and leaves the status alone", () => {

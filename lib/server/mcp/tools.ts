@@ -273,6 +273,9 @@ const CORE_MESSAGES: Record<
     `This project has reached the ${params?.limit ?? "issue"} issue limit of its ` +
     "owner's plan. The owner must upgrade the plan or free up issues — retrying " +
     "will not help.",
+  commentNotFound: () =>
+    "parent_comment_id names no comment of this issue. Use the id of a comment " +
+    "returned by minddy_get_issue for the same issue.",
 };
 
 interface CoreFailure {
@@ -2814,7 +2817,8 @@ export function registerMinddyTools(
         "The timeline shows the agent as the author (this API " +
         "key's name with an '(mcp)' marker), not the key's owner. To attach a " +
         "resource to the comment, call minddy_add_resource with the returned " +
-        "comment id.",
+        "comment id. To answer a comment, reply INSIDE its thread by passing " +
+        "parent_comment_id; a new root comment leaves the thread unanswered.",
       inputSchema: z.object({
         project_id: PROJECT_ID,
         issue: ISSUE_REF,
@@ -2824,6 +2828,15 @@ export function registerMinddyTools(
           .describe(
             "Markdown, SHORT: a few sentences or short bullets, 1000 characters " +
               "at most, no headings.",
+          ),
+        parent_comment_id: z
+          .string()
+          .uuid()
+          .optional()
+          .describe(
+            "Reply INSIDE an existing thread of this issue: the id of any " +
+              "comment from minddy_get_issue (a reply lands in its root's " +
+              "thread). Omit to post a new root comment.",
           ),
       }),
       annotations: WRITE,
@@ -2838,6 +2851,7 @@ export function registerMinddyTools(
         issueId: ref.issue.id,
         actorId: scope.userId,
         body: args.body,
+        parentId: args.parent_comment_id ?? null,
         mcpKeyId: scope.keyId,
       });
       if (!result.ok) return coreFail(result);

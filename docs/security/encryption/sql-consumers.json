@@ -2697,7 +2697,7 @@
       "functionReferences": []
     },
     "issue_comment_follow_ups(uuid[])": {
-      "sha256": "a8a01cd5c1adf2da570c8278247eb52073dc74132d09c94420c35029ef1342f9",
+      "sha256": "eeb2dc15cac804a26bb6a6f446308d6c3e553f629d190a5657102a75da2fe15b",
       "securityDefiner": false,
       "configuration": [
         "search_path=\"\""

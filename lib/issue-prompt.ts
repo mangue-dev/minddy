@@ -1,3 +1,4 @@
+import type { CommentFollowUp } from "@/lib/comment-follow-up";
 import { parsePlan, type PlanProgress } from "@/lib/plan";
 import { issueIdentifier } from "@/lib/issue-constants";
 import type { Issue, IssueRelationType } from "@/lib/types";
@@ -277,7 +278,7 @@ const ACTION_INSTRUCTIONS = {
   verify:
     "Compare the actual implementation with the issue, its plan and its comments, where decisions and departures from the plan are recorded. Check tasks marked done, missed callers and surfaces, regressions, edge cases and security-sensitive behavior. Where code and plan disagree, say which is right. Fix only defects you can confirm from the code, within this issue's scope, and verify each fix with the repository's relevant checks. Report suspected problems separately instead of changing working code, and state what you could not check.",
   comments:
-    "People commented on this issue after your last comment, possibly on its linked pull request. Read every comment written since then and address each one: make the changes it asks for, answer its questions, and say plainly when you disagree or when a request falls outside this issue. Follow the plan where it is still accurate. Run the repository's relevant checks for what you change. Report how you handled each new comment, what changed and what remains.",
+    "People commented on this issue after your last comment or replied in one of your threads, possibly on its linked pull request. Read every new comment and address each one: make the changes it asks for, answer its questions, and say plainly when you disagree or when a request falls outside this issue. Follow the plan where it is still accurate. Run the repository's relevant checks for what you change. Report how you handled each new comment, what changed and what remains.",
   custom:
     "The request above is the task: follow its scope rather than assuming the whole issue has to be implemented.",
   multi:
@@ -409,25 +410,34 @@ export function buildIssuePrompt(input: IssuePromptInput): string {
 /**
  * “Copy prompt for new comments” (MIN-801): an MCP agent commented on the
  * issue, and people — or the pull request mirror (MIN-802) — commented after
- * it. The prompt names how many comments and since when, but never inlines
- * them: the agent reads them through the MCP, or asks for them.
+ * it or replied in one of its threads (MIN-818). The prompt names how many
+ * comments, since when, and which threads hold replies, but never inlines
+ * them: the agent reads them through the MCP, or asks for them. Replies are
+ * answered inside their thread, which is also what settles them.
  */
 export function buildIssueCommentsPrompt(
   input: IssuePromptInput,
-  followUp: { count: number; since: string },
+  followUp: Pick<CommentFollowUp, "count" | "since" | "threads">,
 ): string {
   const hasPlan = parsePlan(input.issue.plan).tasks.length > 0;
-  const comments = followUp.count === 1 ? "1 new comment was" : `${followUp.count} new comments were`;
+  const comments = followUp.count === 1 ? "1 new comment is" : `${followUp.count} new comments are`;
+  const threads = followUp.threads.map((id) => `\`${id}\``).join(", ");
+  const read = threads
+    ? `Read the issue and its comments with \`minddy_get_issue\`. The new ones are the replies written after your last message in the ${followUp.threads.length === 1 ? "thread" : "threads"} under ${followUp.threads.length === 1 ? "comment" : "comments"} ${threads}, and any other comment written after your last comment (${followUp.since}). They are not copied into this prompt.`
+    : `Read the issue and its comments with \`minddy_get_issue\`: the new ones are those written after your last comment (${followUp.since}). They are not copied into this prompt.`;
+  const reply = threads
+    ? "When you are done, answer each reply inside its thread with `minddy_add_comment`, passing the thread's root comment id as `parent_comment_id`; answer the other new comments with one more `minddy_add_comment`. Say how you handled each new comment."
+    : "When you are done, reply with `minddy_add_comment`, saying how you handled each new comment.";
   return singleIssuePrompt(
     input,
     "comments",
-    `Address the new comments on this minddy issue: ${comments} posted after your last comment (${followUp.since}).`,
+    `Address the new comments on this minddy issue: ${comments} waiting for your answer.`,
     ACTION_INSTRUCTIONS.comments,
     {
       steps: [
-        `Read the issue and its comments with \`minddy_get_issue\`: the new ones are those written after ${followUp.since}. They are not copied into this prompt.`,
+        read,
         ...(hasPlan ? [`If you follow the plan, ${TRACK_TASKS}.`] : []),
-        "When you are done, reply with `minddy_add_comment`, saying how you handled each new comment.",
+        reply,
       ],
       fallback:
         "Without them, ask me to paste the new comments before changing anything: don't guess what they say, and don't claim that anything was saved in minddy.",
