@@ -42,6 +42,13 @@ const SWEEP = BASELINE_MIGRATION.split("_")[0];
 const POLICY_HELPERS =
   /^(can_access_.*|is_project_member|is_project_owner|can_watch_.*|.*_quota_ok)$/;
 
+/**
+ * MIN-822 revoked the anon and authenticated grants of every trigger definer
+ * (`20270109200086_definer_execute_grants.sql`). A trigger fires without an
+ * EXECUTE grant, so later trigger definers must give theirs up too.
+ */
+const TRIGGER_GRANTS_SWEEP = "20270109200086";
+
 /** The roles that a policy has the right to target. `public` and `anon`: never. */
 const ALLOWED_POLICY_ROLES = new Set(["authenticated", "service_role"]);
 
@@ -198,10 +205,11 @@ function definersAreClosed(files: Migration[]): string[] {
       if (!/\bset search_path\b/i.test(header)) {
         offenders.push(`${m.file} : ${name} n'a pas de \`set search_path\``);
       }
-      // A trigger function cannot be called by PostgREST, and the helpers of
-      // policy MUST remain executable by `authenticated` (revoke them
-      // RAISES the branch, which causes the entire policy to fall).
-      if (/returns trigger\b/i.test(header) || POLICY_HELPERS.test(name)) continue;
+      // Policy helpers MUST remain executable by `authenticated` (revoking
+      // them RAISES the branch, which causes the entire policy to fall).
+      // Trigger functions written before the MIN-822 sweep were closed by it.
+      if (POLICY_HELPERS.test(name)) continue;
+      if (/returns trigger\b/i.test(header) && m.version <= TRIGGER_GRANTS_SWEEP) continue;
       const closed = m.statements.some(
         (s) =>
           (new RegExp(`^revoke .*\\bon function (?:public\\.)?${name}\\b`, "i").test(s) &&
@@ -338,15 +346,17 @@ describe("schema guardrail — the mistakes it catches", () => {
     expect(definersAreClosed(later(floating))).toHaveLength(1);
   });
 
-  it("allows a trigger function and a policy helper through", () => {
+  it("requires a new trigger definer to give up its anon and authenticated grants", () => {
+    const trigger =
+      "create function public.notify() returns trigger language plpgsql security definer " +
+      "set search_path = public as $$ begin return new; end $$;";
+    expect(definersAreClosed(later(trigger))).toHaveLength(1);
     expect(
-      definersAreClosed(
-        later(
-          "create function public.notify() returns trigger language plpgsql security definer " +
-            "set search_path = public as $$ begin return new; end $$;"
-        )
-      )
+      definersAreClosed(later(trigger + "\nrevoke all on function public.notify() from public, anon, authenticated;"))
     ).toEqual([]);
+  });
+
+  it("allows a policy helper through", () => {
     expect(
       definersAreClosed(
         later(
