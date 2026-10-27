@@ -38,6 +38,7 @@ export const STRINGS_EN: PaletteStrings = {
   "form.noResults": "No results",
   "form.noActionPending": "No pending action",
   "form.actionFailed": "The action failed",
+  "form.current": "Current value",
 
   // Default item actions
   "itemActions.open": "Open",
@@ -74,6 +75,7 @@ export const STRINGS_FR: PaletteStrings = {
   "form.noResults": "Aucun résultat",
   "form.noActionPending": "Aucune action en attente",
   "form.actionFailed": "L'action a échoué",
+  "form.current": "Valeur actuelle",
 
   // Default item actions
   "itemActions.open": "Ouvrir",
@@ -99,6 +101,7 @@ export const STRINGS_DE: PaletteStrings = {
   "form.noResults": "Keine Ergebnisse",
   "form.noActionPending": "Keine ausstehende Aktion",
   "form.actionFailed": "Die Aktion ist fehlgeschlagen",
+  "form.current": "Aktueller Wert",
   "itemActions.open": "Öffnen",
 };
 
@@ -122,6 +125,7 @@ export const STRINGS_ES: PaletteStrings = {
   "form.noResults": "Sin resultados",
   "form.noActionPending": "Ninguna acción pendiente",
   "form.actionFailed": "La acción falló",
+  "form.current": "Valor actual",
   "itemActions.open": "Abrir",
 };
 
@@ -145,6 +149,7 @@ export const STRINGS_IT: PaletteStrings = {
   "form.noResults": "Nessun risultato",
   "form.noActionPending": "Nessuna azione in sospeso",
   "form.actionFailed": "L'azione non è riuscita",
+  "form.current": "Valore attuale",
   "itemActions.open": "Apri",
 };
 
@@ -168,6 +173,7 @@ export const STRINGS_PT: PaletteStrings = {
   "form.noResults": "Nenhum resultado",
   "form.noActionPending": "Nenhuma ação pendente",
   "form.actionFailed": "A ação falhou",
+  "form.current": "Valor atual",
   "itemActions.open": "Abrir",
 };
 

@@ -27,7 +27,7 @@
 // share it); this component is controlled via `open` / `onOpenChange`.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AiAutoRotateIcon as CycleIcon, Cancel01Icon, CircleIcon, ComputerIcon, Copy01Icon, Delete02Icon, GitPullRequestIcon, Link02Icon, MoonIcon, SignalFull01Icon, StickyNote02Icon, Sun01Icon, Target01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { AiAutoRotateIcon as CycleIcon, Cancel01Icon, CircleIcon, ComputerIcon, Copy01Icon, Delete02Icon, GitPullRequestIcon, Link02Icon, MoonIcon, SignalFull01Icon, StickyNote02Icon, Sun01Icon, Tag01Icon, Target01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import {
   useCallback,
   useMemo,
@@ -71,11 +71,23 @@ import { useBulkActions } from "@/lib/bulk-actions-context";
 import { useBulkPaletteMode } from "@/lib/use-bulk-palette-mode";
 import { displayName } from "@/lib/display-name";
 import { fetchIssueApi, updateIssueApi } from "@/lib/issues-api";
+import { setIssueCategoriesApi } from "@/lib/categories-api";
+import {
+  PALETTE_NONE,
+  assigneeOptions,
+  categoryOptions,
+  effortOptions,
+  objectiveOptions,
+  priorityOptions,
+  statusOptions,
+  toggleCategory,
+} from "@/components/command-palette-options";
 import { buildIssuePrompt } from "@/lib/issue-prompt";
 import { loadOneIssuePromptContext } from "@/lib/issue-prompt-context";
 import {
   issueWrites,
   mergeServerIssue,
+  patchIssueEverywhere,
 } from "@/lib/optimistic/issue-writes";
 import { patchSearchIndexIssue } from "@/lib/use-search-index";
 import {
@@ -89,9 +101,6 @@ import { useProjects } from "@/lib/projects-context";
 import { smartAssignFillsEmptyAssignee } from "@/lib/smart-assign-config";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
 import {
-  ALL_STATUSES,
-  PRIORITIES,
-  EFFORTS,
   type IssueStatus,
   type IssuePriority,
   type IssueEffort,
@@ -107,6 +116,7 @@ import { queueSettingsSectionFocus } from "@/lib/settings-section-focus";
 import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 import type {
+  Category,
   Issue,
   Member,
   SearchIndexIssue,
@@ -198,13 +208,13 @@ const priorityActionIcon = cachedIndicator<IssuePriority>(
  * current) or light line of the cross-project index (MIN-91). */
 type PaletteIssue = Issue | SearchIndexIssue;
 
-// "__none__" is the effort select's clear option: the issue's effort becomes unset.
+// PALETTE_NONE is the effort select's clear option: the issue's effort becomes unset.
 function effortFromPalette(value: unknown): IssueEffort | null {
-  return value === "__none__" ? null : (value as IssueEffort);
+  return value === PALETTE_NONE ? null : (value as IssueEffort);
 }
 
 function effortPaletteLabel(value: unknown, noneLabel: string): string {
-  return value === "__none__" ? noneLabel : String(value).toUpperCase();
+  return value === PALETTE_NONE ? noneLabel : String(value).toUpperCase();
 }
 
 /** Only board rows have `category_ids` (added by mapIssueRow) —
@@ -313,6 +323,16 @@ export function CommandPalette({
     for (const c of projectCategories) map.set(c.id, c.name);
     return map;
   }, [searchIndex, projectCategories]);
+
+  // Categories of the TICKET project, in settings order (both lists are read
+  // by position): the live list of the current project, else the index.
+  const categoriesForProject = useCallback(
+    (projectId: string): Category[] => {
+      if (projectId === currentProjectId && projectCategories.length > 0) return projectCategories;
+      return searchIndex?.categories[projectId] ?? [];
+    },
+    [currentProjectId, projectCategories, searchIndex]
+  );
 
   // Members of the DU TICKET project — the palette now lists tickets for
   // all projects, so the assignee can no longer come from the URL project.
@@ -576,12 +596,7 @@ export function CommandPalette({
             ...selectField(
               "status",
               tIssueUI("changeStatusAria"),
-              ALL_STATUSES.map((s) => ({
-                value: s.value,
-                label: tStatus(s.value),
-                icon: <StatusIndicator status={s.value} className="size-4" />,
-                description: s.value === issue.status ? "•" : undefined,
-              }))
+              statusOptions(tStatus, { current: issue.status })
             ),
             onSubmit: (values) =>
               update(
@@ -603,12 +618,7 @@ export function CommandPalette({
             ...selectField(
               "priority",
               tIssueUI("changePriorityAria"),
-              PRIORITIES.map((p) => ({
-                value: p.value,
-                label: tPriority(p.value),
-                icon: <PriorityIndicator priority={p.value} className="size-4" />,
-                description: p.value === issue.priority ? "•" : undefined,
-              }))
+              priorityOptions(tPriority, { current: issue.priority })
             ),
             onSubmit: (values) =>
               update(
@@ -621,9 +631,8 @@ export function CommandPalette({
 
         // — Effort —
         // Triangle: the board's effort glyph (EffortIndicator = triangle +
-        // letter). The full indicator would not fit in this 16 px slot,
-        // and the options do not carry any on the cards either — the letter
-        // (XS…XL) IS the information.
+        // letter). The full indicator would not fit in this 16 px slot; the
+        // options carry the triangle alone, as in the card's picker.
         actions.push({
           id: "issue.effort",
           label: tIssueUI("changeEffortAria"),
@@ -634,18 +643,7 @@ export function CommandPalette({
             ...selectField(
               "effort",
               tIssueUI("changeEffortAria"),
-              [
-                {
-                  value: "__none__",
-                  label: tField("effortNone"),
-                  description: issue.effort === null ? "•" : undefined,
-                },
-                ...EFFORTS.map((e) => ({
-                  value: e.value,
-                  label: e.label,
-                  description: e.value === issue.effort ? "•" : undefined,
-                })),
-              ]
+              effortOptions(tField("effortNone"), { current: issue.effort })
             ),
             onSubmit: (values) =>
               update(
@@ -657,6 +655,11 @@ export function CommandPalette({
         });
 
         // — Assigned —
+        // Smart Assign fills an empty assignee here (MIN-811).
+        const smartAssign = smartAssignFillsEmptyAssignee(
+          projects.find((project) => project.id === issue.project_id)?.smart_assign_enabled,
+          issue.status,
+        );
         actions.push({
           id: "issue.assignee",
           label: tIssueUI("changeAssigneeAria"),
@@ -664,31 +667,21 @@ export function CommandPalette({
           category: "secondary",
           priority: 10,
           requiresForm: {
-            ...selectField("assignee", tIssueUI("changeAssigneeAria"), [
-              {
-                value: "__none__",
-                // Smart Assign fills an empty assignee here (MIN-811).
-                label: tField(
-                  smartAssignFillsEmptyAssignee(
-                    projects.find((project) => project.id === issue.project_id)?.smart_assign_enabled,
-                    issue.status,
-                  )
-                    ? "smartAssign"
-                    : "unassigned",
-                ),
-              },
-              ...membersForProject(issue.project_id).map((m) => ({
-                value: m.user_id,
-                label: displayName(m),
-                description: m.user_id === issue.assignee_id ? "•" : undefined,
-              })),
-            ]),
+            ...selectField(
+              "assignee",
+              tIssueUI("changeAssigneeAria"),
+              assigneeOptions(
+                membersForProject(issue.project_id),
+                { label: tField(smartAssign ? "smartAssign" : "unassigned"), smartAssign },
+                { current: issue.assignee_id }
+              )
+            ),
             onSubmit: (values) =>
               update(
                 issue,
                 {
                   assignee_id:
-                    values.assignee === "__none__"
+                    values.assignee === PALETTE_NONE
                       ? null
                       : (values.assignee as string),
                 },
@@ -712,24 +705,19 @@ export function CommandPalette({
           category: "secondary",
           priority: 9,
           requiresForm: {
-            ...selectField("objective", tIssueUI("changeObjectiveAria"), [
-              {
-                value: "__none__",
-                label: tField("noObjective"),
-                description: issue.objective_id === null ? "•" : undefined,
-              },
-              ...projectObjectives.map((objective) => ({
-                value: objective.id,
-                label: objective.name,
-                description: objective.id === issue.objective_id ? "•" : undefined,
-              })),
-            ]),
+            ...selectField(
+              "objective",
+              tIssueUI("changeObjectiveAria"),
+              objectiveOptions(projectObjectives, tField("noObjective"), {
+                current: issue.objective_id,
+              })
+            ),
             onSubmit: (values) =>
               update(
                 issue,
                 {
                   objective_id:
-                    values.objective === "__none__"
+                    values.objective === PALETTE_NONE
                       ? null
                       : (values.objective as string),
                 },
@@ -737,6 +725,63 @@ export function CommandPalette({
               ),
           },
         });
+
+        // — Categories — a multi-value field in a single-select form: choosing
+        // a category toggles it, and the form returns to search so another one
+        // can follow. Index rows carry no category set; the project's cached
+        // tickets usually do, otherwise the ticket is read before the write.
+        const projectCategoryList = categoriesForProject(issue.project_id);
+        const knownCategoryIds = isFullIssue(issue)
+          ? issue.category_ids
+          : queryClient
+              .getQueryData<Issue[]>(["issues", issue.project_id])
+              ?.find((row) => row.id === issue.id)?.category_ids;
+        if (projectCategoryList.length > 0) {
+          actions.push({
+            id: "issue.categories",
+            label: tIssueUI("editCategoriesAria"),
+            icon: Tag01Icon,
+            category: "secondary",
+            priority: 8,
+            requiresForm: {
+              ...selectField(
+                "category",
+                tIssueUI("editCategoriesAria"),
+                categoryOptions(projectCategoryList, knownCategoryIds)
+              ),
+              onSubmit: async (values): Promise<ActionResult> => {
+                let current = knownCategoryIds;
+                try {
+                  current ??= (await fetchIssueApi(issue.id)).category_ids;
+                } catch (err) {
+                  toast.error((err as Error).message);
+                  return { success: false, closeMenu: false };
+                }
+                const categoryId = values.category as string;
+                const next = toggleCategory(current, categoryId);
+                const handle = issueWrites.begin({
+                  kind: "patch",
+                  id: issue.id,
+                  patch: { category_ids: next },
+                });
+                patchIssueEverywhere(queryClient, issue.project_id, issue.id, { category_ids: next });
+                try {
+                  await setIssueCategoriesApi(issue.id, next);
+                } catch (err) {
+                  issueWrites.fail(handle);
+                  patchIssueEverywhere(queryClient, issue.project_id, issue.id, { category_ids: current });
+                  throw err;
+                }
+                // The PUT returns no row: the written set is the truth, and
+                // realtime reconciles the rest.
+                issueWrites.settle(handle);
+                const name = projectCategoryList.find((c) => c.id === categoryId)?.name ?? "";
+                toast.success(`${tIssueUI("editCategoriesAria")} → ${name}`);
+                return { success: true, closeMenu: false };
+              },
+            },
+          });
+        }
 
         // — Copy the prompt (the ⇧P of the board: XML agent + auto-start MIN-20) —
         actions.push({
@@ -823,7 +868,7 @@ export function CommandPalette({
         return actions;
       },
     };
-  }, [queryClient, membersForProject, projects, user, categoryNameById, searchIndex, tIssueUI, tStatus, tPriority, tField, tAction]);
+  }, [queryClient, membersForProject, categoriesForProject, projects, user, categoryNameById, searchIndex, tIssueUI, tStatus, tPriority, tField, tAction]);
 
   const entityProvider = useMemo(
     () =>
@@ -896,7 +941,7 @@ export function CommandPalette({
                   value: o.value,
                   label: o.label,
                   icon: <HugeiconsIcon icon={o.icon} className="size-4" />,
-                  description: o.value === theme ? "•" : undefined,
+                  selected: o.value === theme,
                 })),
               },
             ],
@@ -1145,11 +1190,7 @@ export function CommandPalette({
                 ...selectField(
                   "status",
                   tIssueUI("changeStatusAria"),
-                  ALL_STATUSES.map((s) => ({
-                    value: s.value,
-                    label: tStatus(s.value),
-                    icon: <StatusIndicator status={s.value} className="size-4" />,
-                  }))
+                  statusOptions(tStatus)
                 ),
                 onSubmit: (values) =>
                   update(
@@ -1171,11 +1212,7 @@ export function CommandPalette({
                 ...selectField(
                   "priority",
                   tIssueUI("changePriorityAria"),
-                  PRIORITIES.map((p) => ({
-                    value: p.value,
-                    label: tPriority(p.value),
-                    icon: <PriorityIndicator priority={p.value} className="size-4" />,
-                  }))
+                  priorityOptions(tPriority)
                 ),
                 onSubmit: (values) =>
                   update(
@@ -1197,10 +1234,7 @@ export function CommandPalette({
                 ...selectField(
                   "effort",
                   tIssueUI("changeEffortAria"),
-                  [
-                    { value: "__none__", label: tField("effortNone") },
-                    ...EFFORTS.map((e) => ({ value: e.value, label: e.label })),
-                  ]
+                  effortOptions(tField("effortNone"))
                 ),
                 onSubmit: (values) =>
                   update(
@@ -1248,19 +1282,20 @@ export function CommandPalette({
                 ...selectField(
                   "objective",
                   tIssueUI("changeObjectiveAria"),
-                  [
-                    { value: "__none__", label: tField("noObjective") },
-                    ...(req.objectives ?? []).map((o) => ({
-                      value: o.id,
-                      label: o.name,
-                    })),
-                  ]
+                  // Picker order (MIN-785): the selection is single-project here.
+                  objectiveOptions(
+                    orderObjectives(
+                      req.objectives ?? [],
+                      queryClient.getQueryData<Issue[]>(["issues", req.objectives?.[0]?.project_id]) ?? []
+                    ),
+                    tField("noObjective")
+                  )
                 ),
                 onSubmit: (values) =>
                   update(
                     {
                       objective_id:
-                        values.objective === "__none__"
+                        values.objective === PALETTE_NONE
                           ? null
                           : (values.objective as string),
                     },
@@ -1278,18 +1313,16 @@ export function CommandPalette({
               icon: UserCircleIcon,
               category: "primary",
               requiresForm: {
-                ...selectField("assignee", tIssueUI("changeAssigneeAria"), [
-                  { value: "__none__", label: tField("unassigned") },
-                  ...req.members.map((m) => ({
-                    value: m.user_id,
-                    label: displayName(m),
-                  })),
-                ]),
+                ...selectField(
+                  "assignee",
+                  tIssueUI("changeAssigneeAria"),
+                  assigneeOptions(req.members, { label: tField("unassigned") })
+                ),
                 onSubmit: (values) =>
                   update(
                     {
                       assignee_id:
-                        values.assignee === "__none__"
+                        values.assignee === PALETTE_NONE
                           ? null
                           : (values.assignee as string),
                     },
@@ -1302,7 +1335,7 @@ export function CommandPalette({
         return [];
       },
     };
-  }, [bulkRequest, tIssueUI, tStatus, tPriority, tField, tPr]);
+  }, [bulkRequest, queryClient, tIssueUI, tStatus, tPriority, tField, tPr]);
 
   const providers = useMemo(
     () => [issueProvider, entityProvider, themeProvider, bulkFieldProvider],
