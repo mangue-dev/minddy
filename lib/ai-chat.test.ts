@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   alternateOutputTokenBody,
+  anthropicModelReasoning,
   aiChatProviderHeaders,
   repairRejectedAiChatBody,
   translateAiChatRequest,
@@ -59,16 +60,19 @@ describe("translateAiChatRequest", () => {
     expect(body).not.toHaveProperty("reasoning_effort");
   });
 
-  it("translates Anthropic reasoning through the compatibility layer", () => {
-    const body = translateAiChatRequest({ ...base, model: "claude-sonnet-5" }, "anthropic");
-    expect(body).toMatchObject({
-      // Lifted so the hidden adaptive thinking cannot consume the answer.
-      max_completion_tokens: 16_000,
-      thinking: { type: "adaptive" },
-      output_config: { effort: "high" },
-    });
-    expect(body).not.toHaveProperty("reasoning");
-    expect(body).not.toHaveProperty("reasoning_effort");
+  it("never sends adaptive thinking through the compatibility layer (MIN-826)", () => {
+    // The endpoint answers 400 "Adaptive thinking is not available via the
+    // OpenAI compatibility endpoint" (checked against the API, 2026-10-27).
+    for (const model of ["claude-sonnet-5", "claude-opus-5-5", "claude-opus-4-7", "claude-haiku-5-5"]) {
+      for (const effort of ["low", "medium", "high", "xhigh", "max"] as const) {
+        const body = translateAiChatRequest({ ...base, model, reasoning: { effort } }, "anthropic");
+        expect(body).toMatchObject({ max_completion_tokens: 1234 });
+        expect(body).not.toHaveProperty("thinking");
+        expect(body).not.toHaveProperty("output_config");
+        expect(body).not.toHaveProperty("reasoning");
+        expect(body).not.toHaveProperty("reasoning_effort");
+      }
+    }
   });
 
   it("selects Anthropic reasoning settings by model family", () => {
@@ -77,7 +81,7 @@ describe("translateAiChatRequest", () => {
         { ...base, model: "claude-opus-4-6", reasoning: { effort: "medium" } },
         "anthropic",
       ),
-    ).toMatchObject({ thinking: { type: "adaptive" } });
+    ).toMatchObject({ thinking: { type: "enabled", budget_tokens: 1233 } });
     expect(
       translateAiChatRequest(
         { ...base, model: "claude-haiku-4-5", reasoning: { effort: "low" } },
@@ -125,91 +129,30 @@ describe("translateAiChatRequest", () => {
     ).toMatchObject({ thinking: { type: "disabled" } });
   });
 
-  it("lowers Claude 5.5 families to their cheapest effort when reasoning is off", () => {
+  it("keeps Claude 5.5 families on their default when reasoning is off", () => {
     // Claude Opus 5.5 / Sonnet 5.5 reject `thinking: {type: "disabled"}` with
-    // a 400 at every effort: "off" keeps thinking implicit and asks for the
-    // cheapest effort instead of the model's own default.
+    // a 400: "off" sends nothing, the model keeps its always-on thinking.
     for (const model of ["claude-opus-5-5", "claude-sonnet-5-5"]) {
-      const body = translateAiChatRequest(
-        { ...base, model, reasoning: { effort: "off" } },
-        "anthropic",
-      );
-      expect(body).not.toHaveProperty("thinking");
-      expect(body).toMatchObject({ output_config: { effort: "low" } });
-    }
-  });
-
-  it("sends the chosen effort to adaptive Claude families (MIN-826)", () => {
-    // The compatibility layer ignores `reasoning_effort`; without
-    // `output_config.effort` the picker had no effect on these models.
-    for (const [effort, sent] of [
-      ["minimal", "low"],
-      ["medium", "medium"],
-      ["xhigh", "xhigh"],
-      ["max", "max"],
-    ] as const) {
       expect(
         translateAiChatRequest(
-          { ...base, model: "claude-opus-5-5", reasoning: { effort } },
+          { ...base, model, reasoning: { effort: "off" } },
           "anthropic",
         ),
-      ).toMatchObject({ thinking: { type: "adaptive" }, output_config: { effort: sent } });
+      ).not.toHaveProperty("thinking");
     }
-    // Claude 4.6 predates `xhigh`: the level folds down, never up.
-    expect(
-      translateAiChatRequest(
-        { ...base, model: "claude-opus-4-6", reasoning: { effort: "xhigh" } },
-        "anthropic",
-      ),
-    ).toMatchObject({ output_config: { effort: "high" } });
-    // A manual-budget family keeps its budget and receives no effort.
-    expect(
-      translateAiChatRequest(
-        { ...base, model: "claude-haiku-4-5", reasoning: { effort: "low" } },
-        "anthropic",
-      ),
-    ).not.toHaveProperty("output_config");
-    // Other providers never receive the Anthropic field.
-    expect(translateAiChatRequest({ ...base, model: "claude-opus-5-5" }, "openrouter"))
-      .not.toHaveProperty("output_config");
   });
 
-  it("leaves room for hidden thinking in the output ceiling", () => {
-    const numoRound = { ...base, maxOutputTokens: 6144, reasoning: { effort: "medium" as const } };
-    expect(
-      translateAiChatRequest({ ...numoRound, model: "claude-opus-5-5" }, "anthropic")
-        .max_completion_tokens,
-    ).toBe(16_000);
-    // Claude 5 thinks by default even when no reasoning is requested.
-    expect(
-      translateAiChatRequest(
-        { model: "claude-sonnet-5", messages: [], maxOutputTokens: 256 },
-        "anthropic",
-      ).max_completion_tokens,
-    ).toBe(16_000);
-    // Disabled thinking and older families keep the requested ceiling.
-    expect(
-      translateAiChatRequest(
-        { ...numoRound, model: "claude-opus-5", reasoning: { effort: "off" } },
-        "anthropic",
-      ).max_completion_tokens,
-    ).toBe(6144);
-    expect(
-      translateAiChatRequest({ ...numoRound, model: "claude-haiku-4-5" }, "anthropic")
-        .max_completion_tokens,
-    ).toBe(6144);
-    expect(
-      translateAiChatRequest({ ...numoRound, model: "claude-opus-5-5" }, "openrouter")
-        .max_completion_tokens,
-    ).toBe(6144);
-    // A larger ceiling is never lowered.
-    expect(
-      translateAiChatRequest(
-        { ...numoRound, maxOutputTokens: 32_000, model: "claude-opus-5-5" },
-        "anthropic",
-      ).max_completion_tokens,
-    ).toBe(32_000);
+  it("offers only the reasoning levels that change an Anthropic request", () => {
+    // Adaptive families ignore every effort field on this endpoint.
+    expect(anthropicModelReasoning("claude-opus-5-5")).toEqual({ efforts: ["medium"], mandatory: true });
+    expect(anthropicModelReasoning("claude-sonnet-5")).toEqual({ efforts: ["medium"], mandatory: false });
+    expect(anthropicModelReasoning("claude-opus-4-7")).toEqual({ efforts: ["medium"], mandatory: false });
+    // Manual-budget and unknown families keep the generic levels.
+    expect(anthropicModelReasoning("claude-opus-4-6")).toBeUndefined();
+    expect(anthropicModelReasoning("claude-haiku-4-5-20251001")).toBeUndefined();
+    expect(anthropicModelReasoning("claude-unknown")).toBeUndefined();
   });
+
 
   it("drops the sampling temperature that Claude 4.7 and later reject", () => {
     const request = { ...base, temperature: 0 };
@@ -420,20 +363,6 @@ describe("repairRejectedAiChatBody", () => {
         JSON.stringify({ model: "gpt-5.6-sol", reasoning_effort: "medium" }),
         "Function tools with reasoning_effort are not supported for gpt-5.6-sol",
       ),
-    ).toBeNull();
-  });
-
-  it("replays without output_config only when the provider names it", () => {
-    const body = JSON.stringify({
-      model: "claude-opus-5-5",
-      thinking: { type: "adaptive" },
-      output_config: { effort: "high" },
-    });
-    const repaired = repairRejectedAiChatBody(body, "output_config: Extra inputs are not permitted");
-    expect(JSON.parse(repaired!)).toEqual({ model: "claude-opus-5-5", thinking: { type: "adaptive" } });
-    expect(repairRejectedAiChatBody(body, "messages: field required")).toBeNull();
-    expect(
-      repairRejectedAiChatBody(JSON.stringify({ model: "x" }), "output_config: not permitted"),
     ).toBeNull();
   });
 });

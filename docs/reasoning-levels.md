@@ -25,11 +25,11 @@ declare one, and two of them are rarely the same:
 | `google/gemini-3.6-flash` | **`minimal`** · `low` · `medium` · `high`, `mandatory` |
 | `anthropic/claude-*` | he reasons, but publishes **no** enumeration |
 
-A **direct Anthropic BYOK** catalog has no index either. Its levels come from
-Anthropic's per-family table instead (`anthropicModelReasoning` in
-`lib/ai-chat.ts`): `low` to `max` on adaptive families (no `xhigh` on 4.6), and
-`mandatory` on the families that cannot disable thinking (Fable 5, Mythos 5,
-Claude Opus 5.5, Claude Sonnet 5.5).
+A **direct Anthropic BYOK** catalog has no index either, and its endpoint
+cannot set an effort on adaptive families (see below). `anthropicModelReasoning`
+in `lib/ai-chat.ts` therefore offers a single `medium` ("Standard") level on
+Claude 4.7+ and Claude 5, plus `off` where the family can disable thinking;
+4.5 and 4.6 keep the generic levels, which map to a real budget.
 | a model without an object `reasoning` | nothing: the selector remains inert |
 
 The internal vocabulary therefore expands to that of OpenRouter — `off`, `minimal`,
@@ -69,7 +69,7 @@ no longer carries a decision specific to a surface.
 | --- | --- | --- | --- |
 | **OpenRouter** (quota minddy + BYOK) | `openrouter.ai/api/v1/chat/completions` | `reasoning` | `reasoning: { effort: "low"\|"medium"\|"high", exclude: false }` |
 | **OpenAI** (BYOK) | `api.openai.com/v1/chat/completions` | `reasoning_effort` | `reasoning_effort: "low"\|"medium"\|"high"` |
-| **Anthropic** (BYOK) | `api.anthropic.com/v1/chat/completions` | `thinking` | `thinking: { type: "adaptive" }` + `output_config: { effort }` on current families; manual budget limited only when the family accepts it |
+| **Anthropic** (BYOK) | `api.anthropic.com/v1/chat/completions` | `thinking` | no field on adaptive families (model default); `disabled` at `off` where accepted; manual budget on 4.5 / 4.6 |
 | **Google / Gemini** (BYOK) | `…/v1beta/openai/chat/completions` | `reasoning_effort` | `reasoning_effort: "low"\|"medium"\|"high"` |
 | **Generic** (OpenAI-compatible) | base URL entered | *(none)* | **nothing, never** |
 
@@ -77,9 +77,8 @@ At `off`, no fields are sent to OpenRouter/OpenAI/Gemini/generic. On a
 Claude family that accepts it, the adapter explicitly sends
 `thinking: { type: "disabled" }`, because Claude 5 can reason by default.
 The families that refuse the field with a 400 (Fable 5, Mythos 5, Mythos
-Preview, Claude Opus 5.5, Claude Sonnet 5.5) keep thinking on and receive
-the cheapest effort, `output_config: { effort: "low" }`, since their own default
-(`medium` on Claude Opus 5.5) would ignore the choice. Claude Opus 5.5, Sonnet 5.5, Fable 5.1, and Mythos 5.1
+Preview, Claude Opus 5.5, Claude Sonnet 5.5) get no field at all: their
+default thinking stays on. Claude Opus 5.5, Sonnet 5.5, Fable 5.1, and Mythos 5.1
 also reject forced tool use on every request. The shared chat adapter downgrades forced `tool_choice` to `auto`
 on those families; non-forced choices remain unchanged. Earlier Fable 5 and
 Mythos 5 keep forced tool use. See the
@@ -151,24 +150,23 @@ assumption. We don't do it.
 
 ## Anthropic and Gemini particularities
 
-The OpenAI-compatible Anthropic layer ignores `reasoning_effort`, but accepts the
-Anthropic `thinking` setting. The adapter therefore chooses the mode according to
-the family: adaptive for current models, manual only on
-4.5/4.6 families who accept it when a fixed budget is requested. The budget
-manual always remains at least at 1024 and strictly under the output ceiling.
-An unknown family receives no experimental fields.
+The OpenAI-compatible Anthropic layer was checked against the API with a BYOK
+key (2026-10-27, MIN-826):
 
-On adaptive families, the chosen level travels as `output_config.effort`
-(MIN-826), folded to what the family accepts (`minimal` becomes `low`, `xhigh`
-becomes `high` on 4.6). The compatibility layer does not document this field;
-a 400 that names it is replayed once without it, at the model's default effort.
+- `thinking: { type: "adaptive" }` returns 400 "Adaptive thinking is not
+  available via the OpenAI compatibility endpoint", on every model. Sending it
+  made every Numo turn fail on Claude 4.7+ and Claude 5.
+- `reasoning_effort` and `output_config.effort` are accepted and ignored: an
+  invalid effort value passes, and `low` and `max` produce the same output.
+- `thinking: { type: "enabled", budget_tokens }` works on 4.5 / 4.6 and is
+  accepted without effect on later families.
+- `thinking: { type: "disabled" }` and `temperature` below 1 return 400 on
+  Claude Opus 5.5; `disabled` works on Claude Sonnet 5.
 
-Adaptive thinking counts against the output ceiling and this layer never
-streams it, so a ceiling sized for the visible answer can be consumed entirely
-by hidden thinking and end the round on `length` with no text. Whenever
-adaptive thinking runs (requested, or by default on Claude 5), the adapter
-lifts the ceiling to at least 16,000 tokens. It also drops `temperature` on
-Claude 4.7 and later, which reject any value below 1.
+The adapter therefore sends a manual budget only to 4.5 / 4.6 (at least 1024
+and strictly under the output ceiling), `disabled` at `off` where the family
+accepts it, and nothing otherwise. It drops `temperature` on Claude 4.7 and
+later. Effort control on adaptive families would need the native Messages API.
 
 Gemini instead documents `reasoning_effort` and its translation to
 `thinking_level`/`thinking_budget`. You should not send the field directly

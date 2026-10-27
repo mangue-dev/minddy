@@ -3,7 +3,6 @@ import {
   type AgentProviderId,
 } from "./agent-providers";
 import {
-  nearestReasoningLevel,
   reasoningRequestFields,
   reasoningTokenBudget,
   type ModelReasoning,
@@ -52,27 +51,19 @@ function isAdaptiveClaude(model: string): boolean {
   );
 }
 
-/** Claude 4.6 knows `max` but predates the `xhigh` effort level. */
+/** Claude 4.6: still accepts a manual thinking budget, and sampling fields. */
 function isClaude46(model: string): boolean {
   return /^claude-(?:opus|sonnet)-4-6(?:-|$)/i.test(model);
 }
 
 /**
  * Claude 4.7 and later return a 400 for any `temperature` below 1 through the
- * compatibility layer, so the sampling field is dropped on those families.
+ * compatibility layer ("`temperature` is deprecated for this model"), so the
+ * sampling field is dropped on those families.
  */
 function rejectsSamplingTemperature(model: string): boolean {
   return isAdaptiveClaude(model) && !isClaude46(model);
 }
-
-/**
- * Adaptive thinking is billed inside the output ceiling and the compatibility
- * layer never streams it. A ceiling sized for the visible answer alone lets
- * the hidden thinking consume it, and the round ends on `length` without a
- * word. Only the tokens actually generated are billed, so a generous floor
- * costs nothing on short answers.
- */
-const ADAPTIVE_CLAUDE_MIN_OUTPUT_TOKENS = 16_000;
 
 function isManualThinkingClaude(model: string): boolean {
   return /^claude-(?:opus|sonnet|haiku)-4-(?:5|6)(?:-|$)/i.test(model);
@@ -93,27 +84,19 @@ function isAlwaysThinkingClaude(model: string): boolean {
 }
 
 /**
- * What an Anthropic model accepts as effort, for the BYOK picker: the
- * compatibility layer publishes no capability index, so the levels come from
- * the documented per-family table. `undefined` leaves the picker on its
- * generic levels (manual-budget and unknown families).
+ * What the BYOK reasoning picker offers for an Anthropic model.
+ *
+ * The compatibility layer rejects adaptive thinking ("Adaptive thinking is not
+ * available via the OpenAI compatibility endpoint") and silently drops
+ * `reasoning_effort` and `output_config` (MIN-826, checked against the API).
+ * Adaptive families therefore run at their own default effort whatever the
+ * level: one "Standard" level, plus "off" where the family can disable
+ * thinking. Manual-budget families (4.5, 4.6) keep the generic levels, which
+ * map to a real budget. `undefined` = generic levels.
  */
 export function anthropicModelReasoning(model: string): ModelReasoning | undefined {
-  if (!isAdaptiveClaude(model)) return undefined;
-  const efforts: ReasoningLevel[] = isClaude46(model)
-    ? ["low", "medium", "high", "max"]
-    : ["low", "medium", "high", "xhigh", "max"];
-  return { efforts, mandatory: isAlwaysThinkingClaude(model) };
-}
-
-/**
- * The effort sent as `output_config.effort`. "off" on a family that cannot
- * disable thinking becomes the cheapest effort, which is what the selector
- * shows for those models.
- */
-function anthropicEffort(model: string, level: ReasoningLevel): ReasoningLevel {
-  const allowed = anthropicModelReasoning(model)?.efforts ?? [];
-  return nearestReasoningLevel(level === "off" ? "low" : level, allowed);
+  if (!isAdaptiveClaude(model) || isClaude46(model)) return undefined;
+  return { efforts: ["medium"], mandatory: isAlwaysThinkingClaude(model) };
 }
 
 function isGpt56(model: string): boolean {
@@ -154,27 +137,13 @@ function normalizeProviderToolChoice(
   }
 }
 
-/**
- * Adjusts a translated Anthropic body to the thinking that will actually run:
- * removes the sampling temperature the recent families reject, and lifts the
- * output ceiling whenever adaptive thinking is on (explicitly, or by default
- * on the Claude 5 families).
- */
-function normalizeAnthropicThinkingBody(
+/** Removes the sampling temperature that the recent Claude families reject. */
+function normalizeAnthropicSampling(
   body: Record<string, unknown>,
   provider: AgentProviderId,
-  outputTokenField: string,
 ): void {
   if (provider !== "anthropic" || typeof body.model !== "string") return;
-  const model = body.model;
-  if (rejectsSamplingTemperature(model)) delete body.temperature;
-  const thinking = (body.thinking as { type?: unknown } | undefined)?.type;
-  const thinks = isAdaptiveClaude(model) && thinking !== "disabled" &&
-    (thinking === "adaptive" || /^claude-[a-z]+-5(?:-|$)/i.test(model));
-  const ceiling = body[outputTokenField];
-  if (thinks && typeof ceiling === "number" && ceiling < ADAPTIVE_CLAUDE_MIN_OUTPUT_TOKENS) {
-    body[outputTokenField] = ADAPTIVE_CLAUDE_MIN_OUTPUT_TOKENS;
-  }
+  if (rejectsSamplingTemperature(body.model)) delete body.temperature;
 }
 
 function anthropicReasoningFields(params: {
@@ -186,27 +155,16 @@ function anthropicReasoningFields(params: {
   if (params.effort === "off") {
     // Fable 5 / Mythos 5 / Mythos Preview and the Claude 5.5 families refuse
     // `thinking: {type: "disabled"}` (400): reasoning cannot be turned off on
-    // these families, so the cheapest effort is the closest honest request.
-    if (isAlwaysThinkingClaude(params.model)) {
-      return { output_config: { effort: anthropicEffort(params.model, "off") } };
-    }
+    // these families, so we send no field and they keep their default.
+    if (isAlwaysThinkingClaude(params.model)) return {};
     return isAdaptiveClaude(params.model) || isManualThinkingClaude(params.model)
       ? { thinking: { type: "disabled" } }
       : {};
   }
 
-  // An explicit budget keeps manual mode on families who accept it.
-  // Without a fixed budget, the current recommended path is adaptive mode.
-  // The compatibility layer ignores `reasoning_effort`: adaptive families
-  // only receive the chosen depth through `output_config.effort`.
-  if (params.fixedTokens === undefined && isAdaptiveClaude(params.model)) {
-    return {
-      thinking: { type: "adaptive" },
-      ...(params.effort
-        ? { output_config: { effort: anthropicEffort(params.model, params.effort) } }
-        : {}),
-    };
-  }
+  // The compatibility layer rejects `thinking: {type: "adaptive"}` with a 400
+  // and drops every effort field, so families without a manual budget get no
+  // field and think at their own default. 4.5 / 4.6 keep a manual budget.
   if (!isManualThinkingClaude(params.model)) return {};
 
   const requested =
@@ -302,7 +260,7 @@ export function translateAiChatRequest(
   );
 
   normalizeProviderToolChoice(body, provider);
-  normalizeAnthropicThinkingBody(body, provider, profile.outputTokenField);
+  normalizeAnthropicSampling(body, provider);
 
   if (profile.usageAccounting) body.usage = { include: true };
   if (request.stream && profile.streamUsage) {
@@ -359,10 +317,9 @@ export function alternateOutputTokenBody(
 }
 
 /**
- * Repairs the only compatibility 400s that we know how to replay without risk:
- * a denied cap alias, a rejected Anthropic `output_config`, or GPT-5.6 Chat
- * Completions that denies the couple function tools + reasoning. Any other
- * error keeps the initial body.
+ * Repairs the only two compatibility 400s that we know how to replay without risk:
+ * a denied cap alias, or GPT-5.6 Chat Completions that denies the couple
+ * function tools + reasoning. Any other error keeps the initial body.
  */
 export function repairRejectedAiChatBody(
   bodyText: string,
@@ -370,21 +327,6 @@ export function repairRejectedAiChatBody(
 ): string | null {
   const outputAliasRepair = alternateOutputTokenBody(bodyText, errorText);
   if (outputAliasRepair !== null) return outputAliasRepair;
-
-  // The Anthropic compatibility layer does not document `output_config`. If
-  // it ever names the field in a 400, the turn replays at the model's default
-  // effort rather than failing.
-  if (/output_config/i.test(errorText)) {
-    try {
-      const body = JSON.parse(bodyText) as Record<string, unknown>;
-      if (Object.hasOwn(body, "output_config")) {
-        delete body.output_config;
-        return JSON.stringify(body);
-      }
-    } catch {
-      return null;
-    }
-  }
 
   if (
     !/function tools[^\n]{0,160}reasoning_effort[^\n]{0,160}(?:not supported|unsupported)/i.test(
@@ -429,7 +371,6 @@ export function translateLegacyAiChatBody(
   delete body.reasoning;
   delete body.reasoning_effort;
   delete body.thinking;
-  delete body.output_config;
   if (reasoningEffort) {
     Object.assign(
       body,
@@ -444,7 +385,7 @@ export function translateLegacyAiChatBody(
   }
 
   normalizeProviderToolChoice(body, provider);
-  normalizeAnthropicThinkingBody(body, provider, profile.outputTokenField);
+  normalizeAnthropicSampling(body, provider);
 
   if (profile.usageAccounting && body.usage === undefined) body.usage = { include: true };
   // This border is only used by the opencode client, which streams all its rounds.
