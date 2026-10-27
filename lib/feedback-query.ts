@@ -16,7 +16,8 @@ export function feedbackQueryOptions(projectId: string, filters: FeedbackListFil
       const response = await fetch(`/api/projects/${projectId}/feedback${scope}`, { signal, cache: "no-store" });
       const data = await response.json().catch(() => null);
       if (!response.ok) throw new Error(data?.error || "Unable to load feedback");
-      return data as { posts: TeamFeedbackListItem[]; board_enabled: boolean };
+      // `total` counts the whole project, not the filtered `posts`.
+      return data as { posts: TeamFeedbackListItem[]; total?: number; board_enabled: boolean };
     },
   };
 }

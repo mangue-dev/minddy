@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { requireProjectMember } from "@/lib/server/feedback/team-guard";
 import { parseFeedbackListFilters } from "@/lib/feedback-list-filters";
-import { listTeamFeedback } from "@/lib/server/feedback/team-queries";
+import { countTeamFeedback, listTeamFeedback } from "@/lib/server/feedback/team-queries";
 import { createFeedbackPost } from "@/lib/server/feedback/posts";
 import { getBoardForProject } from "@/lib/server/feedback/boards";
 import { upsertFeedbackUser } from "@/lib/server/feedback/identity";
@@ -32,11 +32,14 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     const t = await getTranslations("ApiErrors");
     return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
   }
-  const [posts, board] = await Promise.all([
+  // `total` ignores the filters: the list opens on open statuses, and a
+  // project whose requests are all settled must not read as an empty one.
+  const [posts, total, board] = await Promise.all([
     listTeamFeedback(id, { filters }),
+    countTeamFeedback(id),
     getBoardForProject(id),
   ]);
-  return NextResponse.json({ posts, board_enabled: board?.enabled ?? false });
+  return NextResponse.json({ posts, total, board_enabled: board?.enabled ?? false });
 }
 
 export async function POST(request: NextRequest, { params }: RouteContext) {
