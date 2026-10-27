@@ -141,6 +141,26 @@ describe("MCP tool capabilities", () => {
     expect(h.addComment).toHaveBeenCalledTimes(1);
   });
 
+  it("forwards a thread reply's parent to the comment core", async () => {
+    h.access.mockResolvedValue(accessFor("member"));
+    const parent = "00000000-0000-4000-8000-000000000001";
+    await call("minddy_add_comment", { issue: "MIN-1", body: "Done", parent_comment_id: parent });
+    expect(h.addComment).toHaveBeenCalledWith(expect.objectContaining({ parentId: parent }));
+
+    await call("minddy_add_comment", { issue: "MIN-1", body: "Done" });
+    expect(h.addComment).toHaveBeenLastCalledWith(expect.objectContaining({ parentId: null }));
+  });
+
+  it("explains a reply to a comment of another issue", async () => {
+    h.access.mockResolvedValue(accessFor("member"));
+    h.addComment.mockResolvedValue({ ok: false, status: 404, errorKey: "commentNotFound" });
+    const { body } = await call("minddy_add_comment", {
+      issue: "MIN-1", body: "Done", parent_comment_id: "00000000-0000-4000-8000-000000000002",
+    });
+    expect(body.error.code).toBe("not_found");
+    expect(body.error.message).toContain("minddy_get_issue");
+  });
+
   it("hides integration summaries from readers", async () => {
     h.access.mockResolvedValue(accessFor("reader", true));
     expect((await call("minddy_list_integrations")).body.error.code).toBe("forbidden");

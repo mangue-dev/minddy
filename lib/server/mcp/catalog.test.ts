@@ -337,6 +337,14 @@ describe("catalogue MCP — un objectif se lit et se commente", () => {
  * sentence. This is the only thing preventing `minddy_update_page` from becoming the
  * default path again, like `minddy_update_issues` had been for blueprints.
  */
+describe("MCP catalog — issue comment threads", () => {
+  it("lets an agent reply inside a thread of the issue (MIN-818)", () => {
+    expect(param("minddy_add_comment", "parent_comment_id").required).toBe(false);
+    expect(param("minddy_add_comment", "parent_comment_id").description).toContain("minddy_get_issue");
+    expect(tool("minddy_add_comment").description).toContain("parent_comment_id");
+  });
+});
+
 describe("catalogue MCP — les pages", () => {
   it("expose les outils, lectures annoncées sans effet de bord", () => {
     for (const name of [
