@@ -650,6 +650,10 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   });
   const posts = useMemo(() => listData?.posts ?? [], [listData]);
   const boardEnabled = listData?.board_enabled ?? false;
+  // The list is scoped on the server (open statuses by default): an empty
+  // `posts` can hide settled requests. Only the project-wide count says that
+  // nothing was collected at all (MIN-815).
+  const hasFeedback = posts.length > 0 || (listData?.total ?? 0) > 0;
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -952,7 +956,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
                   on the state, whatever it may be. Nothing at all says so
                   plainly: there is no feedback yet. */
               title={
-                posts.length === 0
+                !hasFeedback
                   ? t("emptyTitle")
                   : query.trim()
                     ? tCommon("noFilterMatch")
@@ -968,7 +972,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
               }
               className="py-10"
             >
-              {posts.length === 0 ? (
+              {!hasFeedback ? (
                 // Nothing collected yet: the first gesture, as in the pane.
                 canWrite ? (
                   <Button size="sm" onClick={() => setCreateOpen(true)}>
@@ -1031,7 +1035,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
 
       {/* ── Detail ──────────────────────────── ──────────────────────────── */}
       <div data-comment-surface className="min-h-0 min-w-0 flex-1">
-        {isPending || selectedId || posts.length > 0 ? (
+        {isPending || selectedId || hasFeedback ? (
           selectedId ? (
           <FeedbackDetail
             key={selectedId}

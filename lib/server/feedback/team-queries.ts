@@ -262,6 +262,20 @@ export function listFeedbackForObjective(projectId: string, objectiveId: string)
   return listLinkedFeedback(projectId, objectiveId, "objective_id");
 }
 
+/**
+ * Every live, canonical request of a project, whatever the list filters. The
+ * team list is scoped on the server (open statuses by default), so an empty
+ * list does not mean an empty project: this count tells the two apart.
+ */
+export async function countTeamFeedback(projectId: string) {
+  const { count, error } = await feedbackPostStore(getServiceClient())
+    .select("id", { count: "exact", head: true })
+    .eq("project_id", projectId)
+    .is("deleted_at", null).is("merged_into_id", null);
+  if (error || count === null || count === undefined) throw new Error("Unable to count team feedback");
+  return count;
+}
+
 /** Count canonical, live requests without fetching encrypted content or a capped list. */
 export async function countFeedbackForObjective(projectId: string, objectiveId: string) {
   const { count, error } = await feedbackPostStore(getServiceClient())

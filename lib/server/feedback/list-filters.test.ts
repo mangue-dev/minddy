@@ -87,6 +87,15 @@ describe("team feedback list filters", () => {
       .toEqual({ visibility: ["public", "private"] });
   });
 
+  it("returns the project-wide total beside a status-scoped list", async () => {
+    state.client = client([post("shipped", { status: "shipped" }), post("declined", { status: "declined" }),
+      post("trashed", { deleted_at: "2026-10-11" }), post("merged", { merged_into_id: "shipped" }),
+      post("foreign", { project_id: "other" })]);
+    const response = await GET(new NextRequest("https://minddy.example/api/projects/project/feedback?statuses=open&statuses=planned"), { params: Promise.resolve({ id: "project" }) });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ posts: [], total: 2, board_enabled: true });
+  });
+
   it("accepts repeated optional identifiers and rejects invalid values before querying", async () => {
     expect(parseFeedbackListFilters(new URLSearchParams(`objective=${goal}&objective=none&source=api&statuses=shipped`)))
       .toEqual({ objective: [goal, null], source: ["api"], statuses: ["shipped"] });

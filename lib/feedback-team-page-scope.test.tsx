@@ -166,8 +166,9 @@ vi.mock("@/components/app-content-header", async () => { const { createElement }
   const Box = ({ children }: { children?: React.ReactNode }) => createElement("div", null, children);
   return { AppContentHeader: Box, APP_CONTENT_HEADER_LEADING_INSET: "" }; });
 vi.mock("@/components/empty-scene", async () => { const { createElement } = await import("react");
-  const Box = ({ children }: { children?: React.ReactNode }) => createElement("div", null, children);
-  return { EmptyScene: Box }; });
+  const Scene = ({ title, children }: { title: string; children?: React.ReactNode }) =>
+    createElement("div", { "data-testid": "empty-scene", "data-title": title }, children);
+  return { EmptyScene: Scene }; });
 vi.mock("@/components/markdown", async () => { const { createElement } = await import("react");
   const Box = ({ children }: { children?: React.ReactNode }) => createElement("div", null, children);
   return { Markdown: Box }; });
@@ -221,6 +222,7 @@ const settle = () => act(async () => { await new Promise((resolve) => setTimeout
 // than one short tick on a loaded CI worker; wait for the observable outcome.
 const settleUntil = async (done: () => boolean) => { for (let tick = 0; tick < 200 && !done(); tick++) await settle(); };
 const selectedTitle = () => container.querySelector<HTMLTextAreaElement>('[data-testid="feedback-title"]')?.value;
+const sceneTitles = () => [...container.querySelectorAll('[data-testid="empty-scene"]')].map((scene) => scene.getAttribute("data-title"));
 const render = (hidden = false) => act(() => root.render(createElement(Host, { hidden })));
 function seedNormal(filters: FeedbackListFilters = normalFilters) {
   client.setQueryData(feedbackQueryOptions(projectId, filters).queryKey, {
@@ -358,6 +360,22 @@ describe("FeedbackTeamPage requested-post query scope", () => {
     expect(selectedTitle()).toBe("Feedback 2");
     expect(state.replace).toHaveBeenCalledWith(pathname);
     expect(requests).toEqual([]);
+  });
+
+  it("reads an empty open scope as filtered, not as a project without feedback", async () => {
+    client.setQueryData(feedbackQueryOptions(projectId, normalFilters).queryKey, { posts: [], total: 4, board_enabled: true });
+    await render(); await settle();
+    expect(sceneTitles()).toEqual(["FeedbackBoard.emptyUnresolved"]);
+    expect(container.textContent).toContain("FeedbackBoard.emptyShowAll");
+    expect(container.textContent).not.toContain("FeedbackBoard.emptyConfigure");
+  });
+
+  it("keeps the first-feedback scene when the project has none at all", async () => {
+    client.setQueryData(feedbackQueryOptions(projectId, normalFilters).queryKey, { posts: [], total: 0, board_enabled: true });
+    await render(); await settle();
+    expect(sceneTitles()).toEqual(["FeedbackBoard.emptyTitle", "FeedbackBoard.emptyTitle"]);
+    expect(container.textContent).toContain("FeedbackBoard.emptyConfigure");
+    expect(container.textContent).not.toContain("FeedbackBoard.emptyShowAll");
   });
 
   it("opens the composer once for ?new=1 and keeps the other parameters", async () => {
