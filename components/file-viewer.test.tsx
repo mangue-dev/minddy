@@ -251,3 +251,15 @@ it("highlights no item when the menu opens with the pointer (MIN-686)", async ()
   await key(document.querySelector('[role="menu"]')!, "ArrowUp");
   expect(document.activeElement).toBe(document.querySelectorAll('[role="menuitem"]')[items.length - 1]);
 });
+
+it("closes its actions menu when the open trigger is clicked again", async () => {
+  await render();
+  const trigger = document.querySelector<HTMLButtonElement>('button[aria-haspopup="menu"]')!;
+  await act(() => trigger.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 })));
+  expect(document.querySelector('[role="menu"]')).not.toBeNull();
+  // A browser moves focus to the pressed trigger before its click lands.
+  await act(() => trigger.focus());
+  await act(() => trigger.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 })));
+  expect(document.querySelector('[role="menu"]')).toBeNull();
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
+});

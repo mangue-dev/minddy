@@ -250,7 +250,10 @@ function FilePreviewActions({ close, downloadHref, fileName, onRemove, onRename 
       <HugeiconsIcon icon={MoreHorizontalIcon} className="size-5" aria-hidden />
     </Button>
     {expanded && <div ref={menu} id={menuId} role="menu" aria-label={t("actions")} tabIndex={-1}
-      onKeyDown={navigate} onBlur={event => { if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) setExpanded(false); }}
+      onKeyDown={navigate}
+      // Focus moving to the trigger is its own toggle: closing here first made
+      // that click reopen the menu instead of closing it.
+      onBlur={event => { if (event.relatedTarget && !container.current?.contains(event.relatedTarget)) setExpanded(false); }}
       className="absolute right-0 bottom-full z-10 mb-2 min-w-48 outline-none rounded-xl bg-popover p-2 text-popover-foreground shadow-md ring-1 ring-foreground/10">
       <a role="menuitem" tabIndex={-1} href={downloadHref} download={fileName} aria-disabled={downloading} onClick={download}
         className="flex min-h-10 items-center gap-2 rounded-sm px-2 text-sm hover:bg-accent focus:bg-accent focus:outline-none">
