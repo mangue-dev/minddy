@@ -10,8 +10,9 @@ import { afterOrNow } from "@/lib/server/after-safe";
  * write paths call these helpers, and the worker calls the write paths.
  */
 
-/** The properties Smart Fill can own — the migration's CHECK lists the same four. */
-export type SmartFillOwnedField = "priority" | "effort" | "category_ids" | "objective_id";
+/** The properties Smart Fill can own — the migrations' CHECK lists the same
+ * five (`title` since MIN-798, only when the author left it empty). */
+export type SmartFillOwnedField = "priority" | "effort" | "category_ids" | "objective_id" | "title";
 
 /** How long the title and description must rest before the pass runs. */
 export const REEVALUATION_DELAY_MS = 5 * 60_000;

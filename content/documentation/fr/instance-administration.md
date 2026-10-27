@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 10,
+  "revision": 11,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-27",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review)",
+    "version": "0.20.0 (MIN-747 release review); MIN-798 Smart Fill title model",
     "editions": [
       "self-hosted"
     ],
@@ -46,10 +46,10 @@
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 11,
+    "fact": "agent:claude-code (MIN-798 Smart-fill titles model paragraph checked against lib/ai-model-config.ts, lib/ai-surfaces.ts and lib/server/smart-fill-title.ts: automations group, fallback deepseek/deepseek-v4-flash, not answered by the decision model; no figure changed); agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:claude-code (fr MIN-798 Smart-fill titles model paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-27"
   },
   "related": [
     "authentication-and-email",
@@ -66,7 +66,7 @@
       "src": "/documentation/fr/instance-administration-overview.png",
       "alt": "Vue d’ensemble administrateur avec indicateurs agrégés des comptes, de l’activité, de l’accueil et du contenu.",
       "caption": "Vue d’ensemble affiche les indicateurs agrégés de l’instance ; la capture provient d’une instance de démonstration. Finances y apparaît, car une clé OpenRouter gérée y est configurée.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -83,7 +83,7 @@
       "src": "/documentation/fr/instance-administration-models.png",
       "alt": "Réglages des modèles IA et du raisonnement de l’instance.",
       "caption": "Modèles règle les valeurs par défaut et les usages dédiés. La capture montre la configuration existante ; aucun réglage de modèle ou de fournisseur n’a été modifié.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -119,6 +119,8 @@ La console regroupe Vue d'ensemble, Utilisateurs, Modèles et, selon la configur
 Dans **Modèles**, section **Automatisations**, **Modèle de décision** fixe le modèle unique qui répond à toutes les décisions IA de l’instance : Smart Fill, Smart Assign et la relecture des retours. Il n’existe aucun choix par projet, par utilisateur ou par fonctionnalité. Le sélecteur ne propose que les modèles OpenRouter qui publient la capacité de décision ; les modèles de conversation, d’embedding et de transcription n’y apparaissent jamais. L’enregistrement teste le candidat par une décision représentative. Un modèle qui n’est pas un modèle de décision, refuse la requête, renvoie une réponse invalide ou dépasse 5 secondes est refusé, et le modèle actuel reste utilisé. Quand le catalogue ne peut pas être chargé, tout changement est refusé. Une instance auto-hébergée sans IA gérée n’a pas de catalogue plateforme et conserve le modèle par défaut, Jev.
 
 Les nouvelles décisions utilisent le modèle enregistré en une minute environ sur chaque processus serveur. Quand le modèle échoue ou répond sous le seuil de confiance, la décision retombe sur le modèle LLM propre à la fonctionnalité, comme avant. Le seuil a été calibré sur Jev et les autres modèles de décision répartissent leur confiance autrement : après un changement, vérifiez l’accord par modèle dans la vue de base de données `ai_decision_evaluations_weekly`. Les lignes d’usage enregistrent le modèle qui a répondu.
+
+**Titres Smart-fill**, dans **Modèles**, section **Automatisations**, choisit le modèle qui rédige le titre d’un ticket créé sans titre, et le réécrit lors d’une réévaluation. C’est une tâche de rédaction, pas une décision : le modèle de décision n’y répond jamais. La valeur par défaut est `deepseek/deepseek-v4-flash` ; quelqu’un attend le ticket, choisissez donc un modèle rapide.
 
 ## Configurer les relations Smart Fill {#smart-fill-relations}
 

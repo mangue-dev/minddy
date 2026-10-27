@@ -6,9 +6,11 @@ import {
   resolveSmartFill,
   resolveSmartFillRelations,
   resolveSmartFillScope,
+  resolveSmartFillTitle,
   SMART_FILL_CREATED_META_KEY,
   SMART_FILL_META_KEY,
   SMART_FILL_RELATIONS_META_KEY,
+  SMART_FILL_TITLE_META_KEY,
   SMART_FILL_TRIAGE_META_KEY,
 } from "./smart-fill";
 
@@ -80,5 +82,20 @@ describe("Smart Fill relations and issue indexing (MIN-717)", () => {
     expect(resolveIssueIndexing(undefined)).toBe(true);
     expect(resolveIssueIndexing({ [SMART_FILL_META_KEY]: false })).toBe(true);
     expect(resolveIssueIndexing({ [ISSUE_INDEXING_META_KEY]: false })).toBe(false);
+  });
+});
+
+describe("resolveSmartFillTitle (MIN-798)", () => {
+  it("is enabled by default, and only an explicit false disables it", () => {
+    expect(resolveSmartFillTitle(undefined)).toBe(true);
+    expect(resolveSmartFillTitle({})).toBe(true);
+    expect(resolveSmartFillTitle({ [SMART_FILL_TITLE_META_KEY]: "false" })).toBe(true);
+    expect(resolveSmartFillTitle({ [SMART_FILL_TITLE_META_KEY]: false })).toBe(false);
+  });
+
+  it("keeps the master switch authoritative", () => {
+    expect(
+      resolveSmartFillTitle({ [SMART_FILL_META_KEY]: false }),
+    ).toBe(false);
   });
 });

@@ -112,7 +112,12 @@ vi.mock("@/lib/server/attachments", () => ({
 }));
 /** What Smart-fill responds to, when a test calls it. */
 let smartFillPatch: Record<string, unknown> = {};
-let smartFillPayer: { userId: string; scope: "created" | "triage" } | null = null;
+let smartFillPayer: { userId: string; scope: "created" | "triage"; title?: boolean } | null = null;
+let generatedTitle: string | null = null;
+vi.mock("@/lib/server/smart-fill-title", () => ({
+  generateIssueTitle: async () => generatedTitle,
+  fallbackIssueTitle: (description: string | null) => description?.split("\n")[0]?.trim() || null,
+}));
 vi.mock("@/lib/server/smart-fill", () => ({
   resolveSmartFillPayer: async () => smartFillPayer,
   runSmartFill: async () => smartFillPatch,
@@ -157,6 +162,7 @@ beforeEach(() => {
   afterCallbacks = [];
   smartFillPatch = {};
   smartFillPayer = null;
+  generatedTitle = null;
 });
 
 afterEach(() => vi.restoreAllMocks());
@@ -232,6 +238,47 @@ describe("createIssueForProject birth activity", () => {
     expect(ownershipRows).toEqual([
       { issue_id: "issue-1", project_id: "project-1", fields: ["priority", "effort", "objective_id"] },
     ]);
+  });
+
+  it("writes the title of an issue its author only described (MIN-798)", async () => {
+    smartFillPayer = { userId: "member-1", scope: "created", title: true };
+    generatedTitle = "PDF export leaves pages blank";
+
+    const result = await create({ title: "  ", description: "When I export a report\nMore" });
+
+    expect(result).toMatchObject({ ok: true, issue: { title: "PDF export leaves pages blank" } });
+    expect(eventRows.find((row) => row.field === "smart_fill")?.to_value).toBe("title");
+    expect(ownershipRows[0]?.fields).toContain("title");
+  });
+
+  it("falls back to the description's first line when no title is written", async () => {
+    smartFillPayer = { userId: "member-1", scope: "created", title: true };
+
+    const result = await create({ title: "", description: "When I export a report\nMore" });
+
+    expect(result).toMatchObject({ ok: true, issue: { title: "When I export a report" } });
+    expect(eventRows.find((row) => row.field === "smart_fill")).toBeUndefined();
+    expect(ownershipRows[0]?.fields).toContain("title");
+  });
+
+  it("still requires a title from an author who did not opt in", async () => {
+    smartFillPayer = { userId: "member-1", scope: "created", title: false };
+    await expect(create({ title: "", description: "Something" })).resolves.toMatchObject({
+      ok: false,
+      errorKey: "titleRequired",
+    });
+    smartFillPayer = { userId: "member-1", scope: "created", title: true };
+    await expect(create({ title: "", description: null })).resolves.toMatchObject({
+      ok: false,
+      errorKey: "titleRequired",
+    });
+    expect(eventRows).toEqual([]);
+  });
+
+  it("never owns a title the author wrote", async () => {
+    smartFillPayer = { userId: "member-1", scope: "created", title: true };
+    await create();
+    expect(ownershipRows[0]?.fields).not.toContain("title");
   });
 
   it("records no ownership when Smart Fill was not armed for the creation", async () => {

@@ -62,6 +62,7 @@
     "smartFillObjective": "l'objectif",
     "smartFillPriority": "la priorité",
     "smartFillProperties": "ses propriétés",
+    "smartFillTitle": "le titre",
     "smartFilled": "a rempli {fields}",
     "objectiveChanged": "a changé l'objectif : {from} → {to}",
     "dueDateChanged": "a changé l'échéance : {from} → {to}",
@@ -1880,6 +1881,7 @@
   },
   "IssueUI": {
     "titlePlaceholder": "Titre du ticket",
+    "titlePlaceholderSmartFill": "Titre du ticket (facultatif, Smart-fill le rédige)",
     "descriptionPlaceholder": "Ajoutez une description…",
     "issueDeletedToast": "Ticket déplacé vers la corbeille.",
     "deleteDialogTitle": "Déplacer « {title} » vers la corbeille ?",
@@ -1897,9 +1899,11 @@
     "smartFillChip": "Smart-fill",
     "smartFillOffHint": "Coupé pour ce ticket : vous renseignez ses propriétés et ses relations vous-même. Réactivez pour laisser Smart-fill le faire.",
     "smartFillOnHint": "Actif : Smart-fill lit le ticket, pose sa priorité, son effort, ses catégories et son objectif, puis le relie aux tickets liés une fois enregistré. Coupez pour les renseigner vous-même.",
+    "smartFillOnTitleHint": "Actif : Smart-fill lit le ticket, rédige son titre si vous le laissez vide, pose sa priorité, son effort, ses catégories et son objectif, puis le relie aux tickets liés une fois enregistré. Coupez pour les renseigner vous-même.",
     "smartFillPendingToast": "Smart-fill remplit le ticket, il apparaîtra dans quelques secondes.",
     "newIssueTitle": "Nouveau ticket",
     "createDescriptionPlaceholder": "Description du ticket",
+    "createDescriptionPlaceholderSmartFill": "Décrivez le ticket, Smart-fill lui donne un titre",
     "createMore": "En créer un autre",
     "createTicket": "Créer le ticket",
     "createIdentifier": "Créer {identifier}",
@@ -2801,6 +2805,8 @@
     "smartFillCreatedLabel": "Remplir les tickets créés",
     "smartFillTriageDesc": "Remplit les tickets en triage que vous possédez.",
     "smartFillTriageLabel": "Remplir les tickets en triage",
+    "smartFillWriteTitleLabel": "Rédiger les titres manquants",
+    "smartFillWriteTitleDesc": "Laissez vide le titre d'un ticket : Smart Fill le rédige à partir de la description, puis le met à jour après les modifications tant que vous ne le changez pas vous-même.",
     "smartFillReevaluateLabel": "Réévaluer les tickets modifiés",
     "smartFillReevaluateDesc": "Cinq minutes après la dernière modification du titre ou de la description d'un ticket, le relit et met à jour la priorité, l'effort, les catégories ou l'objectif que personne n'a définis à la main.",
     "smartFillRelationsLabel": "Relier les tickets liés",
@@ -4580,6 +4586,10 @@
       "smart_fill_model": {
         "label": "Modèle Smart-fill",
         "desc": "Lit le titre et la description d'un ticket neuf et remplit ses champs. Quelqu'un l'attend : prendre un modèle rapide."
+      },
+      "smart_fill_title_model": {
+        "label": "Titres Smart-fill",
+        "desc": "Rédige le titre d'un ticket créé sans titre, à partir de sa description. Quelqu'un l'attend : prendre un modèle rapide."
       },
       "issue_embedding_model": {
         "label": "Embeddings des tickets",

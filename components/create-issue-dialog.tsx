@@ -8,6 +8,7 @@ import { createUuid } from "@/lib/create-uuid";
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { cn } from "@/lib/utils";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
 import { SplitButton } from "@/components/ui/split-button";
@@ -78,7 +79,12 @@ import type {
   IssuePriority,
   IssueEffort,
 } from "@/lib/issue-constants";
-import { resolveSmartFill, resolveSmartFillRelations, resolveSmartFillScope } from "@/lib/smart-fill";
+import {
+  resolveSmartFill,
+  resolveSmartFillRelations,
+  resolveSmartFillScope,
+  resolveSmartFillTitle,
+} from "@/lib/smart-fill";
 import { smartFillFieldVisible, type SmartFillField } from "@/lib/smart-fill-fields";
 import type { RecurrenceCadence } from "@/lib/recurrence";
 import type {
@@ -229,6 +235,7 @@ export function CreateIssueDialog({
   const scopedCategories = inHomeProject ? categories : foreignCategories;
   const scopedObjectives = inHomeProject ? objectives : foreignObjectives;
   const [title, setTitle] = useState("");
+  const [titleFocused, setTitleFocused] = useState(false);
   const [description, setDescription] = useState("");
   /** The editor document of `description`, as last committed (MIN-728);
       cleared whenever the description is replaced from outside the editor. */
@@ -315,6 +322,20 @@ export function CreateIssueDialog({
   );
   const smartFillTouchedRef = useRef(false);
   const [smartFill, setSmartFill] = useState(smartFillDefault);
+  /**
+   * SMART FILL TITLE (MIN-798): unless the account turned it off, and while
+   * Smart Fill is on for this issue, the title may stay empty and the server
+   * writes it from the description. The title field stays where it is,
+   * editable as always; what changes says where to write without a tutorial:
+   * the caret opens in the description, the empty title shrinks so the
+   * description carries the form (it regains its size once focused or
+   * filled), both placeholders say who writes the title, and Create works
+   * with a description alone.
+   */
+  const writesTitle = smartFill && resolveSmartFillTitle(user?.user_metadata);
+  const titleRecedes = writesTitle && !titleFocused && title.trim() === "";
+  const hasDescription = description.trim() !== "";
+  const canSubmitText = title.trim() !== "" || (writesTitle && hasDescription);
   const showsField = (field: SmartFillField) =>
     smartFillFieldVisible(field, {
       smartFill,
@@ -621,7 +642,7 @@ export function CreateIssueDialog({
   // click still counts as a user gesture, before the request is awaited.
   const submit = async (keepOpen: boolean, copyIdentifier = false) => {
     const trimmed = title.trim();
-    if (!trimmed || submitting) return;
+    if (!canSubmitText || submitting) return;
     // An image still uploading has no address yet (MIN-728).
     if (imagesUploading) {
       toast.info(tPages("waitForUploads"));
@@ -702,7 +723,9 @@ export function CreateIssueDialog({
         setSmartFill(smartFillDefault);
         setCategoryIds([]);
         setOpenPicker(null);
-        titleRef.current?.focus();
+        // The remounted description editor takes the caret itself when
+        // Smart Fill writes the title.
+        if (!writesTitle) titleRef.current?.focus();
       } else {
         // Direct close — the draft just became an issue, nothing to guard.
         closeAndReset();
@@ -779,7 +802,7 @@ export function CreateIssueDialog({
   const createLabel = nextIdentifier
     ? t("createIdentifier", { identifier: nextIdentifier })
     : t("createTicket");
-  const createDisabled = submitting || numoBusy || !title.trim() || uploads.uploading;
+  const createDisabled = submitting || numoBusy || !canSubmitText || uploads.uploading;
   // A draft keeps finished uploads only, so it waits for those in flight.
   const saveDraftDisabled = submitting || numoBusy || uploads.uploading || !draftHasContent();
 
@@ -843,15 +866,21 @@ export function CreateIssueDialog({
                 id={titleId}
                 ref={arrowTitle.ref}
                 enterKeyHint={mobile ? "next" : undefined}
-                autoFocus={!mobile && !focusDescription}
-                required
+                autoFocus={!mobile && !focusDescription && !writesTitle}
+                required={!writesTitle}
                 value={title}
                 onChange={(e) => setTitle(arrowTitle.read(e))}
+                onFocus={() => setTitleFocused(true)}
+                onBlur={() => setTitleFocused(false)}
                 onKeyDown={(e) => {
                   titleBody.onTitleKeyDown(e, { submit: () => void submit(createMore), mobile });
                 }}
-                placeholder={t("titlePlaceholder")}
-                className="creation-title w-full title-field bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50 sm:text-2xl"
+                placeholder={writesTitle ? t("titlePlaceholderSmartFill") : t("titlePlaceholder")}
+                data-recedes={titleRecedes || undefined}
+                className={cn(
+                  "creation-title w-full title-field bg-transparent text-xl leading-tight font-semibold outline-none sm:text-2xl",
+                  titleRecedes ? "placeholder:text-muted-foreground/30" : "placeholder:text-muted-foreground/50",
+                )}
               />
               <div className="creation-field-label">{tField("description")}</div>
               <div ref={titleBody.bodyRef}>
@@ -859,7 +888,7 @@ export function CreateIssueDialog({
                 mentions={mentions}
                 key={editorKey}
                 onLeaveTop={titleBody.leaveBody}
-                autoFocus={focusDescription}
+                autoFocus={focusDescription || (!mobile && writesTitle)}
                 value={description}
                 document={draftDocument}
                 uploadScope={`projects/${activeProjectId}`}
@@ -877,7 +906,11 @@ export function CreateIssueDialog({
                 onEmptyChange={(empty) => {
                   editorNonEmptyRef.current = !empty;
                 }}
-                placeholder={t("createDescriptionPlaceholder")}
+                placeholder={
+                  writesTitle
+                    ? t("createDescriptionPlaceholderSmartFill")
+                    : t("createDescriptionPlaceholder")
+                }
                 className="creation-description mt-2 min-h-16"
               />
               </div>
@@ -997,6 +1030,7 @@ export function CreateIssueDialog({
                 {smartFillAvailable && (
                   <SmartFillCompact
                       fullWidth={mobile}
+                      writesTitle={resolveSmartFillTitle(user?.user_metadata)}
                       value={smartFill}
                       onChange={(value) => {
                         smartFillTouchedRef.current = true;

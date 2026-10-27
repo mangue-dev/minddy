@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 37,
-  "sourceRevision": 36,
+  "revision": 38,
+  "sourceRevision": 37,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-26",
+  "updatedAt": "2026-10-27",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations",
+    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -49,6 +49,7 @@
       "lib/smart-fill-fields.ts",
       "lib/server/smart-fill-reevaluation.ts",
       "lib/server/smart-fill-ownership.ts",
+      "lib/server/smart-fill-title.ts",
       "app/(app)/projects/[id]/triage/page.tsx",
       "components/triage/triage-page.tsx",
       "lib/smart-triage.ts",
@@ -121,10 +122,10 @@
     ]
   },
   "review": {
-    "revision": 37,
-    "fact": "agent:claude-code (MIN-804 sub-issues paragraph checked against lib/issue-hierarchy.ts, components/issue-card.tsx, components/relations-section.tsx and the enforce_one_level_subissues trigger: R and the right-click Relations entry offer Parent of / Sub-issue of only where the one-level rule allows, re-parenting moves the issue, a selection uses Sub-issue of; no figure changed); agent:/root/min776 (drafts paragraph checked against components/create-issue-dialog.tsx, components/objective-dialog.tsx and lib/use-held-draft.ts: closing keeps the form, reopening resumes it, two minutes after a close it becomes a draft, another context saves it first, and the split menu offers Save as draft; rest of the article unchanged since the MIN-778 review; no figure changed); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of create-an-issue-steps, issue-statuses-steps, issue-dependencies-steps, sub-issues-steps, implementation-plans-steps, import-issues-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:claude-code (es MIN-804 sub-issues paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:/root/min776 (es drafts paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-26"
+    "revision": 38,
+    "fact": "agent:claude-code (MIN-798 Smart-fill title section and preference bullet checked against lib/smart-fill.ts, lib/server/smart-fill-title.ts, lib/server/create-issue.ts, lib/server/smart-fill-reevaluation.ts, lib/server/update-issue.ts, components/create-issue-dialog.tsx and components/settings/account-smart-fill-section.tsx: on by default under the master switch, description focus, smaller empty title until focused or filled, and placeholders in the form, first-line fallback, ownership released by a manual edit, re-evaluation skipped for an editor who turned titles off; MCP requires a title; no figure changed); agent:claude-code (MIN-804 sub-issues paragraph checked against lib/issue-hierarchy.ts, components/issue-card.tsx, components/relations-section.tsx and the enforce_one_level_subissues trigger: R and the right-click Relations entry offer Parent of / Sub-issue of only where the one-level rule allows, re-parenting moves the issue, a selection uses Sub-issue of; no figure changed); agent:/root/min776 (drafts paragraph checked against components/create-issue-dialog.tsx, components/objective-dialog.tsx and lib/use-held-draft.ts: closing keeps the form, reopening resumes it, two minutes after a close it becomes a draft, another context saves it first, and the split menu offers Save as draft; rest of the article unchanged since the MIN-778 review; no figure changed); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of create-an-issue-steps, issue-statuses-steps, issue-dependencies-steps, sub-issues-steps, implementation-plans-steps, import-issues-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:claude-code (es MIN-798 Smart-fill title section with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-804 sub-issues paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:/root/min776 (es drafts paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-27"
   },
   "related": [
     "feedback",
@@ -169,7 +170,7 @@
       "src": "/documentation/es/new-issue.png",
       "alt": "Borrador sin enviar en el proyecto Aurora con título, descripción, propiedades que se pueden elegir manualmente y el botón Crear AUR-19.",
       "caption": "Describe el resultado esperado y elige las propiedades útiles antes de crear el ticket.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -186,7 +187,7 @@
       "src": "/documentation/es/triage-incoming.png",
       "alt": "Incidencia entrante de demostración AUR-19 con informe, propiedades y controles de duplicado, Rechazar y Aceptar.",
       "caption": "Lee el informe recibido antes de aceptarlo, rechazarlo o enlazar un duplicado.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -203,7 +204,7 @@
       "src": "/documentation/es/issue-statuses.png",
       "alt": "Los ocho estados del ticket en el selector, con el estado de backlog seleccionado.",
       "caption": "La marca indica el estado actual. Elige el que corresponda al estado real del trabajo.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -220,7 +221,7 @@
       "src": "/documentation/es/work-resources.png",
       "alt": "Diálogo para añadir un enlace con una dirección de contacto de ejemplo.",
       "caption": "Revisa el destino antes de añadir el recurso. Este enlace de ejemplo no se ha enviado.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -236,7 +237,7 @@
       "src": "/documentation/es/work-dependencies.png",
       "alt": "Búsqueda de una incidencia bloqueante por identificador.",
       "caption": "Elige el sentido de la relación antes de su destino. El selector se muestra sin enviar la relación.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -253,7 +254,7 @@
       "src": "/documentation/es/work-sub-issues.png",
       "alt": "Campo para crear una subincidencia en una incidencia principal de demostración.",
       "caption": "El campo crea una hija de esta incidencia; cada hija conserva su estado y conversación.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -270,7 +271,7 @@
       "src": "/documentation/es/work-implementation-plan.png",
       "alt": "Plan de demostración con dos tareas de trabajo completadas de seis.",
       "caption": "El plan guardado distingue pasos completados, activos y pendientes. Su progreso no demuestra que se ejecutara la tarea de código ficticia.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -287,7 +288,7 @@
       "src": "/documentation/es/issue-date-recurrence.png",
       "alt": "Selector de fecha en modo recurrente con vista previa semanal los domingos y hora opcional.",
       "caption": "El modo recurrente muestra la frecuencia semanal. Confirma la primera fecha antes de crear el ticket.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -303,7 +304,7 @@
       "src": "/documentation/es/import-issues-preview-workflow.png",
       "alt": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas.",
       "caption": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas. No se envió la importación; la planificación opcional con IA se bloqueó para la captura.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -320,7 +321,7 @@
       "src": "/documentation/es/file-preview.png",
       "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.",
       "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Cambiar nombre y Eliminar.",
-      "revision": 37,
+      "revision": 38,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -377,7 +378,7 @@ Si falla la creación o el guardado, conserva el texto, lee el error y comprueba
 Las preferencias de Smart Fill pertenecen a tu cuenta. Abre **Ajustes de la cuenta** → **Smart Fill**. Cada opción tiene su propia tarjeta:
 
 - En la tarjeta **Smart Fill**, **Activar Smart Fill** activa o desactiva Smart Fill para tu cuenta. Completa la prioridad, el esfuerzo, las categorías y el objetivo que falten; el estado, el responsable y la fecha límite siguen siendo cosa tuya. Los interruptores de las dos tarjetas siguientes dependen de él.
-- En **Incidencias que rellenar**, **Completar incidencias creadas** y **Completar incidencias en Clasificación** eligen qué incidencias nuevas completa: las que creas y las incidencias de triaje de las que eres responsable. **Reevaluar incidencias editadas**, activado por defecto, permite a Smart Fill [volver a leer una incidencia](#smart-fill-reevaluation) después de un cambio en su título o su descripción.
+- En **Incidencias que rellenar**, **Completar incidencias creadas** y **Completar incidencias en Clasificación** eligen qué incidencias nuevas completa: las que creas y las incidencias de triaje de las que eres responsable. **Reevaluar incidencias editadas**, activado por defecto, permite a Smart Fill [volver a leer una incidencia](#smart-fill-reevaluation) después de un cambio en su título o su descripción. **Escribir los títulos que falten**, activado por defecto, permite a Smart Fill [escribir el título](#smart-fill-title) de una incidencia que solo describes.
 - En **Incidencias relacionadas**, **Vincular incidencias relacionadas**, activado por defecto, permite a Smart Fill [añadir relaciones](#smart-fill-relations) después de guardar una incidencia.
 - En **Indexación de incidencias**, **Indexar incidencias**, activado por defecto e independiente de Smart Fill, convierte el título y la descripción de las incidencias que creas o editas en vectores privados que sirven para encontrar incidencias relacionadas y para [buscar incidencias por el sentido](/docs/navigation#search-by-meaning). La indexación en segundo plano de las incidencias existentes de un proyecto respeta a la vez el interruptor del propietario del proyecto y el del autor: una incidencia cuyo autor lo desactivó nunca se indexa. Los vectores se cifran con el proyecto, igual que la incidencia; los guardados antes de que el proyecto empezara a cifrar los convierte la tarea en segundo plano. Con el interruptor desactivado no se crea ningún vector para tus incidencias, aunque otra persona las edite, y la búsqueda de incidencias relacionadas solo compara palabras. Tus propias búsquedas usan entonces solo el texto, sin búsqueda por el sentido. Los vectores ya creados se mantienen mientras el texto no cambie; se eliminan en cuanto el texto cambia, o con la incidencia.
 
@@ -390,6 +391,14 @@ Con **Reevaluar incidencias editadas** activado, una incidencia creada con Smart
 Solo cambia las propiedades que nadie eligió a mano: las que quedaron vacías al crear la incidencia y que nadie ha cambiado desde entonces. En cuanto tú, Numo o un agente conectado cambiáis una de ellas, Smart Fill deja de tocarla. Nunca quita el objetivo ni todas las categorías; puede vaciar el esfuerzo cuando el texto ya no describe trabajo estimable. Las incidencias creadas antes de esta función, con Smart Fill desactivado o con todas sus propiedades ya definidas nunca se vuelven a leer.
 
 Cada cambio aparece en la actividad de la incidencia con Smart Fill como autor, y una incidencia que pasa a otro objetivo aparece también en la actividad de ambos objetivos. Una pasada que no encuentra nada que cambiar no escribe nada. La pasada cuenta en la parte **Automatizaciones** de la persona que hizo el último cambio, sigue su preferencia **Reevaluar incidencias editadas** y se omite cuando su presupuesto está agotado o el proveedor falla.
+
+### Dejar que Smart Fill escriba el título {#smart-fill-title}
+
+Con **Escribir los títulos que falten** activado, creas una incidencia describiéndola. Está activado por defecto y depende de **Activar Smart Fill**. Mientras Smart Fill esté activo para la incidencia, el formulario de creación se abre con el cursor en la descripción, y el campo del título vacío se ve más pequeño de lo habitual e indica que Smart Fill lo escribe; recupera su tamaño normal en cuanto haces clic en él o escribes un título. Déjalo vacío, describe el trabajo y crea la incidencia. El título sigue siendo editable, y un título que escribas se conserva tal cual. Esto se aplica al formulario de creación; Numo, el servidor MCP y la importación CSV escriben sus propios títulos.
+
+Smart Fill escribe un título corto que resume la descripción y distingue la incidencia de otras parecidas, en el idioma de la descripción. La incidencia aparece cuando su título y sus propiedades están completos, y su actividad nombra a Smart Fill. Si no se puede escribir ningún título, porque el proveedor falla o tu presupuesto de **Automatizaciones** está agotado, la incidencia toma en su lugar la primera línea de su descripción. Una descripción que solo contiene una imagen sigue necesitando un título.
+
+Un título escrito así sigue siendo de Smart Fill hasta que alguien lo cambie. Con **Reevaluar incidencias editadas** activado, una [lectura](#smart-fill-reevaluation) posterior puede sustituirlo cuando la descripción ya describe otro trabajo, y lo mantiene mientras siga encajando. Esa pasada solo reescribe el título si la persona que hizo el último cambio no desactivó **Escribir los títulos que falten**. En cuanto tú, Numo o un agente conectado editáis el título, Smart Fill deja de tocarlo.
 
 ## Revisar el trabajo entrante en clasificación {#triage-incoming-work}
 

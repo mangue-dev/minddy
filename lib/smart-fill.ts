@@ -95,3 +95,21 @@ export function resolveIssueIndexing(
 ): boolean {
   return meta?.[ISSUE_INDEXING_META_KEY] !== false;
 }
+
+/**
+ * SMART FILL TITLE (MIN-798) — whether Smart Fill writes the title of an issue
+ * whose author left it empty, from its description. It lives under the master
+ * switch and is enabled by default like the others: only an explicit `false`
+ * disables it.
+ *
+ * Like every Smart Fill property, a title it wrote stays its own until someone
+ * edits it by hand, and a re-evaluation may rewrite it after the description
+ * changes — only when the editor who pays for that pass has not turned it off.
+ */
+export const SMART_FILL_TITLE_META_KEY = "smart_fill_title";
+
+export function resolveSmartFillTitle(
+  meta: Record<string, unknown> | null | undefined,
+): boolean {
+  return resolveSmartFill(meta) && meta?.[SMART_FILL_TITLE_META_KEY] !== false;
+}
