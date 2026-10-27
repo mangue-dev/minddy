@@ -4,7 +4,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Activity01Icon, AnalyticsDownIcon, AnalyticsUpIcon, CancelCircleIcon as CircleSlash2, MinusSignIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
 import { useMemo } from "react";
-import { useFormatter, useNow, useTimeZone, useTranslations } from "next-intl";
+import { useFormatter, useTimeZone, useTranslations } from "next-intl";
+import { useLiveNow, useTimeAgo } from "@/lib/use-live-now";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -101,7 +102,8 @@ export function ObjectiveMomentum({
 function ObjectiveMomentumCard({ objective, issues }: ObjectiveMomentumProps) {
   const t = useTranslations("Objectives");
   const format = useFormatter();
-  const now = useNow({ updateInterval: 60_000 });
+  const now = useLiveNow();
+  const timeAgo = useTimeAgo();
   const timeZone = useTimeZone() ?? "UTC";
   const insight = useMemo(
     () => objectiveMomentum(objective, issues, now, timeZone),
@@ -155,7 +157,7 @@ function ObjectiveMomentumCard({ objective, issues }: ObjectiveMomentumProps) {
     }
     if (insight.state === "stalled" && insight.lastCompletionAt) {
       return t("momentumLastCompletion", {
-        time: format.relativeTime(new Date(insight.lastCompletionAt), now),
+        time: timeAgo(insight.lastCompletionAt) ?? "",
       });
     }
     return t("momentumForecastPending");

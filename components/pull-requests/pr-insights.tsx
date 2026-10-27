@@ -4,7 +4,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { AlertCircleIcon, ArrowDown01Icon, Copy01Icon, LinkSquare01Icon, ArrowUpRight01Icon, BubbleChatIcon, GitBranchIcon, GitMergeIcon, GitPullRequestDraftIcon, Shield01Icon, CheckIcon, UserRoundCheckIcon as UserRoundCheck, ViewIcon, Wrench01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
-import { useFormatter, useNow, useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
+import { useLiveNow } from "@/lib/use-live-now";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -166,7 +167,7 @@ interface PrInsightsProps {
 /** Keep a fixed order within the blocking and non-blocking property groups. */
 export function PrInsights(props: PrInsightsProps) {
   const t = useTranslations("PullRequests");
-  const initialNow = useNow();
+  const initialNow = useLiveNow();
   const [now, setNow] = useState(initialNow);
   useEffect(() => {
     // Match server time during hydration, then synchronize immediately.

@@ -2,7 +2,7 @@
 
 import { useQueries } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { useNow } from "next-intl";
+import { useLiveNow } from "./use-live-now";
 import { issuesQueryFn } from "./issues-api";
 import { orderObjectives } from "./objective-order";
 import type { Issue, Objective } from "./types";
@@ -36,6 +36,6 @@ export function useOrderedObjectives<T extends Objective>(objectives: readonly T
     })),
     combine: combineIssueLists,
   });
-  const now = useNow().getTime();
+  const now = useLiveNow().getTime();
   return useMemo(() => orderObjectives(objectives, issues, now), [objectives, issues, now]);
 }

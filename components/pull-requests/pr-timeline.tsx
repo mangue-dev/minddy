@@ -21,7 +21,7 @@ import {
   groupReviewThreads,
   type ReviewThreadState,
 } from "@/lib/pr-review-threads";
-import { useForgeNow } from "@/lib/use-forge-now";
+import { useLiveNow } from "@/lib/use-live-now";
 import { normalizeForgeInstant } from "@/lib/forge-time";
 import type { PrTimelineEvent, PrReviewState } from "@/lib/pr-timeline";
 import type { PrEndpoint, PullRequestReviewComment } from "@/lib/agent-api";
@@ -89,7 +89,7 @@ const KIND_MESSAGE: Record<
 export function PrTimelineRow({ event }: { event: PrTimelineEvent }) {
   const t = useTranslations("PullRequests");
   const format = useFormatter();
-  const now = useForgeNow();
+  const now = useLiveNow();
   // A NUE review — approved without a word — arrives here rather than on the map: it
   // then keeps the color of its verdict, the only carrier of meaning.
   const verdict =
@@ -239,7 +239,7 @@ export function PrTimelineReview({
 }) {
   const t = useTranslations("PullRequests");
   const format = useFormatter();
-  const now = useForgeNow();
+  const now = useLiveNow();
   const state = REVIEW_STATE[event.reviewState ?? "commented"];
   const threads = groupReviewThreads(comments, threadStates);
   const replies = useReviewReplies(endpoint, onChanged);

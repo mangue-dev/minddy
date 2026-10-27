@@ -97,7 +97,7 @@ import {
 } from "@/lib/pr-readiness";
 import { viewerReviewIsRequested } from "@/lib/pr-review-request";
 import { settleMergeFlowOverride, type PullRequestDetailTab } from "@/lib/pr-readiness-actions";
-import { useForgeNow } from "@/lib/use-forge-now";
+import { useLiveNow } from "@/lib/use-live-now";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { normalizeForgeInstant } from "@/lib/forge-time";
 import { REPO_PROVIDERS } from "@/lib/repo-providers";
@@ -337,7 +337,7 @@ export function ThreadComment({
   const t = useTranslations("PullRequests");
   const isDescription = presentation === "description";
   const format = useFormatter();
-  const now = useForgeNow();
+  const now = useLiveNow();
   const list = reactions?.byComment.get(commentId) ?? [];
   const when = normalizeForgeInstant(createdAt, now);
   const queryClient = useQueryClient();
