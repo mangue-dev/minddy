@@ -46,6 +46,7 @@ export function useIssueDictation({
   getDraft,
   applyPatch,
   smartFill = false,
+  smartFillTitle = false,
 }: {
   projectId: string;
   /** "create" fills the new-issue form; "edit" edits an existing issue. */
@@ -53,12 +54,15 @@ export function useIssueDictation({
   getDraft: () => DictationDraft;
   applyPatch: (patch: IssueDraftPatch) => void;
   /**
- * Smart-fill is armed on the form (MIN-260): the route then removes
- * priority, effort, categories and objective from the tool, so the dictation no longer poses them
- * — it is Smart-fill which will pose them at creation. Read at EACH
- * sent and not frozen on opening: the toggle can change between two takes.
- */
+   * Smart Fill is armed on the form (MIN-260): dictation then leaves
+   * priority, effort, categories and objective to it, unless the user names
+   * them explicitly (MIN-816). Read at each take, not frozen on opening: the
+   * toggle can change between two takes.
+   */
   smartFill?: boolean;
+  /** Smart Fill also writes the empty title (MIN-798): the title joins the
+   *  fields dictation sets only on explicit request. */
+  smartFillTitle?: boolean;
 }) {
   const t = useTranslations("IssueUI");
   const [busy, setBusy] = useState(false);
@@ -80,6 +84,7 @@ export function useIssueDictation({
           mode,
           draft: getDraft(),
           smartFill,
+          smartFillTitle,
           history: historyRef.current,
           // Numo returns naive local datetimes; normalizeDueDate interprets
           // them in the browser's timezone.

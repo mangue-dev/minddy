@@ -773,12 +773,13 @@ export function CreateIssueDialog({
   } = useIssueDictation({
     projectId: activeProjectId,
     mode: "create",
-    // Armed smart-fill: dictation no longer poses priority, effort, categories or
-    // objective — the route removes these arguments from its tool, and it is Smart-fill
-    // who will pose them to creation (MIN-260). Without that, a dictation would fill
-    // fields that the form no longer shows, and which gained on
-    // automation that we thought was armed.
+    // Armed Smart Fill: dictation leaves priority, effort, categories,
+    // objective and (when Smart Fill writes it) the title to Smart Fill unless
+    // the user names them (MIN-260, MIN-816). Smart Fill only fills what is
+    // empty, so a dictated value would otherwise win over the automation the
+    // user armed.
     smartFill,
+    smartFillTitle: writesTitle,
     getDraft: () => ({
       title,
       description,
