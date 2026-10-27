@@ -13,7 +13,6 @@ import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { PagePeekPanel } from "@/components/pages/page-peek-panel";
 import { CollectionSidebar, type SidebarBrowseTarget } from "@/components/secondary-sidebar";
@@ -38,7 +37,7 @@ import {
   pushPagesHistory,
   replacePagesHistory,
 } from "@/lib/pages-navigation";
-import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
+import { SIDEBAR_HEADER_ACTION_CLASS } from "@/lib/sidebar-control-styles";
 import type { PageMenuTarget } from "@/components/pages/page-document-actions";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { useRetainedWhileClosing } from "@/lib/use-retained-while-closing";
@@ -219,8 +218,8 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
         actions={
           canWrite ? (
             <PageCreateMenu onCreate={(database) => void create(null, database)} trigger={
-              <Button variant="ghost" size="icon" className={cn(SIDEBAR_COMPACT_CONTROL_CLASS, "-mr-2")}
-                aria-label={tDatabase("create")}><HugeiconsIcon icon={Add01Icon} className="size-[18px]" /></Button>
+              <Button variant="ghost" size="icon" className={SIDEBAR_HEADER_ACTION_CLASS}
+                aria-label={tDatabase("create")}><HugeiconsIcon icon={Add01Icon} className="size-4" /></Button>
             } />
           ) : undefined
         }

@@ -2,12 +2,11 @@
 import type { ReactNode } from "react";
 import { Search01Icon as Search } from "@hugeicons/core-free-icons";
 import Link from "@/components/app-link";
-import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 import { AppIcon } from "@/components/icon";
 import { KbdSequence } from "@/components/ui/kbd";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { SIDEBAR_COMPACT_CONTROL_CLASS, SIDEBAR_TOOLTIP_DELAY_MS } from "@/lib/sidebar-control-styles";
+import { SIDEBAR_TOOLTIP_DELAY_MS, SIDEBAR_HEADER_ACTION_CLASS } from "@/lib/sidebar-control-styles";
 import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
 import { CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
 import type { AppNavItem } from "@/components/app-sidebar";
@@ -31,12 +30,9 @@ function SidebarTopAction({
   shortcut?: ReactNode;
   inboxTrigger?: boolean;
 }) {
-  // Same shape as the sidebar toggle: h-9 square with the same radius, sitting
-  // as its sibling in the top bar.
-  const className = cn(
-    SIDEBAR_COMPACT_CONTROL_CLASS,
-    "h-9 w-9 min-w-9 px-0 text-sidebar-foreground/65 hover:text-sidebar-foreground",
-  );
+  // Same shape as the sidebar toggle (h-9 square, same radius) and as the
+  // sidebar band's actions below, which line up with these buttons.
+  const className = SIDEBAR_HEADER_ACTION_CLASS;
   const content = (
     <span className="relative flex size-4 shrink-0">
       <AppIcon icon={Icon} className="size-4" />

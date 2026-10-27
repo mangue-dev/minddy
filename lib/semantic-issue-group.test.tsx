@@ -11,13 +11,13 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
  * matches — and the highlighted row stays where it was when they arrive.
  */
 
-const h = vi.hoisted(() => ({ ids: [] as string[], enabled: [] as boolean[] }));
+const h = vi.hoisted(() => ({ ids: [] as string[], enabled: [] as boolean[], pending: false, answered: false }));
 
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("@/lib/use-semantic-issue-search", () => ({
   useSemanticIssueSearch: (_query: string, options: { enabled?: boolean }) => {
     h.enabled.push(options.enabled !== false);
-    return { ids: h.ids, pending: false };
+    return { ids: h.ids, pending: h.pending, answered: h.answered };
   },
 }));
 // Stubs for the UI primitives the component under test renders.
@@ -48,6 +48,8 @@ let host: HTMLDivElement;
 const onSelect = vi.fn();
 
 beforeEach(() => {
+  h.pending = false;
+  h.answered = false;
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
   Element.prototype.scrollIntoView = () => {};
@@ -129,4 +131,21 @@ it("asks for nothing when the picker has no eligible issue", async () => {
     </Command>
   ));
   expect(h.enabled.every((value) => value === false)).toBe(true);
+});
+
+it("says when the search by meaning is running, then when it found nothing new", async () => {
+  h.ids = [];
+  h.pending = true;
+  await act(() => root.render(<Picker search="login keeps failing" />));
+  expect(host.querySelector('[role="status"]')?.textContent).toBe("searchingByMeaning");
+
+  h.pending = false;
+  h.answered = true;
+  await act(() => root.render(<Picker search="login keeps failing" />));
+  expect(host.querySelector('[role="status"]')?.textContent).toBe("noRelatedByMeaning");
+
+  // A search that did not really run (an outage, indexing off) claims nothing.
+  h.answered = false;
+  await act(() => root.render(<Picker search="login keeps failing" />));
+  expect(host.querySelector('[role="status"]')).toBeNull();
 });

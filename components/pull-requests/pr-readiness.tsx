@@ -3,11 +3,11 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { AlertCircleIcon, ArrowDown01Icon, ArrowRight01Icon, Clock01Icon, CheckIcon } from "@hugeicons/core-free-icons";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -301,7 +301,7 @@ export function PrReadinessControl({
   onMerge: (method: MergeMethod) => void;
   /** Auto-merge (or merge queue entry) already registered at the forge. */
   mergeFlowActive: boolean;
-  /** `false` = the forge refuses auto-merge; the checkbox then does not show. */
+  /** `false` = the forge refuses auto-merge; the switch then does not show. */
   autoMergeAllowed: boolean | null;
   autoMerging: boolean;
   onToggleAutoMerge: (enable: boolean) => void;
@@ -337,9 +337,10 @@ export function PrReadinessControl({
   const statusIcon = merging && !settled
     ? <Spinner className="size-3.5" />
     : <HugeiconsIcon icon={toneIcon(tone)} className="size-3.5" />;
-  // The checkbox stays while an auto-merge is registered, so it can be turned
+  // The switch stays while an auto-merge is registered, so it can be turned
   // off once the pull request is ready too.
   const showAutoMerge = canMerge && autoMergeAllowed !== false && (!readiness.mergeAllowed || mergeFlowActive);
+  const autoMergeId = useId();
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -481,37 +482,32 @@ export function PrReadinessControl({
           })}
         </ul>
         {/* ONE row for both gestures (MIN-548 review): the auto-merge
-            checkbox rides the same line as the merge button — they are two
-            ways to reach the same merge, not two stacked steps. Checkbox and
-            title only: what the registration does is what the title says,
-            and the spinner next to it carries the write in flight. */}
+            switch sits right before the merge button, as "Create more" does
+            in the ticket creation dialog — they are two ways to reach the
+            same merge, not two stacked steps. The spinner next to its label
+            carries the write in flight. */}
         <div
           className={cn(
-            "flex items-center justify-between gap-3 px-3.5 py-3",
+            "flex items-center justify-end gap-4 px-3.5 py-3",
             showAutoMerge && "border-t border-border",
           )}
         >
           {showAutoMerge ? (
-            <label
-              data-testid="pr-auto-merge-toggle"
-              className="flex min-w-0 flex-1 items-center gap-2.5"
-            >
-              <Checkbox
+            <div data-testid="pr-auto-merge-toggle" className="flex min-w-0 items-center gap-3">
+              <label htmlFor={autoMergeId} className="inline-flex min-w-0 items-center gap-1.5 text-sm text-foreground">
+                {autoMerging ? <Spinner className="size-3 shrink-0" /> : null}
+                <span className="truncate">{t("autoMergeWhenReady")}</span>
+              </label>
+              <Switch
+                id={autoMergeId}
                 checked={mergeFlowActive}
                 disabled={!authorityReady || autoMerging}
-                onCheckedChange={(checked) => onToggleAutoMerge(checked === true)}
+                onCheckedChange={onToggleAutoMerge}
               />
-              <span className="inline-flex min-w-0 items-center gap-1.5 text-sm">
-                {t("autoMergeWhenReady")}
-                {autoMerging ? <Spinner className="size-3 shrink-0" /> : null}
-              </span>
-            </label>
+            </div>
           ) : null}
           {preferredMethod ? (
-            // ml-auto keeps the merge pinned to the right edge of the row
-            // even when the auto-merge checkbox is not shown — `justify-
-            // between` alone would park a single child on the left.
-            <div className="ml-auto flex shrink-0 items-center">
+            <div className="flex shrink-0 items-center">
               {/* Why the merge is (not yet) available used to sit as a
                   sentence to the left of the button; it is now a tooltip ON
                   the button — the information belongs to the gesture. The

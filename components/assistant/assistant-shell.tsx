@@ -86,7 +86,7 @@ import { useAiSurfaceAvailability } from "@/lib/use-ai-surface-availability";
 import { ReasoningBlock } from "@/components/agent/reasoning-block";
 import { assistantMessageReasoning } from "@/lib/assistant-reasoning";
 import { SidebarFilterField } from "@/components/sidebar-filter-field";
-import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
+import { SIDEBAR_HEADER_ACTION_CLASS } from "@/lib/sidebar-control-styles";
 import { assistantStarterPage, assistantStarters } from "@/lib/assistant-starters";
 
 export type AssistantDisplayMode = "compact" | "expanded";
@@ -576,7 +576,7 @@ export const AssistantShell = forwardRef<
         <Button
           variant="ghost"
           size="icon-sm"
-          className={cn(SIDEBAR_COMPACT_CONTROL_CLASS, "-mr-2")}
+          className={SIDEBAR_HEADER_ACTION_CLASS}
           aria-label={t("newConversation")}
           onClick={handleNewConversation}
         >
@@ -669,6 +669,9 @@ export const AssistantShell = forwardRef<
               size="icon-sm"
               className="hidden app-desktop:inline-flex"
               aria-label={isExpanded ? t("collapse") : t("expand")}
+              // A click must not take the focus: the composer keeps it, and
+              // its caret, while the panel changes size. Tab still reaches it.
+              onMouseDown={(event) => event.preventDefault()}
               onClick={onToggleDisplayMode}
             >
               {isExpanded ? (
@@ -786,7 +789,7 @@ export const AssistantShell = forwardRef<
           <SheetContent side="left" className="w-[280px] p-0 app-desktop:hidden">
             <SheetTitle className="sr-only">{t("title")}</SheetTitle>
             <div className="flex h-full min-h-0 flex-col bg-sidebar">
-              <div className="secondary-sidebar-header flex h-[var(--app-content-header-height)] shrink-0 items-center gap-2 border-b border-border px-4">
+              <div className="secondary-sidebar-header flex h-[var(--app-content-header-height)] shrink-0 items-center gap-2 border-b border-border pr-2.5 pl-[19px]">
                 <SidebarFilterField {...sidebarFilter} />
                 {newConversationButton}
               </div>

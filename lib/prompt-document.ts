@@ -1,15 +1,14 @@
-// A routine instruction in the shared editor (MIN-728).
+// A routine instruction in the shared document editor (ticket descriptions,
+// plans, pages).
 //
-// The instruction is stored as the plain text an agent reads: one line per
-// paragraph, "@Label" for a mention and "/name" for a repository skill. The
-// mentions' identities travel next to the text (`AssistantMention`), each
-// with its occurrence among the tokens of the same label, so "@Alice" and a
-// second, different "@Alice" keep their own ids. These two functions convert
-// between that text and the editor document, without Markdown: a prompt has
-// no formatting to keep, and Markdown would merge its lines and escape its
-// angle brackets.
+// The instruction is stored as the text an agent reads: Markdown with
+// "@Label" for a mention and "$name" for a repository skill. The mentions'
+// identities travel next to the text (`AssistantMention`), each with its
+// occurrence among the tokens of the same label, so "@Alice" and a second,
+// different "@Alice" keep their own ids. The editor's Markdown carries
+// mentions as typed links instead: `promptToMarkdown` and
+// `promptFromMarkdown` convert between the two.
 
-import type { JSONContent } from "@tiptap/core";
 import type { AssistantMention } from "@/lib/assistant-types";
 import { splitAssistantMentionTokens } from "@/lib/agent-mentions";
 import {
@@ -17,146 +16,16 @@ import {
   MENTION_TOKEN_END_PATTERN,
   MENTION_TOKEN_START_PATTERN,
 } from "@/lib/mention-token";
-import type { RepositorySkillSummary } from "@/lib/repository-skills";
-
-export const PROMPT_SKILL_NODE = "promptSkill";
-
-type Inline = JSONContent | "\n";
-
-function mentionNode(mention: AssistantMention): JSONContent {
-  return {
-    type: "mention",
-    attrs: {
-      mentionType: mention.type,
-      mentionId: mention.id,
-      mentionLabel: mention.label,
-      seed: mention.avatarSeed ?? null,
-      color: mention.color ?? null,
-      icon: mention.icon ?? null,
-      status: mention.status ?? null,
-    },
-  };
-}
-
-export function skillNode(skill: RepositorySkillSummary): JSONContent {
-  return {
-    type: PROMPT_SKILL_NODE,
-    attrs: { path: skill.path, name: skill.name, description: skill.description },
-  };
-}
-
-/** Plain text with the known skills as nodes, line breaks kept as markers. */
-function textWithSkills(text: string, skills: readonly RepositorySkillSummary[]): Inline[] {
-  const out: Inline[] = [];
-  const pushText = (value: string) => {
-    value.split("\n").forEach((line, index) => {
-      if (index > 0) out.push("\n");
-      if (line) out.push({ type: "text", text: line });
-    });
-  };
-  const names = [...skills].sort((a, b) => b.name.length - a.name.length)
-    .map((skill) => skill.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-  if (names.length === 0) {
-    pushText(text);
-    return out;
-  }
-  const pattern = new RegExp(`(^|\\s)/(${names.join("|")})(?=\\s|$)`, "g");
-  let last = 0;
-  let match: RegExpExecArray | null;
-  while ((match = pattern.exec(text)) !== null) {
-    pushText(text.slice(last, match.index) + match[1]);
-    const skill = skills.find((candidate) => candidate.name === match![2]);
-    if (skill) out.push(skillNode(skill));
-    last = match.index + match[0].length;
-  }
-  pushText(text.slice(last));
-  return out;
-}
+import { isMentionLinkType, mentionMarkdown, splitMentionLinks } from "@/lib/mention-link";
 
 /**
- * The editor document of a stored instruction: its saved mentions become
- * pills with their exact ids, the known skills become skill badges, and every
- * line is a paragraph. A token without a saved identity stays text, as in the
- * former field.
+ * Each pill's occurrence among the "@Label" tokens of its label in `text`,
+ * the way the server resolves them (lib/agent-mentions.ts).
  */
-export function promptToDocument(
+function withOccurrences(
   text: string,
-  options: { mentions?: readonly AssistantMention[]; skills?: readonly RepositorySkillSummary[] } = {}
-): JSONContent {
-  const inline: Inline[] = [];
-  for (const segment of splitAssistantMentionTokens(text, options.mentions ?? [])) {
-    if (segment.mention !== undefined) inline.push(mentionNode(segment.mention));
-    else inline.push(...textWithSkills(segment.text, options.skills ?? []));
-  }
-  const paragraphs: JSONContent[] = [{ type: "paragraph", content: [] }];
-  for (const item of inline) {
-    if (item === "\n") paragraphs.push({ type: "paragraph", content: [] });
-    else paragraphs[paragraphs.length - 1].content!.push(item);
-  }
-  return {
-    type: "doc",
-    content: paragraphs.map((paragraph) =>
-      paragraph.content!.length ? paragraph : { type: "paragraph" }),
-  };
-}
-
-/**
- * The stored form of an editor document: its text, and the identity of each
- * mention pill in document order, with its occurrence among the tokens of
- * the same label in that text.
- */
-export function promptFromDocument(doc: JSONContent): { text: string; mentions: AssistantMention[] } {
-  const lines: string[] = [];
-  const pills: Array<{ offset: number; mention: AssistantMention }> = [];
-  let length = 0;
-  const visit = (node: JSONContent, line: string[]) => {
-    if (node.type === "text") {
-      line.push(node.text ?? "");
-      length += (node.text ?? "").length;
-    } else if (node.type === "mention") {
-      const attrs = node.attrs ?? {};
-      const label = String(attrs.mentionLabel ?? "");
-      const type = attrs.mentionType as AssistantMention["type"] | "numo" | "forge";
-      if (attrs.mentionId && type !== "numo" && type !== "forge") {
-        pills.push({
-          offset: length,
-          mention: {
-            type,
-            id: String(attrs.mentionId),
-            label,
-            ...(attrs.seed ? { avatarSeed: String(attrs.seed) } : {}),
-            ...(attrs.color !== null && attrs.color !== undefined ? { color: String(attrs.color) } : {}),
-            ...(attrs.icon !== null && attrs.icon !== undefined ? { icon: String(attrs.icon) } : {}),
-            ...(typeof attrs.status === "string" && attrs.status
-              ? { status: attrs.status as AssistantMention["status"] }
-              : {}),
-          },
-        });
-      }
-      line.push(`@${label}`);
-      length += label.length + 1;
-    } else if (node.type === PROMPT_SKILL_NODE) {
-      const name = String(node.attrs?.name ?? "");
-      line.push(`/${name}`);
-      length += name.length + 1;
-    } else if (node.type === "hardBreak") {
-      line.push("\n");
-      length += 1;
-    } else {
-      for (const child of node.content ?? []) visit(child, line);
-    }
-  };
-  const blocks = doc.content ?? [];
-  blocks.forEach((block, index) => {
-    if (index > 0) length += 1;
-    const line: string[] = [];
-    visit(block, line);
-    lines.push(line.join(""));
-  });
-  const text = lines.join("\n");
-
-  // The occurrence of each pill among the "@Label" tokens of its label, the
-  // way the server resolves them (lib/agent-mentions.ts).
+  pills: ReadonlyArray<{ offset: number; mention: AssistantMention }>,
+): AssistantMention[] {
   const occurrences = new Map<string, number>();
   const labels = [...new Set(pills.map(({ mention }) => mention.label))]
     .sort((a, b) => b.length - a.length);
@@ -173,9 +42,50 @@ export function promptFromDocument(doc: JSONContent): { text: string; mentions: 
       next.set(match[1], count + 1);
     }
   }
-  const mentions = pills.map(({ offset, mention }) => {
+  return pills.map(({ offset, mention }) => {
     const occurrence = occurrences.get(`${offset}\0${mention.label}`);
     return occurrence === undefined ? mention : { ...mention, occurrence };
   });
-  return { text, mentions };
+}
+
+/**
+ * The instruction as the shared document editor holds it (ticket
+ * descriptions, plans, pages): Markdown where each saved mention is a typed
+ * link. The instruction already is Markdown for the agent; only its mentions
+ * change form.
+ */
+export function promptToMarkdown(text: string, mentions: readonly AssistantMention[]): string {
+  return splitAssistantMentionTokens(text, mentions)
+    .map((segment) => segment.mention !== undefined
+      ? mentionMarkdown(segment.mention.type, segment.mention.id, segment.mention.label)
+      : segment.text)
+    .join("");
+}
+
+/**
+ * The stored form of the document editor's Markdown: "@Label" for each typed
+ * mention, with its identity and occurrence. A mention kept from `previous`
+ * keeps the display details saved with it (portrait, color, status).
+ */
+export function promptFromMarkdown(
+  markdown: string,
+  previous: readonly AssistantMention[] = [],
+): { text: string; mentions: AssistantMention[] } {
+  const pills: Array<{ offset: number; mention: AssistantMention }> = [];
+  let text = "";
+  for (const piece of splitMentionLinks(markdown)) {
+    if (typeof piece === "string") {
+      text += piece;
+      continue;
+    }
+    const token = `@${piece.label}`;
+    // An attachment is not an entity a routine run carries: its label stays text.
+    if (isMentionLinkType(piece.type) && piece.type !== "resource") {
+      const saved = previous.find((mention) => mention.type === piece.type && mention.id === piece.id);
+      const { occurrence: _occurrence, ...details } = saved ?? { type: piece.type, id: piece.id, label: piece.label };
+      pills.push({ offset: text.length, mention: { ...details, type: piece.type, id: piece.id, label: piece.label } });
+    }
+    text += token;
+  }
+  return { text, mentions: withOccurrences(text, pills) };
 }

@@ -91,9 +91,6 @@ export const PAGE_BLOCKS: readonly PageBlock[] = [
 /** The catalog one block set mounts (MIN-728), in registry order. */
 export function blocksIn(set: BlockSet): readonly PageBlock[] {
   if (set === "page") return PAGE_BLOCKS;
-  // A prompt is lines of plain text with mentions and skills (MIN-728): it is
-  // stored as the text an agent reads, so it has no block to convert into.
-  if (set === "prompt") return PAGE_BLOCKS.filter((block) => block.id === "paragraph");
   return PAGE_BLOCKS.filter((block) => !block.sets || block.sets.includes(set));
 }
 

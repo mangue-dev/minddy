@@ -8,6 +8,7 @@ import { AppIcon } from "@/components/icon";
 import { LayersIcon as Layers, PencilEdit01Icon as SquarePen } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
+import { MENU_ROW_ACTIVE_CLASS, MENU_ROW_CLASS, MENU_SCROLL_CLASS, MENU_SURFACE_CLASS } from "@/components/ui/menu-surface";
 import type { AssistantCommandId } from "@/lib/assistant-types";
 import type { RepositorySkillSummary } from "@/lib/repository-skills";
 
@@ -100,7 +101,9 @@ export function SlashMenu({
       style={style}
       data-floating-surface
       className={cn(
-        "absolute bottom-full z-50 mb-1 max-h-56 w-72 overflow-y-auto rounded-lg border border-border bg-popover p-1 shadow-md",
+        "absolute bottom-full z-50 mb-1 max-h-56 w-72",
+        MENU_SURFACE_CLASS,
+        MENU_SCROLL_CLASS,
         className,
       )}
     >
@@ -121,9 +124,9 @@ export function SlashMenu({
             if (event.movementX !== 0 || event.movementY !== 0) onHover(index);
           }}
           className={cn(
-            "flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-sm",
+            MENU_ROW_CLASS,
             index === activeIndex &&
-              (option.kind === "skill" ? "bg-emerald-500/10" : "bg-muted"),
+              (option.kind === "skill" ? "bg-emerald-500/10" : MENU_ROW_ACTIVE_CLASS),
           )}
         >
           <AppIcon

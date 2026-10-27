@@ -57,9 +57,11 @@ export interface CommandPaletteProps {
    * the ordered results, in their own category, while a query is typed: the
    * existing rows keep their position, so the active row never jumps. Items
    * already in the results (same id) are skipped. `categories` restricts the
-   * filter tabs they appear under (besides "all").
+   * filter tabs they appear under (besides "all"). `status` is shown under
+   * the search bar when nothing else matches: they are still coming, or none
+   * came.
    */
-  supplemental?: { items: PaletteItem[]; categories?: string[] };
+  supplemental?: { items: PaletteItem[]; categories?: string[]; status?: ReactNode };
 
   // === Behavior ===
   /** Action providers supplying contextual actions per entity type. */

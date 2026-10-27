@@ -64,7 +64,7 @@ export interface SearchViewProps {
   /** All available items (unfiltered). */
   items: PaletteItem[];
   /** Extra results appended after the scored ones (see CommandPaletteProps). */
-  supplemental?: { items: PaletteItem[]; categories?: string[] };
+  supplemental?: { items: PaletteItem[]; categories?: string[]; status?: ReactNode };
   /** Context for action execution. */
   actionContext: ActionExecutionContext;
   /** Callback when the palette should close. */
@@ -509,6 +509,12 @@ export function SearchView({
           through its gradient while the highlighted row paints above it. */}
           <div className={styles.bottomStrip} aria-hidden="true" />
         </>
+      )}
+
+      {/* Nothing else to show: say where the extra results stand (on their
+      way, or none) rather than leaving the bar alone. */}
+      {isExpanded && groups.length === 0 && supplemental?.status && (
+        <div className={styles.supplementalStatus}>{supplemental.status}</div>
       )}
 
       {/* Floating actions shortcut pill — hidden while the popover is open,

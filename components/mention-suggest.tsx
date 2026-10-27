@@ -22,6 +22,8 @@ import { UserAvatar } from "@/components/user-avatar";
 import { NumoFace } from "@/components/numo-face";
 import { filterMentionItems } from "@/lib/mention-menu";
 import { StatusIndicator } from "@/components/issue-indicators";
+import { SemanticSearchingHint, type SemanticSearchStatus } from "@/components/semantic-searching-hint";
+import { MENU_ROW_ACTIVE_CLASS, MENU_ROW_CLASS, MENU_SCROLL_CLASS, MENU_SURFACE_CLASS } from "@/components/ui/menu-surface";
 import type { IssueStatus } from "@/lib/issue-constants";
 import type { ObjectiveStatus } from "@/lib/objective-validation";
 
@@ -207,8 +209,8 @@ export function MentionOptionRow({
         if (event.movementX !== 0 || event.movementY !== 0) onHover();
       }}
       className={cn(
-        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm",
-        active && "bg-muted",
+        MENU_ROW_CLASS,
+        active && MENU_ROW_ACTIVE_CLASS,
       )}
     >
       <MentionFigure option={option} />
@@ -230,12 +232,17 @@ export function MentionSuggestions({
   onPick,
   onHover,
   className,
+  style,
+  semanticStatus = null,
 }: {
   options: MentionOption[];
   activeIndex: number;
   onPick: (option: MentionOption) => void;
   onHover: (index: number) => void;
   className?: string;
+  style?: React.CSSProperties;
+  /** Where the search by meaning stands: a status row closes the list. */
+  semanticStatus?: SemanticSearchStatus | null;
 }) {
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -245,15 +252,18 @@ export function MentionSuggestions({
       ?.scrollIntoView({ block: "nearest" });
   }, [activeIndex, options]);
 
-  if (options.length === 0) return null;
+  if (options.length === 0 && !semanticStatus) return null;
 
   return (
     <div
       ref={listRef}
       role="listbox"
       data-floating-surface
+      style={style}
       className={cn(
-        "scrollbar-quiet absolute bottom-full z-50 mb-1 max-h-56 w-64 overflow-y-auto overscroll-contain rounded-lg border border-border bg-popover p-1 shadow-md",
+        "scrollbar-quiet absolute bottom-full z-50 mb-1 max-h-56 w-64",
+        MENU_SURFACE_CLASS,
+        MENU_SCROLL_CLASS,
         className,
       )}
     >
@@ -271,6 +281,7 @@ export function MentionSuggestions({
           />
         </MentionRowWithDivider>
       ))}
+      {semanticStatus && <SemanticSearchingHint status={semanticStatus} />}
     </div>
   );
 }

@@ -79,7 +79,7 @@ Commitez et poussez ces fichiers sur la branche par défaut du dépôt GitHub ou
 
 ## Sélectionner et examiner {#selection}
 
-Utilisez `/`, `$` ou le menu `+` et prévisualisez les instructions avant l’envoi. Sélectionnez jusqu’à cinq skills ; les badges verts indiquent la sélection. `$` présente seulement les skills du dépôt, `/` comprend aussi d’autres commandes.
+Utilisez `/`, `$` ou le menu `+` et prévisualisez les instructions avant l’envoi. Sélectionnez jusqu’à cinq skills ; les badges verts indiquent la sélection. `$` présente seulement les skills du dépôt, `/` comprend aussi d’autres commandes. Dans l’instruction d’une routine, tapez `$` pour insérer une skill ; `/` ouvre le menu des blocs de l’éditeur.
 
 La sélection s’applique à ce tour utilisateur. Celle d’une routine s’applique à chaque occurrence. Ce sont des fichiers du dépôt, pas des installations globales du compte ; ils ne remplacent pas les consignes système ou de sécurité. Pour créer ou modifier un skill, modifiez ses fichiers vous-même ou avec votre propre agent de code, puis poussez avant de sélectionner la nouvelle version.
 

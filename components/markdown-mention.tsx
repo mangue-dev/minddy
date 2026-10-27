@@ -46,6 +46,9 @@ import {
   type MentionOption,
 } from "@/components/mention-suggest";
 import { useSemanticMentions } from "@/lib/use-semantic-mentions";
+import { SemanticSearchingHint } from "@/components/semantic-searching-hint";
+import { MENU_SCROLL_CLASS, MENU_SURFACE_CLASS } from "@/components/ui/menu-surface";
+import { cn } from "@/lib/utils";
 import type { MentionScan } from "@/lib/mention-scan";
 import { MentionNodeBase } from "@/components/mention-node";
 import { TypedMentionChip } from "@/components/typed-mention-chip";
@@ -259,7 +262,7 @@ const MentionMenu = forwardRef<MentionMenuRef, MentionProps>(function MentionMen
   // which only follows tiptap's own items.
   const allOptions = (props.editor.extensionManager.extensions.find((extension) => extension.name === "mentionSuggest")
     ?.options as MentionSuggestOptions | undefined)?.items() ?? [];
-  const items = useSemanticMentions(props.items, allOptions, props.query);
+  const { options: items, status: semanticStatus } = useSemanticMentions(props.items, allOptions, props.query);
   useEffect(() => setSelected(0), [props.items]);
   useEffect(() => {
     listRef.current
@@ -292,14 +295,14 @@ const MentionMenu = forwardRef<MentionMenuRef, MentionProps>(function MentionMen
     },
   }));
 
-  if (items.length === 0) return null;
+  if (items.length === 0 && !semanticStatus) return null;
 
   return (
     <div
       ref={listRef}
       role="listbox"
       data-floating-surface
-      className="scrollbar-quiet max-h-56 w-72 overflow-y-auto overscroll-contain rounded-xl border border-border bg-popover p-1 shadow-lg"
+      className={cn("scrollbar-quiet max-h-56 w-72", MENU_SURFACE_CLASS, MENU_SCROLL_CLASS)}
     >
       {items.map((option, index) => (
         <MentionRowWithDivider key={`${option.type}:${option.id}`} options={items} index={index}>
@@ -311,6 +314,7 @@ const MentionMenu = forwardRef<MentionMenuRef, MentionProps>(function MentionMen
           />
         </MentionRowWithDivider>
       ))}
+      {semanticStatus && <SemanticSearchingHint status={semanticStatus} />}
     </div>
   );
 });

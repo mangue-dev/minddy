@@ -102,7 +102,7 @@ Uma entrada sem a propriedade exigida aguarda uma edição que satisfaça o filt
 
 ## Gerenciar e verificar execuções {#runs}
 
-Abra a rotina para consultar as esperas, mudar instruções ou gatilho, pausar ou ler as execuções. Pausar, excluir ou mudar a configuração invalida as esperas. Retomar passa a ouvir eventos futuros sem repetir chegadas antigas. A execução manual funciona com qualquer gatilho sem aguardar seu evento e também consome orçamento.
+Abra a rotina para consultar as esperas, mudar instruções ou gatilho, pausar ou ler as execuções. Na página dela, o proprietário escreve a instrução diretamente (ela é salva quando você sai dela), expande **Gatilho** para mudá-lo, escolhe o **Limite de gastos** e alterna entre **Ativa** e **Pausada** pelo selo de estado no topo. Pausar, excluir ou mudar a configuração invalida as esperas. Retomar passa a ouvir eventos futuros sem repetir chegadas antigas. A execução manual funciona com qualquer gatilho sem aguardar seu evento e também consome orçamento.
 
 Clique com o botão direito em uma rotina da lista para abrir a última execução sem selecioná-la primeiro; **Abrir a última execução** fica indisponível até a rotina ter sido executada. O proprietário do projeto também pode escolher **Executar agora**, **Pausar** ou **Retomar**, **Editar** ou **Mover para a lixeira** no mesmo menu. **Retomar** fica indisponível quando a instância não pode agendar rotinas. Os outros membros só veem entradas que não alteram a rotina. Para criar uma rotina, clique com o botão direito em **Rotinas** na barra lateral e escolha **Nova rotina**.
 

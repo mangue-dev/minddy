@@ -55,6 +55,7 @@ import { useObjectiveDictation } from "@/lib/use-objective-dictation";
 import { useAnalytics } from "@/lib/use-analytics";
 import { useDrafts } from "@/lib/use-drafts";
 import { useHeldDraft } from "@/lib/use-held-draft";
+import { useResetAfterClose } from "@/lib/use-dialog-close-content";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { useSubmitShortcut } from "@/lib/keyboard/use-submit-shortcut";
 import { useTitleBodyLink } from "@/lib/use-title-body-link";
@@ -264,7 +265,8 @@ export function ObjectiveDialog({
   const resuming = useHeldDraft({
     open,
     context: [projectId, objective?.id, initialDraftId, initialName].join("\n"),
-    hasContent: () => composerEnabled && draftHasContent(),
+    // A form whose reset waits for the close animation is already empty.
+    hasContent: () => composerEnabled && !resetPending.current && draftHasContent(),
     save: () => saveDraft(),
     clear: () => resetForm(),
     onLost: () => toast.error(tDrafts("autoSaveFailed")),
@@ -416,8 +418,10 @@ export function ObjectiveDialog({
     resetDictation();
   };
 
+  // The form keeps its content while the dialog fades out, then resets.
+  const { scheduleReset, resetPending, resets } = useResetAfterClose(open, resetForm);
   const closeAndReset = () => {
-    resetForm();
+    scheduleReset();
     onOpenChange(false);
   };
 
@@ -634,7 +638,11 @@ export function ObjectiveDialog({
           aria-describedby={undefined}
           // In creation, the extra top padding clears the "Create in" pill and
           // the close button.
-          className={cn("creation-sheet p-8 max-sm:p-5 sm:max-w-2xl", showProjectSelect && "pt-15 max-sm:pt-15")}
+          // The text column starts where the "Create in" pill's label does
+          // (its 16 px inset + its 10 px padding), on both sides; the content
+          // starts 16 px below the pill (44 + 16 = 60). Without the pill, the
+          // name keeps clear of the close button on its right.
+          className={cn("creation-sheet px-[1.625rem] pt-4 pb-4 max-sm:p-5 sm:max-w-2xl", showProjectSelect ? "pt-15 max-sm:pt-15" : "pr-14")}
           onInteractOutside={keepOverlayOpenForPopper}
         >
           {/* Screen reader title: when editing, the name of the objective says
@@ -682,6 +690,9 @@ export function ObjectiveDialog({
               )}
               <label htmlFor={titleId} className="creation-field-label">{tField("title")}</label>
               <AutoTextarea
+                // Remounted by a reset that lands as the dialog reopens, so
+                // its autoFocus follows the fresh form.
+                key={resets}
                 id={titleId}
                 enterKeyHint={mobile ? "next" : undefined}
                 autoFocus={!mobile && !focusDescription}
@@ -693,14 +704,16 @@ export function ObjectiveDialog({
                   titleBody.onTitleKeyDown(e, { submit: () => void submit(), mobile });
                 }}
                 placeholder={t("namePlaceholder")}
-                className="creation-title w-full title-field bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50 sm:text-2xl"
+                className="creation-title w-full title-field bg-transparent text-lg leading-snug font-semibold outline-none placeholder:text-muted-foreground/50"
               />
               <div className="creation-field-label">{tField("description")}</div>
-              <div ref={titleBody.bodyRef}>
+              {/* The title's gap: the description is this wrapper's first child,
+                  where its own margin does not apply. */}
+              <div ref={titleBody.bodyRef} className="app-desktop:mt-3">
               {objective && storedDocument === undefined ? (
                 <DocumentEditorFallback
                   value={form.description}
-                  className="creation-description mt-2 min-h-16"
+                  className="creation-description mt-2 min-h-16 first:mt-0"
                 />
               ) : (
               <LazyDocumentEditor
@@ -726,13 +739,13 @@ export function ObjectiveDialog({
                   editorNonEmptyRef.current = !empty;
                 }}
                 placeholder={t("createDescriptionPlaceholder")}
-                className="creation-description mt-2 min-h-16"
+                className="creation-description mt-2 min-h-16 first:mt-0"
               />
               )}
               </div>
 
               {/* Property values stay compact on desktop and receive labels on mobile. */}
-              <div className="creation-properties mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+              <div className="creation-properties mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 app-desktop:-ml-1.5">
                 <CreationProperty mobile={mobile} label={t("statusFieldLabel")}>
                   <ObjectiveStatusCompact
                     value={form.status}
@@ -798,7 +811,7 @@ export function ObjectiveDialog({
               )}
               {/* No Cancel button: the dialog's own close X already does
                   that job. */}
-              <div className="creation-submit ml-auto flex items-center justify-end gap-2 app-mobile:w-full">
+              <div className="creation-submit ml-auto flex items-center justify-end gap-2 app-mobile:w-full app-desktop:-mr-2.5">
                 <SendShortcutTooltip scope="form" label={submitLabel}>
                   {composerEnabled ? (
                     /* The tooltip clings to the action: its props pass

@@ -563,9 +563,11 @@ export default function InboxContent({ onNavigate }: { onNavigate: () => void })
         onConfirm={() => {
           if (deleteTargetId) act(remove([deleteTargetId]));
         }}
+        // The inbox opens in a popover, which floats above dialogs.
+        overFloatingSurface
       />
       <AlertDialog open={clearReadOpen} onOpenChange={setClearReadOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent overFloatingSurface>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("clearReadConfirmTitle")}</AlertDialogTitle>
             <AlertDialogDescription>

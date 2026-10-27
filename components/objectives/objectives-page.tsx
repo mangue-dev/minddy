@@ -42,7 +42,7 @@ import { CollectionSidebar, type SidebarBrowseTarget } from "@/components/second
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";
-import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
+import { SIDEBAR_HEADER_ACTION_CLASS } from "@/lib/sidebar-control-styles";
 import { ObjectiveDetail } from "@/components/objective-detail";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type { Member, Objective } from "@/lib/types";
@@ -140,11 +140,11 @@ function ObjectiveFilterMenu({
         <Button
           variant="ghost"
           size="icon-sm"
-          className={SIDEBAR_COMPACT_CONTROL_CLASS}
+          className={SIDEBAR_HEADER_ACTION_CLASS}
           aria-label={tooltip}
         >
           <span className="relative flex items-center justify-center">
-            <HugeiconsIcon icon={FilterIcon} className="size-[18px]" />
+            <HugeiconsIcon icon={FilterIcon} className="size-4" />
             {active ? (
               /* The ring in the color of the bar detaches the pellet from the line
  of the icon, which passes just below. */
@@ -520,11 +520,11 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  className={cn(SIDEBAR_COMPACT_CONTROL_CLASS, "-mr-2")}
+                  className={SIDEBAR_HEADER_ACTION_CLASS}
                   aria-label={t("newObjective")}
                   onClick={() => setDialogOpen(true)}
                 >
-                  <HugeiconsIcon icon={Add01Icon} className="size-[18px]" />
+                  <HugeiconsIcon icon={Add01Icon} className="size-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent className="flex items-center gap-2">

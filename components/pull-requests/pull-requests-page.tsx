@@ -64,7 +64,7 @@ import { usePublishCurrentView } from "@/lib/current-view-context";
 import { useProjects } from "@/lib/projects-context";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { prIdentifier } from "@/lib/repo-providers";
-import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
+import { SIDEBAR_HEADER_ACTION_CLASS } from "@/lib/sidebar-control-styles";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type {
   AgentRunPrResponse,
@@ -156,11 +156,11 @@ function PrFilterMenu({
         <Button
           variant="ghost"
           size="icon-sm"
-          className={cn(SIDEBAR_COMPACT_CONTROL_CLASS, "-mr-2")}
+          className={SIDEBAR_HEADER_ACTION_CLASS}
           aria-label={t("filterSections")}
         >
           <span className="relative flex items-center justify-center">
-            <HugeiconsIcon icon={FilterIcon} className="size-[18px]" />
+            <HugeiconsIcon icon={FilterIcon} className="size-4" />
             {active ? (
               <span aria-hidden className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-primary ring-2 ring-sidebar" />
             ) : null}

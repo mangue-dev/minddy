@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useId, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -30,6 +30,10 @@ import { ROUTINE_EVENTS, type RoutineTrigger, type RoutineCondition, type Condit
 
 const databaseEntryEvent = "database.entry_added";
 const focusRing = "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+/** A value the trigger still needs before it can be saved: an amber outline, not an error. */
+const missingRing = "ring-2 ring-amber-500/70 dark:ring-amber-400/70";
+/** Whether the fields outline the values the trigger still lacks (the routine's page saves as you go). */
+const HighlightMissingContext = createContext(false);
 type Choice = { id: string; label: string; icon?: ReactNode };
 const icon = (value: typeof Clock01Icon) => <HugeiconsIcon icon={value} aria-hidden className="size-4 shrink-0 text-muted-foreground" />;
 const fieldIcons: Record<string, ReactNode> = {
@@ -43,8 +47,10 @@ function ChoiceLabel({ label, icon: leading, wrap = false }: { label: string; ic
   </span>;
 }
 
-function ChoiceField({ label, value, choices, onChange, loading = false, compact = false, icon: fallbackIcon, help }: {
+function ChoiceField({ label, value, choices, onChange, loading = false, compact = false, icon: fallbackIcon, help, missing = false }: {
   label: string; value: string; choices: Choice[]; onChange: (value: string) => void; loading?: boolean; compact?: boolean; icon?: ReactNode; help?: string;
+  /** The trigger needs this value before it can be saved. */
+  missing?: boolean;
 }) {
   const t = useTranslations("Routines");
   const common = useTranslations("Common");
@@ -55,7 +61,7 @@ function ChoiceField({ label, value, choices, onChange, loading = false, compact
     <div className={cn("flex min-w-0 flex-col gap-1.5", compact && "sm:flex-row sm:items-center sm:gap-2")}>
       <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">{label}{help && <HelpHint label={t("triggerHelpLabel", { label })}>{help}</HelpHint>}</span>
       {choices.length <= 8 ? <Select value={value || "__any__"} onValueChange={next => onChange(next === "__any__" ? "" : next)}>
-        <SelectTrigger aria-label={label} size={compact ? "sm" : "default"} className={cn("w-full min-w-0", focusRing, compact && "h-auto! min-h-8 w-auto max-w-full rounded-full whitespace-normal text-left text-xs [&>[data-slot=select-value]]:line-clamp-none! [&>[data-slot=select-value]]:whitespace-normal")}>
+        <SelectTrigger aria-label={label} data-missing={missing ? "" : undefined} size={compact ? "sm" : "default"} className={cn("w-full min-w-0", focusRing, missing && missingRing, compact && "h-auto! min-h-8 w-auto max-w-full rounded-full whitespace-normal text-left text-xs [&>[data-slot=select-value]]:line-clamp-none! [&>[data-slot=select-value]]:whitespace-normal")}>
           <SelectValue placeholder={loading ? common("loading") : t("chooseTriggerValue")}>
             <ChoiceLabel icon={selected?.icon ?? fallbackIcon} label={unavailable ? t("unavailableSelection") : selected?.label || (loading ? common("loading") : t("chooseTriggerValue"))} wrap={compact} />
           </SelectValue>
@@ -66,7 +72,7 @@ function ChoiceField({ label, value, choices, onChange, loading = false, compact
         </SelectContent>
       </Select> : <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button type="button" variant="outline" role="combobox" aria-label={label} aria-expanded={open} className={cn("h-11 w-full min-w-0 justify-between bg-control px-3.5 font-normal md:h-9", focusRing)}>
+          <Button type="button" variant="outline" role="combobox" aria-label={label} aria-expanded={open} data-missing={missing ? "" : undefined} className={cn("h-11 w-full min-w-0 justify-between bg-control px-3.5 font-normal md:h-9", focusRing, missing && missingRing)}>
             <ChoiceLabel icon={selected?.icon ?? fallbackIcon} label={unavailable ? t("unavailableSelection") : selected?.label || (loading ? common("loading") : t("chooseTriggerValue"))} />
             <HugeiconsIcon icon={ArrowDown01Icon} aria-hidden className="size-4 shrink-0 text-muted-foreground" />
           </Button>
@@ -96,7 +102,15 @@ function SectionHeading({ title, help }: { title: string; help?: string }) {
   </div>;
 }
 
-export function RoutineTriggerFields({ projectId, value, onChange }: { projectId: string; value: RoutineTrigger; onChange: (value: RoutineTrigger) => void }) {
+export function RoutineTriggerFields({ projectId, value, onChange, hideLegend = false, highlightMissing = false }: {
+  projectId: string;
+  value: RoutineTrigger;
+  onChange: (value: RoutineTrigger) => void;
+  /** Under a row that already names the trigger (the routine's page): kept for screen readers only. */
+  hideLegend?: boolean;
+  /** Outline the values the trigger still lacks (the routine's page, which saves as you go). */
+  highlightMissing?: boolean;
+}) {
   const t = useTranslations("Routines");
   const statusT = useTranslations("Status");
   const priorityT = useTranslations("Priority");
@@ -145,10 +159,13 @@ export function RoutineTriggerFields({ projectId, value, onChange }: { projectId
     onChange({ type: "event", event: event as typeof ROUTINE_EVENTS[number], ...(event === "issue.status_changed" ? { status: "triage" } : {}), ...(event === "issue.comment_added" ? { issueId: "" } : {}), delayMinutes: value.delayMinutes, conditions: value.type === "event" && event !== "feedback.received" ? value.conditions : undefined });
   };
   const conditionsHelp = `${t("conditionsHelp")} ${t("triggerWaitingHelp")}`;
+  const delay = value.type === "schedule" ? 0 : value.delayMinutes ?? 0;
+  const delayMissing = highlightMissing && (!Number.isInteger(delay) || delay < 0 || delay > 120);
   return (
+    <HighlightMissingContext.Provider value={highlightMissing}>
     <div className="@container flex min-w-0 flex-col gap-6">
       <fieldset className="min-w-0">
-        <legend className="mb-2"><span className="flex items-center gap-1.5 text-sm font-semibold">{t("triggerLabel")}<HelpHint label={t("triggerHelpLabel", { label: t("triggerLabel") })}>{t("triggerChooseHelp")}</HelpHint></span></legend>
+        <legend className={hideLegend ? "sr-only" : "mb-2"}><span className="flex items-center gap-1.5 text-sm font-semibold">{t("triggerLabel")}<HelpHint label={t("triggerHelpLabel", { label: t("triggerLabel") })}>{t("triggerChooseHelp")}</HelpHint></span></legend>
         <div className="grid grid-cols-2 gap-2">
           {types.map(type => (
             <Button key={type.id} type="button" variant={mode === type.id ? "default" : "outline"} aria-pressed={mode === type.id}
@@ -171,8 +188,8 @@ export function RoutineTriggerFields({ projectId, value, onChange }: { projectId
             <ChoiceField label={t("eventLabel")} value={value.type === "database" ? databaseEntryEvent : value.event} choices={eventChoices} onChange={changeEvent} />
             {value.type === "event" && value.event === "issue.status_changed" && <ChoiceField label={t("targetStatus")} help={t("triggerStatusWaitingHelp")} value={value.status ?? "triage"} choices={statusChoices} icon={fieldIcons.status} onChange={status => onChange({ ...value, status })} />}
             {value.type === "event" && value.event === "issue.assigned" && <ChoiceField label={t("targetPerson")} help={t("triggerAssignmentWaitingHelp")} value={value.assigneeId ?? ""} choices={[{ id: "", label: t("anyPerson"), icon: fieldIcons.assignee }, ...people]} loading={peopleLoading} onChange={assigneeId => onChange({ ...value, assigneeId: assigneeId || undefined })} />}
-            {value.type === "event" && value.event === "issue.comment_added" && <ChoiceField label={t("followedIssue")} value={value.issueId ?? ""} choices={(issues.data ?? []).map(i => ({ id: i.id, label: i.title, icon: <StatusIndicator status={i.status} className="size-4" /> }))} icon={fieldIcons.status} loading={issues.isPending} onChange={issueId => onChange({ ...value, issueId })} />}
-            {value.type === "database" && <ChoiceField label={t("databaseLabel")} help={t("triggerDatabaseWaitingHelp")} value={value.databaseId} choices={pages.filter(p => p.database_schema != null).map(p => ({ id: p.id, label: p.title, icon: icon(DatabaseIcon) }))} icon={icon(DatabaseIcon)} loading={pagesLoading} onChange={databaseId => { if (databaseId !== value.databaseId) onChange({ type: "database", databaseId, delayMinutes: value.delayMinutes }); }} />}
+            {value.type === "event" && value.event === "issue.comment_added" && <ChoiceField label={t("followedIssue")} missing={highlightMissing && !value.issueId} value={value.issueId ?? ""} choices={(issues.data ?? []).map(i => ({ id: i.id, label: i.title, icon: <StatusIndicator status={i.status} className="size-4" /> }))} icon={fieldIcons.status} loading={issues.isPending} onChange={issueId => onChange({ ...value, issueId })} />}
+            {value.type === "database" && <ChoiceField label={t("databaseLabel")} help={t("triggerDatabaseWaitingHelp")} missing={highlightMissing && !value.databaseId} value={value.databaseId} choices={pages.filter(p => p.database_schema != null).map(p => ({ id: p.id, label: p.title, icon: icon(DatabaseIcon) }))} icon={icon(DatabaseIcon)} loading={pagesLoading} onChange={databaseId => { if (databaseId !== value.databaseId) onChange({ type: "database", databaseId, delayMinutes: value.delayMinutes }); }} />}
           </div>
           {((isDatabase && (pagesError || database.isError)) || (value.type === "event" && value.event === "issue.comment_added" && issues.isError)) && <p role="alert" className="text-xs text-destructive">{t("triggerChoicesError")}</p>}
         </section>
@@ -190,12 +207,13 @@ export function RoutineTriggerFields({ projectId, value, onChange }: { projectId
           <SectionHeading title={t("triggerTiming")} help={`${t("triggerDelayHelp")} ${t("triggerDelayRange")}`} />
           <div className="flex flex-col gap-1.5">
             <label htmlFor={delayId} className="text-xs font-medium text-muted-foreground">{t("triggerDelay")}</label>
-            <Input id={delayId} aria-describedby={`${delayId}-help`} type="number" min={0} max={120} step={1} className={cn("max-w-32", focusRing)} value={value.delayMinutes ?? 0} onChange={e => onChange({ ...value, delayMinutes: Number(e.target.value) })} />
+            <Input id={delayId} aria-describedby={`${delayId}-help`} type="number" min={0} max={120} step={1} className={cn("max-w-32", focusRing, delayMissing && missingRing)} data-missing={delayMissing ? "" : undefined} value={value.delayMinutes ?? 0} onChange={e => onChange({ ...value, delayMinutes: Number(e.target.value) })} />
             <p id={`${delayId}-help`} className="sr-only">{t("triggerDelayRange")}</p>
           </div>
         </section>
       </>}
     </div>
+    </HighlightMissingContext.Provider>
   );
 }
 
@@ -236,11 +254,15 @@ function ConditionRow({ value, onChange, onRemove, path, schema, database, choic
   const collection = value.field === "category" || ["people", "multi_select"].includes(property?.type ?? "");
   const operators: ConditionOperator[] = ["present", "absent", ...(collection ? ["contains" as const] : ["eq" as const, "neq" as const, ...(!property || ["text", "url", "select"].includes(property.type) ? ["in" as const] : [])]), ...(["number", "date", "created_at"].includes(property?.type ?? "") ? ["gt" as const, "gte" as const, "lt" as const, "lte" as const] : [])];
   const options = value.field === "property" ? property?.type === "people" ? choices.assignee : property?.type === "checkbox" ? [{ id: "true", label: t("checked"), icon: icon(PROPERTY_ICONS.checkbox) }, { id: "false", label: t("unchecked"), icon: icon(PROPERTY_ICONS.checkbox) }] : property?.options?.map(o => ({ id: o.id, label: o.name, icon: <Dot color={o.color} /> })) : choices[value.field];
+  const highlightMissing = useContext(HighlightMissingContext);
+  const valueMissing = highlightMissing && !["present", "absent"].includes(value.operator) && (
+    value.value === undefined || value.value === "" || (Array.isArray(value.value) && value.value.length === 0) ||
+    (typeof value.value === "number" && !Number.isFinite(value.value)));
   const setValue = (raw: string) => onChange({ ...value, value: raw === "" ? undefined : value.operator === "in" ? raw.split(",").map(v => v.trim()).filter(Boolean) : property?.type === "number" ? Number(raw) : property?.type === "checkbox" ? raw === "true" : raw });
   let valueField: ReactNode;
   if (!["present", "absent"].includes(value.operator)) {
     if (options && value.operator === "in") {
-      valueField = <fieldset className="flex min-w-0 flex-col gap-2">
+      valueField = <fieldset data-missing={valueMissing ? "" : undefined} className={cn("flex min-w-0 flex-col gap-2 rounded-lg", valueMissing && missingRing)}>
         <legend className="mb-1.5 text-xs font-medium text-muted-foreground">{t("conditionValues")}</legend>
         <div className="flex max-h-40 flex-wrap gap-x-4 gap-y-2 overflow-auto p-1">
           {options.map(option => <label key={option.id} className="flex min-h-9 items-center gap-2 text-sm">
@@ -252,11 +274,11 @@ function ConditionRow({ value, onChange, onRemove, path, schema, database, choic
         </div>
       </fieldset>;
     } else if (options) {
-      valueField = <ChoiceField label={t("conditionValue")} value={String(value.value ?? "")} choices={options} icon={database && property ? icon(PROPERTY_ICONS[property.type]) : fieldIcons[value.field]} onChange={setValue} />;
+      valueField = <ChoiceField label={t("conditionValue")} missing={valueMissing} value={String(value.value ?? "")} choices={options} icon={database && property ? icon(PROPERTY_ICONS[property.type]) : fieldIcons[value.field]} onChange={setValue} />;
     } else {
       valueField = <div className="flex min-w-0 flex-col gap-1.5">
         <label htmlFor={inputId} className="text-xs font-medium text-muted-foreground">{t(value.operator === "in" ? "conditionValues" : "conditionValue")}</label>
-        <Input id={inputId} step={property?.type === "number" ? "any" : undefined} className={focusRing} aria-describedby={value.operator === "in" ? `${inputId}-help` : undefined} type={property?.type === "number" ? "number" : property?.type === "date" ? "date" : "text"} value={Array.isArray(value.value) ? value.value.join(", ") : String(value.value ?? "")} onChange={e => setValue(e.target.value)} />
+        <Input id={inputId} step={property?.type === "number" ? "any" : undefined} className={cn(focusRing, valueMissing && missingRing)} data-missing={valueMissing ? "" : undefined} aria-describedby={value.operator === "in" ? `${inputId}-help` : undefined} type={property?.type === "number" ? "number" : property?.type === "date" ? "date" : "text"} value={Array.isArray(value.value) ? value.value.join(", ") : String(value.value ?? "")} onChange={e => setValue(e.target.value)} />
         {value.operator === "in" && <p id={`${inputId}-help`} className="text-xs text-muted-foreground">{t("conditionValuesHelp")}</p>}
       </div>;
     }

@@ -20,6 +20,9 @@
 
 import * as React from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { SMART_ASSIGN_ICON } from "@/components/feature-icons";
+import { smartAssignFillsEmptyAssignee } from "@/lib/smart-assign-config";
+import { useSmartAssignFillsEmpty } from "@/lib/use-smart-assign-empty";
 import { TriangleIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { CommandGroup, CommandItem } from "@/components/ui/command";
@@ -271,6 +274,13 @@ export function IssueShortcutMenu({
   onSetCategories: (ids: string[], issueId: string) => void;
 }) {
   const writeTargets = targets ?? [issue];
+  // Clearing the assignee lets Smart Assign choose when it fills every
+  // target's empty assignee (MIN-811): the row then names it.
+  const smartAssign =
+    useSmartAssignFillsEmpty(issue.project_id, issue.status) &&
+    writeTargets.every(
+      (target) => target.project_id === issue.project_id && smartAssignFillsEmptyAssignee(true, target.status),
+    );
   // Category writes across several targets are one gesture for ⌘Z (MIN-795).
   const { linked } = useUndoHistory();
   const tBulk = useTranslations("BulkActions");
@@ -395,12 +405,15 @@ export function IssueShortcutMenu({
         <>
           <CommandItem
             value="__none__"
-            keywords={[tField("unassigned")]}
+            keywords={[tField(smartAssign ? "smartAssign" : "unassigned")]}
             onSelect={() => apply({ assignee_id: null })}
             {...all((target) => target.assignee_id, null)}
           >
+            {smartAssign && (
+              <HugeiconsIcon icon={SMART_ASSIGN_ICON} className="size-4 text-muted-foreground" />
+            )}
             <span className="truncate text-muted-foreground">
-              {tField("unassigned")}
+              {tField(smartAssign ? "smartAssign" : "unassigned")}
             </span>
           </CommandItem>
           {members.map((m) => (

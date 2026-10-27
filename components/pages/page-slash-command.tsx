@@ -22,6 +22,7 @@ import { ReactRenderer } from "@tiptap/react";
 import { Suggestion, type SuggestionProps } from "@tiptap/suggestion";
 import { PluginKey } from "@tiptap/pm/state";
 import { cn } from "@/lib/utils";
+import { MENU_ROW_ACTIVE_CLASS, MENU_ROW_CLASS, MENU_SCROLL_CLASS, MENU_SURFACE_CLASS } from "@/components/ui/menu-surface";
 import {
   insertBlock,
   slashItems,
@@ -176,8 +177,8 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
         className={cn(
           // No color transition: with a held arrow the highlight moves faster
           // than a fade, which smeared it over several rows.
-          "flex w-full items-center gap-2.5 scroll-my-1.5 rounded-lg px-2 py-1.5 text-left text-sm",
-          index === selected ? "bg-muted text-foreground" : "text-foreground/90",
+          MENU_ROW_CLASS,
+          index === selected ? MENU_ROW_ACTIVE_CLASS : "text-foreground/90",
           // During keyboard navigation, the mouse no longer paints anything:
           // two lines lit, that would be two responses to “Enter”.
           keyboard && "pointer-events-none"
@@ -193,11 +194,13 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
     <div
       role="listbox"
       data-floating-surface
-      className="min-w-52 overflow-hidden rounded-xl border border-border bg-popover p-1 shadow-lg"
+      // The padding moves onto the scroller, so rows scroll right to the
+      // surface's edge and keep its padding once brought into view.
+      className={cn("min-w-52 overflow-hidden", MENU_SURFACE_CLASS, "p-0")}
     >
       <div
         ref={listRef}
-        className="scrollbar-quiet max-h-80 overflow-y-auto overscroll-contain"
+        className={cn("scrollbar-quiet max-h-80 p-2", MENU_SCROLL_CLASS)}
       >
         {rows}
       </div>
@@ -212,7 +215,7 @@ export const PAGE_SLASH_MENU_ATTR = "data-page-slash-menu";
 const EDGE = 8;
 const GAP = 6;
 
-function renderSlashMenu() {
+export function renderSlashMenu() {
   let renderer: ReactRenderer<SlashMenuRef, SlashProps> | null = null;
   let menuEl: HTMLElement | null = null;
   let caretRect: (() => DOMRect | null) | null = null;

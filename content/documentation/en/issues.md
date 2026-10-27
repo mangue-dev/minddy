@@ -353,7 +353,7 @@ For manual creation, switch Smart-fill off if its button is shown and enabled. T
 
 Set the useful properties before confirming: status, priority, effort, assignee, objective, categories, due date and recurrence. An assignee is the project owner or a Member, never a reader; an objective groups issues around a project outcome. You can leave optional properties unset instead of guessing. Priority is **Not set** or ranges from low through medium and high to urgent; effort is **Not set** or uses XS, S, M, L and XL.
 
-When the project's Smart Assign is on, the assignee picker shows **Smart Assign** instead of **Unassigned**. Leave it selected and Smart Assign chooses the assignee once the issue is past triage. In the issue panel, choosing **Smart Assign** removes the current assignee and lets Smart Assign choose again. **Canceled** and **Duplicate** issues keep **Unassigned**.
+When the project's Smart Assign is on, the assignee picker shows **Smart Assign** instead of **Unassigned**. Issue cards and the command palette follow the same rule, and an unassigned card shows the Smart Assign icon. Leave it selected and Smart Assign chooses the assignee once the issue is past triage. In the issue panel, choosing **Smart Assign** removes the current assignee and lets Smart Assign choose again. **Canceled** and **Duplicate** issues keep **Unassigned**.
 
 Confirm creation and open the new issue. Check its identifier and project. Reopen its property pickers to change values as the task becomes clearer. The description explains the work; an implementation plan is maintained separately in the Plan tab.
 

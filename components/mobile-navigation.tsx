@@ -14,7 +14,7 @@ import { matchesFilter } from "@/components/sidebar-filter-field";
 import Link from "@/components/app-link";
 import { MobileNavActions } from "./mobile-nav-actions";
 import { MobileSidebarReveal } from "./mobile-sidebar-reveal";
-import { SidebarFrame, SidebarRows, SidebarTopBand, SidebarBackRow, ProjectContextRow } from "./app-sidebar";
+import { SidebarFrame, SidebarRows, SidebarTopBand, SidebarBackRow, ProjectContextRow, type SidebarBackBadge } from "./app-sidebar";
 import { MobileSheetScrollArea } from "./ui/mobile-sheet";
 import type { NavSection, NavItem } from "@/components/nav-types";
 import type { Project } from "@/lib/types";
@@ -29,7 +29,7 @@ export type MobileMenuPanel = {
   sections?: MobileMenuSection[];
   render?: (navigation: MobileMenuNavigation) => ReactNode;
   /** The badge of the level this panel's back row returns to (MIN-695). */
-  backBadge?: ReactNode;
+  backBadge?: SidebarBackBadge;
 };
 export type MobileMenuSection = Omit<NavSection, "items"> & {
   items: (NavItem & { panel?: MobileMenuPanel; contextActions?: ContextMenuAction[] })[];

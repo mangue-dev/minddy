@@ -20,7 +20,7 @@ import {
 } from "@/components/wizard/wizard-dialog";
 import { RoutinePromptField } from "@/components/routines/routine-prompt-field";
 import { RoutineScheduleFields } from "@/components/routines/routine-schedule-fields";
-import { SpendCapCombobox } from "@/components/routines/spend-cap-combobox";
+import { SpendCapSelect } from "@/components/routines/spend-cap-select";
 import { DEFAULT_MAX_SPEND_PERCENT } from "@/lib/routine-budget";
 import { useProjects } from "@/lib/projects-context";
 import { useOfferedProjects } from "@/lib/use-offered-projects";
@@ -375,7 +375,7 @@ export function CreateRoutineWizard({
             label={t("spendCapLabel")}
             help={t("spendCapHelp")}
             control={
-              <SpendCapCombobox
+              <SpendCapSelect
                 value={spendCap}
                 onChange={setSpendCap}
                 disabled={creating}

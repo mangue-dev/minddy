@@ -17,6 +17,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
+import { useContentPaneAnchor } from "@/lib/use-content-pane-anchor";
 import { cn } from "@/lib/utils";
 import { DictationWave } from "./dictation-wave";
 import type { DictationRecorder } from "./use-dictation-recorder";
@@ -34,7 +35,15 @@ import type { DictationRecorder } from "./use-dictation-recorder";
  * so nothing else can be clicked while it runs, and no dismissal path (Escape,
  * an outside click, a swipe) can silently throw it away — each one asks
  * through the same confirmation as ✕.
+ *
+ * A successful take closes with a short receipt: the pill collapses into a
+ * circle around a checkmark, holds it long enough to be read, then leaves.
  */
+
+/** How long the checkmark stays on screen once the circle has formed. */
+export const DICTATION_DONE_HOLD_MS = 550;
+/** Matches the pill's width transition below. */
+const DICTATION_COLLAPSE_MS = 200;
 
 export function formatDictationTime(ms: number): string {
   const totalSec = Math.floor(ms / 1000);
@@ -49,8 +58,39 @@ export function DictationPill({ recorder }: { recorder: DictationRecorder }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const validateRef = useRef<HTMLButtonElement>(null);
 
-  const { status, elapsedMs, stream } = recorder;
-  const open = status !== "idle";
+  const { status, elapsedMs, stream, completedTakes } = recorder;
+  // `done` draws the receipt and survives the exit animation; `holding` keeps
+  // the dialog open while the receipt is on screen.
+  const [done, setDone] = useState(false);
+  const [holding, setHolding] = useState(false);
+  const seenTakes = useRef(completedTakes);
+  useEffect(() => {
+    if (completedTakes === seenTakes.current) return;
+    seenTakes.current = completedTakes;
+    setDone(true);
+    setHolding(true);
+    const timer = window.setTimeout(
+      () => setHolding(false),
+      DICTATION_COLLAPSE_MS + DICTATION_DONE_HOLD_MS,
+    );
+    return () => window.clearTimeout(timer);
+  }, [completedTakes]);
+  // A new take (the shortcut can start one at once) replaces the receipt.
+  useEffect(() => {
+    if (status === "starting") {
+      setDone(false);
+      setHolding(false);
+    }
+  }, [status]);
+  const open = status !== "idle" || holding;
+  const receipt = done && status === "idle";
+  // Keeps the closed dialog mounted after a first take, so it can animate out.
+  const [used, setUsed] = useState(open);
+  // Above the bottom bar, at the selection pill's height and centered on the
+  // content pane like it, kept through the exit; the class keeps the
+  // window-bottom fallback.
+  const anchor = useContentPaneAnchor(used && !mobile, open);
+  if (open && !used) setUsed(true);
   const recording = status === "recording";
   const processing = status === "processing";
   // Before the microphone answers there is nothing to keep yet: ✕ stops at
@@ -98,13 +138,23 @@ export function DictationPill({ recorder }: { recorder: DictationRecorder }) {
 
   const pill = (
     <div
+      data-dictation-done={receipt ? "" : undefined}
       className={cn(
         // Concentric: the buttons fill the inner height (h-10 inside p-2.5), so
         // their round ends follow the pill's.
         "flex items-center gap-2 rounded-full bg-popover p-2.5 text-popover-foreground shadow-lg ring-1 ring-border",
-        mobile ? "w-full" : "w-[min(28rem,calc(100vw-2rem))]",
+        "transition-[width] duration-200 ease-out motion-reduce:transition-none",
+        // The receipt: as wide as the pill is tall (h-10 + p-2.5), a circle.
+        receipt
+          ? "mx-auto w-15 justify-center overflow-hidden"
+          : mobile ? "w-full" : "w-[min(28rem,calc(100vw-2rem))]",
       )}
     >
+      {receipt ? (
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground animate-in fade-in-0 zoom-in-50 delay-100 duration-200 fill-mode-backwards">
+          <HugeiconsIcon icon={Tick02Icon} className="size-5" strokeWidth={2.5} />
+        </span>
+      ) : (<>
       <Popover open={confirmOpen} onOpenChange={setConfirmOpen}>
         <PopoverAnchor asChild>
           <Button
@@ -176,16 +226,17 @@ export function DictationPill({ recorder }: { recorder: DictationRecorder }) {
           {processing ? <Spinner className="size-4" /> : <HugeiconsIcon icon={Tick02Icon} className="size-4" />}
         </Button>
       </SendShortcutTooltip>
+      </>)}
     </div>
   );
 
-  // Mounted only while a take is live: every mic button in the app carries a
-  // pill, and an idle one should cost nothing.
-  if (!open) return null;
+  // Mounted only once a take has begun: every mic button in the app carries a
+  // pill, and one never used should cost nothing.
+  if (!used) return null;
 
   return (
     <Dialog
-      open
+      open={open}
       // Every dismissal (a swipe or the sheet's own close) goes through ✕.
       onOpenChange={(next) => {
         if (!next) requestDiscard();
@@ -194,6 +245,7 @@ export function DictationPill({ recorder }: { recorder: DictationRecorder }) {
       <DialogContent
         data-dictation-pill=""
         aria-describedby={undefined}
+        style={anchor}
         showCloseButton={false}
         onOpenAutoFocus={(event) => {
           // ✓ takes focus, so Enter validates and Tab reaches ✕.

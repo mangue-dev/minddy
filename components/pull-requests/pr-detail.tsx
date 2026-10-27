@@ -735,7 +735,7 @@ export function PrDetail({
     null | "merge" | "close" | "reopen" | "ready_for_review" | "convert_to_draft"
   >(null);
   const [maintenanceAction, setMaintenanceAction] = useState<ReadinessAction | null>(null);
-  // The merge-flow checkbox is optimistic: the forge's read-back can lag the
+  // The merge-flow switch is optimistic: the forge's read-back can lag the
   // registration the POST just confirmed, and a settled PR is not re-polled,
   // so the override stands until the data agrees with it.
   const [mergeFlowOverride, setMergeFlowOverride] = useState<boolean | null>(null);

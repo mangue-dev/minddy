@@ -55,6 +55,7 @@ import {
 import { semanticExtras } from "@/lib/issue-semantic-query";
 import { issueSearchTier } from "@/lib/issue-search-order";
 import { useSemanticIssueSearch } from "@/lib/use-semantic-issue-search";
+import { SemanticSearchingHint } from "@/components/semantic-searching-hint";
 
 /** Palette category of the issues found by meaning (MIN-718), always last. */
 const SEMANTIC_CATEGORY = "semantic-issues";
@@ -85,6 +86,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { useCreate } from "@/lib/create-context";
 import { useProjects } from "@/lib/projects-context";
+import { smartAssignFillsEmptyAssignee } from "@/lib/smart-assign-config";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
 import {
   ALL_STATUSES,
@@ -663,7 +665,18 @@ export function CommandPalette({
           priority: 10,
           requiresForm: {
             ...selectField("assignee", tIssueUI("changeAssigneeAria"), [
-              { value: "__none__", label: tField("unassigned") },
+              {
+                value: "__none__",
+                // Smart Assign fills an empty assignee here (MIN-811).
+                label: tField(
+                  smartAssignFillsEmptyAssignee(
+                    projects.find((project) => project.id === issue.project_id)?.smart_assign_enabled,
+                    issue.status,
+                  )
+                    ? "smartAssign"
+                    : "unassigned",
+                ),
+              },
               ...membersForProject(issue.project_id).map((m) => ({
                 value: m.user_id,
                 label: displayName(m),
@@ -1307,7 +1320,7 @@ export function CommandPalette({
   // results below are memoized, so a keystroke re-renders this host without
   // handing the palette new props (which would rescore every item).
   const paletteQuery = usePaletteStore((state) => (semanticEnabled ? state.query : ""));
-  const { ids: semanticIds } = useSemanticIssueSearch(paletteQuery, { projectId: null, enabled: semanticEnabled });
+  const { ids: semanticIds, pending: semanticPending, answered: semanticAnswered } = useSemanticIssueSearch(paletteQuery, { projectId: null, enabled: semanticEnabled });
   const semanticItems = useMemo(() => {
     if (!semanticEnabled || semanticIds.length === 0) return [];
     const issueRows = new Map(
@@ -1339,8 +1352,16 @@ export function CommandPalette({
     return [...categories, semanticCategory];
   }, [showBulk, bulkCategories, navigationSearch, categories, searchItems, hasSemanticItems, semanticLabel]);
   const supplemental = useMemo(
-    () => (showBulk ? undefined : { items: semanticItems, categories: ["issues"] }),
-    [showBulk, semanticItems],
+    () => (showBulk ? undefined : {
+      items: semanticItems,
+      categories: ["issues"],
+      status: semanticPending
+        ? <SemanticSearchingHint />
+        : semanticAnswered && semanticItems.length === 0
+          ? <SemanticSearchingHint status="none" />
+          : undefined,
+    }),
+    [showBulk, semanticItems, semanticPending, semanticAnswered],
   );
 
   // The placeholder follows the mode: the new-tab launcher asks for a

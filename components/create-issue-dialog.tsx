@@ -66,6 +66,7 @@ import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { useAuth } from "@/lib/auth-context";
 import { useDrafts } from "@/lib/use-drafts";
 import { useHeldDraft } from "@/lib/use-held-draft";
+import { useResetAfterClose } from "@/lib/use-dialog-close-content";
 import { useIssueDictation } from "@/lib/use-issue-dictation";
 import { useAnalytics } from "@/lib/use-analytics";
 import { useTrackView } from "@/lib/use-track-view";
@@ -194,7 +195,8 @@ export function CreateIssueDialog({
   const resuming = useHeldDraft({
     open,
     context: [projectId, initialDraftId, initialTitle, initialDescription].join("\n"),
-    hasContent: () => draftHasContent(),
+    // A form whose reset waits for the close animation is already empty.
+    hasContent: () => !resetPending.current && draftHasContent(),
     save: () => saveDraft(),
     clear: () => reset(),
     onLost: () => toast.error(tDrafts("autoSaveFailed")),
@@ -512,8 +514,10 @@ export function CreateIssueDialog({
     resetDictation();
   };
 
+  // The form keeps its content while the dialog fades out, then resets.
+  const { scheduleReset, resetPending, resets } = useResetAfterClose(open, reset);
   const closeAndReset = () => {
-    reset();
+    scheduleReset();
     onOpenChange(false);
   };
 
@@ -573,7 +577,7 @@ export function CreateIssueDialog({
     }
     // A form with content stays as it is, for the next opening or the
     // automatic draft (see useHeldDraft); a blank one starts over.
-    if (!next && !draftHasContent()) reset();
+    if (!next && !draftHasContent()) scheduleReset();
     if (!next) setOpenPicker(null);
     onOpenChange(next);
   };
@@ -820,8 +824,10 @@ export function CreateIssueDialog({
           ref={contentRef}
           onKeyDownCapture={submitShortcut.onKeyDownCapture}
           aria-describedby={undefined}
-          // The extra top padding clears the "Create in" pill and the close button.
-          className="creation-sheet p-8 pt-15 max-sm:p-5 max-sm:pt-15 sm:max-w-2xl"
+          // The text column starts where the "Create in" pill's label does
+          // (its 16 px inset + its 10 px padding), on both sides; the content
+          // starts 16 px below the pill (44 + 16 = 60).
+          className="creation-sheet px-[1.625rem] pt-15 pb-4 max-sm:p-5 max-sm:pt-15 sm:max-w-2xl"
           onInteractOutside={keepOverlayOpenForPopper}
         >
           {/* "Create in" (MIN-741): level with the close button on desktop;
@@ -866,6 +872,9 @@ export function CreateIssueDialog({
               {showsTitle && (<>
               <label htmlFor={titleId} className="creation-field-label">{tField("title")}</label>
               <AutoTextarea
+                // Remounted by a reset that lands as the dialog reopens, so
+                // its autoFocus follows the fresh form.
+                key={resets}
                 id={titleId}
                 ref={arrowTitle.ref}
                 enterKeyHint={mobile ? "next" : undefined}
@@ -883,11 +892,13 @@ export function CreateIssueDialog({
                   titleBody.onTitleKeyDown(e, { submit: () => void submit(createMore), mobile });
                 }}
                 placeholder={t("titlePlaceholder")}
-                className="creation-title w-full title-field bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50 sm:text-2xl"
+                className="creation-title w-full title-field bg-transparent text-lg leading-snug font-semibold outline-none placeholder:text-muted-foreground/50"
               />
               </>)}
               <div className="creation-field-label">{tField("description")}</div>
-              <div ref={titleBody.bodyRef}>
+              {/* The title's gap: the description is this wrapper's first child,
+                  where its own margin does not apply. */}
+              <div ref={titleBody.bodyRef} className={showsTitle ? "app-desktop:mt-3" : undefined}>
               <LazyDocumentEditor
                 mentions={mentions}
                 key={editorKey}
@@ -911,12 +922,12 @@ export function CreateIssueDialog({
                   editorNonEmptyRef.current = !empty;
                 }}
                 placeholder={t("createDescriptionPlaceholder")}
-                className="creation-description mt-2 min-h-16"
+                className="creation-description mt-2 min-h-16 first:mt-0"
               />
               </div>
 
               {/* Property values stay compact on desktop and receive labels on mobile. */}
-              <div className="creation-properties mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+              <div className="creation-properties mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 app-desktop:-ml-1.5">
                 <CreationProperty mobile={mobile} label={tField("status")}>
                   <StatusCompact
                     showValue={mobile}
@@ -1094,7 +1105,7 @@ export function CreateIssueDialog({
               {/* The button in its own block: it is he who switches to a
   line, full width, when the bar passes the line. No Cancel button:
   the dialog's own close X already does that job. */}
-              <div className="creation-submit flex items-center justify-end gap-2 app-mobile:w-full app-desktop:ml-1">
+              <div className="creation-submit flex items-center justify-end gap-2 app-mobile:w-full app-desktop:ml-1 app-desktop:-mr-2.5">
                 {/* The tooltip clings to the action, not the chevron: its
                     props pass through `SplitButton` to the left button, the
                     only one that ⌘↵ activates. */}

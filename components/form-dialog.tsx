@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
 import type { DictationContext } from "@/lib/dictation-context";
+import { useValueWhileOpen } from "@/lib/use-dialog-close-content";
 
 /**
  * The base of small modal forms: same native closure (cross,
@@ -19,8 +20,8 @@ import type { DictationContext } from "@/lib/dictation-context";
 export function FormDialog({
   open,
   onOpenChange,
-  title,
-  description,
+  title: titleProp,
+  description: descriptionProp,
   children,
   onSubmit,
   submitLabel,
@@ -61,6 +62,10 @@ export function FormDialog({
     autoStart?: boolean;
   };
 }) {
+  // A title built from a target the caller clears on close stays as it was
+  // while the dialog fades out.
+  const title = useValueWhileOpen(open, titleProp);
+  const description = useValueWhileOpen(open, descriptionProp);
   const cancel = () => {
     if (onCancel) onCancel();
     else onOpenChange(false);

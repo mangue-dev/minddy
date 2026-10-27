@@ -7,6 +7,7 @@ import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { semanticExtras } from "@/lib/issue-semantic-query";
 import { orderIssuesForSearch } from "@/lib/issue-search-order";
 import { useSemanticIssueSearch } from "@/lib/use-semantic-issue-search";
+import { SemanticSearchingHint } from "@/components/semantic-searching-hint";
 
 /**
  * "Related by meaning" — the semantic half of an issue picker built on cmdk
@@ -20,7 +21,9 @@ import { useSemanticIssueSearch } from "@/lib/use-semantic-issue-search";
  * five rows. The rows are
  * `forceMount`ed with a `semantic:` value — cmdk would otherwise hide them,
  * since their text may share no word with the query — and they land in the
- * last group, so the highlighted row never jumps when they arrive.
+ * last group, so the highlighted row never jumps when they arrive. While the
+ * request is in flight, a status row says so instead of leaving the list
+ * silent, and another says when the answer holds nothing new.
  */
 export function SemanticIssueGroup<T>({
   projectId,
@@ -46,7 +49,7 @@ export function SemanticIssueGroup<T>({
   const t = useTranslations("Picker");
   const search = useCommandState((state) => state.search);
   // No eligible issue, nothing to show: no query embedding is paid for.
-  const { ids } = useSemanticIssueSearch(search, { projectId, enabled: candidates.length > 0 });
+  const { ids, pending, answered } = useSemanticIssueSearch(search, { projectId, enabled: candidates.length > 0 });
 
   const extras = React.useMemo(() => {
     if (ids.length === 0) return [];
@@ -66,7 +69,12 @@ export function SemanticIssueGroup<T>({
     return statusOf ? orderIssuesForSearch(extras, statusOf) : extras;
   }, [ids, candidates, idOf, textOf, statusOf, search]);
 
-  if (extras.length === 0) return null;
+  if (extras.length === 0) {
+    // `data-semantic-group` also hides cmdk's "No results" (globals.css):
+    // the status row says more.
+    if (pending) return <SemanticSearchingHint data-semantic-group="" />;
+    return answered ? <SemanticSearchingHint status="none" data-semantic-group="" /> : null;
+  }
   return (
     <CommandGroup heading={t("relatedByMeaning")} forceMount data-semantic-group="">
       {extras.map((item) => (

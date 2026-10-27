@@ -79,7 +79,7 @@ Esegui commit e push sul branch predefinito del repository GitHub o GitLab colle
 
 ## Selezionare e controllare {#selection}
 
-Usa `/`, `$` o il menu `+` e leggi l’anteprima prima di inviare. Puoi selezionare fino a cinque skill; i badge verdi indicano la scelta. `$` contiene solo skill del repository, `/` anche altri comandi.
+Usa `/`, `$` o il menu `+` e leggi l’anteprima prima di inviare. Puoi selezionare fino a cinque skill; i badge verdi indicano la scelta. `$` contiene solo skill del repository, `/` anche altri comandi. Nell'istruzione di una routine, digita `$` per inserire una skill; `/` apre il menu dei blocchi dell'editor.
 
 La scelta vale per quel turno dell’utente. Nelle routine vale per ogni esecuzione. Le skill sono file del repository, non installazioni globali dell’account, e non sostituiscono istruzioni di sistema o sicurezza. Per crearne o modificarne una, modifica i file del repository tu stesso o con il tuo agente di codice. Esegui il push prima di selezionare la nuova versione.
 

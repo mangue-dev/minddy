@@ -14,7 +14,9 @@ import {
   useState,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   forwardRef,
+  type CSSProperties,
 } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
@@ -68,6 +70,7 @@ import {
   findActiveMentionQuery,
 } from "@/lib/mention-menu";
 import { useSemanticMentions } from "@/lib/use-semantic-mentions";
+import { SemanticSearchingHint } from "@/components/semantic-searching-hint";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { assistantDraftHtml } from "@/lib/assistant-composer-draft";
 import {
@@ -135,7 +138,8 @@ type ActiveSlashQuery = ActiveComposerMenuQuery & {
   commandsAllowed: boolean;
 };
 
-function mentionFromNode(node: HTMLElement): MentionOption | null {
+/** Reads a composer pill back into its option (exported for tests). */
+export function mentionFromNode(node: HTMLElement): MentionOption | null {
   const type = node.dataset.mentionType;
   const id = node.dataset.mentionId;
   const label = node.dataset.mentionLabel;
@@ -158,10 +162,16 @@ function mentionFromNode(node: HTMLElement): MentionOption | null {
     ...(node.dataset.mentionStatus
       ? { status: node.dataset.mentionStatus as MentionOption["status"] }
       : {}),
+    // An objective's own status, so its pill shows it instead of the target
+    // once inserted, as the suggestion did (MIN-785).
+    ...(node.dataset.mentionObjectiveStatus
+      ? { objectiveStatus: node.dataset.mentionObjectiveStatus as MentionOption["objectiveStatus"] }
+      : {}),
   };
 }
 
-function createMentionNode(option: MentionOption): HTMLSpanElement {
+/** The composer pill an option becomes (exported for tests). */
+export function createMentionNode(option: MentionOption): HTMLSpanElement {
   const pill = document.createElement("span");
   pill.contentEditable = "false";
   pill.dataset.mentionType = option.type;
@@ -173,6 +183,7 @@ function createMentionNode(option: MentionOption): HTMLSpanElement {
   if (iconAttr) pill.dataset.mentionIcon = iconAttr;
   if (option.color) pill.dataset.mentionColor = option.color;
   if (option.status) pill.dataset.mentionStatus = option.status;
+  if (option.objectiveStatus) pill.dataset.mentionObjectiveStatus = option.objectiveStatus;
   pill.className = MENTION_SLOT_CLASS;
   return pill;
 }
@@ -196,6 +207,24 @@ function createSkillNode(skill: RepositorySkillSummary): HTMLSpanElement {
   pill.dataset.skillSource = skill.source;
   pill.className = SKILL_SLOT_CLASS;
   return pill;
+}
+
+let placeholderCanvas: CanvasRenderingContext2D | null | undefined;
+/** The width of the placeholder on one line, in the editor's font. Infinite
+ when it cannot be measured, so the composer stays expanded rather than
+ flipping back to a compact row its placeholder overflows. */
+function placeholderWidth(text: string, style: CSSStyleDeclaration): number {
+  if (!text) return 0;
+  if (placeholderCanvas === undefined) {
+    try {
+      placeholderCanvas = document.createElement("canvas").getContext("2d");
+    } catch {
+      placeholderCanvas = null;
+    }
+  }
+  if (!placeholderCanvas || !style.font) return Infinity;
+  placeholderCanvas.font = style.font;
+  return placeholderCanvas.measureText(text).width;
 }
 
 function focusContentEditableAtEnd(element: HTMLElement) {
@@ -306,8 +335,8 @@ export interface ChatInputProps {
   /** Shared upload queue paired with the retained Numo draft. */
   attachmentUploads?: AttachmentUploads;
   /**
-   * Extra controls pinned to the LEFT of the bottom bar (the send/dictate
-   * cluster stays right). The agent launch composer drops its model picker here.
+   * Extra controls placed just before the dictation and send buttons, on the
+   * right (MIN-827): Numo's model picker.
    */
   leadingControls?: ReactNode;
   /**
@@ -491,7 +520,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       [addMenuQuery, mentionables],
     );
     // Issues found by meaning (MIN-718), after the text matches.
-    const addContextOptions = useSemanticMentions(
+    const { options: addContextOptions, status: addContextSemanticStatus } = useSemanticMentions(
       addContextTextOptions,
       mentionables ?? [],
       addMenuQuery,
@@ -669,13 +698,15 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     );
     // Issues found by meaning (MIN-718): appended last, and the highlight
     // resets on the query only, so a late answer never moves it.
-    const mentionOptions = useSemanticMentions(
+    const { options: mentionOptions, status: mentionSemanticStatus } = useSemanticMentions(
       mentionTextOptions,
       mentionables ?? [],
       mentionQuery ?? "",
       mentionQuery !== null,
     );
-    const mentionOpen = mentionOptions.length > 0;
+    // The list also opens on the status row of a search by meaning, so a
+    // description with no text match does not leave the caret silent.
+    const mentionOpen = mentionOptions.length > 0 || mentionSemanticStatus !== null;
     const activeMention = Math.min(
       mentionIndex,
       Math.max(0, mentionOptions.length - 1),
@@ -970,6 +1001,122 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       [slashQuery, commands, availableSkills],
     );
     const slashOpen = slashOptions.length > 0;
+
+    // The mention and "/" / "$" menus open where the text is typed, as in the
+    // shared editor: just above the caret's line, starting at the caret,
+    // kept inside the composer. Measured whenever the query changes, since
+    // the caret moves with it. No caret box (a fresh empty line): the menus
+    // keep their place at the composer's left edge.
+    const rootRef = useRef<HTMLDivElement>(null);
+    const [caretAnchor, setCaretAnchor] = useState<{ left: number; bottom: number } | null>(null);
+    const menusOpenRef = useRef(false);
+    menusOpenRef.current = mentionOpen || slashOpen;
+    const measureCaretAnchor = useCallback(() => {
+      if (!menusOpenRef.current) return;
+      const root = rootRef.current;
+      const selection = window.getSelection();
+      const rect = selection?.rangeCount ? selection.getRangeAt(0).getBoundingClientRect() : null;
+      if (!root || !rect || rect.height === 0) {
+        setCaretAnchor(null);
+        return;
+      }
+      const box = root.getBoundingClientRect();
+      const next = { left: rect.left - box.left, bottom: box.bottom - rect.top };
+      setCaretAnchor((previous) =>
+        previous && previous.left === next.left && previous.bottom === next.bottom ? previous : next,
+      );
+    }, []);
+    useLayoutEffect(() => {
+      measureCaretAnchor();
+    }, [mentionOpen, slashOpen, mentionQuery, slashQuery, measureCaretAnchor]);
+    const menuPlacement = (width: string): CSSProperties | undefined =>
+      caretAnchor
+        ? {
+            left: `clamp(0.75rem, ${caretAnchor.left}px, calc(100% - ${width} - 0.75rem))`,
+            bottom: caretAnchor.bottom,
+          }
+        : undefined;
+
+    // Compact by default, one row: "+", the text, then the model, the mic and
+    // send (MIN-827). Context pills and attachments sit in their own row above
+    // it without changing it. The text takes its own row above the controls as
+    // soon as it wraps or holds a line break, and folds back only once its
+    // single line fits the compact row again, so it never flips at the
+    // boundary. The surface's height follows its content
+    // through a transition, which CSS alone cannot do from `auto` to `auto`.
+    const composerGridRef = useRef<HTMLDivElement>(null);
+    const leadControlsRef = useRef<HTMLDivElement>(null);
+    const trailControlsRef = useRef<HTMLDivElement>(null);
+    const surfaceContentRef = useRef<HTMLDivElement>(null);
+    const [textWraps, setTextWraps] = useState(false);
+    const [surfaceHeight, setSurfaceHeight] = useState<number | null>(null);
+    const expandedLayout = textWraps;
+    const expandedLayoutRef = useRef(expandedLayout);
+    expandedLayoutRef.current = expandedLayout;
+    // What the compact row takes from the grid's width besides the text and
+    // the controls (gaps and paddings), measured while compact. Folding back
+    // compares the text with exactly the room it wrapped in, minus the
+    // controls as they are NOW: an estimate wider than that room let the two
+    // layouts disagree, and room recorded with other controls (Stop while
+    // Numo replies) kept the composer expanded once they shrank.
+    const compactGapsRef = useRef<number | null>(null);
+    const controlsWidth = () =>
+      (leadControlsRef.current?.offsetWidth ?? 0) + (trailControlsRef.current?.offsetWidth ?? 0);
+    const measureComposerLayout = useCallback(() => {
+      const editor = editorRef.current;
+      const grid = composerGridRef.current;
+      // A hidden composer (a closed panel) has nothing to measure.
+      if (!editor || !grid || grid.clientWidth === 0) return;
+      const style = getComputedStyle(editor);
+      const lineHeight = parseFloat(style.lineHeight) || 22;
+      const multiLine = editor.scrollHeight > lineHeight * 1.5;
+      if (!expandedLayoutRef.current) {
+        const textRoom =
+          editor.clientWidth - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0);
+        compactGapsRef.current = grid.clientWidth - textRoom - controlsWidth();
+        setTextWraps(multiLine);
+        return;
+      }
+      // An empty composer shows its placeholder, which expands it like text
+      // when it does not fit the compact row; a range over the empty editor
+      // would measure nothing and fold it back.
+      const empty = editor.childNodes.length === 0;
+      const range = document.createRange();
+      range.selectNodeContents(editor);
+      const textWidth = empty
+        ? placeholderWidth(editor.getAttribute("aria-placeholder") ?? "", style)
+        : range.getBoundingClientRect().width;
+      const compactRoom = grid.clientWidth - controlsWidth() - (compactGapsRef.current ?? 24);
+      setTextWraps(multiLine || textWidth > compactRoom - 1);
+    }, []);
+    useEffect(() => {
+      const editor = editorRef.current;
+      const content = surfaceContentRef.current;
+      if (!editor || !content) return;
+      // Text filled or cleared from outside (dictation, a draft, a send)
+      // changes the editor's size without an input event.
+      const editorObserver = new ResizeObserver(() => measureComposerLayout());
+      editorObserver.observe(editor);
+      // The controls change width on their own (Stop gives way to Send when
+      // a reply ends): the room they leave the text is weighed again.
+      for (const controls of [leadControlsRef.current, trailControlsRef.current]) {
+        if (controls) editorObserver.observe(controls);
+      }
+      const contentObserver = new ResizeObserver(() => setSurfaceHeight(content.offsetHeight));
+      contentObserver.observe(content);
+      return () => {
+        editorObserver.disconnect();
+        contentObserver.disconnect();
+      };
+    }, [measureComposerLayout]);
+    useLayoutEffect(() => {
+      measureComposerLayout();
+    }, [expandedLayout, isEmpty, measureComposerLayout]);
+    // The caret moves when the layout switches and while the height animates:
+    // an open menu follows it, then settles once the transition ends.
+    useLayoutEffect(() => {
+      measureCaretAnchor();
+    }, [expandedLayout, surfaceHeight, measureCaretAnchor]);
     const activeSlash = Math.min(
       slashIndex,
       Math.max(0, slashOptions.length - 1),
@@ -1102,7 +1249,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         // List of mentions open: the arrows and Enter belong to it —
         // otherwise the caret would exit the request (or the message would leave).
         if (mentionOpen) {
-          if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+          // Only the status row is showing: Enter keeps its own meaning.
+          const hasOptions = mentionOptions.length > 0;
+          if (hasOptions && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
             e.preventDefault();
             const n = mentionOptions.length;
             setMentionIndex((i) => {
@@ -1111,7 +1260,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             });
             return;
           }
-          if (e.key === "Enter" || e.key === "Tab") {
+          if (hasOptions && (e.key === "Enter" || e.key === "Tab")) {
             e.preventDefault();
             insertMention(mentionOptions[activeMention]);
             return;
@@ -1159,6 +1308,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       if (!el) return;
       const empty = !el.textContent?.trim();
       setIsEmpty(empty);
+      measureComposerLayout();
 
       if (empty && el.innerHTML !== "") {
         el.innerHTML = "";
@@ -1168,7 +1318,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       syncMentionSlots();
       syncSkillSlots();
       publishDraft();
-    }, [publishDraft, refreshMention, refreshSlash, syncMentionSlots, syncSkillSlots]);
+    }, [measureComposerLayout, publishDraft, refreshMention, refreshSlash, syncMentionSlots, syncSkillSlots]);
 
     /**
      * Pastes only the text provided by the clipboard. The editors of
@@ -1409,6 +1559,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
 
     return (
       <div
+        ref={rootRef}
         className={cn(
           "relative",
           noBorder ? "px-3 pb-3" : "px-3 py-3",
@@ -1468,10 +1619,12 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         {mentionOpen && (
           <MentionSuggestions
             options={mentionOptions}
+            semanticStatus={mentionSemanticStatus}
             activeIndex={activeMention}
             onPick={insertMention}
             onHover={setMentionIndex}
             className="left-3"
+            style={menuPlacement("16rem")}
           />
         )}
         {/* The command/skill menu shares the mention list's floating position.
@@ -1484,6 +1637,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             onPick={insertSlashOption}
             onHover={setSlashIndex}
             className="left-3"
+            style={menuPlacement("18rem")}
           />
         )}
         {/* `keepMounted`: the dial must NEVER be reassembled when the border
@@ -1495,21 +1649,32 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             {mergedContext}
           </div>
         ) : null}
-        <AgentBeam active={!!beam} keepMounted className="relative z-10 rounded-2xl">
+        <AgentBeam active={!!beam} keepMounted className="relative z-10 rounded-[1.625rem]">
         <div
+          data-composer-layout={expandedLayout ? "expanded" : "compact"}
           className={cn(
             // No focus ring, no border: the Numo composer
             // is a borderless `bg-control` surface (the editor caret is the
             // signal), brand colors are kept for drag feedback only.
-            "chat-input-surface relative flex flex-col overflow-hidden rounded-2xl bg-control transition-all",
+            "chat-input-surface relative overflow-hidden rounded-[1.625rem] bg-control",
+            // Content pinned to the bottom: while the height animates, the
+            // controls row never leaves the bottom edge; only the text and
+            // what sits above it move.
+            "flex flex-col justify-end",
+            "transition-[height,box-shadow] duration-200 ease-out motion-reduce:transition-none",
             drop.dragging && "ring-2 ring-brand/20"
           )}
+          style={surfaceHeight === null ? undefined : { height: surfaceHeight }}
+          onTransitionEnd={(event) => {
+            if (event.target === event.currentTarget && event.propertyName === "height") measureCaretAnchor();
+          }}
           {...(canAttach ? drop.handlers : {})}
         >
           <DropOverlay show={canAttach && drop.dragging} />
+          <div ref={surfaceContentRef} className="flex shrink-0 flex-col">
           {/* The host can merge semantic context and attachments into this
-          single adaptive row. Concentric nesting: the surface is rounded-2xl
-          (24px), while its rounded-md pills sit behind a 10px gutter. */}
+          single adaptive row. Concentric nesting: its rounded-md pills sit
+          behind a 10px gutter. */}
           {contextPlacement === "inside" ? mergedContext : null}
           {!contextIncludesAttachments && standaloneAttachmentItems.length > 0 && (
             <div className="px-2.5 pt-2.5">
@@ -1517,9 +1682,24 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             </div>
           )}
           <div
+            ref={composerGridRef}
+            className={cn(
+              "grid grid-cols-[auto_minmax(0,1fr)_auto] items-end",
+              expandedLayout
+                ? "[grid-template-areas:'text_text_text'_'lead_._trail']"
+                : "[grid-template-areas:'lead_text_trail'] items-center",
+            )}
+          >
+          <div
             ref={textScrollRef}
             {...textScrollProps}
-            className="relative max-h-[180px] min-h-[52px] overflow-y-auto px-4 pb-1 pt-3"
+            className={cn(
+              "relative max-h-[180px] overflow-y-auto [grid-area:text]",
+              // Compact: one pixel lower than the box's centre, since the font's
+              // ascent is taller than its descent and the text otherwise rides
+              // above the "+" beside it.
+              expandedLayout ? "px-4 pb-1 pt-3" : "px-1 pt-[15px] pb-[13px]",
+            )}
           >
             <div
               ref={editorRef}
@@ -1555,8 +1735,13 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             />
           </div>
 
-          <div className="flex items-center justify-between gap-2 px-2 pb-2 pt-1">
-            <div className="flex min-w-0 items-center gap-1.5">
+            <div
+              ref={leadControlsRef}
+              className={cn(
+                "flex min-w-0 items-center gap-1.5 [grid-area:lead]",
+                expandedLayout ? "pb-2.5 pl-2.5 pt-1" : "py-2.5 pl-2.5",
+              )}
+            >
               {canAdd && (
                 <>
                   <input
@@ -1719,6 +1904,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                             ))}
                           </CommandGroup>
                         )}
+                        {addContextSemanticStatus && (
+                          <SemanticSearchingHint status={addContextSemanticStatus} data-semantic-group="" />
+                        )}
                       </SearchMenu>
                     </div>
                   ) : (
@@ -1744,9 +1932,15 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                   )}
                 </>
               )}
-              {leadingControls}
             </div>
-            <div className="flex shrink-0 items-center gap-1.5">
+            <div
+              ref={trailControlsRef}
+              className={cn(
+                "flex shrink-0 items-center gap-1.5 [grid-area:trail]",
+                expandedLayout ? "pb-2.5 pr-2.5 pt-1" : "py-2.5 pr-2.5",
+              )}
+            >
+              {leadingControls}
               {/* Dictation stays during a response: the next message can be
                   spoken while Numo is still writing this one. */}
               <DictateButton
@@ -1764,9 +1958,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                       variant="default"
                       onClick={onAbort}
                       aria-label={t("stop")}
-                      className="h-8 w-8 shrink-0 rounded-full bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+                      // The accent, like the send button it replaces.
+                      className="h-8 w-8 shrink-0 rounded-full"
                     >
-                      <HugeiconsIcon icon={SquareIcon} className="h-3 w-3 fill-white text-white dark:fill-black dark:text-black" />
+                      <HugeiconsIcon icon={SquareIcon} className="h-3 w-3 fill-current" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top">{t("stop")}</TooltipContent>
@@ -1814,6 +2009,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                 </>
               )}
             </div>
+          </div>
           </div>
         </div>
         </AgentBeam>

@@ -10,7 +10,7 @@ import { clearSemanticIssueCache, useSemanticIssueSearch } from "./use-semantic-
 
 let host: HTMLDivElement;
 let root: Root;
-let seen: { ids: string[]; pending: boolean } = { ids: [], pending: false };
+let seen: { ids: string[]; pending: boolean; answered: boolean } = { ids: [], pending: false, answered: false };
 const fetchMock = vi.fn();
 
 function Probe({ query, projectId = null }: { query: string; projectId?: string | null }) {
@@ -50,7 +50,7 @@ describe("useSemanticIssueSearch", () => {
     await act(() => vi.advanceTimersByTimeAsync(100));
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(String(fetchMock.mock.calls[0][0])).toContain("q=single+sign-on+login");
-    expect(seen).toEqual({ ids: ["a"], pending: false });
+    expect(seen).toEqual({ ids: ["a"], pending: false, answered: true });
   });
 
   it("never lets a slow answer replace the current query's", async () => {
@@ -75,7 +75,7 @@ describe("useSemanticIssueSearch", () => {
     await act(() => vi.advanceTimersByTimeAsync(400));
     await render("other words entirely", "p1");
     await render("Single  sign-on LOGIN", "p1");
-    expect(seen).toEqual({ ids: ["a"], pending: false });
+    expect(seen).toEqual({ ids: ["a"], pending: false, answered: true });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     await render("single sign-on login", "p2");
     await act(() => vi.advanceTimersByTimeAsync(400));
@@ -88,6 +88,7 @@ describe("useSemanticIssueSearch", () => {
     await render("single sign-on login");
     await act(() => vi.advanceTimersByTimeAsync(400));
     expect(seen.ids).toEqual([]);
+    expect(seen.answered).toBe(false);
     await render("something else here");
     await render("single sign-on login");
     await act(() => vi.advanceTimersByTimeAsync(400));

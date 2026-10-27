@@ -140,6 +140,13 @@ export function SidebarNavOverlay({
         y <= box.bottom
       );
     };
+    /** A dropdown or popover opened from the panel (its trigger says so with
+        `aria-expanded`): the panel stays while it is open, wherever the
+        pointer goes, or the layer would float beside an empty edge. Covers
+        the teleported secondary bar's filter and create menus, which no
+        `pinned` callback reaches. Disclosure rows carry no `aria-haspopup`. */
+    const layerOpen = (): boolean =>
+      panel.current?.querySelector('[aria-haspopup][aria-expanded="true"]') != null;
     const onMove = (e: PointerEvent) => {
       lastPointer.current = { x: e.clientX, y: e.clientY };
       const el = panel.current;
@@ -161,9 +168,20 @@ export function SidebarNavOverlay({
         setOpen(true);
         return;
       }
+      if (layerOpen()) return;
       setOpen(insidePanelBox(e.clientX, e.clientY));
     };
     document.addEventListener("pointermove", onMove);
+    // Once that layer closes (an item chosen, an outside click), the pointer
+    // may already be elsewhere and no move will follow: decide right away.
+    const layers = new MutationObserver(() => {
+      if (layerOpen()) return;
+      const { x, y } = lastPointer.current;
+      if (Number.isFinite(x) && !insidePanelBox(x, y)) setOpen(false);
+    });
+    if (panel.current) {
+      layers.observe(panel.current, { subtree: true, attributes: true, attributeFilter: ["aria-expanded"] });
+    }
     // Exiting the WINDOW from the top or from the right no longer produces any
     // `pointermove`: without this the block would remain open behind another
     // tab, to reveal itself unfolded upon return.
@@ -179,10 +197,12 @@ export function SidebarNavOverlay({
     const onDocumentLeave = () => {
       const { x, y } = lastPointer.current;
       if (Number.isFinite(x) && insidePanelBox(x, y)) return;
+      if (layerOpen()) return;
       closePanel();
     };
     document.documentElement.addEventListener("pointerleave", onDocumentLeave);
     return () => {
+      layers.disconnect();
       document.removeEventListener("pointermove", onMove);
       document.documentElement.removeEventListener("pointerleave", onDocumentLeave);
     };

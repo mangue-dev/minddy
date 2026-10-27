@@ -11,7 +11,7 @@ import { AppIcon } from "@/components/icon";
 import { FilterMenu, FilterSub, FilterItem, MenuToggleRow } from "@/components/filter-menu";
 import { StatusIndicator } from "@/components/issue-indicators";
 import { FeedbackPropertyFilterItems } from "./feedback-property-filters";
-import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
+import { SIDEBAR_HEADER_ACTION_CLASS } from "@/lib/sidebar-control-styles";
 import { FEEDBACK_POST_STATUSES, FEEDBACK_TO_ISSUE_STATUS, type FeedbackPostStatus } from "@/lib/feedback/types";
 import type { FeedbackPropertyFilters } from "@/lib/collection-filters";
 import type { Category, Objective } from "@/lib/types";
@@ -92,8 +92,8 @@ export function FeedbackFilterMenu({
   const tooltip = t("filterTooltip", { state: stateLabel });
 
   return <FilterMenu open={open} onOpenChange={(next) => { setOpen(next); if (!next) setSearch(""); }} label={tooltip}
-    trigger={<Button variant="ghost" size="icon-sm" className={SIDEBAR_COMPACT_CONTROL_CLASS} aria-label={tooltip}>
-      <HugeiconsIcon icon={FilterIcon} className={active ? "size-[18px] text-primary" : "size-[18px]"} />
+    trigger={<Button variant="ghost" size="icon-sm" className={SIDEBAR_HEADER_ACTION_CLASS} aria-label={tooltip}>
+      <HugeiconsIcon icon={FilterIcon} className={active ? "size-4 text-primary" : "size-4"} />
     </Button>}>
     <FilterSub label={t("filterStateLabel")} count={state === "unresolved" ? 0 : 1}>
       <MenuToggleRow active={state === "unresolved"} onSelect={() => onStateChange("unresolved")}>{t("filterUnresolved")}</MenuToggleRow>

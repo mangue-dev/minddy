@@ -79,7 +79,7 @@ Faça commit e push dos arquivos no branch padrão do repositório GitHub ou Git
 
 ## Selecionar e conferir {#selection}
 
-Use `/`, `$` ou o menu `+` e leia a prévia antes de enviar. Selecione até cinco skills; os selos verdes mostram a seleção. `$` lista apenas skills do repositório, enquanto `/` inclui outros comandos.
+Use `/`, `$` ou o menu `+` e leia a prévia antes de enviar. Selecione até cinco skills; os selos verdes mostram a seleção. `$` lista apenas skills do repositório, enquanto `/` inclui outros comandos. Na instrução de uma rotina, digite `$` para inserir uma skill; `/` abre o menu de blocos do editor.
 
 A seleção vale para esse turno do usuário. Em rotinas vale para cada execução. Skills são arquivos do repositório, não instalações globais da conta, e não substituem instruções de sistema ou segurança. Para criar ou editar uma, altere os arquivos do repositório você mesmo ou com seu próprio agente de código. Faça push antes de selecionar a nova versão.
 
