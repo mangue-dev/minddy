@@ -34,8 +34,9 @@ export interface ToolResult {
   isError?: boolean;
 }
 
+/** Compact JSON: indentation is whitespace every model pays for and none reads. */
 export function ok(payload: unknown): ToolResult {
-  return { content: [{ type: "text", text: JSON.stringify(payload, null, 2) }] };
+  return { content: [{ type: "text", text: JSON.stringify(payload) }] };
 }
 
 /**
@@ -54,7 +55,7 @@ export async function mentionsForReader(result: ToolResult, userId: string): Pro
     if (item?.type !== "text" || typeof item.text !== "string" || !(item.text.includes("](mention:") || item.text.includes("[@"))) return item;
     try {
       const parsed = JSON.parse(item.text);
-      return { ...item, text: JSON.stringify(await readResultForReader(userId, parsed), null, 2) };
+      return { ...item, text: JSON.stringify(await readResultForReader(userId, parsed)) };
     } catch {
       return { ...item, text: await readResultForReader(userId, item.text) };
     }

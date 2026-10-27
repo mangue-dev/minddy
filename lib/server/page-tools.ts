@@ -16,7 +16,7 @@ import {
   pageBodyToMarkdownServer,
   reconcileBodyBlocksServer,
 } from "@/lib/server/pages-projection";
-import { editTextPassage } from "@/lib/server/text-edit";
+import { editTextPassages, type TextPassageEdit } from "@/lib/server/text-edit";
 import { restoreStoredMentions } from "@/lib/mention-link";
 import {
   pageBacklinks,
@@ -843,18 +843,15 @@ export async function editPageTextForAgent({
   pageId,
   projectId,
   actorId,
-  oldString,
-  newString,
-  replaceAll = false,
+  edits,
   tools,
   mcpKeyId,
 }: {
   pageId: string;
   projectId?: string;
   actorId: string;
-  oldString: string;
-  newString: string;
-  replaceAll?: boolean;
+  /** The replacements, applied in order in ONE live write, all or nothing. */
+  edits: readonly TextPassageEdit[];
   /** The names that the calling surface bears, so that refusals refer to
  tools that exist on it (see IssueTextTools). */
   tools: { read: string; replaceWhole: string };
@@ -874,13 +871,11 @@ export async function editPageTextForAgent({
     actorId,
     mcpKeyId,
     derive: (current) => {
-      const edit = editTextPassage({
+      const edit = editTextPassages({
         field: "body",
         subject: "page",
         current,
-        oldString,
-        newString,
-        replaceAll,
+        edits,
         read: tools.read,
         otherWay: `Use ${tools.replaceWhole} to write the whole body.`,
       });

@@ -13,6 +13,19 @@ const tool = (name: string) =>
   ASSISTANT_TOOLS.find((candidate) => candidate.function.name === name);
 
 describe("Numo tool contracts", () => {
+  it("keeps the required fields of each read and passage-edit tool on that tool (MIN-800)", () => {
+    // A misplaced `required` once made get_page demand old_string: reads stay
+    // id-only, edits require the first replacement and only ADD `edits`.
+    expect(tool("get_page")?.function.parameters.required).toEqual(["page_id"]);
+    expect(tool("edit_page_text")?.function.parameters.required).toEqual(["page_id", "old_string", "new_string"]);
+    expect(tool("edit_issue_text")?.function.parameters.required).toEqual(["issue_id", "field", "old_string", "new_string"]);
+    expect(tool("edit_scratchpad_text")?.function.parameters.required).toEqual(["old_string", "new_string"]);
+    for (const name of ["edit_page_text", "edit_issue_text", "edit_scratchpad_text"]) {
+      expect(tool(name)?.function.parameters.properties).toHaveProperty("edits");
+    }
+    expect(tool("update_objective")?.function.parameters.properties).toHaveProperty("description_edits");
+  });
+
   it("does not advertise creation-only smart_fill on issue updates", () => {
     const update = tool("update_issues");
     const create = tool("create_issue");

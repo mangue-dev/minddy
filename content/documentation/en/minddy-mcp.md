@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-27",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -57,10 +57,10 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:MIN-768 (MCP setup moved to wizards: changed passages checked against components/settings/account-mcp-clients.tsx and mcp-connect-panel.tsx; 1 screenshot recaptured on 2026-10-21 from the local candidate and inspected; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:MIN-768 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 15,
+    "fact": "agent:MIN-768 (MCP setup moved to wizards: changed passages checked against components/settings/account-mcp-clients.tsx and mcp-connect-panel.tsx; 1 screenshot recaptured on 2026-10-21 from the local candidate and inspected; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-800 bulk-edit paragraph checked against the issue, relation, text-edit, page, notebook, objective and feedback tools in lib/server/mcp/tools.ts and lib/server/mcp/page-tools.ts, and their tests bulk-tools.test.ts, page-tools.test.ts and scratchpad-text-edit.test.ts; the issue, relation, text, page, notebook and objective tools also exercised against the preview database with a throwaway account, removed afterwards (the feedback batch only by tests); figures unchanged and still accurate)",
+    "language": "agent:MIN-768 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (MIN-800 en bulk-edit paragraph, glossary term and locale register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-27"
   },
   "related": [
     "numo",
@@ -81,7 +81,7 @@
       "src": "/documentation/en/external-minddy-mcp-workflow.png",
       "alt": "minddy MCP client picker for Claude, Codex and other assistants.",
       "caption": "Select your client to display its installation command or configuration.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -98,7 +98,7 @@
       "src": "/documentation/en/external-minddy-mcp-install-workflow.png",
       "alt": "Codex install step of the minddy MCP connection wizard, showing the minddy Cloud endpoint.",
       "caption": "This example connects to minddy Cloud. For self-hosting, use your own instance origin; the displayed command was not executed for this capture.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-21",
       "viewport": [
@@ -159,6 +159,8 @@ minddy exposes `/api/mcp` with Streamable HTTP, stateless tools and OAuth 2.1. C
 To find an issue, call `minddy_list_issues` with `query`: it matches title and description words, an identifier or a number. Text matches and exact identifiers come first; a descriptive query can then add issues of the same project found [by meaning](/docs/navigation#search-by-meaning), marked `match: "semantic"`. Read such an issue before acting on it. Search by meaning is charged to your account as **Issue search** and is skipped when you turned off **Index issues**.
 
 `minddy_get_issue` accepts an issue UUID, an issue identifier such as `DEMO-42`, or a bare issue number; `project_id` is supplied separately. Its `plan_tasks` provide zero-based `task_index` values. `minddy_update_plan_task` accepts a `tasks` batch with `pending`, `in_progress`, `completed` or `cancelled` states. The whole batch fails on an invalid index. Use `minddy_append_to_plan` for additions and `minddy_edit_issue_text` with a unique exact `old_string`/`new_string` for a passage. Re-read if the match is stale; replacing the entire plan can overwrite another person’s progress. Questions under `## Questions` do not count as plan tasks.
+
+To change several issues, send one `minddy_update_issues` call: `issues` with `fields` applies the same change to every issue, and `updates` adds issues that each get their own fields. One call takes up to 50 issues, each listed once, and reports `updated` and `failed` per issue, so one failure does not stop the others. Other repeated writes take a list of further items next to their usual fields: `links` for `minddy_link_issues`, `edits` for `minddy_edit_issue_text` and `minddy_edit_page_text` (applied in order; if one does not match, nothing is written), `pages` for `minddy_create_page` (pages under the same parent, such as database entries) and `feedback_post_ids` for `minddy_update_feedback`. `minddy_update_page` with `parent_page_id` moves a page in the tree, or to the root with `null`. The task notebook and objective descriptions are patched the same way: `minddy_edit_scratchpad_text` rewrites or removes passages of the notebook, and `minddy_update_objective` accepts `description_edits` instead of a whole `description`. `minddy_append_to_plan` with `field: "description"` adds a block at the end of an issue's description, and `description_append` does the same for an objective; an objective patch is refused, not applied, if the objective changed since it was read.
 
 Reads that return text with images (`minddy_get_issue`, `minddy_get_objective`, `minddy_get_page`, `minddy_get_feedback`, `minddy_get_scratchpad`) list them under `images`, each with its `src` and alt text. Pass that `src` exactly to `minddy_get_image`: it checks your access to the image's project, or that a notebook image is yours, and returns the image inline up to 10 MB with a signed `download_url` valid about ten minutes. An image hosted outside minddy comes back as its URL only.
 

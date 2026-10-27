@@ -250,3 +250,15 @@ Objectif : brancher l'invitation.
     expect(appendToPlan("- [ ] t1", "   \n\n")).toBe("- [ ] t1");
   });
 });
+
+describe("appendToPlan outside a plan", () => {
+  it("adds after a Questions heading when the text is not a plan", () => {
+    const description = "Context.\n\n## Questions\n\nWhy now?";
+    expect(appendToPlan(description, "More context.", null, { beforeQuestions: false })).toBe(
+      "Context.\n\n## Questions\n\nWhy now?\n\nMore context.",
+    );
+    expect(appendToPlan(description, "- [ ] Task")).toBe(
+      "Context.\n\n- [ ] Task\n\n## Questions\n\nWhy now?",
+    );
+  });
+});

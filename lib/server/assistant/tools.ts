@@ -134,6 +134,68 @@ const ISSUE_FIELD_PROPERTIES = {
   },
 } as const;
 
+/** One relation of link_issues, alone or as an entry of `links`. */
+const LINK_RELATION_PROPERTIES = {
+  issue_id: {
+    type: "string",
+    description:
+      "The issue the relation is stated FROM (its perspective). Required unless source_objective_id is passed.",
+  },
+  source_objective_id: {
+    type: "string",
+    description:
+      "The OBJECTIVE the relation is stated FROM (objective → issue or objective → objective). Required unless issue_id is passed.",
+  },
+  relation: {
+    type: "string",
+    enum: [...RELATION_TYPE_VALUES],
+    description: "The relation, from the source's perspective.",
+  },
+  target_issue_id: {
+    type: "string",
+    description:
+      "The other issue. Must be in the same project. Required unless target_objective_id is passed.",
+  },
+  target_objective_id: {
+    type: "string",
+    description:
+      "The other objective (a UUID). Must be in the same project. Required unless target_issue_id is passed.",
+  },
+  remove: {
+    type: "boolean",
+    description:
+      "Remove that relation instead of adding it (default false).",
+  },
+} as const;
+
+/** The extra replacements of the three passage-edit tools (issue, page, notebook). */
+const TEXT_EDITS_PROPERTY = {
+  type: "array",
+  items: {
+    type: "object",
+    properties: {
+      old_string: { type: "string" },
+      new_string: { type: "string" },
+      replace_all: { type: "boolean" },
+    },
+    required: ["old_string", "new_string"],
+  },
+  description:
+    "MORE replacements in the same call, after old_string → new_string (which is edit 1): applied in order, each on the result of the previous one, all or nothing — if one does not match, nothing is written and the error names it. 50 replacements in all at most.",
+};
+
+/** The `fields` object of update_issues, shared by its two shapes. */
+const ISSUE_UPDATE_FIELDS_SCHEMA = {
+  type: "object",
+  properties: {
+    ...ISSUE_FIELD_PROPERTIES,
+    duplicate_of_id: {
+      type: ["string", "null"],
+      description: "Canonical issue id when setting status='duplicate'.",
+    },
+  },
+} as const;
+
 const CREATE_ISSUE_FIELD_PROPERTIES = {
   ...ISSUE_FIELD_PROPERTIES,
   // Creation-only landing rule (mirrors the MCP create_issue): WHERE
@@ -532,26 +594,34 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "update_issues",
       description:
-        "Update one or several issues (1–50) with the same field changes. Use for single edits too. Only pass the fields to change. Setting status to 'duplicate' requires fields.duplicate_of_id.",
+        "Update 1–50 issues in ONE call; use it for single edits too. issue_ids + fields applies the same changes to every listed issue (close these five, move them to an objective); updates adds issues that each get their OWN fields ([{ issue_id, fields }]) — triage a backlog, re-estimate a batch, assign each issue to a different person. Plan the whole change and send it once rather than one call per issue. Only pass the fields to change. Setting status to 'duplicate' requires fields.duplicate_of_id. Issues are written independently: check `failed` in the result.",
       parameters: {
         type: "object",
         properties: {
           issue_ids: {
             type: "array",
             items: { type: "string" },
-            description: "Ids of the issues to update (1–50).",
+            description: "Ids of the issues that all receive `fields`.",
           },
           fields: {
-            type: "object",
-            properties: {
-              ...ISSUE_FIELD_PROPERTIES,
-              duplicate_of_id: {
-                type: ["string", "null"],
-                description:
-                  "Canonical issue id when setting status='duplicate'.",
+            ...ISSUE_UPDATE_FIELDS_SCHEMA,
+            description: "The field changes applied to every issue of issue_ids.",
+          },
+          updates: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                issue_id: { type: "string", description: "The issue to update." },
+                fields: {
+                  ...ISSUE_UPDATE_FIELDS_SCHEMA,
+                  description: "This issue's own field changes.",
+                },
               },
+              required: ["issue_id", "fields"],
             },
-            description: "The field changes applied to every listed issue.",
+            description:
+              "MORE issues in the same call, each with its OWN fields (the first one goes in issue_ids + fields). Each issue once across issue_ids and updates; 50 issues in all at most.",
           },
         },
         required: ["issue_ids", "fields"],
@@ -563,11 +633,16 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "append_to_plan",
       description:
-        "Add to an issue's implementation plan WITHOUT touching what is already there — the way to record a precision the user just gave, an extra task or a note on a plan that already exists. The block lands at the end of the plan (above its questions section when it has one), or at the end of a named section with `section`. Creates the plan when the issue has none. Prefer this to update_issues { fields: { plan } }, which rewrites the whole plan and drops anything you don't resend.",
+        "Add to an issue's implementation plan WITHOUT touching what is already there — the way to record a precision the user just gave, an extra task or a note on a plan that already exists. The block lands at the end of the plan (above its questions section when it has one), or at the end of a named section with `section`. Creates the plan when the issue has none. Prefer this to update_issues { fields: { plan } }, which rewrites the whole plan and drops anything you don't resend. Pass field 'description' to add the block to the issue's DESCRIPTION instead, the same way.",
       parameters: {
         type: "object",
         properties: {
           issue_id: { type: "string", description: "Issue id." },
+          field: {
+            type: "string",
+            enum: ["plan", "description"],
+            description: "Which text of the issue to add to. Default: plan.",
+          },
           markdown: {
             type: "string",
             description:
@@ -628,7 +703,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "edit_issue_text",
       description:
-        "Rewrite ONE passage of an issue's plan or description IN PLACE, the way a code editor patches a file: old_string → new_string, copied verbatim from get_issue, and the match must be unique (include the surrounding lines, or set replace_all). Every other byte is left alone. This is how you REWORD something already written — a decision that changed, a section to rephrase, a wrong sentence in a description — without re-emitting the whole document through update_issues, which would cost you the entire text and silently drop anything you didn't resend. A stale old_string fails loudly instead. To ADD to a plan use append_to_plan; to tick a task off, update_plan_tasks.",
+        "Rewrite passages of an issue's plan or description IN PLACE, the way a code editor patches a file: old_string → new_string, copied verbatim from get_issue, and the match must be unique (include the surrounding lines, or set replace_all). Every other byte is left alone. This is how you REWORD something already written — a decision that changed, a section to rephrase, a wrong sentence in a description — without re-emitting the whole document through update_issues, which would cost you the entire text and silently drop anything you didn't resend. A stale old_string fails loudly instead. To ADD to a plan use append_to_plan; to tick a task off, update_plan_tasks. Several passages to change? Put the first in old_string/new_string and the others in edits: one call, one write.",
       parameters: {
         type: "object",
         properties: {
@@ -653,6 +728,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             description:
               "Replace EVERY occurrence instead of requiring a unique match (default false) — for a term repeated throughout the text.",
           },
+          edits: TEXT_EDITS_PROPERTY,
         },
         required: ["issue_id", "field", "old_string", "new_string"],
       },
@@ -717,7 +793,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "create_page",
       description:
-        "Create a page in the project's wiki, optionally UNDER an existing page. Write it FILLED — a title and a real body in one call, not an empty page to fill later. A page is for knowledge that outlives a ticket; work to do belongs in an issue (create_issue), not here. Prefer a subpage of the right parent over a new root page: a flat wiki stops being read.",
+        "Create a page in the project's wiki, optionally UNDER an existing page. Write it FILLED — a title and a real body in one call, not an empty page to fill later. A page is for knowledge that outlives a ticket; work to do belongs in an issue (create_issue), not here. Prefer a subpage of the right parent over a new root page: a flat wiki stops being read. Several pages under the same parent (a database's entries, the chapters of a spec)? Pass the others in pages: one call creates them all, in order.",
       parameters: {
         type: "object",
         properties: {
@@ -751,6 +827,21 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             description:
               "Nest the new page under this one (from list_pages). Omit for a root page.",
           },
+          pages: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                title: { type: "string" },
+                markdown: { type: "string" },
+                icon: { type: "string" },
+                values: { type: "object", additionalProperties: true },
+              },
+              required: ["title", "markdown"],
+            },
+            description:
+              "MORE pages created in the same call, after this one and under the same parent_page_id — e.g. every entry of a database, each with its values. The result then lists the created pages in `pages` and the refused ones in `failed` (index 0 is the page above). 50 pages in all at most.",
+          },
         },
         required: ["title", "markdown"],
       },
@@ -769,7 +860,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "update_page",
       description:
-        "Replace a page's body, title or icon. markdown REPLACES the whole body and drops anything you don't resend — so use it to write a page from scratch, never to change part of one: append_to_page adds a block at the end, edit_page_text rewrites one passage. When you do replace the body, pass the version from get_page: the write is then refused if a human or another agent wrote the page meanwhile, instead of silently overwriting them.",
+        "Replace a page's body, title or icon. markdown REPLACES the whole body and drops anything you don't resend — so use it to write a page from scratch, never to change part of one: append_to_page adds a block at the end, edit_page_text rewrites one passage. When you do replace the body, pass the version from get_page: the write is then refused if a human or another agent wrote the page meanwhile, instead of silently overwriting them. It also MOVES a page in the wiki tree: parent_page_id nests it under another page, null brings it back to the root.",
       parameters: {
         type: "object",
         properties: {
@@ -788,6 +879,11 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           icon: {
             type: ["string", "null"],
             description: "New emoji icon; null clears it.",
+          },
+          parent_page_id: {
+            type: ["string", "null"],
+            description:
+              "Move the page under this one (from list_pages); null moves it to the root of the wiki. Its subpages move with it. Omit to leave it where it is.",
           },
         },
         required: ["page_id"],
@@ -819,7 +915,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "edit_page_text",
       description:
-        "Rewrite ONE passage of a page IN PLACE, the way a code editor patches a file: old_string → new_string, copied VERBATIM from get_page, unique match (add the surrounding lines, or set replace_all). Every other byte is left alone. This is how a sentence gets corrected without re-emitting the page — and it is the safe way round: a full rewrite silently overwrites someone else's edit, a stale old_string fails loudly. Only the words you change are written, merged with what people type meanwhile like a second person editing in parallel; untouched blocks keep their formatting and anchors. To ADD text, append_to_page.",
+        "Rewrite passages of a page IN PLACE, the way a code editor patches a file: old_string → new_string, copied VERBATIM from get_page, unique match (add the surrounding lines, or set replace_all). Every other byte is left alone. This is how a sentence gets corrected without re-emitting the page — and it is the safe way round: a full rewrite silently overwrites someone else's edit, a stale old_string fails loudly. Only the words you change are written, merged with what people type meanwhile like a second person editing in parallel; untouched blocks keep their formatting and anchors. To ADD text, append_to_page. Several passages to change (a renamed term, three sections to fix)? Put the first in old_string/new_string and the others in edits: one call, one write, all or nothing.",
       parameters: {
         type: "object",
         properties: {
@@ -839,6 +935,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             description:
               "Replace EVERY occurrence instead of requiring a unique match (default false).",
           },
+          edits: TEXT_EDITS_PROPERTY,
         },
         required: ["page_id", "old_string", "new_string"],
       },
@@ -869,39 +966,20 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "link_issues",
       description:
-        "Create or remove a relation between two issues (MIN-25), or across issues and objectives (MIN-513) — the same links the user adds from a Relations section. From `issue_id`'s (or `source_objective_id`'s) point of view: 'blocks' (it blocks the target), 'blocked_by' (it is blocked by the target), 'related' (a soft link). The target is an issue (`target_issue_id`) or an objective (`target_objective_id`) — pass exactly one of each side. These are NOT sub-issues (that is parent_id) and NOT duplicates (that is status 'duplicate' + duplicate_of_id). Blocking relations are read by the cycle filler, which leaves a blocked issue out until its blocker closes; blocking through an objective cascades to its issues. Pass remove: true to delete the relation instead. Idempotent both ways. Read an issue's current relations with get_issue, an objective's with get_objective.",
+        "Create or remove a relation between two issues (MIN-25), or across issues and objectives (MIN-513) — the same links the user adds from a Relations section. From `issue_id`'s (or `source_objective_id`'s) point of view: 'blocks' (it blocks the target), 'blocked_by' (it is blocked by the target), 'related' (a soft link). The target is an issue (`target_issue_id`) or an objective (`target_objective_id`) — pass exactly one of each side. These are NOT sub-issues (that is parent_id) and NOT duplicates (that is status 'duplicate' + duplicate_of_id). Blocking relations are read by the cycle filler, which leaves a blocked issue out until its blocker closes; blocking through an objective cascades to its issues. Pass remove: true to delete the relation instead. Idempotent both ways. Several relations at once: state the first one as usual and the others in `links`. Read an issue's current relations with get_issue, an objective's with get_objective.",
       parameters: {
         type: "object",
         properties: {
-          issue_id: {
-            type: "string",
+          ...LINK_RELATION_PROPERTIES,
+          links: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: LINK_RELATION_PROPERTIES,
+              required: ["relation"],
+            },
             description:
-              "The issue the relation is stated FROM (its perspective). Required unless source_objective_id is passed.",
-          },
-          source_objective_id: {
-            type: "string",
-            description:
-              "The OBJECTIVE the relation is stated FROM (objective → issue or objective → objective). Required unless issue_id is passed.",
-          },
-          relation: {
-            type: "string",
-            enum: [...RELATION_TYPE_VALUES],
-            description: "The relation, from the source's perspective.",
-          },
-          target_issue_id: {
-            type: "string",
-            description:
-              "The other issue. Must be in the same project. Required unless target_objective_id is passed.",
-          },
-          target_objective_id: {
-            type: "string",
-            description:
-              "The other objective (a UUID). Must be in the same project. Required unless target_issue_id is passed.",
-          },
-          remove: {
-            type: "boolean",
-            description:
-              "Remove that relation instead of adding it (default false).",
+              "MORE relations in the same call, applied in order after the one the other fields state (index 0) — ordering a backlog, linking a batch to an objective. The result then lists each in `results` and the ones that failed in `failed`, by index. 50 relations in all at most.",
           },
         },
         required: ["relation"],
@@ -1051,13 +1129,23 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     type: "function",
     function: {
       name: "update_objective",
-      description: "Update an objective's fields. Get ids via list_objectives.",
+      description: "Update an objective's fields. Get ids via list_objectives. description REPLACES the whole text: to fix part of it, pass description_edits instead (old_string → new_string copied verbatim from get_objective, applied in order, all or nothing), like edit_issue_text on an issue, and/or description_append to add a block at its end. Both are refused, rather than applied, if the objective changed meanwhile.",
       parameters: {
         type: "object",
         properties: {
           objective_id: { type: "string", description: "Objective id." },
           name: { type: "string" },
-          description: { type: "string" },
+          description: { type: "string", description: "The WHOLE new description; replaces the current one." },
+          description_edits: {
+            ...TEXT_EDITS_PROPERTY,
+            description:
+              "Passages of the CURRENT description to rewrite in place, instead of description: each old_string copied verbatim from get_objective, unique match (or replace_all), an empty new_string deletes. If one does not match, nothing is written.",
+          },
+          description_append: {
+            type: "string",
+            description:
+              "A markdown block to ADD at the end of the current description (after description_edits when both are sent), instead of resending it. Only what is new.",
+          },
           status: {
             type: "string",
             enum: [...OBJECTIVE_STATUS_VALUES],
@@ -2034,7 +2122,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_scratchpad",
       description:
-        "Read the user's TASK NOTEBOOK (scratchpad): their single personal, cross-project notes doc of quick things to do right now — not tied to any project, and not the backlog. Markdown with '##' section headings and the same checkbox tasks as an issue plan ('- [ ]' pending, '- [~]' in progress, '- [x]' done, '- [-]' dropped), prose allowed anywhere. Returns the raw markdown, the task progress, the flat task list with its 0-based index in document order (pass those indices to update_scratchpad_tasks) and its `depth` (0 at top level, 1 for a sub-task of the task above it, and so on with no limit — the list is flat, so `depth` is the only thing that says a task belongs to the one before it), the section titles (the values `section` takes in add_scratchpad_tasks), and `rev` — the version to pass back to a write so a concurrent edit by the user is never overwritten. ALWAYS call this before writing to the notebook.",
+        "Read the user's TASK NOTEBOOK (scratchpad): their single personal, cross-project notes doc of quick things to do right now — not tied to any project, and not the backlog. Markdown with '##' section headings and the same checkbox tasks as an issue plan ('- [ ]' pending, '- [~]' in progress, '- [x]' done, '- [-]' dropped), prose allowed anywhere. Returns the raw markdown, the task progress, the flat task list with its 0-based index in document order (pass those indices to update_scratchpad_tasks) and its `depth` (0 at top level, 1 for a sub-task of the task above it, and so on with no limit — the list is flat, so `depth` is the only thing that says a task belongs to the one before it), the section titles (the values `section` takes in add_scratchpad_tasks; edit_scratchpad_text takes passages of this markdown), and `rev` — the version to pass back to a write so a concurrent edit by the user is never overwritten. ALWAYS call this before writing to the notebook.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -2086,7 +2174,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "update_scratchpad_tasks",
       description:
-        "Flip the state of one or more EXISTING notebook tasks WITHOUT rewriting the doc — the precise way to tick items off. Tasks are 0-indexed in document order (the `tasks` array of get_scratchpad); each keeps its text, only its checkbox marker changes. To add tasks use add_scratchpad_tasks; to edit a task's text or remove lines use set_scratchpad. Indices are validated all-or-nothing: a single out-of-range index rejects the whole call. Pass `expected_rev` (the `rev` of the get_scratchpad whose indices you are using) so a concurrent edit can't make you flip the wrong task.",
+        "Flip the state of one or more EXISTING notebook tasks WITHOUT rewriting the doc — the precise way to tick items off. Tasks are 0-indexed in document order (the `tasks` array of get_scratchpad); each keeps its text, only its checkbox marker changes. To add tasks use add_scratchpad_tasks; to edit a task's text or remove lines use edit_scratchpad_text. Indices are validated all-or-nothing: a single out-of-range index rejects the whole call. Pass `expected_rev` (the `rev` of the get_scratchpad whose indices you are using) so a concurrent edit can't make you flip the wrong task.",
       parameters: {
         type: "object",
         properties: {
@@ -2122,7 +2210,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     type: "function",
     function: {
       name: "set_scratchpad",
-      description: `Replace the ENTIRE task notebook markdown — it overwrites the whole doc, so call get_scratchpad FIRST and preserve everything you are not changing. Use it only for what the surgical tools cannot do: editing a task's text, removing lines, adding/renaming/reordering '##' sections, writing prose. To tick tasks off use update_scratchpad_tasks; to add tasks use add_scratchpad_tasks. Checkbox convention: '- [ ]' to do, '- [~]' in progress, '- [x]' done, '- [-]' dropped. Max ${MAX_SCRATCHPAD_LENGTH} characters; an empty string clears the notebook (confirm with the user first — there is no undo and no history). ALWAYS pass expected_rev (the \`rev\` from your get_scratchpad): the write is rejected instead of clobbering the user's concurrent edits.`,
+      description: `Replace the ENTIRE task notebook markdown — it overwrites the whole doc, so call get_scratchpad FIRST and preserve everything you are not changing. Use it only for what the surgical tools cannot do: reordering sections, restructuring the whole note. To tick tasks off use update_scratchpad_tasks; to add tasks use add_scratchpad_tasks; to reword a task, remove lines or rename a section use edit_scratchpad_text. Checkbox convention: '- [ ]' to do, '- [~]' in progress, '- [x]' done, '- [-]' dropped. Max ${MAX_SCRATCHPAD_LENGTH} characters; an empty string clears the notebook (confirm with the user first — there is no undo and no history). ALWAYS pass expected_rev (the \`rev\` from your get_scratchpad): the write is rejected instead of clobbering the user's concurrent edits.`,
       parameters: {
         type: "object",
         properties: {
@@ -2138,6 +2226,36 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           },
         },
         required: ["content"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "edit_scratchpad_text",
+      description:
+        "Rewrite passages of the task notebook IN PLACE, the way a code editor patches a file: old_string → new_string, copied VERBATIM from get_scratchpad, unique match (add the surrounding lines, or set replace_all). Every other byte is left alone. This is how a task gets reworded, a line REMOVED (empty new_string — e.g. a note promoted to an issue) or a section renamed, without resending the whole notebook through set_scratchpad. The match is made on the notebook as it is when you write, so the user's concurrent edits elsewhere are kept, and a passage they changed fails loudly. Several passages? Put the first in old_string/new_string and the others in edits: one call, one write, all or nothing.",
+      parameters: {
+        type: "object",
+        properties: {
+          old_string: {
+            type: "string",
+            description:
+              "The exact passage to replace, copied VERBATIM from the content get_scratchpad returned — whitespace and line breaks included.",
+          },
+          new_string: {
+            type: "string",
+            description:
+              "What replaces it. An empty string deletes the passage.",
+          },
+          replace_all: {
+            type: "boolean",
+            description:
+              "Replace EVERY occurrence instead of requiring a unique match (default false).",
+          },
+          edits: TEXT_EDITS_PROPERTY,
+        },
+        required: ["old_string", "new_string"],
       },
     },
   },
@@ -2539,6 +2657,7 @@ export const ACCOUNT_TOOLS = new Set([
   "get_scratchpad",
   "add_scratchpad_tasks",
   "update_scratchpad_tasks",
+  "edit_scratchpad_text",
   "set_scratchpad",
 ]);
 

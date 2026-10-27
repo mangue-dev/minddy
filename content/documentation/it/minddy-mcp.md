@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
-  "sourceRevision": 14,
+  "revision": 16,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-27",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -57,10 +57,10 @@
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:MIN-768 (MCP setup moved to wizards: changed passages checked against components/settings/account-mcp-clients.tsx and mcp-connect-panel.tsx; 1 screenshot recaptured on 2026-10-21 from the local candidate and inspected; earlier evidence retained in git history); agent:claude-code (it/es catalog review recapture of external-minddy-mcp-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:MIN-768 (it translation of the changed passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it figure update after the catalog review; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 16,
+    "fact": "agent:MIN-768 (MCP setup moved to wizards: changed passages checked against components/settings/account-mcp-clients.tsx and mcp-connect-panel.tsx; 1 screenshot recaptured on 2026-10-21 from the local candidate and inspected; earlier evidence retained in git history); agent:claude-code (it/es catalog review recapture of external-minddy-mcp-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-800 bulk-edit paragraph checked against the issue, relation, text-edit, page, notebook, objective and feedback tools in lib/server/mcp/tools.ts and lib/server/mcp/page-tools.ts, and their tests bulk-tools.test.ts, page-tools.test.ts and scratchpad-text-edit.test.ts; the issue, relation, text, page, notebook and objective tools also exercised against the preview database with a throwaway account, removed afterwards (the feedback batch only by tests); figures unchanged and still accurate)",
+    "language": "agent:MIN-768 (it translation of the changed passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it figure update after the catalog review; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (MIN-800 it bulk-edit paragraph, glossary term and locale register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-27"
   },
   "related": [
     "numo",
@@ -83,7 +83,7 @@
       "src": "/documentation/it/external-minddy-mcp-workflow.png",
       "alt": "Selettore dei client MCP minddy con Claude, Codex e altri assistenti.",
       "caption": "Scegli il client per visualizzare il comando o la configurazione di installazione.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -100,7 +100,7 @@
       "src": "/documentation/it/external-minddy-mcp-install-workflow.png",
       "alt": "Passaggio di installazione di Codex nella procedura di collegamento al MCP di minddy, con l’endpoint minddy Cloud.",
       "caption": "Questo esempio si connette a minddy Cloud. Per un’istanza autogestita, usa l’origine della tua istanza; il comando mostrato non è stato eseguito per questa cattura.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-21",
       "viewport": [
@@ -161,6 +161,8 @@ minddy MCP nelle impostazioni dell’account elenca accessi esterni e controlli 
 Per trovare un ticket, chiama `minddy_list_issues` con `query`: la ricerca considera le parole del titolo e della descrizione, un identificatore o un numero. Le corrispondenze testuali e gli identificatori esatti vengono per primi; una ricerca descrittiva può poi aggiungere ticket dello stesso progetto trovati [per significato](/docs/navigation#search-by-meaning), contrassegnati con `match: "semantic"`. Leggi un ticket di questo tipo prima di agire. La ricerca per significato viene addebitata al tuo account come **Ricerca dei ticket** e non avviene se hai disattivato **Indicizza i ticket**.
 
 `minddy_get_issue` accetta l’UUID di un ticket, un identificatore di ticket come `DEMO-42` oppure il numero del ticket; `project_id` viene fornito separatamente. `plan_tasks` indica `task_index` a partire da zero. `minddy_update_plan_task` riceve un array `tasks` con gli stati `pending`, `in_progress`, `completed` o `cancelled`; un indice non valido fa rifiutare l’intero batch. `minddy_append_to_plan` aggiunge contenuto, mentre `minddy_edit_issue_text` sostituisce una coppia `old_string`/`new_string` esatta e univoca. Rileggi un piano che può essere cambiato: sostituirlo interamente potrebbe sovrascrivere il progresso di altri. La sezione `## Questions` è esclusa dal conteggio delle attività.
+
+Per modificare più ticket, invia una sola chiamata a `minddy_update_issues`: `issues` con `fields` applica la stessa modifica a ogni ticket, e `updates` aggiunge ticket che ricevono ciascuno i propri campi. Una chiamata accetta fino a 50 ticket, ciascuno citato una sola volta, e restituisce `updated` e `failed` per ticket, così un errore non blocca gli altri. Le altre scritture ripetute accettano un elenco di elementi aggiuntivi accanto ai loro campi abituali: `links` per `minddy_link_issues`, `edits` per `minddy_edit_issue_text` e `minddy_edit_page_text` (applicate in ordine; se una non corrisponde, non viene scritto nulla), `pages` per `minddy_create_page` (pagine sotto lo stesso genitore, come le voci di un database) e `feedback_post_ids` per `minddy_update_feedback`. `minddy_update_page` con `parent_page_id` sposta una pagina nell’albero, o alla radice con `null`. Il taccuino delle attività e le descrizioni degli obiettivi si correggono allo stesso modo: `minddy_edit_scratchpad_text` riscrive o elimina passaggi del taccuino, e `minddy_update_objective` accetta `description_edits` invece di una `description` intera. `minddy_append_to_plan` con `field: "description"` aggiunge un blocco alla fine della descrizione di un ticket, e `description_append` fa lo stesso per un obiettivo; una modifica a un obiettivo viene rifiutata, anziché applicata, se l’obiettivo è cambiato dopo la lettura.
 
 Le letture che restituiscono testo con immagini (`minddy_get_issue`, `minddy_get_objective`, `minddy_get_page`, `minddy_get_feedback`, `minddy_get_scratchpad`) le elencano in `images`, ognuna con il suo `src` e il testo alternativo. Passa quel `src` così com’è a `minddy_get_image`: lo strumento verifica il tuo accesso al progetto dell’immagine, o che un’immagine del taccuino sia tua, e restituisce l’immagine fino a 10 MB con un `download_url` firmato valido circa dieci minuti. Un’immagine ospitata fuori da minddy torna solo come URL.
 

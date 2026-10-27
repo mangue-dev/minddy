@@ -38,7 +38,11 @@ import {
   MAX_DESCRIPTION_LENGTH,
   updateIssueFields,
 } from "@/lib/server/update-issue";
-import { editIssueText, type IssueTextTools } from "@/lib/server/text-edit";
+import {
+  editIssueText,
+  type IssueTextTools,
+  type TextPassageEdit,
+} from "@/lib/server/text-edit";
 import {
   appendToPageForAgent,
   createPageForAgent,
@@ -75,6 +79,10 @@ import { GeneratedFileError } from "./generated-files";
 import { insertAttachments } from "@/lib/server/attachments";
 import { imagesIn } from "@/lib/server/document-images";
 import { readResultForReader } from "@/lib/server/mention-access";
+import {
+  BULK_WRITE_CONCURRENCY,
+  mapWithConcurrency,
+} from "@/lib/map-with-concurrency";
 import { FaviconError } from "@/lib/server/favicon";
 import { resolveLinkResource } from "@/lib/server/link-resource";
 import {
@@ -87,7 +95,11 @@ import {
   isRelationType,
 } from "@/lib/relation-validation";
 import { createView, updateView } from "@/lib/server/views";
-import { createObjective, updateObjective } from "@/lib/server/objectives";
+import {
+  createObjective,
+  patchObjectiveDescription,
+  updateObjective,
+} from "@/lib/server/objectives";
 import { createCategory, reorderCategories, updateCategory } from "@/lib/server/categories";
 import { updateProjectSettings } from "@/lib/server/update-project";
 import {
@@ -145,6 +157,7 @@ import { moveIssuesBetweenCycles } from "@/lib/server/cycle-issues";
 import type { FillWeights } from "@/lib/cycle";
 import {
   getScratchpad,
+  editScratchpadText,
   mutateScratchpad,
   setScratchpad,
 } from "@/lib/server/scratchpad";
@@ -1003,6 +1016,7 @@ async function executeToolUnlisted(
       toolName === "get_scratchpad" ||
       toolName === "add_scratchpad_tasks" ||
       toolName === "update_scratchpad_tasks" ||
+      toolName === "edit_scratchpad_text" ||
       toolName === "set_scratchpad"
     ) {
       return executeScratchpadTool(toolName, args, ctx);
@@ -1381,53 +1395,8 @@ async function executeToolUnlisted(
         };
       }
 
-      case "update_issues": {
-        const issueIds = Array.isArray(args.issue_ids)
-          ? args.issue_ids.filter((v): v is string => typeof v === "string")
-          : [];
-        if (issueIds.length === 0 || issueIds.length > 50) {
-          return toolError(
-            "issue_ids must contain between 1 and 50 issue ids.",
-          );
-        }
-        const fields =
-          args.fields && typeof args.fields === "object"
-            ? (args.fields as Record<string, unknown>)
-            : {};
-        if (Object.keys(fields).length === 0) {
-          return toolError("fields must contain at least one field to change.");
-        }
-
-        const failed: Array<{ id: string; error: string }> = [];
-        let updated = 0;
-        for (const issueId of issueIds) {
-          const scoped = await assertIssueInProject(
-            ctx.supabase,
-            issueId,
-            projectId,
-          );
-          if (!scoped.ok) {
-            failed.push({ id: issueId, error: scoped.error });
-            continue;
-          }
-          const result = await updateIssueFields({
-            issueId,
-            actorId: ctx.userId,
-            input: fields,
-            viaAssistant: true,
-          });
-          if (result.ok) updated++;
-          else
-            failed.push({
-              id: issueId,
-              error: result.rawMessage ?? result.errorKey ?? "update failed",
-            });
-        }
-        return {
-          result: { updated, failed },
-          success: failed.length === 0,
-        };
-      }
+      case "update_issues":
+        return executeUpdateIssues(args, ctx, projectId);
 
       // ── Pages: the project wiki (MIN-273) ─────────────────────────
       //
@@ -1462,18 +1431,31 @@ async function executeToolUnlisted(
           typeof args.section === "string" && args.section.trim()
             ? args.section.trim()
             : null;
+        const field = args.field === "description" ? "description" : "plan";
         const current = await readIssueText(ctx, issueId);
         if ("error" in current) return toolError(current.error);
-        const next = appendToPlan(current.plan, markdown, section);
+        const next = appendToPlan(current[field], markdown, section, {
+          beforeQuestions: field === "plan",
+        });
         if (next === null) {
           return toolError(
-            `This plan has no "${section}" heading. Read the plan with get_issue to see its headings, or omit "section" to append at the end.`,
+            `This ${field} has no "${section}" heading. Read it with get_issue to see its headings, or omit "section" to append at the end.`,
           );
         }
-        if (next.length > MAX_PLAN_LENGTH) {
-          return toolError(
-            `The plan is capped at ${MAX_PLAN_LENGTH} characters.`,
-          );
+        const cap = field === "plan" ? MAX_PLAN_LENGTH : MAX_DESCRIPTION_LENGTH;
+        if (next.length > cap) {
+          return toolError(`The ${field} is capped at ${cap} characters.`);
+        }
+        if (field === "description") {
+          const result = await updateIssueFields({
+            issueId,
+            actorId: ctx.userId,
+            input: { description: next },
+            viaAssistant: true,
+            expectedUpdatedAt: current.updatedAt || undefined,
+          });
+          if (!result.ok) return libError(result);
+          return { result: { field, length: next.length }, success: true };
         }
         return writePlan(
           ctx,
@@ -1571,9 +1553,7 @@ async function executeToolUnlisted(
         const edit = editIssueText({
           field,
           current: current[field],
-          oldString: typeof args.old_string === "string" ? args.old_string : "",
-          newString: typeof args.new_string === "string" ? args.new_string : "",
-          replaceAll: args.replace_all === true,
+          edits: numoTextEdits(args),
           tools: NUMO_TEXT_TOOLS,
         });
         if (!edit.ok) return toolError(edit.message);
@@ -1644,109 +1624,8 @@ async function executeToolUnlisted(
       // checked in the draft conversation: the heart controls access to the
       // project, not the fact that the target in itself (an inter-project
       // relationship does not exist).
-      case "link_issues": {
-        const relation = isRelationType(args.relation) ? args.relation : null;
-        if (!relation) {
-          return toolError(
-            `relation must be one of: ${RELATION_TYPE_VALUES.join(", ")}.`,
-          );
-        }
-        const sourceObjectiveId =
-          typeof args.source_objective_id === "string"
-            ? args.source_objective_id
-            : "";
-        const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
-        const targetObjectiveId =
-          typeof args.target_objective_id === "string"
-            ? args.target_objective_id
-            : "";
-        const targetIssueId =
-          typeof args.target_issue_id === "string" ? args.target_issue_id : "";
-
-        const sourceKind: RelationEndpointType = sourceObjectiveId
-          ? "objective"
-          : "issue";
-        const targetKind: RelationEndpointType = targetObjectiveId
-          ? "objective"
-          : "issue";
-        const sourceId = sourceObjectiveId || issueId;
-        const targetId = targetObjectiveId || targetIssueId;
-        if (!sourceId) {
-          return toolError(
-            "Pass issue_id (or source_objective_id) — the relation needs a source.",
-          );
-        }
-        if (!targetId) {
-          return toolError(
-            "Pass target_issue_id or target_objective_id — the relation needs a target.",
-          );
-        }
-        if (Boolean(issueId) === Boolean(sourceObjectiveId)) {
-          return toolError(
-            "Pass exactly one of issue_id / source_objective_id.",
-          );
-        }
-        if (Boolean(targetIssueId) === Boolean(targetObjectiveId)) {
-          return toolError(
-            "Pass exactly one of target_issue_id / target_objective_id.",
-          );
-        }
-        if (sourceKind === targetKind && sourceId === targetId) {
-          return toolError("An entity cannot be related to itself.");
-        }
-        for (const [id, kind] of [
-          [sourceId, sourceKind],
-          [targetId, targetKind],
-        ] as const) {
-          const scoped =
-            kind === "objective"
-              ? await assertObjectiveInProject(
-                  ctx.supabase,
-                  id,
-                  projectId,
-                )
-              : await assertIssueInProject(
-                  ctx.supabase,
-                  id,
-                  projectId,
-                );
-          if (!scoped.ok) return toolError(scoped.error);
-        }
-
-        if (args.remove === true) {
-          const existing = await findIssueRelation(
-            projectId,
-            { id: sourceId, type: sourceKind },
-            relation,
-            { id: targetId, type: targetKind },
-          );
-          // Idempotent, like the MCP tool: removing what is not there is not
-          // not an error, this is already the requested state.
-          if (!existing) {
-            return { result: { removed: false, relation }, success: true };
-          }
-          const removed = await removeIssueRelation({
-            relationId: existing.id,
-            actorId: ctx.userId,
-            viaAssistant: true,
-          });
-          if (!removed.ok) return libError(removed);
-          return { result: { removed: true, relation }, success: true };
-        }
-
-        const added = await addIssueRelation({
-          projectId,
-          actorId: ctx.userId,
-          sourceId,
-          targetId,
-          type: relation,
-          sourceType: sourceKind,
-          targetType: targetKind,
-          viaAssistant: true,
-        });
-        if (!added.ok) return libError(added);
-        return { result: { added: true, relation }, success: true };
-      }
+      case "link_issues":
+        return executeLinkIssues(args, ctx, projectId);
 
       case "add_comment": {
         const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
@@ -2297,18 +2176,49 @@ async function executeToolUnlisted(
         const objectiveId =
           typeof args.objective_id === "string" ? args.objective_id : "";
         if (!objectiveId) return toolError("objective_id is required.");
+        const {
+          description_edits: rawEdits,
+          description_append: rawAppend,
+          ...input
+        } = args;
+        // An empty or null list is no edit at all, not a refused one.
+        const descriptionEdits =
+          Array.isArray(rawEdits) && rawEdits.length > 0 ? rawEdits : null;
+        const descriptionAppend =
+          typeof rawAppend === "string" && rawAppend.trim() ? rawAppend : undefined;
+        const patches = Boolean(descriptionEdits || descriptionAppend);
+        if (patches && args.description !== undefined) {
+          return toolError(
+            "Pass either description (the whole text) or description_edits / description_append, not both.",
+          );
+        }
+        // Edits match the text people see: fold pending live typing in first.
+        if (patches) {
+          await materializePendingDescription("objective", objectiveId, projectId);
+        }
         // Scope check: the objective must belong to the project in scope.
+        // The description is only read (and decrypted) when it is patched.
         const { data: obj } = await objectiveStore(ctx.supabase)
-          .select("id")
+          .select(patches ? "id, description, updated_at" : "id")
           .is("deleted_at", null)
           .eq("id", objectiveId)
           .eq("project_id", projectId)
           .maybeSingle();
         if (!obj) return toolError("Objective not found in this project.");
+        if (patches) {
+          const edit = patchObjectiveDescription(
+            (obj.description as string | null) ?? "",
+            { edits: numoTextEditList(descriptionEdits), append: descriptionAppend },
+            { read: "get_objective", replaceWhole: "update_objective { description }" },
+          );
+          if (!edit.ok) return toolError(edit.message);
+          input.description = edit.content;
+        }
         const result = await updateObjective({
           objectiveId,
           actorId: ctx.userId,
-          input: args,
+          input,
+          expectedUpdatedAt: patches ? (obj.updated_at as string) : null,
           viaAssistant: true,
         });
         if (!result.ok) return libError(result);
@@ -3335,6 +3245,9 @@ async function executePageTool(
           icon: "icon" in args ? (str(args.icon) ?? null) : undefined,
           markdown: str(args.markdown),
           version: typeof args.version === "number" ? args.version : undefined,
+          parentPageId: "parent_page_id" in args
+            ? (str(args.parent_page_id) ?? null)
+            : undefined,
         }),
       );
     case "append_to_page":
@@ -3352,9 +3265,7 @@ async function executePageTool(
           pageId,
           projectId,
           actorId,
-          oldString: str(args.old_string) ?? "",
-          newString: str(args.new_string) ?? "",
-          replaceAll: args.replace_all === true,
+          edits: numoTextEdits(args),
           tools: { read: "get_page", replaceWhole: "update_page { markdown }" },
         }),
       );
@@ -3363,28 +3274,300 @@ async function executePageTool(
   }
 }
 
+/**
+ * The replacements of edit_issue_text / edit_page_text: old_string →
+ * new_string, then those of `edits`. Malformed entries become empty strings,
+ * which the edit engine refuses with its usual message.
+ */
+function numoTextEdits(args: Record<string, unknown>): TextPassageEdit[] {
+  return numoTextEditList([args, ...(Array.isArray(args.edits) ? args.edits : [])]);
+}
+
+/** A model-supplied list of { old_string, new_string, replace_all } entries. */
+function numoTextEditList(list: unknown): TextPassageEdit[] {
+  if (!Array.isArray(list)) return [];
+  return list.map((entry) => {
+    const value =
+      entry && typeof entry === "object" ? (entry as Record<string, unknown>) : {};
+    return {
+      oldString: typeof value.old_string === "string" ? value.old_string : "",
+      newString: typeof value.new_string === "string" ? value.new_string : "",
+      replaceAll: value.replace_all === true,
+    };
+  });
+}
+
+/** Issues, relations or pages one bulk call may touch, as on the MCP. */
+const MAX_BULK_ISSUES = 50;
+
+/**
+ * update_issues: one call edits 1–50 issues — every `issue_ids` entry gets the
+ * same `fields`, and each `updates` entry its own. Issues are written in
+ * parallel (bounded) and independently: a failure is reported, not fatal.
+ */
+async function executeUpdateIssues(
+  args: Record<string, unknown>,
+  ctx: ToolContext,
+  projectId: string,
+): Promise<ToolExecution> {
+  const asFields = (value: unknown) =>
+    value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  const sharedFields = asFields(args.fields);
+  const entries: Array<{ issueId: string; fields: Record<string, unknown> }> = [
+    ...new Set(
+      Array.isArray(args.issue_ids)
+        ? args.issue_ids.filter((v): v is string => typeof v === "string")
+        : [],
+    ),
+  ].map((issueId) => ({ issueId, fields: sharedFields }));
+  if (Array.isArray(args.updates)) {
+    for (const entry of args.updates) {
+      const item = asFields(entry);
+      entries.push({
+        issueId: typeof item.issue_id === "string" ? item.issue_id : "",
+        fields: asFields(item.fields),
+      });
+    }
+  }
+  if (entries.length === 0 || entries.length > MAX_BULK_ISSUES) {
+    return toolError(
+      `Name between 1 and ${MAX_BULK_ISSUES} issues to update across issue_ids and updates.`,
+    );
+  }
+  if (Array.isArray(args.issue_ids) && args.issue_ids.length > 0 &&
+    Object.keys(sharedFields).length === 0) {
+    return toolError("fields must contain at least one field to change.");
+  }
+
+  // The one-level sub-issue trigger reads OTHER rows (the parent's parent, the
+  // issue's children): two parent changes written at once could both pass it.
+  // A batch that moves issues in the hierarchy runs one at a time.
+  const movesParents = entries.some(({ fields }) => "parent_id" in fields);
+  const seen = new Set<string>();
+  const outcomes = await mapWithConcurrency(
+    entries,
+    movesParents ? 1 : BULK_WRITE_CONCURRENCY,
+    async ({ issueId, fields }): Promise<{ id: string; error: string } | null> => {
+      if (Object.keys(fields).length === 0) {
+        return { id: issueId, error: "fields must contain at least one field to change." };
+      }
+      // Two entries for one issue would race each other.
+      if (seen.has(issueId)) {
+        return { id: issueId, error: "Listed more than once: merge its fields into one entry." };
+      }
+      seen.add(issueId);
+      const scoped = await assertIssueInProject(ctx.supabase, issueId, projectId);
+      if (!scoped.ok) return { id: issueId, error: scoped.error };
+      const result = await updateIssueFields({
+        issueId,
+        actorId: ctx.userId,
+        input: fields,
+        viaAssistant: true,
+      });
+      if (result.ok) return null;
+      return {
+        id: issueId,
+        error: result.rawMessage ?? result.errorKey ?? "update failed",
+      };
+    },
+  );
+  const failed = outcomes.filter(
+    (outcome): outcome is { id: string; error: string } => outcome !== null,
+  );
+  return {
+    result: { updated: entries.length - failed.length, failed },
+    success: failed.length === 0,
+  };
+}
+
+/**
+ * link_issues: the relation of the top-level arguments, then those of
+ * `links`, written in order (a later entry may undo an earlier one).
+ */
+async function executeLinkIssues(
+  args: Record<string, unknown>,
+  ctx: ToolContext,
+  projectId: string,
+): Promise<ToolExecution> {
+  const { links: more, ...first } = args;
+  if (!Array.isArray(more) || more.length === 0) {
+    return linkOneRelation(first, ctx, projectId);
+  }
+  // The top-level relation is index 0; `links` follow it in order.
+  const links = [first, ...more];
+  if (links.length > MAX_BULK_ISSUES) {
+    return toolError(`One call writes at most ${MAX_BULK_ISSUES} relations.`);
+  }
+  const results: Array<Record<string, unknown>> = [];
+  const failed: Array<{ index: number; error: string }> = [];
+  for (const [index, link] of links.entries()) {
+    const outcome = await linkOneRelation(
+      link && typeof link === "object" ? (link as Record<string, unknown>) : {},
+      ctx,
+      projectId,
+    );
+    const result = outcome.result as Record<string, unknown>;
+    if (outcome.success) results.push({ index, ...result });
+    else failed.push({ index, error: String(result.error ?? "Request failed") });
+  }
+  return { result: { results, failed }, success: failed.length === 0 };
+}
+
+async function linkOneRelation(
+  args: Record<string, unknown>,
+  ctx: ToolContext,
+  projectId: string,
+): Promise<ToolExecution> {
+  const relation = isRelationType(args.relation) ? args.relation : null;
+  if (!relation) {
+    return toolError(
+      `relation must be one of: ${RELATION_TYPE_VALUES.join(", ")}.`,
+    );
+  }
+  const sourceObjectiveId =
+    typeof args.source_objective_id === "string"
+      ? args.source_objective_id
+      : "";
+  const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
+  const targetObjectiveId =
+    typeof args.target_objective_id === "string"
+      ? args.target_objective_id
+      : "";
+  const targetIssueId =
+    typeof args.target_issue_id === "string" ? args.target_issue_id : "";
+
+  const sourceKind: RelationEndpointType = sourceObjectiveId
+    ? "objective"
+    : "issue";
+  const targetKind: RelationEndpointType = targetObjectiveId
+    ? "objective"
+    : "issue";
+  const sourceId = sourceObjectiveId || issueId;
+  const targetId = targetObjectiveId || targetIssueId;
+  if (!sourceId) {
+    return toolError(
+      "Pass issue_id (or source_objective_id) — the relation needs a source.",
+    );
+  }
+  if (!targetId) {
+    return toolError(
+      "Pass target_issue_id or target_objective_id — the relation needs a target.",
+    );
+  }
+  if (Boolean(issueId) === Boolean(sourceObjectiveId)) {
+    return toolError(
+      "Pass exactly one of issue_id / source_objective_id.",
+    );
+  }
+  if (Boolean(targetIssueId) === Boolean(targetObjectiveId)) {
+    return toolError(
+      "Pass exactly one of target_issue_id / target_objective_id.",
+    );
+  }
+  if (sourceKind === targetKind && sourceId === targetId) {
+    return toolError("An entity cannot be related to itself.");
+  }
+  for (const [id, kind] of [
+    [sourceId, sourceKind],
+    [targetId, targetKind],
+  ] as const) {
+    const scoped =
+      kind === "objective"
+        ? await assertObjectiveInProject(
+            ctx.supabase,
+            id,
+            projectId,
+          )
+        : await assertIssueInProject(
+            ctx.supabase,
+            id,
+            projectId,
+          );
+    if (!scoped.ok) return toolError(scoped.error);
+  }
+
+  if (args.remove === true) {
+    const existing = await findIssueRelation(
+      projectId,
+      { id: sourceId, type: sourceKind },
+      relation,
+      { id: targetId, type: targetKind },
+    );
+    // Idempotent, like the MCP tool: removing what is not there is not
+    // not an error, this is already the requested state.
+    if (!existing) {
+      return { result: { removed: false, relation }, success: true };
+    }
+    const removed = await removeIssueRelation({
+      relationId: existing.id,
+      actorId: ctx.userId,
+      viaAssistant: true,
+    });
+    if (!removed.ok) return libError(removed);
+    return { result: { removed: true, relation }, success: true };
+  }
+
+  const added = await addIssueRelation({
+    projectId,
+    actorId: ctx.userId,
+    sourceId,
+    targetId,
+    type: relation,
+    sourceType: sourceKind,
+    targetType: targetKind,
+    viaAssistant: true,
+  });
+  if (!added.ok) return libError(added);
+  return { result: { added: true, relation }, success: true };
+
+}
+
 /** The creation has no `page_id`: it leaves the dispatch above. */
 async function executeCreatePage(
   args: Record<string, unknown>,
   ctx: ToolContext,
   projectId: string,
 ): Promise<ToolExecution> {
-  const result = await createPageForAgent({
-    projectId,
-    actorId: ctx.userId,
-    database: args.database === true,
-    title: typeof args.title === "string" ? args.title : "",
-    icon: typeof args.icon === "string" ? args.icon : undefined,
-    markdown: typeof args.markdown === "string" ? args.markdown : undefined,
-    parentPageId:
-      typeof args.parent_page_id === "string" ? args.parent_page_id : null,
-    // Shape and contents are checked against the database schema by the core.
-    values: args.values === undefined || args.values === null
-      ? undefined : args.values as Record<string, unknown>,
-  });
-  return result.ok
-    ? { result: result.data, success: true }
-    : toolError(result.message);
+  const parentPageId =
+    typeof args.parent_page_id === "string" ? args.parent_page_id : null;
+  const createOne = (page: Record<string, unknown>) =>
+    createPageForAgent({
+      projectId,
+      actorId: ctx.userId,
+      database: page.database === true,
+      title: typeof page.title === "string" ? page.title : "",
+      icon: typeof page.icon === "string" ? page.icon : undefined,
+      markdown: typeof page.markdown === "string" ? page.markdown : undefined,
+      parentPageId,
+      // Shape and contents are checked against the database schema by the core.
+      values: page.values === undefined || page.values === null
+        ? undefined : page.values as Record<string, unknown>,
+    });
+  if (!Array.isArray(args.pages) || args.pages.length === 0) {
+    const result = await createOne(args);
+    return result.ok
+      ? { result: result.data, success: true }
+      : toolError(result.message);
+  }
+  // The top-level page is index 0; `pages` follow it under the same parent,
+  // created in order so siblings sit in the tree in the order given.
+  const { pages: more, ...first } = args;
+  const pages = [first, ...(more as unknown[])];
+  if (pages.length > MAX_BULK_ISSUES) {
+    return toolError(`One call creates at most ${MAX_BULK_ISSUES} pages.`);
+  }
+  const created: Array<Record<string, unknown>> = [];
+  const failed: Array<{ index: number; error: string }> = [];
+  for (const [index, page] of pages.entries()) {
+    const result = await createOne(
+      page && typeof page === "object" ? (page as Record<string, unknown>) : {},
+    );
+    if (result.ok) created.push({ index, ...result.data });
+    else failed.push({ index, error: result.message });
+  }
+  return { result: { pages: created, failed }, success: failed.length === 0 };
 }
 
 const CONCURRENT_EDIT =
@@ -3519,6 +3702,26 @@ async function executeScratchpadTool(
         rev: saved.rev,
         progress: saved.progress,
         tasks: scratchpadTaskList(saved.content),
+      },
+      success: true,
+    };
+  }
+
+  if (toolName === "edit_scratchpad_text") {
+    const result = await editScratchpadText(db, ctx.userId, numoTextEdits(args), {
+      read: "get_scratchpad",
+      replaceWhole: "set_scratchpad",
+    });
+    if (result.status === "refused") return toolError(result.message);
+    if (result.status === "conflict") return toolError(CONCURRENT_EDIT);
+    return {
+      result: {
+        rev: result.state.rev,
+        progress: result.state.progress,
+        additions: result.additions,
+        deletions: result.deletions,
+        diff: result.diff,
+        tasks: scratchpadTaskList(result.state.content),
       },
       success: true,
     };

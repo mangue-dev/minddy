@@ -23,7 +23,10 @@ export const MCP_FULL_USAGE_GUIDE =
       "workspace; issues belong to a project; an objective groups issues of a project " +
       "around a goal — minddy_list_objectives lists them, minddy_get_objective " +
       "opens one (description, its issues, its comment thread), " +
-      "minddy_create_objective / minddy_update_objective write it, and " +
+      "minddy_create_objective / minddy_update_objective write it (its " +
+      "description_edits patches passages of the description, like " +
+      "minddy_edit_issue_text, and description_append adds a block at its " +
+      "end; both are refused if the objective changed meanwhile), and " +
       "minddy_add_objective_comment posts on the goal itself (a note about one " +
       "ticket goes on that ticket, with minddy_add_comment). " +
       "Your ROLE differs per project (minddy_list_projects returns it): an owner " +
@@ -41,13 +44,26 @@ export const MCP_FULL_USAGE_GUIDE =
       "human named one, or the owner on a single-member project. " +
       "And its RELATIONS: an issue can block, be blocked_by, or be related to " +
       "another issue or an OBJECTIVE (objectives relate too) — minddy_get_issue " +
-      "and minddy_get_objective read them, minddy_link_issues writes one, and " +
+      "and minddy_get_objective read them, minddy_link_issues writes one (or a " +
+      "whole batch via `links`), and " +
       "minddy_create_issue takes them at creation, siblings of the same call " +
       "included ('sub:N'). A dependency you noticed and did not record is one " +
       "nobody else can see. minddy_list_members and minddy_list_categories " +
       "resolve names to ids when you need them; minddy_list_categories gives " +
       "categories in their display order, which minddy_reorder_categories " +
-      "changes. An issue " +
+      "changes. " +
+      "WORK IN BATCHES. Plan the whole change, then send it in ONE call: every " +
+      "write that repeats takes a list of MORE items next to its usual fields. " +
+      "minddy_update_issues: `issues` + `fields` for the same change, plus " +
+      "`updates` ([{ issue, fields }]) for issues that each get their own " +
+      "(triage, re-estimation, reassignment). minddy_link_issues: `links`. " +
+      "minddy_edit_issue_text, minddy_edit_page_text and " +
+      "minddy_edit_scratchpad_text: `edits`, applied in " +
+      "order, all or nothing. minddy_create_page: `pages` under the same " +
+      "parent (a database's entries). minddy_update_feedback: " +
+      "`feedback_post_ids`. Up to 50 items per call; issue and feedback batches " +
+      "run in parallel and independently, so read `failed` and retry only those. " +
+      "An issue " +
       "can RECUR: field 'recurrence' (daily, weekly, monthly, yearly) riding on its " +
       "due date — 'every Monday' is the cadence plus the date, so a cadence without " +
       "a due_date is refused. Completing a recurring issue creates the next " +
@@ -65,7 +81,8 @@ export const MCP_FULL_USAGE_GUIDE =
       "(create/update). AFTERWARDS, never resend the document to change part of " +
       "it: minddy_update_plan_task flips task states (mark the task you start " +
       "'- [~]', finished '- [x]'), minddy_append_to_plan adds a block (a task, a " +
-      "note), and minddy_edit_issue_text rewrites one passage of the plan — or of " +
+      "note; field 'description' adds it to the description instead), and " +
+      "minddy_edit_issue_text rewrites passages of the plan — or of " +
       "the description — in place (old_string → new_string, unique match, like a " +
       "code editor). Each costs a few tokens instead of the whole plan, and a " +
       "stale old_string fails loudly where a full rewrite would silently overwrite " +
@@ -103,9 +120,10 @@ export const MCP_FULL_USAGE_GUIDE =
       "same checkbox markdown as plans. minddy_get_scratchpad reads it (tasks listed with " +
       "0-based indices); minddy_add_scratchpad_tasks appends new tasks (optionally under a " +
       "'##' section); minddy_update_scratchpad_task flips individual tasks' states by index " +
-      "the precise way to tick items off; minddy_set_scratchpad replaces the WHOLE doc " +
-      "(for editing task text or restructuring), so read first and preserve what you are not " +
-      "changing. " +
+      "the precise way to tick items off; minddy_edit_scratchpad_text rewrites or removes " +
+      "passages in place (old_string → new_string, more of them in `edits`), like a page; " +
+      "minddy_set_scratchpad replaces the WHOLE doc (only to restructure it), so read first " +
+      "and preserve what you are not changing. " +
       "A project also has PAGES: its wiki, where the durable knowledge its issues " +
       "assume lives — specs, decisions and their why, conventions, runbooks. Read " +
       "them: a ticket says what to do, a page says why it is like that. " +
@@ -116,11 +134,12 @@ export const MCP_FULL_USAGE_GUIDE =
       "minddy_update_page_database edits schemas or cells (operation=values for several cells of one entry at once) and previews/applies column conversions; preserve revision, expected value, and preview token guards. " +
       "minddy_list_pages maps the wiki (ids, titles, icons, parents, no bodies), " +
       "minddy_get_page reads one in MARKDOWN with its direct subpages, " +
-      "minddy_create_page writes a new one (optionally under a parent), and — as " +
+      "minddy_create_page writes a new one (optionally under a parent; " +
+      "minddy_update_page with parent_page_id MOVES one), and — as " +
       "for a plan, never resend the document to change part of it — " +
       "minddy_append_to_page adds a block at the end while " +
-      "minddy_edit_page_text rewrites one passage in place (old_string → " +
-      "new_string, unique match). minddy_update_page replaces a whole body, so " +
+      "minddy_edit_page_text rewrites passages in place (old_string → " +
+      "new_string, unique match; more of them in `edits`). minddy_update_page replaces a whole body, so " +
       "pass the version you read to be refused rather than overwrite someone. " +
       "A page is also DISCUSSED: minddy_get_page returns the threads on it — " +
       "objections and questions anchored to a passage — and " +

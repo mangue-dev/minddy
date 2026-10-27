@@ -1,5 +1,11 @@
 import "server-only";
+import {
+  editTextPassages,
+  type IssueTextEditResult,
+  type TextPassageEdit,
+} from "@/lib/server/text-edit";
 import { restoreStoredMentions } from "@/lib/mention-link";
+import { appendToPlan } from "@/lib/plan";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeObjective, encodeObjective } from "@/lib/server/objective-store";
@@ -59,6 +65,46 @@ export type ObjectiveResult =
 // the description is free markdown, bounded like the plan. Beyond that we truncate.
 const MAX_NAME_LENGTH = 500;
 export const MAX_OBJECTIVE_DESCRIPTION_LENGTH = 65_536;
+
+/**
+ * Patches an objective's description the way pages and issue texts are
+ * patched, so an agent fixes or extends the goal without resending it: the
+ * passage `edits` first (old → new, in order, all or nothing), then `append`
+ * at the end. The edits are matched on the description as just read: a
+ * passage someone changed meanwhile fails loudly.
+ */
+export function patchObjectiveDescription(
+  current: string,
+  { edits = [], append }: { edits?: readonly TextPassageEdit[]; append?: string },
+  tools: { read: string; replaceWhole: string },
+): IssueTextEditResult {
+  let edited: IssueTextEditResult = { ok: true, content: current, diff: "", additions: 0, deletions: 0 };
+  if (edits.length > 0) {
+    edited = editTextPassages({
+      field: "description",
+      subject: "objective",
+      current,
+      edits,
+      read: tools.read,
+      otherWay: `Use ${tools.replaceWhole} to write the whole description.`,
+    });
+    if (!edited.ok) return edited;
+  }
+  if (append?.trim()) {
+    edited = {
+      ...edited,
+      content: appendToPlan(edited.content, append, null, { beforeQuestions: false }) ?? edited.content,
+    };
+  }
+  if (edited.content.length > MAX_OBJECTIVE_DESCRIPTION_LENGTH) {
+    return {
+      ok: false,
+      code: "invalid_params",
+      message: `The description is capped at ${MAX_OBJECTIVE_DESCRIPTION_LENGTH} characters; this change would take it to ${edited.content.length}.`,
+    };
+  }
+  return edited;
+}
 
 function objectiveGuardError(message: string):
   | "forbidden"
@@ -256,10 +302,16 @@ export async function updateObjective({
   mcpKeyId = null,
   descriptionDocument = null,
   descriptionFromDocument = false,
+  expectedUpdatedAt = null,
 }: {
   objectiveId: string;
   actorId: string;
   input: Record<string, unknown>;
+  /** Compare-and-swap base for read-modify-write callers (agent patches of
+   the description): the `updated_at` they read. It is checked against the
+   snapshot below, whose `encryption_revision` the database then checks under
+   the row lock — so no write between the caller's read and this one is lost. */
+  expectedUpdatedAt?: string | null;
   /** Assigns change events to Numo in the activity feed. */
   viaAssistant?: boolean;
   /** Assigns events to an MCP (agent) key instead of the user. */
@@ -364,6 +416,15 @@ export async function updateObjective({
   // locks the project before re-checking membership, so a concurrent revocation
   // is ordered entirely before or after this mutation.
   const protectedEdit = Object.hasOwn(updates, "name") || Object.hasOwn(updates, "description");
+  const changedMeanwhile = {
+    ok: false as const,
+    status: 409,
+    rawMessage:
+      "The objective changed while this edit was being prepared. Read it again and reapply the change.",
+  };
+  if (expectedUpdatedAt !== null && objective.updated_at !== expectedUpdatedAt) {
+    return changedMeanwhile;
+  }
   const guardedUpdates: Record<string, unknown> = {
     ...updates, encryption_revision: objective.encryption_revision ?? 0,
   };
@@ -396,7 +457,9 @@ export async function updateObjective({
       return { ok: false, status: 400, errorKey: "notAProjectMember" };
     }
     if (error.message.includes("objective_revision_conflict")) {
-      return { ok: false, status: 409, errorKey: "databaseError" };
+      return expectedUpdatedAt !== null
+        ? changedMeanwhile
+        : { ok: false, status: 409, errorKey: "databaseError" };
     }
     console.error("[objectives] update failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };

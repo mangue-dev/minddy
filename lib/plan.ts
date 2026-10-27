@@ -299,7 +299,10 @@ function findHeadingLine(
 export function appendToPlan(
   plan: string | null | undefined,
   block: string,
-  section?: string | null
+  section?: string | null,
+  /** False for a text that is not a plan (a description): its "Questions"
+   heading is ordinary prose, so the block simply goes at the end. */
+  { beforeQuestions = true }: { beforeQuestions?: boolean } = {}
 ): string | null {
   const addition = block.replace(/^\n+/, "").replace(/\s+$/, "");
   const current = plan ?? "";
@@ -318,7 +321,7 @@ export function appendToPlan(
     if (headingIdx === -1) return null;
     const nextHeading = findHeadingLine(lines, () => true, headingIdx + 1);
     if (nextHeading !== -1) insertAt = nextHeading;
-  } else {
+  } else if (beforeQuestions) {
     const questions = findHeadingLine(lines, isQuestionHeading);
     if (questions !== -1) insertAt = questions;
   }
