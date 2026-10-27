@@ -1316,7 +1316,10 @@ export function CommandPalette({
                 ...selectField(
                   "assignee",
                   tIssueUI("changeAssigneeAria"),
-                  assigneeOptions(req.members, { label: tField("unassigned") })
+                  assigneeOptions(req.members, {
+                    label: tField(req.smartAssign ? "smartAssign" : "unassigned"),
+                    smartAssign: req.smartAssign,
+                  })
                 ),
                 onSubmit: (values) =>
                   update(

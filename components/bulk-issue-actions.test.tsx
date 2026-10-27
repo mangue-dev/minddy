@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { BulkActionsRequest } from "@/lib/bulk-actions-context";
 import en from "@/messages/en.json";
+import { ProjectsContext } from "@/lib/projects-context-store";
 import { BulkIssueActions } from "./bulk-issue-actions";
 
 const h = vi.hoisted(() => ({
@@ -66,11 +67,28 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
-async function renderPill(onDelete: () => void) {
+type SelectedIssue = { id: string; project_id: string; status?: string };
+
+async function renderPill(
+  onDelete: () => void,
+  {
+    issues = [
+      { id: "issue-1", project_id: "project" },
+      { id: "issue-2", project_id: "project" },
+    ],
+    smartAssignProjects = [],
+  }: { issues?: SelectedIssue[]; smartAssignProjects?: string[] } = {},
+) {
   const queryClient = new QueryClient();
+  const projects = [...new Set(issues.map((issue) => issue.project_id))].map((id) => ({
+    id,
+    smart_assign_enabled: smartAssignProjects.includes(id),
+  }));
   await act(() =>
     root.render(
-      createElement(NextIntlClientProvider, {
+      createElement(ProjectsContext.Provider, {
+        value: { projects } as never,
+        children: createElement(NextIntlClientProvider, {
         locale: "en",
         messages: en,
         children: createElement(QueryClientProvider, {
@@ -85,13 +103,11 @@ async function renderPill(onDelete: () => void) {
               onDelete,
               onClear: vi.fn(),
               onAskNumo: vi.fn(),
-              issues: [
-                { id: "issue-1", project_id: "project" },
-                { id: "issue-2", project_id: "project" },
-              ],
+              issues,
             }),
           ),
         }),
+      }),
       }),
     ),
   );
@@ -107,6 +123,26 @@ const dialogButton = (label: string) =>
   [...(dialog()?.querySelectorAll("button") ?? [])].find((button) => button.textContent === label)!;
 
 describe("bulk issue actions", () => {
+  it("names Smart Assign only when it fills every selected ticket (MIN-820)", async () => {
+    const issues = [
+      { id: "issue-1", project_id: "smart", status: "todo" },
+      { id: "issue-2", project_id: "smart", status: "triage" },
+    ];
+    expect((await renderPill(vi.fn(), { issues, smartAssignProjects: ["smart"] })).smartAssign).toBe(true);
+    expect(
+      (await renderPill(vi.fn(), {
+        issues: [...issues, { id: "issue-3", project_id: "smart", status: "canceled" }],
+        smartAssignProjects: ["smart"],
+      })).smartAssign,
+    ).toBe(false);
+    expect(
+      (await renderPill(vi.fn(), {
+        issues: [...issues, { id: "issue-3", project_id: "manual", status: "todo" }],
+        smartAssignProjects: ["smart"],
+      })).smartAssign,
+    ).toBe(false);
+  });
+
   it("only trashes the selection once the confirmation is accepted", async () => {
     const onDelete = vi.fn();
     const request = await renderPill(onDelete);

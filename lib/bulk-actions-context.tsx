@@ -45,6 +45,9 @@ export interface BulkActionsRequest {
   surface?: string;
   /** Assignable members across the selection's projects (already de-duplicated). */
   members: Member[];
+  /** Smart Assign fills an empty assignee on every selected ticket (MIN-811):
+   *  the clear option reads "Smart Assign" instead of "Unassigned". */
+  smartAssign?: boolean;
   /** Applies a field patch to every selected ticket. */
   onUpdate: (patch: IssueUpdateInput) => void;
   /** Deletes the selection — absent when deletion isn't allowed (e.g. cycles). */
