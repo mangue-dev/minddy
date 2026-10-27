@@ -86,6 +86,7 @@ import {
 import type { MessageKey } from "@/lib/i18n-keys";
 import type { Project } from "@/lib/types";
 import { AppTooltip } from "@/components/ui/app-tooltip";
+import { countLabel } from "@/components/nav-badge";
 
 /** Expanded width the sidebar keeps on every level — the old secondary
  * column's width (MIN-546): the sidebar never resizes anymore. */
@@ -1018,21 +1019,37 @@ export function SidebarTopBand({ secondary = false, headerRef, onCreate }: {
   );
 }
 
+/** What waits on the level a back row returns to (MIN-695): its count, and
+ an incomplete-setting alert (Smart Assign) that colors it. */
+export type SidebarBackBadge = { count: number; label: string; alert?: boolean };
+
 /** The secondary-level browse row uses the same geometry in both layouts. */
 export function SidebarBackRow({ label, onBack, ariaLabel, badge }: {
   label: string; onBack: () => void; ariaLabel?: string;
-  /** The badge of the level this row returns to (MIN-695). */
-  badge?: ReactNode;
+  /** The badge of the level this row returns to, worn by the chevron. */
+  badge?: SidebarBackBadge;
 }) {
+  const shown = badge && (badge.count > 0 || badge.alert) ? badge : undefined;
   return <div className="shrink-0 pt-[calc((var(--app-content-header-height)-2.25rem)/2)] pb-2">
     <div className={GUTTER}>
       <button type="button" data-sidebar-back onClick={onBack} aria-label={ariaLabel}
         className={cn("relative flex h-9 w-full min-w-0 items-center rounded-lg text-sm font-medium transition-colors", ROW_PL, "pr-3 text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground")}>
-        <HugeiconsIcon icon={ArrowLeft01Icon} className="absolute left-[9px] top-1/2 size-[18px] shrink-0 -translate-y-1/2" aria-hidden />
+        <span className="absolute left-[9px] top-1/2 flex size-[18px] -translate-y-1/2">
+          <HugeiconsIcon icon={ArrowLeft01Icon} className="size-[18px] shrink-0" aria-hidden />
+          {shown && (
+            // The inbox's pill geometry, in a neutral tone: red stays the
+            // inbox's own call for attention. It starts at the glyph's tip,
+            // which only fills the left half of its 18 px box. Amber marks the Smart Assign
+            // alert, as the triangle does on Home's row.
+            <span data-sidebar-back-badge aria-label={shown.label}
+              className={cn("absolute left-3 -top-2.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold leading-none tabular-nums ring-2 ring-sidebar",
+                shown.alert ? "bg-amber-500 text-white" : "bg-muted-foreground text-background",
+                shown.count <= 0 && "left-3 -top-0.5 h-2.5 min-w-2.5 px-0")}>
+              {shown.count > 0 ? countLabel(shown.count) : null}
+            </span>
+          )}
+        </span>
         <span className="min-w-0 flex-1 truncate text-center">{label}</span>
-        {badge != null && (
-          <span className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center">{badge}</span>
-        )}
       </button>
     </div>
   </div>;
@@ -1117,7 +1134,7 @@ export function AppSidebar({
   projects: Project[];
   onLayerOpenChange?: (open: boolean) => void;
   /** The badge of the level a back row returns to, by its href (MIN-695). */
-  backBadgeFor?: (href: string) => ReactNode;
+  backBadgeFor?: (href: string) => SidebarBackBadge | undefined;
 }) {
   const reduce = useReducedMotion();
   const t = useTranslations("Nav");
