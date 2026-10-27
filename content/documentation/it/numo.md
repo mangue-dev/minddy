@@ -256,7 +256,7 @@ Numo usa il contesto della conversazione e i permessi del tuo account. Inizia co
 Apri il ticket o il progetto interessato e usa il pulsante flottante di Numo. La pagina corrente diventa il contesto. Le azioni contestuali che affidano lavoro a Numo aprono lo stesso pannello. Servono accesso al progetto e budget IA disponibile oppure una chiave personale compatibile.
 
 1. Controlla il contesto nell’area di scrittura. Specifica il ticket quando sono coinvolti più elementi. Per aggiungere un ticket come contesto, digita `@` nell’area di scrittura o usa **Aggiungi contesto** → **Ticket**; una descrizione mostra anche ticket trovati [per significato](/docs/navigation#search-by-meaning) sotto **Correlati per significato**.
-2. Scegli modello e livello di ragionamento della conversazione con il logo del provider accanto al microfono; passandoci sopra vedi il modello attuale. Queste scelte valgono per la conversazione.
+2. Scegli modello e livello di ragionamento della conversazione con il logo del provider accanto al microfono; passandoci sopra vedi il modello attuale. Queste scelte valgono per la conversazione. Se il modello non offre il controllo del ragionamento, il cursore resta su **Nessun ragionamento**; su un modello che ragiona sempre, **Nessun ragionamento** usa il suo livello più leggero.
 3. Invia una richiesta circoscritta, per esempio: «Leggi questo ticket e proponi criteri di accettazione. Non modificarne lo stato».
 4. Leggi la risposta e apri i collegamenti ai ticket o alle fonti. Se hai chiesto una modifica, verifica l’oggetto aggiornato.
 

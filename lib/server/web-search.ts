@@ -20,6 +20,7 @@ import {
   aiChatProviderHeaders,
   translateAiChatRequest,
 } from "@/lib/ai-chat";
+import { providerErrorFromResponse, reportProviderError } from "@/lib/server/ai-provider-errors";
 
 /**
  * Numo web search — the ONLY web path for the app.
@@ -208,6 +209,7 @@ async function attemptWebSearch(params: {
     });
 
     if (!response.ok) {
+      reportProviderError(await providerErrorFromResponse("openrouter", params.model, response), "web_search");
       const detail = await response.text().catch(() => "");
       // A refused managed key is discarded (401). At its cap, the tool returns
       // an error: the turn's next generation ends on the budget message.

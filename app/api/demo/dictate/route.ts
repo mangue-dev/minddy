@@ -48,6 +48,7 @@ import {
 } from "@/lib/ai-chat";
 import { polishDictationTranscript } from "@/lib/server/dictation-polish";
 import { resolvePolishedDictation } from "@/lib/dictation-context";
+import { providerErrorFromResponse, reportProviderError } from "@/lib/server/ai-provider-errors";
 
 /**
  * Dictation demo available without an account (MIN-150).
@@ -302,6 +303,10 @@ export async function POST(request: NextRequest) {
       "[api/demo/dictate]",
     );
     if (!result.response.ok) {
+      reportProviderError(
+        await providerErrorFromResponse("openrouter", result.model, result.response),
+        "demo_dictate",
+      );
       const detail = await result.response.text();
       // A revoked public key is discarded so the next visitor gets a new one.
       if (platformKey) await handleManagedKeyRejection(platformKey, result.response.status, detail);

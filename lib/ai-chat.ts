@@ -3,6 +3,7 @@ import {
   type AgentProviderId,
 } from "./agent-providers";
 import {
+  nearestReasoningLevel,
   reasoningRequestFields,
   reasoningTokenBudget,
   type ModelReasoning,
@@ -51,29 +52,37 @@ function isAdaptiveClaude(model: string): boolean {
   );
 }
 
-/** Claude 4.6: still accepts a manual thinking budget, and sampling fields. */
+/** Claude 4.6: adaptive, but predates `xhigh` and still accepts sampling fields. */
 function isClaude46(model: string): boolean {
   return /^claude-(?:opus|sonnet)-4-6(?:-|$)/i.test(model);
 }
 
 /**
- * Claude 4.7 and later return a 400 for any `temperature` below 1 through the
- * compatibility layer ("`temperature` is deprecated for this model"), so the
- * sampling field is dropped on those families.
+ * Claude 4.7 and later return a 400 for any `temperature` below 1
+ * ("`temperature` is deprecated for this model"), so the sampling field is
+ * dropped on those families.
  */
 function rejectsSamplingTemperature(model: string): boolean {
   return isAdaptiveClaude(model) && !isClaude46(model);
 }
 
+/**
+ * Thinking takes its share of the output ceiling. A ceiling sized for the
+ * visible answer would let a high effort consume it and end the round on
+ * `max_tokens`; only generated tokens are billed, so the floor is free on
+ * short answers.
+ */
+const ADAPTIVE_CLAUDE_MIN_OUTPUT_TOKENS = 16_000;
+
+/** Families that take a manual `budget_tokens` (4.6 accepts it as a deprecated escape hatch). */
 function isManualThinkingClaude(model: string): boolean {
   return /^claude-(?:opus|sonnet|haiku)-4-(?:5|6)(?:-|$)/i.test(model);
 }
 
 /**
- * Families that reject `thinking: {type: "disabled"}` with a 400. At "off",
- * omit the field and retain their default thinking behavior.
- * Sonnet 5.5 also supports `between_tools` at effort `high` or below;
- * this adapter conservatively preserves the family's default at "off".
+ * Families that reject `thinking: {type: "disabled"}` with a 400. At "off"
+ * they run at the cheapest effort instead. Sonnet 5.5 also supports
+ * `between_tools` at effort `high` or below; this adapter does not use it.
  */
 function isAlwaysThinkingClaude(model: string): boolean {
   return (
@@ -84,19 +93,25 @@ function isAlwaysThinkingClaude(model: string): boolean {
 }
 
 /**
- * What the BYOK reasoning picker offers for an Anthropic model.
- *
- * The compatibility layer rejects adaptive thinking ("Adaptive thinking is not
- * available via the OpenAI compatibility endpoint") and silently drops
- * `reasoning_effort` and `output_config` (MIN-826, checked against the API).
- * Adaptive families therefore run at their own default effort whatever the
- * level: one "Standard" level, plus "off" where the family can disable
- * thinking. Manual-budget families (4.5, 4.6) keep the generic levels, which
- * map to a real budget. `undefined` = generic levels.
+ * What the BYOK reasoning picker offers for an Anthropic model: Anthropic's
+ * `/v1/models` publishes no effort list, so the levels follow the documented
+ * per-family table. Adaptive families take `low` to `max` (no `xhigh` before
+ * 4.7) and are `mandatory` when thinking cannot be disabled. Manual-budget
+ * families (4.5) keep the generic levels, which map to a budget.
+ * `undefined` = generic levels.
  */
 export function anthropicModelReasoning(model: string): ModelReasoning | undefined {
-  if (!isAdaptiveClaude(model) || isClaude46(model)) return undefined;
-  return { efforts: ["medium"], mandatory: isAlwaysThinkingClaude(model) };
+  if (!isAdaptiveClaude(model)) return undefined;
+  const efforts: ReasoningLevel[] = isClaude46(model)
+    ? ["low", "medium", "high", "max"]
+    : ["low", "medium", "high", "xhigh", "max"];
+  return { efforts, mandatory: isAlwaysThinkingClaude(model) };
+}
+
+/** A level folded to what the family accepts (`minimal` → `low`, `xhigh` → `high` on 4.6). */
+function anthropicEffort(model: string, level: ReasoningLevel): ReasoningLevel {
+  const allowed = anthropicModelReasoning(model)?.efforts ?? [];
+  return nearestReasoningLevel(level === "off" ? "low" : level, allowed);
 }
 
 function isGpt56(model: string): boolean {
@@ -137,35 +152,65 @@ function normalizeProviderToolChoice(
   }
 }
 
-/** Removes the sampling temperature that the recent Claude families reject. */
-function normalizeAnthropicSampling(
+/**
+ * Final Anthropic adjustments once the body is assembled: drops the sampling
+ * temperature recent families reject, drops a manual budget when the tool
+ * choice is forced ("Thinking may not be enabled when tool_choice forces tool
+ * use", 400), and lifts the ceiling when adaptive thinking runs.
+ */
+function normalizeAnthropicBody(
   body: Record<string, unknown>,
   provider: AgentProviderId,
 ): void {
   if (provider !== "anthropic" || typeof body.model !== "string") return;
   if (rejectsSamplingTemperature(body.model)) delete body.temperature;
+  const thinking = (body.thinking as { type?: unknown } | undefined)?.type;
+  if (thinking === "enabled" && isForcedOpenAiToolChoice(body.tool_choice)) {
+    delete body.thinking;
+  }
+  if (thinking === "adaptive") {
+    const ceiling = body.max_tokens;
+    if (typeof ceiling !== "number" || ceiling < ADAPTIVE_CLAUDE_MIN_OUTPUT_TOKENS) {
+      body.max_tokens = ADAPTIVE_CLAUDE_MIN_OUTPUT_TOKENS;
+    }
+  }
 }
 
+/**
+ * Native Messages API reasoning (`lib/server/anthropic-messages.ts` carries
+ * these fields as they are). Adaptive families get `thinking: adaptive` with a
+ * readable summary for the reasoning feed, and the level as
+ * `output_config.effort`; 4.5 families get a manual budget.
+ */
 function anthropicReasoningFields(params: {
   model: string;
   effort?: ReasoningLevel;
   fixedTokens?: number;
   maxOutputTokens?: number;
 }): Record<string, unknown> {
+  const { model } = params;
   if (params.effort === "off") {
     // Fable 5 / Mythos 5 / Mythos Preview and the Claude 5.5 families refuse
-    // `thinking: {type: "disabled"}` (400): reasoning cannot be turned off on
-    // these families, so we send no field and they keep their default.
-    if (isAlwaysThinkingClaude(params.model)) return {};
-    return isAdaptiveClaude(params.model) || isManualThinkingClaude(params.model)
+    // `thinking: {type: "disabled"}` (400): the cheapest effort is the
+    // closest request they accept.
+    if (isAlwaysThinkingClaude(model)) {
+      return { output_config: { effort: anthropicEffort(model, "off") } };
+    }
+    return isAdaptiveClaude(model) || isManualThinkingClaude(model)
       ? { thinking: { type: "disabled" } }
       : {};
   }
 
-  // The compatibility layer rejects `thinking: {type: "adaptive"}` with a 400
-  // and drops every effort field, so families without a manual budget get no
-  // field and think at their own default. 4.5 / 4.6 keep a manual budget.
-  if (!isManualThinkingClaude(params.model)) return {};
+  // A fixed budget keeps manual mode where the family still accepts one.
+  const manual = isManualThinkingClaude(model) &&
+    (params.fixedTokens !== undefined || !isAdaptiveClaude(model));
+  if (!manual) {
+    if (!isAdaptiveClaude(model) || !params.effort) return {};
+    return {
+      thinking: { type: "adaptive", display: "summarized" },
+      output_config: { effort: anthropicEffort(model, params.effort) },
+    };
+  }
 
   const requested =
     params.fixedTokens ??
@@ -178,6 +223,88 @@ function anthropicReasoningFields(params: {
     maxOutput !== undefined ? Math.min(requested, maxOutput - 1) : requested,
   );
   return { thinking: { type: "enabled", budget_tokens: budget } };
+}
+
+/**
+ * OpenAI reasoning families. Only these accept `reasoning_effort`; sending it
+ * to a chat model (gpt-4o, gpt-4.1) is a 400. GPT-5.1 and later accept
+ * `"none"`, which really disables reasoning; GPT-5 and the o-series always
+ * reason (GPT-5 also has `minimal`).
+ */
+function isOpenAiReasoningModel(model: string): boolean {
+  return /^(?:o\d|gpt-5)(?:[-.]|$)/i.test(model);
+}
+
+function openAiModelReasoning(model: string): ModelReasoning | null {
+  if (!isOpenAiReasoningModel(model)) return null;
+  if (/^gpt-5\.\d/i.test(model)) return { efforts: ["low", "medium", "high"], mandatory: false };
+  if (/^gpt-5(?:-|$)/i.test(model)) {
+    return { efforts: ["minimal", "low", "medium", "high"], mandatory: true };
+  }
+  return { efforts: ["low", "medium", "high"], mandatory: true };
+}
+
+/**
+ * Gemini thinking families on the OpenAI-compatible endpoint
+ * (ai.google.dev/gemini-api/docs/openai): 2.5 Flash and Flash-Lite can stop
+ * thinking with `"none"`; 2.5 Pro and Gemini 3 cannot; Gemini 3 Pro only takes
+ * `low` and `high`. Earlier families and Gemma do not think.
+ */
+function geminiModelReasoning(model: string): ModelReasoning | null {
+  if (/^gemini-2\.5-flash/i.test(model)) return { efforts: ["low", "medium", "high"], mandatory: false };
+  if (/^gemini-2\.5-pro/i.test(model)) return { efforts: ["low", "medium", "high"], mandatory: true };
+  if (/^gemini-3(?:\.\d+)?-pro/i.test(model)) return { efforts: ["low", "high"], mandatory: true };
+  if (/^gemini-3(?:[-.]|$)/i.test(model)) return { efforts: ["low", "medium", "high"], mandatory: true };
+  return null;
+}
+
+/**
+ * The reasoning levels a direct (non-OpenRouter) provider really honors for a
+ * model, for its picker and its translation alike. `null` = no reasoning
+ * control reaches the model: it does not reason, or the endpoint has no
+ * reasoning field (OpenCode gateways, generic and local servers).
+ * `undefined` = no rule, the generic levels apply (OpenRouter publishes its
+ * own per model; manual-budget Claude models map every level to a budget).
+ */
+export function nativeModelReasoning(
+  provider: AgentProviderId,
+  model: string,
+): ModelReasoning | null | undefined {
+  if (provider === "openrouter") return undefined;
+  if (provider === "anthropic") return anthropicModelReasoning(model);
+  if (provider === "openai") return openAiModelReasoning(model);
+  if (provider === "google") return geminiModelReasoning(model);
+  return getAgentProvider(provider)?.requestProfile.reasoningField ? undefined : null;
+}
+
+/**
+ * A model's reasoning for the picker and the server alike: its catalog entry
+ * when it has one, otherwise the provider rule — local and generic endpoints
+ * have no listable catalog, and their models must not show inert levels.
+ */
+export function catalogModelReasoning(
+  provider: AgentProviderId,
+  modelId: string | null | undefined,
+  entry?: { reasoning?: ModelReasoning | null },
+): ModelReasoning | null | undefined {
+  if (entry && entry.reasoning !== undefined) return entry.reasoning;
+  return modelId ? nativeModelReasoning(provider, modelId) : undefined;
+}
+
+/** `reasoning_effort` for OpenAI and Gemini, folded to what the model takes. */
+function compatEffortFields(
+  provider: "openai" | "google",
+  model: string,
+  level: ReasoningLevel,
+): Record<string, unknown> {
+  const reasoning = provider === "openai" ? openAiModelReasoning(model) : geminiModelReasoning(model);
+  if (!reasoning) return {};
+  if (level === "off") {
+    // A mandatory model has no "off": the server already lowers it, and the
+    // model's own default is the safe fallback for any other caller.
+    return reasoning.mandatory ? {} : { reasoning_effort: "none" };
+  }
+  return { reasoning_effort: nearestReasoningLevel(level, reasoning.efforts) };
 }
 
 function providerReasoningFields(
@@ -203,6 +330,15 @@ function providerReasoningFields(
     return {};
   }
   const fixedTokens = positiveInt(reasoning?.maxTokens);
+  if ((provider === "openai" || provider === "google") && reasoning.effort) {
+    return compatEffortFields(provider, model, reasoning.effort);
+  }
+  // "Off" really disables optional reasoning: omitting the field ran the
+  // model at its default effort (MIN-826). A mandatory model answers 400,
+  // which `repairRejectedAiChatBody` replays without the field.
+  if (provider === "openrouter" && reasoning.effort === "off") {
+    return { reasoning: { enabled: false } };
+  }
   if (provider === "anthropic") {
     return anthropicReasoningFields({
       model,
@@ -219,6 +355,28 @@ function providerReasoningFields(
     : {};
 }
 
+/**
+ * Gemini 3 returns a `thought_signature` in each tool call's `extra_content`,
+ * and requires it back on the next round. The loop keeps it in history; any
+ * other provider receives the tool calls without that Gemini-only field.
+ */
+function withoutGeminiToolExtras(messages: unknown[]): unknown[] {
+  return messages.map((message) => {
+    const calls = (message as { tool_calls?: unknown } | null)?.tool_calls;
+    if (!Array.isArray(calls) || !calls.some((call) => call && typeof call === "object" && "extra_content" in call)) {
+      return message;
+    }
+    return {
+      ...(message as Record<string, unknown>),
+      tool_calls: calls.map((call) => {
+        if (!call || typeof call !== "object" || !("extra_content" in call)) return call;
+        const { extra_content: _extra, ...rest } = call as Record<string, unknown>;
+        return rest;
+      }),
+    };
+  });
+}
+
 /** Translates the minddy contract to the exact JSON of the provider. Pure function. */
 export function translateAiChatRequest(
   request: AiChatRequest,
@@ -229,7 +387,7 @@ export function translateAiChatRequest(
 
   const body: Record<string, unknown> = {
     model: request.model,
-    messages: request.messages,
+    messages: provider === "google" ? request.messages : withoutGeminiToolExtras(request.messages),
     ...(request.stream !== undefined ? { stream: request.stream } : {}),
     ...(request.tools ? { tools: request.tools } : {}),
     ...(request.toolChoice !== undefined ? { tool_choice: request.toolChoice } : {}),
@@ -260,7 +418,7 @@ export function translateAiChatRequest(
   );
 
   normalizeProviderToolChoice(body, provider);
-  normalizeAnthropicSampling(body, provider);
+  normalizeAnthropicBody(body, provider);
 
   if (profile.usageAccounting) body.usage = { include: true };
   if (request.stream && profile.streamUsage) {
@@ -317,9 +475,10 @@ export function alternateOutputTokenBody(
 }
 
 /**
- * Repairs the only two compatibility 400s that we know how to replay without risk:
- * a denied cap alias, or GPT-5.6 Chat Completions that denies the couple
- * function tools + reasoning. Any other error keeps the initial body.
+ * Repairs the only compatibility 400s that we know how to replay without risk:
+ * a denied cap alias, a reasoning disable refused by a model that must reason,
+ * or GPT-5.6 Chat Completions that denies the couple function tools +
+ * reasoning. Any other error keeps the initial body.
  */
 export function repairRejectedAiChatBody(
   bodyText: string,
@@ -327,6 +486,22 @@ export function repairRejectedAiChatBody(
 ): string | null {
   const outputAliasRepair = alternateOutputTokenBody(bodyText, errorText);
   if (outputAliasRepair !== null) return outputAliasRepair;
+
+  // "Off" sent to a model whose catalog entry did not say it must reason:
+  // replay at the model's own default rather than failing the turn.
+  if (/reasoning is mandatory|(?:reasoning|thinking)[^\n]{0,80}cannot be (?:turned off|disabled)/i.test(errorText)) {
+    try {
+      const body = JSON.parse(bodyText) as Record<string, unknown>;
+      const reasoning = body.reasoning as { enabled?: unknown } | undefined;
+      if (reasoning?.enabled === false || body.reasoning_effort === "none") {
+        delete body.reasoning;
+        delete body.reasoning_effort;
+        return JSON.stringify(body);
+      }
+    } catch {
+      return null;
+    }
+  }
 
   if (
     !/function tools[^\n]{0,160}reasoning_effort[^\n]{0,160}(?:not supported|unsupported)/i.test(
@@ -385,7 +560,7 @@ export function translateLegacyAiChatBody(
   }
 
   normalizeProviderToolChoice(body, provider);
-  normalizeAnthropicSampling(body, provider);
+  normalizeAnthropicBody(body, provider);
 
   if (profile.usageAccounting && body.usage === undefined) body.usage = { include: true };
   // This border is only used by the opencode client, which streams all its rounds.

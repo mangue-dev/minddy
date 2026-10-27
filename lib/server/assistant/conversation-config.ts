@@ -15,6 +15,7 @@ import {
   type ResolvedAiRuntime,
 } from "@/lib/server/ai-runtime";
 import { isLocalAgentProvider } from "@/lib/agent-providers";
+import { catalogModelReasoning } from "@/lib/ai-chat";
 import { getAssistantReasoningLevel } from "@/lib/server/assistant/reasoning";
 import { conversationReasoningLevels } from "@/lib/conversation-settings";
 
@@ -155,9 +156,8 @@ export async function resolveNumoTurnConfiguration(input: {
     }
   }
 
-  const allowedReasoning = conversationReasoningLevels(
-    reasoningLevelsFor(modelEntry?.reasoning),
-  );
+  const modelReasoning = catalogModelReasoning(runtime.provider, runtime.model, modelEntry);
+  const allowedReasoning = conversationReasoningLevels(reasoningLevelsFor(modelReasoning));
   if (hasExplicitReasoning && !allowedReasoning.includes(persistedReasoningLevel)) {
     throw new NumoConversationConfigError(
       "reasoning_unsupported",
@@ -165,11 +165,16 @@ export async function resolveNumoTurnConfiguration(input: {
     );
   }
 
+  const chosenReasoning = hasExplicitReasoning
+    ? persistedReasoningLevel
+    : nearestReasoningLevel(configuredReasoning ?? DEFAULT_REASONING_LEVEL, allowedReasoning);
   return {
     model: runtime.model,
-    reasoningLevel: hasExplicitReasoning
-      ? persistedReasoningLevel
-      : nearestReasoningLevel(configuredReasoning ?? DEFAULT_REASONING_LEVEL, allowedReasoning),
+    // The slider always starts at "Off", but a model that must reason cannot
+    // honor it: its lowest level is what really runs (MIN-826).
+    reasoningLevel: chosenReasoning === "off" && modelReasoning?.mandatory
+      ? reasoningLevelsFor(modelReasoning)[0] ?? "off"
+      : chosenReasoning,
     runtime,
     persistedModel,
     persistedReasoningLevel,

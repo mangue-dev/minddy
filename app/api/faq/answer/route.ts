@@ -30,6 +30,7 @@ import {
   type FaqSection,
 } from "@/lib/server/faq-answer";
 import { FAQ_KEYS, PRICING_FAQ_KEYS, MCP_FAQ_KEYS } from "@/components/marketing/faq-keys";
+import { providerErrorFromResponse, reportProviderError } from "@/lib/server/ai-provider-errors";
 
 /**
  * The FAQ ask box (MIN-590): an anonymous visitor types their own question on
@@ -171,6 +172,10 @@ export async function POST(request: NextRequest) {
     "[api/faq/answer]",
   );
   if (!response.response.ok) {
+    reportProviderError(
+      await providerErrorFromResponse("openrouter", response.model, response.response),
+      "faq_answer",
+    );
     const detail = await response.response.text();
     // A revoked public key is discarded so the next question gets a new one.
     if (platformKey) await handleManagedKeyRejection(platformKey, response.response.status, detail);

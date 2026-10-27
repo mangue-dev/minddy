@@ -4,9 +4,12 @@
  * ai-keys, key resolution (`lib/server/agent/model.ts`), and loop
  * (`agent-loop.ts`) all rely on this.
  *
- * Principle: all providers are addressed via the OpenAI-compatible
- * `<baseUrl>/chat/completions` endpoint with `Authorization: Bearer <apiKey>`. Anthropic,
- * OpenAI and Gemini each expose such a layer; the “generic” provider
+ * Principle: providers are addressed via the OpenAI-compatible
+ * `<baseUrl>/chat/completions` endpoint with `Authorization: Bearer <apiKey>`,
+ * except Anthropic, whose compatibility layer cannot carry Claude's reasoning:
+ * its calls go to the native `<baseUrl>/messages` and are converted back to
+ * the chat shape (`lib/server/anthropic-messages.ts`). OpenAI and Gemini expose
+ * such a layer; the “generic” provider
  * covers any OpenAI-compatible server via a URL base entered by
  * the user. The particularities per provider (attribution headers,
  * usage count, API version) are carried by `requestProfile` and
@@ -149,11 +152,10 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     keyPlaceholder: "sk-ant-…",
     logoModel: "anthropic/x",
     listStrategy: "anthropic",
-    // The compat layer accepts both caps, but recommends the contract
-    // Recent OpenAI. The reasoning, however, keeps the Anthropic form.
+    // Native Messages API (MIN-826): the ceiling is `max_tokens`, usage is
+    // always reported in the stream, and reasoning keeps the Anthropic form.
     requestProfile: {
-      streamUsage: true,
-      outputTokenField: "max_completion_tokens",
+      outputTokenField: "max_tokens",
       defaultMaxOutputTokens: 8192,
       reasoningField: "thinking",
     },

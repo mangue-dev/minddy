@@ -255,7 +255,7 @@ Numo works from your conversation’s context and your account’s permissions. 
 Open the issue or project you want to work on, then use the floating Numo button. The current page becomes conversation context. Contextual actions that hand work to Numo open this same panel. You need access to the project and available AI usage or a compatible personal key.
 
 1. Check the context shown in the composer. Name the issue explicitly if several items are relevant. To add an issue as context, type `@` in the composer or use **Add context** → **Issue**; a description also lists issues found [by meaning](/docs/navigation#search-by-meaning) under **Related by meaning**.
-2. Choose the conversation model and reasoning level with the provider logo next to the microphone; hovering it names the current model. These choices affect the conversation.
+2. Choose the conversation model and reasoning level with the provider logo next to the microphone; hovering it names the current model. These choices affect the conversation. When the model offers no reasoning control, the reasoning slider stays on **No reasoning**; on a model that always reasons, **No reasoning** runs its lightest level.
 3. Send a bounded request, for example: “Read this issue and propose acceptance criteria. Do not change its status.”
 4. Read the answer and follow its issue or source links. For an action request, open the changed object and check the result.
 

@@ -100,16 +100,18 @@ export interface ModelReasoning {
 }
 
 /**
- * What the selector displays for a given model. Without metadata (model
- * unknown, provider without index), the four historical levels; with, those who
- * the model publishes, more `off` when it allows us not to reason.
+ * What the selector displays for a given model. Without metadata (`undefined`:
+ * model unknown, catalog not loaded), the four historical levels; with, those
+ * the model publishes, plus `off` when it allows us not to reason.
  *
- * `null` (not an empty list) = this model has NO reasoning ability:
- * the caller then shows an inert selector rather than a choice with no effect.
+ * `null` = no reasoning control reaches this model (it does not reason, or
+ * its endpoint drops every reasoning field): no level at all, so the caller
+ * shows an inert selector rather than choices with no effect.
  */
 export function reasoningLevelsFor(
   reasoning: ModelReasoning | null | undefined,
 ): ReasoningLevel[] {
+  if (reasoning === null) return [];
   if (!reasoning) return GENERIC_REASONING_LEVELS;
   const efforts = reasoning.efforts.length > 0 ? reasoning.efforts : GENERIC_REASONING_LEVELS;
   const withoutOff = efforts.filter((l) => l !== "off");

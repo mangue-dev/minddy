@@ -104,6 +104,11 @@ export interface AssistantToolCall {
     name: string;
     arguments: string;
   };
+  /**
+   * Provider data echoed back with the call on the next round: Gemini 3 puts
+   * its `thought_signature` here and rejects a later round without it.
+   */
+  extra_content?: unknown;
 }
 
 export interface AssistantMessage {

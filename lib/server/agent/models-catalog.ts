@@ -21,7 +21,7 @@ import { getAppConfigValue } from "@/lib/server/app-config";
 import { aiModelFallback } from "@/lib/ai-model-config";
 import { parseRecommendedModels } from "@/lib/recommended-models";
 import { dedupeModelVariants } from "@/lib/model-variants";
-import { anthropicModelReasoning } from "@/lib/ai-chat";
+import { nativeModelReasoning } from "@/lib/ai-chat";
 import {
   getAgentProvider,
   isLocalAgentProvider,
@@ -201,6 +201,16 @@ export async function getOpenRouterConversationModels(apiKey: string): Promise<A
   return listOpenRouter(apiKey).catch(() => []);
 }
 
+/**
+ * Attaches the levels a direct provider really honors for this model
+ * (`nativeModelReasoning`): without it the picker offered levels that the
+ * endpoint ignored or rejected (MIN-826).
+ */
+function withNativeReasoning(provider: AgentProviderId, entry: AgentModelEntry): AgentModelEntry {
+  const reasoning = nativeModelReasoning(provider, entry.id);
+  return reasoning === undefined ? entry : { ...entry, reasoning };
+}
+
 /** OpenAI-compatible `/models` endpoint (OpenAI, Google, generic). */
 async function listOpenAICompat(
   provider: AgentProviderId,
@@ -224,7 +234,7 @@ async function listOpenAICompat(
       if (capability === "embedding") return /embed/i.test(id);
       return !NON_CHAT_RE.test(id);
     })
-    .map((id) => ({ id, name: id }));
+    .map((id) => withNativeReasoning(provider, { id, name: id }));
   return sortById(models);
 }
 
@@ -247,10 +257,7 @@ async function listAnthropic(
   };
   const models = (body.data ?? [])
     .filter((m) => !!m.id)
-    .map((m) => {
-      const reasoning = anthropicModelReasoning(m.id);
-      return { id: m.id, name: m.display_name ?? m.id, ...(reasoning ? { reasoning } : {}) };
-    });
+    .map((m) => withNativeReasoning("anthropic", { id: m.id, name: m.display_name ?? m.id }));
   return sortById(models);
 }
 
