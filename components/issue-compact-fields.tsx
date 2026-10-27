@@ -7,11 +7,11 @@
 // issue-property-fields.tsx.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, Tag01Icon, Target01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, Heading01Icon, Tag01Icon, Target01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
-import { useId } from "react";
+import { useId, useRef } from "react";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { SMART_ASSIGN_ICON, SMART_FILL_ICON } from "@/components/feature-icons";
 import {
@@ -437,6 +437,13 @@ export interface SmartFillManualFields {
   objectives: Objective[];
   objectiveId: string | null;
   onObjectiveChange: (id: string) => void;
+  /**
+   * Shows the title field Smart Fill would otherwise write (MIN-813). Given
+   * only while Smart Fill writes the title; `onTitleFocus` runs once the menu
+   * has closed, so the caret lands in the field and not back on the chevron.
+   */
+  onTitleRequest?: () => void;
+  onTitleFocus?: () => void;
 }
 
 /**
@@ -446,6 +453,7 @@ export interface SmartFillManualFields {
  * stays in the property's own picker once it is back in the row.
  */
 function SmartFillManualMenu({
+  onTitleRequest,
   priority,
   onPriorityChange,
   effort,
@@ -456,7 +464,7 @@ function SmartFillManualMenu({
   objectives,
   objectiveId,
   onObjectiveChange,
-}: SmartFillManualFields) {
+}: Omit<SmartFillManualFields, "onTitleFocus">) {
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
   const tPriority = useTranslations("Priority");
@@ -464,6 +472,12 @@ function SmartFillManualMenu({
   return (
     <>
       <DropdownMenuLabel>{t("smartFillManualLabel")}</DropdownMenuLabel>
+      {onTitleRequest && (
+        <DropdownMenuItem onSelect={onTitleRequest}>
+          <HugeiconsIcon icon={Heading01Icon} className="size-4 text-muted-foreground" />
+          {tField("title")}
+        </DropdownMenuItem>
+      )}
       <DropdownMenuSub>
         <DropdownMenuSubTrigger>
           <PriorityIndicator priority={priority} className="size-4" />
@@ -575,9 +589,29 @@ export function SmartFillCompact({
 }) {
   const t = useTranslations("IssueUI");
   const id = useId();
+  /** Title was chosen: the closing menu hands the caret to the title field. */
+  const titleChosenRef = useRef(false);
   const menu = manual && (
-    <DropdownMenuContent align="end" className="w-52">
-      <SmartFillManualMenu {...manual} />
+    <DropdownMenuContent
+      align="end"
+      className="w-52"
+      onCloseAutoFocus={(event) => {
+        if (!titleChosenRef.current) return;
+        titleChosenRef.current = false;
+        event.preventDefault();
+        manual.onTitleFocus?.();
+      }}
+    >
+      <SmartFillManualMenu
+        {...manual}
+        onTitleRequest={
+          manual.onTitleRequest &&
+          (() => {
+            titleChosenRef.current = true;
+            manual.onTitleRequest?.();
+          })
+        }
+      />
     </DropdownMenuContent>
   );
   if (fullWidth) return <div className="creation-smart-fill">

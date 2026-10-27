@@ -155,8 +155,11 @@ vi.mock("@/components/issue-compact-fields", () => ({
   EffortCompact: ({ open, onChange, onOpenChange }: { open: boolean; onChange: (value: string) => void; onOpenChange: (open: boolean) => void }) =>
     React.createElement("div", null, React.createElement("button", { type: "button", "aria-label": "Change effort" }),
       open && React.createElement("button", { type: "button", onClick: () => { onChange("m"); onOpenChange(false); } }, "M")),
-  SmartFillCompact: ({ value, onChange }: { value: boolean; onChange: (value: boolean) => void }) =>
-    React.createElement("button", { type: "button", onClick: () => onChange(!value) }, "Smart Fill"),
+  // The "Set manually" → Title entry, when offered, is one button (MIN-813).
+  SmartFillCompact: ({ value, onChange, manual }: { value: boolean; onChange: (value: boolean) => void; manual?: { onTitleRequest?: () => void; onTitleFocus?: () => void } }) =>
+    React.createElement(React.Fragment, null,
+      React.createElement("button", { type: "button", onClick: () => onChange(!value) }, "Smart Fill"),
+      manual?.onTitleRequest && React.createElement("button", { type: "button", onClick: () => { manual.onTitleRequest!(); queueMicrotask(() => manual.onTitleFocus?.()); } }, "Set title manually")),
 }));
 vi.mock("@/components/issue-indicators", () => ({ RelationIcon: () => null, StatusIndicator: () => null, ObjectiveStatusIndicator: () => null }));
 vi.mock("@/components/relation-objective-label", () => ({ RelationObjectiveLabel: ({ objective }: { objective: Objective }) => React.createElement("span", null, objective.name) }));
@@ -189,7 +192,7 @@ beforeEach(() => {
   fixture.issues = [issue, { ...issue, id: "closed", title: "Closed issue", status: "done" }, { ...issue, id: "foreign", project_id: "other", title: "Foreign issue" }];
   fixture.objectives = [objective, { ...objective, id: "closed-goal", name: "Closed objective", status: "done" }, { ...objective, id: "foreign-goal", name: "Foreign objective", project_id: "other" }];
   fixture.mobile = false;
-  fixture.drafts = []; fixture.editorDocuments = []; fixture.editorAutoFocus = []; fixture.smartFill = true; fixture.smartFillCreated = true; fixture.smartFillRelations = true; fixture.smartFillTitle = true; fixture.queryProjects = [];
+  fixture.drafts = []; fixture.editorDocuments = []; fixture.editorAutoFocus = []; fixture.smartFill = true; fixture.smartFillCreated = true; fixture.smartFillRelations = true; fixture.smartFillTitle = false; fixture.queryProjects = [];
   fixture.save.mockImplementation(async (draft) => { fixture.drafts = [draft]; });
   fixture.remove.mockImplementation(async (id) => { fixture.drafts = fixture.drafts.filter((draft) => draft.id !== id); return true; });
   host = document.createElement("div"); document.body.append(host); root = createRoot(host);
@@ -455,8 +458,6 @@ describe("creation relation controls", () => {
   });
 
   it.each(["issue", "objective"] as const)("resumes a %s form with the caret in its description", async (kind) => {
-    // Without Smart Fill titles, a fresh issue form starts in the title.
-    fixture.smartFillTitle = false;
     const dialog = await mountDialog(kind);
     // A fresh form starts in the title.
     expect(document.activeElement).toBe(host.querySelector("textarea"));
@@ -473,20 +474,28 @@ describe("creation relation controls", () => {
     expect(document.activeElement).toBe(host.querySelector("textarea"));
   });
 
-  it("starts in the description and shrinks the empty title while Smart Fill writes it (MIN-798)", async () => {
+  it("shows the description alone while Smart Fill writes the title, and the title on request (MIN-813)", async () => {
+    fixture.smartFillTitle = true;
     await mountDialog("issue");
-    const title = host.querySelector("textarea")!;
+    expect(host.querySelector("textarea")).toBeNull();
     expect(fixture.editorAutoFocus.at(-1)).toBe(true);
-    expect(document.activeElement).not.toBe(title);
-    expect(title.placeholder).toBe(en.IssueUI.titlePlaceholderSmartFill);
-    expect(title.hasAttribute("data-recedes")).toBe(true);
-    // Focus brings it back to its size, and so does a typed title.
-    await act(() => title.focus());
-    expect(title.hasAttribute("data-recedes")).toBe(false);
+    // "Set manually" → Title brings the field back with the caret in it.
+    await click("Set title manually");
+    const title = host.querySelector("textarea")!;
+    expect(document.activeElement).toBe(title);
+    expect(title.placeholder).toBe(en.IssueUI.titlePlaceholder);
+    // Left empty, it leaves again on blur; a typed title keeps it.
     await act(() => title.blur());
-    expect(title.hasAttribute("data-recedes")).toBe(true);
+    expect(host.querySelector("textarea")).toBeNull();
+    await click("Set title manually");
     await typeTitle("Named by hand");
-    expect(title.hasAttribute("data-recedes")).toBe(false);
+    await act(() => host.querySelector("textarea")!.blur());
+    expect(host.querySelector("textarea")?.value).toBe("Named by hand");
+    // Without Smart Fill, the title is always there.
+    await typeTitle("");
+    await click("Smart Fill");
+    expect(host.querySelector("textarea")).not.toBeNull();
+    expect(host.textContent).not.toContain("Set title manually");
   });
 
   it.each(["issue", "objective"] as const)("saves a held %s form when its dialog unmounts", async (kind) => {

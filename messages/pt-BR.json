@@ -1882,7 +1882,6 @@
   },
   "IssueUI": {
     "titlePlaceholder": "Título do ticket",
-    "titlePlaceholderSmartFill": "Título do ticket (opcional, o preenchimento inteligente escreve)",
     "descriptionPlaceholder": "Adicione uma descrição…",
     "issueDeletedToast": "Ticket movido para a lixeira.",
     "deleteDialogTitle": "Mover “{title}” para a lixeira?",
@@ -1906,7 +1905,6 @@
     "smartFillPendingToast": "O preenchimento inteligente está completando o ticket; o resultado aparecerá em alguns segundos.",
     "newIssueTitle": "Novo ticket",
     "createDescriptionPlaceholder": "Descrição do ticket",
-    "createDescriptionPlaceholderSmartFill": "Descreva o ticket, o preenchimento inteligente dá o título",
     "createMore": "Criar mais",
     "createTicket": "Criar ticket",
     "createIdentifier": "Criar {identifier}",

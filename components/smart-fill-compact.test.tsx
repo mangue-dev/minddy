@@ -144,4 +144,27 @@ describe("SmartFillCompact split button (MIN-809)", () => {
     key(host.querySelector(`[aria-label="${en.IssueUI.smartFillManualAria}"]`)!, "Enter");
     expect(() => menuItem("menuitem", en.Field.objective)).toThrow();
   });
+
+  it("offers the title only while Smart Fill writes it, then hands it the caret (MIN-813)", async () => {
+    const chevron = () => host.querySelector(`[aria-label="${en.IssueUI.smartFillManualAria}"]`)!;
+    render(<SmartFillCompact value onChange={vi.fn()} manual={manualFields()} />);
+    key(chevron(), "Enter");
+    expect(() => menuItem("menuitem", en.Field.title)).toThrow();
+
+    act(() => root.unmount());
+    document.body.innerHTML = "";
+    document.body.append(host);
+    root = createRoot(host);
+    const onTitleFocus = vi.fn();
+    const fields = manualFields({ onTitleRequest: vi.fn(), onTitleFocus });
+    render(<SmartFillCompact value onChange={vi.fn()} manual={fields} />);
+    key(chevron(), "Enter");
+    key(menuItem("menuitem", en.Field.title), "Enter");
+    expect(fields.onTitleRequest).toHaveBeenCalledOnce();
+    // The closing menu does not take the caret back to the chevron; Radix
+    // restores focus on the task after the menu unmounts.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+    expect(document.activeElement).not.toBe(chevron());
+    expect(onTitleFocus).toHaveBeenCalledOnce();
+  });
 });

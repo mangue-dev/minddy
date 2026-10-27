@@ -8,7 +8,6 @@ import { createUuid } from "@/lib/create-uuid";
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { cn } from "@/lib/utils";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
 import { SplitButton } from "@/components/ui/split-button";
@@ -236,7 +235,8 @@ export function CreateIssueDialog({
   const scopedCategories = inHomeProject ? categories : foreignCategories;
   const scopedObjectives = inHomeProject ? objectives : foreignObjectives;
   const [title, setTitle] = useState("");
-  const [titleFocused, setTitleFocused] = useState(false);
+  /** The author asked for the title field from the Smart Fill menu (MIN-813). */
+  const [titleRequested, setTitleRequested] = useState(false);
   const [description, setDescription] = useState("");
   /** The editor document of `description`, as last committed (MIN-728);
       cleared whenever the description is replaced from outside the editor. */
@@ -326,15 +326,14 @@ export function CreateIssueDialog({
   /**
    * SMART FILL TITLE (MIN-798): unless the account turned it off, and while
    * Smart Fill is on for this issue, the title may stay empty and the server
-   * writes it from the description. The title field stays where it is,
-   * editable as always; what changes says where to write without a tutorial:
-   * the caret opens in the description, the empty title shrinks so the
-   * description carries the form (it regains its size once focused or
-   * filled), both placeholders say who writes the title, and Create works
-   * with a description alone.
+   * writes it from the description. The form then shows the description
+   * alone, with the caret in it, and Create works with a description alone.
+   * "Set manually" → Title in the Smart Fill menu brings the title field back
+   * (MIN-813); it leaves again when it loses focus while empty. A title
+   * already there, typed or resumed from a draft, keeps the field shown.
    */
   const writesTitle = smartFill && resolveSmartFillTitle(user?.user_metadata);
-  const titleRecedes = writesTitle && !titleFocused && title.trim() === "";
+  const showsTitle = !writesTitle || titleRequested || title !== "";
   const hasDescription = description.trim() !== "";
   const canSubmitText = title.trim() !== "" || (writesTitle && hasDescription);
   const showsField = (field: SmartFillField) =>
@@ -724,6 +723,7 @@ export function CreateIssueDialog({
         setSmartFill(smartFillDefault);
         setCategoryIds([]);
         setOpenPicker(null);
+        setTitleRequested(false);
         // The remounted description editor takes the caret itself when
         // Smart Fill writes the title.
         if (!writesTitle) titleRef.current?.focus();
@@ -862,6 +862,7 @@ export function CreateIssueDialog({
                 onChange={setRelations}
                 disabled={submitting}
               />
+              {showsTitle && (<>
               <label htmlFor={titleId} className="creation-field-label">{tField("title")}</label>
               <AutoTextarea
                 id={titleId}
@@ -871,18 +872,19 @@ export function CreateIssueDialog({
                 required={!writesTitle}
                 value={title}
                 onChange={(e) => setTitle(arrowTitle.read(e))}
-                onFocus={() => setTitleFocused(true)}
-                onBlur={() => setTitleFocused(false)}
+                onBlur={(e) => {
+                  if (e.currentTarget.value.trim() === "") {
+                    setTitle("");
+                    setTitleRequested(false);
+                  }
+                }}
                 onKeyDown={(e) => {
                   titleBody.onTitleKeyDown(e, { submit: () => void submit(createMore), mobile });
                 }}
-                placeholder={writesTitle ? t("titlePlaceholderSmartFill") : t("titlePlaceholder")}
-                data-recedes={titleRecedes || undefined}
-                className={cn(
-                  "creation-title w-full title-field bg-transparent text-xl leading-tight font-semibold outline-none sm:text-2xl",
-                  titleRecedes ? "placeholder:text-muted-foreground/30" : "placeholder:text-muted-foreground/50",
-                )}
+                placeholder={t("titlePlaceholder")}
+                className="creation-title w-full title-field bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50 sm:text-2xl"
               />
+              </>)}
               <div className="creation-field-label">{tField("description")}</div>
               <div ref={titleBody.bodyRef}>
               <LazyDocumentEditor
@@ -907,11 +909,7 @@ export function CreateIssueDialog({
                 onEmptyChange={(empty) => {
                   editorNonEmptyRef.current = !empty;
                 }}
-                placeholder={
-                  writesTitle
-                    ? t("createDescriptionPlaceholderSmartFill")
-                    : t("createDescriptionPlaceholder")
-                }
+                placeholder={t("createDescriptionPlaceholder")}
                 className="creation-description mt-2 min-h-16"
               />
               </div>
@@ -1055,6 +1053,11 @@ export function CreateIssueDialog({
                         objectiveId: fields.objective_id,
                         onObjectiveChange: (objective_id) =>
                           setFields((f) => ({ ...f, objective_id })),
+                        // The title Smart Fill would write (MIN-813).
+                        ...(writesTitle && {
+                          onTitleRequest: () => setTitleRequested(true),
+                          onTitleFocus: () => titleRef.current?.focus(),
+                        }),
                       }}
                     />
                 )}
