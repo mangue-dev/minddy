@@ -20,12 +20,13 @@
       ]
     },
     "numo_conversation_history": {
-      "sha256": "7dfddd6895af9a5765daa786986c237aff9b8f77d7bde9146a875d8107331aab",
+      "sha256": "0ffead0904f7615879f725f8a4666baf56c510eff5a770af7f86f68b0ead4e2d",
       "relations": [
         "projects",
         "conversations",
         "numo_conversation_ids",
-        "numo_conversation_state"
+        "numo_conversation_state",
+        "assistant_messages"
       ]
     },
     "ai_decision_evaluations_weekly": {
@@ -35,7 +36,7 @@
       ]
     },
     "numo_user_conversation_history": {
-      "sha256": "63651d30f15a8f01be14f9f276e7614b78819a5e64fb2f0a68e651397a0275ba",
+      "sha256": "84571d18cf3c74a38e29a3254626fa2c60ab31a7f6b6179192f9c4ee5c297d00",
       "relations": [
         "numo_conversation_history"
       ]

@@ -47,6 +47,8 @@ export interface NumoConversation extends Omit<Conversation, "user_id"> {
   archived_at: string | null;
   pinned_at: string | null;
   last_read_at: string | null;
+  /** Time of Numo's latest answer; null while the conversation has none. */
+  last_answer_at: string | null;
   /** Explicit conversation choice; null preserves the account default. */
   model?: string | null;
   /** Explicit conversation choice; null preserves the compatible legacy default. */
