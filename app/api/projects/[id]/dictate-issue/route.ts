@@ -76,17 +76,28 @@ type Draft = {
 };
 
 /**
- * THE FOUR FIELDS THAT SMART-FILL PLACES, removed from the tool when it is armed
- * (MIN-260). Dictating “urgent bug on the login” should then NOT pose the
- * priority: the form no longer shows these pickers, and a field placed there
- * would be invisible — worse, it would gain on Smart-fill (which only completes the
- * empty), so the automation that we believe to be armed would no longer do anything.
+ * THE FIELDS SMART FILL SETS when it is armed on the creation form (MIN-260),
+ * plus the title when Smart Fill also writes it (MIN-798). Smart Fill only
+ * fills what is still empty, so a value dictation sets wins over it: dictating
+ * "urgent bug on the login" must leave them alone, or the automation the user
+ * armed would have nothing left to do.
  *
- * They are removed from the DIAGRAM, not filtered after the fact: a model that is not
- * does not propose an argument, does not fulfill it, does not reason it, and does not
- * not bill. Filtering the response would have paid to throw it away.
+ * They stay in the tool schema (MIN-816): "put it in the Onboarding
+ * objective" or "effort M" is an explicit request, and an argument the schema
+ * no longer offers could not honor it. The restriction lives in the prompt and
+ * in each field's description instead. A property set this way stays visible
+ * on the form (MIN-746), so the user sees what dictation chose.
  */
 const SMART_FILLED_FIELDS = ["priority", "effort", "objective_id", "category_ids"] as const;
+
+/** The fields dictation leaves to Smart Fill unless the user names them. */
+export function smartFillFields(smartFill: boolean, smartFillTitle: boolean): string[] {
+  if (!smartFill) return [];
+  return smartFillTitle ? ["title", ...SMART_FILLED_FIELDS] : [...SMART_FILLED_FIELDS];
+}
+
+const SMART_FILL_FIELD_NOTE =
+  "Smart Fill sets this field when the issue is created: pass it ONLY when the user explicitly asks to set this property.";
 
 const UPDATE_DRAFT_TOOL = {
   type: "function" as const,
@@ -135,17 +146,26 @@ const UPDATE_DRAFT_TOOL = {
   },
 };
 
-/** The tool as it comes from the model: entire, or amputated of the fields that
- * Smart-fill installs itself (see `SMART_FILLED_FIELDS`). Exported for testing:
- * what we remove from the diagram is nowhere to be seen on the screen, and a regression
- * here would just make the dictation "oddly verbose" without breaking anything. */
-export function updateDraftTool(smartFill: boolean) {
-  if (!smartFill) return UPDATE_DRAFT_TOOL;
+/** The tool as the model sees it: every field, with the ones Smart Fill sets
+ * (see `smartFillFields`) marked as explicit-request only. Exported for
+ * testing: none of this shows on screen, and a regression would only make
+ * dictation quietly overwrite what Smart Fill was armed to decide. */
+export function updateDraftTool(smartFill: boolean, smartFillTitle = false) {
+  const reserved = smartFillFields(smartFill, smartFillTitle);
+  if (reserved.length === 0) return UPDATE_DRAFT_TOOL;
   const properties = { ...UPDATE_DRAFT_TOOL.function.parameters.properties } as Record<
     string,
-    unknown
+    { description?: string }
   >;
-  for (const field of SMART_FILLED_FIELDS) delete properties[field];
+  for (const field of reserved) {
+    const property = properties[field];
+    properties[field] = {
+      ...property,
+      description: property.description
+        ? `${property.description} ${SMART_FILL_FIELD_NOTE}`
+        : SMART_FILL_FIELD_NOTE,
+    };
+  }
   return {
     ...UPDATE_DRAFT_TOOL,
     function: {
@@ -241,7 +261,16 @@ function formatNow(timeZone: string): string {
   }
 }
 
-function buildDictatePrompt({
+const SMART_FILL_FIELD_NAMES: Record<string, string> = {
+  title: "title",
+  priority: "priority",
+  effort: "effort",
+  objective_id: "objective",
+  category_ids: "categories",
+};
+
+/** Exported for testing: the Smart Fill rules only exist in this text. */
+export function buildDictatePrompt({
   ctx,
   draft,
   mode,
@@ -249,15 +278,19 @@ function buildDictatePrompt({
   userId,
   timeZone,
   smartFill,
+  smartFillTitle = false,
 }: {
   ctx: PromptProjectContext;
   draft: Draft;
   mode: "create" | "edit";
   locale: string;
   userId: string;
-  /** Smart-fill is armed on this form: priority, effort, categories and
-   * objective are not for dictation (MIN-260). */
+  /** Smart Fill is armed on this form: its fields are set by dictation only
+   * on explicit request (MIN-260, MIN-816). */
   smartFill: boolean;
+  /** Smart Fill also writes the empty title (MIN-798), so the title joins
+   * those fields. */
+  smartFillTitle?: boolean;
   timeZone: string;
 }): string {
   const me = ctx.members.find((m) => m.user_id === userId);
@@ -279,9 +312,11 @@ This edits a form on screen — nothing is saved until the user clicks the Creat
 The user speaks; you edit the issue's fields by calling update_draft.
 Every change you emit is saved to the issue IMMEDIATELY — be conservative: change exactly what was asked, nothing more.`;
 
+  const reserved = smartFillFields(smartFill, smartFillTitle);
+  const reservedNames = reserved.map((field) => SMART_FILL_FIELD_NAMES[field] ?? field);
   const modeRules =
     mode === "create"
-      ? `- FIRST dictation describing a problem or idea (draft mostly empty): fill as much as the words reasonably support — a concise title (≤ 80 chars, imperative, Linear-style), a clean markdown description faithful to what was said (structure it; NEVER invent facts, steps or details that were not said), and every field the words imply: "je m'en occupe" / "assigne-moi" → assignee = current user, a person's name → that member, deadlines → due_date${smartFill ? "" : ", category/objective names → their ids"}. ${smartFill ? "Priority, effort, categories and objective are NOT yours on this form: Smart-fill sets them itself when the issue is created, and the form does not even show them. You have no argument for them — do not mention them, do not ask about them, do not say they are missing. Say what you did with the fields you DO have." : "On a first dictation ALWAYS set priority AND effort, even when not stated: estimate priority from the urgency/impact wording and effort (t-shirt size) from the apparent scope and complexity of the work — a reasoned estimate beats leaving the defaults."} Leave the other unstated fields untouched.
+      ? `- FIRST dictation describing a problem or idea (draft mostly empty): fill as much as the words reasonably support — ${reserved.includes("title") ? "" : "a concise title (≤ 80 chars, imperative, Linear-style), "}a clean markdown description faithful to what was said (structure it; NEVER invent facts, steps or details that were not said), and every field the words imply: "je m'en occupe" / "assigne-moi" → assignee = current user, a person's name → that member, deadlines → due_date${smartFill ? "" : ", category/objective names → their ids"}. ${smartFill ? `Smart Fill is armed on this form: it sets the ${reservedNames.join(", ")} itself when the issue is created. Leave those fields untouched UNLESS the user explicitly asks to set that property ("set the title to…", "the objective is…", "effort M", "make it urgent priority") — then set exactly what they asked. Words that only describe the work (how urgent or big it sounds, what area it touches) are NOT such a request. Do not mention the fields you left to Smart Fill, do not ask about them, do not say they are missing.` : "On a first dictation ALWAYS set priority AND effort, even when not stated: estimate priority from the urgency/impact wording and effort (t-shirt size) from the apparent scope and complexity of the work — a reasoned estimate beats leaving the defaults."} Leave the other unstated fields untouched.
 - FOLLOW-UP commands ("passe-la en urgent", "attribue-moi le ticket", "enlève l'échéance"): apply EXACTLY the requested change(s), nothing else. Do not rewrite title or description unless asked.
 - Additional context dictated later ("ajoute que…") extends the description without losing what's there.
 - Title and description are written in the language the user dictates in.`
@@ -359,6 +394,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     history?: unknown;
     timeZone?: unknown;
     smartFill?: unknown;
+    smartFillTitle?: unknown;
   };
   try {
     body = await request.json();
@@ -374,6 +410,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   // Smart-fill only exists in the CREATION form: in edition, the
   // panel shows all fields and dictation asks them all.
   const smartFill = mode === "create" && body.smartFill === true;
+  // Whether Smart Fill writes the title too (MIN-798): the account may have
+  // turned that off, and the title then stays dictation's job.
+  const smartFillTitle = smartFill && body.smartFillTitle === true;
 
   const transcript =
     typeof body.transcript === "string"
@@ -473,6 +512,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         userId: auth.user.id,
         timeZone,
         smartFill,
+        smartFillTitle,
       }),
     },
     ...history,
@@ -494,7 +534,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         (m) => ({
           model: m,
           messages,
-          tools: [updateDraftTool(smartFill)],
+          tools: [updateDraftTool(smartFill, smartFillTitle)],
           maxOutputTokens: 4096,
         }),
         "Numo (minddy)",
