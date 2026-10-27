@@ -209,6 +209,24 @@ function createSkillNode(skill: RepositorySkillSummary): HTMLSpanElement {
   return pill;
 }
 
+let placeholderCanvas: CanvasRenderingContext2D | null | undefined;
+/** The width of the placeholder on one line, in the editor's font. Infinite
+ when it cannot be measured, so the composer stays expanded rather than
+ flipping back to a compact row its placeholder overflows. */
+function placeholderWidth(text: string, style: CSSStyleDeclaration): number {
+  if (!text) return 0;
+  if (placeholderCanvas === undefined) {
+    try {
+      placeholderCanvas = document.createElement("canvas").getContext("2d");
+    } catch {
+      placeholderCanvas = null;
+    }
+  }
+  if (!placeholderCanvas || !style.font) return Infinity;
+  placeholderCanvas.font = style.font;
+  return placeholderCanvas.measureText(text).width;
+}
+
 function focusContentEditableAtEnd(element: HTMLElement) {
   element.focus();
   const selection = window.getSelection();
@@ -1045,11 +1063,6 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       const grid = composerGridRef.current;
       // A hidden composer (a closed panel) has nothing to measure.
       if (!editor || !grid || grid.clientWidth === 0) return;
-      // An empty composer is compact, whatever its placeholder does.
-      if (!editor.textContent?.trim() && !editor.querySelector("[contenteditable=false]")) {
-        setTextWraps(false);
-        return;
-      }
       const style = getComputedStyle(editor);
       const lineHeight = parseFloat(style.lineHeight) || 22;
       const multiLine = editor.scrollHeight > lineHeight * 1.5;
@@ -1060,9 +1073,15 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         setTextWraps(multiLine);
         return;
       }
+      // An empty composer shows its placeholder, which expands it like text
+      // when it does not fit the compact row; a range over the empty editor
+      // would measure nothing and fold it back.
+      const empty = editor.childNodes.length === 0;
       const range = document.createRange();
       range.selectNodeContents(editor);
-      const textWidth = range.getBoundingClientRect().width;
+      const textWidth = empty
+        ? placeholderWidth(editor.getAttribute("aria-placeholder") ?? "", style)
+        : range.getBoundingClientRect().width;
       const compactRoom =
         compactOverheadRef.current !== null
           ? grid.clientWidth - compactOverheadRef.current
@@ -1635,6 +1654,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             // is a borderless `bg-control` surface (the editor caret is the
             // signal), brand colors are kept for drag feedback only.
             "chat-input-surface relative overflow-hidden rounded-[1.625rem] bg-control",
+            // Content pinned to the bottom: while the height animates, the
+            // controls row never leaves the bottom edge; only the text and
+            // what sits above it move.
+            "flex flex-col justify-end",
             "transition-[height,box-shadow] duration-200 ease-out motion-reduce:transition-none",
             drop.dragging && "ring-2 ring-brand/20"
           )}
@@ -1645,7 +1668,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           {...(canAttach ? drop.handlers : {})}
         >
           <DropOverlay show={canAttach && drop.dragging} />
-          <div ref={surfaceContentRef} className="flex flex-col">
+          <div ref={surfaceContentRef} className="flex shrink-0 flex-col">
           {/* The host can merge semantic context and attachments into this
           single adaptive row. Concentric nesting: its rounded-md pills sit
           behind a 10px gutter. */}

@@ -61,7 +61,14 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("keeps an empty composer compact when its placeholder wraps in a narrow panel", async () => {
+it("expands an empty composer whose placeholder overflows a narrow panel, without flipping back", async () => {
+  // The placeholder measures 150 px, wider than the compact row's 60 px.
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+    font: "", measureText: () => ({ width: 150 }),
+  } as unknown as CanvasRenderingContext2D);
+  vi.spyOn(window, "getComputedStyle").mockReturnValue({
+    font: "14px sans-serif", lineHeight: "22px", paddingLeft: "0px", paddingRight: "0px",
+  } as CSSStyleDeclaration);
   const errors = vi.spyOn(console, "error").mockImplementation(() => {});
   await act(async () => {
     root.render(createElement(TooltipProvider, {
@@ -69,7 +76,8 @@ it("keeps an empty composer compact when its placeholder wraps in a narrow panel
     }));
   });
   expect(errors.mock.calls.flat().join(" ")).not.toMatch(/Maximum update depth/);
-  expect(compact(editor())).toBe(true);
+  expect(editor().textContent).toBe("");
+  expect(compact(editor())).toBe(false);
 });
 
 it("keeps a line that wraps in the compact row on its own row, without flipping back", async () => {
