@@ -64,6 +64,7 @@ function detail(): NumoConversationDetail {
       archived_at: null,
       pinned_at: null,
       last_read_at: null,
+      last_answer_at: null,
       created_at: "2026-09-12T10:00:00.000Z",
       updated_at: "2026-09-12T10:00:00.000Z",
       model: "chosen-model",
