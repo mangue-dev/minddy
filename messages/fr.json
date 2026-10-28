@@ -3168,7 +3168,6 @@
     "wizardNameSuggestHint": "Nom provisoire : vous pourrez le renommer quand vous voudrez.",
     "wizardJoinLink": "Je souhaite rejoindre un projet",
     "keyLabel": "Clé",
-    "keyPlaceholder": "2 à 5 lettres",
     "keyTooltipLabel": "À quoi sert la clé ?",
     "keyTooltip": "La clé préfixe les identifiants de vos {entityPlural} (ex. {key}-42). 2 à 5 lettres, unique dans votre compte.",
     "createProjectButton": "Créer le projet",
