@@ -117,7 +117,7 @@
       "caption": "Le guide public illustre les trois étapes Safari et le maintien de l’option Ouvrir comme app web. Il s’agit d’illustrations pédagogiques affichées par minddy, pas de captures d’une installation iOS effectuée.",
       "revision": 16,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-28",
       "viewport": [
         1488,
         762
@@ -168,7 +168,7 @@
       "caption": "Page de récupération dans l’application de développement macOS, avec un profil isolé et un serveur de démonstration. Le shell natif utilise des libellés anglais dans toutes les langues.",
       "revision": 16,
       "reviewed": true,
-      "capturedAt": "2026-10-10",
+      "capturedAt": "2026-10-28",
       "viewport": [
         1280,
         860

@@ -117,7 +117,7 @@
       "caption": "La guida pubblica illustra i tre passaggi di Safari e l’opzione Apri come app web da mantenere attiva. Sono illustrazioni didattiche mostrate da minddy, non schermate di un’installazione iOS completata.",
       "revision": 17,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-28",
       "viewport": [
         1488,
         759
@@ -168,7 +168,7 @@
       "caption": "Pagina di ripristino nell’app di sviluppo per macOS, con un profilo isolato e un server dimostrativo. L’interfaccia nativa usa etichette in inglese in tutte le lingue.",
       "revision": 17,
       "reviewed": true,
-      "capturedAt": "2026-10-10",
+      "capturedAt": "2026-10-28",
       "viewport": [
         1280,
         860

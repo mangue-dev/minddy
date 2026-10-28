@@ -117,7 +117,7 @@
       "caption": "La guía pública ilustra los tres pasos de Safari y la opción Abrir como app web que debe permanecer activada. Son ilustraciones didácticas mostradas por minddy, no capturas de una instalación de iOS realizada.",
       "revision": 17,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-28",
       "viewport": [
         1488,
         736
@@ -168,7 +168,7 @@
       "caption": "Página de recuperación en la aplicación de desarrollo para macOS, con un perfil aislado y un servidor de demostración. La interfaz nativa utiliza etiquetas en inglés en todos los idiomas.",
       "revision": 17,
       "reviewed": true,
-      "capturedAt": "2026-10-10",
+      "capturedAt": "2026-10-28",
       "viewport": [
         1280,
         860

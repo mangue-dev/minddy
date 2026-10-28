@@ -9,7 +9,8 @@ Primitives live in `components/ui/` and design tokens in `app/tokens.css`
 (imported by `app/globals.css`, with palettes in `app/theme-presets.css`). The
 "UI components" section of `AGENTS.md` explains how to change a primitive. UI
 mock-ups for the core surfaces are in `assets/figma/`; follow them closely
-when redesigning those surfaces.
+when redesigning those surfaces. The logo, the brand colors and the voice
+outside the interface are in [the brand guide](docs/brand.md).
 
 ## Direction
 

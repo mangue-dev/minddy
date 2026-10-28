@@ -18,11 +18,7 @@ export function GET() {
     lang: "en",
     start_url: "/home",
     scope: "/",
-    icons: pwaIcons(getAppEnv()).manifest.map((icon) => ({
-      ...icon,
-      type: "image/png",
-      purpose: "any maskable",
-    })),
+    icons: pwaIcons(getAppEnv()).manifest.map((icon) => ({ ...icon, type: "image/png" })),
     screenshots: [
       {
         src: "/pwa-install-narrow.png",
