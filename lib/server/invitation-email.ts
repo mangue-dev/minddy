@@ -30,7 +30,8 @@ import type { Locale } from "@/i18n/config";
 const RESEND_URL = "https://api.resend.com/emails";
 /** Minddy's palette (`app/globals.css` + `app/tokens.css`, light theme),
  * in hexadecimal because email clients do not read `oklch()`. */
-const INK = "#16181e"; // --primary
+const INK = "#16181e"; // the name next to the mark, in ink (brand guide)
+const ACCENT = "#7059c4"; // --primary, minddy's lavender (MIN-840)
 const TITLE = "#0a0a0a"; // --foreground
 const MUTED = "#606369"; // --muted-foreground
 const FAINT = "#8b8e96"; // footer text, one step lighter than --muted-foreground
@@ -38,7 +39,7 @@ const BORDER = "#d9dce5"; // --border
 const HAIRLINE = "#eceef3"; // subtle inner rule on the card
 const PAGE = "#f5f7fb"; // --background
 const CARD = "#ffffff"; // --card
-const ON_INK = "#fafafa"; // --primary-foreground
+const ON_ACCENT = "#ffffff"; // --primary-foreground
 
 const FONT =
   "-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',Roboto,Helvetica,Arial,sans-serif";
@@ -268,8 +269,8 @@ export async function sendInvitationEmail(
 
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0 0;">
               <tr>
-                <td bgcolor="${INK}" style="background-color:${INK};border-radius:10px;">
-                  <a href="${link}" style="display:inline-block;padding:11px 20px;font-family:${FONT};font-size:14px;font-weight:500;line-height:20px;color:${ON_INK};text-decoration:none;border-radius:10px;">${escapeHtml(cta)}</a>
+                <td bgcolor="${ACCENT}" style="background-color:${ACCENT};border-radius:10px;">
+                  <a href="${link}" style="display:inline-block;padding:11px 20px;font-family:${FONT};font-size:14px;font-weight:500;line-height:20px;color:${ON_ACCENT};text-decoration:none;border-radius:10px;">${escapeHtml(cta)}</a>
                 </td>
               </tr>
             </table>

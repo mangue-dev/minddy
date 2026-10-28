@@ -9,9 +9,13 @@
    sans-serif is used.
 
    ── Brand color ────────────────────────────────────────────────────────────
-   The two `--primary` lines (one in :root, one in .dark) recolor buttons,
-   rings, focus states, accents and charts. The account palettes of
-   app/theme-presets.css override them per mode (MIN-696).
+   minddy's color is lavender (MIN-840): `#7059C4` in light mode, `#B6A5F0` in
+   dark mode. It is both the default accent (`--primary`, `--ring` and the
+   sidebar's: the primary button, segmented controls, switches, the focus
+   ring) and the identity color (`--brand` and the surfaces derived from it).
+   The account palettes of app/theme-presets.css override the accent per mode
+   (MIN-696); the "Noir" / "Blanc" presets bring back ink actions. `--brand`
+   stays lavender under every accent preset.
    ============================================================================ */
 
 @import "tw-animate-css";
@@ -260,9 +264,9 @@
   --popover: oklch(0.995 0.002 266);
   --popover-foreground: oklch(0.145 0 0);
 
-  /* Ink, with white text on top. */
-  --primary: oklch(0.21 0.012 265);
-  --primary-foreground: oklch(0.985 0 0);
+  /* Lavender, with white text on top (5.4:1). */
+  --primary: #7059c4;
+  --primary-foreground: #ffffff;
 
   --secondary: oklch(0.920 0.020 268);
   --secondary-foreground: oklch(0.256 0.102 268);
@@ -273,7 +277,7 @@
   --destructive: oklch(0.58 0.22 27);
   --border: oklch(0.895 0.012 268);
   --input: oklch(0.910 0.012 268);
-  --ring: oklch(0.45 0 0);
+  --ring: #7059c4;
   /* Scrollbar thumb, read by `scrollbar-quiet`. Repeat that utility's rules on
      `*` in your app's CSS to make it the scrollbar of every surface. */
   --scrollbar-thumb: oklch(0 0 0 / 18%);
@@ -285,12 +289,12 @@
   --chart-5: oklch(0.45 0.12 266);
   --sidebar: oklch(0.975 0.006 266);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.62 0.22 265);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-primary: #7059c4;
+  --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: oklch(0.940 0.012 268);
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.900 0.012 268);
-  --sidebar-ring: oklch(0.676 0.060 270);
+  --sidebar-ring: #7059c4;
 
   /* Semantic tokens */
   /* Shared control fill — inputs, selects, outline buttons and neutral chips use
@@ -311,8 +315,8 @@
   --surface-raised: oklch(0.995 0.002 266);
   --surface-sunken: oklch(0.940 0.008 268);
   --surface-glass: oklch(0.965 0.006 268 / 60%);
-  --surface-brand: oklch(0.920 0.044 265);
-  --surface-brand-hover: oklch(0.890 0.066 265);
+  --surface-brand: #efebf8;
+  --surface-brand-hover: #e4ddf4;
   --surface-info: oklch(0.950 0.022 265);
   --surface-success: oklch(0.920 0.032 155);
   --surface-warning: oklch(0.937 0.021 75);
@@ -322,9 +326,9 @@
   --surface-type-screenshot: oklch(0.930 0.030 230);
   --surface-type-locked: oklch(0.930 0.030 55);
   --border-subtle: oklch(0.910 0.010 268);
-  --accent-glow: oklch(0.62 0.22 265);
-  --accent-glow-foreground: oklch(1 0 0);
-  --accent-glow-muted: oklch(0.62 0.22 265 / 10%);
+  --accent-glow: #7059c4;
+  --accent-glow-foreground: #ffffff;
+  --accent-glow-muted: oklch(0.541 0.160 289.9 / 10%);
   --success: oklch(0.68 0.16 155);
   --success-foreground: oklch(1 0 0);
   --warning: oklch(0.78 0.14 75);
@@ -332,14 +336,14 @@
   --warning-strong: oklch(0.53 0.17 52);
   --text-tertiary: oklch(0.500 0.010 266);
 
-  /* Brand — derived from primary by default */
-  --brand: oklch(0.62 0.22 265);
-  --brand-foreground: oklch(1 0 0);
+  /* Brand — lavender, the identity color, under every accent preset. */
+  --brand: #7059c4;
+  --brand-foreground: #ffffff;
 
   /* Ultrawide canvas — backdrop behind the centered app shell on ≥3xl screens */
   --canvas: oklch(0.945 0.025 266);
-  --canvas-glow-1: oklch(0.80 0.12 250 / 0.55);
-  --canvas-glow-2: oklch(0.78 0.11 300 / 0.45);
+  --canvas-glow-1: oklch(0.80 0.10 290 / 0.55);
+  --canvas-glow-2: oklch(0.80 0.09 320 / 0.45);
 }
 
 .dark {
@@ -351,8 +355,9 @@
   --popover: oklch(0.170 0.003 250);
   --popover-foreground: oklch(0.985 0 0);
 
-  --primary: oklch(0.97 0.004 265);
-  --primary-foreground: oklch(0.18 0.01 265);
+  /* Lavender, with deep-lavender text on top (8.1:1). */
+  --primary: #b6a5f0;
+  --primary-foreground: #1b1530;
 
   --secondary: oklch(0.220 0.003 250);
   --secondary-foreground: oklch(0.985 0 0);
@@ -363,7 +368,7 @@
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 8%);
   --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.78 0 0);
+  --ring: #b6a5f0;
   --scrollbar-thumb: oklch(1 0 0 / 16%);
   --scrollbar-thumb-hover: oklch(1 0 0 / 28%);
   --chart-1: oklch(0.85 0 0);
@@ -373,12 +378,12 @@
   --chart-5: oklch(0.40 0 0);
   --sidebar: oklch(0.110 0.003 250);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.64 0.22 265);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-primary: #b6a5f0;
+  --sidebar-primary-foreground: #1b1530;
   --sidebar-accent: oklch(0.200 0.003 250);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 6%);
-  --sidebar-ring: oklch(0.555 0 0);
+  --sidebar-ring: #b6a5f0;
 
   /* Semantic tokens dark */
   /* Opaque on purpose: controls must stay visible without relying on a border. */
@@ -397,8 +402,8 @@
   --surface-raised: oklch(0.170 0.003 250);
   --surface-sunken: oklch(0.090 0.003 250);
   --surface-glass: oklch(0.170 0.003 250 / 60%);
-  --surface-brand: oklch(0.230 0.044 265);
-  --surface-brand-hover: oklch(0.270 0.066 265);
+  --surface-brand: #29233d;
+  --surface-brand-hover: #332b4b;
   --surface-info: oklch(0.210 0.033 265);
   --surface-success: oklch(0.210 0.032 155);
   --surface-warning: oklch(0.240 0.028 75);
@@ -408,9 +413,9 @@
   --surface-type-screenshot: oklch(0.230 0.030 230);
   --surface-type-locked: oklch(0.230 0.030 55);
   --border-subtle: oklch(1 0 0 / 5%);
-  --accent-glow: oklch(0.58 0.22 265);
-  --accent-glow-foreground: oklch(1 0 0);
-  --accent-glow-muted: oklch(0.58 0.22 265 / 12%);
+  --accent-glow: #b6a5f0;
+  --accent-glow-foreground: #1b1530;
+  --accent-glow-muted: oklch(0.764 0.107 294.1 / 12%);
   --success: oklch(0.72 0.16 155);
   --success-foreground: oklch(0.95 0 0);
   --warning: oklch(0.82 0.14 75);
@@ -419,13 +424,13 @@
   --text-tertiary: oklch(0.555 0 0);
 
   /* Brand dark */
-  --brand: oklch(0.58 0.22 265);
-  --brand-foreground: oklch(1 0 0);
+  --brand: #b6a5f0;
+  --brand-foreground: #1b1530;
 
   /* Ultrawide canvas dark */
   --canvas: oklch(0.060 0.003 250);
-  --canvas-glow-1: oklch(0.28 0.10 265 / 0.30);
-  --canvas-glow-2: oklch(0.20 0.06 265 / 0.25);
+  --canvas-glow-1: oklch(0.28 0.08 292 / 0.30);
+  --canvas-glow-2: oklch(0.20 0.05 292 / 0.25);
 }
 
 @supports (color: color-mix(in oklab, red, blue)) {
@@ -437,8 +442,9 @@
     --destructive-border: color-mix(in oklab, var(--destructive) 30%, var(--background));
     --destructive-border-hover: color-mix(in oklab, var(--destructive) 40%, var(--background));
     --tabs-hover: color-mix(in oklab, var(--foreground) 5%, var(--muted));
-    --surface-brand: color-mix(in oklab, var(--brand) 20%, var(--background));
-    --surface-brand-hover: color-mix(in oklab, var(--brand) 30%, var(--background));
+    /* Lavender tint over the page: about #efebf8 / #e4ddf4 on white. */
+    --surface-brand: color-mix(in oklab, var(--brand) 10%, var(--background));
+    --surface-brand-hover: color-mix(in oklab, var(--brand) 20%, var(--background));
     --surface-info: color-mix(in oklab, var(--brand) 10%, var(--background));
     --surface-success: color-mix(in oklab, var(--success) 10%, var(--background));
     --surface-warning: color-mix(in oklab, var(--warning) 15%, var(--background));

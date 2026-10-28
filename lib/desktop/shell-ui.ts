@@ -35,16 +35,16 @@ export function desktopShellStyles(interFontDataUrl?: string): string {
       --background: oklch(1 0 0);
       --foreground: oklch(0.145 0 0);
       --card: oklch(1 0 0);
-      --primary: oklch(0.21 0.012 265);
-      --primary-foreground: oklch(0.985 0 0);
+      --primary: #7059c4;
+      --primary-foreground: #ffffff;
       --muted: oklch(0.935 0.008 268);
       --muted-foreground: oklch(0.5 0.01 266);
       --control: oklch(1 0 0);
       --control-hover: oklch(0.95 0.008 268);
       --border: oklch(0.895 0.012 268);
       --input: oklch(0.91 0.012 268);
-      --ring: oklch(0.62 0.22 265);
-      --brand: oklch(0.62 0.22 265);
+      --ring: #7059c4;
+      --brand: #7059c4;
       --destructive: oklch(0.58 0.22 27);
       font-family: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
@@ -74,16 +74,16 @@ export function desktopShellStyles(interFontDataUrl?: string): string {
         --background: oklch(0.165 0.004 264);
         --foreground: oklch(0.985 0 0);
         --card: #0f0f0f;
-        --primary: oklch(0.97 0.004 265);
-        --primary-foreground: oklch(0.18 0.01 265);
+        --primary: #b6a5f0;
+        --primary-foreground: #1b1530;
         --muted: oklch(0.236 0.005 264);
         --muted-foreground: oklch(0.62 0.003 250);
         --control: oklch(0.240 0.005 264);
         --control-hover: oklch(0.270 0.005 264);
         --border: oklch(1 0 0 / 8%);
         --input: oklch(1 0 0 / 12%);
-        --ring: oklch(0.58 0.22 265);
-        --brand: oklch(0.58 0.22 265);
+        --ring: #b6a5f0;
+        --brand: #b6a5f0;
         --destructive: oklch(0.704 0.191 22.216);
       }
     }`;

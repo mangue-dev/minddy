@@ -19,16 +19,18 @@
  *   with the mode class, so both choices can sit on the root at once.
  *
  * Missing or unknown ids resolve to the minddy palette of their mode, which
- * has no CSS at all: the default appearance is exactly the one that existed
- * before presets. Ids are mode-specific — a dark id is not a light palette.
+ * has no CSS at all: the default appearance is app/tokens.css as is, with the
+ * lavender brand accent (MIN-840). The retired `violet-*` ids resolve the same
+ * way. Ids are mode-specific — a dark id is not a light palette.
  *
  * This module is PURE (no React, no DOM): the proxy, the root layout, the
  * pre-paint script builder, the server account settings, the import filter
  * and the settings screen all read the same catalog.
  *
  * The accent presets keep minddy's surfaces and text: they recolor only the
- * primary action and the focus ring. Their primary colors are Tailwind's 600 (light) and 400 (dark)
- * steps, chosen so the text on them keeps 4.5:1.
+ * primary action and the focus ring. "Noir" / "Blanc" (`ink-*`) restore the
+ * ink actions minddy had before lavender; the colored ones use Tailwind's 600
+ * (light) and 400 (dark) steps, chosen so the text on them keeps 4.5:1.
  *
  * Palette sources: Solarized (Ethan Schoonover, MIT), Catppuccin Latte and
  * Mocha (MIT), Nord (Arctic Ice Studio, MIT). Their roles are adapted to
@@ -40,8 +42,8 @@ export type ThemeMode = "light" | "dark";
 
 export const LIGHT_THEME_PRESETS = [
   "minddy-light",
+  "ink-light",
   "blue-light",
-  "violet-light",
   "green-light",
   "orange-light",
   "rose-light",
@@ -53,8 +55,8 @@ export const LIGHT_THEME_PRESETS = [
 
 export const DARK_THEME_PRESETS = [
   "minddy-dark",
+  "ink-dark",
   "blue-dark",
-  "violet-dark",
   "green-dark",
   "orange-dark",
   "rose-dark",
@@ -109,8 +111,9 @@ export const THEME_PRESET_GROUPS: readonly ThemePresetGroup[] = ["accent", "pale
 
 /** Labels the settings screen translates (`Account` namespace). */
 export type ThemePresetLabelKey =
+  | "themePresetInk"
+  | "themePresetPaper"
   | "themePresetBlue"
-  | "themePresetViolet"
   | "themePresetGreen"
   | "themePresetOrange"
   | "themePresetRose"
@@ -141,9 +144,17 @@ export const THEME_PRESETS: Record<ThemePresetId, ThemePresetInfo> = {
     group: "accent",
     label: { name: "minddy" },
     highContrast: false,
-    swatch: { background: "#ffffff", sidebar: "#f3f4f6", foreground: "#0a0a0a", primary: "#16181e" },
+    swatch: { background: "#ffffff", sidebar: "#f3f4f6", foreground: "#0a0a0a", primary: "#7059c4" },
     // app/tokens.css's light `--background`, in hexadecimal: `theme-color` is read
     // off the page, so it cannot point to a variable (see lib/theme-script.ts).
+    chromeColor: "#f5f7fb",
+  },
+  "ink-light": {
+    mode: "light",
+    group: "accent",
+    label: { key: "themePresetInk" },
+    highContrast: false,
+    swatch: { background: "#ffffff", sidebar: "#f3f4f6", foreground: "#0a0a0a", primary: "#16181e" },
     chromeColor: "#f5f7fb",
   },
   "blue-light": {
@@ -152,14 +163,6 @@ export const THEME_PRESETS: Record<ThemePresetId, ThemePresetInfo> = {
     label: { key: "themePresetBlue" },
     highContrast: false,
     swatch: { background: "#ffffff", sidebar: "#f3f4f6", foreground: "#0a0a0a", primary: "#2563eb" },
-    chromeColor: "#f5f7fb",
-  },
-  "violet-light": {
-    mode: "light",
-    group: "accent",
-    label: { key: "themePresetViolet" },
-    highContrast: false,
-    swatch: { background: "#ffffff", sidebar: "#f3f4f6", foreground: "#0a0a0a", primary: "#7c3aed" },
     chromeColor: "#f5f7fb",
   },
   "green-light": {
@@ -223,8 +226,16 @@ export const THEME_PRESETS: Record<ThemePresetId, ThemePresetInfo> = {
     group: "accent",
     label: { name: "minddy" },
     highContrast: false,
-    swatch: { background: "#0f0f0f", sidebar: "#0d0e10", foreground: "#fafafa", primary: "#f4f5f8" },
+    swatch: { background: "#0f0f0f", sidebar: "#0d0e10", foreground: "#fafafa", primary: "#b6a5f0" },
     // app/tokens.css's dark `--background`, in hexadecimal.
+    chromeColor: "#070809",
+  },
+  "ink-dark": {
+    mode: "dark",
+    group: "accent",
+    label: { key: "themePresetPaper" },
+    highContrast: false,
+    swatch: { background: "#0f0f0f", sidebar: "#0d0e10", foreground: "#fafafa", primary: "#f4f5f8" },
     chromeColor: "#070809",
   },
   "blue-dark": {
@@ -233,14 +244,6 @@ export const THEME_PRESETS: Record<ThemePresetId, ThemePresetInfo> = {
     label: { key: "themePresetBlue" },
     highContrast: false,
     swatch: { background: "#0f0f0f", sidebar: "#0d0e10", foreground: "#fafafa", primary: "#60a5fa" },
-    chromeColor: "#070809",
-  },
-  "violet-dark": {
-    mode: "dark",
-    group: "accent",
-    label: { key: "themePresetViolet" },
-    highContrast: false,
-    swatch: { background: "#0f0f0f", sidebar: "#0d0e10", foreground: "#fafafa", primary: "#a78bfa" },
     chromeColor: "#070809",
   },
   "green-dark": {
