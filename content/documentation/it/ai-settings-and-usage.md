@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 21,
+  "revision": 23,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-28",
   "compatibility": {
@@ -46,6 +46,7 @@
       "components/settings/account-preferences-section.tsx",
       "components/settings/dictation-vocabulary-section.tsx",
       "lib/dictation-vocabulary.ts",
+      "lib/dictation-hallucinations.ts",
       "app/api/transcribe/route.ts",
       "lib/use-issue-dictation.ts",
       "components/issue-side-panel.tsx",
@@ -61,9 +62,9 @@
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code/MIN-826 (provider per usage, connected providers and Numo provider then model checked against components/settings/account-ai-keys-section.tsx, components/assistant/conversation-settings.tsx and lib/server/ai-routes.ts, and in the running app on the preview demo account; diagram and its SVG fallback rebuilt; no form submitted; earlier evidence retained in git history)",
-    "language": "agent:claude-code/MIN-826 (it translation of the changed passages with catalog UI labels; informal register; self-reviewed; agent review, not human acceptance)",
+    "revision": 23,
+    "fact": "agent:claude-code/MIN-831 (removal of subtitle credits and sign-offs invented on silence, with cleanup on or off, checked against lib/dictation-hallucinations.ts and lib/server/openrouter-transcribe.ts and their tests; earlier evidence retained in git history)",
+    "language": "agent:claude-code/MIN-831 (it translation of the added sentence; locale register kept; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-28"
   },
   "related": [
@@ -86,7 +87,7 @@
       "src": "/documentation/it/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Fornitori collegati, un fornitore per utilizzo, e fornitore e modello di Numo sono impostazioni separate.",
       "caption": "Ogni utilizzo passa da minddy Cloud o da un fornitore collegato. Il predefinito di Numo è salvato per fornitore; una conversazione può scegliere fornitore e modello propri.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -175,7 +176,7 @@ Usa il microfono accanto a un campo compatibile per dettare un ticket, un obiett
 
 ### Consumo e limiti di registrazione {#voice-limits}
 
-L’audio viene inviato al servizio di trascrizione configurato, poi può essere corretto o interpretato da un modello IA. La pulizia corregge punteggiatura, intercalari e autocorrezioni; per inserire le parole così come sono state sentite, disattiva **Ripulisci le dettature** in **Impostazioni account** > **Preferenze** > **Dettatura vocale**, e nessun modello di pulizia viene chiamato per le tue dettature. Il feedback pubblico mantiene la propria elaborazione. In **Vocabolario**, subito sotto, aggiungi fino a 50 nomi e termini che la dettatura deve scrivere a modo tuo; compila **Sentito come** per sostituire quella parola in ogni dettatura, anche senza pulizia. Il consumo segue le regole del fornitore e del budget dell’account; registrazione e interpretazione possono generare consumi separati. Il feedback pubblico ha regole proprie di disponibilità e addebito, descritte nella [guida al feedback](/docs/feedback). La demo della pagina iniziale ha un limite separato e non costituisce una quota di dettatura dell’account.
+L’audio viene inviato al servizio di trascrizione configurato, poi può essere corretto o interpretato da un modello IA. La pulizia corregge punteggiatura, intercalari e autocorrezioni; per inserire le parole così come sono state sentite, disattiva **Ripulisci le dettature** in **Impostazioni account** > **Preferenze** > **Dettatura vocale**, e nessun modello di pulizia viene chiamato per le tue dettature. Con o senza pulizia, minddy rimuove le frasi che i modelli di trascrizione inventano sul silenzio, come i crediti dei sottotitoli o un «Grazie per la visione» finale. Il feedback pubblico mantiene la propria elaborazione. In **Vocabolario**, subito sotto, aggiungi fino a 50 nomi e termini che la dettatura deve scrivere a modo tuo; compila **Sentito come** per sostituire quella parola in ogni dettatura, anche senza pulizia. Il consumo segue le regole del fornitore e del budget dell’account; registrazione e interpretazione possono generare consumi separati. Il feedback pubblico ha regole proprie di disponibilità e addebito, descritte nella [guida al feedback](/docs/feedback). La demo della pagina iniziale ha un limite separato e non costituisce una quota di dettatura dell’account.
 
 Il servizio di trascrizione per utenti autenticati accetta fino a 10 MiB di audio e 30 richieste per account all’ora. Il registratore condiviso si ferma dopo 20 minuti come precauzione. Preferisci registrazioni brevi per controllare ogni risultato. Conserva il testo esistente fino alla verifica; il registratore non è un backup dell’audio.
 

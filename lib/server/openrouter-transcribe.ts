@@ -3,6 +3,7 @@ import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { fetchAiProvider } from "@/lib/server/ai-provider-request";
 import { handleManagedKeyRejection } from "@/lib/server/ai-runtime";
 import type { AgentProviderId } from "@/lib/agent-providers";
+import { stripTranscriptionHallucinations } from "@/lib/dictation-hallucinations";
 
 /**
  * OpenRouter speech-to-text helper (ported from AutoKap).
@@ -146,7 +147,9 @@ export async function transcribeAudio(
   };
 
   return {
-    text: data.text ?? "",
+    // Every transcription path goes through here, so credits and sign-offs the
+    // model invents on silence (MIN-831) never reach a caller.
+    text: stripTranscriptionHallucinations(data.text ?? ""),
     seconds: data.usage?.seconds ?? 0,
     cost: data.usage?.cost ?? 0,
     inputTokens: data.usage?.input_tokens ?? 0,

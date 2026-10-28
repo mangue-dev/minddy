@@ -54,4 +54,12 @@ describe("transcription provider requests", () => {
       input_audio: { data: "YXVkaW8=", format: "webm" }, language: "fr", temperature: 0,
     });
   });
+
+  it("drops credits the model invents on silence before any caller sees the text", async () => {
+    fetchAiProvider.mockResolvedValue(Response.json({
+      text: "Le filtre ne marche plus. Sous-titrage Société Radio-Canada",
+    }));
+    const result = await transcribeAudio("openai/gpt-transcribe", "YXVkaW8=", "webm", "test-key");
+    expect(result.text).toBe("Le filtre ne marche plus.");
+  });
 });
