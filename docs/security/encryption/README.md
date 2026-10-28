@@ -2041,8 +2041,8 @@ PR blockers. Other MIN-591 targets remain open.
 ## BYOK credential checkpoint — 26 September 2026
 
 `user_ai_keys.key_encrypted`, `base_url` and `feature_models` now move together
-into a row-bound user-key envelope. Capability assignments and per-usage
-provider routes (`user_ai_surface_routes`, MIN-826) retain only opaque
+into a row-bound user-key envelope. Capability assignments and per-call-type
+provider routes (`user_ai_usage_routes`, MIN-826) retain only opaque
 credential IDs. Account settings decode only after the owner check and return
 an explicit safe projection without the credential. Agent resolution uses the
 same codec; account export includes the endpoint but never the secret.

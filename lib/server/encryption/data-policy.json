@@ -4298,7 +4298,7 @@
       ]
     }
   },
-  "user_ai_surface_routes": {
+  "user_ai_usage_routes": {
     "scope": {
       "kind": "user",
       "column": "user_id"
@@ -4307,7 +4307,7 @@
     "clear": {
       "routing_identity": [
         "ai_key_id",
-        "surface",
+        "usage_key",
         "user_id"
       ],
       "timestamp": [

@@ -1,19 +1,21 @@
 "use client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AiProviderChoice, RoutedAiSurface } from "./ai-surfaces";
+import type { AiProviderChoice, ByokModelKey } from "./ai-surfaces";
 import type { AiProviderOption } from "./ai-provider-options";
 import { agentModelsQueryKey } from "./use-agent-models-query";
 import { aiKeysQueryKey } from "./use-ai-keys-query";
 
-/** The provider of each AI usage, and the providers each usage can choose (MIN-826). */
+/** The provider of each AI call type, and the providers each one can choose (MIN-826). */
 export interface AiRoutesState {
-  routes: Record<RoutedAiSurface, AiProviderChoice>;
-  options: Record<RoutedAiSurface, AiProviderOption[]>;
+  routes: Record<ByokModelKey, AiProviderChoice>;
+  options: Record<ByokModelKey, AiProviderOption[]>;
 }
+
+export type AiRoutePatch = { usage: ByokModelKey; provider: AiProviderChoice };
 
 export const aiRoutesQueryKey = ["ai-routes"] as const;
 
-async function requestAiRoutes(patch?: { surface: RoutedAiSurface; provider: AiProviderChoice }): Promise<AiRoutesState> {
+async function requestAiRoutes(patch?: AiRoutePatch): Promise<AiRoutesState> {
   const response = await fetch("/api/account/ai-routes", {
     method: patch ? "PUT" : "GET", cache: "no-store",
     ...(patch ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) } : {}),
@@ -27,18 +29,18 @@ export function useAiRoutesQuery() {
   return useQuery({ queryKey: aiRoutesQueryKey, queryFn: () => requestAiRoutes() });
 }
 
-/** Routes one usage optimistically; the previous route comes back on refusal. */
+/** Routes one call type optimistically; the previous route comes back on refusal. */
 export function useSetAiRoute(onError: (error: Error) => void) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (patch: { surface: RoutedAiSurface; provider: AiProviderChoice }) => requestAiRoutes(patch),
+    mutationFn: (patch: AiRoutePatch) => requestAiRoutes(patch),
     onMutate: async (patch) => {
       await queryClient.cancelQueries({ queryKey: aiRoutesQueryKey });
       const previous = queryClient.getQueryData<AiRoutesState>(aiRoutesQueryKey);
       if (previous) {
         queryClient.setQueryData<AiRoutesState>(aiRoutesQueryKey, {
           ...previous,
-          routes: { ...previous.routes, [patch.surface]: patch.provider },
+          routes: { ...previous.routes, [patch.usage]: patch.provider },
         });
       }
       return { previous };

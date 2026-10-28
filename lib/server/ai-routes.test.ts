@@ -10,7 +10,7 @@ vi.mock("server-only", () => ({}));
 
 type Row = Record<string, unknown>;
 const h = vi.hoisted(() => ({
-  tables: { user_ai_keys: [] as Row[], user_ai_surface_routes: [] as Row[] } as Record<string, Row[]>,
+  tables: { user_ai_keys: [] as Row[], user_ai_usage_routes: [] as Row[] } as Record<string, Row[]>,
   managed: true,
 }));
 
@@ -38,7 +38,7 @@ function table(name: string) {
     upsert: async (input: Row | Row[], options?: { ignoreDuplicates?: boolean }) => {
       for (const row of [input].flat()) {
         const existing = (h.tables[name] ??= []).findIndex((entry) =>
-          entry.user_id === row.user_id && entry.surface === row.surface);
+          entry.user_id === row.user_id && entry.usage_key === row.usage_key);
         if (existing >= 0 && options?.ignoreDuplicates) continue;
         if (existing >= 0) h.tables[name]![existing] = { ...h.tables[name]![existing], ...row };
         else h.tables[name]!.push(row);
@@ -61,7 +61,7 @@ const {
   AiRouteError,
   getAiProviderOptions,
   getAiRoutes,
-  routeUnservedSurfaces,
+  routeUnservedUsages,
   setAiRoute,
 } = await import("./ai-routes");
 
@@ -72,27 +72,34 @@ const key = (provider: string, extra: Row = {}): Row => ({
 });
 
 beforeEach(() => {
-  h.tables = { user_ai_keys: [key("anthropic"), key("openai")], user_ai_surface_routes: [] };
+  h.tables = { user_ai_keys: [key("anthropic"), key("openai")], user_ai_usage_routes: [] };
   h.managed = true;
 });
 
-describe("usage routes", () => {
-  it("serves each usage from its own route, and minddy Cloud without one", async () => {
-    await setAiRoute("user", "assistant", "anthropic");
+const ids = (options: Array<{ id: string }>) => options.map((option) => option.id);
+
+describe("call-type routes", () => {
+  it("serves each call type from its own route, and minddy Cloud without one", async () => {
+    await setAiRoute("user", "assistant_model", "anthropic");
+    // Numo conversations on the key; their titles stay on minddy Cloud.
+    expect((await getUserByok("user", "assistant", "text", "assistant_model"))?.provider).toBe("anthropic");
+    expect(await getUserByok("user", "assistant", "text", "conversation_title_model")).toBeNull();
+    // A surface-level read uses the surface's main call type.
     expect((await getUserByok("user", "assistant"))?.provider).toBe("anthropic");
     expect(await getUserByok("user", "automations")).toBeNull();
-    expect(await getAiRoutes("user")).toEqual({
-      assistant: "anthropic", automations: "minddy", voice: "minddy", feedback: "minddy",
-    });
+    const routes = await getAiRoutes("user");
+    expect(routes.assistant_model).toBe("anthropic");
+    expect(routes.conversation_title_model).toBe("minddy");
   });
 
-  it("keeps a capability the routed provider lacks on minddy Cloud", async () => {
-    await setAiRoute("user", "voice", "anthropic");
-    expect((await getUserByok("user", "voice", "text"))?.provider).toBe("anthropic");
-    expect(await getUserByok("user", "voice", "transcription")).toBeNull();
-    const options = await getAiProviderOptions("user", "voice");
-    expect(options.find((option) => option.id === "anthropic")?.fallbackCapabilities).toEqual(["transcription"]);
-    expect(options.find((option) => option.id === "openai")?.fallbackCapabilities).toEqual([]);
+  it("offers only the providers that can serve a call type", async () => {
+    expect(ids(await getAiProviderOptions("user", "smart_fill_model"))).toEqual(["minddy", "anthropic", "openai"]);
+    expect(ids(await getAiProviderOptions("user", "transcription_model"))).toEqual(["minddy", "openai"]);
+    expect(ids(await getAiProviderOptions("user", "issue_embedding_model"))).toEqual(["minddy", "openai"]);
+    // Web search runs on OpenRouter's web plugin.
+    expect(ids(await getAiProviderOptions("user", "web_search_model"))).toEqual(["minddy"]);
+    h.tables.user_ai_keys!.push(key("openrouter"));
+    expect(ids(await getAiProviderOptions("user", "web_search_model"))).toEqual(["minddy", "openrouter"]);
   });
 
   it("serves a provider chosen explicitly, whatever the routes say", async () => {
@@ -100,34 +107,35 @@ describe("usage routes", () => {
     expect(await getUserByokForProvider("user", "google")).toBeNull();
   });
 
-  it("moves a usage back to minddy Cloud and refuses providers it cannot use", async () => {
-    await setAiRoute("user", "feedback", "openai");
-    await setAiRoute("user", "feedback", "minddy");
-    expect(h.tables.user_ai_surface_routes).toEqual([]);
-    await expect(setAiRoute("user", "feedback", "google")).rejects.toBeInstanceOf(AiRouteError);
+  it("moves a call type back to minddy Cloud and refuses providers that cannot serve it", async () => {
+    await setAiRoute("user", "feedback_analysis_model", "openai");
+    await setAiRoute("user", "feedback_analysis_model", "minddy");
+    expect(h.tables.user_ai_usage_routes).toEqual([]);
+    await expect(setAiRoute("user", "feedback_analysis_model", "google")).rejects.toBeInstanceOf(AiRouteError);
+    await expect(setAiRoute("user", "transcription_model", "anthropic")).rejects.toBeInstanceOf(AiRouteError);
+    await expect(setAiRoute("user", "web_search_model", "openai")).rejects.toBeInstanceOf(AiRouteError);
     h.tables.user_ai_keys!.push(key("ollama"));
-    await expect(setAiRoute("user", "assistant", "ollama")).rejects.toBeInstanceOf(AiRouteError);
+    await expect(setAiRoute("user", "assistant_model", "ollama")).rejects.toBeInstanceOf(AiRouteError);
     h.tables.user_ai_keys!.push(key("google", { validated_at: null }));
-    await expect(setAiRoute("user", "assistant", "google")).rejects.toBeInstanceOf(AiRouteError);
+    await expect(setAiRoute("user", "assistant_model", "google")).rejects.toBeInstanceOf(AiRouteError);
   });
 
   it("offers minddy Cloud only where the instance provides it", async () => {
-    expect((await getAiProviderOptions("user", "assistant")).map((option) => option.id))
-      .toEqual(["minddy", "anthropic", "openai"]);
     h.managed = false;
-    expect((await getAiProviderOptions("user", "assistant")).map((option) => option.id))
-      .toEqual(["anthropic", "openai"]);
-    await expect(setAiRoute("user", "assistant", "minddy")).rejects.toBeInstanceOf(AiRouteError);
+    expect(ids(await getAiProviderOptions("user", "assistant_model"))).toEqual(["anthropic", "openai"]);
+    await expect(setAiRoute("user", "assistant_model", "minddy")).rejects.toBeInstanceOf(AiRouteError);
   });
 
-  it("routes a new credential to the unrouted usages only without minddy Cloud", async () => {
-    await routeUnservedSurfaces("user", "anthropic");
-    expect(h.tables.user_ai_surface_routes).toEqual([]);
+  it("routes a new credential to the unrouted call types only without minddy Cloud", async () => {
+    await routeUnservedUsages("user", "anthropic");
+    expect(h.tables.user_ai_usage_routes).toEqual([]);
     h.managed = false;
-    await setAiRoute("user", "assistant", "openai");
-    await routeUnservedSurfaces("user", "anthropic");
-    expect(await getAiRoutes("user")).toEqual({
-      assistant: "openai", automations: "anthropic", voice: "anthropic", feedback: "anthropic",
-    });
+    await setAiRoute("user", "assistant_model", "openai");
+    await routeUnservedUsages("user", "anthropic");
+    const routes = await getAiRoutes("user");
+    expect(routes.assistant_model).toBe("openai");
+    expect(routes.smart_fill_model).toBe("anthropic");
+    // Anthropic cannot transcribe: that call type keeps no provider.
+    expect(routes.transcription_model).toBe("minddy");
   });
 });

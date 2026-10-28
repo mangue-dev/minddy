@@ -31,8 +31,8 @@ vi.mock("@/lib/supabase-service", () => ({
       };
       const list = () => {
         h.log.push(table);
-        if (table === "user_ai_surface_routes") {
-          return { data: h.route ? [{ surface: "assistant", ...h.route }] : [], error: null };
+        if (table === "user_ai_usage_routes") {
+          return { data: h.route ? [{ usage_key: "assistant_model", ...h.route }] : [], error: null };
         }
         if (table === "user_ai_keys") return { data: [key], error: null };
         if (table === "user_numo_preferences") {
@@ -47,7 +47,7 @@ vi.mock("@/lib/supabase-service", () => ({
         then: (resolve: (value: unknown) => unknown) => Promise.resolve(list()).then(resolve),
         maybeSingle: async () => {
           h.log.push(table);
-          if (table === "user_ai_surface_routes") return { data: h.route, error: null };
+          if (table === "user_ai_usage_routes") return { data: h.route, error: null };
           if (table === "user_ai_keys") return { data: key, error: null };
           return { data: null, error: null };
         },

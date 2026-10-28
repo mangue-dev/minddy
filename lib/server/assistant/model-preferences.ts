@@ -3,12 +3,13 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { DEFAULT_AGENT_PROVIDER } from "@/lib/agent-providers";
 import { MINDDY_CLOUD_PROVIDER, type AiProviderChoice } from "@/lib/ai-surfaces";
 import { resolveByokFeatureDefaultModel } from "@/lib/server/ai-runtime";
-import { getAiProviderOptions, getAiRoutes, type AiProviderOption } from "@/lib/server/ai-routes";
+import { getAiProviderOptions, getAiRoutes } from "@/lib/server/ai-routes";
+import type { AiProviderOption } from "@/lib/ai-provider-options";
 import { DatabaseOperationError } from "@/lib/server/failure-diagnostics";
 
 /**
- * Numo's account defaults (MIN-826): the provider is the route of the Numo
- * usage, and each provider keeps its own default model, since every provider
+ * Numo's account defaults (MIN-826): the provider is the route of Numo
+ * conversations (`assistant_model`), and each provider keeps its own default model, since every provider
  * has its own model namespace.
  *
  * Minddy Cloud's models are stored under `minddy`. Before MIN-826 they were
@@ -37,7 +38,7 @@ export function numoApplicationModel(provider: AiProviderChoice): Promise<string
 }
 
 export interface NumoPreferences {
-  /** Numo's default provider: the route of the Numo usage. */
+  /** Numo's default provider: the route of Numo conversations. */
   provider: AiProviderChoice;
   default_model: string | null;
   application_model: string | null;
@@ -48,9 +49,9 @@ export interface NumoPreferences {
 export async function getNumoPreferences(userId: string): Promise<NumoPreferences> {
   const [routes, providers] = await Promise.all([
     getAiRoutes(userId),
-    getAiProviderOptions(userId, "assistant"),
+    getAiProviderOptions(userId, "assistant_model"),
   ]);
-  const provider = routes.assistant;
+  const provider = routes.assistant_model;
   const [model, applicationModel] = await Promise.all([
     getNumoDefaultModel(userId, provider),
     numoApplicationModel(provider),

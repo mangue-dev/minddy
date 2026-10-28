@@ -10582,14 +10582,14 @@
     ],
     "foreignKeys": []
   },
-  "user_ai_surface_routes": {
+  "user_ai_usage_routes": {
     "columns": {
       "user_id": {
         "type": "uuid",
         "nullable": false,
         "generated": false
       },
-      "surface": {
+      "usage_key": {
         "type": "text",
         "nullable": false,
         "generated": false
@@ -10612,7 +10612,7 @@
     },
     "primaryKey": [
       "user_id",
-      "surface"
+      "usage_key"
     ],
     "foreignKeys": [
       {

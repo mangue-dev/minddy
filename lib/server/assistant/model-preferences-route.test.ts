@@ -38,8 +38,8 @@ vi.mock("@/lib/server/api-auth", () => ({ getAuthedUser: async () => h.authentic
   : { ok: false, response: Response.json({ error: "Unauthorized" }, { status: 401 }) } }));
 // The Numo usage route decides the default provider; minddy Cloud has no route.
 vi.mock("@/lib/server/ai-routes", () => ({
-  getAiRoutes: async (user: string) => ({ assistant: h.routes.get(user) ?? h.provider }),
-  getAiProviderOptions: async () => [{ id: "minddy", label: "minddy Cloud", fallbackCapabilities: [] }],
+  getAiRoutes: async (user: string) => ({ assistant_model: h.routes.get(user) ?? h.provider }),
+  getAiProviderOptions: async () => [{ id: "minddy", label: "minddy Cloud" }],
   setAiRoute: async (user: string, _surface: string, provider: string) => { h.routes.set(user, provider); },
   AiRouteError: class extends Error {},
 }));

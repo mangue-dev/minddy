@@ -51,7 +51,7 @@ export async function PUT(request: NextRequest) {
         userId: auth.user.id, provider, model, catalogOnly: true,
       });
     }
-    await setAiRoute(auth.user.id, "assistant", provider);
+    await setAiRoute(auth.user.id, "assistant_model", provider);
     await saveNumoDefaultModel(auth.user.id, provider, model);
     return NextResponse.json(await getNumoPreferences(auth.user.id));
   } catch (error) {

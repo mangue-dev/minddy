@@ -207,7 +207,7 @@ export async function resolveAiRuntime(params: {
       ? Promise.resolve(null)
       : chosenProvider
         ? getUserByokForProvider(params.userId, chosenProvider, { surface, capability })
-        : getUserByok(params.userId, surface, capability),
+        : getUserByok(params.userId, surface, capability, params.modelKey),
     platformModel(params.modelKey),
   ]);
   if (chosenProvider && chosenProvider !== MINDDY_CLOUD_PROVIDER &&
@@ -292,7 +292,7 @@ export async function usesByokForSurface(
     return (await getUserByok(userId, surface, "text")) !== null;
   const credentials = await Promise.all(
     required.map((modelKey) =>
-      getUserByok(userId, surface, modelCatalogCapabilityForKey(modelKey)),
+      getUserByok(userId, surface, modelCatalogCapabilityForKey(modelKey), modelKey),
     ),
   );
   return credentials.every(

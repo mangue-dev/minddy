@@ -16,10 +16,10 @@ import { decodeUserAiKeyRow, type UserAiKeyRow } from
   "@/lib/server/user-ai-key-content";
 import { getOpenRouterModelInfo } from "./openrouter-index";
 import {
-  isRoutedAiSurface,
+  usageKeyFor,
   type AiSurface,
   type ByokFeatureModels,
-  type RoutedAiSurface,
+  type ByokModelKey,
 } from "@/lib/ai-surfaces";
 import { isManagedAiEnabled } from "@/lib/managed-services";
 import { providerSupportsModelCapability, type ModelCatalogCapability } from "@/lib/model-catalog-capability";
@@ -118,10 +118,10 @@ async function confirmsUnvalidatedKey(params: {
  * The account credential serving a usage or a provider, decrypted and
  * resolved to an endpoint, or null (= Minddy Cloud).
  *
- * A usage is served by the credential its route names (MIN-826); no route
- * means Minddy Cloud. A capability the routed provider does not offer
- * (transcription or embeddings on Anthropic, for instance) falls back to
- * Minddy Cloud as well.
+ * A call type is served by the credential its route names (MIN-826); no
+ * route means Minddy Cloud. A surface-level read uses the surface's main call
+ * type (`usageKeyFor`). A capability the routed provider does not offer falls
+ * back to Minddy Cloud as well.
  *
  * Ignores a row whose URL base is not resolvable (generic without URL), whose
  * key no longer decrypts (secret turned → “reconfigure your key”), or — since
@@ -130,18 +130,18 @@ async function confirmsUnvalidatedKey(params: {
 async function resolveUserByok(
   userId: string,
   surface: AiSurface | undefined,
-  target: { capability: ModelCatalogCapability; provider?: AgentProviderId },
+  target: { capability: ModelCatalogCapability; provider?: AgentProviderId; usageKey?: ByokModelKey },
 ): Promise<UserByok | null> {
   const supabase = getServiceClient();
   let aiKeyId: string | null = null;
   if (!target.provider) {
     // The retired code agent and surface-less reads follow the Numo route.
-    const routed: RoutedAiSurface = surface && isRoutedAiSurface(surface) ? surface : "assistant";
+    const usageKey = target.usageKey ?? usageKeyFor(surface, target.capability);
     const { data: route } = await supabase
-      .from("user_ai_surface_routes")
+      .from("user_ai_usage_routes")
       .select("ai_key_id")
       .eq("user_id", userId)
-      .eq("surface", routed)
+      .eq("usage_key", usageKey)
       .maybeSingle();
     aiKeyId = (route as { ai_key_id?: string } | null)?.ai_key_id ?? null;
     if (!aiKeyId) return null;
@@ -227,8 +227,10 @@ export async function getUserByok(
   userId: string,
   surface?: AiSurface,
   capability: ModelCatalogCapability = "text",
+  /** The precise call type; the surface's main one otherwise. */
+  usageKey?: ByokModelKey,
 ): Promise<UserByok | null> {
-  return resolveUserByok(userId, surface, { capability });
+  return resolveUserByok(userId, surface, { capability, usageKey });
 }
 
 /**

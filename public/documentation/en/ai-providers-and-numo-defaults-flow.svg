@@ -7,7 +7,7 @@
 <text x="42" y="107" font-family="Arial,sans-serif" font-size="14" fill="#475569">minddy Cloud and your API keys stay available side by side.</text>
 <rect x="24" y="161" width="768" height="94" rx="12" fill="#fff" stroke="#cbd5e1"/>
 <text x="42" y="188" font-family="Arial,sans-serif" font-size="17" font-weight="bold" fill="#0f172a">2. A provider per usage</text>
-<text x="42" y="212" font-family="Arial,sans-serif" font-size="14" fill="#475569">Numo, automations, dictation and feedback each choose their provider.</text>
+<text x="42" y="212" font-family="Arial,sans-serif" font-size="14" fill="#475569">Each precise usage, from Numo's titles to transcription, chooses its provider.</text>
 <rect x="24" y="266" width="768" height="94" rx="12" fill="#fff" stroke="#cbd5e1"/>
 <text x="42" y="293" font-family="Arial,sans-serif" font-size="17" font-weight="bold" fill="#0f172a">3. Numo provider and model</text>
 <text x="42" y="317" font-family="Arial,sans-serif" font-size="14" fill="#475569">Pick a provider, then its model. A conversation can choose its own.</text>

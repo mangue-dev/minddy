@@ -14,9 +14,10 @@ export type AiSurface = (typeof AI_SURFACES)[number];
 export const DEFAULT_BYOK_SURFACES: AiSurface[] = [...AI_SURFACES];
 
 /**
- * The usages an account routes to a provider of its choice (MIN-826): each one
- * names its own provider in `user_ai_surface_routes`, and no route means
- * Minddy Cloud. The retired code-agent surface is not one of them.
+ * The groups the account's AI settings show (MIN-826): each lists its precise
+ * usages, the call types, and every call type chooses its own provider in
+ * `user_ai_usage_routes` (no route means Minddy Cloud). The retired code-agent
+ * surface is not one of them.
  */
 export const ROUTED_AI_SURFACES = ["assistant", "automations", "voice", "feedback"] as const;
 
@@ -24,6 +25,27 @@ export type RoutedAiSurface = (typeof ROUTED_AI_SURFACES)[number];
 
 export function isRoutedAiSurface(value: unknown): value is RoutedAiSurface {
   return typeof value === "string" && (ROUTED_AI_SURFACES as readonly string[]).includes(value);
+}
+
+/**
+ * The call type that answers for a whole surface when a caller does not name
+ * one: the conversation model for Numo, the main model of each other surface
+ * for its capability.
+ */
+export function usageKeyFor(
+  surface: AiSurface | undefined,
+  capability: "text" | "transcription" | "embedding" = "text",
+): ByokModelKey {
+  switch (surface) {
+    case "automations":
+      return capability === "embedding" ? "issue_embedding_model" : "smart_fill_model";
+    case "voice":
+      return capability === "transcription" ? "transcription_model" : "dictate_model";
+    case "feedback":
+      return capability === "embedding" ? "feedback_embedding_model" : "feedback_analysis_model";
+    default:
+      return "assistant_model";
+  }
 }
 
 /** The managed provider, next to the account's own credentials. */

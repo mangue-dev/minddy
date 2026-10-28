@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Select,
   SelectContent,
@@ -12,36 +11,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import { ProviderOptionLabel } from "@/components/ai-provider-label";
 import { ModelCombobox } from "@/components/agent/model-combobox";
 import { ByokConnectPanel } from "@/components/settings/byok-connect-panel";
-import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
+import { SETTINGS_SECTIONS, type SettingsSectionId } from "@/lib/settings-sections";
 import { useNumoPreferencesQuery, useSaveNumoPreferences } from "@/lib/use-numo-preferences-query";
 import { useAiRoutesQuery, useSetAiRoute } from "@/lib/use-ai-routes-query";
-import { useAiKeysQuery } from "@/lib/use-ai-keys-query";
+import { aiKeysQueryKey, useAiKeysQuery } from "@/lib/use-ai-keys-query";
 import { updateAiKeyPreferencesApi, type AiKey } from "@/lib/agent-keys-api";
-import { useQueryClient } from "@tanstack/react-query";
-import { aiKeysQueryKey } from "@/lib/use-ai-keys-query";
 import {
   AI_SURFACE_DEFINITIONS,
   MINDDY_CLOUD_PROVIDER,
+  ROUTED_AI_SURFACES,
   type AiProviderChoice,
   type ByokModelKey,
   type RoutedAiSurface,
 } from "@/lib/ai-surfaces";
 import type { AiProviderOption } from "@/lib/ai-provider-options";
-import { modelCatalogCapabilityForKey, providerSupportsModelKey } from "@/lib/model-catalog-capability";
-import { isKnownAgentProvider } from "@/lib/agent-providers";
+import { modelCatalogCapabilityForKey } from "@/lib/model-catalog-capability";
 
 /**
- * Minddy's AI settings (MIN-826): the providers the account can use, then
- * one provider per usage. Every usage is independent, so Numo can run on a
- * personal key while everything else stays on minddy Cloud. Choices apply at
- * once and roll back if the server refuses them.
+ * Minddy's AI settings (MIN-826): the providers the account can use, then a
+ * provider for every precise usage, grouped as Numo, automations, voice and
+ * feedback. Each call type is independent, so Numo conversations can run on a
+ * personal key while their titles and everything else stay on minddy Cloud.
+ * Choices apply at once and roll back if the server refuses them.
  */
 export function AccountAiKeysSection() {
   const t = useTranslations("Account");
@@ -55,17 +51,31 @@ export function AccountAiKeysSection() {
         title={t("aiConnectedProviders")} variant="block">
         <ByokConnectPanel mode="settings" />
       </SettingsGroup>
-      <SettingsGroup anchor={SETTINGS_SECTIONS.accountAiUsages} title={t("aiUsagesTitle")}>
-        <NumoUsageRow />
-        {(["automations", "voice", "feedback"] as const).map((surface) => (
-          <UsageRow key={surface} surface={surface} />
-        ))}
-      </SettingsGroup>
+      <UsageGroup surface="assistant" anchor={SETTINGS_SECTIONS.accountAiUsages} />
+      {ROUTED_AI_SURFACES.filter((surface) => surface !== "assistant").map((surface) => (
+        <UsageGroup key={surface} surface={surface} />
+      ))}
     </section>
   );
 }
 
-/** Provider choice for a usage; a single option is shown as plain text. */
+function usageKeysOf(surface: RoutedAiSurface): readonly ByokModelKey[] {
+  return AI_SURFACE_DEFINITIONS.find((entry) => entry.id === surface)?.modelKeys ?? [];
+}
+
+/** One category of usages: a row per call type. */
+function UsageGroup({ surface, anchor }: { surface: RoutedAiSurface; anchor?: SettingsSectionId }) {
+  const t = useTranslations("Account");
+  return (
+    <SettingsGroup anchor={anchor} title={t(`aiUsage_${surface}`)}>
+      {usageKeysOf(surface).map((usageKey) => usageKey === "assistant_model"
+        ? <NumoConversationsRow key={usageKey} />
+        : <UsageRow key={usageKey} usageKey={usageKey} />)}
+    </SettingsGroup>
+  );
+}
+
+/** Provider choice for a call type; a single option is shown as plain text. */
 function ProviderSelect({ value, options, onChange, ariaLabel, disabled }: {
   value: AiProviderChoice;
   options: AiProviderOption[];
@@ -79,7 +89,7 @@ function ProviderSelect({ value, options, onChange, ariaLabel, disabled }: {
   }
   return (
     <Select value={value} onValueChange={(next) => onChange(next as AiProviderChoice)} disabled={disabled}>
-      <SelectTrigger className="w-full sm:w-72" aria-label={ariaLabel}>
+      <SelectTrigger className="w-full" aria-label={ariaLabel}>
         <SelectValue><ProviderOptionLabel option={current} /></SelectValue>
       </SelectTrigger>
       <SelectContent>
@@ -91,52 +101,51 @@ function ProviderSelect({ value, options, onChange, ariaLabel, disabled }: {
   );
 }
 
-function useUsageCopy() {
-  const t = useTranslations("Account");
+/** The row's controls: the provider, then the model when one can be chosen. */
+function UsageControls({ provider, model }: { provider: ReactNode; model?: ReactNode }) {
+  return (
+    <div className="flex w-full flex-col gap-2 sm:w-72">
+      {provider}
+      {model}
+    </div>
+  );
+}
+
+function useModelCopy() {
+  const ta = useTranslations("Agent");
   return {
-    label: (surface: RoutedAiSurface) => t(`aiUsage_${surface}`),
-    hint: (surface: RoutedAiSurface) => t(`aiUsageHint_${surface}`),
-    fallback: (option: AiProviderOption | undefined) => option && option.fallbackCapabilities.length > 0
-      ? t("aiUsageFallback", {
-        capabilities: option.fallbackCapabilities
-          .map((capability) => t(`aiCapabilityShort_${capability}` as "aiCapabilityShort_embedding"))
-          .join(", "),
-      })
-      : null,
+    placeholder: ta("modelSearchPlaceholder"),
+    emptyLabel: ta("modelSearchEmpty"),
+    loadingLabel: ta("modelSearchLoading"),
+    freeTextLabel: (model: string) => ta("modelUseCustom", { model }),
   };
 }
 
-/** Numo: provider, then that provider's default model. */
-function NumoUsageRow() {
+/** Numo conversations: provider, then that provider's default model. */
+function NumoConversationsRow() {
   const t = useTranslations("Account");
-  const ta = useTranslations("Agent");
-  const copy = useUsageCopy();
+  const modelCopy = useModelCopy();
   const preferences = useNumoPreferencesQuery();
   const save = useSaveNumoPreferences(() => toast.error(t("numoModelSaveError")));
   const data = preferences.data;
   const provider = data?.provider ?? MINDDY_CLOUD_PROVIDER;
-  const option = data?.providers.find((entry) => entry.id === provider);
+  const label = t("aiUsageKey_assistant_model");
   return (
     <SettingsRow
-      label={copy.label("assistant")}
-      hint={copy.fallback(option) ?? copy.hint("assistant")}
+      label={label}
+      hint={t("aiUsageKeyHint_assistant_model")}
       control={
-        <div className="flex w-full flex-col gap-2 sm:w-72">
-          <ProviderSelect value={provider} options={data?.providers ?? []}
-            ariaLabel={t("aiUsageProvider", { usage: copy.label("assistant") })}
+        <UsageControls
+          provider={<ProviderSelect value={provider} options={data?.providers ?? []}
+            ariaLabel={t("aiUsageProvider", { usage: label })} disabled={!data}
+            onChange={(next) => save.mutate({ provider: next, default_model: null })} />}
+          model={<ModelCombobox scope="assistant" providerChoice={provider}
+            value={data?.default_model ?? ""}
+            onChange={(value) => data && save.mutate({ provider, default_model: value || null })}
             disabled={!data}
-            onChange={(next) => save.mutate({ provider: next, default_model: null })} />
-          <div className="w-full">
-            <ModelCombobox scope="assistant" providerChoice={provider}
-              value={data?.default_model ?? ""}
-              onChange={(value) => data && save.mutate({ provider, default_model: value || null })}
-              disabled={!data}
-              defaultLabel={t("numoApplicationDefault")} defaultModelId={data?.application_model}
-              placeholder={ta("modelSearchPlaceholder")} emptyLabel={ta("modelSearchEmpty")}
-              loadingLabel={ta("modelSearchLoading")} freeTextLabel={(model) => ta("modelUseCustom", { model })}
-              ariaLabel={t("numoDefaultModel")} />
-          </div>
-        </div>
+            defaultLabel={t("numoApplicationDefault")} defaultModelId={data?.application_model}
+            {...modelCopy} ariaLabel={t("numoDefaultModel")} />}
+        />
       }
     >
       {/* A failed background refresh keeps the loaded preference usable, as
@@ -146,60 +155,39 @@ function NumoUsageRow() {
   );
 }
 
-/** Automations, voice and feedback: a provider, and a key's detailed models on demand. */
-function UsageRow({ surface }: { surface: Exclude<RoutedAiSurface, "assistant"> }) {
+/** Any other call type: a provider, and a key's model for it. */
+function UsageRow({ usageKey }: { usageKey: Exclude<ByokModelKey, "assistant_model"> }) {
   const t = useTranslations("Account");
-  const copy = useUsageCopy();
   const routes = useAiRoutesQuery();
   const { keys } = useAiKeysQuery();
   const setRoute = useSetAiRoute(() => toast.error(t("aiUsageSaveError")));
-  const [open, setOpen] = useState(false);
-  const provider = routes.data?.routes[surface] ?? MINDDY_CLOUD_PROVIDER;
-  const options = routes.data?.options[surface] ?? [];
-  const option = options.find((entry) => entry.id === provider);
+  const provider = routes.data?.routes[usageKey] ?? MINDDY_CLOUD_PROVIDER;
   const key = provider === MINDDY_CLOUD_PROVIDER ? undefined : keys.find((entry) => entry.provider === provider);
-  const modelKeys = key ? surfaceModelKeys(surface, key) : [];
+  const label = t(`aiUsageKey_${usageKey}`);
   return (
-    <div className="border-b border-border/60 last:border-b-0">
-      <SettingsRow
-        label={copy.label(surface)}
-        hint={copy.fallback(option) ?? copy.hint(surface)}
-        control={
-          <div className="flex items-center gap-1">
-            <ProviderSelect value={provider} options={options}
-              ariaLabel={t("aiUsageProvider", { usage: copy.label(surface) })}
-              disabled={!routes.data}
-              onChange={(next) => { setOpen(false); setRoute.mutate({ surface, provider: next }); }} />
-            {modelKeys.length > 0 && (
-              <Button type="button" variant="ghost" size="icon" aria-expanded={open}
-                aria-label={t("aiUsageModels", { usage: copy.label(surface) })}
-                onClick={() => setOpen((value) => !value)}>
-                <HugeiconsIcon icon={ArrowDown01Icon} className={cn("size-4 transition-transform", open && "rotate-180")} />
-              </Button>
-            )}
-          </div>
-        }
-      />
-      {open && key && <KeyModels aiKey={key} modelKeys={modelKeys} />}
-    </div>
+    <SettingsRow
+      label={label}
+      hint={t(`aiUsageKeyHint_${usageKey}`)}
+      control={
+        <UsageControls
+          provider={<ProviderSelect value={provider} options={routes.data?.options[usageKey] ?? []}
+            ariaLabel={t("aiUsageProvider", { usage: label })} disabled={!routes.data}
+            onChange={(next) => setRoute.mutate({ usage: usageKey, provider: next })} />}
+          model={key ? <KeyModel aiKey={key} usageKey={usageKey} label={label} /> : undefined}
+        />
+      }
+    />
   );
 }
 
-function surfaceModelKeys(surface: RoutedAiSurface, key: AiKey): ByokModelKey[] {
-  const definition = AI_SURFACE_DEFINITIONS.find((entry) => entry.id === surface);
-  if (!definition || !isKnownAgentProvider(key.provider)) return [];
-  return definition.modelKeys.filter((modelKey) => providerSupportsModelKey(key.provider, modelKey));
-}
-
-/** The model of each call type a key serves for a usage, saved optimistically. */
-function KeyModels({ aiKey, modelKeys }: { aiKey: AiKey; modelKeys: ByokModelKey[] }) {
+/** The model a key runs for one call type, saved optimistically. */
+function KeyModel({ aiKey, usageKey, label }: { aiKey: AiKey; usageKey: ByokModelKey; label: string }) {
   const t = useTranslations("Account");
-  const tAgent = useTranslations("Agent");
-  const tAdmin = useTranslations("Admin");
+  const modelCopy = useModelCopy();
   const queryClient = useQueryClient();
-  const saveModel = async (modelKey: ByokModelKey, model: string) => {
+  const saveModel = async (model: string) => {
     const previous = queryClient.getQueryData<{ keys: AiKey[] }>(aiKeysQueryKey);
-    const featureModels = { ...aiKey.feature_models, [modelKey]: model };
+    const featureModels = { ...aiKey.feature_models, [usageKey]: model };
     queryClient.setQueryData<{ keys: AiKey[] }>(aiKeysQueryKey, (data) => data && {
       keys: data.keys.map((entry) => entry.id === aiKey.id ? { ...entry, feature_models: featureModels } : entry),
     });
@@ -213,27 +201,12 @@ function KeyModels({ aiKey, modelKeys }: { aiKey: AiKey; modelKeys: ByokModelKey
     }
   };
   return (
-    <ModelsPanel>
-      {modelKeys.map((modelKey) => (
-        <SettingsRow key={modelKey} label={tAdmin(`fields.${modelKey}.label` as never)}
-          control={
-            <div className="w-full sm:w-64">
-              <ModelCombobox scope="byok" providerChoice={aiKey.provider}
-                capability={modelCatalogCapabilityForKey(modelKey)}
-                value={aiKey.feature_models[modelKey] ?? ""}
-                onChange={(value) => void saveModel(modelKey, value)}
-                defaultLabel={t("byokModelDefault")}
-                defaultModelId={aiKey.resolved_feature_models?.[modelKey] ?? null}
-                placeholder={tAgent("modelSearchPlaceholder")} emptyLabel={tAgent("modelSearchEmpty")}
-                loadingLabel={tAgent("modelSearchLoading")}
-                freeTextLabel={(q) => tAgent("modelUseCustom", { model: q })} />
-            </div>
-          } />
-      ))}
-    </ModelsPanel>
+    <ModelCombobox scope="byok" providerChoice={aiKey.provider}
+      capability={modelCatalogCapabilityForKey(usageKey)}
+      value={aiKey.feature_models[usageKey] ?? ""}
+      onChange={(value) => void saveModel(value)}
+      defaultLabel={t("byokModelDefault")}
+      defaultModelId={aiKey.resolved_feature_models?.[usageKey] ?? null}
+      {...modelCopy} ariaLabel={t("aiUsageModel", { usage: label })} />
   );
-}
-
-function ModelsPanel({ children }: { children: ReactNode }) {
-  return <div className="mb-3 ml-4 border-l border-border/70 pl-4">{children}</div>;
 }

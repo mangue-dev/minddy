@@ -3,91 +3,91 @@
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 155,
+    "line": 156,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "from",
     "resource": "user_ai_capability_assignments",
-    "line": 160,
+    "line": 161,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 288,
+    "line": 289,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "rpc",
     "resource": "upsert_user_ai_key_protected",
-    "line": 306,
+    "line": 307,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "rpc",
     "resource": "upsert_user_ai_key",
-    "line": 329,
+    "line": 330,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "from",
     "resource": "user_ai_capability_assignments",
-    "line": 355,
+    "line": 356,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "rpc",
     "resource": "delete_user_ai_key",
-    "line": 378,
+    "line": 379,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 436,
+    "line": 437,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "rpc",
     "resource": "set_user_ai_capability_assignment",
-    "line": 454,
+    "line": 455,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 475,
+    "line": 476,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "rpc",
     "resource": "update_user_ai_key_preferences_protected",
-    "line": 549,
+    "line": 550,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "rpc",
     "resource": "update_user_ai_key_preferences",
-    "line": 563,
+    "line": 564,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "from",
     "resource": "user_ai_capability_assignments",
-    "line": 594,
+    "line": 595,
     "storage": false
   },
   {
@@ -1885,7 +1885,7 @@
   {
     "file": "lib/server/agent/model.ts",
     "operation": "from",
-    "resource": "user_ai_surface_routes",
+    "resource": "user_ai_usage_routes",
     "line": 140,
     "storage": false
   },
@@ -2215,42 +2215,35 @@
     "file": "lib/server/ai-routes.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 59,
+    "line": 46,
     "storage": false
   },
   {
     "file": "lib/server/ai-routes.ts",
     "operation": "from",
-    "resource": "user_ai_surface_routes",
-    "line": 69,
+    "resource": "user_ai_usage_routes",
+    "line": 53,
     "storage": false
   },
   {
     "file": "lib/server/ai-routes.ts",
     "operation": "from",
-    "resource": "user_ai_surface_routes",
-    "line": 121,
+    "resource": "user_ai_usage_routes",
+    "line": 114,
     "storage": false
   },
   {
     "file": "lib/server/ai-routes.ts",
     "operation": "from",
-    "resource": "user_ai_surface_routes",
-    "line": 129,
+    "resource": "user_ai_usage_routes",
+    "line": 122,
     "storage": false
   },
   {
     "file": "lib/server/ai-routes.ts",
     "operation": "from",
-    "resource": "user_ai_surface_routes",
-    "line": 148,
-    "storage": false
-  },
-  {
-    "file": "lib/server/ai-routes.ts",
-    "operation": "from",
-    "resource": "user_ai_surface_routes",
-    "line": 157,
+    "resource": "user_ai_usage_routes",
+    "line": 142,
     "storage": false
   },
   {
@@ -2614,14 +2607,14 @@
     "file": "lib/server/assistant/model-preferences.ts",
     "operation": "from",
     "resource": "user_numo_preferences",
-    "line": 20,
+    "line": 21,
     "storage": false
   },
   {
     "file": "lib/server/assistant/model-preferences.ts",
     "operation": "from",
     "resource": "user_numo_preferences",
-    "line": 67,
+    "line": 68,
     "storage": false
   },
   {
