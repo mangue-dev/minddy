@@ -1405,7 +1405,6 @@
     "resetFilters": "Reset filters"
   },
   "Categories": {
-    "colorSwatchAria": "Color {color}",
     "removeFromIssue": "Remove “{name}”",
     "colors": {
       "amber": "amber",
@@ -2389,7 +2388,6 @@
     "switchObjective": "Switch objective",
     "backToObjective": "Back to objective",
     "noColor": "No color",
-    "colorAria": "Color {color}",
     "namePlaceholder": "Objective title",
     "descriptionPlaceholder": "Description",
     "createDescriptionPlaceholder": "Objective description",

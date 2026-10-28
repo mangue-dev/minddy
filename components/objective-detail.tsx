@@ -5,7 +5,7 @@ import { useRichDocument } from "@/lib/use-rich-document";
 import { useDescriptionCollaboration } from "@/lib/use-description-collaboration";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Delete02Icon, Mic01Icon, MoreHorizontalIcon, TaskEdit01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { Delete02Icon, Mic01Icon, MoreHorizontalIcon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
 import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -21,7 +21,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { AutoTextarea } from "@/components/auto-textarea";
@@ -70,7 +69,7 @@ import {
   OBJECTIVE_STATUS_MAP,
   type ObjectiveStatus,
 } from "@/lib/objective-constants";
-import { CATEGORY_COLORS, CATEGORY_COLOR_NAMES } from "@/lib/category-colors";
+import { ColorSelect, useColorName } from "@/components/color-select";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import type {
   Issue,
@@ -79,7 +78,6 @@ import type {
   ObjectiveDraftPatch,
   ObjectiveUpdateInput,
 } from "@/lib/types";
-import { AppTooltip } from "@/components/ui/app-tooltip";
 import {
   OBJECTIVE_KEY_FOR_FIELD,
   useObjectiveFieldShortcuts,
@@ -142,76 +140,41 @@ function ObjectiveStatusValue({
   );
 }
 
-/** Objective color swatch picker rendered as a borderless property-row value. */
+/** Objective color picker rendered as a borderless property-row value. */
 function ObjectiveColorValue({
   value,
   onChange,
-  open,
-  onOpenChange: setOpen,
-  shortcutHint,
+  ...control
 }: {
   value: string | null;
   onChange: (v: string | null) => void;
 } & PickerControl) {
   const t = useTranslations("Objectives");
-  const tColors = useTranslations("Categories.colors");
   const tCommon = useTranslations("Common");
-  const pick = (c: string | null) => {
-    onChange(c);
-    setOpen(false);
-  };
+  const name = useColorName(value);
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <AppTooltip label={t("colorFieldLabel")} shortcut={[shortcutHint]}>
-        <PopoverTrigger asChild>
-          <button type="button" aria-label={t("colorFieldLabel")} className={TRIGGER}>
-            <span
-              className={cn(
-                "flex size-[18px] shrink-0 items-center justify-center rounded-full",
-                value === null && "border border-dashed border-muted-foreground/60"
-              )}
-              style={value ? { backgroundColor: value } : undefined}
-            />
-            <span className="truncate text-muted-foreground">
-              {value ? t("colorFieldLabel") : tCommon("none")}
-            </span>
-          </button>
-        </PopoverTrigger>
-      </AppTooltip>
-      <PopoverContent align="end" className="w-auto p-2">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <AppTooltip label={t("noColor")}>
-            <button
-              type="button"
-              onClick={() => pick(null)}
-              aria-label={t("noColor")}
-              className={cn(
-                "flex size-6 items-center justify-center rounded-full border border-border text-[10px] text-muted-foreground",
-                value === null && "ring-2 ring-ring ring-offset-2 ring-offset-background"
-              )}
-            >
-              ∅
-            </button>
-          </AppTooltip>
-          {CATEGORY_COLORS.map((c) => (
-            <AppTooltip label={t("colorAria", { color: tColors(CATEGORY_COLOR_NAMES[c]) })} key={c}>
-              <button
-                type="button"
-                onClick={() => pick(c)}
-                aria-label={t("colorAria", { color: tColors(CATEGORY_COLOR_NAMES[c]) })}
-                className={cn(
-                  "flex size-6 items-center justify-center rounded-full ring-offset-2 ring-offset-background",
-                  value === c && "ring-2 ring-ring"
-                )}
-                style={{ backgroundColor: c }}
-              >
-                {value === c && <HugeiconsIcon icon={CheckIcon} className="size-3.5 text-white" />}
-              </button>
-            </AppTooltip>
-          ))}
-        </div>
-      </PopoverContent>
-    </Popover>
+    <ColorSelect
+      value={value}
+      onChange={onChange}
+      noneLabel={t("noColor")}
+      align="end"
+      tooltip={t("colorFieldLabel")}
+      {...control}
+      trigger={
+        <button type="button" aria-label={t("colorFieldLabel")} className={TRIGGER}>
+          <span
+            className={cn(
+              "flex size-[18px] shrink-0 items-center justify-center rounded-full",
+              value === null && "border border-dashed border-muted-foreground/60"
+            )}
+            style={value ? { backgroundColor: value } : undefined}
+          />
+          <span className={cn("truncate", !name && "text-muted-foreground")}>
+            {value ? (name ?? t("colorFieldLabel")) : tCommon("none")}
+          </span>
+        </button>
+      }
+    />
   );
 }
 

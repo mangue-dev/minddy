@@ -1405,7 +1405,6 @@
     "resetFilters": "Reimposta filtri"
   },
   "Categories": {
-    "colorSwatchAria": "Colore {color}",
     "removeFromIssue": "Rimuovi «{name}»",
     "colors": {
       "amber": "ambra",
@@ -2389,7 +2388,6 @@
     "switchObjective": "Cambia obiettivo",
     "backToObjective": "Torna all'obiettivo",
     "noColor": "Nessun colore",
-    "colorAria": "Colore {color}",
     "namePlaceholder": "Titolo dell'obiettivo",
     "descriptionPlaceholder": "Descrizione",
     "createDescriptionPlaceholder": "Descrizione dell’obiettivo",

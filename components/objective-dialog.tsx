@@ -5,9 +5,6 @@ import { useRichDocument } from "@/lib/use-rich-document";
 
 import { MobileSheetScrollArea } from "@/components/ui/mobile-sheet";
 
-import { ResponsivePopover, ResponsivePopoverContent, ResponsivePopoverTrigger } from "@/components/ui/responsive-popover";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { CheckIcon } from "@hugeicons/core-free-icons";
 import { createUuid } from "@/lib/create-uuid";
 
 import { useEffect, useId, useRef, useState } from "react";
@@ -64,7 +61,7 @@ import {
   OBJECTIVE_STATUS_MAP,
   type ObjectiveStatus,
 } from "@/lib/objective-constants";
-import { CATEGORY_COLORS, CATEGORY_COLOR_NAMES } from "@/lib/category-colors";
+import { ColorSelect } from "@/components/color-select";
 import type {
   CreateObjectiveInput,
   Member,
@@ -74,7 +71,6 @@ import type {
   PendingRelationInput,
   Project,
 } from "@/lib/types";
-import { AppTooltip } from "@/components/ui/app-tooltip";
 import {
   OBJECTIVE_KEY_FOR_FIELD,
   useObjectiveFieldShortcuts,
@@ -129,73 +125,36 @@ function ObjectiveStatusCompact({
   );
 }
 
-/** Color swatch picker — a single dot trigger opening the palette in a popover. */
+/** Color picker — a single dot trigger opening the searchable palette. */
 function ColorCompact({
   value,
   onChange,
-  open,
-  onOpenChange: setOpen,
-  shortcutHint,
+  ...control
 }: {
   value: string | null;
   onChange: (v: string | null) => void;
 } & PickerControl) {
   const t = useTranslations("Objectives");
-  const tColors = useTranslations("Categories.colors");
-  const pick = (c: string | null) => {
-    onChange(c);
-    setOpen(false);
-  };
   return (
-    <ResponsivePopover open={open} onOpenChange={setOpen}>
-      <AppTooltip label={t("colorFieldLabel")} shortcut={[shortcutHint]}>
-        <ResponsivePopoverTrigger asChild>
-          <button type="button" aria-label={t("colorFieldLabel")} className={BARE}>
-            <span
-              className={cn(
-                "flex size-[18px] shrink-0 items-center justify-center rounded-full",
-                value === null && "border border-dashed border-muted-foreground/60"
-              )}
-              style={value ? { backgroundColor: value } : undefined}
-            />
-            <span className="text-muted-foreground">{t("colorFieldLabel")}</span>
-          </button>
-        </ResponsivePopoverTrigger>
-      </AppTooltip>
-      <ResponsivePopoverContent mobileTitle={t("colorFieldLabel")} align="start" className="w-auto p-2">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <AppTooltip label={t("noColor")}>
-            <button
-              type="button"
-              onClick={() => pick(null)}
-              aria-label={t("noColor")}
-              className={cn(
-                "flex size-6 app-mobile:size-11 items-center justify-center rounded-full border border-border text-[10px] text-muted-foreground",
-                value === null && "ring-2 ring-ring ring-offset-2 ring-offset-background"
-              )}
-            >
-              ∅
-            </button>
-          </AppTooltip>
-          {CATEGORY_COLORS.map((c) => (
-            <AppTooltip label={t("colorAria", { color: tColors(CATEGORY_COLOR_NAMES[c]) })} key={c}>
-              <button
-                type="button"
-                onClick={() => pick(c)}
-                aria-label={t("colorAria", { color: tColors(CATEGORY_COLOR_NAMES[c]) })}
-                className={cn(
-                  "flex size-6 items-center justify-center rounded-full ring-offset-2 ring-offset-background",
-                  value === c && "ring-2 ring-ring"
-                )}
-                style={{ backgroundColor: c }}
-              >
-                {value === c && <HugeiconsIcon icon={CheckIcon} className="size-3.5 text-white" />}
-              </button>
-            </AppTooltip>
-          ))}
-        </div>
-      </ResponsivePopoverContent>
-    </ResponsivePopover>
+    <ColorSelect
+      value={value}
+      onChange={onChange}
+      noneLabel={t("noColor")}
+      tooltip={t("colorFieldLabel")}
+      {...control}
+      trigger={
+        <button type="button" aria-label={t("colorFieldLabel")} className={BARE}>
+          <span
+            className={cn(
+              "flex size-[18px] shrink-0 items-center justify-center rounded-full",
+              value === null && "border border-dashed border-muted-foreground/60"
+            )}
+            style={value ? { backgroundColor: value } : undefined}
+          />
+          <span className="text-muted-foreground">{t("colorFieldLabel")}</span>
+        </button>
+      }
+    />
   );
 }
 
