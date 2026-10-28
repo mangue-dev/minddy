@@ -99,6 +99,27 @@ test("uses rounded transparent icons for Windows shell surfaces", async () => {
   }
 });
 
+test("ships unplated taskbar icons so Windows draws no plate behind them", async () => {
+  // Without the targetsize altform-unplated variants, Windows puts the app
+  // icon on a system plate in the taskbar and Start, which shows as dark
+  // corners around a rounded icon.
+  const sizes = [16, 20, 24, 30, 32, 36, 40, 44, 48, 60, 64, 72, 80, 96, 256];
+  for (const size of sizes) {
+    for (const form of ["", "_altform-unplated", "_altform-lightunplated"]) {
+      const fileName = `Square44x44Logo.targetsize-${size}${form}.png`;
+      const file = fileURLToPath(new URL(`../desktop/build/appx/${fileName}`, import.meta.url));
+      const { width, height, hasAlpha } = await sharp(file).metadata();
+      assert.equal(width, size, `${fileName} width`);
+      assert.equal(height, size, `${fileName} height`);
+      assert.equal(hasAlpha, true, `${fileName} must support transparency`);
+      const pixel = (left, top) => sharp(file).extract({ left, top, width: 1, height: 1 }).ensureAlpha().raw().toBuffer();
+      assert.equal((await pixel(0, 0))[3], 0, `${fileName} must have a transparent corner`);
+      const center = Math.floor(size / 2);
+      assert.equal((await pixel(center, center))[3], 255, `${fileName} must have an opaque center`);
+    }
+  }
+});
+
 test("packages the architecture-matched WNS helper and COM activator", async () => {
   const config = await readFile(new URL("../desktop/electron-builder.yml", import.meta.url), "utf8");
   const manifest = await readFile(

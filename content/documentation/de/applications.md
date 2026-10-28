@@ -117,7 +117,7 @@
       "caption": "Die öffentliche Anleitung illustriert die drei Safari-Schritte und die aktivierte Option Als Web-App öffnen. Die Abbildungen sind von minddy dargestellte Anleitungen und keine Aufnahmen einer abgeschlossenen iOS-Installation.",
       "revision": 17,
       "reviewed": true,
-      "capturedAt": "2026-10-22",
+      "capturedAt": "2026-10-28",
       "viewport": [
         1488,
         762
@@ -168,7 +168,7 @@
       "caption": "Wiederherstellungsseite in der macOS-Entwicklungsapp mit isoliertem Profil und Demonstrationsserver. Die native Oberfläche verwendet in allen Sprachen englische Beschriftungen.",
       "revision": 17,
       "reviewed": true,
-      "capturedAt": "2026-10-10",
+      "capturedAt": "2026-10-28",
       "viewport": [
         1280,
         860

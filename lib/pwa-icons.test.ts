@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { pwaIcons } from "./pwa-icons";
 import { GET } from "@/app/manifest.json/route";
 
-// The static app/manifest.json this route replaced (MIN-720): production must
-// keep serving exactly this document.
+// The production manifest: the document the static app/manifest.json served
+// (MIN-720), with the maskable icon split from the rounded ones (MIN-838).
 const PRODUCTION_MANIFEST = {
   "id": "/",
   "name": "minddy",
@@ -17,13 +17,19 @@ const PRODUCTION_MANIFEST = {
       "src": "/web-app-manifest-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/web-app-manifest-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/web-app-manifest-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "screenshots": [
@@ -47,6 +53,7 @@ describe("pwaIcons", () => {
     expect(pwaIcons("preview").manifest.map((icon) => icon.src)).toEqual([
       "/web-app-manifest-preview-192x192.png",
       "/web-app-manifest-preview-512x512.png",
+      "/web-app-manifest-preview-maskable-512x512.png",
     ]);
     expect(pwaIcons("preview").apple).toBe("apple-icon-preview.png");
     expect(pwaIcons("production").apple).toBe("apple-icon.png");
@@ -55,7 +62,7 @@ describe("pwaIcons", () => {
 });
 
 describe("/manifest.json", () => {
-  it("serves the former static manifest unchanged in production", async () => {
+  it("serves the production manifest", async () => {
     vi.stubEnv("NEXT_PUBLIC_VERCEL_ENV", "production");
     vi.stubEnv("VERCEL_ENV", "production");
     const response = GET();
@@ -70,6 +77,7 @@ describe("/manifest.json", () => {
     expect(manifest.icons.map((icon: { src: string }) => icon.src)).toEqual([
       "/web-app-manifest-preview-192x192.png",
       "/web-app-manifest-preview-512x512.png",
+      "/web-app-manifest-preview-maskable-512x512.png",
     ]);
   });
 });
