@@ -1,14 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="816" height="390" viewBox="0 0 816 390" role="img" aria-labelledby="title desc">
-<title id="title">Anbieter und Numo-Standard</title><desc id="desc">Verbundene Anbieter, Fähigkeitszuordnung und persönliches Numo-Modell sind getrennte Einstellungen.</desc>
+<title id="title">Anbieter, Nutzungen und Numo</title><desc id="desc">Verbundene Anbieter, ein Anbieter je Nutzung sowie Anbieter und Modell von Numo sind getrennte Einstellungen.</desc>
 <rect width="816" height="390" rx="16" fill="#f8fafc"/>
-<text x="32" y="38" font-family="Arial,sans-serif" font-size="20" font-weight="bold" fill="#0f172a">Anbieter und Numo-Standard</text>
+<text x="32" y="38" font-family="Arial,sans-serif" font-size="20" font-weight="bold" fill="#0f172a">Anbieter, Nutzungen und Numo</text>
 <rect x="24" y="56" width="768" height="94" rx="12" fill="#fff" stroke="#cbd5e1"/>
 <text x="42" y="83" font-family="Arial,sans-serif" font-size="17" font-weight="bold" fill="#0f172a">1. Verbundene Anbieter</text>
-<text x="42" y="107" font-family="Arial,sans-serif" font-size="14" fill="#475569">Mehrere API-Anbieter bleiben verbunden; neue Verbindungen ersetzen die anderen nicht.</text>
+<text x="42" y="107" font-family="Arial,sans-serif" font-size="14" fill="#475569">minddy Cloud und deine API-Schlüssel stehen nebeneinander bereit.</text>
 <rect x="24" y="161" width="768" height="94" rx="12" fill="#fff" stroke="#cbd5e1"/>
-<text x="42" y="188" font-family="Arial,sans-serif" font-size="17" font-weight="bold" fill="#0f172a">2. Anbieter je Fähigkeit</text>
-<text x="42" y="212" font-family="Arial,sans-serif" font-size="14" fill="#475569">Ordne Text, Transkription und Embeddings getrennt zu und aktiviere die Nutzungen.</text>
+<text x="42" y="188" font-family="Arial,sans-serif" font-size="17" font-weight="bold" fill="#0f172a">2. Ein Anbieter je Nutzung</text>
+<text x="42" y="212" font-family="Arial,sans-serif" font-size="14" fill="#475569">Numo, Automatisierungen, Diktat und Feedback wählen jeweils ihren Anbieter.</text>
 <rect x="24" y="266" width="768" height="94" rx="12" fill="#fff" stroke="#cbd5e1"/>
-<text x="42" y="293" font-family="Arial,sans-serif" font-size="17" font-weight="bold" fill="#0f172a">3. Standardmodell für Numo</text>
-<text x="42" y="317" font-family="Arial,sans-serif" font-size="14" fill="#475569">App-Standard oder persönliches Modell. Eine ausdrückliche Gesprächsauswahl hat Vorrang.</text>
+<text x="42" y="293" font-family="Arial,sans-serif" font-size="17" font-weight="bold" fill="#0f172a">3. Anbieter und Modell von Numo</text>
+<text x="42" y="317" font-family="Arial,sans-serif" font-size="14" fill="#475569">Wähle einen Anbieter, dann sein Modell. Ein Gespräch kann eigene wählen.</text>
 </svg>

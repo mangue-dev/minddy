@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 21,
-  "sourceRevision": 20,
+  "revision": 22,
+  "sourceRevision": 21,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-25",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -66,10 +66,10 @@
     ]
   },
   "review": {
-    "revision": 21,
-    "fact": "agent:MIN-793 (Numo writes downloadable files: added passage checked against lib/server/assistant/tools.ts, conversation-attachments.ts, markdown-pdf.ts and components/assistant/generated-file-cards.tsx; no figure recaptured; earlier evidence retained in git history)",
-    "language": "agent:MIN-793 (pt-BR translation of the added passage with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-25"
+    "revision": 22,
+    "fact": "agent:claude-code/MIN-826 (step 2 now names the conversation provider, checked against components/assistant/conversation-settings.tsx and the running app on the preview demo account; no figure recaptured, existing figures still match; earlier evidence retained in git history)",
+    "language": "agent:claude-code/MIN-826 (pt-BR translation of the changed passages with catalog UI labels; informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "code-work",
@@ -100,7 +100,7 @@
       "src": "/documentation/pt-BR/work-with-numo-workflow.png",
       "alt": "Conversa de demonstração Numo com contexto, mudança de prioridade e resposta salva.",
       "caption": "Conversa de demonstração existente, traduzida para exibição. A resposta salva cita AUR-11 e AUR-7; a captura não comprova uma nova execução.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -117,7 +117,7 @@
       "src": "/documentation/pt-BR/numo-permissions-and-approvals-workflow.svg",
       "alt": "Matriz de permissões do Numo para ações do projeto, conexões pessoais e rotinas.",
       "caption": "O acesso ao projeto e os pedidos explícitos limitam as ações do Numo; conteúdo externo não concede permissões.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -178,7 +178,7 @@
       "src": "/documentation/pt-BR/numo-execution-model-flow.svg",
       "alt": "Diagrama: Persistir intenção, mensagem e UUID. Assumir turno, gravar ferramentas e resultados. Aguardar sua resposta se necessário. Rever eventos e reconciliar escritas incertas.",
       "caption": "Siga as etapas nesta ordem. Persistir intenção, mensagem e UUID. Assumir turno, gravar ferramentas e resultados. Aguardar sua resposta se necessário. Rever eventos e reconciliar escritas incertas.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -210,7 +210,7 @@
       "src": "/documentation/pt-BR/numo-mcp-connections-workflow.png",
       "alt": "Configurações MCP pessoais, lista vazia e botão para adicionar outro servidor.",
       "caption": "As conexões de Numo são pessoais; as rotinas usam as do proprietário do projeto.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -227,7 +227,7 @@
       "src": "/documentation/pt-BR/numo-mcp-connections-config-workflow.png",
       "alt": "Assistente de conexão do Notion mostrando o método de login conhecido pelo catálogo.",
       "caption": "Etapa de login de um serviço do catálogo. Nenhuma credencial foi inserida e nenhum servidor foi contatado.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-21",
       "viewport": [
@@ -256,7 +256,7 @@ O Numo usa o contexto da conversa e as permissões da sua conta. Comece com uma 
 Abra o ticket ou o projeto e use o botão flutuante do Numo. A página atual vira contexto da conversa. As ações contextuais que passam trabalho ao Numo abrem o mesmo painel. Você precisa de acesso ao projeto e uso de IA disponível ou uma chave pessoal compatível.
 
 1. Confira o contexto na área de mensagem. Identifique o ticket quando houver vários itens relevantes. Para adicionar um ticket como contexto, digite `@` na área de mensagem ou use **Adicionar contexto** → **Ticket**; uma descrição também lista tickets encontrados [pelo sentido](/docs/navigation#search-by-meaning) em **Relacionados pelo sentido**.
-2. Escolha o modelo e o nível de raciocínio da conversa pelo logotipo do provedor, ao lado do microfone; ao passar o cursor, você vê o modelo atual. Essas escolhas valem para a conversa. Se o modelo não oferece controle de raciocínio, o controle deslizante fica em **Sem raciocínio**; em um modelo que sempre raciocina, **Sem raciocínio** usa o nível mais leve.
+2. Escolha o provedor, o modelo e o nível de raciocínio da conversa pelo logotipo do provedor, ao lado do microfone; ao passar o cursor, você vê o modelo atual. Essas escolhas valem para a conversa. Se o modelo não oferece controle de raciocínio, o controle deslizante fica em **Sem raciocínio**; em um modelo que sempre raciocina, **Sem raciocínio** usa o nível mais leve.
 3. Envie um pedido delimitado, por exemplo: “Leia este ticket e proponha critérios de aceitação. Não altere o status”.
 4. Leia a resposta e abra os links de tickets ou fontes. Para uma alteração, confira o objeto atualizado.
 

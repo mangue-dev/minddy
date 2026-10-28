@@ -4,6 +4,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { assertPublicHttpUrl } from "@/lib/server/safe-fetch";
 import {
   DEFAULT_AGENT_PROVIDER,
+  isKnownAgentProvider,
   isLocalAgentProvider,
   resolveProviderBaseUrl,
   type AgentProviderId,
@@ -15,12 +16,13 @@ import { decodeUserAiKeyRow, type UserAiKeyRow } from
   "@/lib/server/user-ai-key-content";
 import { getOpenRouterModelInfo } from "./openrouter-index";
 import {
-  DEFAULT_BYOK_SURFACES,
+  isRoutedAiSurface,
   type AiSurface,
   type ByokFeatureModels,
+  type RoutedAiSurface,
 } from "@/lib/ai-surfaces";
 import { isManagedAiEnabled } from "@/lib/managed-services";
-import type { ModelCatalogCapability } from "@/lib/model-catalog-capability";
+import { providerSupportsModelCapability, type ModelCatalogCapability } from "@/lib/model-catalog-capability";
 
 /**
  * Resolved model endpoint (MIN-46).
@@ -41,7 +43,6 @@ export interface UserByok {
   credentialVersion: string;
   /** Effective URL base (register, or custom for 'generic'). */
   baseUrl: string;
-  enabledSurfaces: AiSurface[];
   featureModels: ByokFeatureModels;
 }
 
@@ -114,32 +115,35 @@ async function confirmsUnvalidatedKey(params: {
 }
 
 /**
- * BYOK assigned to a model capability, decrypted and resolved at endpoint, or
- * null. Ignores a row whose URL base is not resolvable (generic without URL)
- * or whose key no longer decrypts (secret turned → “reconfigure your key”).
+ * The account credential serving a usage or a provider, decrypted and
+ * resolved to an endpoint, or null (= Minddy Cloud).
  *
- * Also ignores — since MIN-344 — a key that the provider has never recognized.
- * An invented key raised all the usual ceilings without ever having done
- * run anything; an unvalidated line is therefore no longer worth anything, neither
- * here nor in `checkAgentQuota`.
+ * A usage is served by the credential its route names (MIN-826); no route
+ * means Minddy Cloud. A capability the routed provider does not offer
+ * (transcription or embeddings on Anthropic, for instance) falls back to
+ * Minddy Cloud as well.
+ *
+ * Ignores a row whose URL base is not resolvable (generic without URL), whose
+ * key no longer decrypts (secret turned → “reconfigure your key”), or — since
+ * MIN-344 — that the provider has never recognized.
  */
 async function resolveUserByok(
   userId: string,
-  surface?: AiSurface,
-  target: { capability: ModelCatalogCapability } | { provider: AgentProviderId } = {
-    capability: "text",
-  },
+  surface: AiSurface | undefined,
+  target: { capability: ModelCatalogCapability; provider?: AgentProviderId },
 ): Promise<UserByok | null> {
   const supabase = getServiceClient();
   let aiKeyId: string | null = null;
-  if ("capability" in target) {
-    const { data: assignment } = await supabase
-      .from("user_ai_capability_assignments")
+  if (!target.provider) {
+    // The retired code agent and surface-less reads follow the Numo route.
+    const routed: RoutedAiSurface = surface && isRoutedAiSurface(surface) ? surface : "assistant";
+    const { data: route } = await supabase
+      .from("user_ai_surface_routes")
       .select("ai_key_id")
       .eq("user_id", userId)
-      .eq("capability", target.capability)
+      .eq("surface", routed)
       .maybeSingle();
-    aiKeyId = (assignment as { ai_key_id?: string } | null)?.ai_key_id ?? null;
+    aiKeyId = (route as { ai_key_id?: string } | null)?.ai_key_id ?? null;
     if (!aiKeyId) return null;
   }
   let keyQuery = supabase
@@ -148,7 +152,7 @@ async function resolveUserByok(
       "id, user_id, provider, key_encrypted, base_url, validated_at, updated_at, enabled_surfaces, feature_models, encrypted_content, encryption_version, content_revision",
     )
     .eq("user_id", userId);
-  keyQuery = "provider" in target
+  keyQuery = target.provider
     ? keyQuery.eq("provider", target.provider)
     : keyQuery.eq("id", aiKeyId!);
   const { data } = await keyQuery.maybeSingle();
@@ -164,10 +168,10 @@ async function resolveUserByok(
   if (!stored) return null;
   const row = await decodeUserAiKeyRow(stored, userId).catch(() => null);
   if (!row) return null;
-  const enabledSurfaces = Array.isArray(row.enabled_surfaces)
-    ? row.enabled_surfaces
-    : DEFAULT_BYOK_SURFACES;
-  if (surface && !enabledSurfaces.includes(surface)) return null;
+  if (!isKnownAgentProvider(row.provider) ||
+    !providerSupportsModelCapability(row.provider as AgentProviderId, target.capability)) {
+    return null;
+  }
   const localProvider = isLocalAgentProvider(row.provider);
   // Only the agent surface has an explicit local-execution handoff. Every
   // other surface runs on the server and must ignore a legacy or corrupted
@@ -215,7 +219,6 @@ async function resolveUserByok(
     apiKey: apiKey ?? "",
     credentialVersion: stored.updated_at,
     baseUrl,
-    enabledSurfaces,
     featureModels: row.feature_models ?? {},
   };
 }
@@ -226,6 +229,21 @@ export async function getUserByok(
   capability: ModelCatalogCapability = "text",
 ): Promise<UserByok | null> {
   return resolveUserByok(userId, surface, { capability });
+}
+
+/**
+ * The account's credential for one provider, whatever the routes say: a Numo
+ * conversation set to that provider, or the settings catalog of its models.
+ */
+export async function getUserByokForProvider(
+  userId: string,
+  provider: AgentProviderId,
+  options: { surface?: AiSurface; capability?: ModelCatalogCapability } = {},
+): Promise<UserByok | null> {
+  return resolveUserByok(userId, options.surface, {
+    capability: options.capability ?? "text",
+    provider,
+  });
 }
 
 /** True if the user has a usable BYOK (→ unlimited use). */

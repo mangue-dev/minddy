@@ -41,8 +41,10 @@ import { addAiKeyApi, deleteAiKeyApi, type AiKey } from "@/lib/agent-keys-api";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import { aiKeysQueryKey, useAiKeysQuery } from "@/lib/use-ai-keys-query";
 import { agentModelsQueryKey } from "@/lib/use-agent-models-query";
+import { aiRoutesQueryKey } from "@/lib/use-ai-routes-query";
+import { MINDDY_CLOUD_PROVIDER } from "@/lib/ai-surfaces";
+import { MinddyLogo } from "@/components/minddy-logo";
 
-const MINDDY_CLOUD_PROVIDER = "minddy";
 
 /** Multi-provider BYOK credential list shared by account settings and onboarding. */
 export function ByokConnectPanel({
@@ -111,6 +113,7 @@ export function ByokConnectPanel({
       queryClient.invalidateQueries({ queryKey: aiKeysQueryKey }),
       queryClient.invalidateQueries({ queryKey: agentModelsQueryKey }),
       queryClient.invalidateQueries({ queryKey: numoPreferencesQueryKey }),
+      queryClient.invalidateQueries({ queryKey: aiRoutesQueryKey }),
     ]);
   const resetForm = () => {
     setEditing(null);
@@ -229,16 +232,15 @@ export function ByokConnectPanel({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      {mode === "settings" && <>
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-3">
-          <div>
-            <h3 className="text-sm font-medium">{t("aiConnectedProviders")}</h3>
-            <p className="text-xs text-muted-foreground">{t("aiMultipleProvidersHint")}</p>
+      {mode === "settings" && managedAiAvailable && (
+        <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
+          <MinddyLogo className="size-5 shrink-0" />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="text-sm font-medium">{t("aiProviderMinddy")}</span>
+            <span className="text-xs text-muted-foreground">{t("aiProviderMinddyIncluded")}</span>
           </div>
-          {!adding && <Button size="sm" variant="outline" disabled={availableProviders.length === 0}
-            onClick={() => setAdding(true)}>{t("aiAddProvider")}</Button>}
         </div>
-      </>}
+      )}
       {keys.map((key) => {
         const definition = getAgentProvider(key.provider);
         return (
@@ -278,6 +280,13 @@ export function ByokConnectPanel({
           </div>
         );
       })}
+
+      {mode === "settings" && !adding && (
+        <div>
+          <Button size="sm" variant="outline" disabled={availableProviders.length === 0}
+            onClick={() => setAdding(true)}>{t("aiAddProvider")}</Button>
+        </div>
+      )}
 
       {adding && <div className="flex flex-col gap-3 rounded-lg border border-border/70 p-3">
         <SettingsRow label={editing ? tc("edit") : t(mode === "settings" ? "aiAddProvider" : "aiProviderTitle")}

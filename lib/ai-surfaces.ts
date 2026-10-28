@@ -4,12 +4,33 @@
  * share exactly the same identifiers and the same default values.
  */
 
+import type { AgentProviderId } from "./agent-providers";
+
 export const AI_SURFACES = ["agent", "assistant", "automations", "voice", "feedback"] as const;
 
 export type AiSurface = (typeof AI_SURFACES)[number];
 
 /** An existing or newly created key covers everything as long as the user does not uncheck anything. */
 export const DEFAULT_BYOK_SURFACES: AiSurface[] = [...AI_SURFACES];
+
+/**
+ * The usages an account routes to a provider of its choice (MIN-826): each one
+ * names its own provider in `user_ai_surface_routes`, and no route means
+ * Minddy Cloud. The retired code-agent surface is not one of them.
+ */
+export const ROUTED_AI_SURFACES = ["assistant", "automations", "voice", "feedback"] as const;
+
+export type RoutedAiSurface = (typeof ROUTED_AI_SURFACES)[number];
+
+export function isRoutedAiSurface(value: unknown): value is RoutedAiSurface {
+  return typeof value === "string" && (ROUTED_AI_SURFACES as readonly string[]).includes(value);
+}
+
+/** The managed provider, next to the account's own credentials. */
+export const MINDDY_CLOUD_PROVIDER = "minddy" as const;
+
+/** A provider an account can choose for a usage or a conversation. */
+export type AiProviderChoice = typeof MINDDY_CLOUD_PROVIDER | AgentProviderId;
 
 /**
  * Call types whose template may differ. They correspond to the real

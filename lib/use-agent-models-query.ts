@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { DEFAULT_AGENT_PROVIDER, type AgentProviderId } from "@/lib/agent-providers";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
 import { catalogModelReasoning } from "@/lib/model-reasoning-rules";
+import type { AiProviderChoice } from "@/lib/ai-surfaces";
+import type { AiProviderOption } from "@/lib/ai-provider-options";
 import {
   reasoningLevelsFor,
   type ModelReasoning,
@@ -81,11 +83,18 @@ interface AgentModelsResult {
     provider: "local_openai" | "ollama";
     baseUrl: string;
   };
+  /** The provider this catalog lists (`assistant` scope, MIN-826). */
+  providerChoice?: AiProviderChoice | null;
+  /** Numo's default provider for the account. */
+  defaultProvider?: AiProviderChoice | null;
+  /** Providers the account can choose for Numo. */
+  providers?: AiProviderOption[];
 }
 
 export async function fetchAgentModels(
   scope: AgentModelsScope,
   capability: AdminCatalogCapability,
+  provider?: AiProviderChoice | null,
 ): Promise<AgentModelsResult> {
   const empty = {
     provider: DEFAULT_AGENT_PROVIDER,
@@ -97,10 +106,12 @@ export async function fetchAgentModels(
     routineSchedulingConfigured: false,
     defaultReasoning: undefined,
   };
-  const endpoint =
-    scope === "platform" || scope === "byok"
-      ? `${SCOPE_ENDPOINTS[scope]}?capability=${encodeURIComponent(capability)}`
-      : SCOPE_ENDPOINTS[scope];
+  const params = new URLSearchParams();
+  if (scope === "platform" || scope === "byok") params.set("capability", capability);
+  if (provider && (scope === "assistant" || scope === "byok")) params.set("provider", provider);
+  const endpoint = params.size > 0
+    ? `${SCOPE_ENDPOINTS[scope]}?${params.toString()}`
+    : SCOPE_ENDPOINTS[scope];
   const res = await fetch(endpoint);
   if (!res.ok) return empty;
   const data = (await res.json()) as {
@@ -117,6 +128,9 @@ export async function fetchAgentModels(
       provider?: AgentProviderId;
       baseUrl?: string;
     };
+    providerChoice?: AiProviderChoice | null;
+    defaultProvider?: AiProviderChoice | null;
+    providers?: AiProviderOption[];
   };
   const localEndpoint: AgentModelsResult["localEndpoint"] =
     data.localEndpoint &&
@@ -137,6 +151,9 @@ export async function fetchAgentModels(
     routineEventProcessingConfigured: data.routineEventProcessingConfigured ?? false,
     routineSchedulingConfigured: data.routineSchedulingConfigured ?? false,
     defaultReasoning: data.defaultReasoning,
+    providerChoice: data.providerChoice ?? null,
+    defaultProvider: data.defaultProvider ?? null,
+    providers: data.providers ?? [],
     ...(localEndpoint ? { localEndpoint } : {}),
   };
   // The web server never contacts a local address. The desktop app discovers
@@ -153,12 +170,16 @@ export async function fetchAgentModels(
 export function useAgentModelsQuery(
   scope: AgentModelsScope = "user",
   capability: AdminCatalogCapability = "text",
+  /** One provider's catalog instead of the usage's route (MIN-826). */
+  provider?: AiProviderChoice | null,
 ) {
   const { data, isPending } = useQuery({
     // One scope = one catalog: the two should never share a cache.
     queryKey:
-      scope === "user" ? agentModelsQueryKey : [...agentModelsQueryKey, scope, capability],
-    queryFn: () => fetchAgentModels(scope, capability),
+      scope === "user"
+        ? agentModelsQueryKey
+        : [...agentModelsQueryKey, scope, capability, provider ?? "route"],
+    queryFn: () => fetchAgentModels(scope, capability, provider),
     // Cloud catalogs are hidden on the server side; one minute allows
     // revenge to Ollama / LM Studio, freshly started, appears quickly without
     // refresh button nor local access from the cloud.
@@ -174,6 +195,9 @@ export function useAgentModelsQuery(
     routineEventProcessingConfigured: data?.routineEventProcessingConfigured ?? false,
     routineSchedulingConfigured: data?.routineSchedulingConfigured ?? false,
     defaultReasoning: data?.defaultReasoning,
+    providerChoice: data?.providerChoice ?? null,
+    defaultProvider: data?.defaultProvider ?? null,
+    providers: data?.providers ?? [],
     loading: isPending,
   };
 }
@@ -194,8 +218,9 @@ export function useAgentModelsQuery(
 export function useReasoningLevelsFor(
   modelId: string | null | undefined,
   scope: AgentModelsScope = "user",
+  providerChoice?: AiProviderChoice | null,
 ): ReasoningLevel[] {
-  const { models, provider } = useAgentModelsQuery(scope);
+  const { models, provider } = useAgentModelsQuery(scope, "text", providerChoice);
   const entry = modelId ? models.find((m) => m.id === modelId) : undefined;
   return reasoningLevelsFor(catalogModelReasoning(provider, modelId, entry));
 }

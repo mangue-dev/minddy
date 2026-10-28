@@ -9,6 +9,7 @@ export async function ensureNumoRequestConversation(input: {
   conversationId: string;
   userId: string;
   title?: string | null;
+  provider?: string | null;
   model?: string | null;
   reasoningLevel?: ReasoningLevel | null;
 }): Promise<{ created: boolean }> {
@@ -18,6 +19,7 @@ export async function ensureNumoRequestConversation(input: {
     user_id: userId,
     project_id: null,
     title: input.title ?? null,
+    ...(input.provider != null ? { provider: input.provider } : {}),
     ...(input.model != null ? { model: input.model } : {}),
     ...(input.reasoningLevel != null ? { reasoning_level: input.reasoningLevel } : {}),
   });

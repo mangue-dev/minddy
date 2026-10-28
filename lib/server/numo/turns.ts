@@ -3,7 +3,8 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ProviderRequestError, captureBackgroundException } from "@/lib/server/ai-provider-errors";
+import type { AiProviderChoice } from "@/lib/ai-surfaces";
+import { ChosenProviderUnavailableError, ProviderRequestError, captureBackgroundException } from "@/lib/server/ai-provider-errors";
 
 import type {
   AssistantMention,
@@ -100,6 +101,11 @@ export interface NumoTurnIntent {
   numoDefaultStatus: NumoDefaultStatus;
   /** Always true since the admin switch was removed (MIN-733); turns queued before may carry false. */
   webSearchEnabled: boolean;
+  /**
+   * The conversation's provider (MIN-826), frozen with its model: `minddy` or
+   * a credential provider. Absent follows the Numo usage route.
+   */
+  provider?: AiProviderChoice;
   /** Preserve comment-origin semantics for activity. */
   triggerSource?: "chat" | "mention";
   /** Routine operation identity; the turn id is the occurrence identity. */
@@ -996,6 +1002,7 @@ async function executeClaimedNumoTurn(input: {
       userId: claimed.user_id,
       modelKey: "assistant_model",
       surface: "assistant",
+      provider: claimed.intent.provider ?? null,
       modelOverride: claimed.model,
       ...(claimed.intent.documentation ? { managedOnly: true } : {}),
     });
@@ -1269,8 +1276,10 @@ async function executeClaimedNumoTurn(input: {
     // three times behind a spinner, then shown as "Numo turn failed").
     const providerError = error instanceof ProviderRequestError ? error : null;
     const message = providerError ? providerError.userMessage
-      : error instanceof NumoCompletionError ? error.message : "Numo turn failed";
+      : error instanceof NumoCompletionError || error instanceof ChosenProviderUnavailableError
+        ? error.message : "Numo turn failed";
     const status: "retryable" | "failed" = error instanceof NumoCompletionError
+      || error instanceof ChosenProviderUnavailableError
       || (providerError && !providerError.retryable)
       ? "failed" : claimed.attempts < 3 ? "retryable" : "failed";
     if (!providerError) {

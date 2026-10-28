@@ -2677,6 +2677,11 @@
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
+      },
+      "provider": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -10576,5 +10581,55 @@
       "storage_path"
     ],
     "foreignKeys": []
+  },
+  "user_ai_surface_routes": {
+    "columns": {
+      "user_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "surface": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "ai_key_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "created_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "updated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "user_id",
+      "surface"
+    ],
+    "foreignKeys": [
+      {
+        "table": "user_ai_keys",
+        "column": "ai_key_id",
+        "targetColumn": "id"
+      },
+      {
+        "table": "user_ai_keys",
+        "column": "user_id",
+        "targetColumn": "user_id"
+      },
+      {
+        "table": "users",
+        "column": "user_id",
+        "targetColumn": "id"
+      }
+    ]
   }
 }

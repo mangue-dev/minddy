@@ -105,6 +105,7 @@ export const SETTINGS_SECTIONS = {
   accountConnectedApps: "account-connected-apps",
   accountGitConnections: "account-git-connections",
   accountAiProvider: "account-ai-provider",
+  accountAiUsages: "account-ai-usages",
   accountAnalytics: "account-analytics",
   accountDataImport: "account-data-import",
   accountDataExport: "account-data-export",
@@ -581,6 +582,17 @@ export function useSettingsSections(): SettingsSection[] {
         keywords: [
           "ia", "ai", "clé", "cle", "key", "api", "byok", "openai",
           "anthropic", "provider", "quota", "budget",
+        ],
+      }),
+      account({
+        id: SETTINGS_SECTIONS.accountAiUsages,
+        tab: "agent",
+        icon: KeyRound,
+        title: tAccount("aiUsagesTitle"),
+        keywords: [
+          "ia", "ai", "usage", "usages", "numo", "modèle", "modele", "model",
+          "fournisseur", "provider", "automatisations", "automations",
+          "dictée", "dictee", "voice", "retours", "feedback",
         ],
       }),
       account({

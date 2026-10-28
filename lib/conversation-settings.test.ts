@@ -9,7 +9,9 @@ import {
 } from "@/lib/conversation-settings";
 
 const h = vi.hoisted(() => ({
+  providers: [] as Array<{ id: string; label: string; fallbackCapabilities: string[] }>,
   state: {
+    conversationProvider: null as string | null,
     conversationModel: null as string | null,
     conversationReasoningLevel: "high" as const,
     conversationConfigError: null as string | null,
@@ -35,6 +37,8 @@ vi.mock("@/lib/assistant-chat-context", () => ({
 vi.mock("@/lib/use-agent-models-query", () => ({
   useAgentModelsQuery: () => ({
     provider: "openrouter",
+    defaultProvider: "minddy",
+    providers: h.providers,
     defaultModel: "z-ai/glm-5.3-flash",
     defaultReasoning: "medium",
     models: [{
@@ -43,6 +47,9 @@ vi.mock("@/lib/use-agent-models-query", () => ({
     }],
   }),
   useReasoningLevelsFor: () => ["low"],
+}));
+vi.mock("@/components/ai-provider-label", () => ({
+  ProviderOptionLabel: ({ option }: { option: { label: string } }) => option.label,
 }));
 vi.mock("@/components/agent/model-combobox", () => ({
   ModelCombobox: () => null,
@@ -105,6 +112,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   h.sliderProps = null;
+  h.providers = [];
+  h.state.conversationProvider = null;
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
@@ -144,9 +153,32 @@ describe("ConversationSettings", () => {
       'button[aria-label="modelSettingsReset"]',
     );
     await act(async () => reset?.click());
-    expect(h.update).toHaveBeenCalledWith({ model: null, reasoningLevel: null });
+    expect(h.update).toHaveBeenCalledWith({ provider: null, model: null, reasoningLevel: null });
 
     await act(async () => h.sliderProps?.onValueChange([0]));
     expect(h.update).toHaveBeenCalledWith({ reasoningLevel: "off" });
+  });
+
+  it("chooses a provider first, which restarts on that provider's default model (MIN-826)", async () => {
+    // One provider: no choice to offer.
+    await act(async () => root.render(createElement(ConversationSettings)));
+    expect(host.querySelectorAll('[role="radio"]')).toHaveLength(0);
+
+    h.providers = [
+      { id: "minddy", label: "minddy Cloud", fallbackCapabilities: [] },
+      { id: "anthropic", label: "Anthropic", fallbackCapabilities: [] },
+    ];
+    await act(async () => root.render(createElement(ConversationSettings, { key: "two" })));
+    const radios = [...host.querySelectorAll<HTMLButtonElement>('[role="radio"]')];
+    expect(radios.map((radio) => radio.textContent)).toEqual(["minddy Cloud", "Anthropic"]);
+    expect(radios[0]!.getAttribute("aria-checked")).toBe("true");
+    await act(async () => radios[1]!.click());
+    expect(h.update).toHaveBeenCalledWith({ provider: "anthropic", model: null });
+    // Back to the default provider stores no override.
+    h.update.mockClear();
+    h.state.conversationProvider = "anthropic";
+    await act(async () => root.render(createElement(ConversationSettings, { key: "anthropic" })));
+    await act(async () => host.querySelector<HTMLButtonElement>('[role="radio"]')!.click());
+    expect(h.update).toHaveBeenCalledWith({ provider: null, model: null });
   });
 });

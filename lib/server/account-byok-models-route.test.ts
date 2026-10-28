@@ -32,7 +32,20 @@ describe("GET /api/account/byok-models", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(getActiveByokModelCatalog).toHaveBeenCalledWith("user-1", "transcription");
+    expect(getActiveByokModelCatalog).toHaveBeenCalledWith("user-1", "transcription", undefined);
+  });
+
+  it("lists one credential's catalog when the settings name its provider (MIN-826)", async () => {
+    getActiveByokModelCatalog.mockResolvedValue({ provider: "openai", models: [] });
+    const response = await GET(
+      new NextRequest("http://localhost/api/account/byok-models?capability=text&provider=openai"),
+    );
+    expect(response.status).toBe(200);
+    expect(getActiveByokModelCatalog).toHaveBeenCalledWith("user-1", "text", "openai");
+    const unknown = await GET(
+      new NextRequest("http://localhost/api/account/byok-models?capability=text&provider=unknown"),
+    );
+    expect(unknown.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({ provider: "openai" });
   });
 

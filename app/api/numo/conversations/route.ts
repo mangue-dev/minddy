@@ -38,11 +38,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
-  let body: { title?: string | null; projectId?: string | null; model?: string | null; reasoningLevel?: string | null };
+  let body: { title?: string | null; projectId?: string | null; provider?: string | null; model?: string | null; reasoningLevel?: string | null };
   try {
     body = await request.json();
     if (!body || typeof body !== "object" || Array.isArray(body)
-      || Object.keys(body).some((key) => !["title", "projectId", "model", "reasoningLevel"].includes(key))
+      || Object.keys(body).some((key) => !["title", "projectId", "provider", "model", "reasoningLevel"].includes(key))
+      || (body.provider != null && (typeof body.provider !== "string" || !/^[a-z0-9_-]{1,64}$/.test(body.provider)))
       || (body.title != null && (typeof body.title !== "string" || body.title.length > 200))
       || (body.projectId != null && (typeof body.projectId !== "string" || !NUMO_UUID.test(body.projectId)))
       || (body.model != null && (typeof body.model !== "string" || body.model.length > 300))
@@ -51,10 +52,11 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "Invalid conversation" }, { status: 400 });
   }
   let configuration;
-  if (Object.hasOwn(body, "model") || Object.hasOwn(body, "reasoningLevel")) {
+  if (Object.hasOwn(body, "provider") || Object.hasOwn(body, "model") || Object.hasOwn(body, "reasoningLevel")) {
     try {
       configuration = await resolveNumoTurnConfiguration({
         userId: auth.user.id,
+        provider: body.provider,
         model: body.model,
         reasoningLevel: body.reasoningLevel,
         catalogOnly: true,
@@ -79,6 +81,7 @@ export async function POST(request: NextRequest) {
     ? await encodeConversationTitle(auth.user.id, id, title) : title;
   const { data, error } = await auth.supabase.from("conversations").insert({
     id, user_id: auth.user.id, title: storedTitle, project_id: body.projectId ?? null,
+    ...(configuration?.persistedProvider ? { provider: configuration.persistedProvider } : {}),
     ...(configuration?.persistedModel !== null && configuration?.persistedModel !== undefined
       ? { model: configuration.persistedModel }
       : {}),
@@ -92,7 +95,7 @@ export async function POST(request: NextRequest) {
     const config = await getNumoConversationConfig(auth.supabase, data.id);
     return Response.json(
       conversation && config
-        ? { ...conversation, model: config.model, reasoning_level: config.reasoningLevel }
+        ? { ...conversation, provider: config.provider, model: config.model, reasoning_level: config.reasoningLevel }
         : conversation,
       { status: 201 },
     );

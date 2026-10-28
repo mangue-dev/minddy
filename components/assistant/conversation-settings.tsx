@@ -22,6 +22,9 @@ import {
   useReasoningLevelsFor,
 } from "@/lib/use-agent-models-query";
 import { formatModelName } from "@/lib/model-display";
+import { ProviderOptionLabel } from "@/components/ai-provider-label";
+import type { AiProviderChoice } from "@/lib/ai-surfaces";
+import { cn } from "@/lib/utils";
 import { catalogModelReasoning } from "@/lib/model-reasoning-rules";
 import {
   conversationReasoningIndex,
@@ -48,7 +51,13 @@ const REASONING_LABEL_KEYS: Record<ReasoningLevel, MessageKey<"Agent">> = {
 export function ConversationSettings() {
   const t = useTranslations("Agent");
   const { state, updateConversationConfig } = useAssistantChatContext();
-  const catalog = useAgentModelsQuery("assistant");
+  // Numo's default provider and the providers the account can choose; then
+  // the catalog of the provider this conversation uses (MIN-826).
+  const defaults = useAgentModelsQuery("assistant");
+  const providerChoice = (state.conversationProvider as AiProviderChoice | null) ?? null;
+  const chosenCatalog = useAgentModelsQuery("assistant", "text", providerChoice);
+  const catalog = providerChoice ? chosenCatalog : defaults;
+  const currentProvider = providerChoice ?? defaults.defaultProvider;
   const [open, setOpen] = useState(false);
   const defaultModel = catalog.defaultModel;
   const model = state.conversationModel;
@@ -56,6 +65,7 @@ export function ConversationSettings() {
   const modelReasoningLevels = useReasoningLevelsFor(
     resolvedModel,
     "assistant",
+    providerChoice,
   );
   const reasoningLevels = conversationReasoningLevels(modelReasoningLevels);
   const defaultReasoning = catalog.defaultReasoning ?? DEFAULT_REASONING_LEVEL;
@@ -118,7 +128,16 @@ export function ConversationSettings() {
   };
 
   const reset = () => {
-    void updateConversationConfig({ model: null, reasoningLevel: null });
+    void updateConversationConfig({ provider: null, model: null, reasoningLevel: null });
+  };
+  // Another provider starts on its own default model; the reasoning choice
+  // stays and is placed on that model's levels once its catalog loads.
+  const selectProvider = (next: AiProviderChoice) => {
+    if (next === currentProvider) return;
+    void updateConversationConfig({
+      provider: next === defaults.defaultProvider ? null : next,
+      model: null,
+    });
   };
   const selectReasoningIndex = (index: number) => {
     const level = reasoningLevels[index];
@@ -154,6 +173,23 @@ export function ConversationSettings() {
           sideOffset={8}
           className="w-[min(22rem,calc(100vw-2rem))] rounded-xl p-3 app-desktop:relative"
         >
+          {defaults.providers.length > 1 && (
+            <div role="radiogroup" aria-label={t("providerLabel")}
+              className="mb-3 flex flex-wrap justify-center gap-1">
+              {defaults.providers.map((option) => {
+                const selected = option.id === currentProvider;
+                return (
+                  <Button key={option.id} type="button" role="radio" aria-checked={selected}
+                    variant="ghost" size="sm"
+                    className={cn("h-7 gap-1.5 rounded-full px-2.5 text-xs",
+                      selected ? "bg-muted text-foreground" : "text-muted-foreground")}
+                    onClick={() => selectProvider(option.id)}>
+                    <ProviderOptionLabel option={option} />
+                  </Button>
+                );
+              })}
+            </div>
+          )}
           <div className="grid grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2">
             <div aria-hidden />
             <div className="flex min-w-0 justify-center">
@@ -184,6 +220,7 @@ export function ConversationSettings() {
                   </span>
                 )}
                 scope="assistant"
+                providerChoice={providerChoice}
               />
             </div>
             <Tooltip>

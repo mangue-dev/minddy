@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
+import { routeUnservedSurfaces, routedSurfacesByKey } from "@/lib/server/ai-routes";
 import { randomUUID } from "node:crypto";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -169,13 +170,17 @@ export async function GET(request: NextRequest) {
       row.capability,
     ]);
   }
+  // A usage's credential is its route now (MIN-826); `enabled_surfaces`
+  // reports the usages each credential serves.
+  const routed = await routedSurfacesByKey(auth.user.id);
   const keys = await Promise.all(
-    (data ?? []).map(async (row) =>
-      decorateAiKey(
+    (data ?? []).map(async (row) => ({
+      ...await decorateAiKey(
         await sanitizedAiKey(row as UserAiKeyRow, auth.user.id),
         assignedByKey.get(row.id),
       ),
-    ),
+      enabled_surfaces: routed.get(row.id) ?? [],
+    })),
   );
   return NextResponse.json({ keys });
 }
@@ -344,6 +349,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: t("aiKeySaveFailed") }, { status: 500 });
   }
 
+  if (data.validated_at && isKnownAgentProvider(data.provider)) {
+    await routeUnservedSurfaces(auth.user.id, data.provider as AgentProviderId);
+  }
   const { data: assignments } = await service
     .from("user_ai_capability_assignments")
     .select("capability")

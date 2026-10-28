@@ -21,6 +21,14 @@ import { getServerPostHog, sanitizeServerProperties } from "@/lib/server/posthog
 
 const MAX_MESSAGE_LENGTH = 300;
 
+/** The provider chosen for a conversation no longer has a usable credential. */
+export class ChosenProviderUnavailableError extends Error {
+  constructor(readonly provider: AgentProviderId) {
+    super(`The ${provider} key is no longer available. Choose another provider.`);
+    this.name = "ChosenProviderUnavailableError";
+  }
+}
+
 export class ProviderRequestError extends Error {
   readonly provider: AgentProviderId;
   readonly model: string;

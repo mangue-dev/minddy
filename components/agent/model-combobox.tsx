@@ -1,6 +1,7 @@
 "use client";
 
 import { CommandList } from "@/components/ui/command";
+import type { AiProviderChoice } from "@/lib/ai-surfaces";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AddToListIcon, ArrowUpDownIcon, CheckIcon } from "@hugeicons/core-free-icons";
@@ -85,6 +86,7 @@ export function ModelCombobox({
   triggerClassName,
   scope = "user",
   capability = "text",
+  providerChoice,
 }: {
   /** "" = follows my default template; otherwise a model id. */
   value: string;
@@ -127,9 +129,11 @@ export function ModelCombobox({
   scope?: AgentModelsScope;
   /** Runtime capability used to filter the platform admin catalog. */
   capability?: AdminCatalogCapability;
+  /** Lists one provider's models (MIN-826): the picker chose the provider first. */
+  providerChoice?: AiProviderChoice | null;
 }) {
   const { provider, models, maxMultiplier, planId, recommended, loading } =
-    useAgentModelsQuery(scope, capability);
+    useAgentModelsQuery(scope, capability, providerChoice);
   const locale = useLocale();
   const t = useTranslations("Agent");
   const [open, setOpen] = useState(false);

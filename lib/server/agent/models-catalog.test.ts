@@ -114,7 +114,6 @@ async function freshCatalog(
       ? {
           ...endpoint,
           credentialVersion: `${endpoint.apiKey}-version`,
-          enabledSurfaces: ["agent"],
           featureModels: {},
         }
       : null),
@@ -334,7 +333,6 @@ describe("getActiveByokModelCatalog", () => {
       baseUrl: "https://api.openai.com/v1",
       apiKey: "rotated-user-key",
       credentialVersion: "rotated-user-key-version",
-      enabledSurfaces: ["agent"],
       featureModels: {},
     });
     await getActiveByokModelCatalog("user-1", "text");
