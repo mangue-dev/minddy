@@ -1,4 +1,5 @@
 # Reviewed false positives, one fingerprint per finding (commit:file:rule:line).
-# The email rule reads the file name 1024x1024@1x.png in the first MIN-838 brand
-# guide commit as an address; a later commit of the same pull request removes it.
+# MIN-838: the email rule reads an icon file name with an @1x scale suffix as an
+# address, in the brand guide and in an earlier comment of this file.
 945af58a268922c86bb8d64cedace5cf577868d3:docs/brand.md:minddy-personal-email-marker:216
+95be3c593ed51aea653baa31561cca9066a75f5c:.gitleaksignore:minddy-personal-email-marker:2
