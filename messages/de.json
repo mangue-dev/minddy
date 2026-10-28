@@ -1405,7 +1405,6 @@
     "resetFilters": "Filter zurücksetzen"
   },
   "Categories": {
-    "colorSwatchAria": "Farbe {color}",
     "removeFromIssue": "„{name}“ entfernen",
     "colors": {
       "amber": "Bernstein",
@@ -2389,7 +2388,6 @@
     "switchObjective": "Ziel wechseln",
     "backToObjective": "Zurück zum Ziel",
     "noColor": "Keine Farbe",
-    "colorAria": "Farbe {color}",
     "namePlaceholder": "Zieltitel",
     "descriptionPlaceholder": "Beschreibung",
     "createDescriptionPlaceholder": "Zielbeschreibung",

@@ -30,53 +30,16 @@ import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
-import {
-  ResponsivePopover,
-  ResponsivePopoverContent,
-  ResponsivePopoverTrigger,
-} from "@/components/ui/responsive-popover";
+import { ColorSelect } from "@/components/color-select";
 import { InlineEditField } from "@/components/settings/inline-edit-field";
 import { SettingsEmpty, SettingsGroup } from "@/components/settings/settings-ui";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
-import {
-  CATEGORY_COLORS,
-  CATEGORY_COLOR_NAMES,
-  DEFAULT_CATEGORY_COLOR,
-} from "@/lib/category-colors";
+import { DEFAULT_CATEGORY_COLOR } from "@/lib/category-colors";
 import type { Category } from "@/lib/types";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 
-function Swatches({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (color: string) => void;
-}) {
-  const t = useTranslations("Categories");
-  const tColors = useTranslations("Categories.colors");
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {CATEGORY_COLORS.map((c) => (
-        <AppTooltip label={t("colorSwatchAria", { color: tColors(CATEGORY_COLOR_NAMES[c]) })} key={c}>
-          <button
-            type="button"
-            onClick={() => onChange(c)}
-            aria-label={t("colorSwatchAria", { color: tColors(CATEGORY_COLOR_NAMES[c]) })}
-            className={cn(
-              "size-5 rounded-full ring-offset-2 ring-offset-background transition-shadow",
-              value === c && "ring-2 ring-ring"
-            )}
-            style={{ backgroundColor: c }}
-          />
-        </AppTooltip>
-      ))}
-    </div>
-  );
-}
-
-/** The color of a category: a dot that opens the swatches (a sheet on a
-    phone). Picking one applies at once. */
+/** The color of a category: a dot that opens the searchable palette. Picking
+    one applies at once. */
 function ColorButton({
   value,
   onChange,
@@ -86,35 +49,27 @@ function ColorButton({
   onChange: (color: string) => void | Promise<unknown>;
   label: string;
 }) {
-  const t = useTranslations("Categories");
-  const [open, setOpen] = useState(false);
   return (
-    <ResponsivePopover open={open} onOpenChange={setOpen}>
-      <AppTooltip label={label}>
-        <ResponsivePopoverTrigger asChild>
-          <button
-            type="button"
-            aria-label={label}
-            className="flex size-8 shrink-0 items-center justify-center rounded-full outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <span
-              aria-hidden
-              className="size-3.5 rounded-full ring-1 ring-black/5 dark:ring-white/10"
-              style={{ backgroundColor: value }}
-            />
-          </button>
-        </ResponsivePopoverTrigger>
-      </AppTooltip>
-      <ResponsivePopoverContent align="start" className="w-auto p-3" mobileTitle={t("colorLabel")}>
-        <Swatches
-          value={value}
-          onChange={(color) => {
-            setOpen(false);
-            void onChange(color);
-          }}
-        />
-      </ResponsivePopoverContent>
-    </ResponsivePopover>
+    <ColorSelect
+      value={value}
+      onChange={(color) => {
+        if (color) void onChange(color);
+      }}
+      tooltip={label}
+      trigger={
+        <button
+          type="button"
+          aria-label={label}
+          className="flex size-8 shrink-0 items-center justify-center rounded-full outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <span
+            aria-hidden
+            className="size-3.5 rounded-full ring-1 ring-black/5 dark:ring-white/10"
+            style={{ backgroundColor: value }}
+          />
+        </button>
+      }
+    />
   );
 }
 

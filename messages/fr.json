@@ -1405,7 +1405,6 @@
     "resetFilters": "Réinitialiser les filtres"
   },
   "Categories": {
-    "colorSwatchAria": "Couleur {color}",
     "removeFromIssue": "Retirer « {name} »",
     "colors": {
       "amber": "ambre",
@@ -2389,7 +2388,6 @@
     "switchObjective": "Changer d'objectif",
     "backToObjective": "Retour à l'objectif",
     "noColor": "Aucune couleur",
-    "colorAria": "Couleur {color}",
     "namePlaceholder": "Titre de l'objectif",
     "descriptionPlaceholder": "Description",
     "createDescriptionPlaceholder": "Description de l’objectif",

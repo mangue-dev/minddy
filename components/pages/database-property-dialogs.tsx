@@ -4,7 +4,7 @@ import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, ArrowDown01Icon, ArrowUp01Icon, Delete02Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, ArrowDown01Icon, ArrowUp01Icon, Delete02Icon } from "@hugeicons/core-free-icons";
 import { arrayMove } from "@dnd-kit/sortable";
 import { createUuid } from "@/lib/create-uuid";
 
@@ -12,7 +12,6 @@ import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -26,7 +25,8 @@ import {
 import { FormDialog } from "@/components/form-dialog";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { SearchSelect, PICKER_FIELD_TRIGGER } from "@/components/search-select";
-import { CATEGORY_COLORS, CATEGORY_COLOR_NAMES, pickFreeCategoryColor } from "@/lib/category-colors";
+import { pickFreeCategoryColor } from "@/lib/category-colors";
+import { ColorSelect } from "@/components/color-select";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { usePageDatabase } from "@/lib/use-page-database";
 import {
@@ -39,7 +39,6 @@ import {
 import type { PageSummary } from "@/lib/pages-api";
 import type { DatabaseConversionPreview } from "@/lib/page-database-conversion";
 import { PROPERTY_ICONS } from "./database-property-icons";
-import { AppTooltip } from "@/components/ui/app-tooltip";
 
 /** Mount once per edit so incoming revisions cannot replace an unsaved draft. */
 export function DatabaseOptionsDialog({
@@ -55,12 +54,10 @@ export function DatabaseOptionsDialog({
 }) {
   const t = useTranslations("PageDatabase");
   const tObjectives = useTranslations("Objectives");
-  const tColors = useTranslations("Categories.colors");
   const locale = useLocale();
   const { saveSchema, pending } = usePageDatabase(projectId);
   const [base] = useState(database);
   const [options, setOptions] = useState(property.options ?? []);
-  const [palette, setPalette] = useState<string | null>(null);
   const names = options.map((option) => option.name.trim().toLowerCase());
   const duplicate = new Set(names).size !== names.length;
   const dirty =
@@ -123,61 +120,31 @@ export function DatabaseOptionsDialog({
                 )
               }
             />
-            <Popover
-              open={palette === option.id}
-              onOpenChange={(open) => setPalette(open ? option.id : null)}
-            >
-              <AppTooltip label={tObjectives("colorFieldLabel") + ": " + option.name}>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    disabled={pending}
-                    aria-label={
-                      tObjectives("colorFieldLabel") + ": " + option.name
-                    }
-                    className="flex h-9 w-12 shrink-0 items-center justify-center gap-1.5 rounded-md hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring"
-                  >
-                    <span
-                      className="size-3 rounded-full"
-                      style={{ backgroundColor: option.color }}
-                    />
-                    <HugeiconsIcon icon={ArrowDown01Icon} className="size-3 text-muted-foreground" />
-                  </button>
-                </PopoverTrigger>
-              </AppTooltip>
-              <PopoverContent
-                align="end"
-                className="grid w-auto grid-cols-5 gap-1 rounded-xl p-2"
-              >
-                {CATEGORY_COLORS.map((color) => (
-                  <AppTooltip label={tObjectives("colorAria", { color: tColors(CATEGORY_COLOR_NAMES[color]) })} key={color}>
-                    <button
-                      type="button"
-                      aria-label={tObjectives("colorAria", { color: tColors(CATEGORY_COLOR_NAMES[color]) })}
-                      aria-pressed={color === option.color}
-                      className="flex size-7 items-center justify-center rounded-sm hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring"
-                      onClick={() => {
-                        setOptions((rows) =>
-                          rows.map((row, i) =>
-                            i === index ? { ...row, color } : row,
-                          ),
-                        );
-                        setPalette(null);
-                      }}
-                    >
-                      <span
-                        className="flex size-4 items-center justify-center rounded-full"
-                        style={{ backgroundColor: color }}
-                      >
-                        {color === option.color && (
-                          <HugeiconsIcon icon={CheckIcon} className="size-3 text-white" />
-                        )}
-                      </span>
-                    </button>
-                  </AppTooltip>
-                ))}
-              </PopoverContent>
-            </Popover>
+            <ColorSelect
+              value={option.color}
+              align="end"
+              tooltip={tObjectives("colorFieldLabel") + ": " + option.name}
+              onChange={(color) => {
+                if (!color) return;
+                setOptions((rows) =>
+                  rows.map((row, i) => (i === index ? { ...row, color } : row)),
+                );
+              }}
+              trigger={
+                <button
+                  type="button"
+                  disabled={pending}
+                  aria-label={tObjectives("colorFieldLabel") + ": " + option.name}
+                  className="flex h-9 w-12 shrink-0 items-center justify-center gap-1.5 rounded-md hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring"
+                >
+                  <span
+                    className="size-3 rounded-full"
+                    style={{ backgroundColor: option.color }}
+                  />
+                  <HugeiconsIcon icon={ArrowDown01Icon} className="size-3 text-muted-foreground" />
+                </button>
+              }
+            />
             <Button type="button" variant="ghost" size="icon"
               className="size-9 shrink-0 app-mobile:size-11"
               disabled={pending || index === 0}
@@ -198,7 +165,6 @@ export function DatabaseOptionsDialog({
               aria-label={t("deleteOption", { name: option.name })}
               onClick={() => {
                 setOptions((rows) => rows.filter((row) => row.id !== option.id));
-                if (palette === option.id) setPalette(null);
               }}>
               <HugeiconsIcon icon={Delete02Icon} className="size-4" />
             </Button>

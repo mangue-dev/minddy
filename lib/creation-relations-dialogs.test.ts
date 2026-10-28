@@ -21,6 +21,7 @@ vi.mock("next-intl", () => ({ useTranslations: (namespace: string) =>
   (key: string, values?: Record<string, string>) => ((namespace.split(".").reduce<unknown>(
     (messages, part) => (messages as Record<string, unknown>)[part], en) as Record<string, string>)[key] ?? key)
     .replace(/\{(\w+)\}/g, (match, name: string) => values?.[name] ?? match),
+  useLocale: () => "en",
 }));
 vi.mock("@hugeicons/react", () => ({ HugeiconsIcon: () => null }));
 vi.mock("@/components/ui/app-tooltip", () => ({ AppTooltip: ({ children }: { children: React.ReactNode }) => children }));
