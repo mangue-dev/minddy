@@ -9,13 +9,14 @@
  * - one page which has children becomes a FILE (`Title/index.md`): this is
  * the only form which keeps the nesting of the wiki in an archive, and that
  * that all exports of this kind have converged to produce;
- * - the subpage blocks, written `[[page:<id>]]` by projection, become
+ * - the page mentions (`[@Title](mention:page/<id>)`, how a parent cites its
+ * subpages) and the older `[[page:<id>]]` markers become
  * RELATIVE LINKS between the files in the archive. A bare identifier in
  * a file that is opened outside of minddy leads nowhere — and that is
  * precisely the use we are aiming for: taking the doc.
  *
  * A target OUTSIDE the archive (a subpage that is not exported) keeps its
- * `[[page:<id>]]`. Inventing a link that does not resolve would be worse than leaving
+ * mention or its `[[page:<id>]]`. Inventing a link that does not resolve would be worse than leaving
  * the mark of the original document, which itself says what it is.
  */
 
@@ -80,6 +81,9 @@ function uniqueIn(taken: Set<string>, slug: string): string {
 }
 
 const SUBPAGE_LINK = /\[\[page:([^\]\s]+)\]\]/g;
+/** A page mention, the form a parent cites its subpages with since the
+    subpage block was retired: `[@Title](mention:page/<id>)`. */
+const PAGE_MENTION_LINK = /\[@((?:[^\]\\\n]|\\.){0,256})\]\(mention:page\/([A-Za-z0-9_-]{1,64})\)/g;
 
 type ExportPageLocation = Pick<ExportInputPage, "id" | "parent_id" | "title">;
 
@@ -139,7 +143,9 @@ export function exportPagesToFiles(pages: ExportInputPage[]): ExportedFile[] {
   }));
 }
 
-/** The `[[page:<id>]]` markers in a body, changed into relative Markdown links. */
+/** The `[[page:<id>]]` markers and the page mentions of a body that point to
+    an exported page, changed into relative Markdown links. A mention of a page
+    outside the export stays as it is. */
 function rewriteSubpageLinks(
   markdown: string,
   fromPath: string,
@@ -147,13 +153,16 @@ function rewriteSubpageLinks(
   pages: ExportInputPage[]
 ): string {
   const titleOf = new Map(pages.map((p) => [p.id, p]));
-  return markdown.replace(SUBPAGE_LINK, (whole, id: string) => {
+  const link = (whole: string, id: string) => {
     const target = pathOf.get(id);
     if (!target) return whole;
     const page = titleOf.get(id);
     const label = page ? `${page.icon ? `${page.icon} ` : ""}${page.title || id}` : id;
     return `[${escapeLinkLabel(label)}](${encodeLinkPath(relativePath(fromPath, target))})`;
-  });
+  };
+  return markdown
+    .replace(SUBPAGE_LINK, (whole, id: string) => link(whole, id))
+    .replace(PAGE_MENTION_LINK, (whole, _label: string, id: string) => link(whole, id));
 }
 
 /** A page title as Markdown link text: brackets and backslashes would otherwise

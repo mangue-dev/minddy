@@ -2,8 +2,8 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, ArrowDown01Icon, ArrowUp01Icon, ArrowUpDownIcon, Cancel01Icon, Copy01Icon, Delete02Icon, DragDropVerticalIcon, File02Icon, FilterIcon, Search01Icon, Settings02Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
-import { useMemo, useRef, useState } from "react";
+import { Add01Icon, ArrowDown01Icon, ArrowRight01Icon, ArrowUp01Icon, ArrowUpDownIcon, Cancel01Icon, Copy01Icon, Delete02Icon, DragDropVerticalIcon, File02Icon, FilterIcon, Search01Icon, Settings02Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -15,6 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Sheet, SheetTitle } from "@/components/ui/sheet";
+import { MobileSheetContent } from "@/components/ui/mobile-sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   DropdownMenu,
@@ -35,7 +37,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { DndContext, PointerSensor, KeyboardSensor, closestCenter, useSensor, useSensors, type Modifier } from "@dnd-kit/core";
-import { SortableContext, useSortable, horizontalListSortingStrategy, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { SortableContext, arrayMove, useSortable, horizontalListSortingStrategy, verticalListSortingStrategy, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { CSS } from "@dnd-kit/utilities";
 import { DatabaseColumnName } from "./database-column-name";
 import { reorderDatabaseColumns } from "@/lib/page-database-columns";
@@ -45,9 +48,6 @@ import {
   selectDatabaseRows,
 } from "@/lib/page-database-rows";
 import { AppTooltip } from "@/components/ui/app-tooltip";
-import { DateTimePicker } from "@/components/date-time-picker";
-import { SearchSelect } from "@/components/search-select";
-import { UserAvatar } from "@/components/user-avatar";
 import { usePagesQuery } from "@/lib/use-pages-query";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { usePromotePage } from "./page-promotion-context";
@@ -55,13 +55,15 @@ import { NumoIcon } from "@/components/numo-icon";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { usePageDatabase } from "@/lib/use-page-database";
 import { usePageDatabaseViews } from "@/lib/use-page-database-views";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { useDragAnnouncements } from "@/lib/use-drag-announcements";
 import { DatabaseViewStrip } from "./database-view-strip";
+import { DatabaseFilterEditor, activeFilterCount } from "./database-filter-editor";
+import { matchesDatabaseFilter, type DatabaseViewFilter } from "@/lib/page-database-filters";
 import { displayName } from "@/lib/display-name";
 import {
   MAX_DATABASE_PROPERTIES,
   compareDatabaseValues,
-  databaseDateMatches,
   databaseValueText,
   databasePropertyValue,
   type DatabaseProperty,
@@ -123,59 +125,103 @@ function DatabaseSelect({
   );
 }
 
+const verticalPropertyDrag: Modifier = ({ transform }) => ({ ...transform, x: 0 });
+
+/** One column of the properties popover, reordered by its handle like the
+    project's categories. */
+function SortablePropertyRow({ property, sortable, children }: {
+  property: DatabaseProperty; sortable: boolean; children: ReactNode;
+}) {
+  const t = useTranslations("PageDatabase");
+  const { setNodeRef, setActivatorNodeRef, attributes, listeners, transform, transition, isDragging } =
+    useSortable({ id: property.id, disabled: !sortable });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`relative flex min-h-9 items-center gap-1 rounded-sm bg-popover px-1 hover:bg-muted/50 ${isDragging ? "z-10 shadow-sm" : ""}`}
+    >
+      <AppTooltip label={t("reorderColumnHint")}>
+        <button
+          ref={setActivatorNodeRef}
+          type="button"
+          aria-label={t("reorderColumn", { name: property.name })}
+          disabled={!sortable}
+          {...attributes}
+          {...listeners}
+          // A touch on the handle drags; the rest of the list still scrolls.
+          style={{ touchAction: "none" }}
+          className="flex size-6 shrink-0 cursor-grab items-center justify-center rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing disabled:cursor-default disabled:opacity-40"
+        >
+          <HugeiconsIcon icon={DragDropVerticalIcon} className="size-4" />
+        </button>
+      </AppTooltip>
+      {children}
+    </div>
+  );
+}
+
 function PropertySettings({
   projectId,
   database,
   hidden,
   onToggleVisibility,
   onCreate,
+  sheet,
 }: {
   projectId: string;
   database: PageSummary;
   hidden: string[];
   onToggleVisibility: (id: string) => void;
   onCreate: () => void;
+  /** On a phone: a bottom sheet the toolbar's settings open, without a
+      trigger of its own. */
+  sheet?: { open: boolean; onOpenChange: (open: boolean) => void };
 }) {
   const t = useTranslations("PageDatabase");
   const { saveSchema, pending } = usePageDatabase(projectId);
   const schema = database.database_schema ?? [];
-  const [open, setOpen] = useState(false);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const open = sheet ? sheet.open : popoverOpen;
+  const setOpen = sheet ? sheet.onOpenChange : setPopoverOpen;
   const [manage, setManage] = useState<DatabaseProperty | null>(null);
   const [remove, setRemove] = useState<DatabaseProperty | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [rename, setRename] = useState("");
   const [editBase, setEditBase] = useState(database);
   const [removeBase, setRemoveBase] = useState(database);
-  const reorder = (index: number, direction: number) => {
-    const next = [...schema];
-    [next[index], next[index + direction]] = [
-      next[index + direction],
-      next[index],
-    ];
-    void saveSchema(database, next);
-  };
-  return (
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+  const announcements = useDragAnnouncements((id) =>
+    schema.find((property) => property.id === id)?.name);
+  const columnsBody = (
     <>
-      <Popover open={open} onOpenChange={setOpen}>
-        <AppTooltip label={t("properties")}>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon-sm" aria-label={t("properties")}>
-              <HugeiconsIcon icon={Settings02Icon} className="size-4" />
-            </Button>
-          </PopoverTrigger>
-        </AppTooltip>
-        <PopoverContent
-          align="end"
-          className="w-[min(380px,calc(100vw-2rem))] gap-2 rounded-xl p-2 [&_input]:rounded-sm [&_button]:rounded-sm"
-        >
-          <div className="px-2 py-1 text-sm font-medium">{t("properties")}</div>
-          <div className="max-h-72 space-y-1 overflow-y-auto">
-            {schema.map((property, index) => {
+          {!sheet && <div className="px-2 py-1 text-sm font-medium">{t("properties")}</div>}
+          <DndContext
+            accessibility={{ announcements, screenReaderInstructions: { draggable: t("reorderColumnHint") } }}
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            modifiers={[verticalPropertyDrag]}
+            onDragEnd={({ active, over }) => {
+              if (!over || active.id === over.id) return;
+              const ids = schema.map((property) => property.id);
+              const from = ids.indexOf(String(active.id));
+              const to = ids.indexOf(String(over.id));
+              if (from === -1 || to === -1) return;
+              void saveSchema(database, arrayMove(schema, from, to));
+            }}
+          >
+          <SortableContext items={schema.map((property) => property.id)} strategy={verticalListSortingStrategy}>
+          <div className={sheet ? "max-h-[50dvh] space-y-1 overflow-y-auto" : "max-h-72 space-y-1 overflow-y-auto"}>
+            {schema.map((property) => {
               const Icon = PROPERTY_ICONS[property.type];
               return (
-                <div
+                <SortablePropertyRow
                   key={property.id}
-                  className="flex min-h-9 items-center gap-1 rounded-sm px-2 hover:bg-muted/50"
+                  property={property}
+                  sortable={!pending && schema.length > 1 && editing !== property.id}
                 >
                   <AppIcon icon={Icon} className="mr-1 size-4 shrink-0 text-muted-foreground" />
                   {editing === property.id ? (
@@ -225,36 +271,20 @@ function PropertySettings({
                   )}
                   {(property.type === "select" ||
                     property.type === "multi_select") && (
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={t("editOptions")}
-                      onClick={() => {
-                        setOpen(false);
-                        setManage(property);
-                      }}
-                    >
-                      <HugeiconsIcon icon={Settings02Icon} className="size-3.5" />
-                    </Button>
+                    <AppTooltip label={t("editOptions")}>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={t("editOptions")}
+                        onClick={() => {
+                          setOpen(false);
+                          setManage(property);
+                        }}
+                      >
+                        <HugeiconsIcon icon={Settings02Icon} className="size-3.5" />
+                      </Button>
+                    </AppTooltip>
                   )}
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={t("moveUp")}
-                    disabled={pending || index === 0}
-                    onClick={() => reorder(index, -1)}
-                  >
-                    <HugeiconsIcon icon={ArrowUp01Icon} className="size-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={t("moveDown")}
-                    disabled={pending || index === schema.length - 1}
-                    onClick={() => reorder(index, 1)}
-                  >
-                    <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5" />
-                  </Button>
                   <AppTooltip
                     label={t(
                       hidden.includes(property.id)
@@ -282,22 +312,26 @@ function PropertySettings({
                       )}
                     </Button>
                   </AppTooltip>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={t("deleteProperty")}
-                    disabled={pending}
-                    onClick={() => {
-                      setRemoveBase(database);
-                      setRemove(property);
-                    }}
-                  >
-                    <HugeiconsIcon icon={Delete02Icon} className="size-3.5" />
-                  </Button>
-                </div>
+                  <AppTooltip label={t("deleteProperty")}>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={t("deleteProperty")}
+                      disabled={pending}
+                      onClick={() => {
+                        setRemoveBase(database);
+                        setRemove(property);
+                      }}
+                    >
+                      <HugeiconsIcon icon={Delete02Icon} className="size-3.5" />
+                    </Button>
+                  </AppTooltip>
+                </SortablePropertyRow>
               );
             })}
           </div>
+          </SortableContext>
+          </DndContext>
           <div className="border-t pt-2">
             <Button
               variant="ghost"
@@ -317,8 +351,35 @@ function PropertySettings({
               </p>
             )}
           </div>
+    </>
+  );
+  return (
+    <>
+      {sheet ? (
+        <Sheet open={open} onOpenChange={setOpen}>
+          <MobileSheetContent side="bottom" aria-describedby={undefined}
+            className="gap-2 p-2 pt-12 [&_button]:rounded-md [&_input]:rounded-md">
+            <SheetTitle className="mobile-picker-title truncate">{t("properties")}</SheetTitle>
+            {columnsBody}
+          </MobileSheetContent>
+        </Sheet>
+      ) : (
+      <Popover open={open} onOpenChange={setOpen}>
+        <AppTooltip label={t("properties")}>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="icon-sm" aria-label={t("properties")}>
+              <HugeiconsIcon icon={Settings02Icon} className="size-4" />
+            </Button>
+          </PopoverTrigger>
+        </AppTooltip>
+        <PopoverContent
+          align="end"
+          className="w-[min(380px,calc(100vw-2rem))] gap-2 rounded-xl p-2 [&_input]:rounded-sm [&_button]:rounded-sm"
+        >
+          {columnsBody}
         </PopoverContent>
       </Popover>
+      )}
       {manage && (
         <DatabaseOptionsDialog
           projectId={projectId}
@@ -327,40 +388,25 @@ function PropertySettings({
           onClose={() => setManage(null)}
         />
       )}
-      <AlertDialog
+      <ConfirmDeleteDialog
         open={!!remove}
         onOpenChange={(open) => {
           if (!open) setRemove(null);
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("deleteProperty")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("deletePropertyBody", { name: remove?.name ?? "" })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={pending}
-              onClick={(e) => {
-                e.preventDefault();
-                void saveSchema(
-                  removeBase,
-                  (removeBase.database_schema ?? []).filter(
-                    (p) => p.id !== remove?.id,
-                  ),
-                );
-                setRemove(null);
-              }}
-            >
-              {t("delete")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title={t("deleteProperty")}
+        description={t("deletePropertyBody", { name: remove?.name ?? "" })}
+        confirmLabel={t("delete")}
+        cancelLabel={t("cancel")}
+        isLoading={pending}
+        onConfirm={() => {
+          void saveSchema(
+            removeBase,
+            (removeBase.database_schema ?? []).filter(
+              (p) => p.id !== remove?.id,
+            ),
+          );
+        }}
+      />
     </>
   );
 }
@@ -383,6 +429,7 @@ export function PageDatabaseView({
   const columnSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates, keyboardCodes: { start: ["F8"], cancel: ["Escape"], end: ["F8", "Enter", "Space"] } }));
   const t = useTranslations("PageDatabase");
+  const mobile = useMobileLayout() === true;
   const columnAnnouncements = useDragAnnouncements((id) =>
     database.database_schema?.find((property) => property.id === id)?.name);
   const tPages = useTranslations("Pages");
@@ -398,13 +445,18 @@ export function PageDatabaseView({
   } = usePagesQuery(projectId);
   const { members } = useMembersQuery(projectId, true);
   const [query, setQuery] = useState("");
-  const databaseViews = usePageDatabaseViews(projectId, database.id, canWrite);
-  const { sort, descending, filter, filterValue, hidden } = databaseViews.config;
+  const databaseViews = usePageDatabaseViews(projectId, database.id, canWrite,
+    database.database_schema ?? undefined);
+  const { sort, descending, filters, hidden } = databaseViews.config;
   const updateView = databaseViews.update;
   const setSort = (next: string) => updateView({ sort: next });
   const setDescending = (next: boolean) => updateView({ descending: next });
-  const setFilter = (next: string) => updateView({ filter: next, filterValue: "" });
-  const setFilterValue = (next: string) => updateView({ filterValue: next });
+  const setFilters = (next: DatabaseViewFilter) => updateView({ filters: next });
+  const filterCount = activeFilterCount(filters);
+  // The phone's toolbar: search unfolds in place, the settings sheet leads to
+  // the sort, filter and column sheets.
+  const [mobileSearch, setMobileSearch] = useState(false);
+  const [mobileSheet, setMobileSheet] = useState<"settings" | "sort" | "filter" | "columns" | null>(null);
   const [remove, setRemove] = useState<PageSummary[]>([]);
   const [menuEntry, setMenuEntry] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
@@ -416,7 +468,6 @@ export function PageDatabaseView({
     above: boolean;
   } | null>(null);
   const schema = database.database_schema ?? [];
-  const filterProperty = schema.find((property) => property.id === filter);
   const names = useMemo(
     () =>
       new Map(
@@ -440,25 +491,7 @@ export function PageDatabaseView({
         .join(" ")
         .toLocaleLowerCase();
       if (!text.includes(query.toLocaleLowerCase())) return false;
-      if (!filterProperty) return true;
-      const value = databasePropertyValue(entry, filterProperty);
-      if (filterProperty.type === "checkbox")
-        return (value === true) === (filterValue === "true");
-      if (!filterValue)
-        return (
-          value == null ||
-          value === "" ||
-          (Array.isArray(value) && !value.length)
-        );
-      if (filterProperty.type === "date")
-        return databaseDateMatches(value, filterValue);
-      if (filterProperty.type === "people")
-        return Array.isArray(value)
-          ? value.includes(filterValue)
-          : value === filterValue;
-      return databaseValueText(value, names, filterProperty)
-        .toLocaleLowerCase()
-        .includes(filterValue.toLocaleLowerCase());
+      return matchesDatabaseFilter(entry, schema, filters);
     })
     .sort((a, b) => {
       const effectiveSort =
@@ -513,7 +546,7 @@ export function PageDatabaseView({
       if (!position) return;
       const created = await createPage({ parent_id: database.id, position });
       // Manual order is already on screen; the new entry must not be filtered out.
-      if (filter) setFilter("");
+      if (filters.conditions.length) setFilters({ ...filters, conditions: [] });
       setQuery("");
       onOpen(created.id);
       await created.settled;
@@ -582,10 +615,60 @@ export function PageDatabaseView({
     ),
   ];
   const contentWidth = columnWidths.reduce((total, width) => total + width, 0);
+  // The chrome columns around the data: the row gutter (+ and handle), which a
+  // touch screen does without, the selection checkbox, and the trailing cell.
+  const gutterWidth = mobile ? 0 : 64;
+  const selectWidth = mobile ? 44 : 32;
+  const chromeWidth = gutterWidth + selectWidth + 56;
+  const filterEditor = (
+    <DatabaseFilterEditor schema={schema} filter={filters} members={members} onChange={setFilters} />
+  );
+  const sortControls = (
+    <>
+      <DatabaseSelect
+        label={t("sort")}
+        value={sort}
+        onChange={setSort}
+        options={[
+          { value: "position", label: t("manualOrder") },
+          {
+            value: "title",
+            label: database.database_title_name ?? t("name"),
+          },
+          ...schema.map((p) => ({ value: p.id, label: p.name })),
+        ]}
+      />
+      <DatabaseSelect
+        label={t("sortDirection")}
+        value={descending ? "descending" : "ascending"}
+        onChange={(next) => setDescending(next === "descending")}
+        options={[
+          { value: "ascending", label: t("sortAscending") },
+          { value: "descending", label: t("sortDescending") },
+        ]}
+      />
+    </>
+  );
+  const propertySettings = (sheet?: { open: boolean; onOpenChange: (open: boolean) => void }) => (
+    <PropertySettings
+      projectId={projectId}
+      database={database}
+      hidden={hidden}
+      sheet={sheet}
+      onCreate={() => setCreateProperty(true)}
+      onToggleVisibility={(id) =>
+        updateView({
+          hidden: hidden.includes(id)
+            ? hidden.filter((value) => value !== id)
+            : [...hidden, id],
+        })
+      }
+    />
+  );
   return (
     <div className="mt-5 space-y-1">
       <div className="flex items-center gap-0.5">
-        <div className="mr-auto flex min-w-0 items-center gap-1">
+        <div className={`mr-auto flex min-w-0 items-center gap-1 ${mobile ? "flex-1" : ""}`}>
           <DatabaseViewStrip
             views={databaseViews.views}
             activeId={databaseViews.active?.id ?? null}
@@ -637,6 +720,24 @@ export function PageDatabaseView({
             </>
           )}
         </div>
+        {mobile ? (
+          <>
+            <Button variant="ghost" size="icon" aria-label={t("searchEntries")}
+              className={`size-11 ${query ? "text-primary" : "text-muted-foreground"}`}
+              onClick={() => setMobileSearch(true)}>
+              <HugeiconsIcon icon={Search01Icon} className="size-5" />
+            </Button>
+            <Button variant="ghost" size="icon" aria-label={t("viewSettings")}
+              className={`size-11 ${filterCount || sort !== "position" || descending ? "text-primary" : "text-muted-foreground"}`}
+              onClick={() => setMobileSheet("settings")}>
+              <HugeiconsIcon icon={Settings02Icon} className="size-5" />
+            </Button>
+            <Button className="ml-1 h-11" onClick={add}>
+              {t("new")}
+            </Button>
+          </>
+        ) : (
+          <>
         <Popover>
           <AppTooltip label={t("filter")}>
             <PopoverTrigger asChild>
@@ -644,9 +745,7 @@ export function PageDatabaseView({
                 variant="ghost"
                 size="icon-sm"
                 aria-label={t("filter")}
-                className={
-                  filterProperty ? "text-primary" : "text-muted-foreground"
-                }
+                className={filterCount ? "text-primary" : "text-muted-foreground"}
               >
                 <HugeiconsIcon icon={FilterIcon} className="size-4" />
               </Button>
@@ -654,67 +753,10 @@ export function PageDatabaseView({
           </AppTooltip>
           <PopoverContent
             align="end"
-            className="w-72 max-w-[calc(100vw-2rem)] gap-2 rounded-xl p-2 [&_input]:rounded-sm [&_button]:rounded-sm"
+            className="max-h-[min(70vh,36rem)] w-[min(380px,calc(100vw-2rem))] gap-2 overflow-y-auto rounded-xl p-2 [&_input]:rounded-sm [&_button]:rounded-sm"
           >
             <div className="px-2 py-1 text-sm font-medium">{t("filter")}</div>
-            <DatabaseSelect
-              label={t("filterProperty")}
-              value={filter}
-              onChange={setFilter}
-              options={[
-                { value: "", label: t("allEntries") },
-                ...schema.map((p) => ({ value: p.id, label: p.name })),
-              ]}
-            />
-            {filterProperty &&
-              (filterProperty.type === "checkbox" ? (
-                <DatabaseSelect
-                  label={t("filterValue")}
-                  value={filterValue}
-                  onChange={setFilterValue}
-                  options={[
-                    { value: "", label: t("unchecked") },
-                    { value: "true", label: t("checked") },
-                  ]}
-                />
-              ) : filterProperty.type === "people" ? (
-                <SearchSelect
-                  value={filterValue || null}
-                  onChange={(next) => setFilterValue(next ?? "")}
-                  noneOption={{ label: t("emptyValue") }}
-                  options={members.map((m) => ({
-                    value: m.user_id,
-                    label: displayName(m, t("unknownPerson")),
-                    icon: (
-                      <UserAvatar seed={m.avatar_seed} className="size-5" />
-                    ),
-                  }))}
-                  trigger={
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start rounded-sm"
-                      aria-label={t("filterValue")}
-                    >
-                      {names.get(filterValue) ?? t("emptyValue")}
-                    </Button>
-                  }
-                />
-              ) : filterProperty.type === "date" ? (
-                <DateTimePicker
-                  dateOnly
-                  value={filterValue || null}
-                  onChange={(next) => setFilterValue(next ?? "")}
-                  ariaLabel={t("filterValue")}
-                  placeholder={t("emptyValue")}
-                />
-              ) : (
-                <Input
-                  aria-label={t("filterValue")}
-                  placeholder={t("valuePlaceholder")}
-                  value={filterValue}
-                  onChange={(event) => setFilterValue(event.target.value)}
-                />
-              ))}
+            {filterEditor}
           </PopoverContent>
         </Popover>
         <Popover>
@@ -739,28 +781,7 @@ export function PageDatabaseView({
             className="w-72 max-w-[calc(100vw-2rem)] gap-2 rounded-xl p-2 [&_input]:rounded-sm [&_button]:rounded-sm"
           >
             <div className="px-2 py-1 text-sm font-medium">{t("sort")}</div>
-            <DatabaseSelect
-              label={t("sort")}
-              value={sort}
-              onChange={setSort}
-              options={[
-                { value: "position", label: t("manualOrder") },
-                {
-                  value: "title",
-                  label: database.database_title_name ?? t("name"),
-                },
-                ...schema.map((p) => ({ value: p.id, label: p.name })),
-              ]}
-            />
-            <DatabaseSelect
-              label={t("sortDirection")}
-              value={descending ? "descending" : "ascending"}
-              onChange={(next) => setDescending(next === "descending")}
-              options={[
-                { value: "ascending", label: t("sortAscending") },
-                { value: "descending", label: t("sortDescending") },
-              ]}
-            />
+            {sortControls}
           </PopoverContent>
         </Popover>
         <Popover>
@@ -789,23 +810,68 @@ export function PageDatabaseView({
             />
           </PopoverContent>
         </Popover>
-        <PropertySettings
-          projectId={projectId}
-          database={database}
-          hidden={hidden}
-          onCreate={() => setCreateProperty(true)}
-          onToggleVisibility={(id) =>
-            updateView({
-              hidden: hidden.includes(id)
-                ? hidden.filter((value) => value !== id)
-                : [...hidden, id],
-            })
-          }
-        />
+        {propertySettings()}
         <Button size="sm" className="ml-2" onClick={add}>
           {t("new")}
         </Button>
+          </>
+        )}
       </div>
+      {mobile && mobileSearch && (
+        <div className="flex items-center gap-1">
+          <Input
+            autoFocus
+            aria-label={t("searchEntries")}
+            placeholder={t("searchEntries")}
+            className="h-11 flex-1"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          <Button variant="ghost" size="icon" aria-label={t("closeSearch")}
+            onClick={() => { setQuery(""); setMobileSearch(false); }}>
+            <HugeiconsIcon icon={Cancel01Icon} className="size-5" />
+          </Button>
+        </div>
+      )}
+      {mobile && (
+        <>
+          <Sheet open={mobileSheet === "settings"} onOpenChange={(open) => setMobileSheet(open ? "settings" : null)}>
+            <MobileSheetContent side="bottom" aria-describedby={undefined} className="gap-1 p-2 pt-12">
+              <SheetTitle className="mobile-picker-title truncate">{t("viewSettings")}</SheetTitle>
+              {([
+                { key: "sort", icon: ArrowUpDownIcon, label: t("sort"),
+                  detail: sort === "position" ? t("manualOrder")
+                    : sort === "title" ? database.database_title_name ?? t("name")
+                    : schema.find((p) => p.id === sort)?.name ?? t("manualOrder") },
+                { key: "filter", icon: FilterIcon, label: t("filter"), detail: t("filterCount", { count: filterCount }) },
+                { key: "columns", icon: Settings02Icon, label: t("properties"),
+                  detail: t("visibleColumns", { count: visible.length + 1 }) },
+              ] as const).map((row) => (
+                <button key={row.key} type="button" onClick={() => setMobileSheet(row.key)}
+                  className="flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-left text-sm active:bg-control">
+                  <HugeiconsIcon icon={row.icon} className="size-5 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 flex-1 truncate">{row.label}</span>
+                  <span className="max-w-[45%] truncate text-muted-foreground">{row.detail}</span>
+                  <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0 text-muted-foreground" />
+                </button>
+              ))}
+            </MobileSheetContent>
+          </Sheet>
+          <Sheet open={mobileSheet === "sort"} onOpenChange={(open) => setMobileSheet(open ? "sort" : null)}>
+            <MobileSheetContent side="bottom" aria-describedby={undefined} className="gap-2 p-4 pt-12">
+              <SheetTitle className="mobile-picker-title truncate">{t("sort")}</SheetTitle>
+              {sortControls}
+            </MobileSheetContent>
+          </Sheet>
+          <Sheet open={mobileSheet === "filter"} onOpenChange={(open) => setMobileSheet(open ? "filter" : null)}>
+            <MobileSheetContent side="bottom" aria-describedby={undefined} className="gap-2 p-4 pt-12">
+              <SheetTitle className="mobile-picker-title truncate">{t("filter")}</SheetTitle>
+              <div className="max-h-[60dvh] overflow-y-auto">{filterEditor}</div>
+            </MobileSheetContent>
+          </Sheet>
+          {propertySettings({ open: mobileSheet === "columns", onOpenChange: (open) => setMobileSheet(open ? "columns" : null) })}
+        </>
+      )}
       <DndContext accessibility={{ announcements: columnAnnouncements, screenReaderInstructions: { draggable: t("dragColumnHint") } }} sensors={columnSensors} collisionDetection={closestCenter} modifiers={[horizontalColumnDrag]}
         onDragStart={() => { columnBase.current = database; }}
         onDragCancel={() => { columnBase.current = null; }}
@@ -821,16 +887,16 @@ export function PageDatabaseView({
       <DatabaseTableScroll>
         <table
           className="w-full table-fixed border-separate border-spacing-0 text-sm"
-          style={{ minWidth: contentWidth + 152 }}
+          style={{ minWidth: contentWidth + chromeWidth }}
         >
           <colgroup>
-            <col style={{ width: 64 }} />
-            <col style={{ width: 32 }} />
+            {!mobile && <col style={{ width: gutterWidth }} />}
+            <col style={{ width: selectWidth }} />
             {columnWidths.map((width, index) => (
               <col
                 key={index}
                 style={{
-                  width: `max(${width}px, calc(${(100 * width) / contentWidth}cqw - ${(152 * width) / contentWidth}px))`,
+                  width: `max(${width}px, calc(${(100 * width) / contentWidth}cqw - ${(chromeWidth * width) / contentWidth}px))`,
                 }}
               />
             ))}
@@ -838,8 +904,11 @@ export function PageDatabaseView({
           </colgroup>
           <thead>
             <tr className="text-left text-muted-foreground">
-              <th scope="col" className="w-16 bg-background" />
+              {!mobile && <th scope="col" className="w-16 bg-background" />}
               <th scope="col" className="w-8 bg-background">
+                {/* The tooltip sits on the wrapper: as the checkbox's own trigger,
+                    its `data-state` would replace the checked state. */}
+                <AppTooltip label={t(rows.length > 0 && selectedRows.length === rows.length ? "deselectAllEntries" : "selectAllEntries")}>
                 <div
                   className={`flex justify-end pr-2 ${selectedRows.length ? "" : "opacity-0 hover:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100"}`}
                 >
@@ -854,13 +923,16 @@ export function PageDatabaseView({
                           ? "indeterminate"
                           : false
                     }
-                    onCheckedChange={(checked) =>
+                    onCheckedChange={() =>
                       setSelected(
-                        checked === true ? rows.map((entry) => entry.id) : [],
+                        selectedRows.length === rows.length
+                          ? []
+                          : rows.map((entry) => entry.id),
                       )
                     }
                   />
                 </div>
+                </AppTooltip>
               </th>
               <th
                 scope="col"
@@ -893,13 +965,12 @@ export function PageDatabaseView({
             {rows.map((entry) => {
               const targets = targetsFor(entry);
               const checked = selected.includes(entry.id);
-              const showGutter = checked || selectedRows.length > 0;
               return (
                 <tr
                   key={entry.id}
                   data-entry-id={entry.id}
                   aria-selected={checked}
-                  className={`group h-10 ${checked ? "bg-primary/5" : "hover:bg-muted/20"} ${dropTarget?.id === entry.id ? (dropTarget.above ? "[&>td]:shadow-[inset_0_2px_0_var(--primary)]" : "[&>td]:shadow-[inset_0_-2px_0_var(--primary)]") : ""}`}
+                  className={`group h-10 pointer-coarse:h-12 ${checked ? "bg-primary/5" : "hover:bg-muted/20"} ${dropTarget?.id === entry.id ? (dropTarget.above ? "[&>td]:shadow-[inset_0_2px_0_var(--primary)]" : "[&>td]:shadow-[inset_0_-2px_0_var(--primary)]") : ""}`}
                   onDragOver={(event) => {
                     if (
                       !manual ||
@@ -922,117 +993,120 @@ export function PageDatabaseView({
                     drop(entry.id, event.clientY < box.top + box.height / 2);
                   }}
                 >
+                  {!mobile && (
                   <td className="h-10 w-16 bg-background p-0">
-                    <div
-                      className={`flex h-10 items-center justify-end gap-2 ${showGutter ? "" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100 has-[[data-state=open]]:opacity-100 [@media(hover:none)]:opacity-100"}`}
-                    >
-                      <AppTooltip label={t("insertEntryHint")}>
-                        <button
-                          type="button"
-                          className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                          aria-label={t("insertEntryHint")}
-                          onClick={(event) => insert(entry, event.altKey)}
-                        >
-                          <HugeiconsIcon icon={Add01Icon} className="size-4" />
-                        </button>
-                      </AppTooltip>
-                      <DropdownMenu
-                        open={menuEntry === entry.id}
-                        onOpenChange={(open) =>
-                          setMenuEntry(open ? entry.id : null)
-                        }
+                      <div
+                        className="flex h-10 items-center justify-end gap-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 has-[[data-state=open]]:opacity-100 [@media(hover:none)]:hidden"
                       >
-                        <AppTooltip label={t("entryActions")}>
-                          <DropdownMenuTrigger asChild>
-                            <button
-                              type="button"
-                              aria-label={t("entryActions")}
-                              draggable={manual}
-                              className={`flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
-                              onPointerDownCapture={(event) => {
-                                if (event.button === 0) event.stopPropagation();
-                              }}
-                              onClick={() => setMenuEntry(entry.id)}
-                              onDragStart={(event) => {
-                                setIsDragging(true);
-                                dragging.current = targets.map(
-                                  (target) => target.id,
-                                );
-                                event.dataTransfer.effectAllowed = "move";
-                                event.dataTransfer.setData(
-                                  "text/plain",
-                                  entry.id,
-                                );
-                              }}
-                              onDragEnd={() => {
-                                dragging.current = [];
-                                setIsDragging(false);
-                                setDropTarget(null);
-                              }}
-                            >
-                              <HugeiconsIcon icon={DragDropVerticalIcon} className="size-4" />
-                            </button>
-                          </DropdownMenuTrigger>
-                        </AppTooltip>
-                        <DropdownMenuContent align="start" className="[&_[role=menuitem]]:rounded-sm">
-                          {targets.length === 1 && (
-                            <DropdownMenuItem onSelect={() => onOpen(entry.id)}>
-                              <HugeiconsIcon icon={File02Icon} className="size-4" />
-                              {t("openEntry")}
-                            </DropdownMenuItem>
-                          )}
-                          {/* One entry, one issue: a selection is not promoted in bulk. */}
-                          {targets.length === 1 && canWrite && (
-                            <DropdownMenuItem onSelect={() => void promotePage(entry)}>
-                              <NumoIcon animated={false} className="size-4" />
-                              {tPages("promoteToIssue")}
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem onSelect={() => setDuplicateTargets(targets)}>
-                            <HugeiconsIcon icon={Copy01Icon} className="size-4" />
-                            {t("duplicate")}
-                          </DropdownMenuItem>
-                          {targets.length === 1 && (
-                            <>
-                              <DropdownMenuItem
-                                disabled={
-                                  !manual || entries[0]?.id === entry.id
-                                }
-                                onSelect={() => move(entry, -1)}
-                              >
-                                <HugeiconsIcon icon={ArrowUp01Icon} className="size-4" />
-                                {t("moveUp")}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                disabled={
-                                  !manual || entries.at(-1)?.id === entry.id
-                                }
-                                onSelect={() => move(entry, 1)}
-                              >
-                                <HugeiconsIcon icon={ArrowDown01Icon} className="size-4" />
-                                {t("moveDown")}
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            variant="destructive"
-                            onSelect={() => setRemove(targets)}
+                        <AppTooltip label={t("insertEntryHint")}>
+                          <button
+                            type="button"
+                            className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                            aria-label={t("insertEntryHint")}
+                            onClick={(event) => insert(entry, event.altKey)}
                           >
-                            <HugeiconsIcon icon={Delete02Icon} className="size-4" />
-                            {t("moveToTrash")}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </td>
+                            <HugeiconsIcon icon={Add01Icon} className="size-4" />
+                          </button>
+                        </AppTooltip>
+                        <DropdownMenu
+                          open={menuEntry === entry.id}
+                          onOpenChange={(open) =>
+                            setMenuEntry(open ? entry.id : null)
+                          }
+                        >
+                          <AppTooltip label={t("entryActions")}>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                aria-label={t("entryActions")}
+                                draggable={manual}
+                                className={`flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
+                                onPointerDownCapture={(event) => {
+                                  if (event.button === 0) event.stopPropagation();
+                                }}
+                                onClick={() => setMenuEntry(entry.id)}
+                                onDragStart={(event) => {
+                                  setIsDragging(true);
+                                  dragging.current = targets.map(
+                                    (target) => target.id,
+                                  );
+                                  event.dataTransfer.effectAllowed = "move";
+                                  event.dataTransfer.setData(
+                                    "text/plain",
+                                    entry.id,
+                                  );
+                                }}
+                                onDragEnd={() => {
+                                  dragging.current = [];
+                                  setIsDragging(false);
+                                  setDropTarget(null);
+                                }}
+                              >
+                                <HugeiconsIcon icon={DragDropVerticalIcon} className="size-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                          </AppTooltip>
+                          <DropdownMenuContent align="start" className="[&_[role=menuitem]]:rounded-sm">
+                            {targets.length === 1 && (
+                              <DropdownMenuItem onSelect={() => onOpen(entry.id)}>
+                                <HugeiconsIcon icon={File02Icon} className="size-4" />
+                                {t("openEntry")}
+                              </DropdownMenuItem>
+                            )}
+                            {/* One entry, one issue: a selection is not promoted in bulk. */}
+                            {targets.length === 1 && canWrite && (
+                              <DropdownMenuItem onSelect={() => void promotePage(entry)}>
+                                <NumoIcon animated={false} className="size-4" />
+                                {tPages("promoteToIssue")}
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem onSelect={() => setDuplicateTargets(targets)}>
+                              <HugeiconsIcon icon={Copy01Icon} className="size-4" />
+                              {t("duplicate")}
+                            </DropdownMenuItem>
+                            {targets.length === 1 && (
+                              <>
+                                <DropdownMenuItem
+                                  disabled={
+                                    !manual || entries[0]?.id === entry.id
+                                  }
+                                  onSelect={() => move(entry, -1)}
+                                >
+                                  <HugeiconsIcon icon={ArrowUp01Icon} className="size-4" />
+                                  {t("moveUp")}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  disabled={
+                                    !manual || entries.at(-1)?.id === entry.id
+                                  }
+                                  onSelect={() => move(entry, 1)}
+                                >
+                                  <HugeiconsIcon icon={ArrowDown01Icon} className="size-4" />
+                                  {t("moveDown")}
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onSelect={() => setRemove(targets)}
+                            >
+                              <HugeiconsIcon icon={Delete02Icon} className="size-4" />
+                              {t("moveToTrash")}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </td>
+                  )}
                   <td
-                    className="pointer-events-none sticky left-0 z-20 h-10 w-8 p-0"
+                    className="pointer-events-none sticky left-0 z-20 h-10 w-8 p-0 pointer-coarse:h-12"
                     data-selection-cell
                   >
                     <div
-                      className={`absolute inset-0 flex items-center justify-center bg-background ${checked ? "" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100"}`}
+                      className={`absolute inset-0 flex items-center justify-center bg-background ${checked ? "" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100"}`}
                     >
+                      <AppTooltip label={t(checked ? "deselectEntryTooltip" : "selectEntryTooltip")}>
                       <div className="pointer-events-auto flex size-6 items-center justify-center">
                         {/* Anchor the checkbox hit area to the full selection container. */}
                         <Checkbox
@@ -1068,12 +1142,13 @@ export function PageDatabaseView({
                           }}
                         />
                       </div>
+                      </AppTooltip>
                     </div>
                   </td>
-                  <td className="h-10 overflow-hidden border-b border-border/40 p-0">
+                  <td className="h-10 overflow-hidden border-b border-border/40 p-0 pointer-coarse:h-12">
                     <button
                       type="button"
-                      className="flex h-10 w-full min-w-0 items-center gap-2 overflow-hidden px-2 text-left transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+                      className="flex h-10 w-full min-w-0 items-center gap-2 overflow-hidden px-2 text-left transition-colors pointer-coarse:h-12 hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
                       onClick={() => onOpen(entry.id)}
                       onMouseEnter={() => prefetchPage(entry.id)}
                       onFocus={() => prefetchPage(entry.id)}
@@ -1089,7 +1164,7 @@ export function PageDatabaseView({
                   {visible.map((property) => (
                     <td
                       key={property.id}
-                      className="h-10 overflow-hidden border-b border-l border-border/30 p-0"
+                      className="h-10 overflow-hidden border-b border-l border-border/30 p-0 pointer-coarse:h-12"
                     >
                       <DatabasePropertyCell
                         table
@@ -1102,7 +1177,7 @@ export function PageDatabaseView({
                   ))}
                   <td
                     aria-hidden="true"
-                    className="h-10 border-b border-l border-border/30 p-0"
+                    className="h-10 border-b border-l border-border/30 p-0 pointer-coarse:h-12"
                   />
                 </tr>
               );

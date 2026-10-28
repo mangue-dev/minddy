@@ -130,24 +130,23 @@ export function MarkdownLinkEditDialog({
               {error}
             </p>
           ) : null}
-          <DialogFooter className="sm:justify-between">
+          {/* The buttons are the footer's own children: in the phone's bottom
+              sheet they stack, full width, Save first; on a desktop removing
+              the link sits apart on the left. */}
+          <DialogFooter className="[.mobile-bottom-sheet_&]:!grid-cols-1">
             {hasLink ? (
-              <Button type="button" variant="destructive" onClick={removeLink}>
+              <Button type="button" variant="destructive" className="sm:mr-auto" onClick={removeLink}>
                 {t("selectionRemoveLink")}
               </Button>
-            ) : (
-              <span />
-            )}
-            <div className="flex flex-col-reverse gap-2 sm:flex-row">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
-                {tCommon("cancel")}
-              </Button>
-              <Button type="submit">{tCommon("save")}</Button>
-            </div>
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              {tCommon("cancel")}
+            </Button>
+            <Button type="submit" className="[.mobile-bottom-sheet_&]:order-first">{tCommon("save")}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -39,7 +39,9 @@ describe("editor block sets", () => {
     expect(withoutUploads).not.toContain("image");
     expect(withoutUploads).not.toContain("file");
     expect(withoutUploads).toContain("callout");
-    expect(slashItems().map((block) => block.id)).toContain("subpage");
+    // The retired subpage block is never offered: the page editor's own
+    // “/Subpage” action cites the new page with a mention instead.
+    expect(slashItems().map((block) => block.id)).not.toContain("subpage");
     // Outside pages, uploads are images only (MIN-728).
     const imagesOnly = slashItems({ set: "document", uploads: "images" }).map((block) => block.id);
     expect(imagesOnly).toContain("image");

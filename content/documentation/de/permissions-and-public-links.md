@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -39,14 +39,15 @@
       "proxy.ts",
       "content/knowledge/settings-and-data.md",
       "docs/security/project-roles.md",
-      "lib/project-roles.ts"
+      "lib/project-roles.ts",
+      "components/public-page-body.tsx"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 8,
+    "fact": "agent:claude-code (published-page mention sentence checked against components/public-page-body.tsx and app/p/[token]/published-page.tsx: a mention of a page in the published set shows its title and opens under the same link, any other page shows the Sub-page not published label, inert; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed behavior)",
+    "language": "agent:claude-code (de changed sentence with catalog UI labels; equivalent meaning to en revision 8; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "pages",
@@ -64,7 +65,7 @@
       "src": "/documentation/de/permissions-and-public-links-flow.svg",
       "alt": "Diagramm: Konto- und Projektberechtigungen. Privates Objekt oder bewusste Veröffentlichung. Nur veröffentlichter Satz; signierte Dateien. Link widerrufen; Dateilinks laufen später ab.",
       "caption": "Eine Freigabe betrifft nur ausgewählte Inhalte; bereits ausgestellte Dateilinks können nach dem Widerruf der Freigabe noch gültig bleiben.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -108,7 +109,7 @@ Eine Rollenänderung oder Entfernung gilt ab der nächsten Anfrage. Bereits ausg
 
 ## Veröffentlichungsumfang verstehen {#publication}
 
-Veröffentlichte Seiten und geteilte Ansichten verwenden einen undurchsichtigen Zugriffslink, optional mit Passwort. Der Eigentümer und Mitglieder können diese Links veröffentlichen und widerrufen, Leser nicht. Wer den Link und, sofern erforderlich, das Passwort besitzt, kann auf die veröffentlichten Inhalte zugreifen. Widerrufe den Link, wenn er nicht mehr benötigt wird. Unterseiten werden nur innerhalb des veröffentlichten Satzes aufgelöst; ausgeschlossene Titel bleiben verborgen. Dateien erhalten Signaturen nur für veröffentlichte Seiten, private Buckets und authentifizierte Routen bleiben geschlossen. Erwähnungen können Text ohne private Profillinks bleiben. Eine veröffentlichte Datenbank zeigt nur Einträge ihres veröffentlichten Zweigs.
+Veröffentlichte Seiten und geteilte Ansichten verwenden einen undurchsichtigen Zugriffslink, optional mit Passwort. Der Eigentümer und Mitglieder können diese Links veröffentlichen und widerrufen, Leser nicht. Wer den Link und, sofern erforderlich, das Passwort besitzt, kann auf die veröffentlichten Inhalte zugreifen. Widerrufe den Link, wenn er nicht mehr benötigt wird. Auf einer veröffentlichten Seite zeigt eine Erwähnung einer Seite aus dem veröffentlichten Satz ihren Titel und öffnet diese Seite unter demselben Link; eine Erwähnung jeder anderen Seite zeigt **Unterseite nicht veröffentlicht** und lässt sich nicht öffnen, sodass ausgeschlossene Titel verborgen bleiben. Dateien erhalten Signaturen nur für veröffentlichte Seiten, private Buckets und authentifizierte Routen bleiben geschlossen. Erwähnungen können Text ohne private Profillinks bleiben. Eine veröffentlichte Datenbank zeigt nur Einträge ihres veröffentlichten Zweigs.
 
 ## Freigabe und Widerruf prüfen {#revocation}
 

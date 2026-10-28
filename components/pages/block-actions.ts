@@ -30,20 +30,20 @@ import {
 import { flashBlockAt } from "@/components/pages/block-flash";
 
 /**
- * The width of the BUTTONS of the gutter, in pixels: two buttons of 24 px,
- * their `gap-0.5` and the `pr-1` which separates them from the block. This is what `BlockGutter`
+ * The width of the BUTTONS of the gutter, in pixels: the 24 px `+`, the
+ * 28 px handle, and the up to 14 px that separate them from the block. This is what `BlockGutter`
  * actually occupies — not the strip that makes it appear, below.
  */
-export const GUTTER_WIDTH = 54;
+export const GUTTER_WIDTH = 66;
 
 /**
  * The width of the HOVERBAND, in pixels: the entire reserve as the column
  * of the document leaves to its left (`md:pl-24`, components/pages/page-view.tsx).
  *
  * This is NOT `GUTTER_WIDTH`, and the difference is what caused the
- * first version: the buttons only occupy the 54 px stuck to the text, but
+ * first version: the buttons only occupy the 66 px stuck to the text, but
  * the gutter we SEE — and therefore the one we aim for — is the entire margin. In
- * limiting it to the buttons, there remained a dead band of 42 px at the left edge,
+ * limiting it to the buttons, there remained a dead band at the left edge,
  * exactly where the mouse arrives when it comes from the sidebar. Measured at
  * browser: stop at 25 px of text, handle comes out; stop at 70 px, nothing.
  *

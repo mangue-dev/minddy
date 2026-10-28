@@ -93,6 +93,12 @@ export function isTypingTarget(target: EventTarget | null): boolean {
   return target.getAttribute("role") === "textbox";
 }
 
+/** A ProseMirror editor, where ⌘B formats the selection. */
+export function isRichTextTarget(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && target.isContentEditable &&
+    target.closest(".ProseMirror") !== null;
+}
+
 function isDialogOpen(): boolean {
   return hasVisibleOpenDialog();
 }
@@ -237,8 +243,9 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
       }
       // ⌘B hides or shows the navigation column (MIN-546 review). Allowed
       // while typing — a letter in a filter field is not ⌘B — but never
-      // under a dialog, which owns the screen.
-      if (matchesModCombo(e, "b")) {
+      // under a dialog, which owns the screen. In a rich text editor ⌘B is
+      // bold, so the keystroke is left to the editor.
+      if (matchesModCombo(e, "b") && !isRichTextTarget(e.target)) {
         e.preventDefault();
         e.stopImmediatePropagation();
         if (isDialogOpen()) return;

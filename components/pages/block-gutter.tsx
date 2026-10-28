@@ -41,6 +41,7 @@ import type { Editor } from "@tiptap/core";
 import type { Node } from "@tiptap/pm/model";
 import { DragHandle } from "@tiptap/extension-drag-handle-react";
 import { cn } from "@/lib/utils";
+import { scrollPane } from "@/lib/scroll-pane";
 import { BlockMenu } from "@/components/pages/block-menu";
 import type { PageCommentAnchor } from "@/components/pages/page-comment-bubble";
 import { COMMENTED_BLOCK_CLASS } from "@/components/pages/block-comments";
@@ -61,9 +62,21 @@ import {
     that this object changes identity. */
 const POSITION = { placement: "left-start", strategy: "absolute" } as const;
 
-/** Side of a gutter button (`size-6`), in pixels — it is used for calculation
-    centering on the first line of the block, which has no CSS equivalent. */
-const BUTTON_SIZE = 24;
+/** Side of the handle, the taller gutter button, in pixels: its 24 px icon
+    (the 24 px body line height) and a 2 px padding. It is used to centre the
+    buttons on the block's first line, which has no CSS equivalent. */
+const BUTTON_SIZE = 28;
+
+/** The handle and the smaller `+` beside it, side by side, in pixels. */
+const BUTTONS_WIDTH = 24 + BUTTON_SIZE;
+
+/** The gap between the buttons and the text: `GUTTER_GAP_MIN` always, plus
+    up to `GUTTER_GAP_EXTRA` while the pane leaves the room for it. */
+const GUTTER_GAP_MIN = 4;
+const GUTTER_GAP_EXTRA = 10;
+
+/** How long the buttons take to fade in beside a newly hovered block. */
+const GUTTER_FADE_MS = 120;
 
 /** Keep both gutter buttons clear of a commented block's left edge. */
 const COMMENTED_GUTTER_SHIFT = 12;
@@ -84,7 +97,7 @@ const COMMENTED_GUTTER_SHIFT = 12;
 const TOOLTIP_DELAY_MS = 600;
 
 const BUTTON = cn(
-  "flex size-6 items-center justify-center rounded-md text-muted-foreground/60",
+  "flex items-center justify-center rounded-md p-0.5 text-muted-foreground/60",
   "transition-colors hover:bg-muted hover:text-foreground",
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 );
@@ -159,6 +172,7 @@ export function BlockGutter({
    * movement would re-render the entire editor.
    */
   const gutter = useRef<HTMLDivElement>(null);
+  const shownAt = useRef<HTMLElement | null>(null);
 
   const onNodeChange = useCallback(
     ({ node, pos }: { node: Node | null; pos: number }) => {
@@ -174,6 +188,28 @@ export function BlockGutter({
         element.style.transform = "";
         return;
       }
+      // A new block: the buttons fade in beside it rather than jump there.
+      // Showing and hiding the whole handle fades through app/globals.css.
+      if (shownAt.current !== dom) {
+        shownAt.current = dom;
+        if (!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+          element.animate?.([{ opacity: 0 }, { opacity: 1 }], {
+            duration: GUTTER_FADE_MS,
+            easing: "ease-out",
+          });
+        }
+      }
+      // The buttons stand a little away from the text, unless the pane is
+      // too narrow on the left for that: then they move closer instead of
+      // leaving it.
+      const room =
+        dom.getBoundingClientRect().left -
+        scrollPane(dom).getBoundingClientRect().left;
+      const extra = Math.max(
+        0,
+        Math.min(GUTTER_GAP_EXTRA, room - BUTTONS_WIDTH - GUTTER_GAP_MIN)
+      );
+      element.style.paddingRight = `${GUTTER_GAP_MIN + Math.floor(extra)}px`;
       const box = styledBox(dom);
       const style = getComputedStyle(box);
       const commented =
@@ -195,7 +231,7 @@ export function BlockGutter({
           triggerRect.top -
           blockRect.top +
           (triggerRect.height - BUTTON_SIZE) / 2;
-        element.style.marginTop = `${Math.max(0, Math.round(offset))}px`;
+        element.style.marginTop = `${Math.round(offset)}px`;
         return;
       }
       // Text does not always start at the block's top edge: quotes, callouts,
@@ -210,8 +246,10 @@ export function BlockGutter({
       const lineHeight = Number.isFinite(parsed)
         ? parsed
         : parseFloat(style.fontSize || "0") * 1.5;
+      // The buttons are taller than a line of body text: centred on it, they
+      // rise above the block's top, so the offset may be negative.
       const offset = inset + (lineHeight - BUTTON_SIZE) / 2;
-      element.style.marginTop = `${Math.max(0, Math.round(offset))}px`;
+      element.style.marginTop = `${Math.round(offset)}px`;
     },
     [editor]
   );
@@ -286,14 +324,14 @@ export function BlockGutter({
         <div
           ref={gutter}
           style={{ width: GUTTER_WIDTH }}
-          className="flex items-center justify-end gap-0.5 pr-1 transition-transform"
+          className="flex items-center justify-end pr-1 transition-transform"
         >
           <Tooltip delayDuration={TOOLTIP_DELAY_MS} disableHoverableContent>
             <TooltipTrigger asChild>
               <button
                 type="button"
                 aria-label={t("insertBlock")}
-                className={BUTTON}
+                className={cn(BUTTON, "size-6")}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={(event) => {
                   const { pos } = hovered.current;
@@ -305,7 +343,7 @@ export function BlockGutter({
                   );
                 }}
               >
-                <HugeiconsIcon icon={Add01Icon} className="size-4" />
+                <HugeiconsIcon icon={Add01Icon} className="size-5" />
               </button>
             </TooltipTrigger>
             {/* The gesture AND its variant: `alt` inserts above, which none
@@ -319,7 +357,7 @@ export function BlockGutter({
                 aria-label={t("blockMenu")}
                 // The grab cursor says a drag is under way, not that one is
                 // possible: hovering keeps the plain cursor of a button.
-                className={cn(BUTTON, dragging && "cursor-grabbing")}
+                className={cn(BUTTON, "size-7", dragging && "cursor-grabbing")}
                 // NO `preventDefault` on the `mousedown`, and that's it
                 // subject: native drag IS the default action of
                 // `mousedown`. The handle lives in a `div[draggable]` placed by
@@ -337,7 +375,9 @@ export function BlockGutter({
                   openMenuAt(event.currentTarget.getBoundingClientRect());
                 }}
               >
-                <HugeiconsIcon icon={DragDropVerticalIcon} className="size-4" />
+                {/* Filled dots: the icon draws each as a stroked ring, which leaves a
+                    hole in its centre at this size. */}
+                <HugeiconsIcon icon={DragDropVerticalIcon} className="size-6 [&_path]:fill-current" />
               </button>
             </TooltipTrigger>
             {/* A handle that does TWO things: clicking opens the menu,

@@ -1,4 +1,5 @@
 import "server-only";
+import { markdownForReader } from "@/lib/server/mention-access";
 import { databaseArchiveFiles } from "./database-export";
 import type { ImportPage } from "@/lib/database-import/types";
 
@@ -188,7 +189,9 @@ export async function exportPage({
       parent_id: page.id === rootRow.id ? null : page.parent_id,
       title: page.title,
       icon: page.icon,
-      markdown: await pageToMarkdownServer({
+      // Mentions carry the current titles the exporter may see (pages cite
+      // their subpages with mentions whose stored label is empty).
+      markdown: await markdownForReader(actorId, await pageToMarkdownServer({
         title: page.title,
         icon: page.icon,
         content: pageDatabaseDocument(
@@ -198,7 +201,7 @@ export async function exportPage({
           (id) =>
             encodeLinkPath(relativePath(archivePaths.get(page.id)!, archivePaths.get(id)!)),
         ) as never,
-      }),
+      }), service),
     });
   }
 

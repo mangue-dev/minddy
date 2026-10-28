@@ -87,8 +87,9 @@ export function MobileNavigation({ sections, initialPanel, initialPanels, projec
     headerHost,
   };
   useLayoutEffect(() => { if (menuOpen) focusTarget.current?.focus({ preventScroll: true }); }, [panel?.key, menuOpen]);
+  const typing = useTypingInField();
   return <>
-    <nav aria-label="Navigation" data-mobile-navigation className="fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[max(1rem,env(safe-area-inset-bottom))] app-desktop:hidden">
+    <nav aria-label="Navigation" data-mobile-navigation data-typing={typing ? "" : undefined} className="fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[max(1rem,env(safe-area-inset-bottom))] app-desktop:hidden">
       <div className="grid h-12 w-[min(100%-2rem,320px)] grid-cols-5 grid-rows-1 items-center rounded-full border border-border bg-background shadow-lg">
         <Link href="/home" aria-label={t("home")} aria-current={pathname === "/home" ? "page" : undefined} className="flex h-full min-w-0 items-center justify-center rounded-full focus-visible:ring-2 focus-visible:ring-ring"><AppIcon icon={Home01Icon} className="size-[22px]" /></Link>
         <button ref={menuTrigger} data-mobile-menu-trigger type="button" aria-label={t("goTo")} aria-haspopup="dialog" aria-expanded={menuOpen} onClick={() => onOpenChange(true)} className="flex h-full min-w-0 items-center justify-center rounded-full outline-none focus-visible:bg-muted"><AppIcon icon={LayoutAlignLeftIcon} className="size-[22px]" /></button>
@@ -186,4 +187,30 @@ function MobileStaticMenu({ sections, headerHost, ...navigation }: { sections: M
     {headerHost && createPortal(<SecondarySidebarHeader filter={{ value: query, onChange: setQuery, placeholder: t("filterPlaceholder", { count }), clearLabel: tc("clearFilter") }} />, headerHost)}
     <MobileMenuRows sections={sections.map((section) => ({ ...section, items: section.items.filter((item) => matchesFilter(query, [item.label])) }))} {...navigation} />
   </>;
+}
+
+/** A text field has the focus — a page title, a comment, a search field — so
+    the keyboard is up and the bottom navigation would only cover the text. */
+function isTextField(element: Element | null): boolean {
+  if (!(element instanceof HTMLElement)) return false;
+  if (element.isContentEditable || element instanceof HTMLTextAreaElement) return true;
+  return element instanceof HTMLInputElement &&
+    !["checkbox", "radio", "button", "submit", "reset", "range", "color", "file", "image"].includes(element.type);
+}
+
+function useTypingInField(): boolean {
+  const [typing, setTyping] = useState(false);
+  useEffect(() => {
+    // `focusout` fires before the next field takes the focus: read the active
+    // element once the move is over.
+    const update = () => queueMicrotask(() => setTyping(isTextField(document.activeElement)));
+    update();
+    document.addEventListener("focusin", update);
+    document.addEventListener("focusout", update);
+    return () => {
+      document.removeEventListener("focusin", update);
+      document.removeEventListener("focusout", update);
+    };
+  }, []);
+  return typing;
 }

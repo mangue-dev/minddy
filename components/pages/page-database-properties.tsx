@@ -21,7 +21,7 @@ import { DatabaseCellEditor } from "./database-cell-editor";
 import { DatabaseSelectCell } from "./database-select-cell";
 
 const TABLE_CELL_TRIGGER =
-  "flex h-10 w-full min-w-0 items-center overflow-hidden rounded-none px-2 py-0 text-left text-sm whitespace-nowrap outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring";
+  "flex h-10 w-full min-w-0 items-center overflow-hidden rounded-none px-2 py-0 text-left text-sm whitespace-nowrap outline-none transition-colors pointer-coarse:h-12 hover:bg-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring";
 
 export { PROPERTY_ICONS } from "./database-property-icons";
 

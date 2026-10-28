@@ -57,6 +57,9 @@ export interface PaletteItem {
    *  menu still uses `onSelect`; desktop uses this for copy/open-in-new-tab. */
   href?: string;
   onSelect?: () => void;
+  /** A creation that has no address before it runs (a new page): how the
+   *  new-tab palette (⌘T) performs it, opening the result in a new tab. */
+  onSelectInNewTab?: () => void;
 }
 
 export interface PaletteGroup {

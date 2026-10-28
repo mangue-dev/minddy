@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
+import type { MentionLinks } from "@/components/mention-links";
 import type { JSONContent } from "@tiptap/core";
 
 import { PageEditor } from "@/components/pages/page-editor";
@@ -28,6 +30,11 @@ import type { PagesLookup } from "@/components/pages/pages-lookup";
  * - pages outside the published set: the lookup does not know them, and
  * their block becomes inert under a neutral label. Their title has never
  * left the server (see lib/server/page-publication.ts).
+ *
+ * Page MENTIONS — how a page cites its subpages since the subpage block was
+ * retired — follow the same rule through `mentionLinks`, limited to pages: a
+ * page of the published set shows its title and opens under the same token,
+ * any other page the neutral label, inert. Other mentions keep no link.
  */
 export function PublicPageBody({
   content,
@@ -70,12 +77,27 @@ export function PublicPageBody({
     };
   }, [pages, token, rootId, missingLabel]);
 
+  const untitled = useTranslations("Pages")("untitled");
+  const mentionLinks = useMemo<MentionLinks>(() => {
+    const byId = new Map(pages.map((p) => [p.id, p]));
+    return {
+      href: (type, id) => (type === "page" && byId.has(id) ? lookup.href?.(id) ?? null : null),
+      issueStatus: () => null,
+      navigate: (type, id) => {
+        if (type === "page" && byId.has(id)) lookup.navigate?.(id);
+      },
+      label: (type, id) =>
+        type === "page" ? (byId.has(id) ? byId.get(id)?.title || untitled : missingLabel) : null,
+    };
+  }, [pages, lookup, missingLabel, untitled]);
+
   return (
     <PageEditor
       initialContent={(content as JSONContent | null) ?? null}
       onChange={() => {}}
       editable={false}
       pages={lookup}
+      mentionLinks={mentionLinks}
     />
   );
 }

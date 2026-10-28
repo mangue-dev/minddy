@@ -17,10 +17,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
-  "sourceRevision": 18,
+  "revision": 20,
+  "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -52,14 +52,20 @@
       "components/pages/page-promotion-context.test.tsx",
       "components/pages/database-view-strip.tsx",
       "lib/use-page-database-views.ts",
-      "lib/server/page-database-views.ts"
+      "lib/server/page-database-views.ts",
+      "components/pages/database-table-scroll.tsx",
+      "components/ui/checkbox.tsx",
+      "lib/server/database-view-tools.ts",
+      "lib/page-database-filters.ts",
+      "components/pages/database-filter-editor.tsx",
+      "supabase/migrations/20270109200092_page_database_views_realtime.sql"
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:/root/min764 (database views section checked against components/pages/database-view-strip.tsx, components/pages/page-database-view.tsx, lib/use-page-database-views.ts and lib/server/page-database-views.ts: named views shared by the project, each with its own sort, filter and hidden columns, managed and reordered by writers, adjusted locally by readers; insertion clears the active view's filter; rest of the article unchanged since the MIN-747 review; no figure changed); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min764 (de changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 20,
+    "fact": "agent:claude-code (column header menu Delete column with confirmation and right-click opening, hover-only row gutter, touch-screen rows without gutter, checkbox tooltips and partial header state, bottom scrollbar hidden on touch screens, view rename/delete by right-click, column reordering by handle in Columns, Numo view tools and no MCP view tools checked against components/pages/database-column-name.tsx, page-database-view.tsx, database-view-strip.tsx, database-table-scroll.tsx, components/ui/checkbox.tsx, lib/server/assistant/tools.ts and lib/server/database-view-tools.ts; several filter conditions with All/Any match, operators per column type, up to 10 conditions, single filters kept, live view updates, default view rename, phone view dropdown, View settings sheets, search field and cell sheets checked against lib/page-database-filters.ts, components/pages/database-filter-editor.tsx, lib/use-page-database-views.ts, supabase/migrations/20270109200092_page_database_views_realtime.sql, components/pages/database-view-strip.tsx, components/pages/page-database-view.tsx and components/pages/database-cell-editor.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; equivalent meaning to en revision 19; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "pages"
@@ -83,7 +89,7 @@
       "src": "/documentation/de/database-setup-cards.png",
       "alt": "Komponentenvorschau der Karten zur Einrichtung einer neuen Datenbank mit Numo oder zum Import einer vorhandenen Datenbank.",
       "caption": "Vorschläge für eine neue Datenbank mit Demonstrationsdaten. Wähle Numo oder Import, oder schließe die Karten, um manuell fortzufahren.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -100,7 +106,7 @@
       "src": "/documentation/de/database-property-types.png",
       "alt": "Auswahl des Spaltentyps mit Suchfeld sowie Text, Zahl, Auswahl, Datum, Personen und Kontrollkästchen.",
       "caption": "Wähle einen Typ, der zu den gespeicherten Werten passt.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -117,7 +123,7 @@
       "src": "/documentation/de/database-entry.png",
       "alt": "Demoeintrag mit Beschreibung, Dauer 2.5, aktiviertem Kontrollkästchen und leerer Auswahl.",
       "caption": "Öffne einen Eintrag, um den vollständigen Text zu lesen und typisierte Werte zu bearbeiten.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -133,7 +139,7 @@
       "src": "/documentation/de/database-conversion-warning.png",
       "alt": "Umwandlungswarnung: Der Wechsel von Text zu Zahl leert eine inkompatible Zelle; Abbrechen und Bestätigen sind verfügbar.",
       "caption": "Prüfe die tatsächliche Zahl inkompatibler Zellen vor der Bestätigung. Abbrechen erhält die bisherigen Werte.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -149,7 +155,7 @@
       "src": "/documentation/de/database-import-review.png",
       "alt": "Importprüfung einer lokalen CSV-Datei: zwei Eintragsseiten und zwei Eigenschaftsspalten mit der Importschaltfläche.",
       "caption": "Prüfe die eingelesenen Einträge und die Spaltenzahl vor dem Import in die leere Datenbank.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -165,7 +171,7 @@
       "src": "/documentation/de/database-options.png",
       "alt": "Komponentenvorschau von Optionen bearbeiten mit deutschen Statusoptionen, Pfeilen nach oben und unten, Papierkörben und einer Erklärung zum Löschen.",
       "caption": "Bearbeite Namen, Farben und Reihenfolge der Optionen gemeinsam. Der Papierkorb entfernt eine Option aus dem Entwurf; Speichern übernimmt die Änderungen. Mit Demonstrationsdaten.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -182,7 +188,7 @@
       "src": "/documentation/de/database-date-time.png",
       "alt": "Komponentenvorschau der Datumsauswahl mit dem ausgewählten 24. Juli 2026, aktivierter Uhrzeit und Zeit auf 02:00 AM.",
       "caption": "Aktiviere „Uhrzeit hinzufügen“, um eine Uhrzeit einzugeben. Diese Komponentenvorschau verwendet Demonstrationsdaten und die Zeitzone des Geräts.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -251,13 +257,19 @@ Ein leerer Eintrag zeigt im Inhalt einen Platzhalter für den Schreibbereich. Be
 
 Öffne einen Eintrag, um seine vollständige Seite in einem schwebenden Panel zu bearbeiten. „Vergrößern“ öffnet ihn als vollständige Seite, nachdem ausstehendes Speichern des Dokuments beendet ist. Schlägt Speichern fehl, bleibt das Panel zur Fehlerbehebung offen. Ein leerer Eintrag bleibt bis zum Löschen in der Datenbank.
 
-Verwende Zeilen-Kontrollkästchen für die Auswahl und Shift-Klick für einen Bereich. Der Griff öffnet Aktionen und kann Einträge in manueller Reihenfolge umordnen. Das + am Zeilenrand fügt unter dem Eintrag ein; Option/Alt fügt oberhalb ein. Benachbartes Einfügen entfernt den Filter der aktiven Ansicht, damit der neue Eintrag sichtbar ist.
+Verwende Zeilen-Kontrollkästchen für die Auswahl und Shift-Klick für einen Bereich. Der Tooltip jedes Kontrollkästchens lautet **Auswählen** oder **Auswahl aufheben**. Das Kontrollkästchen in der Kopfzeile (**Alle Einträge auswählen** oder, wenn alle ausgewählt sind, **Alle abwählen**) zeigt einen Strich, solange nur ein Teil der Einträge ausgewählt ist, und ein Häkchen, wenn alle ausgewählt sind; ein Klick darauf bei einer Teilauswahl wählt alle Einträge aus. Fahre mit dem Zeiger über eine Zeile, um ihren Rand anzuzeigen: Der Griff öffnet Aktionen und kann Einträge in manueller Reihenfolge umordnen, und das + fügt unter dem Eintrag ein; Option/Alt fügt oberhalb ein. Benachbartes Einfügen entfernt die Filter der aktiven Ansicht, damit der neue Eintrag sichtbar ist. Auf einem Touchscreen haben Zeilen keinen Rand, und ihre Kontrollkästchen bleiben sichtbar: Wähle Einträge aus und verwende dann **Duplizieren** oder **In den Papierkorb verschieben** in der Auswahlleiste. **Zu Ticket hochstufen** und das Verschieben eines Eintrags nach oben oder unten sind dort nicht verfügbar.
 
 Im Griffmenü eines einzelnen Eintrags kann der Eigentümer oder ein Mitglied **Zu Ticket hochstufen** wählen, damit Numo diesen Eintrag mit Inhalt und Eigenschaften in ein Ticket umwandelt. Der Eintrag bleibt in der Datenbank. Bezieht sich das Menü auf mehrere ausgewählte Zeilen, fehlt die Aktion; eine Sammel-Hochstufung gibt es nicht, also stufe jeden Eintrag einzeln hoch. Die [Seitenanleitung](/de/dokumentation/pages#promote-page-to-issue) beschreibt die Rückfragen von Numo und was zu tun ist, wenn der Eintrag vorher nicht gespeichert werden kann.
 
 ### Datenbankansichten {#database-display}
 
-Eine Datenbank zeigt ihre Einträge in Ansichten, die über der Tabelle aufgelistet sind. Jede Ansicht hat ihre eigene Sortierung, ihren Filter und ihre ausgeblendeten Spalten, und alle Projektmitglieder sehen dieselben Ansichten. Der Projektinhaber oder ein Mitglied fügt mit **Neue Ansicht** (+) eine Ansicht hinzu, die von der angezeigten Ansicht ausgeht, benennt die aktive Ansicht über ihr Optionsmenü (⋯) mit **Ansicht umbenennen** um oder löscht sie mit **Ansicht löschen** und ordnet Ansichten per Ziehen neu an. Änderungen an Sortierung, Filter und Spalten werden für alle in der aktiven Ansicht gespeichert. Eine Datenbank behält mindestens eine Ansicht; vor ihrer ersten Änderung zeigt sie die Standardansicht **Tabelle**. Leser wechseln zwischen Ansichten und können eine Ansicht für sich anpassen, bis sie die Seite verlassen. Dein Browser merkt sich die zuletzt geöffnete Ansicht; die Suche wird nie gespeichert. Die manuelle Reihenfolge wird mit dem Seitenbaum geteilt. Scrolle horizontal per Trackpad-Geste, Shift und Mausrad, Touch oder unterer Bildlaufleiste. Eine abgeschnittene Textvorschau kürzt den gespeicherten Wert nicht. Einträge mit Spaltenwerten lassen sich innerhalb ihrer Datenbank umordnen, aber nicht aus ihr heraus verschieben.
+Eine Datenbank zeigt ihre Einträge in Ansichten, die über der Tabelle aufgelistet sind. Jede Ansicht hat ihre eigene Sortierung, ihren Filter und ihre ausgeblendeten Spalten, und alle Projektmitglieder sehen dieselben Ansichten. Der Projektinhaber oder ein Mitglied fügt mit **Neue Ansicht** (+) eine Ansicht hinzu, die von der angezeigten Ansicht ausgeht, benennt eine Ansicht per Rechtsklick mit **Ansicht umbenennen** um oder löscht sie mit **Ansicht löschen** und ordnet Ansichten per Ziehen neu an. Änderungen an Sortierung, Filter und Spalten werden für alle in der aktiven Ansicht gespeichert. Eine Datenbank behält mindestens eine Ansicht; vor ihrer ersten Änderung zeigt sie die Standardansicht **Tabelle**. Leser wechseln zwischen Ansichten und können eine Ansicht für sich anpassen, bis sie die Seite verlassen. Dein Browser merkt sich die zuletzt geöffnete Ansicht; die Suche wird nie gespeichert. Die manuelle Reihenfolge wird mit dem Seitenbaum geteilt. Scrolle horizontal per Trackpad-Geste, Shift und Mausrad oder mit der Bildlaufleiste am unteren Fensterrand. Ein Touchscreen zeigt diese Leiste nicht: Wische dort über die Tabelle. Eine abgeschnittene Textvorschau kürzt den gespeicherten Wert nicht. Einträge mit Spaltenwerten lassen sich innerhalb ihrer Datenbank umordnen, aber nicht aus ihr heraus verschieben. Numo kann die Ansichten einer Datenbank auflisten und sie auf deine Bitte erstellen, umbenennen, umordnen oder löschen (nie die letzte) oder ihre Sortierung, ihre Filter (alle oder mindestens einer) und ihre ausgeblendeten Spalten ändern. Auf einer Datenbankseite versteht Numo unter „einer Ansicht“ die Ansichten der Datenbank, nicht die des Ticketboards. Die Spaltenreihenfolge gehört nicht zu einer Ansicht, sondern zum Datenbankschema. minddy-MCP-Clients können keine Ansichten verwalten.
+
+Öffne **Filtern**, um mit **Filter hinzufügen** eine Liste von Bedingungen aufzubauen; **Diesen Filter entfernen** löscht eine davon. Jede Bedingung wählt eine Spalte, eine Bedingung und einen Wert, und die Bedingungen hängen vom Spaltentyp ab. Text bietet enthält, enthält nicht, ist, ist nicht, ist leer und ist nicht leer. Zahl bietet ist, ist nicht, größer als, kleiner als, ist leer und ist nicht leer. Auswahl bietet ist, ist nicht, ist leer und ist nicht leer. Mehrfachauswahl und Personen bieten enthält, enthält nicht, ist leer und ist nicht leer. Datum und Erstellt am bieten ist am, ist nach, ist vor, ist leer und ist nicht leer. Kontrollkästchen entspricht **Aktiviert** oder **Deaktiviert**. Eine Bedingung ohne Wert filtert noch nicht. Ab zwei Bedingungen wählst du **Alle Filter**, um die Einträge zu behalten, die jede Bedingung erfüllen, oder **Mindestens ein Filter** für die, die mindestens eine erfüllen. Eine Ansicht enthält bis zu 10 Bedingungen; eine früher mit einem einzelnen Filter gespeicherte Ansicht behält ihn.
+
+Ansichten aktualisieren sich live: Eine Ansicht, die ein Teammitglied oder Numo erstellt oder ändert, erscheint ohne Neuladen der Seite. Solange eine Datenbank keine gespeicherte Ansicht hat, klicke mit der rechten Maustaste auf ihre Standardansicht und wähle **Ansicht umbenennen**: Das Umbenennen speichert sie als benannte Ansicht mit den aktuellen Einstellungen, und **Ansicht löschen** bleibt nicht verfügbar.
+
+Auf dem Smartphone wählst du eine Ansicht aus dem Dropdown über der Tabelle; sein Menü bietet **Neue Ansicht**, **Ansicht umbenennen** und **Ansicht löschen**. Die Symbolleiste zeigt nur die Suche, **Ansichtseinstellungen** und **Neu**. **Ansichtseinstellungen** öffnet ein Blatt mit **Sortieren nach**, **Filtern** und **Spalten**, die jeweils ihr eigenes Blatt öffnen. Die Suche klappt unter der Symbolleiste ein Feld mit einer Schaltfläche zum Schließen auf. Die Tabelle reicht von Rand zu Rand, mit höheren Zeilen und immer sichtbaren Kontrollkästchen. Text- und Zahlenzellen öffnen sich in einem unteren Blatt mit einer Schaltfläche **Speichern**, wie es Auswahl, Personen und Datum bereits tun.
 
 
 ![Demoeintrag mit Beschreibung, Dauer 2.5, aktiviertem Kontrollkästchen und leerer Auswahl.](/documentation/de/database-entry.png)
@@ -266,9 +278,9 @@ Eine Datenbank zeigt ihre Einträge in Ansichten, die über der Tabelle aufgelis
 
 Das Verschieben einer Spalte beginnt nach einer Zeigerbewegung und bleibt horizontal. Der Greifcursor erscheint nur während des Ziehens; ein normaler Klick öffnet weiterhin die Spaltenaktionen. Wenn eine Spaltenüberschrift fokussiert ist, öffnet Eingabe oder Leertaste ihre Aktionen. Starte das Umordnen mit F8, verwende Links oder Rechts und bestätige mit Eingabe oder brich mit Escape ab.
 
-Unter Spalten kannst du Eigenschaften mit dem Augensymbol ein- oder ausblenden. Klicke auf eine Spaltenüberschrift, um sie umzubenennen, oder ziehe die Überschriften, um ihre Reihenfolge zu ändern. Die Namensspalte der Einträge bleibt an erster Stelle. Optionen für Auswahl und Mehrfachauswahl lassen sich im Zellenmenü oder unter Spalten bearbeiten. Namen und Farben werden zusammen gespeichert.
+Unter Spalten kannst du Eigenschaften mit dem Augensymbol ein- oder ausblenden und Spalten umordnen, indem du den Griff einer Zeile in dieser Liste ziehst. Mit der Tastatur fokussierst du den Griff, drückst die Leertaste, verschiebst die Spalte mit den Pfeiltasten nach oben oder unten und drückst erneut die Leertaste, um sie abzulegen; Escape bricht ab. Klicke auf eine Spaltenüberschrift oder klicke sie mit der rechten Maustaste an, um ihr Menü zu öffnen, etwa um die Spalte umzubenennen, oder ziehe die Überschriften, um ihre Reihenfolge zu ändern. Die Namensspalte der Einträge bleibt an erster Stelle. Optionen für Auswahl und Mehrfachauswahl lassen sich im Zellenmenü oder unter Spalten bearbeiten. Namen und Farben werden zusammen gespeichert.
 
-Eine ausgeblendete Spalte ändert nur die Anzeigeeinstellungen; ihre Werte bleiben erhalten. Wenn du eine benutzerdefinierte Spalte löschst, gehen ihre Werte in allen Einträgen unwiderruflich verloren. Beachte diese Folge, bevor du das Löschen bestätigst.
+Eine ausgeblendete Spalte ändert nur die Anzeigeeinstellungen; ihre Werte bleiben erhalten. Um eine benutzerdefinierte Spalte zu löschen, wähle **Spalte löschen** im Menü ihrer Überschrift oder ihre Papierkorb-Schaltfläche unter Spalten; beide fragen nach einer Bestätigung. Dabei gehen ihre Werte in allen Einträgen unwiderruflich verloren. Beachte diese Folge, bevor du das Löschen bestätigst.
 
 ### Den Eigenschaftstyp umwandeln {#convert-column}
 

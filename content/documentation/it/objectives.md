@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 20,
-  "sourceRevision": 19,
+  "revision": 21,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-23",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -52,14 +52,15 @@
       "lib/use-resource-mentions.ts",
       "lib/keyboard/shortcuts.ts",
       "lib/objective-order.ts",
-      "components/objective-label.tsx"
+      "components/objective-label.tsx",
+      "components/editor/mobile-editor-toolbar.tsx"
     ]
   },
   "review": {
-    "revision": 20,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of objectives-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-785 objective picker order and status display checked against lib/objective-order.ts and components/objective-label.tsx; no figure changed)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (it picker-order sentence with catalog status labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-23"
+    "revision": 21,
+    "fact": "agent:claude-code (phone keyboard toolbar sentence checked against components/editor/mobile-editor-toolbar.tsx and components/editor/rich-editor.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (it changed passages with catalog UI labels; equivalent meaning to en revision 20; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "issues",
@@ -80,7 +81,7 @@
       "src": "/documentation/it/reader-objectives.png",
       "alt": "Finestra di creazione obiettivo non inviata nel progetto Aurora con un nome di risultato d’esempio e il pulsante Crea obiettivo.",
       "caption": "Definisci il risultato prima di scegliere responsabile, data limite e stato. Questa finestra non ha creato un secondo obiettivo.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -104,7 +105,7 @@ Un obiettivo raccoglie i ticket di un progetto per seguire un risultato. Le sue 
 
 Apri la destinazione degli obiettivi del progetto e crea un obiettivo. Se lo crei da un altro punto dell’app, scegli il suo progetto in **Crea in**, in alto a sinistra del modulo (accanto al titolo **Nuovo obiettivo** sul telefono); cambiare progetto rimuove il responsabile e le relazioni scelti per il precedente. Su un computer, Command/Ctrl+Maiusc+P apre questo menu anche mentre scrivi il nome o la descrizione; quando scegli un progetto o chiudi il menu, il cursore torna esattamente dov’era. La pillola mostra questa scorciatoia, che esiste solo quando si può scegliere più di un progetto; sul telefono non viene indicata alcuna scorciatoia. Dai un nome al risultato desiderato, aggiungi contesto utile e imposta i campi disponibili per responsabile, data obiettivo, colore e stato. Su un computer, gli stessi tasti dei campi di un ticket li aprono non appena il cursore lascia il nome e la descrizione: S lo stato, A il responsabile, D la data obiettivo, R una relazione e C il colore; il tooltip di ogni selettore mostra il suo tasto. Un obiettivo appartiene a un progetto ed è distinto da un ciclo personale che comprende più progetti. La persona responsabile segue il risultato; sceglierla non trasferisce la proprietà del progetto. Solo il proprietario o un Membro può essere responsabile di un obiettivo, e un responsabile il cui ruolo diventa Lettore viene rimosso dall’obiettivo.
 
-La descrizione dell’obiettivo e i suoi commenti usano lo stesso editor delle pagine del progetto, senza le maniglie dei blocchi: digita `/` per inserire blocchi e `@` per menzionare una persona, un ticket, un obiettivo o una pagina. Il menu `@` elenca anche le risorse allegate a ciò che stai scrivendo: il ticket o l’obiettivo per la descrizione e il piano, un commento per i propri file o una finestra di creazione per i file aggiunti lì. Una menzione di una risorsa allegata altrove appare come **Non disponibile**. Più persone possono modificare la descrizione contemporaneamente, con il cursore di ciascuna mostrato con il suo nome e il suo colore. Seleziona del testo per formattarlo o aggiungere un link. Incolla o trascina un'immagine, oppure scegli **Immagine** nel menu `/`, per inserirla nella descrizione.
+La descrizione dell’obiettivo e i suoi commenti usano lo stesso editor delle pagine del progetto, senza le maniglie dei blocchi: digita `/` per inserire blocchi e `@` per menzionare una persona, un ticket, un obiettivo o una pagina. Il menu `@` elenca anche le risorse allegate a ciò che stai scrivendo: il ticket o l’obiettivo per la descrizione e il piano, un commento per i propri file o una finestra di creazione per i file aggiunti lì. Una menzione di una risorsa allegata altrove appare come **Non disponibile**. Più persone possono modificare la descrizione contemporaneamente, con il cursore di ciascuna mostrato con il suo nome e il suo colore. Seleziona del testo per formattarlo o aggiungere un link. Incolla o trascina un'immagine, oppure scegli **Immagine** nel menu `/`, per inserirla nella descrizione. Sul telefono, la barra sopra la tastiera sostituisce la barra di selezione e il menu `@` digitato; la [guida alle pagine](/it/documentazione/pages#editor-formatting) la descrive.
 
 Apri ogni ticket pertinente e scegli l’obiettivo nelle sue proprietà oppure usa i controlli dei ticket dell’obiettivo. Il selettore degli obiettivi mostra gli obiettivi aperti prima di quelli fatti e annullati; in ciascun gruppo vengono prima quelli che hanno ricevuto più ticket negli ultimi 30 giorni. Ognuno mostra il proprio stato e il proprio nome nel suo colore. Verifica che il lavoro previsto compaia sotto l’obiettivo. Usa discussione e risorse per decisioni e pagine di riferimento che riguardano l’intero risultato.
 

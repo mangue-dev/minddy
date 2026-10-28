@@ -1,5 +1,6 @@
 "use client";
 
+import { useOptionalPagePanelActions } from "@/lib/page-panel-context";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon, Message01Icon, MoreHorizontalIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
@@ -250,6 +251,9 @@ function isEmptyDoc(content: unknown): boolean {
  * to catch both by hand, we go back up - exactly what a
  * navigation from one page to another.
  */
+/** The side panel's closing animation, before the history unmounts. */
+const HISTORY_CLOSE_MS = 400;
+
 export function PageView({
   projectId,
   pageId,
@@ -318,6 +322,7 @@ function PageSurface({
   const { members, loading: membersLoading } = useMembersQuery(projectId, true);
   // Project readers (MIN-693) read the page: no editing, no document writes.
   const { canWrite, canComment } = useProjectCapabilities(projectId);
+  const pagePanel = useOptionalPagePanelActions();
   const present = usePresentOn(pageId);
   // The watch heartbeat: while this surface holds the document open, the
   // server knows someone is reading it and stays quiet about agent writes.
@@ -642,11 +647,15 @@ function PageSurface({
         }
       },
       opened: (id) => {
-        // The block has just been placed in THIS document: we write it BEFORE
-        // leave. Without this `flush`, navigation unmounts the editor with, in
-        // the draft, a block that no one has yet recorded — the
-        // subpage exists, its link in the parent does not.
-        void flushRef.current().finally(() => openPage(id));
+        // The mention has just been placed in THIS document: we write it
+        // BEFORE the subpage opens. Without this `flush`, a navigation unmounts
+        // the editor with, in the draft, a mention no one has recorded yet —
+        // the subpage exists, its link in the parent does not.
+        // The subpage opens in the side panel, beside the page it was written
+        // from, so writing goes on here; the panel's “Expand” reaches the full
+        // page. A page created from the sidebar still opens in full.
+        void flushRef.current().finally(() =>
+          pagePanel ? pagePanel.openPage(projectId, id) : openPage(id));
       },
       duplicate: async (id) => {
         try {
@@ -670,7 +679,7 @@ function PageSurface({
         }
       },
     }),
-    [pagesLoaded, byId, base, createPage, duplicatePage, pageId, restorePage, openPage, t]
+    [pagesLoaded, byId, base, createPage, duplicatePage, pageId, restorePage, openPage, pagePanel, projectId, t]
   );
 
   /* ── Delete block moves page to trash ─────────────────────── */
@@ -747,6 +756,17 @@ function PageSurface({
   // makes one believe a page. The name comes from the MEMBERS of the project, already charged
   // for mentions and presence — never the raw email (lib/display-name).
   const [historyOpen, setHistoryOpen] = useState(false);
+  // Mounted on demand (it may render a second editor), and kept past its
+  // closing so the panel slides out instead of vanishing.
+  const [historyMounted, setHistoryMounted] = useState(false);
+  useEffect(() => {
+    if (historyOpen) {
+      setHistoryMounted(true);
+      return;
+    }
+    const timer = setTimeout(() => setHistoryMounted(false), HISTORY_CLOSE_MS);
+    return () => clearTimeout(timer);
+  }, [historyOpen]);
   const [historyTab, setHistoryTab] = useState<PageHistoryTab>("activity");
   const [historyRequest, setHistoryRequest] = useState(0);
   const openHistory = useCallback((tab: PageHistoryTab) => {
@@ -858,44 +878,32 @@ function PageSurface({
     [pageId, title, summary?.favorite, page?.favorite]
   );
 
-  /* ── ⌘⇧L: copy this page for an agent ───────────────────────────── */
+  /* ── ⌘⇧L: copy this page's link ─────────────────────────────────── */
   //
-  // Notion's gesture, and for the same reason: giving the page we read to
-  // someone else is too frequent to go through a menu. That
-  // “someone else” here means, it’s an agent — hence the contact details
-  // MCP next to the URL, and the optional instruction (lib/page-agent-prompt.ts).
+  // Notion's gesture, and for the same reason: handing over the page you are
+  // reading is too frequent to go through a menu. It copies the same link as
+  // the menu's Copy → Copy link.
   //
-  // ⇧ IS MANDATORY, and it is not an aesthetic choice. ⌘L naked fails
-  // never on the page on a Mac: the address bar takes it to the level of
-  // browser, before the document — the `keydown` does not arrive, and there is therefore
-  // nothing at `preventDefault`. Verified in real life on PR 67, after having written it
-  // in ⌘L. The neighborhood is already in ⌘⇧ for the same reason (⌘⇧D, dictation,
-  // lib/create-context.tsx): this is the form that passes.
+  // ⇧ IS MANDATORY, and not for looks: on a Mac the address bar takes a bare
+  // ⌘L at the browser level, before the document, so its `keydown` never
+  // arrives (verified on PR 67). The neighbors use ⌘⇧ for the same reason
+  // (⌘⇧D, dictation, lib/create-context.tsx).
   //
-  // He OPENS the dialog instead of copying, and this is deliberate: the entry of the
-  // menu and shortcut are the same gesture, they should give the same
-  // result. The field takes focus, so ⌘⇧L then ⌘Enter copy without anything
-  // to ask, against the possibility of saying what we want to see done.
+  // It needs no particular focus: the listener sits on `window`, in capture,
+  // and the caret may be in the editor, in the title or nowhere — the page
+  // on screen is the one copied.
   //
-  // It does not require ANY particular focus: it is enough for the page to be
-  // the screen. The listener is on `window`, in capture — the cursor can be
-  // in the editor, in the title or nowhere, it is the displayed page that we
-  // copie.
-  //
-  // `openAgentCopyRef`: the shortcut does not resubscribe on each keystroke in
-  // the title. `pageRef` changes with each character typed, and a `useEffect` which
-  // would depend on it would put an earpiece per letter.
-  const openAgentCopyRef = useRef<() => void>(() => {});
-  openAgentCopyRef.current = () => documentMenu.openAgentCopy(pageRef, "shortcut");
+  // `copyLinkRef`: the listener is not resubscribed on every keystroke in the
+  // title, which renews `pageRef`.
+  const copyLinkRef = useRef<() => void>(() => {});
+  copyLinkRef.current = () => documentMenu.copyLink(pageRef, "shortcut");
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (!active || !matchesModShiftCombo(event, "l")) return;
-      // A dialog already open takes up the screen - this one included: without this
-      // guard, the shortcut while writing the instruction would reopen the
-      // dialog and would erase what was just typed.
+      // A dialog owns the screen: the page behind it is not the one in view.
       if (hasVisibleOpenDialog()) return;
       event.preventDefault();
-      openAgentCopyRef.current();
+      copyLinkRef.current();
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
@@ -1009,7 +1017,8 @@ function PageSurface({
             onNavigate={openPage}
           />
         </div>
-        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+        {/* Desktop-sized icon buttons grow to a finger's size on touch screens. */}
+        <div className="ml-auto flex shrink-0 items-center gap-1.5 pointer-coarse:gap-1">
           <PagePresence userIds={present} members={members} />
           <PageStatus
             state={saveState}
@@ -1168,8 +1177,9 @@ function PageSurface({
           Saying “this page” when five are gone is trash
           a surprise rather than a trickle. */}
       {/* Activity and versions share one panel. It is mounted only when one of
-          the header shortcuts requests it because it may render a second editor. */}
-      {historyOpen ? (
+          the header shortcuts requests it because it may render a second editor,
+          and unmounted once its closing animation has played. */}
+      {historyOpen || historyMounted ? (
         <PageHistorySheet
           projectId={projectId}
           pageId={pageId}

@@ -265,8 +265,9 @@ export function useMentionLinksFor(
     const labels = new Map<string, string>([
       ...issues.map((issue) => [`issue:${issue.id}`, issue.identifier] as [string, string]),
       ...objectives.map((objective) => [`objective:${objective.id}`, objective.name] as [string, string]),
-      ...pages.filter((page) => page.title.trim())
-        .map((page) => [`page:${page.id}`, page.title] as [string, string]),
+      // An untitled page is known, not unavailable: an empty label, which
+      // the pill reads as “Untitled” (components/typed-mention-chip.tsx).
+      ...pages.map((page) => [`page:${page.id}`, page.title.trim()] as [string, string]),
       ...members.map((member) => [`member:${member.user_id}`, displayName(member)] as [string, string]),
       ...projects.map((project) => [`project:${project.id}`, project.name] as [string, string]),
     ]);

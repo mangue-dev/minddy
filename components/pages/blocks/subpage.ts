@@ -1,8 +1,9 @@
 import { isCollabRemoteTransaction } from "@/lib/page-collaboration-origin";
-import { Node } from "@tiptap/core";
+import { Node, type Editor } from "@tiptap/core";
 import { FileTextIcon as FileText } from "@hugeicons/core-free-icons";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
-import { escapeHtmlAttribute } from "@/components/pages/blocks/escape";
+import { mentionMarkdown } from "@/lib/mention-link";
+import { pageMentionNode } from "@/lib/pages-subpage";
 import type {
   MarkdownNode,
   MarkdownState,
@@ -10,6 +11,20 @@ import type {
 } from "@/components/pages/blocks/types";
 
 /**
+ * The SUB-PAGE block — RETIRED: a parent now cites its child with an inline
+ * page mention on a line of its own (`[@Title](mention:page/<id>)`), which
+ * text can follow like any mention. The “/” entry that creates a subpage is
+ * `insertSubpageMention` below, offered by the page editor.
+ *
+ * The node stays in the schema for documents stored before the change: a page
+ * converts its blocks into link lines the first time it is opened
+ * (`convertLegacySubpages`, lib/server/pages.ts), and its history keeps showing
+ * them. Its Markdown already writes the mention form, and `[[page:<id>]]` —
+ * the syntax agents learned — reads back as a mention.
+ *
+ * What follows describes the block as it was, and still holds for the
+ * documents that carry one:
+ *
  * The SUB-PAGE block: an atomic node which ONLY carries the id of the target page.
  *
  * No title copied in, deliberately: renaming a page would leave
@@ -99,7 +114,7 @@ export function subpageIdsInDoc(doc: ProseMirrorNode): Set<string> {
   return ids;
 }
 
-const SUBPAGE_MD = /^\[\[page:([^\]\s]+)\]\]$/;
+const SUBPAGE_INLINE = /\[\[page:([A-Za-z0-9_-]{1,64})\]\]/g;
 
 export const Subpage = Node.create<Record<string, never>, SubpageStorage>({
   name: "subpage",
@@ -180,6 +195,29 @@ export const Subpage = Node.create<Record<string, never>, SubpageStorage>({
   },
 });
 
+/**
+ * The “/” entry that creates a subpage: the page is created under the current
+ * one, its mention takes the place of “/…” followed by a space — so writing
+ * goes on after it — then the new page opens, as the block used to.
+ * The creator and the opener are the surface's (`storage.subpage`, placed by
+ * the editor from its `PagesLookup`), read at the moment of the gesture.
+ */
+export function insertSubpageMention(editor: Editor, range: { from: number; to: number }): void {
+  editor.chain().focus().deleteRange(range).run();
+  const create = editor.storage.subpage?.create;
+  if (!create) return;
+  const at = range.from;
+  void create().then((pageId) => {
+    if (editor.isDestroyed || !pageId) return;
+    const pos = Math.min(at, editor.state.doc.content.size);
+    editor
+      .chain()
+      .insertContentAt(pos, [pageMentionNode(pageId), { type: "text", text: " " }])
+      .run();
+    editor.storage.subpage?.opened?.(pageId);
+  });
+}
+
 export const subpageBlock: PageBlock = {
   id: "subpage",
   nodeName: "subpage",
@@ -195,6 +233,7 @@ export const subpageBlock: PageBlock = {
   // A subpage does not “transform” from a paragraph: there is nothing
   // to convert, it POINTS to another document.
   turnInto: false,
+  legacy: true,
   insert: (editor, range) => {
     editor.chain().focus().deleteRange(range).run();
     const create = editor.storage.subpage?.create;
@@ -218,12 +257,14 @@ export const subpageBlock: PageBlock = {
   },
   isActive: (editor) => editor.isActive("subpage"),
   markdown: {
-    // A subpage is projected as `[[page:<id>]]`: one line, readable, and
-    // Numo can WRITE (it knows the ids from MCP tools). The reading sense
-    // requires its own rule — markdown-it doesn't know this syntax.
+    // A legacy block is projected as what replaced it, the page's mention on
+    // its own line: an agent reads the same Markdown before and after the
+    // conversion. `[[page:<id>]]`, which agents learned to write, is still
+    // read — as that mention (the rule below).
     sample: "[[page:00000000-0000-4000-8000-000000000000]]",
     toMarkdown: (state: MarkdownState, node: MarkdownNode) => {
-      state.write(`[[page:${node.attrs.pageId ?? ""}]]`);
+      const id = node.attrs.pageId;
+      if (typeof id === "string" && id) state.write(mentionMarkdown("page", id, ""));
       state.closeBlock(node);
     },
     fromMarkdown: (markdownit) => subpageMarkdownIt(markdownit as MarkdownIt),
@@ -233,8 +274,8 @@ export const subpageBlock: PageBlock = {
 /* ── The markdown-it rule (reading direction) ──────────────────────────────── */
 
 // Minimal form of markdown-it pieces that we touch — same bias as
-// components/scratchpad/task-markdown.ts: the package is a dependency
-// transitive de tiptap-markdown, on ne s'y accroche pas par ses types.
+// components/scratchpad/task-markdown.ts: the package is a transitive
+// dependency of tiptap-markdown, and nothing here relies on its types.
 interface MdToken {
   type: string;
   content: string;
@@ -242,45 +283,28 @@ interface MdToken {
 }
 interface MdCoreState {
   tokens: MdToken[];
-  Token: new (type: string, tag: string, nesting: number) => MdToken;
 }
 interface MarkdownIt {
   core: {
     ruler: {
-      after(after: string, name: string, fn: (state: MdCoreState) => void): void;
+      before(before: string, name: string, fn: (state: MdCoreState) => void): void;
     };
   };
 }
 
 /**
- * A paragraph that ONLY contains `[[page:<id>]]` becomes the HTML as the node
- * knows how to reread. We use a `html_block` rather than a house token: the
- * reading path of tiptap-markdown is markdown-it → HTML → `parseHTML`, and
- * This is what `parseHTML` of the node above already does.
- *
- * Hence the `html: true` on the Markdown page editor extension: without it,
- * markdown-it would escape this block into text.
+ * `[[page:<id>]]` reads as the page's mention, wherever it is written — on a
+ * line of its own or inside a sentence. The marker is rewritten in the inline
+ * source before markdown-it parses it, so the mention's own reading path
+ * (a `mention:` link, components/mention-node.ts) does the rest. An id outside
+ * the mention alphabet stays text: there is no page to point to.
  */
 function subpageMarkdownIt(md: MarkdownIt): void {
-  md.core.ruler.after("inline", "minddy-subpage", (state) => {
-    const tokens = state.tokens;
-    for (let i = tokens.length - 2; i >= 1; i--) {
-      if (
-        tokens[i].type !== "inline" ||
-        tokens[i - 1].type !== "paragraph_open" ||
-        tokens[i + 1].type !== "paragraph_close"
-      ) {
-        continue;
-      }
-      const match = SUBPAGE_MD.exec(tokens[i].content.trim());
-      if (!match) continue;
-      const token = new state.Token("html_block", "", 0);
-      // Escaped: `[[page:a"b]]` is perfectly writeable markdown, and
-      // copied naked it closes the attribute that we manufacture (MIN-350).
-      token.content =
-        `<div data-type="subpage" data-page-id="${escapeHtmlAttribute(match[1])}"></div>\n`;
-      token.block = true;
-      tokens.splice(i - 1, 3, token);
+  md.core.ruler.before("inline", "minddy-subpage", (state) => {
+    for (const token of state.tokens) {
+      if (token.type !== "inline" || !token.content.includes("[[page:")) continue;
+      token.content = token.content.replace(SUBPAGE_INLINE, (_whole, id: string) =>
+        mentionMarkdown("page", id, ""));
     }
   });
 }

@@ -1,4 +1,9 @@
 import { parseDueDate } from "./due-date";
+import {
+  normalizeDatabaseViewFilter,
+  sameDatabaseViewFilter,
+  type DatabaseViewFilter,
+} from "./page-database-filters";
 
 /** Basic page database properties. Property IDs survive renames and reordering. */
 export const DATABASE_PROPERTY_TYPES = [
@@ -156,13 +161,18 @@ export function compareDatabaseValues(
   );
 }
 
+/** The local calendar day (`YYYY-MM-DD`) the date editor shows for a value, or null. */
+export function databaseDateDay(value: DatabaseValue | undefined): string | null {
+  if (typeof value !== "string") return null;
+  const date = parseDueDate(value);
+  if (!date) return null;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 /** Match the calendar day shown by the date editor, including timestamps near midnight. */
 export function databaseDateMatches(value: DatabaseValue | undefined, day: string): boolean {
-  if (typeof value !== "string") return false;
-  const date = parseDueDate(value);
-  if (!date) return false;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` === day;
+  return databaseDateDay(value) === day;
 }
 
 /** Metadata is derived from the entry, never stored as an editable value. */
@@ -201,7 +211,7 @@ export function parseDatabaseNumber(value: string): number | null | undefined {
 }
 
 /**
- * The saved view of a database: its sort, filter and hidden columns (MIN-764).
+ * The saved view of a database: its sort, filters and hidden columns (MIN-764).
  * It belongs to the database page, so every member sees the same view. The
  * search box is not part of it.
  */
@@ -209,7 +219,17 @@ export interface DatabaseView {
   /** `position`, `title` or a property ID. */
   sort: string;
   descending: boolean;
-  /** A property ID, or empty for no filter. */
+  /**
+   * The conditions an entry must meet (lib/page-database-filters.ts). A view
+   * saved before they existed has none and keeps its single filter in
+   * `filter`/`filterValue`; `resolveDatabaseViewFilter` converts it.
+   */
+  filters: DatabaseViewFilter;
+  /**
+   * The single filter of the previous release, still written as a mirror of
+   * `filters` so a client running it shows a superset of the entries rather
+   * than ignoring the filter. A property ID, or empty for no filter.
+   */
   filter: string;
   filterValue: string;
   hidden: string[];
@@ -217,6 +237,8 @@ export interface DatabaseView {
 export const DEFAULT_DATABASE_VIEW: DatabaseView = {
   sort: "position",
   descending: false,
+  // Written out rather than imported: the two modules import each other.
+  filters: { match: "and", conditions: [] },
   filter: "",
   filterValue: "",
   hidden: [],
@@ -233,6 +255,10 @@ export function normalizeDatabaseView(value: unknown): DatabaseView | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const input = value as Record<string, unknown>;
   const { sort, descending, filter, filterValue, hidden } = input;
+  // A view written by the previous release has no `filters` at all.
+  const filters = input.filters === undefined
+    ? { match: "and" as const, conditions: [] }
+    : normalizeDatabaseViewFilter(input.filters);
   if (
     typeof sort !== "string" ||
     !VIEW_PROPERTY.test(sort) ||
@@ -243,12 +269,14 @@ export function normalizeDatabaseView(value: unknown): DatabaseView | null {
     filterValue.length > MAX_VIEW_FILTER_LENGTH ||
     !Array.isArray(hidden) ||
     hidden.length > MAX_DATABASE_PROPERTIES ||
-    !hidden.every((id) => typeof id === "string" && UUID.test(id))
+    !hidden.every((id) => typeof id === "string" && UUID.test(id)) ||
+    !filters
   )
     return null;
   return {
     sort,
     descending,
+    filters,
     filter,
     filterValue: filter ? filterValue : "",
     hidden: [...new Set(hidden as string[])],
@@ -261,6 +289,7 @@ export function sameDatabaseView(a: DatabaseView, b: DatabaseView): boolean {
     a.descending === b.descending &&
     a.filter === b.filter &&
     a.filterValue === b.filterValue &&
+    sameDatabaseViewFilter(a.filters, b.filters) &&
     a.hidden.length === b.hidden.length &&
     a.hidden.every((id, index) => id === b.hidden[index])
   );

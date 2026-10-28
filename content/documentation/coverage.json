@@ -404,7 +404,7 @@
       "member"
     ],
     "type": "guide",
-    "source": "`components/pages/page-comment-popover.tsx`; `components/pages/page-presence.tsx`; `components/pages/page-conflict-banner.tsx`",
+    "source": "`components/pages/page-comment-dialog.tsx`; `components/pages/page-presence.tsx`; `components/pages/page-conflict-banner.tsx`",
     "gaps": "Comment anchors/threads, resolve/reply, mentions, viewing versus editing, save conflict recovery",
     "illustration": "New comments/presence/conflict",
     "requiresFigures": true,

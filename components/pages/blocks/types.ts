@@ -223,6 +223,14 @@ export interface PageBlock {
    * insertion that cannot complete.
    */
   needsUploads?: "image" | "file";
+
+  /**
+   * Kept in the schema only so that documents stored before it was retired
+   * still load (and so do their versions); never offered in a menu. Its
+   * Markdown writes what replaced it, so its `sample` does not read back as
+   * this node. The subpage block, since subpages became inline mentions.
+   */
+  legacy?: true;
 }
 
 /**

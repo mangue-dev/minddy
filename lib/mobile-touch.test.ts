@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -229,10 +230,23 @@ describe("other touch pitfalls", () => {
     expect(read(UI("input"))).toContain("text-base");
     expect(read(UI("input"))).toContain("md:text-sm");
     const css = read(GLOBALS);
-    expect(css).toMatch(/textarea,\s*select \{\s*font-size: 16px;/);
+    expect(css).toMatch(/textarea:not\(\.title-field\),\s*select \{\s*font-size: 16px;/);
     // Anything that has no text to enter stays out.
     for (const type of ["checkbox", "radio", "range", "submit"]) {
       expect(css).toContain(`[type="${type}"]`);
+    }
+  });
+
+  it("leaves title fields out of the floor only because they are larger", () => {
+    // The floor would shrink a title (a page title read 16 px on a phone):
+    // every `title-field` must carry a size of 18 px (`text-lg`) or more.
+    const files = execSync("git grep -l 'title-field' -- components", { encoding: "utf8" })
+      .split("\n").filter(Boolean);
+    for (const file of files) {
+      for (const match of read(file).matchAll(/className="([^"]*\btitle-field\b[^"]*)"/g)) {
+        // `text-lg` and up, or an arbitrary rem size from 1.125rem (18 px).
+        expect(match[1], file).toMatch(/\btext-(lg|xl|[2-9]xl|\[(1\.(1[2-9]|[2-9])\d*|[2-9](\.\d+)?)rem\])(?![\w-])/);
+      }
     }
   });
 

@@ -1047,7 +1047,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const composerGridRef = useRef<HTMLDivElement>(null);
     const leadControlsRef = useRef<HTMLDivElement>(null);
     const trailControlsRef = useRef<HTMLDivElement>(null);
-    const surfaceContentRef = useRef<HTMLDivElement>(null);
+    const surfaceTopRef = useRef<HTMLDivElement>(null);
     const [textWraps, setTextWraps] = useState(false);
     const [surfaceHeight, setSurfaceHeight] = useState<number | null>(null);
     const expandedLayout = textWraps;
@@ -1091,8 +1091,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     }, []);
     useEffect(() => {
       const editor = editorRef.current;
-      const content = surfaceContentRef.current;
-      if (!editor || !content) return;
+      const top = surfaceTopRef.current;
+      const grid = composerGridRef.current;
+      if (!editor || !top || !grid) return;
       // Text filled or cleared from outside (dictation, a draft, a send)
       // changes the editor's size without an input event.
       const editorObserver = new ResizeObserver(() => measureComposerLayout());
@@ -1102,8 +1103,12 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       for (const controls of [leadControlsRef.current, trailControlsRef.current]) {
         if (controls) editorObserver.observe(controls);
       }
-      const contentObserver = new ResizeObserver(() => setSurfaceHeight(content.offsetHeight));
-      contentObserver.observe(content);
+      // The natural height is the context row's plus the grid's: both keep
+      // their own size whatever height the surface is animating through.
+      const contentObserver = new ResizeObserver(() =>
+        setSurfaceHeight(top.offsetHeight + grid.offsetHeight));
+      contentObserver.observe(top);
+      contentObserver.observe(grid);
       return () => {
         editorObserver.disconnect();
         contentObserver.disconnect();
@@ -1657,10 +1662,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             // is a borderless `bg-control` surface (the editor caret is the
             // signal), brand colors are kept for drag feedback only.
             "chat-input-surface relative overflow-hidden rounded-[1.625rem] bg-control",
-            // Content pinned to the bottom: while the height animates, the
-            // controls row never leaves the bottom edge; only the text and
-            // what sits above it move.
-            "flex flex-col justify-end",
+            // The context row is pinned to the top and the controls row to
+            // the bottom: while the height animates, both keep their gutter
+            // to their edge, and only the text between them moves.
+            "flex flex-col",
             "transition-[height,box-shadow] duration-200 ease-out motion-reduce:transition-none",
             drop.dragging && "ring-2 ring-brand/20"
           )}
@@ -1671,7 +1676,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           {...(canAttach ? drop.handlers : {})}
         >
           <DropOverlay show={canAttach && drop.dragging} />
-          <div ref={surfaceContentRef} className="flex shrink-0 flex-col">
+          <div ref={surfaceTopRef} className="shrink-0">
           {/* The host can merge semantic context and attachments into this
           single adaptive row. Concentric nesting: its rounded-md pills sit
           behind a 10px gutter. */}
@@ -1681,10 +1686,14 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               <ScrollableContextRow items={standaloneAttachmentItems} />
             </div>
           )}
+          </div>
+          {/* Shrinking, the grid overflows upward: clipped here, under the
+              context row, rather than over it. */}
+          <div className="flex min-h-0 flex-1 flex-col justify-end overflow-hidden">
           <div
             ref={composerGridRef}
             className={cn(
-              "grid grid-cols-[auto_minmax(0,1fr)_auto] items-end",
+              "grid shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-end",
               expandedLayout
                 ? "[grid-template-areas:'text_text_text'_'lead_._trail']"
                 : "[grid-template-areas:'lead_text_trail'] items-center",

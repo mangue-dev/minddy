@@ -692,13 +692,13 @@ describe("the gutter hover surface", () => {
   it("stays off where there is no gutter", () => {
     // The rule is conditional on `[data-gutter]`, which the editor engine only
     // sets when the block chrome is shown: a public page, a print, a
-    // description or a comment has no reservation on the left, and the
-    // negative margin there would move the text out of its column.
+    // description, a comment or the phone layout has no reservation on the
+    // left, and the negative margin there would move the text out of its column.
     const editor = readFileSync(
       join(process.cwd(), "components/editor/rich-editor.tsx"),
       "utf8"
     );
-    expect(editor).toContain("const chrome = !!editor && editable && blockChrome;");
+    expect(editor).toContain("const chrome = !!editor && editable && blockChrome && !mobile;");
     expect(editor).toContain('data-gutter={chrome ? "" : undefined}');
   });
 

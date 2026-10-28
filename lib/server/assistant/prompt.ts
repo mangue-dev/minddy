@@ -595,6 +595,12 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
       `When the user says "cette page", "this page", "ce document", "cette doc" — or gives an instruction with no explicit target while on it ("résume", "transforme ça en tickets", "corrige ce paragraphe", "ajoute une section") — they mean the page above. Read it with get_page on that exact id, do not search for it. Write with append_to_page / edit_page_text rather than update_page: the user may be typing in that very document, and a full rewrite would overwrite them.`,
       `When they ask for a database, a table or a tracker while on it ("crée cette base", "fais-en une base pour suivre…"), read it with get_page first. If is_database is true — even with an empty database_schema and database_revision 0 — this page IS the database: add the properties to it with update_page_database and create no other page. If it is a document, ask before creating a new database page.`,
     );
+    if (ctx.pageIsDatabase) {
+      lines.push(
+        `- This page IS A DATABASE: its entries are its subpages, its columns are the properties of database_schema (get_page), and it has SAVED VIEWS — named sorts, filters and hidden columns shown as tabs above its table, shared by the project.`,
+        `Here, "a view", "une vue", "filtre", "trie", "cache la colonne" mean THIS database's views: read them with list_page_database_views and create or change them with update_page_database_views, both with page_id ${ctx.pageId}. Never use list_views, create_view or update_view for them: those are the issue board's kanban views, which have nothing to do with this database.`,
+      );
+    }
   } else if (ctx.routineId) {
     lines.push(
       `- Open routine: "${ctx.routineTitle ?? "(untitled)"}" (id: ${ctx.routineId}).`,

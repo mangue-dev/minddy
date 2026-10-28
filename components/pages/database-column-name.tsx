@@ -2,15 +2,17 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Edit04Icon, Settings02Icon } from "@hugeicons/core-free-icons";
+import { Delete02Icon, Edit04Icon, Settings02Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState, type HTMLAttributes } from "react";
 import { useTranslations } from "next-intl";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Input } from "@/components/ui/input";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { PROPERTY_ICONS } from "./database-property-icons";
@@ -41,6 +43,8 @@ export function DatabaseColumnName({
   const [editing, setEditing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
+  // The schema the deletion was asked on, so a concurrent edit is not undone.
+  const [removeBase, setRemoveBase] = useState<PageSummary | null>(null);
   const hasOptions = property?.type === "select" || property?.type === "multi_select";
   const suppressClick = useRef(false);
   useEffect(() => {
@@ -140,6 +144,12 @@ export function DatabaseColumnName({
               setMenuOpen(true);
             }}
             onDoubleClick={start}
+            onContextMenu={(event) => {
+              if (dragging) return;
+              event.preventDefault();
+              suppressClick.current = false;
+              setMenuOpen(true);
+            }}
             onKeyDown={(event) => {
               if (event.key === "F8" || dragging) dragHandleProps?.onKeyDown?.(event);
               if (event.defaultPrevented) return;
@@ -183,6 +193,15 @@ export function DatabaseColumnName({
             {t("editOptions")}
           </DropdownMenuItem>
         )}
+        {property && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onSelect={() => setRemoveBase(database)}>
+              <HugeiconsIcon icon={Delete02Icon} className="size-4" />
+              {t("deleteProperty")}
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
     {property && optionsOpen && (
@@ -191,6 +210,25 @@ export function DatabaseColumnName({
         database={database}
         property={property}
         onClose={() => setOptionsOpen(false)}
+      />
+    )}
+    {property && (
+      <ConfirmDeleteDialog
+        open={removeBase !== null}
+        onOpenChange={(open) => {
+          if (!open) setRemoveBase(null);
+        }}
+        title={t("deleteProperty")}
+        description={t("deletePropertyBody", { name })}
+        confirmLabel={t("delete")}
+        cancelLabel={t("cancel")}
+        onConfirm={() => {
+          if (!removeBase) return;
+          void saveSchema(
+            removeBase,
+            (removeBase.database_schema ?? []).filter((p) => p.id !== property.id),
+          );
+        }}
       />
     )}
     </>

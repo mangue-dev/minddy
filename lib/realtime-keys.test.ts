@@ -472,6 +472,36 @@ describe("routine realtime", () => {
   });
 });
 
+describe("database view realtime", () => {
+  const VIEW = "77777777-7777-4777-8777-777777777777";
+
+  it("refetches the views of the database a view belongs to, deletions included", () => {
+    for (const operation of ["INSERT", "UPDATE", "DELETE"] as const) {
+      const row = { id: VIEW, page_id: PAGE, project_id: PROJECT };
+      const keys = keysForProjectEvent(change("page_database_views", {
+        operation,
+        record: operation === "DELETE" ? null : row,
+        old_record: operation === "INSERT" ? null : row,
+      }), PROJECT);
+      expect(keys).toEqual([{ key: ["page-database-views", PROJECT, PAGE], refetch: "active" }]);
+    }
+  });
+
+  it("catches view edits missed while the tab was disconnected", () => {
+    expect(projectScopeKeys(PROJECT)).toContainEqual(["page-database-views", PROJECT]);
+  });
+
+  it("broadcasts identifiers without the view name or configuration", () => {
+    const sql = canonicalSql(readMigration("20270109200092_page_database_views_realtime.sql"));
+    expect(sql).toContain("create trigger page_database_views_broadcast");
+    expect(sql).toContain("after insert or update or delete on public.page_database_views");
+    expect(sql).not.toContain("to_jsonb(new)");
+    expect(sql).not.toContain("new.name");
+    expect(sql).not.toContain("new.view");
+    expect(sql).not.toContain("encrypted_content");
+  });
+});
+
 describe("page stream wake-ups (MIN-688)", () => {
   const head = (field: "body" | "title", revision: number, pageId = PAGE) =>
     change("page_collaboration_heads", {

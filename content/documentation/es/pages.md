@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
-  "sourceRevision": 18,
+  "revision": 20,
+  "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -42,7 +42,6 @@
       "components/pages/page-tree.tsx",
       "components/pages/page-editor.tsx",
       "components/pages/page-slash-command.tsx",
-      "components/pages/page-comment-popover.tsx",
       "components/pages/page-presence.tsx",
       "components/pages/page-conflict-banner.tsx",
       "lib/pages-merge.ts",
@@ -70,14 +69,27 @@
       "components/pages/page-promotion-context.tsx",
       "components/pages/page-promotion-context.test.tsx",
       "components/pages/page-database-view.tsx",
-      "lib/server/page-database-views.ts"
+      "lib/server/page-database-views.ts",
+      "components/pages/page-comment-bubble.tsx",
+      "components/editor/mobile-editor-toolbar.tsx",
+      "components/editor/rich-editor.tsx",
+      "components/pages/page-extensions.ts",
+      "components/pages/blocks/image.ts",
+      "lib/pages-markdown.ts",
+      "components/pages/blocks/subpage.ts",
+      "lib/server/pages.ts",
+      "lib/pages-subpage.ts",
+      "lib/pages-export.ts",
+      "components/public-page-body.tsx",
+      "components/pages/page-comment-dialog.tsx",
+      "lib/keyboard/shortcuts.ts"
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:/root/min764 (database archive sentence checked against lib/server/database-export.ts and lib/server/page-database-views.ts: saved views are not exported and are copied by duplication; rest of the article unchanged since the previous review; no figure changed); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of page-editor-steps, page-comments-and-collaboration-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min764 (es changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 20,
+    "fact": "agent:claude-code (new editor-formatting section (selection toolbar, shortcuts, Shift+Enter line break and send keys, phone keyboard toolbar) and image width kept in Markdown checked against components/pages/page-comment-bubble.tsx, lib/keyboard/keyboard-context.tsx, components/editor/document-editor.tsx, components/pages/page-extensions.ts, components/editor/mobile-editor-toolbar.tsx, components/editor/rich-editor.tsx, components/pages/blocks/image.ts and lib/pages-markdown.ts; retired subpage block: \"/\" Sub-page inserting a mention and opening the child, legacy blocks converted on a writer's first opening with block ids kept, trash and restore of a child's mention line, mention deletion never trashing, duplication remapping mentions, `[@Title](mention:page/<id>)` with `[[page:<id>]]` still read, export relative links and current titles, published mentions checked against components/pages/blocks/subpage.ts, components/pages/page-editor.tsx, lib/server/pages.ts, lib/pages-subpage.ts, lib/pages-export.ts, lib/server/pages-export.ts and components/public-page-body.tsx; block comment dialog or bottom sheet, phone long-press selection, notebook toolbar, bottom navigation hidden while typing and Add icon on touch screens checked against components/pages/page-comment-dialog.tsx and components/editor/mobile-editor-toolbar.tsx; Sub-page opening in the side panel with Expand (sidebar creation still full page), color lists showing each color by name in that color, selection ended by an outside click or Comment, Turn into marking only the selection's block, and Untitled page mentions checked against components/pages/page-view.tsx and components/pages/page-comment-bubble.tsx; page Copy submenu (Copy link, Copy page content as Markdown, not on databases) and the Command/Ctrl+Shift+L link shortcut checked against components/pages/page-document-actions.tsx and lib/keyboard/shortcuts.ts; floating phone toolbar hiding with the keyboard, its Color sheet and pinned Hide keyboard button checked against components/editor/mobile-editor-toolbar.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (es changed passages with catalog UI labels; equivalent meaning to en revision 19; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "notifications-and-inbox",
@@ -112,7 +124,7 @@
       "src": "/documentation/es/page-create-menu.png",
       "alt": "Menú de creación con Nueva página y Nueva base de datos.",
       "caption": "Utiliza los controles de páginas del proyecto para elegir un documento o una base de datos.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -128,7 +140,7 @@
       "src": "/documentation/es/page-editor.png",
       "alt": "Página de demostración con títulos, párrafos, casillas de tareas y una mención a un ticket.",
       "caption": "Los títulos, las tareas y la mención AUR-2 estructuran la página. El contenido es un ejemplo de demostración.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -145,7 +157,7 @@
       "src": "/documentation/es/page-comments.png",
       "alt": "Actividad de la página todavía sin eventos y el campo de comentario vacío.",
       "caption": "Consulta la actividad y escribe un comentario en el campo. En este ejemplo no se ha enviado ninguno.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -162,7 +174,7 @@
       "src": "/documentation/es/page-file-states.png",
       "alt": "Página de demostración con una carga incompleta y un archivo guardado de 67 bytes que ofrece Descargar.",
       "caption": "Comprueba el estado real del archivo: el segundo adjunto está disponible y la primera carga incompleta no.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -178,7 +190,7 @@
       "src": "/documentation/es/page-history-preview.png",
       "alt": "Pestaña Versiones con un estado anterior desplegado, su autor, Restaurar y el aviso de conservación durante 30 días.",
       "caption": "Previsualiza un estado guardado y compáralo con la página actual antes de restaurarlo.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -194,7 +206,7 @@
       "src": "/documentation/es/page-publish.png",
       "alt": "Diálogo de publicación con Privado seleccionado y opciones de contraseña o enlace.",
       "caption": "Privado mantiene la página dentro del proyecto. Revisa quién debe verla antes de cambiar la publicación.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -210,7 +222,7 @@
       "src": "/documentation/es/page-export.png",
       "alt": "Menú de exportación del documento con Markdown (.md) e Imprimir / PDF.",
       "caption": "Elige Markdown para descargar el documento o Imprimir / PDF para abrir la vista de impresión.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -226,7 +238,7 @@
       "src": "/documentation/es/file-preview.png",
       "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.",
       "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Cambiar nombre y Eliminar.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -257,13 +269,13 @@ Las páginas forman el wiki de un proyecto, con documentos, subpáginas y entrad
 
 Abre Páginas en un proyecto como propietario o como Miembro; los lectores pueden abrir las páginas, pero no crearlas. Usa el menú + y elige una página para un documento o una base de datos para una lista estructurada. Pon un título útil y escribe la especificación, decisión o procedimiento que deba conservar.
 
-Crea subpáginas para documentos relacionados y utiliza los controles del árbol para moverlas o reordenarlas. Una página no puede ser descendiente de sí misma. Duplicar una página crea contenido nuevo, no una referencia actualizada al original. Revisa la rama duplicada antes de editarla o compartirla.
+Crea subpáginas para documentos relacionados y utiliza los controles del árbol para moverlas o reordenarlas. Una página no puede ser descendiente de sí misma. Duplicar una página crea contenido nuevo, no una referencia actualizada al original. Revisa la rama duplicada antes de editarla o compartirla. Para crear una subpágina mientras escribes, teclea `/` y elige **Subpágina**: minddy crea la página hija bajo la actual, inserta su mención en el cursor seguida de un espacio y abre la nueva página en el panel lateral, junto a la página en la que escribes; elige **Ampliar** para abrirla completa. Puedes seguir escribiendo después de la mención en la misma línea, como después de cualquier mención. Una página creada desde la barra lateral se abre completa. Una página más antigua puede mostrar todavía bloques de subpágina: la primera vez que la abre alguien que puede editarla, cada bloque se convierte en una línea que solo contiene la mención de la hija, y los comentarios y enlaces de bloque siguen apuntando a ella. Abrirla como lector no convierte nada. Al duplicar una página con sus subpáginas, las menciones de las páginas copiadas apuntan a las copias, incluidas las menciones dentro de una frase.
 
 ### Favoritos y eliminación {#page-tree}
 
-Marca una página como favorita para mostrarla al principio del árbol del proyecto. Estos favoritos se comparten dentro del proyecto, a diferencia de una nota privada del cuaderno. Enlaza una página a una incidencia cuando el documento actual sea contexto de la tarea; el título del recurso sigue los cambios de nombre de la página.
+Marca una página como favorita para mostrarla al principio del árbol del proyecto. Estos favoritos se comparten dentro del proyecto, a diferencia de una nota privada del cuaderno. Enlaza una página a una incidencia cuando el documento actual sea contexto de la tarea; el título del recurso sigue los cambios de nombre de la página. En el menú `…` de la página abierta, **Copiar** ofrece **Copiar enlace** y **Copiar el contenido de la página**, que copia el título y el cuerpo en Markdown (no se ofrece en una base de datos). Comando+Mayús+L en macOS o Ctrl+Mayús+L en Windows/Linux copia el enlace de la página abierta.
 
-La eliminación envía a la papelera las páginas para las que se admite la recuperación. Desde un menú de página, **Mover a la papelera** pide confirmación antes, nombrando la página y cuántas subpáginas se van con ella; se pueden restaurar desde la papelera durante 30 días. Comprueba la rama seleccionada antes de eliminar y recupera una página perdida en lugar de recrearla cuando quieras conservar su contenido. Las entradas con valores de base de datos guardados se pueden reordenar dentro de su base, pero no mover fuera de ella. Si se rechaza un movimiento, examina jerarquía y tipo de entrada en lugar de forzarlo con intentos repetidos.
+La eliminación envía a la papelera las páginas para las que se admite la recuperación. Desde un menú de página, **Mover a la papelera** pide confirmación antes, nombrando la página y cuántas subpáginas se van con ella; se pueden restaurar desde la papelera durante 30 días. Borrar una mención nunca mueve una página a la papelera. Mover una página hija a la papelera desde el árbol quita de la página principal la línea que solo contiene su mención; al restaurar la página, esa línea vuelve al final de la página principal, salvo que esta aún la mencione en otro lugar. Una mención dentro de una frase nunca se quita. Comprueba la rama seleccionada antes de eliminar y recupera una página perdida en lugar de recrearla cuando quieras conservar su contenido. Las entradas con valores de base de datos guardados se pueden reordenar dentro de su base, pero no mover fuera de ella. Si se rechaza un movimiento, examina jerarquía y tipo de entrada en lugar de forzarlo con intentos repetidos.
 
 
 ![Menú de creación con Nueva página y Nueva base de datos.](/documentation/es/page-create-menu.png)
@@ -283,12 +295,20 @@ A diferencia de una tarea del cuaderno llevada al proyecto, la página no se eli
 
 Abre la página y edita su título o cuerpo como propietario o como Miembro. Los lectores pueden abrir y leer las páginas, pero no pueden editarlas, importarlas, duplicarlas, añadirlas a favoritos ni publicarlas, ni restaurar una versión. Usa el menú de comandos de barra y los controles de formato para insertar encabezados, texto, listas con viñetas, numeradas y de tareas, citas, avisos, bloques de código, divisores, desplegables (secciones plegables), subpáginas, imágenes y archivos. Un aviso puede tener un icono emoji y un color de la paleta; elígelos para distinguir información útil, no como única forma de comunicar una advertencia.
 
-Utiliza menciones para enlazar incidencias, objetivos, personas o páginas relevantes. Escribe `@` seguido de un identificador, palabras del título o una breve descripción; una búsqueda descriptiva también muestra incidencias encontradas [por el sentido](/docs/navigation#search-by-meaning) bajo **Relacionadas por significado**, después de las coincidencias de texto. Los enlaces inversos ayudan a encontrar páginas que hacen referencia a la actual. Un enlace aporta contexto, no acceso a un objeto privado de otro proyecto.
+Utiliza menciones para enlazar incidencias, objetivos, personas o páginas relevantes. Escribe `@` seguido de un identificador, palabras del título o una breve descripción; una búsqueda descriptiva también muestra incidencias encontradas [por el sentido](/docs/navigation#search-by-meaning) bajo **Relacionadas por significado**, después de las coincidencias de texto. Los enlaces inversos ayudan a encontrar páginas que hacen referencia a la actual. Un enlace aporta contexto, no acceso a un objeto privado de otro proyecto. La mención de una página que aún no tiene título muestra **Sin título**.
 
 Al hacer clic en la mención de una página, un enlace inverso, una página adjunta a una incidencia o a un objetivo, o un enlace a una página en un comentario o una respuesta de Numo, esa página se abre en un panel lateral sobre lo que estabas leyendo. Léela o edítala ahí, elige **Ampliar** para abrir la página completa o cierra el panel para volver. Una base de datos no se abre en el panel: se abre como página completa.
 
 
 ![Página de demostración con títulos, párrafos, casillas de tareas y una mención a un ticket.](/documentation/es/page-editor.png)
+
+### Dar formato al texto y escribir en el teléfono {#editor-formatting}
+
+Las páginas, las descripciones, los comentarios y el cuaderno de tareas comparten el mismo editor. Selecciona texto para abrir la barra de selección. Su primera fila muestra el tipo de bloque actual: elígela para abrir **Convertir en** y cambiar el bloque. Después vienen **Color**, para el texto o el fondo, **Negrita**, **Cursiva**, **Tachado**, **Código**, **Añadir enlace** (o **Quitar enlace** sobre un enlace) y **Borrar formato**. En una página, una fila **Comentar** ancla un comentario a la selección. **Convertir en** marca solo el tipo del bloque que contiene la selección. En las listas de colores, aquí y en el menú del bloque, cada color aparece con su nombre, escrito en ese color o sobre ese fondo. Hacer clic fuera del editor termina la selección y oculta la barra, igual que elegir **Comentar**. Las descripciones emergentes muestran los atajos: Comando+B, Comando+I, Comando+Mayús+S y Comando+E en macOS, o Ctrl con las mismas teclas en Windows/Linux. En un editor, Comando/Ctrl+B pone el texto en negrita; fuera de él, sigue mostrando u ocultando la barra lateral.
+
+Mayús+Intro empieza una línea nueva dentro del mismo bloque. Comando/Ctrl+Intro no inserta un salto de línea: en un comentario u otro compositor envía, sea cual sea el atajo de envío elegido en tus [preferencias](/es/documentacion/accounts#preferences), y si elegiste Intro como atajo de envío, Intro también envía.
+
+En un teléfono, el editor no muestra tiradores de bloque ni barra de selección, y escribir `@` deja un carácter normal. Mientras un editor tiene el foco, una barra flotante se sitúa encima del teclado y se oculta cuando el teclado se cierra: **Insertar un bloque** (+) lista los bloques de este editor e inserta el elegido en el cursor, como `/`; **Mencionar** (@) lista personas, incidencias, objetivos y páginas para mencionar; después vienen **Negrita**, **Cursiva**, **Tachado**, **Código**, **Color** (una hoja para el color del texto o del fondo), **Añadir enlace**, **Reducir sangría** y **Aumentar sangría** en una lista, **Comentar** en una página y **Ocultar teclado**, que se mantiene fijo en el extremo derecho. Una hoja inferior en la que escribes crece hasta ocupar toda la altura de la pantalla, y la línea que escribes se mantiene encima del teclado. Una pulsación larga selecciona texto en un editor, y la barra y sus hojas también funcionan en el cuaderno de tareas. La navegación inferior se oculta mientras un campo de texto tiene el foco, como el título de una página o un comentario. En una pantalla táctil, **Añadir icono** siempre está visible en una página.
 
 ### Guardado y portabilidad {#editor-save}
 
@@ -296,11 +316,11 @@ Una página se guarda a medida que escribes: cada cambio llega al servidor en un
 
 Si se corta la conexión, mantén la página abierta. Los cambios sin guardar permanecen en la página y se envían cuando vuelve la conexión; los cambios de los demás llegan al mismo tiempo y se fusionan con los tuyos. minddy solo abre otra página cuando tus cambios están guardados: mientras no se pueden enviar, te mantiene en la página e indica que el guardado falló. Cerrar una pestaña del navegador con cambios sin guardar te pide confirmación antes; salir de la aplicación de escritorio no la pide, y los cambios sin guardar se pierden. Si pierdes el acceso a la página o el permiso para editarla mientras hay cambios sin guardar, minddy los deshace y muestra un mensaje. Cuando el servidor rechaza un cambio, por ejemplo un título de más de 500 caracteres o un enlace cuyo protocolo no está permitido, minddy deshace ese cambio y muestra un mensaje. El historial puede ayudar a examinar versiones guardadas anteriormente.
 
-Las exportaciones Markdown y las lecturas de páginas por agentes conservan iconos y colores de avisos en su representación admitida. Los formatos difieren en fidelidad y tratamiento de adjuntos, así que comprueba el documento resultante antes de sustituir una fuente original. Usa bloques de código para comandos literales y conserva sus requisitos y advertencias en el texto que los rodea.
+Las exportaciones Markdown y las lecturas de páginas por agentes conservan iconos y colores de avisos en su representación admitida. Una imagen redimensionada también conserva su ancho, escrito como título de la imagen (`![alt](src "width=60%")`), así que las ediciones de Numo, de los agentes MCP o del cuaderno de tareas no lo restablecen. Los agentes leen y escriben una mención de página como `[@Title](mention:page/<id>)`; la forma antigua `[[page:<id>]]` sigue aceptándose y se lee como la misma mención, también dentro de una línea. Los formatos difieren en fidelidad y tratamiento de adjuntos, así que comprueba el documento resultante antes de sustituir una fuente original. Usa bloques de código para comandos literales y conserva sus requisitos y advertencias en el texto que los rodea.
 
 ## Discutir una página y resolver conflictos {#page-comments-and-collaboration}
 
-Abre una página del proyecto y sus controles de comentarios. Selecciona el contenido relevante al crear un comentario anclado, explica la pregunta o cambio propuesto y utiliza menciones para involucrar a un miembro. Un lector puede comentar si el propietario le ha activado **Puede comentar**. Responde en el hilo para mantener la decisión junto a su contexto. Resuélvelo cuando su pregunta se haya atendido realmente.
+Abre una página del proyecto y sus controles de comentarios. Selecciona el contenido relevante al crear un comentario anclado, explica la pregunta o cambio propuesto y utiliza menciones para involucrar a un miembro. Un lector puede comentar si el propietario le ha activado **Puede comentar**. Responde en el hilo para mantener la decisión junto a su contexto. Resuélvelo cuando su pregunta se haya atendido realmente. El hilo de un bloque se abre en un diálogo en un ordenador y en una hoja inferior en un teléfono, en lugar de junto al bloque: muestra el pasaje citado, las discusiones existentes con sus respuestas y un campo para un comentario nuevo. Ábrelo desde la insignia de comentarios del bloque, **Comentar** en la barra de selección o el menú del bloque.
 
 Los avatares de presencia identifican a las personas que ven la página. Mientras alguien edita, su cursor y su selección aparecen en el cuerpo y en el título, con un color propio y una etiqueta con su nombre. El cursor de un lector no se muestra. Un cursor indica dónde está trabajando alguien, no que su texto esté guardado: el indicador de guardado solo refleja tus propios cambios.
 
@@ -357,7 +377,7 @@ Abre una página del proyecto como propietario o como Miembro y usa sus controle
 
 Copia el enlace /p/ generado cuando la publicación tenga éxito. Si la página tiene descendientes, revisa la opción de incluirlos y su número. Incluirlos publica la rama seleccionada; excluirlos deja su contenido fuera de esa publicación. Una base de datos sin descendientes publicados no expone automáticamente todos los cuerpos de sus entradas.
 
-Abre el enlace en una sesión separada del navegador sin tu cuenta. Prueba la contraseña si está activada, el contenido, las subpáginas previstas y las descargas. Esto verifica el acceso de solo lectura del visitante, no tus permisos más amplios de miembro.
+Abre el enlace en una sesión separada del navegador sin tu cuenta. Prueba la contraseña si está activada, el contenido, las subpáginas previstas y las descargas. Una mención de una página del conjunto publicado muestra su título y la abre con el mismo enlace; una mención de cualquier otra página muestra **Subpágina no publicada** y no se abre. Esto verifica el acceso de solo lectura del visitante, no tus permisos más amplios de miembro.
 
 
 ![Diálogo de publicación con Privado seleccionado y opciones de contraseña o enlace.](/documentation/es/page-publish.png)
@@ -372,7 +392,7 @@ Los enlaces de páginas de usuarios mantienen `noindex` y son distintos del manu
 
 Abre el menú del documento de la página y elige Exportar. Selecciona Markdown para una página (.md) o una rama (.zip), PDF para abrir la vista de impresión o el archivo de base de datos si la página es una base de datos. Revisa el alcance ofrecido antes de confirmar: una página, su rama y un archivo de base de datos contienen elementos diferentes.
 
-Abre la exportación y comprueba los encabezados, avisos, enlaces y adjuntos que necesite el lector. La acción PDF abre una vista de impresión legible sin toda la navegación de la aplicación. Usa los controles de impresión del navegador para imprimir o guardar un PDF. El menú del documento no ofrece una acción de importación general. Las importaciones compatibles se inician desde una base vacía, como explica la guía de importación de bases de datos.
+Abre la exportación y comprueba los encabezados, avisos, enlaces y adjuntos que necesite el lector. En la exportación, las menciones muestran los títulos actuales de las páginas, y las menciones de páginas incluidas en la exportación se convierten en enlaces relativos. La acción PDF abre una vista de impresión legible sin toda la navegación de la aplicación. Usa los controles de impresión del navegador para imprimir o guardar un PDF. El menú del documento no ofrece una acción de importación general. Las importaciones compatibles se inician desde una base vacía, como explica la guía de importación de bases de datos.
 
 
 ![Menú de exportación del documento con Markdown (.md) e Imprimir / PDF.](/documentation/es/page-export.png)

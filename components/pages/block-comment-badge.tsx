@@ -4,6 +4,7 @@ import { Message01Icon } from "@hugeicons/core-free-icons";
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
@@ -18,7 +19,11 @@ export function BlockCommentBadge({
   label: string;
   onOpen: (blockId: string) => void;
 }) {
+  // The badge is mounted in a React root of its own (a ProseMirror widget,
+  // blocks/block-comments.ts), outside the app's tooltip provider: without
+  // one here the tooltip threw and the badge never rendered.
   return (
+    <TooltipProvider>
     <Tooltip delayDuration={400} disableHoverableContent>
       <TooltipTrigger asChild>
         <button
@@ -43,5 +48,6 @@ export function BlockCommentBadge({
       </TooltipTrigger>
       <TooltipContent side="top">{label}</TooltipContent>
     </Tooltip>
+    </TooltipProvider>
   );
 }

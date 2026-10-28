@@ -434,11 +434,14 @@ export function CommandPalette({
             // A settings row lands on its card in the new tab too.
             queueSettingsSectionFocus(it.href);
             onDestinationSelect?.(destination);
+          } else if (destinationOnly && it.onSelectInNewTab) {
+            onOpenChange(false);
+            it.onSelectInNewTab();
           } else it.onSelect?.();
         },
       };
     },
-    [projectIconById, track, destinationOnly, onDestinationSelect]
+    [projectIconById, track, destinationOnly, onDestinationSelect, onOpenChange]
   );
 
   const items = useMemo<CpPaletteItem[]>(() => {
@@ -450,6 +453,7 @@ export function CommandPalette({
         .filter((it) => {
           if (HIDDEN_KEYS.has(it.key)) return false;
           if (!navigationSearch || paletteDestinationHref(it.href) !== null) return true;
+          if (destinationOnly && it.onSelectInNewTab) return true;
           // Tickets and navigation panels can open in place without a tab destination.
           return mobile && !destinationOnly && (it.entityType === "issue" || ["go-inbox", "open-notes", "go-agents", "cmd-shortcuts"].includes(it.key));
         })

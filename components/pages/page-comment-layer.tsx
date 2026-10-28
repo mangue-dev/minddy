@@ -5,7 +5,7 @@
 //
 // It does not render any surface in the flow: neither section nor footer. A
 // discussion on a passage is read next to the passage (the thread opened by the
-// block pad, components/pages/page-comment-popover.tsx); a discussion
+// block pad, components/pages/page-comment-dialog.tsx); a discussion
 // on the ENTIRE page can be read in its activity, with the other gestures
 // (components/pages/page-activity.tsx, “Activity” tab in history).
 //
@@ -28,9 +28,9 @@ import {
   type CommentedBlocks,
 } from "@/components/pages/block-comments";
 import {
-  PageCommentPopover,
+  PageCommentDialog,
   type BlockCommentTarget,
-} from "@/components/pages/page-comment-popover";
+} from "@/components/pages/page-comment-dialog";
 import { usePageComments } from "@/lib/use-page-comments";
 import { commentedBlockAnnotations } from "@/lib/page-comments";
 import type { Member } from "@/lib/types";
@@ -159,7 +159,7 @@ export function PageCommentLayer({
   if (!target) return null;
 
   return (
-    <PageCommentPopover
+    <PageCommentDialog
       editor={editor}
       target={target}
       threads={openThreads}

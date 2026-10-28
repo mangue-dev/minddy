@@ -89,8 +89,9 @@ const BODY = z
       "blocks, horizontal rules, <details><summary>…</summary>…</details> " +
       "collapsibles, <aside data-type=\"callout\" " +
       "data-page-callout-color=\"blue\" data-page-callout-icon=\"💡\">…</aside> " +
-      "callouts, and '[[page:<page_id>]]' on its own line to embed a link to " +
-      "another page. Anything else degrades to plain text. Never send " +
+      "callouts, and page mentions '[@Title](mention:page/<page_id>)' to link " +
+      "another page (inline: text can follow it; '[[page:<page_id>]]' is read as " +
+      "the same mention). Anything else degrades to plain text. Never send " +
       "ProseMirror JSON — markdown is the contract. " +
       IMAGES_AND_FILES
   );
@@ -203,7 +204,8 @@ export function registerPageTools(server: McpServer): void {
         "listing call). This is what you read before writing: copy passages from " +
         "here verbatim for minddy_edit_page_text, and keep the version to write " +
         "the body safely with minddy_update_page. Subpages are separate documents " +
-        "— a '[[page:<id>]]' line in the body is a link to one, never its content. " +
+        "— a page mention '[@Title](mention:page/<id>)' in the body is a link to one, " +
+        "never its content. " +
         "It also carries WHO wrote last (last_edited_by, last_edited_kind: " +
         "'human' or 'agent') and when (updated_at): a human edit since your last " +
         "pass is text someone owns — edit around it rather than replacing the " +

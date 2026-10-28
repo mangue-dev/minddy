@@ -24,7 +24,10 @@
 // - the mention pill (components/markdown-mention.tsx) placed on the node
 //   bare of the schema, and its suggestion “@”;
 // - the “/” menu, connected to the register, and the chrome of the block
-//   (components/pages/block-gutter.tsx): the margin on hover and the menu ⋯.
+//   (components/pages/block-gutter.tsx): the margin on hover and the menu ⋯;
+// - on a phone, none of the hover chrome, the selection bubble or the typed
+//   “@”: the keyboard toolbar (mobile-editor-toolbar.tsx) carries the blocks,
+//   the formats and the mentions in touch-sized controls.
 //
 // Version history is not here: it stays a page feature (MIN-271), and this
 // editor just renders its JSON on each keystroke.
@@ -77,6 +80,7 @@ import { BlockComments } from "@/components/pages/block-comments";
 import { FileDrop, viewBlockGapAt } from "@/components/editor/file-drop";
 import {
   PageCommentBubble,
+  commentAtCaret,
   type PageCommentAnchor,
 } from "@/components/pages/page-comment-bubble";
 import { focusDocumentEnd } from "@/components/pages/block-actions";
@@ -106,6 +110,10 @@ import {
 import { isCollabRemoteTransaction } from "@/lib/page-collaboration-origin";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { EDITABLE_CHANGED_META } from "@/components/editor/use-editor-editable";
+import { MobileEditorToolbar } from "@/components/editor/mobile-editor-toolbar";
+import { useMarginCaret } from "@/components/editor/margin-caret";
+import { isMobileLayout } from "@/lib/app-layout";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
 
 export interface RichEditorMentions extends MentionSuggestOptions {
   /** Rebuild mention nodes from the plain-text form stored by agent writes. */
@@ -142,9 +150,11 @@ const PROSE: Record<RichEditorSize, string> = {
   page: cn(
     PROSE_BASE,
     "text-base",
-    "[&_h1]:mt-6 [&_h1]:mb-2 [&_h1]:text-2xl [&_h1]:font-semibold [&_h1]:tracking-tight",
-    "[&_h2]:mt-5 [&_h2]:mb-1.5 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:tracking-tight",
-    "[&_h3]:mt-4 [&_h3]:mb-1 [&_h3]:text-lg [&_h3]:font-semibold",
+    // A clear step between levels, close to Notion's 30 / 24 / 20 px over a
+    // 16 px body: the former 24 / 20 / 18 read almost alike.
+    "[&_h1]:mt-7 [&_h1]:mb-2 [&_h1]:text-[1.875rem] [&_h1]:leading-tight [&_h1]:font-semibold [&_h1]:tracking-tight",
+    "[&_h2]:mt-6 [&_h2]:mb-1.5 [&_h2]:text-2xl [&_h2]:leading-snug [&_h2]:font-semibold [&_h2]:tracking-tight",
+    "[&_h3]:mt-5 [&_h3]:mb-1 [&_h3]:text-xl [&_h3]:leading-snug [&_h3]:font-semibold",
     "[&_hr]:my-4 [&_hr]:border-border"
   ),
   compact: cn(
@@ -444,16 +454,26 @@ export function RichEditor({
   const mentionsRef = useRef(mentions);
   mentionsRef.current = mentions;
   const hasMentions = mentions !== undefined;
+  // Read at mount, like every extension: on a phone “@” is a letter, and the
+  // mentions come from the keyboard toolbar's sheet.
+  const [typedMentions] = useState(() => typeof window === "undefined" || !isMobileLayout());
+  const mobile = useMobileLayout() === true;
   const mentionSuggest = useMemo(
     () =>
-      hasMentions
+      hasMentions && typedMentions
         ? MentionSuggest.configure({
             items: () => mentionsRef.current?.items() ?? [],
             onQuery: () => mentionsRef.current?.onQuery?.(),
           })
         : null,
+    [hasMentions, typedMentions]
+  );
+  const mentionItems = useMemo(
+    () => (hasMentions ? () => mentionsRef.current?.items() ?? [] : undefined),
     [hasMentions]
   );
+  const onMentionQuery = useMemo(() => () => mentionsRef.current?.onQuery?.(), []);
+  const readSlashItems = useMemo(() => () => slashItemsRef.current, []);
 
   // Same rule as everywhere in this file: the `editorProps` do not change
   // NEVER identity, otherwise tiptap reapplies everything each time it is rendered. THE
@@ -778,7 +798,10 @@ export function RichEditor({
     if (editor.storage.pageFile) editor.storage.pageFile.pick = uploads?.imagesOnly ? null : pick;
   }, [editor, uploads]);
 
-  const chrome = !!editor && editable && blockChrome;
+  const chrome = !!editor && editable && blockChrome && !mobile;
+  // A click in the side margins of the pane puts the caret on that line.
+  const rootRef = useRef<HTMLDivElement>(null);
+  useMarginCaret(editor, rootRef, editable);
   const body = (
     // Neither `relative` nor withdrawal here, and that's the point: the GUTTER of chrome
     // (handle + `+`) is placed to the left of the block hovered over, therefore outside the
@@ -792,15 +815,26 @@ export function RichEditor({
     // margin, and the negative margin would cause the text to overflow out of
     // its column.
     <div
+      ref={rootRef}
       className={cn("page-editor", className)}
       data-gutter={chrome ? "" : undefined}
     >
       {chrome && <BlockGutter editor={editor} onComment={onComment} blockLinks={blockLinks} />}
       {/* The selection toolbar (bold, italic, link…) belongs to the editor,
- on every surface (MIN-728); a page adds the comment action. Outside pages it
- floats over the document, since comment fields and dialogs scroll. */}
-      {editor && editable && (
-        <PageCommentBubble editor={editor} onComment={onComment} floating={blocks !== "page"} />
+ on every surface (MIN-728); a page adds the comment action. It floats on the
+ body everywhere, pages included: positioned against the window rather than
+ the content column, it stays whole when the passage sits by an edge. */}
+      {editor && editable && !mobile && (
+        <PageCommentBubble editor={editor} onComment={onComment} floating />
+      )}
+      {editor && editable && mobile && (
+        <MobileEditorToolbar
+          editor={editor}
+          slashItems={readSlashItems}
+          mentionItems={mentionItems}
+          onMentionQuery={onMentionQuery}
+          onComment={onComment ? () => commentAtCaret(editor, onComment) : undefined}
+        />
       )}
       <EditorContent editor={editor} className={contentClassName} />
       <MarkdownLinkMenu editor={editor} />

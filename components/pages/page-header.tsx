@@ -124,7 +124,7 @@ export function PageHeader({
         //
         // The place is RESERVED (`h-7`) even when the button is invisible:
         // without this, the title would jump 28 px on mouseover.
-        <div className="-ml-1.5 flex h-7 items-center">
+        <div className="-ml-1.5 flex h-7 items-center pointer-coarse:h-9">
           <EmojiPicker value={null} onChange={onIconChange}>
             <button
               type="button"
@@ -135,6 +135,9 @@ export function PageHeader({
                 // him and exits the header — its trigger should not
                 // fade beneath it along the way.
                 "group-hover/header:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100",
+                // A touch screen has no hover to reveal it: always shown, at a
+                // touch target's height.
+                "[@media(hover:none)]:opacity-100 pointer-coarse:min-h-9 pointer-coarse:px-2 pointer-coarse:text-sm",
                 "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               )}
             >
@@ -187,7 +190,7 @@ export function PageHeader({
           }
         }}
         // `title-field` (app/globals.css): descenders neither scroll nor clip.
-        className="title-field w-full border-0 bg-transparent px-0 font-display text-4xl font-semibold tracking-tight outline-none placeholder:text-muted-foreground/50"
+        className="title-field w-full border-0 bg-transparent px-0 font-display text-[2rem] leading-tight font-semibold tracking-tight outline-none app-desktop:text-4xl placeholder:text-muted-foreground/50"
       />
       {live && live.carets.length > 0 && (
         <PageTitleCarets fieldRef={measuredRef} carets={live.carets} value={value} />

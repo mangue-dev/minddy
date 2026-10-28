@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
-  "sourceRevision": 19,
+  "revision": 20,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-23",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -52,14 +52,15 @@
       "lib/use-resource-mentions.ts",
       "lib/keyboard/shortcuts.ts",
       "lib/objective-order.ts",
-      "components/objective-label.tsx"
+      "components/objective-label.tsx",
+      "components/editor/mobile-editor-toolbar.tsx"
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-785 objective picker order and status display checked against lib/objective-order.ts and components/objective-label.tsx; no figure changed)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (fr picker-order sentence with catalog status labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-23"
+    "revision": 20,
+    "fact": "agent:claude-code (phone keyboard toolbar sentence checked against components/editor/mobile-editor-toolbar.tsx and components/editor/rich-editor.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (fr changed passages with catalog UI labels; equivalent meaning to en revision 20; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "issues",
@@ -80,7 +81,7 @@
       "src": "/documentation/fr/reader-objectives.png",
       "alt": "Dialogue de création d’objectif non envoyé dans le projet Aurora, avec un nom de résultat d’exemple et le bouton Créer l’objectif.",
       "caption": "Nommez le résultat avant de choisir le responsable, la date cible et l’état. Ce dialogue n’a pas créé un deuxième objectif.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -103,7 +104,7 @@ Un objectif regroupe les tickets d’un projet autour d’un résultat. Créez-l
 
 Ouvrez les objectifs du projet et créez-en un. Si vous le créez depuis un autre endroit de l’application, choisissez son projet dans **Créer dans**, en haut à gauche du formulaire (à côté du titre **Nouvel objectif** sur téléphone) ; changer de projet retire le responsable et les relations choisis pour le précédent. Sur ordinateur, Commande/Ctrl+Maj+P ouvre ce menu, même pendant la saisie du nom ou de la description ; une fois le projet choisi ou le menu fermé, le curseur revient exactement où il était. La pastille affiche ce raccourci, qui n’existe que si plusieurs projets peuvent être choisis ; sur téléphone, aucun raccourci n’est indiqué. Nommez le résultat recherché, ajoutez le contexte utile et renseignez les champs disponibles de responsable, date cible, couleur et état. Sur ordinateur, les mêmes touches que pour les champs d’un ticket les ouvrent dès que le curseur quitte le nom et la description : S l’état, A le responsable, D la date cible, R une relation, et C la couleur ; l’infobulle de chaque sélecteur affiche sa touche. Le responsable suit le résultat ; le choisir ne transfère pas la propriété du projet. Seul le propriétaire ou un Membre peut être responsable d’un objectif, et un responsable dont le rôle passe à Lecteur en est retiré. Un objectif appartient à un projet ; il diffère du cycle personnel qui couvre plusieurs projets.
 
-La description de l’objectif et ses commentaires utilisent le même éditeur que les pages du projet, sans les poignées de bloc : tapez `/` pour insérer des blocs et `@` pour mentionner une personne, un ticket, un objectif ou une page. Le menu `@` propose aussi les ressources jointes à ce que vous rédigez : le ticket ou l’objectif pour sa description et son plan, un commentaire pour ses propres fichiers, ou une fenêtre de création pour les fichiers ajoutés. Une mention d’une ressource jointe ailleurs s’affiche **Indisponible**. Plusieurs personnes peuvent modifier la description en même temps, avec le curseur de chacune affiché avec son nom et sa couleur. Sélectionnez du texte pour le mettre en forme ou ajouter un lien. Collez ou déposez une image, ou choisissez **Image** dans le menu `/`, pour l’insérer dans la description.
+La description de l’objectif et ses commentaires utilisent le même éditeur que les pages du projet, sans les poignées de bloc : tapez `/` pour insérer des blocs et `@` pour mentionner une personne, un ticket, un objectif ou une page. Le menu `@` propose aussi les ressources jointes à ce que vous rédigez : le ticket ou l’objectif pour sa description et son plan, un commentaire pour ses propres fichiers, ou une fenêtre de création pour les fichiers ajoutés. Une mention d’une ressource jointe ailleurs s’affiche **Indisponible**. Plusieurs personnes peuvent modifier la description en même temps, avec le curseur de chacune affiché avec son nom et sa couleur. Sélectionnez du texte pour le mettre en forme ou ajouter un lien. Collez ou déposez une image, ou choisissez **Image** dans le menu `/`, pour l’insérer dans la description. Sur un téléphone, la barre au-dessus du clavier remplace la barre de sélection et le menu `@` à la saisie ; le [guide des pages](/fr/documentation/pages#editor-formatting) la décrit.
 
 Dans les propriétés de chaque ticket concerné, choisissez l’objectif, ou utilisez les commandes de tickets de l’objectif. Le sélecteur d’objectif présente les objectifs ouverts avant ceux terminés ou annulés ; dans chaque groupe, ceux qui ont reçu le plus de tickets au cours des 30 derniers jours viennent en tête. Chacun affiche son statut et son nom dans sa couleur. Vérifiez que le travail voulu apparaît. Ses discussions et ressources conservent les décisions et pages de référence applicables au résultat global.
 

@@ -110,6 +110,13 @@ export async function fetchPageApi(
   );
 }
 
+/** A page as Markdown, its title and body: the single-page export, read as text. */
+export async function fetchPageMarkdownApi(projectId: string, pageId: string): Promise<string> {
+  const response = await fetchClientRead(`/api/projects/${projectId}/pages/${pageId}/export`);
+  await ok(response, "Request failed");
+  return response.text();
+}
+
 /** Validate the projected brief before creating its project, and reuse that body when saving. */
 export async function prepareInitialBriefApi(markdown: string): Promise<unknown> {
   const result = await json<{ content: unknown }>(

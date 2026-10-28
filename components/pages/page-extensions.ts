@@ -20,6 +20,7 @@
 import type { AnyExtension, Extensions, NodeViewRenderer } from "@tiptap/core";
 import type { Transaction } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
+import { HardBreak } from "@tiptap/extension-hard-break";
 import { Text } from "@tiptap/extension-text";
 import { MarkdownLinkMark } from "@/components/markdown-link-mark";
 import UniqueID from "@tiptap/extension-unique-id";
@@ -102,6 +103,14 @@ export function escapeMarkdownTags(text: string): string {
   return text.replace(/<(?=[A-Za-z/!?])/g, "&lt;");
 }
 
+/** A line break on ⇧↵ only. StarterKit's also binds ⌘↵, and claiming that
+    keystroke stopped every composer from sending with its send shortcut. */
+const ShiftEnterHardBreak = HardBreak.extend({
+  addKeyboardShortcuts() {
+    return { "Shift-Enter": () => this.editor.commands.setHardBreak() };
+  },
+});
+
 const MarkdownText = Text.extend({
   addStorage() {
     return {
@@ -143,9 +152,11 @@ export function pageExtensions(
       orderedList: false,
       listItem: false,
       link: false,
+      hardBreak: false,
       ...(trailingNode ? {} : { trailingNode: false }),
     }),
     MarkdownText,
+    ShiftEnterHardBreak,
     MarkdownLinkMark,
     ...blockExtensions({ headless, nodeViews, extensions, set: blocks }),
     ...pageColorExtensions(),

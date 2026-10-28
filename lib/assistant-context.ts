@@ -267,7 +267,7 @@ const FIELDS_BY_KEY: Record<string, (keyof AssistantPageContext)[]> = {
   objective: ["objectiveId", "objectiveName", "objectiveColor"],
   feedback: ["feedbackId", "feedbackTitle"],
   routine: ["routineId", "routineTitle"],
-  page: ["pageId", "pageTitle", "pageIcon"],
+  page: ["pageId", "pageTitle", "pageIcon", "pageIsDatabase"],
   view: ["viewId", "viewName", "onglet"],
   cycle: ["cycleId", "cycleLabel"],
 };

@@ -237,15 +237,15 @@ neither of the two layers having to reorganize itself. */}
         className={cn(
           "absolute top-0 right-0 w-64",
           "scrollbar-quiet flex max-h-[70vh] flex-col overflow-y-auto",
-          // 12 px radius, 6 px padding: the CONCENTRIC radius of a
-          // line is therefore 6 px (`rounded-md` lower). A free value
-          // would make two curves that don't fit together.
+          // The surface and padding of the app's dropdown menus
+          // (components/ui/dropdown-menu.tsx): 12 px radius, 8 px padding,
+          // and rows of the same height and inner radius.
           // The background comes from the shared `[data-floating-surface]`
           // rule in globals.css — the same translucent, blurred surface as
           // popovers, menus and selects. `layer="local"` opts out of the
           // global z-index elevation: the table lives inside the page
           // panel, it is not a short-lived portaled overlay.
-          "rounded-xl border border-border bg-popover p-1.5 shadow-lg",
+          "rounded-xl bg-popover p-2 shadow-md ring-1 ring-foreground/10",
           "pointer-events-none translate-x-1 opacity-0",
           "transition-[opacity,transform] duration-200 ease-out",
           "group-hover/toc:pointer-events-auto group-hover/toc:translate-x-0 group-hover/toc:opacity-100",
@@ -269,7 +269,7 @@ neither of the two layers having to reorganize itself. */}
                 goTo(entry.id);
               }}
               className={cn(
-                "flex h-7 w-full shrink-0 items-center rounded-md px-2 outline-none",
+                "flex min-h-8 w-full shrink-0 items-center rounded-sm px-2 py-1.5 outline-none",
                 "transition-colors hover:bg-muted",
                 "focus-visible:ring-2 focus-visible:ring-ring"
               )}

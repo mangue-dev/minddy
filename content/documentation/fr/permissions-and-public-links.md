@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -39,14 +39,15 @@
       "proxy.ts",
       "content/knowledge/settings-and-data.md",
       "docs/security/project-roles.md",
-      "lib/project-roles.ts"
+      "lib/project-roles.ts",
+      "components/public-page-body.tsx"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 8,
+    "fact": "agent:claude-code (published-page mention sentence checked against components/public-page-body.tsx and app/p/[token]/published-page.tsx: a mention of a page in the published set shows its title and opens under the same link, any other page shows the Sub-page not published label, inert; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed behavior)",
+    "language": "agent:claude-code (fr changed sentence with catalog UI labels; equivalent meaning to en revision 8; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "pages",
@@ -64,7 +65,7 @@
       "src": "/documentation/fr/permissions-and-public-links-flow.svg",
       "alt": "Schéma: Contrôles du compte et du projet. Objet privé ou publication explicite. Ensemble publié uniquement et fichiers signés. Révoquer le lien ; fichiers signés expirent après.",
       "caption": "La publication expose uniquement le contenu sélectionné ; les liens de fichiers déjà délivrés peuvent rester valides après révocation, jusqu’à leur expiration.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -108,7 +109,7 @@ Un changement de rôle ou un retrait s’applique à la requête suivante. Le co
 
 ## Comprendre la portée de publication {#publication}
 
-Une page publiée ou vue partagée utilise un lien opaque, éventuellement protégé par mot de passe. Le propriétaire et les membres peuvent publier et révoquer ces liens ; les lecteurs ne le peuvent pas. Toute personne possédant le lien et, lorsqu’il est exigé, son mot de passe peut accéder au contenu publié. Révoquez le lien dès qu’il n’est plus nécessaire. Les sous-pages se résolvent uniquement dans l’ensemble publié ; les titres exclus ne sortent pas. Les fichiers sont signés uniquement pour les pages publiées, le bucket privé et les routes authentifiées restent fermés. Les mentions peuvent rester du texte sans lien vers un profil privé. Une base publiée montre uniquement les entrées incluses dans sa branche publiée.
+Une page publiée ou vue partagée utilise un lien opaque, éventuellement protégé par mot de passe. Le propriétaire et les membres peuvent publier et révoquer ces liens ; les lecteurs ne le peuvent pas. Toute personne possédant le lien et, lorsqu’il est exigé, son mot de passe peut accéder au contenu publié. Révoquez le lien dès qu’il n’est plus nécessaire. Sur une page publiée, une mention d’une page de l’ensemble publié affiche son titre et ouvre cette page sous le même lien ; une mention de toute autre page affiche **Sous-page non publiée** et ne s’ouvre pas, si bien que les titres exclus ne sortent pas. Les fichiers sont signés uniquement pour les pages publiées, le bucket privé et les routes authentifiées restent fermés. Les mentions peuvent rester du texte sans lien vers un profil privé. Une base publiée montre uniquement les entrées incluses dans sa branche publiée.
 
 ## Tester le partage et sa révocation {#revocation}
 

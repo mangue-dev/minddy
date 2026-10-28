@@ -15,6 +15,13 @@ import { useEffect } from "react";
 /** Marks a typed pill so a copy of rendered text keeps its reference. */
 export const MENTION_REF_ATTR = "data-mention-ref";
 
+/** A label the surface's sources hold: an empty one is a page they know
+    without a title, which reads “Untitled”, never “unavailable”. */
+function knownLabel(label: string | null, type: MentionLinkType, untitled: string): string | null {
+  if (label === null) return null;
+  return label || (type === "page" ? untitled : null);
+}
+
 /**
  * The pill of a typed mention (MIN-734), in an editor or a rendered text.
  *
@@ -37,8 +44,9 @@ export function TypedMentionChip({
   appearance?: { seed?: string | null; color?: string | null; icon?: string | null };
 }) {
   const t = useTranslations("Common");
+  const tPages = useTranslations("Pages");
   const links = useMentionLinks();
-  const local = links?.label?.(type, id) ?? null;
+  const local = knownLabel(links?.label?.(type, id) ?? null, type, tPages("untitled"));
   // An attachment is mentioned only from the surface that holds it (MIN-742):
   // its pill resolves from that surface's attachments alone, so a mention of
   // another ticket's file reads as unavailable instead of asking the server.
@@ -88,8 +96,9 @@ export function TypedMentionChip({
  */
 export function TypedMentionText({ type, id }: { type: MentionLinkType; id: string }) {
   const t = useTranslations("Common");
+  const tPages = useTranslations("Pages");
   const links = useMentionLinks();
-  const local = links?.label?.(type, id) ?? null;
+  const local = knownLabel(links?.label?.(type, id) ?? null, type, tPages("untitled"));
   const resolved = useResolvedMentionLabel(local ? null : type, local ? null : id);
   const label = local ?? resolved;
   return <>@{label === null ? t("mentionUnavailable") : label ?? "…"}</>;

@@ -29,6 +29,31 @@ describe("per-message context authorization", () => {
     });
     expect(buildPageContextBlock(result!.context!)).toContain("project id: a");
   });
+  it("says a database page has its own views, from the database row and not the request", async () => {
+    const databases = new Set(["page-a"]);
+    const supabase = { from: (table: string) => {
+      let id: string;
+      const query = {
+        select: () => query,
+        eq: (_key: string, value: string) => { id = value; return query; },
+        is: () => query,
+        maybeSingle: async () => ({ data: id === "a" ? { id } : id === "page-a" || id === "doc-a"
+          ? { id, project_id: "a", ...(table === "pages" && { page_is_database: databases.has(id) }) }
+          : null }),
+      };
+      return query;
+    } } as never;
+    const database = await validateMessageContext(supabase, { pageId: "page-a", pageTitle: "CRM" }, []);
+    expect(database?.context?.pageIsDatabase).toBe(true);
+    const block = buildPageContextBlock(database!.context!);
+    expect(block).toContain("This page IS A DATABASE");
+    expect(block).toContain("update_page_database_views, both with page_id page-a");
+    expect(block).toContain("Never use list_views, create_view or update_view");
+    const forged = await validateMessageContext(supabase,
+      { pageId: "doc-a", pageIsDatabase: true }, []);
+    expect(forged?.context?.pageIsDatabase).toBeUndefined();
+    expect(buildPageContextBlock(forged!.context!)).not.toContain("IS A DATABASE");
+  });
   it("derives an ambient resource's project when no project was supplied", async () => {
     expect(await validateMessageContext(client(new Set(["a", "issue-a"])), { issueId: "issue-a" }, []))
       .toMatchObject({ context: { issueId: "issue-a", projectId: "a" } });

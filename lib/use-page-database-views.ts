@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -9,9 +9,17 @@ import {
   databaseViewPositionBetween,
   normalizeDatabaseView,
   sameDatabaseView,
+  type DatabaseProperty,
   type DatabaseView,
   type SavedDatabaseView,
 } from "./page-databases";
+import {
+  emptyDatabaseViewFilter,
+  legacyDatabaseViewFields,
+  legacyDatabaseViewFilter,
+  normalizeDatabaseViewFilter,
+  resolveDatabaseViewFilter,
+} from "./page-database-filters";
 import { removeLocalSnapshot, restoreLocalSnapshot } from "./local-snapshots";
 
 export const pageDatabaseViewsKey = (projectId: string, pageId: string) =>
@@ -70,8 +78,15 @@ async function request<T>(url: string, init: RequestInit, fallback: string): Pro
  * a view, for themselves and until they leave the page. A database without a
  * saved view shows the default one, saved as its first view on the first
  * change.
+ *
+ * With the database `schema`, `config.filters` also carries the single filter
+ * of a view saved by the previous release, converted, and `update({ filters })`
+ * rewrites the single-filter mirror that release still reads. Without it the
+ * hook keeps both as stored. `update({ filter, filterValue })` still works: it
+ * replaces the conditions with the converted single filter.
  */
-export function usePageDatabaseViews(projectId: string, pageId: string, canWrite: boolean) {
+export function usePageDatabaseViews(projectId: string, pageId: string, canWrite: boolean,
+  schema?: readonly DatabaseProperty[]) {
   const queryClient = useQueryClient();
   const t = useTranslations("PageDatabase");
   const base = `/api/projects/${projectId}/pages/${pageId}/database/views`;
@@ -82,7 +97,13 @@ export function usePageDatabaseViews(projectId: string, pageId: string, canWrite
       return body.views;
     },
   });
-  const views = data ?? [];
+  // Every view as this release reads it, whatever cached it: a query cache
+  // persisted on the device by the previous release still holds views
+  // without `filters`, and the first render reads that cache before any fetch.
+  const views = useMemo(() => (data ?? []).map((view) => ({
+    ...view,
+    view: normalizeDatabaseView(view.view) ?? DEFAULT_DATABASE_VIEW,
+  })), [data]);
   const [chosen, setChosen] = useState<{ pageId: string; id: string | null }>(
     () => ({ pageId, id: readActiveView(pageId) }));
   const chosenId = chosen.pageId === pageId ? chosen.id : readActiveView(pageId);
@@ -90,11 +111,14 @@ export function usePageDatabaseViews(projectId: string, pageId: string, canWrite
   // Changes not yet confirmed by the server, per page and view.
   const [local, setLocal] = useState<{ key: string; view: DatabaseView } | null>(null);
   const localKey = `${pageId}:${active?.id ?? ""}`;
-  const config = (local?.key === localKey ? local.view : null) ??
+  const stored = (local?.key === localKey ? local.view : null) ??
     active?.view ?? DEFAULT_DATABASE_VIEW;
+  const config = useMemo(() => schema
+    ? { ...stored, filters: resolveDatabaseViewFilter(stored, schema) } : stored,
+  [stored, schema]);
 
-  const latest = useRef({ config, active, views, localKey });
-  latest.current = { config, active, views, localKey };
+  const latest = useRef({ config, active, views, localKey, schema });
+  latest.current = { config, active, views, localKey, schema };
   // Writes run one after another, so a first change creating the default
   // view is never doubled by the next one.
   const chain = useRef<Promise<unknown>>(Promise.resolve());
@@ -157,8 +181,20 @@ export function usePageDatabaseViews(projectId: string, pageId: string, canWrite
   }, []);
 
   const update = useCallback((patch: Partial<DatabaseView>) => {
-    const { config: previous, active: view, localKey: entryKey } = latest.current;
+    const { config: previous, active: view, localKey: entryKey, schema: properties } =
+      latest.current;
     const next = { ...previous, ...patch };
+    if (patch.filters !== undefined) {
+      next.filters = normalizeDatabaseViewFilter(patch.filters, properties) ??
+        emptyDatabaseViewFilter();
+      Object.assign(next, legacyDatabaseViewFields(next.filters, properties ?? []));
+    } else if (patch.filter !== undefined || patch.filterValue !== undefined) {
+      // A caller of the single filter: its conditions follow it. Without the
+      // schema they are left empty, which still reads the single filter.
+      next.filters = properties
+        ? legacyDatabaseViewFilter(next.filter, next.filterValue, properties)
+        : emptyDatabaseViewFilter();
+    }
     latest.current = { ...latest.current, config: next };
     setLocal({ key: entryKey, view: next });
     if (!canWrite) return;
@@ -226,7 +262,9 @@ export function usePageDatabaseViews(projectId: string, pageId: string, canWrite
       // Views saved on the page win over the one this browser kept.
       if (!legacy || latest.current.views.length ||
           !latest.current.localKey.startsWith(`${pageId}:`)) return;
-      update(legacy);
+      // That browser view only knew the single filter.
+      update({ sort: legacy.sort, descending: legacy.descending, filter: legacy.filter,
+        filterValue: legacy.filterValue, hidden: legacy.hidden });
     });
   }, [isSuccess, projectId, pageId, update]);
 

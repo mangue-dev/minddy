@@ -78,7 +78,9 @@ describe("page interface regressions", () => {
     for (const id of [
       "new-subpage",
       "favorite",
-      "copy-for-agent",
+      "copy",
+      "copy-link",
+      "copy-content",
       "promote-to-issue",
       "publish",
       "export",

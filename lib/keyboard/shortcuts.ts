@@ -84,8 +84,8 @@ export const CHEATSHEET: CheatsheetSection[] = [
       // Same case: not a chord, and it is only valid on an open page — the
       // menu ⋯ of the page displays it too, next to the entry it triggers.
       {
-        id: "page.copyForAgent",
-        labelKey: "pageCopyForAgent",
+        id: "page.copyLink",
+        labelKey: "pageCopyLink",
         // ⇧ obligatory: ⌘L bare is taken by the browser address bar
         // and never reaches the page (see components/pages/page-view.tsx).
         keys: [["mod", "⇧", "L"]],

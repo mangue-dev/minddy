@@ -11,8 +11,9 @@
 // descriptor field.
 //
 // The same for the colors: the palette comes from blocks/color.ts, therefore from
-// that of the product labels, and each pastille is painted with the tokens
-// CSS that will paint the text. A tablet cannot lie about the result.
+// that of the product labels, and each color's NAME is painted with the CSS
+// tokens that will paint the text (PageColorName): the entry cannot lie about
+// the result.
 //
 // Everything related to the document is in block-actions.ts: this component does not
 // only calls, so that the behavior remains testable without an interface.
@@ -45,12 +46,10 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Kbd } from "@/components/ui/kbd";
 import {
   PAGE_COLORS,
-  PAGE_COLOR_ATTRIBUTE,
   activeCalloutColor,
   activePageColor,
   setCalloutColor,
@@ -72,31 +71,7 @@ import {
   selectionIsMediaOnly,
   turnBlocksInto,
 } from "@/components/pages/block-actions";
-import type { PageCommentAnchor } from "@/components/pages/page-comment-bubble";
-
-/** The patch of a color, painted with the token it places — the “A”
- for the text, the solid square for the background. */
-function Swatch({
-  kind,
-  color,
-}: {
-  kind: PageColorKind;
-  color: PageColor | null;
-}) {
-  const attribute = color ? { [PAGE_COLOR_ATTRIBUTE[kind]]: color } : {};
-  return (
-    <span
-      {...attribute}
-      aria-hidden
-      className={cn(
-        "flex size-5 shrink-0 items-center justify-center rounded border border-border text-xs font-semibold",
-        !color && "text-muted-foreground"
-      )}
-    >
-      A
-    </span>
-  );
-}
+import { PageColorName, type PageCommentAnchor } from "@/components/pages/page-comment-bubble";
 
 function ColorItems({
   editor,
@@ -126,8 +101,7 @@ function ColorItems({
           onDone();
         }}
       >
-        <Swatch kind={kind} color={null} />
-        <span className="truncate">{t("colorNone")}</span>
+        <span className="min-w-0 flex-1"><PageColorName kind={kind} color={null} label={t("colorNone")} /></span>
         {active === null && <HugeiconsIcon icon={CheckIcon} className="ml-auto size-3" />}
       </DropdownMenuItem>
       {PAGE_COLORS.map((color) => (
@@ -138,8 +112,7 @@ function ColorItems({
             onDone();
           }}
         >
-          <Swatch kind={kind} color={color} />
-          <span className="truncate">{colorName(color)}</span>
+          <span className="min-w-0 flex-1"><PageColorName kind={kind} color={color} label={colorName(color)} /></span>
           {active === color && <HugeiconsIcon icon={CheckIcon} className="ml-auto size-3" />}
         </DropdownMenuItem>
       ))}

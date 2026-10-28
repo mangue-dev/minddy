@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 38,
-  "sourceRevision": 38,
+  "revision": 39,
+  "sourceRevision": 39,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-27",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles; MIN-809 Smart Fill split button; MIN-813 Smart Fill title on request",
     "editions": [
@@ -118,14 +118,15 @@
       "components/drafts-tray.tsx",
       "lib/use-all-drafts.ts",
       "lib/use-held-draft.ts",
-      "lib/issue-hierarchy.ts"
+      "lib/issue-hierarchy.ts",
+      "components/editor/mobile-editor-toolbar.tsx"
     ]
   },
   "review": {
-    "revision": 38,
-    "fact": "agent:claude-code (MIN-813 Smart-fill title paragraph checked against components/create-issue-dialog.tsx and components/issue-compact-fields.tsx: while Smart-fill writes the title only the description shows, Set manually → Title reveals and focuses the title field, an empty field leaves on blur, switching Smart-fill off shows it; plain placeholders; new-issue figure shows Smart-fill off with the title visible and stays accurate, no figure changed); agent:claude-code (MIN-809 manual-creation paragraph checked against components/issue-compact-fields.tsx and components/create-issue-dialog.tsx: the arrow next to the Smart-fill button lists priority, effort, categories and objective, each with a submenu of values, and the chosen value brings the property back to the form; property keys unchanged; new-issue figure recaptured on 2026-10-27 in six locales from the working tree on the local dev server against the preview demo account, Smart-fill off with its arrow visible, writes blocked, nothing submitted, each image inspected); agent:claude-code (MIN-798 Smart-fill title section and preference bullet checked against lib/smart-fill.ts, lib/server/smart-fill-title.ts, lib/server/create-issue.ts, lib/server/smart-fill-reevaluation.ts, lib/server/update-issue.ts, components/create-issue-dialog.tsx and components/settings/account-smart-fill-section.tsx: on by default under the master switch, description focus, smaller empty title until focused or filled, and placeholders in the form, first-line fallback, ownership released by a manual edit, re-evaluation skipped for an editor who turned titles off; MCP requires a title; no figure changed); agent:claude-code (MIN-804 sub-issues paragraph checked against lib/issue-hierarchy.ts, components/issue-card.tsx, components/relations-section.tsx and the enforce_one_level_subissues trigger: R and the right-click Relations entry offer Parent of / Sub-issue of only where the one-level rule allows, re-parenting moves the issue, a selection uses Sub-issue of; no figure changed); agent:/root/min776 (drafts paragraph checked against components/create-issue-dialog.tsx, components/objective-dialog.tsx and lib/use-held-draft.ts: closing keeps the form, reopening resumes it, two minutes after a close it becomes a draft, another context saves it first, and the split menu offers Save as draft; rest of the article unchanged since the MIN-778 review; no figure changed); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of create-an-issue-steps, issue-statuses-steps, issue-dependencies-steps, sub-issues-steps, implementation-plans-steps, import-issues-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:claude-code (es MIN-813 Smart-fill title paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-809 manual-creation paragraph; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-798 Smart-fill title section with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-804 sub-issues paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:/root/min776 (es drafts paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-27"
+    "revision": 39,
+    "fact": "agent:claude-code (phone keyboard toolbar sentence checked against components/editor/mobile-editor-toolbar.tsx and components/editor/rich-editor.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (es changed passages with catalog UI labels; equivalent meaning to en revision 39; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "feedback",
@@ -170,7 +171,7 @@
       "src": "/documentation/es/new-issue.png",
       "alt": "Borrador sin enviar en el proyecto Aurora con título, descripción, propiedades que se pueden elegir manualmente y el botón Crear AUR-21.",
       "caption": "Describe el resultado esperado y elige las propiedades útiles antes de crear el ticket.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -187,7 +188,7 @@
       "src": "/documentation/es/triage-incoming.png",
       "alt": "Incidencia entrante de demostración AUR-19 con informe, propiedades y controles de duplicado, Rechazar y Aceptar.",
       "caption": "Lee el informe recibido antes de aceptarlo, rechazarlo o enlazar un duplicado.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -204,7 +205,7 @@
       "src": "/documentation/es/issue-statuses.png",
       "alt": "Los ocho estados del ticket en el selector, con el estado de backlog seleccionado.",
       "caption": "La marca indica el estado actual. Elige el que corresponda al estado real del trabajo.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -221,7 +222,7 @@
       "src": "/documentation/es/work-resources.png",
       "alt": "Diálogo para añadir un enlace con una dirección de contacto de ejemplo.",
       "caption": "Revisa el destino antes de añadir el recurso. Este enlace de ejemplo no se ha enviado.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -237,7 +238,7 @@
       "src": "/documentation/es/work-dependencies.png",
       "alt": "Búsqueda de una incidencia bloqueante por identificador.",
       "caption": "Elige el sentido de la relación antes de su destino. El selector se muestra sin enviar la relación.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -254,7 +255,7 @@
       "src": "/documentation/es/work-sub-issues.png",
       "alt": "Campo para crear una subincidencia en una incidencia principal de demostración.",
       "caption": "El campo crea una hija de esta incidencia; cada hija conserva su estado y conversación.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -271,7 +272,7 @@
       "src": "/documentation/es/work-implementation-plan.png",
       "alt": "Plan de demostración con dos tareas de trabajo completadas de seis.",
       "caption": "El plan guardado distingue pasos completados, activos y pendientes. Su progreso no demuestra que se ejecutara la tarea de código ficticia.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -288,7 +289,7 @@
       "src": "/documentation/es/issue-date-recurrence.png",
       "alt": "Selector de fecha en modo recurrente con vista previa semanal los domingos y hora opcional.",
       "caption": "El modo recurrente muestra la frecuencia semanal. Confirma la primera fecha antes de crear el ticket.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -304,7 +305,7 @@
       "src": "/documentation/es/import-issues-preview-workflow.png",
       "alt": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas.",
       "caption": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas. No se envió la importación; la planificación opcional con IA se bloqueó para la captura.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -321,7 +322,7 @@
       "src": "/documentation/es/file-preview.png",
       "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.",
       "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Cambiar nombre y Eliminar.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -367,7 +368,7 @@ Al cerrar el formulario se conserva lo que escribiste: vuelve a abrirlo para seg
 
 ![Borrador sin enviar en el proyecto Aurora con título, descripción, propiedades que se pueden elegir manualmente y el botón Crear AUR-21.](/documentation/es/new-issue.png)
 
-La descripción, los comentarios y el diálogo de nueva incidencia usan el mismo editor que las páginas del proyecto, sin los controles de bloque. Escribe `/` para insertar un encabezado, una lista, una tarea, una cita, un **Destacado**, un bloque de código, un **Desplegable** o un divisor, y `@` para mencionar a una persona, una incidencia, un objetivo o una página. El menú `@` también muestra los recursos adjuntos a lo que escribes: la incidencia o el objetivo para su descripción y su plan, un comentario para sus propios archivos o un diálogo de creación para los archivos añadidos en él. Una mención de un recurso adjunto en otro lugar aparece como **No disponible**. Varias personas pueden editar la misma descripción a la vez: el cursor de cada una aparece con su nombre y su color, y los cambios de Numo o de un agente conectado aparecen en cuanto se guardan. Numo, los agentes conectados y las exportaciones CSV leen el texto en Markdown, que se actualiza unos segundos después de dejar de escribir. Selecciona texto para ponerlo en negrita, cursiva, tachado o código, o para añadir un enlace. Pega o suelta una imagen, o elige **Imagen** en el menú `/`, para insertarla en la descripción; los demás tipos de archivo van en los recursos de la incidencia. Una mención apunta a su destino, no a su nombre: sigue un cambio de nombre y resiste las ediciones y el copiar y pegar en otra descripción, un comentario, una página o el compositor de Numo. Quien no puede abrir el destino ve una mención **No disponible**, sin su nombre ni su proyecto.
+La descripción, los comentarios y el diálogo de nueva incidencia usan el mismo editor que las páginas del proyecto, sin los controles de bloque. Escribe `/` para insertar un encabezado, una lista, una tarea, una cita, un **Destacado**, un bloque de código, un **Desplegable** o un divisor, y `@` para mencionar a una persona, una incidencia, un objetivo o una página. El menú `@` también muestra los recursos adjuntos a lo que escribes: la incidencia o el objetivo para su descripción y su plan, un comentario para sus propios archivos o un diálogo de creación para los archivos añadidos en él. Una mención de un recurso adjunto en otro lugar aparece como **No disponible**. Varias personas pueden editar la misma descripción a la vez: el cursor de cada una aparece con su nombre y su color, y los cambios de Numo o de un agente conectado aparecen en cuanto se guardan. Numo, los agentes conectados y las exportaciones CSV leen el texto en Markdown, que se actualiza unos segundos después de dejar de escribir. Selecciona texto para ponerlo en negrita, cursiva, tachado o código, o para añadir un enlace. Pega o suelta una imagen, o elige **Imagen** en el menú `/`, para insertarla en la descripción; los demás tipos de archivo van en los recursos de la incidencia. Una mención apunta a su destino, no a su nombre: sigue un cambio de nombre y resiste las ediciones y el copiar y pegar en otra descripción, un comentario, una página o el compositor de Numo. Quien no puede abrir el destino ve una mención **No disponible**, sin su nombre ni su proyecto. En un teléfono, la barra encima del teclado sustituye a la barra de selección y al menú `@` al escribir; la [guía de páginas](/es/documentacion/pages#editor-formatting) la describe.
 
 ### Comprobar el guardado y la visibilidad {#issue-save}
 

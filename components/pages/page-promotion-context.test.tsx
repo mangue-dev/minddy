@@ -28,7 +28,6 @@ vi.mock("@/lib/use-project-capabilities", () => ({
   useProjectCapabilities: () => ({ canWrite }),
 }));
 vi.mock("@/components/pages/page-publish-dialog", () => ({ PagePublishDialog: () => null }));
-vi.mock("@/components/pages/page-agent-copy-dialog", () => ({ PageAgentCopyDialog: () => null }));
 vi.mock("@/components/numo-icon", () => ({ NumoIcon: () => null }));
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });

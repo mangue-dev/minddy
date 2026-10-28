@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
-  "sourceRevision": 16,
+  "revision": 18,
+  "sourceRevision": 17,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -58,14 +58,15 @@
       "components/settings-shell.tsx",
       "components/settings/account-smart-fill-section.tsx",
       "components/objective-relations-section.tsx",
-      "components/create-issue-dialog.tsx"
+      "components/create-issue-dialog.tsx",
+      "components/app-shell-chrome.tsx"
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:/root/min777 (panel paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of navigation-steps, search-and-shortcuts-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min777 (es sentence on the page side panel with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 18,
+    "fact": "agent:claude-code (New page in the project new-tab palette checked against components/app-shell-chrome.tsx and components/command-palette.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (es changed passages with catalog UI labels; equivalent meaning to en revision 17; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "views",
@@ -86,7 +87,7 @@
       "src": "/documentation/es/work-navigation.png",
       "alt": "Navegación del proyecto junto al tablero de incidencias de demostración.",
       "caption": "La barra del proyecto da acceso a incidencias, objetivos, páginas y clasificación de entradas.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -103,7 +104,7 @@
       "src": "/documentation/es/work-search.png",
       "alt": "Resultados de búsqueda del identificador de una incidencia de demostración.",
       "caption": "La paleta encuentra la incidencia por identificador junto a las páginas del proyecto; abrir un resultado conserva sus reglas de acceso.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -162,7 +163,7 @@ Abre la paleta de comandos desde el control de búsqueda de la navegación. Busc
 
 Pulsa Command+K en macOS o Ctrl+K en Windows/Linux para abrir la paleta de comandos; Command/Ctrl+P es un atajo alternativo de la aplicación. Fuera del texto editable, ? abre la ayuda de atajos y C la creación de incidencias. Sobre una tarjeta de incidencia bajo el puntero o en sus controles de detalle compatibles, S abre el estado, P la prioridad, E el esfuerzo, A el responsable, L las categorías, D la fecha límite y O el objetivo. R añade una relación desde esos mismos lugares, en la página de un objetivo y en el formulario de nueva incidencia: elige el tipo de relación y después la otra incidencia u objetivo. Si la tarjeta forma parte de una selección, estas teclas cambian todas las incidencias seleccionadas; el responsable, el objetivo, las categorías y las relaciones solo se aplican a las incidencias seleccionadas del proyecto de esa tarjeta. Mayús+C lleva a un campo de comentario listo para escribir, con el hilo desplazado hasta su último mensaje: el de una tarjeta de incidencia bajo el puntero o de una fila bajo el puntero en la lista de objetivos, sugerencias, pull requests, páginas o clasificación, o, si no hay nada bajo el puntero, el de la incidencia, el objetivo, la sugerencia, la pull request o la página en pantalla. Una página abre para ello su panel **Actividad**. Mayús+C solo actúa sobre ese elemento, aunque la tarjeta forme parte de una selección. En la página de un objetivo y en el formulario de nuevo objetivo, S abre su estado, A su responsable, D su fecha objetivo y C su color; ahí, C no crea una incidencia. Estas acciones de una sola tecla no interceptan la escritura en campos, áreas de texto ni editores de contenido. Las secuencias de navegación como G y después H (Inicio) o G y después I (Bandeja de entrada) usan dos teclas sucesivas. G y después W lleva a Páginas solo dentro de un proyecto.
 
-Para llegar a un ajuste, escribe su nombre en la paleta de comandos o en el campo de filtro de la parte superior de la barra lateral de ajustes. Ambos encuentran cada tarjeta de ajustes y los ajustes individuales, como el idioma, el tema, cada paleta, la transparencia y los dos interruptores de **Iniciar una incidencia**. Al elegir un resultado se abre la pestaña de ajustes correcta, se desplaza hasta la tarjeta o la fila y la resalta. Comando+T en macOS o Ctrl+T en Windows/Linux abre la paleta de nueva pestaña; un ajuste elegido allí se abre en una nueva pestaña de la app. Las palabras clave en inglés y en francés funcionan sea cual sea el idioma de la interfaz.
+Para llegar a un ajuste, escribe su nombre en la paleta de comandos o en el campo de filtro de la parte superior de la barra lateral de ajustes. Ambos encuentran cada tarjeta de ajustes y los ajustes individuales, como el idioma, el tema, cada paleta, la transparencia y los dos interruptores de **Iniciar una incidencia**. Al elegir un resultado se abre la pestaña de ajustes correcta, se desplaza hasta la tarjeta o la fila y la resalta. Comando+T en macOS o Ctrl+T en Windows/Linux abre la paleta de nueva pestaña; un ajuste elegido allí se abre en una nueva pestaña de la app. Dentro de un proyecto, también ofrece **Nueva página**, que crea una página en ese proyecto y la abre en una nueva pestaña. Las palabras clave en inglés y en francés funcionan sea cual sea el idioma de la interfaz.
 
 Utiliza la ayuda de atajos para consultar los comandos disponibles en tu plataforma. minddy distingue los atajos de la aplicación, las acciones de propiedades de incidencias y los atajos nativos de pestañas o ventanas de escritorio. Comprueba dónde está el foco antes de usar un comando: escribir en un editor y actuar sobre la incidencia que lo rodea son contextos diferentes.
 

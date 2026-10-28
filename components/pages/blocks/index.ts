@@ -233,7 +233,7 @@ export function slashItems(
     !block.needsUploads || uploads === "all" ||
     (uploads === "images" && block.needsUploads === "image");
   const rank = new Map(SLASH_GROUPS.map(({ group }, index) => [group, index]));
-  return blocksIn(set).filter(offered).sort(
+  return blocksIn(set).filter((block) => offered(block) && !block.legacy).sort(
     (a, b) =>
       (rank.get(a.slash.group) ?? 0) - (rank.get(b.slash.group) ?? 0) ||
       a.slash.order - b.slash.order
@@ -308,7 +308,26 @@ export const PageBlockShortcuts = Extension.create({
 export function turnIntoItems(
   editor: Editor
 ): Array<{ block: PageBlock; active: boolean }> {
-  return slashItems()
-    .filter((block) => block.turnInto !== false)
-    .map((block) => ({ block, active: block.isActive(editor) }));
+  const items = slashItems().filter((block) => block.turnInto !== false);
+  const current = currentTurnIntoBlock(editor, items);
+  return items.map((block) => ({ block, active: block === current }));
+}
+
+/**
+ * The ONE block the selection is in, for the checkmark. `isActive` answers for
+ * every ancestor at once: a line of a bullet list is a paragraph too, so the
+ * list and “Text” were both checked. The innermost wrapper wins (a bullet list
+ * nested in a numbered one is a bullet list), and the paragraph only when it
+ * stands alone.
+ */
+function currentTurnIntoBlock(editor: Editor, items: readonly PageBlock[]): PageBlock | null {
+  const active = items.filter((block) => block.isActive(editor));
+  if (active.length <= 1) return active[0] ?? null;
+  const { $from } = editor.state.selection;
+  for (let depth = $from.depth; depth >= 1; depth -= 1) {
+    const name = $from.node(depth).type.name;
+    const match = active.find((block) => block.id !== "paragraph" && block.nodeName === name);
+    if (match) return match;
+  }
+  return active.find((block) => block.id !== "paragraph") ?? active[0];
 }

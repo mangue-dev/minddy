@@ -13,7 +13,7 @@ const fixture = vi.hoisted(() => ({
   translate: (key: string) => key,
 }));
 vi.mock("next-intl", () => ({ useTranslations: () => fixture.translate }));
-vi.mock("@/components/pages/page-comment-popover", () => ({ PageCommentPopover: () => null }));
+vi.mock("@/components/pages/page-comment-dialog", () => ({ PageCommentDialog: () => null }));
 vi.mock("@/components/pages/block-comments", () => ({
   documentBlockIds: () => new Set(fixture.ids),
   setCommentedBlocks: vi.fn(),

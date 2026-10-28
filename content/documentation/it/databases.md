@@ -17,10 +17,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
-  "sourceRevision": 18,
+  "revision": 20,
+  "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -52,14 +52,20 @@
       "components/pages/page-promotion-context.test.tsx",
       "components/pages/database-view-strip.tsx",
       "lib/use-page-database-views.ts",
-      "lib/server/page-database-views.ts"
+      "lib/server/page-database-views.ts",
+      "components/pages/database-table-scroll.tsx",
+      "components/ui/checkbox.tsx",
+      "lib/server/database-view-tools.ts",
+      "lib/page-database-filters.ts",
+      "components/pages/database-filter-editor.tsx",
+      "supabase/migrations/20270109200092_page_database_views_realtime.sql"
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:/root/min764 (database views section checked against components/pages/database-view-strip.tsx, components/pages/page-database-view.tsx, lib/use-page-database-views.ts and lib/server/page-database-views.ts: named views shared by the project, each with its own sort, filter and hidden columns, managed and reordered by writers, adjusted locally by readers; insertion clears the active view's filter; rest of the article unchanged since the MIN-747 review; no figure changed); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min764 (it changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 20,
+    "fact": "agent:claude-code (column header menu Delete column with confirmation and right-click opening, hover-only row gutter, touch-screen rows without gutter, checkbox tooltips and partial header state, bottom scrollbar hidden on touch screens, view rename/delete by right-click, column reordering by handle in Columns, Numo view tools and no MCP view tools checked against components/pages/database-column-name.tsx, page-database-view.tsx, database-view-strip.tsx, database-table-scroll.tsx, components/ui/checkbox.tsx, lib/server/assistant/tools.ts and lib/server/database-view-tools.ts; several filter conditions with All/Any match, operators per column type, up to 10 conditions, single filters kept, live view updates, default view rename, phone view dropdown, View settings sheets, search field and cell sheets checked against lib/page-database-filters.ts, components/pages/database-filter-editor.tsx, lib/use-page-database-views.ts, supabase/migrations/20270109200092_page_database_views_realtime.sql, components/pages/database-view-strip.tsx, components/pages/page-database-view.tsx and components/pages/database-cell-editor.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (it changed passages with catalog UI labels; equivalent meaning to en revision 19; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "pages"
@@ -83,7 +89,7 @@
       "src": "/documentation/it/database-setup-cards.png",
       "alt": "Anteprima del componente con le schede per configurare una nuova banca dati con Numo o importarne una esistente.",
       "caption": "Suggerimenti per una nuova banca dati con dati dimostrativi. Scegli Numo o l’importazione, oppure chiudi le schede per continuare manualmente.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -100,7 +106,7 @@
       "src": "/documentation/it/database-property-types.png",
       "alt": "Selettore del tipo di colonna con un campo di ricerca, testo, numero, selezioni, date, persone e casella di controllo.",
       "caption": "Scegli un tipo adatto ai valori da conservare.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -117,7 +123,7 @@
       "src": "/documentation/it/database-entry.png",
       "alt": "Voce dimostrativa con descrizione, durata 2.5, casella selezionata e selezione vuota.",
       "caption": "Apri una voce per leggere il testo completo e modificare i valori in base al tipo.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -133,7 +139,7 @@
       "src": "/documentation/it/database-conversion-warning.png",
       "alt": "Avviso di conversione: il passaggio da Testo a Numero svuota una cella incompatibile, con pulsanti per annullare o confermare.",
       "caption": "Controlla il numero effettivo di celle incompatibili prima di confermare. Annulla conserva i valori attuali.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -149,7 +155,7 @@
       "src": "/documentation/it/database-import-review.png",
       "alt": "Verifica di un CSV locale: due pagine di voci e due colonne, con il pulsante Importa database.",
       "caption": "Controlla le voci analizzate e il numero di colonne prima di importare nel database vuoto.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -165,7 +171,7 @@
       "src": "/documentation/it/database-options.png",
       "alt": "Anteprima del componente Modifica opzioni con stati in italiano, frecce verso l’alto e il basso, cestini e la spiegazione dell’eliminazione.",
       "caption": "Modifica insieme nomi, colori e ordine delle opzioni. Il cestino rimuove un’opzione dalla bozza; Salva applica le modifiche. Sono mostrati dati dimostrativi.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -182,7 +188,7 @@
       "src": "/documentation/it/database-date-time.png",
       "alt": "Anteprima del selettore di data con il 24 luglio 2026 selezionato, Aggiungi un orario attivo e Orario impostato su 02:00 AM.",
       "caption": "Attiva Aggiungi un orario per inserire un orario. Questa anteprima del componente usa dati dimostrativi e il fuso orario del dispositivo.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -251,13 +257,19 @@ Il contenuto di una voce vuota mostra un segnaposto per individuare l’area di 
 
 Apri una voce per modificarne la pagina completa in un pannello flottante. «Espandi» la apre come pagina completa dopo la fine dei salvataggi del documento in attesa. Se il salvataggio fallisce, il pannello resta aperto per risolverlo. Una voce vuota resta nel database finché non viene eliminata.
 
-Usa le caselle delle righe per selezionare e Shift-clic per un intervallo. La maniglia apre le azioni e può riordinare le voci in ordine manuale. Il + nel margine inserisce sotto una voce; Option/Alt inserisce sopra. L’inserimento adiacente rimuove il filtro della vista attiva per rendere visibile la nuova voce.
+Usa le caselle delle righe per selezionare e Shift-clic per un intervallo. Il suggerimento di ogni casella indica **Seleziona** o **Deseleziona**. La casella dell’intestazione (**Seleziona tutte le voci**, oppure **Deseleziona tutto** quando sono tutte selezionate) mostra un trattino quando è selezionata solo una parte delle voci e un segno di spunta quando lo sono tutte; un clic su di essa da una selezione parziale seleziona tutte le voci. Passa il puntatore su una riga per mostrarne il margine: la maniglia apre le azioni e può riordinare le voci in ordine manuale, e il + inserisce sotto la voce; Option/Alt inserisce sopra. L’inserimento adiacente rimuove i filtri della vista attiva per rendere visibile la nuova voce. Su uno schermo touch le righe non hanno margine e le loro caselle restano visibili: seleziona le voci, poi usa **Duplica** o **Sposta nel cestino** nella barra di selezione. **Promuovi a ticket** e lo spostamento di una voce in alto o in basso non sono disponibili lì.
 
 Dal menu della maniglia di una singola voce, il proprietario o un Membro può scegliere **Promuovi a ticket** perché Numo trasformi quella voce, il suo contenuto e le sue proprietà in un ticket. La voce resta nel database. L’azione non compare quando il menu riguarda più righe selezionate: non esiste una promozione multipla, quindi promuovi ogni voce separatamente. La [guida alle pagine](/it/documentazione/pages#promote-page-to-issue) descrive le domande di Numo e cosa fare se la voce non può essere salvata prima.
 
 ### Viste del database {#database-display}
 
-Un database mostra le sue voci attraverso viste, elencate sopra la tabella. Ogni vista conserva il proprio ordinamento, il proprio filtro e le proprie colonne nascoste, e tutti i membri del progetto vedono le stesse viste. Il proprietario o un Membro aggiunge una vista con **Nuova vista** (+), che parte dalla vista mostrata, rinomina o cancella la vista attiva dal suo menu delle opzioni (⋯) con **Rinomina vista** o **Elimina vista**, e trascina le viste per riordinarle. Le modifiche a ordinamento, filtro e colonne vengono salvate nella vista attiva per tutti. Un database conserva almeno una vista; prima della sua prima modifica mostra la vista predefinita **Tabella**. I lettori passano da una vista all’altra e possono regolarne una per sé finché non lasciano la pagina. Il browser ricorda l’ultima vista aperta; la ricerca non viene mai salvata. L’ordine manuale è condiviso con l’albero delle pagine. Scorri orizzontalmente con un gesto del trackpad, Shift e rotella del mouse, tocco o barra inferiore. Un’anteprima tagliata non accorcia il testo salvato. Le voci con valori di colonne si possono riordinare nel proprio database, ma non spostare fuori.
+Un database mostra le sue voci attraverso viste, elencate sopra la tabella. Ogni vista conserva il proprio ordinamento, il proprio filtro e le proprie colonne nascoste, e tutti i membri del progetto vedono le stesse viste. Il proprietario o un Membro aggiunge una vista con **Nuova vista** (+), che parte dalla vista mostrata, fa clic destro su una vista per scegliere **Rinomina vista** o **Elimina vista**, e trascina le viste per riordinarle. Le modifiche a ordinamento, filtro e colonne vengono salvate nella vista attiva per tutti. Un database conserva almeno una vista; prima della sua prima modifica mostra la vista predefinita **Tabella**. I lettori passano da una vista all’altra e possono regolarne una per sé finché non lasciano la pagina. Il browser ricorda l’ultima vista aperta; la ricerca non viene mai salvata. L’ordine manuale è condiviso con l’albero delle pagine. Scorri orizzontalmente con un gesto del trackpad, Shift e rotella del mouse o la barra di scorrimento in fondo alla finestra. Uno schermo touch non mostra questa barra: scorri la tabella con il dito. Un’anteprima tagliata non accorcia il testo salvato. Le voci con valori di colonne si possono riordinare nel proprio database, ma non spostare fuori. Numo può elencare le viste di un database e, su tua richiesta, crearle, rinominarle, riordinarle o eliminarle (mai l’ultima), oppure cambiarne ordinamento, filtri (tutti o almeno uno) e colonne nascoste. Nella pagina di un database, Numo intende «una vista» come una vista del database, non della bacheca dei ticket. L’ordine delle colonne non fa parte di una vista: appartiene allo schema del database. I client minddy MCP non possono gestire le viste.
+
+Apri **Filtra** per comporre un elenco di condizioni con **Aggiungi un filtro**; **Rimuovi questo filtro** ne elimina una. Ogni condizione sceglie una colonna, una condizione e un valore, e le condizioni dipendono dal tipo di colonna. Testo offre contiene, non contiene, è, non è, è vuoto e non è vuoto. Numero offre è, non è, maggiore di, minore di, è vuoto e non è vuoto. Selezione offre è, non è, è vuoto e non è vuoto. Selezione multipla e Persone offrono contiene, non contiene, è vuoto e non è vuoto. Data e Data di creazione offrono è il, è dopo, è prima, è vuoto e non è vuoto. Casella di controllo corrisponde a **Selezionata** o **Non selezionata**. Una condizione senza valore non filtra ancora. Con due o più condizioni, scegli **Tutti i filtri** per mantenere le voci che soddisfano ogni condizione, oppure **Almeno un filtro** per quelle che ne soddisfano almeno una. Una vista contiene fino a 10 condizioni; una vista salvata in precedenza con un solo filtro lo conserva.
+
+Le viste si aggiornano in tempo reale: una vista che un membro del team o Numo crea o modifica compare senza ricaricare la pagina. Finché un database non ha viste salvate, fai clic destro sulla vista predefinita per scegliere **Rinomina vista**: la rinomina la salva come vista con nome con le impostazioni attuali, e **Elimina vista** resta non disponibile.
+
+Sul telefono, scegli una vista dal menu a discesa sopra la tabella; il suo menu offre **Nuova vista**, **Rinomina vista** ed **Elimina vista**. La barra degli strumenti mostra solo la ricerca, **Impostazioni della vista** e **Nuovo**. **Impostazioni della vista** apre un pannello con **Ordina per**, **Filtra** e **Colonne**, ognuno dei quali apre un proprio pannello. La ricerca apre un campo sotto la barra degli strumenti, con un pulsante per chiuderlo. La tabella occupa tutta la larghezza, con righe più alte e caselle sempre visibili. Le celle di testo e numero si aprono in un pannello inferiore con un pulsante **Salva**, come già fanno selezioni, persone e date.
 
 
 ![Voce dimostrativa con descrizione, durata 2.5, casella selezionata e selezione vuota.](/documentation/it/database-entry.png)
@@ -266,9 +278,9 @@ Un database mostra le sue voci attraverso viste, elencate sopra la tabella. Ogni
 
 Il trascinamento di una colonna inizia dopo un movimento del puntatore e resta orizzontale. Il cursore di presa compare solo durante il trascinamento; un clic normale continua ad aprire le azioni della colonna. Con il focus sull’intestazione di una colonna, Invio o Spazio apre le azioni. Premi F8 per iniziare il riordino, usa Sinistra o Destra, quindi Invio per confermare o Esc per annullare.
 
-In Colonne, usa il controllo con l’occhio per mostrare o nascondere le proprietà. Fai clic su un’intestazione per rinominarla oppure trascina le intestazioni per riordinarle. La colonna con il nome della voce rimane per prima. Puoi modificare le opzioni di Selezione o Selezione multipla dal menu della cella o da Colonne; nomi e colori vengono salvati insieme.
+In Colonne, usa il controllo con l’occhio per mostrare o nascondere le proprietà e trascina la maniglia di una riga di questo elenco per riordinare le colonne. Da tastiera, porta il focus sulla maniglia, premi Spazio, sposta la colonna con le frecce Su e Giù e premi di nuovo Spazio per rilasciarla; Esc annulla. Fai clic o clic destro su un’intestazione per aprirne il menu, per esempio per rinominare la colonna, oppure trascina le intestazioni per riordinarle. La colonna con il nome della voce rimane per prima. Puoi modificare le opzioni di Selezione o Selezione multipla dal menu della cella o da Colonne; nomi e colori vengono salvati insieme.
 
-Nascondere una colonna cambia le preferenze di visualizzazione e mantiene i valori. Eliminare una colonna personalizzata rimuove invece i suoi valori da tutte le voci e non può essere annullato. Considera questa conseguenza prima di confermare l’eliminazione.
+Nascondere una colonna cambia le preferenze di visualizzazione e mantiene i valori. Per eliminare una colonna personalizzata, scegli **Elimina colonna** nel menu della sua intestazione o il suo pulsante cestino in Colonne; entrambi chiedono conferma. L’eliminazione rimuove invece i suoi valori da tutte le voci e non può essere annullata. Considera questa conseguenza prima di confermare l’eliminazione.
 
 ### Convertire il tipo di una proprietà {#convert-column}
 

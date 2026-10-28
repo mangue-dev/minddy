@@ -1202,7 +1202,8 @@ button[data-variant="ghost"] {
       [type="file"],
       [type="image"]
     ),
-  textarea,
+  /* Title fields are larger than the floor: it would only shrink them. */
+  textarea:not(.title-field),
   select {
     font-size: 16px;
   }
@@ -1943,7 +1944,7 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
 
    The two values ​​are the RESERVE column (`GUTTER_HOVER`,
    components/pages/block-actions.ts), not the width of the buttons: these do not
-   hold only the 54 px stuck to the text, but the gutter that we see — and
+   hold only the 66 px stuck to the text, but the gutter that we see — and
    that we aim for — is the entire margin. The first version stopped at
    buttons, and left 42 dead px at the left edge, where the mouse arrives
    when it comes from the sidebar. Not a pixel more either: beyond that, the
@@ -1951,6 +1952,20 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
 
    In mobile layout, the column is only 24px indented: the extended box would overflow
    of the container that passes by. And there's no hovering on a touchscreen. */
+/* The gutter's handle and `+` fade in and out as the pointer moves from block
+   to block. The extension toggles an inline `visibility`; the transition on
+   it holds the buttons visible while their opacity falls, so the fade-out
+   plays too. */
+.page-editor .drag-handle {
+  transition: opacity 120ms ease-out, visibility 120ms ease-out;
+}
+.page-editor .drag-handle[style*="visibility: hidden"] {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-editor .drag-handle { transition: none; }
+}
+
 :root[data-app-layout="desktop"] {
   .page-editor[data-gutter] .ProseMirror {
     padding-left: 96px;
@@ -2756,6 +2771,23 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
 
+  /* Writing in a sheet: it takes the whole height above the keyboard, so the
+     text being typed has room, and it clears the editor's keyboard toolbar
+     (components/editor/mobile-editor-toolbar.tsx). */
+  /* `:focus-within`, not the editor's own focus: tapping the sheet's send
+     button moves the focus to it, and the sheet must not shrink under the
+     finger before the tap lands. */
+  .mobile-bottom-sheet[data-slot="sheet-content"]:has(.ProseMirror):focus-within,
+  [data-slot="alert-dialog-content"]:has(.ProseMirror):focus-within {
+    height: calc(var(--mobile-viewport-height, 100dvh) - max(1rem, env(safe-area-inset-top)) - var(--mobile-editor-toolbar, 0px));
+    bottom: calc(var(--mobile-keyboard-inset, 0px) + var(--mobile-editor-toolbar, 0px));
+  }
+  .mobile-assistant-sheet[data-slot="sheet-content"]:has(.ProseMirror):focus-within,
+  .mobile-side-panel-sheet[data-slot="sheet-content"]:has(.ProseMirror):focus-within,
+  .creation-sheet[data-slot="sheet-content"]:has(.ProseMirror):focus-within {
+    padding-bottom: var(--mobile-editor-toolbar, 0px);
+  }
+
   .mobile-bottom-sheet[data-slot="sheet-content"] {
     padding-top: 8px;
     border: 0;
@@ -2810,10 +2842,23 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   }
   .mobile-bottom-sheet [data-mobile-sheet-header-actions] { margin: 0; gap: 8px; flex-shrink: 0; }
   .mobile-bottom-sheet [data-mobile-sheet-toolbar] { gap: 8px; }
+  /* Icon buttons in a pane header or a sheet are aimed with a thumb: they
+     grow to 40px, their icon to 20px. `min-*` so a button that is already
+     larger (a sheet's 44px close) keeps its size. */
+  :is(.app-content-header, .mobile-bottom-sheet) :is([data-size="icon-sm"], [data-size="icon"]) {
+    min-width: 40px;
+    min-height: 40px;
+  }
+  :is(.app-content-header, .mobile-bottom-sheet) :is([data-size="icon-sm"], [data-size="icon"]) > svg {
+    width: 20px;
+    height: 20px;
+  }
   .mobile-assistant-sheet .app-content-header > div { padding-right: 60px; }
   .mobile-assistant-sheet .app-content-header button { min-height: 44px; min-width: 44px; }
   [data-property-row] { min-height: 52px; }
-  [data-property-row] :is(button, a[role="button"]) { min-height: 44px; min-width: 44px; justify-content: flex-end; }
+  /* A checkbox is a button too, but it keeps its box: its touch area is its
+     own wider `::after` (components/ui/checkbox.tsx). */
+  [data-property-row] :is(button, a[role="button"]):not([role="checkbox"]) { min-height: 44px; min-width: 44px; justify-content: flex-end; }
   [data-bulk-issue-actions] button { min-height: 44px; min-width: 44px; }
   :is([data-slot="sheet-overlay"], [data-slot="dialog-overlay"], [data-slot="alert-dialog-overlay"]) {
     -webkit-backdrop-filter: blur(4px);
@@ -3015,6 +3060,13 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   }
   [data-mobile-navigation] {
     bottom: var(--mobile-keyboard-inset, 0px);
+  }
+  /* Writing brings the keyboard up: the bottom navigation steps aside for the
+     text (components/mobile-navigation.tsx tracks the focused field), and for
+     the editor's keyboard toolbar (components/editor/mobile-editor-toolbar.tsx). */
+  &[data-mobile-toolbar-open] [data-mobile-navigation],
+  [data-mobile-navigation][data-typing] {
+    display: none;
   }
   .app-content-header > div {
     width: 100%;

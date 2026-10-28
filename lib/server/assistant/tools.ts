@@ -1,5 +1,6 @@
 import "server-only";
 import { DATABASE_TOOL_PARAMETERS, databaseToolDescription } from "@/lib/server/database-tool-schema";
+import { DATABASE_VIEWS_TOOL_PARAMETERS } from "@/lib/server/database-view-tools";
 
 import { MCP_CLIENT_TOOLS, MCP_SETUP_TOOLS } from "@/lib/mcp-client-tools";
 
@@ -76,7 +77,8 @@ const PAGE_BODY_DESCRIPTION =
   "'# ' is the page title), bold/italic/inline code, links, bullet and numbered " +
   "lists, task lists ('- [ ]' / '- [x]'), quotes, fenced code blocks, horizontal " +
   "rules, <details><summary>…</summary>…</details> collapsibles, and " +
-  "'[[page:<page_id>]]' on its own line to embed a link to another page. Anything " +
+  "page mentions '[@Title](mention:page/<page_id>)' to link another page (inline: text " +
+  "can follow it; '[[page:<page_id>]]' is read as the same mention). Anything " +
   "else degrades to plain text. " +
   PAGE_FILES_DESCRIPTION;
 
@@ -545,7 +547,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "list_views",
       description:
-        "List the saved kanban views of the current scope — the project's views in project mode, the user's personal cross-project views on the global board — with their id, name, kind, shared, filters, sort, display. Call it BEFORE update_view: the `filters` argument of update_view replaces the whole config, so you must read the current one and resend every key you want to keep. kind 'my' is the user's system view (its name is localized — \"My issues\" in English, \"Mes tickets\" in French): its name and its assignee filter (locked to [\"@me\"], the dynamic 'assigned to me' value) can never change, and it cannot be deleted — other filters/sort/display remain editable.",
+        "List the saved views of the ISSUE BOARD (the kanban of issues), never the views of a database page — those are list_page_database_views. Lists the saved kanban views of the current scope — the project's views in project mode, the user's personal cross-project views on the global board — with their id, name, kind, shared, filters, sort, display. Call it BEFORE update_view: the `filters` argument of update_view replaces the whole config, so you must read the current one and resend every key you want to keep. kind 'my' is the user's system view (its name is localized — \"My issues\" in English, \"Mes tickets\" in French): its name and its assignee filter (locked to [\"@me\"], the dynamic 'assigned to me' value) can never change, and it cannot be deleted — other filters/sort/display remain editable.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -778,7 +780,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_page",
       description:
-        "ONE page in full: title, icon, body in MARKDOWN, version, and its direct subpages. is_database says whether the page IS a database: true even when database_schema is an empty array and database_revision is 0 — that is a database with no properties yet, to fill with update_page_database, never to recreate with create_page. Database pages also return database_schema (property and option ids/names/colors), database_revision, database_title_name, and entry property_values/created_at in subpages. Read a database entry separately for its body. Use update_page_database for properties, never markdown tables. This is what you read before writing: copy passages from here verbatim for edit_page_text, and keep the version to replace the body safely with update_page. A '[[page:<id>]]' line is a LINK to a subpage, never its content — read that page too if you need it.",
+        "ONE page in full: title, icon, body in MARKDOWN, version, and its direct subpages. is_database says whether the page IS a database: true even when database_schema is an empty array and database_revision is 0 — that is a database with no properties yet, to fill with update_page_database, never to recreate with create_page. Database pages also return database_schema (property and option ids/names/colors), database_revision, database_title_name, and entry property_values/created_at in subpages. Its saved views (sort, filter, hidden columns) are read with list_page_database_views. Read a database entry separately for its body. Use update_page_database for properties, never markdown tables. This is what you read before writing: copy passages from here verbatim for edit_page_text, and keep the version to replace the body safely with update_page. A page mention '[@Title](mention:page/<id>)' — how a page cites its subpages — is a LINK, never its content: read that page too if you need it.",
       parameters: {
         type: "object",
         properties: {
@@ -853,6 +855,36 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
       name: "update_page_database",
       description: databaseToolDescription("get_page", "create_page"),
       parameters: DATABASE_TOOL_PARAMETERS,
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_page_database_views",
+      description:
+        "The saved VIEWS of a database page, in the order of its view strip: each has view_id, name, position, sort, descending, filters ({ match: \"and\"|\"or\", conditions: [{ property_id, operator, value }] }) and hidden_property_ids. Views are shared by every project member. When the conversation is about a database page, \"a view\" / \"une vue\" means one of THESE, never an issue board view. An empty list means the database still shows its default view (by position, no filter, every column). Read this before update_page_database_views. These are NOT the issue views of list_views.",
+      parameters: {
+        type: "object",
+        properties: {
+          page_id: { type: "string", description: "The database page id (is_database true in get_page)." },
+        },
+        required: ["page_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_page_database_views",
+      description:
+        "Create, reconfigure, delete or reorder the saved VIEWS of a database page — never its schema or entries (update_page_database), never the issue board views (create_view/update_view). When the conversation is about a database page, this is the tool for \"create a view\" / \"crée une vue\", filtering, sorting or hiding columns. Read get_page for the property ids and option ids, and list_page_database_views for the view ids, first. operation=create needs name and takes any view field; omitted fields get the default (sort position ascending, no filter, no hidden column); the view is added at the end of the strip. operation=update needs view_id and changes ONLY the fields you pass (name, sort, descending, filters, hidden_property_ids). filters and hidden_property_ids each REPLACE the whole current value: resend the conditions and ids you want to keep. operation=delete needs view_id; the last view cannot be deleted. operation=reorder needs order: EVERY view_id of the database exactly once, in the new strip order. sort is \"position\" (manual order), \"title\" or a property id. filters = { match: \"and\" (every condition, the default) or \"or\" (any condition), conditions: up to 10 { property_id, operator, value } }; null or no conditions removes the filter. Operators by property type: text contains, not_contains, eq, neq (case-insensitive); number eq, neq, gt, lt (value a decimal); select eq, neq (value an option ID, never its name); multi_select contains, not_contains (option ID); people contains, not_contains (member user id); date and created_at eq (same day), gt (after), lt (before) with value YYYY-MM-DD; checkbox eq with \"true\" or \"false\"; every type except checkbox also takes empty and not_empty, without a value. Column ORDER is not part of a view: it is the order of the database_schema array, changed with update_page_database operation=schema. The result lists every view after the write.",
+      parameters: {
+        ...DATABASE_VIEWS_TOOL_PARAMETERS,
+        properties: {
+          ...DATABASE_VIEWS_TOOL_PARAMETERS.properties,
+          page_id: { type: "string", description: "The database page id (is_database true in get_page)." },
+        },
+      },
     },
   },
   {
@@ -1021,7 +1053,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "create_view",
       description:
-        "Create a saved kanban view. In project mode it is shared with the whole project; in global mode it is your personal CROSS-PROJECT view (spanning every project). The kanban ALWAYS groups by status — a view only filters, sorts and optionally hides done issues. STRICT ID RULE: filter values are IDS or enum values, never names or free text — resolve member/category/objective/integration names through list_members / list_categories / list_objectives / list_integrations (or list_global_filter_options in global mode) BEFORE calling, and copy status/priority/effort verbatim from their enums. null inside effort/assignee/objective/integration means 'effort not set'/'unassigned'/'no objective'/'not from an integration'; '@me' inside assignee means 'assigned to the viewing user' (dynamic). Omitting a filter key means 'do not filter on it' — a view with NO filters shows everything.",
+        "Create a saved view of the ISSUE BOARD (the kanban of issues). Never use it for a database page: when the user is on a database page, or asks for a view of a database, table or tracker, use update_page_database_views operation=create instead. In project mode it is shared with the whole project; in global mode it is your personal CROSS-PROJECT view (spanning every project). The kanban ALWAYS groups by status — a view only filters, sorts and optionally hides done issues. STRICT ID RULE: filter values are IDS or enum values, never names or free text — resolve member/category/objective/integration names through list_members / list_categories / list_objectives / list_integrations (or list_global_filter_options in global mode) BEFORE calling, and copy status/priority/effort verbatim from their enums. null inside effort/assignee/objective/integration means 'effort not set'/'unassigned'/'no objective'/'not from an integration'; '@me' inside assignee means 'assigned to the viewing user' (dynamic). Omitting a filter key means 'do not filter on it' — a view with NO filters shows everything.",
       parameters: {
         type: "object",
         properties: {
@@ -1061,7 +1093,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "update_view",
       description:
-        "Update a saved kanban view (name, filters, sort, display). Same filter shape and ID rules as create_view (IDS and enum values only, resolved through the list_* tools first). Get view ids via list_views. DANGER: `filters` REPLACES the whole filter config — read the view with list_views first and resend EVERY key you want to keep, otherwise you silently drop the user's existing filters. On the kind='my' system view the name and the assignee filter are locked (assignee stays [\"@me\"]); everything else is editable.",
+        "Update a saved view of the ISSUE BOARD (the kanban of issues) — never a database page's view, which is update_page_database_views. Same filter shape and ID rules as create_view (IDS and enum values only, resolved through the list_* tools first). Get view ids via list_views. DANGER: `filters` REPLACES the whole filter config — read the view with list_views first and resend EVERY key you want to keep, otherwise you silently drop the user's existing filters. On the kind='my' system view the name and the assignee filter are locked (assignee stays [\"@me\"]); everything else is editable.",
       parameters: {
         type: "object",
         properties: {

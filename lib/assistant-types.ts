@@ -307,6 +307,11 @@ export interface AssistantPageContext {
   pageId?: string;
   pageTitle?: string;
   pageIcon?: string | null;
+  /**
+   * Set by the server, never read from the request: the open page is a
+   * database, so "a view" means one of its saved views, not a board view.
+   */
+  pageIsDatabase?: boolean;
 }
 
 /** Where a voluntary request entered Numo. This is product context, not an

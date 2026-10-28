@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -43,14 +43,15 @@
       "components/editor/comment-editor.tsx",
       "components/scratchpad/scratchpad-editor.tsx",
       "lib/scratchpad-search.ts",
-      "components/command-palette.tsx"
+      "components/command-palette.tsx",
+      "components/editor/mobile-editor-toolbar.tsx"
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 10,
+    "fact": "agent:claude-code (phone keyboard toolbar sentence checked against components/editor/mobile-editor-toolbar.tsx and components/editor/rich-editor.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "issues",
@@ -68,7 +69,7 @@
       "src": "/documentation/en/work-task-notebook.png",
       "alt": "Localized demonstration tasks in the personal notebook.",
       "caption": "The notebook keeps personal steps outside the project issue hierarchy. The sample task states remain unchanged.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -91,7 +92,7 @@ Open the task notebook from the personal application controls, or use Command+Sh
 
 To find a task again, open the command palette with Command+K on macOS or Ctrl+K on Windows/Linux and type words from it. Tasks still to do appear under **Task notebook**, with their section; completed and canceled tasks and questions do not. Choose one to open the notebook on that task. Before you type, the palette does not list notebook tasks.
 
-The notebook uses the same editor as project pages, with the same block handles: hover a block to drag it, open its menu or add a block with **+**. Type `/` to insert a task, listed first, or a heading, list, quote, **Callout**, code block, **Toggle** or divider, or choose **Dictate a task** to speak tasks aloud. The notebook is still saved as Markdown, so Numo and connected agents read the same tasks and states. Select text to format it or add a link. Paste or drop an image, or choose **Image** in the `/` menu, to insert it in a note. Other kinds of files belong in pages.
+The notebook uses the same editor as project pages, with the same block handles: hover a block to drag it, open its menu or add a block with **+**. Type `/` to insert a task, listed first, or a heading, list, quote, **Callout**, code block, **Toggle** or divider, or choose **Dictate a task** to speak tasks aloud. The notebook is still saved as Markdown, so Numo and connected agents read the same tasks and states. Select text to format it or add a link. Paste or drop an image, or choose **Image** in the `/` menu, to insert it in a note. Other kinds of files belong in pages. On a phone, the toolbar above the keyboard replaces the block handles, the selection toolbar and the typed `@` menu; the [Pages guide](/docs/pages#editor-formatting) describes it.
 
 The **Notebook actions** menu (`…`) offers **Copy all as prompt**, which copies the whole notebook for your own coding agent, and **Remove done and dropped tasks**. Removal asks for confirmation, deletes completed and canceled tasks with the headings they leave empty, and keeps tasks to do or in progress. To copy less, use a heading's **Copy section as prompt** control or a task's **Copy as prompt**. If **Start the issue or task when I copy its prompt** is enabled in **Account settings** → **Issues**, copying also moves the copied pending tasks to in progress.
 

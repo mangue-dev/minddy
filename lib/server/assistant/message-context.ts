@@ -51,6 +51,14 @@ export async function validateMessageContext(
     // Resource identity determines its project, even when the project chip was hidden.
     next.projectId = item.projectId;
   }
+  // Whether the open page is a database is read here, never trusted from the
+  // client: it decides which views "a view" means in the prompt.
+  if (next) delete next.pageIsDatabase;
+  if (next?.pageId) {
+    const { data } = await supabase.from("pages").select("page_is_database")
+      .eq("id", next.pageId).is("deleted_at", null).maybeSingle();
+    if (data?.page_is_database === true) next.pageIsDatabase = true;
+  }
   if (next?.issueIds) {
     const issues = await Promise.all(
       next.issueIds.map((id) => bind({ kind: "issue", id, label: id })),

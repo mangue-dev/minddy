@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 9,
+  "revision": 11,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -43,14 +43,15 @@
       "components/editor/comment-editor.tsx",
       "components/scratchpad/scratchpad-editor.tsx",
       "lib/scratchpad-search.ts",
-      "components/command-palette.tsx"
+      "components/command-palette.tsx",
+      "components/editor/mobile-editor-toolbar.tsx"
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of task-notebook-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 11,
+    "fact": "agent:claude-code (phone keyboard toolbar sentence checked against components/editor/mobile-editor-toolbar.tsx and components/editor/rich-editor.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (it changed passages with catalog UI labels; equivalent meaning to en revision 10; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "issues",
@@ -68,7 +69,7 @@
       "src": "/documentation/it/work-task-notebook.png",
       "alt": "Attività personali dimostrative tradotte nel taccuino.",
       "caption": "Il taccuino segue passaggi personali fuori dalla gerarchia dei ticket del progetto. Gli stati delle attività d’esempio restano invariati.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -92,7 +93,7 @@ Apri il taccuino delle attività dai comandi personali dell’applicazione, oppu
 
 Per ritrovare un’attività, apri la palette dei comandi con Command+K su macOS o Ctrl+K su Windows/Linux e digita alcune parole dell’attività. Le attività ancora da fare compaiono sotto **Taccuino delle attività**, con la loro sezione; le attività completate o annullate e le domande non compaiono. Scegline una per aprire il taccuino su quell’attività. Finché non digiti nulla, la palette non elenca le attività del taccuino.
 
-Il taccuino usa lo stesso editor delle pagine del progetto, con le stesse maniglie dei blocchi: passa sopra un blocco per trascinarlo, aprirne il menu o aggiungere un blocco con **+**. Digita `/` per inserire un'attività, proposta per prima, o un titolo, un elenco, una citazione, un **Riquadro**, un blocco di codice, un **Blocco a scomparsa** o un divisore, oppure scegli **Detta un'attività** per dettare le attività a voce. Il taccuino resta salvato in Markdown, quindi Numo e gli agenti collegati leggono le stesse attività e gli stessi stati. Seleziona del testo per formattarlo o aggiungere un link. Incolla o trascina un'immagine, oppure scegli **Immagine** nel menu `/`, per inserirla in una nota. Gli altri tipi di file vanno nelle pagine.
+Il taccuino usa lo stesso editor delle pagine del progetto, con le stesse maniglie dei blocchi: passa sopra un blocco per trascinarlo, aprirne il menu o aggiungere un blocco con **+**. Digita `/` per inserire un'attività, proposta per prima, o un titolo, un elenco, una citazione, un **Riquadro**, un blocco di codice, un **Blocco a scomparsa** o un divisore, oppure scegli **Detta un'attività** per dettare le attività a voce. Il taccuino resta salvato in Markdown, quindi Numo e gli agenti collegati leggono le stesse attività e gli stessi stati. Seleziona del testo per formattarlo o aggiungere un link. Incolla o trascina un'immagine, oppure scegli **Immagine** nel menu `/`, per inserirla in una nota. Gli altri tipi di file vanno nelle pagine. Sul telefono, la barra sopra la tastiera sostituisce le maniglie dei blocchi, la barra di selezione e il menu `@` digitato; la [guida alle pagine](/it/documentazione/pages#editor-formatting) la descrive.
 
 Il menu **Azioni del taccuino** (`…`) offre **Copia tutto come prompt**, che copia l’intero taccuino per il tuo agente di programmazione, e **Rimuovi le attività completate e annullate**. La rimozione chiede una conferma, elimina le attività completate e annullate insieme ai titoli che restano vuoti e conserva le attività da fare o in corso. Per copiare meno, usa **Copia la sezione come prompt** su un titolo o **Copia come prompt** su un’attività. Se **Avvia il ticket o l'attività quando ne copio il prompt** è attivo in **Impostazioni account** → **Ticket**, la copia porta anche in corso le attività in attesa copiate.
 

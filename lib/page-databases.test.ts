@@ -183,8 +183,14 @@ describe("saved database views", () => {
 
   it("keeps a valid view, without duplicate hidden columns or unknown keys", () => {
     expect(normalizeDatabaseView({ ...view, extra: "dropped" })).toEqual({
-      ...view, hidden: [property],
+      ...view, filters: { match: "and", conditions: [] }, hidden: [property],
     });
+  });
+
+  it("keeps the filter conditions of a view", () => {
+    const filters = { match: "or", conditions: [
+      { id: "a", propertyId: property, operator: "contains", value: "Acme" }] };
+    expect(normalizeDatabaseView({ ...view, filters })?.filters).toEqual(filters);
   });
 
   it("drops the filter value of a view without a filter", () => {
@@ -197,6 +203,7 @@ describe("saved database views", () => {
     ["an oversized filter value", { ...view, filterValue: "x".repeat(201) }],
     ["a hidden column that is not a property", { ...view, hidden: ["title"] }],
     ["a missing direction", { ...view, descending: undefined }],
+    ["filters that are not a filter", { ...view, filters: [] }],
   ])("refuses %s", (_case, input) => {
     expect(normalizeDatabaseView(input)).toBeNull();
   });

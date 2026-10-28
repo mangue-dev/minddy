@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, Delete02Icon, Edit04Icon, MoreHorizontalIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, ArrowDown01Icon, Delete02Icon, Edit04Icon } from "@hugeicons/core-free-icons";
 import { DndContext, MouseSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, horizontalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -13,13 +13,12 @@ import { Input } from "@/components/ui/input";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  IssueContextMenu,
+  type ContextMenuAction,
+} from "@/components/issue-context-menu";
 import { FormDialog } from "@/components/form-dialog";
+import { SearchSelect } from "@/components/search-select";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { cn } from "@/lib/utils";
 import { useDragAnnouncements } from "@/lib/use-drag-announcements";
@@ -29,20 +28,23 @@ import {
   type SavedDatabaseView,
 } from "@/lib/page-databases";
 
+// The issue board's tab pills, so both kinds of views read the same.
 const PILL_CLASS =
-  "flex max-w-40 shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs transition-colors";
+  "flex max-w-48 shrink-0 items-center rounded-full px-3 py-1 text-sm transition-colors";
 const pillTone = (active: boolean) =>
   active ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted";
 
-function ViewPill({ view, active, sortable, onSelect }: {
+function ViewPill({ view, active, sortable, onSelect, onContextMenu }: {
   view: SavedDatabaseView; active: boolean; sortable: boolean; onSelect: () => void;
+  onContextMenu?: (event: React.MouseEvent) => void;
 }) {
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } =
     useSortable({ id: view.id, disabled: !sortable });
   return (
     <button type="button" ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      {...attributes} {...listeners} onClick={onSelect} aria-pressed={active}
+      {...attributes} {...listeners} onClick={onSelect} onContextMenu={onContextMenu}
+      aria-pressed={active}
       className={cn(PILL_CLASS, pillTone(active), isDragging && "opacity-50")}>
       <span className="truncate">{view.name}</span>
     </button>
@@ -115,61 +117,38 @@ export function DatabaseViewStrip({ views, activeId, canWrite, onSelect, onCreat
   const announcements = useDragAnnouncements((id) => views.find((view) => view.id === id)?.name);
   const active = views.find((view) => view.id === activeId) ?? null;
   const name = active?.name ?? t("defaultView");
+  // Rename and delete live on the pill's right-click menu, like the board's.
+  // `view: null` is the default view of a database that has no saved one yet.
+  const [menu, setMenu] = useState<{ view: SavedDatabaseView | null; x: number; y: number } | null>(null);
+  const [renameDefault, setRenameDefault] = useState(false);
+  const menuActions: ContextMenuAction[] = menu ? [
+    {
+      id: "rename",
+      label: tBoard("renameView"),
+      icon: <HugeiconsIcon icon={Edit04Icon} className="size-4" />,
+      onSelect: () => (menu.view ? setRenameTarget(menu.view) : setRenameDefault(true)),
+    },
+    {
+      id: "delete",
+      label: tBoard("deleteView"),
+      icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />,
+      variant: "destructive",
+      separatorBefore: true,
+      // A database keeps at least one view, like the issue board.
+      disabled: views.length <= 1 || !menu.view,
+      onSelect: () => setDeleteTarget(menu.view),
+    },
+  ] : [];
 
-  return (
-    <div role="group" aria-label={t("views")} className="flex min-w-0 items-center gap-0.5 overflow-x-auto">
-      {views.length ? (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} accessibility={{ announcements }}
-          onDragEnd={({ active: dragged, over }) => {
-            if (over && dragged.id !== over.id) onMove(String(dragged.id), String(over.id));
-          }}>
-          <SortableContext items={views.map((view) => view.id)} strategy={horizontalListSortingStrategy}>
-            {views.map((view) => (
-              <ViewPill key={view.id} view={view} active={view.id === activeId}
-                sortable={canWrite && views.length > 1} onSelect={() => onSelect(view.id)} />
-            ))}
-          </SortableContext>
-        </DndContext>
-      ) : (
-        <span className={cn(PILL_CLASS, pillTone(true))}>{name}</span>
-      )}
-      {canWrite && (
-        <>
-          <AppTooltip label={tBoard("newView")}>
-            <Button variant="ghost" size="icon-sm" aria-label={tBoard("newView")}
-              disabled={views.length >= MAX_DATABASE_VIEWS}
-              onClick={() => setCreateOpen(true)}>
-              <HugeiconsIcon icon={Add01Icon} className="size-4" />
-            </Button>
-          </AppTooltip>
-          {active && (
-            <DropdownMenu>
-              <AppTooltip label={tBoard("viewOptions", { name })}>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon-sm" aria-label={tBoard("viewOptions", { name })}>
-                    <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-              </AppTooltip>
-              <DropdownMenuContent align="start">
-                <DropdownMenuItem onSelect={() => setRenameTarget(active)}>
-                  <HugeiconsIcon icon={Edit04Icon} />
-                  {tBoard("renameView")}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                {/* A database keeps at least one view, like the issue board. */}
-                <DropdownMenuItem variant="destructive" disabled={views.length <= 1}
-                  onSelect={() => setDeleteTarget(active)}>
-                  <HugeiconsIcon icon={Delete02Icon} />
-                  {tBoard("deleteView")}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </>
-      )}
+  const mobile = useMobileLayout() === true;
+  const dialogs = (
+    <>
+      <IssueContextMenu position={menu ? { x: menu.x, y: menu.y } : null}
+        onClose={() => setMenu(null)} actions={menuActions} searchable={false} />
       <ViewNameDialog open={createOpen} onOpenChange={setCreateOpen}
         title={tBoard("newView")} initialName="" onSubmit={onCreate} />
+      <ViewNameDialog open={renameDefault} onOpenChange={setRenameDefault}
+        title={tBoard("renameViewTitle")} initialName={name} onSubmit={onCreate} />
       <ViewNameDialog open={renameTarget !== null}
         onOpenChange={(open) => { if (!open) setRenameTarget(null); }}
         title={tBoard("renameViewTitle")} initialName={renameTarget?.name ?? ""}
@@ -188,6 +167,85 @@ export function DatabaseViewStrip({ views, activeId, canWrite, onSelect, onCreat
             toast.error((error as Error).message);
           }
         }} />
+    </>
+  );
+
+  // A phone has no room for a strip of pills and no right-click: one picker,
+  // like the issue board's, whose menu creates, renames and deletes.
+  if (mobile) {
+    const actions = canWrite ? [
+      ...(views.length < MAX_DATABASE_VIEWS ? [{
+        id: "create-view", label: tBoard("newView"),
+        icon: <HugeiconsIcon icon={Add01Icon} className="size-4" />, onSelect: () => setCreateOpen(true),
+      }] : []),
+      { id: "rename-view", label: tBoard("renameView"),
+        icon: <HugeiconsIcon icon={Edit04Icon} className="size-4" />,
+        onSelect: () => (active ? setRenameTarget(active) : setRenameDefault(true)) },
+      ...(active && views.length > 1 ? [{ id: "delete-view", label: tBoard("deleteView"),
+        icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />, onSelect: () => setDeleteTarget(active) }] : []),
+    ] : undefined;
+    // The picker takes the row's free width, so a long view name only
+    // truncates once the toolbar buttons leave it no more room.
+    return (
+      <div className="flex min-w-0 flex-1 items-center">
+        <SearchSelect
+          value={active?.id ?? "__default__"}
+          onChange={(id) => { if (id && id !== "__default__") onSelect(id); }}
+          options={views.length
+            ? views.map((view) => ({ value: view.id, label: view.name }))
+            : [{ value: "__default__", label: name }]}
+          menuActions={actions}
+          trigger={
+            <Button variant="ghost" className="-ml-3 h-11 min-w-0 max-w-full justify-start gap-2 px-3 text-base" aria-label={t("views")}>
+              <span className="truncate">{name}</span>
+              <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 shrink-0" />
+            </Button>
+          }
+        />
+        {dialogs}
+      </div>
+    );
+  }
+
+  return (
+    <div role="group" aria-label={t("views")} className="flex min-w-0 items-center gap-0.5 overflow-x-auto">
+      {views.length ? (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} accessibility={{ announcements }}
+          onDragEnd={({ active: dragged, over }) => {
+            if (over && dragged.id !== over.id) onMove(String(dragged.id), String(over.id));
+          }}>
+          <SortableContext items={views.map((view) => view.id)} strategy={horizontalListSortingStrategy}>
+            {views.map((view) => (
+              <ViewPill key={view.id} view={view} active={view.id === activeId}
+                sortable={canWrite && views.length > 1} onSelect={() => onSelect(view.id)}
+                onContextMenu={canWrite ? (event) => {
+                  event.preventDefault();
+                  setMenu({ view, x: event.clientX, y: event.clientY });
+                } : undefined} />
+            ))}
+          </SortableContext>
+        </DndContext>
+      ) : (
+        // The default view: renaming it saves it under that name, with the
+        // settings on screen; it cannot be deleted.
+        <span className={cn(PILL_CLASS, pillTone(true))}
+          onContextMenu={canWrite ? (event) => {
+            event.preventDefault();
+            setMenu({ view: null, x: event.clientX, y: event.clientY });
+          } : undefined}>{name}</span>
+      )}
+      {canWrite && (
+        <>
+          <AppTooltip label={tBoard("newView")}>
+            <Button variant="ghost" size="icon-sm" aria-label={tBoard("newView")}
+              disabled={views.length >= MAX_DATABASE_VIEWS}
+              onClick={() => setCreateOpen(true)}>
+              <HugeiconsIcon icon={Add01Icon} className="size-4" />
+            </Button>
+          </AppTooltip>
+        </>
+      )}
+      {dialogs}
     </div>
   );
 }

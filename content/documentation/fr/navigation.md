@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 16,
-  "sourceRevision": 16,
+  "revision": 17,
+  "sourceRevision": 17,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -58,14 +58,15 @@
       "components/settings-shell.tsx",
       "components/settings/account-smart-fill-section.tsx",
       "components/objective-relations-section.tsx",
-      "components/create-issue-dialog.tsx"
+      "components/create-issue-dialog.tsx",
+      "components/app-shell-chrome.tsx"
     ]
   },
   "review": {
-    "revision": 16,
-    "fact": "agent:/root/min777 (panel paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min777 (fr sentence on the page side panel with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 17,
+    "fact": "agent:claude-code (New page in the project new-tab palette checked against components/app-shell-chrome.tsx and components/command-palette.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (fr changed passages with catalog UI labels; equivalent meaning to en revision 17; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "views",
@@ -86,7 +87,7 @@
       "src": "/documentation/fr/work-navigation.png",
       "alt": "Navigation du projet à côté du tableau de tickets de démonstration.",
       "caption": "La barre du projet donne accès aux tickets, objectifs, pages et arrivées en triage.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -102,7 +103,7 @@
       "src": "/documentation/fr/work-search.png",
       "alt": "Résultats de recherche pour l’identifiant d’un ticket de démonstration.",
       "caption": "La palette retrouve le ticket par identifiant avec les pages du projet ; ouvrir un résultat conserve ses règles d’accès.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -160,7 +161,7 @@ Ouvrez la palette de commandes depuis la recherche de navigation. Cherchez un ti
 
 Utilisez Commande+K sur macOS ou Ctrl+K sur Windows/Linux pour ouvrir la palette ; Commande/Ctrl+P constitue une autre combinaison de l’application. Hors d’un champ de texte, ? ouvre l’aide des raccourcis et C la création de ticket. Sur une carte survolée ou les commandes de détail compatibles, S ouvre l’état, P la priorité, E l’effort, A le responsable, L les catégories, D l’échéance et O l’objectif. R ajoute une relation depuis les mêmes endroits, sur la page d’un objectif et dans le formulaire de nouveau ticket : choisissez le type de relation, puis l’autre ticket ou objectif. Si la carte fait partie d’une sélection, ces touches modifient tous les tickets sélectionnés ; le responsable, l’objectif, les catégories et les relations ne s’appliquent qu’aux tickets sélectionnés du projet de cette carte. Maj+C mène à un champ de commentaire prêt pour la saisie, le fil défilé jusqu’à son dernier message : celui d’une carte de ticket survolée ou d’une ligne survolée dans la liste des objectifs, des retours, des pull requests, des pages ou du triage, ou, sans rien survoler, celui du ticket, de l’objectif, du retour, de la pull request ou de la page à l’écran. Une page ouvre pour cela son panneau **Activité**. Maj+C ne concerne que cet élément, même si la carte fait partie d’une sélection. Sur la page d’un objectif et dans le formulaire de nouvel objectif, S ouvre son état, A son responsable, D sa date cible et C sa couleur ; à ces endroits, C ne crée pas de ticket. Ces touches seules n’interceptent pas la saisie dans un champ, une zone de texte ou un éditeur. Les séquences G puis H (Accueil) et G puis I (Boîte de réception) utilisent deux touches successives ; G puis W ouvre les pages uniquement dans le contexte d’un projet.
 
-Pour atteindre un réglage, tapez son nom dans la palette de commandes ou dans le champ de filtre en haut de la barre latérale des paramètres. Les deux trouvent chaque carte de réglages et les réglages individuels, comme la langue, le thème, chaque palette, la transparence et les deux interrupteurs de **Démarrer un ticket**. Choisir un résultat ouvre le bon onglet des paramètres, fait défiler jusqu’à la carte ou la ligne et la met en évidence. Commande+T sur macOS ou Ctrl+T sur Windows/Linux ouvre la palette du nouvel onglet ; un réglage choisi depuis celle-ci s’ouvre dans un nouvel onglet de l’app. Les mots-clés anglais et français fonctionnent quelle que soit la langue de l’interface.
+Pour atteindre un réglage, tapez son nom dans la palette de commandes ou dans le champ de filtre en haut de la barre latérale des paramètres. Les deux trouvent chaque carte de réglages et les réglages individuels, comme la langue, le thème, chaque palette, la transparence et les deux interrupteurs de **Démarrer un ticket**. Choisir un résultat ouvre le bon onglet des paramètres, fait défiler jusqu’à la carte ou la ligne et la met en évidence. Commande+T sur macOS ou Ctrl+T sur Windows/Linux ouvre la palette du nouvel onglet ; un réglage choisi depuis celle-ci s’ouvre dans un nouvel onglet de l’app. Dans un projet, elle propose aussi **Nouvelle page**, qui crée une page dans ce projet et l’ouvre dans un nouvel onglet. Les mots-clés anglais et français fonctionnent quelle que soit la langue de l’interface.
 
 Consultez l’aide des raccourcis pour votre plateforme. minddy distingue raccourcis de l’application, actions de propriétés des tickets et commandes natives d’onglets ou de fenêtres desktop. Vérifiez le focus avant une commande : saisir dans un éditeur et agir sur le ticket environnant sont des contextes différents.
 

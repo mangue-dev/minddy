@@ -82,7 +82,7 @@ export const HOME_TIPS: HomeTip[] = [
   tip("pagesComment"),
   tip("pagesHistory"),
   tip("pagesBacklinks"),
-  tip("pageCopyForAgent", "page.copyForAgent"),
+  tip("pageCopyLink", "page.copyLink"),
   tip("cycles"),
   tip("objectives"),
   tip("stats"),

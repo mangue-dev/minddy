@@ -1,5 +1,6 @@
 "use client";
 
+import { pageHref } from "@/lib/pages-navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { documentationPath } from "@/lib/documentation-core.mjs";
 import { ContentToaster } from "@/components/content-toaster";
@@ -456,6 +457,12 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
    * saved, and leaving without writing a letter in it makes it disappear.
    */
   const createPageFromPalette = useCreateProjectPage(navigateToWikiPage);
+  // The same creation from the new-tab palette (⌘T): the page opens in a tab.
+  const openWikiPageInNewTab = useCallback(
+    (projectId: string, pageId: string) => { void appTabSession?.create(pageHref(projectId, pageId)); },
+    [appTabSession],
+  );
+  const createPageInNewTab = useCreateProjectPage(openWikiPageInNewTab);
   const projectContext = useProjectContextActions({ createProjectPage: createPageFromPalette });
 
   // Cross-project search (MIN-91): every ticket and objective of every project,
@@ -664,6 +671,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         metaText: currentProject.name,
         contextId: currentProject.id,
         onSelect: () => createPageFromPalette(currentProject.id),
+        onSelectInNewTab: () => createPageInNewTab(currentProject.id),
       });
     } else {
       // Outside a project, creation is GENERIC: one "New issue" line and one
@@ -982,7 +990,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     }
 
     return groups;
-  }, [projects, switcherProjects, projectById, projectDrafts, openProjectDraft, creationDrafts, tDrafts, currentProject, createPageFromPalette, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, openAssistant, agentsAllowed, projectLimitReached, openExport, locale, t, ti, tk, tPages, tScratch, tSettings, tExport, tProjects, setCheatsheetOpen]);
+  }, [projects, switcherProjects, projectById, projectDrafts, openProjectDraft, creationDrafts, tDrafts, currentProject, createPageFromPalette, createPageInNewTab, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, openAssistant, agentsAllowed, projectLimitReached, openExport, locale, t, ti, tk, tPages, tScratch, tSettings, tExport, tProjects, setCheatsheetOpen]);
 
   // ── Settings: one line per CARD, not per tab ───────────────────────
   // A settings tab is a column of cards; “Cadence”, “Zone

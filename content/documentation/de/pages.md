@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 20,
-  "sourceRevision": 18,
+  "revision": 21,
+  "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -42,7 +42,6 @@
       "components/pages/page-tree.tsx",
       "components/pages/page-editor.tsx",
       "components/pages/page-slash-command.tsx",
-      "components/pages/page-comment-popover.tsx",
       "components/pages/page-presence.tsx",
       "components/pages/page-conflict-banner.tsx",
       "lib/pages-merge.ts",
@@ -70,14 +69,27 @@
       "components/pages/page-promotion-context.tsx",
       "components/pages/page-promotion-context.test.tsx",
       "components/pages/page-database-view.tsx",
-      "lib/server/page-database-views.ts"
+      "lib/server/page-database-views.ts",
+      "components/pages/page-comment-bubble.tsx",
+      "components/editor/mobile-editor-toolbar.tsx",
+      "components/editor/rich-editor.tsx",
+      "components/pages/page-extensions.ts",
+      "components/pages/blocks/image.ts",
+      "lib/pages-markdown.ts",
+      "components/pages/blocks/subpage.ts",
+      "lib/server/pages.ts",
+      "lib/pages-subpage.ts",
+      "lib/pages-export.ts",
+      "components/public-page-body.tsx",
+      "components/pages/page-comment-dialog.tsx",
+      "lib/keyboard/shortcuts.ts"
     ]
   },
   "review": {
-    "revision": 20,
-    "fact": "agent:/root/min764 (database archive sentence checked against lib/server/database-export.ts and lib/server/page-database-views.ts: saved views are not exported and are copied by duplication; rest of the article unchanged since the previous review; no figure changed); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of page-editor-steps, page-comments-and-collaboration-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (page-comments inline alt aligned with the figure alt and the recaptured image); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min764 (de changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (de alt text edit; self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 21,
+    "fact": "agent:claude-code (new editor-formatting section (selection toolbar, shortcuts, Shift+Enter line break and send keys, phone keyboard toolbar) and image width kept in Markdown checked against components/pages/page-comment-bubble.tsx, lib/keyboard/keyboard-context.tsx, components/editor/document-editor.tsx, components/pages/page-extensions.ts, components/editor/mobile-editor-toolbar.tsx, components/editor/rich-editor.tsx, components/pages/blocks/image.ts and lib/pages-markdown.ts; retired subpage block: \"/\" Sub-page inserting a mention and opening the child, legacy blocks converted on a writer's first opening with block ids kept, trash and restore of a child's mention line, mention deletion never trashing, duplication remapping mentions, `[@Title](mention:page/<id>)` with `[[page:<id>]]` still read, export relative links and current titles, published mentions checked against components/pages/blocks/subpage.ts, components/pages/page-editor.tsx, lib/server/pages.ts, lib/pages-subpage.ts, lib/pages-export.ts, lib/server/pages-export.ts and components/public-page-body.tsx; block comment dialog or bottom sheet, phone long-press selection, notebook toolbar, bottom navigation hidden while typing and Add icon on touch screens checked against components/pages/page-comment-dialog.tsx and components/editor/mobile-editor-toolbar.tsx; Sub-page opening in the side panel with Expand (sidebar creation still full page), color lists showing each color by name in that color, selection ended by an outside click or Comment, Turn into marking only the selection's block, and Untitled page mentions checked against components/pages/page-view.tsx and components/pages/page-comment-bubble.tsx; page Copy submenu (Copy link, Copy page content as Markdown, not on databases) and the Command/Ctrl+Shift+L link shortcut checked against components/pages/page-document-actions.tsx and lib/keyboard/shortcuts.ts; floating phone toolbar hiding with the keyboard, its Color sheet and pinned Hide keyboard button checked against components/editor/mobile-editor-toolbar.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; equivalent meaning to en revision 19; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "notifications-and-inbox",
@@ -112,7 +124,7 @@
       "src": "/documentation/de/page-create-menu.png",
       "alt": "Erstellungsmenü mit Neue Seite und Neue Datenbank.",
       "caption": "Wähle über die Seitenfunktionen des Projekts ein Dokument oder eine Datenbank.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -128,7 +140,7 @@
       "src": "/documentation/de/page-editor.png",
       "alt": "Demoseite mit Überschriften, Absätzen, Aufgaben mit Kontrollkästchen und einer Ticketreferenz.",
       "caption": "Überschriften, Aufgabenblöcke und die Referenz AUR-2 gliedern die Seite. Der Inhalt dient als Demobeispiel.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -145,7 +157,7 @@
       "src": "/documentation/de/page-comments.png",
       "alt": "Seitenaktivität ohne bisherige Einträge und ein leeres Kommentarfeld.",
       "caption": "Lies die Seitenaktivität und verfasse einen Kommentar im Eingabefeld. In diesem Beispiel wurde keiner abgesendet.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -162,7 +174,7 @@
       "src": "/documentation/de/page-file-states.png",
       "alt": "Demoseite mit einem unvollständigen Upload und einer gespeicherten Datei von 67 Byte mit Downloadfunktion.",
       "caption": "Prüfe den tatsächlichen Dateizustand: Der zweite Anhang ist verfügbar, der erste unvollständige Upload nicht.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -178,7 +190,7 @@
       "src": "/documentation/de/page-history-preview.png",
       "alt": "Versionen-Tab mit aufgeklapptem früherem Zustand, Autor, Wiederherstellen und Hinweis auf 30 Tage Aufbewahrung.",
       "caption": "Prüfe einen gespeicherten Zustand in der Vorschau und vergleiche ihn vor dem Wiederherstellen mit der aktuellen Seite.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -194,7 +206,7 @@
       "src": "/documentation/de/page-publish.png",
       "alt": "Veröffentlichungsdialog mit ausgewähltem Privat und Alternativen für Passwort oder Link.",
       "caption": "Privat hält die Seite im Projekt. Prüfe die vorgesehene Zielgruppe vor einer Änderung der Freigabe.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -210,7 +222,7 @@
       "src": "/documentation/de/page-export.png",
       "alt": "Exportmenü des Dokuments mit Markdown (.md) und Drucken / PDF.",
       "caption": "Wähle Markdown zum Herunterladen oder Drucken / PDF für die Druckansicht.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -226,7 +238,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Umbenennen und Entfernen.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -257,13 +269,13 @@ Seiten bilden das Wiki eines Projekts mit Dokumenten, Unterseiten und Datenbanke
 
 Öffne den Seitenbereich eines Projekts als Eigentümer oder Mitglied; Leser können Seiten öffnen, aber keine erstellen. Wähle im +-Menü eine Seite für ein Dokument oder eine Datenbank für eine strukturierte Liste. Gib der Seite einen hilfreichen Titel und schreibe die Spezifikation, Entscheidung oder Vorgehensweise, die sie bewahren soll.
 
-Erstelle Unterseiten für zusammengehörige Dokumente und verschiebe oder ordne sie mit den Baumfunktionen. Eine Seite darf nicht unter sich selbst eingeordnet werden. Das Duplizieren erzeugt neue Inhalte statt eines aktuellen Verweises auf das Original. Prüfe den Zweig der Kopie vor Bearbeitung oder Freigabe.
+Erstelle Unterseiten für zusammengehörige Dokumente und verschiebe oder ordne sie mit den Baumfunktionen. Eine Seite darf nicht unter sich selbst eingeordnet werden. Das Duplizieren erzeugt neue Inhalte statt eines aktuellen Verweises auf das Original. Prüfe den Zweig der Kopie vor Bearbeitung oder Freigabe. Um beim Schreiben eine Unterseite zu erstellen, tippe `/` und wähle **Unterseite**: minddy erstellt die untergeordnete Seite unter der aktuellen, fügt ihre Erwähnung an der Cursorposition mit einem folgenden Leerzeichen ein und öffnet die neue Seite dann im Seitenpanel neben der Seite, an der du schreibst; mit **Vergrößern** öffnest du sie vollständig. Du kannst in derselben Zeile nach der Erwähnung weiterschreiben, wie nach jeder Erwähnung. Eine in der Seitenleiste erstellte Seite öffnet sich vollständig. Eine ältere Seite kann noch Unterseitenblöcke zeigen: Wenn sie zum ersten Mal von jemandem mit Bearbeitungsrecht geöffnet wird, wird jeder Block zu einer Zeile, die nur die Erwähnung der Unterseite enthält, und Kommentare und Blocklinks verweisen weiterhin darauf. Das Öffnen durch Leser wandelt nichts um. Wenn du eine Seite mit ihren Unterseiten duplizierst, verweisen Erwähnungen der kopierten Seiten auf die Kopien, auch innerhalb von Sätzen.
 
 ### Favoriten und Löschen {#page-tree}
 
-Markiere eine Seite als Favorit, damit sie oben im Seitenbaum des Projekts erscheint. Diese Favoriten werden im Projekt geteilt, anders als eine private Notiz im Aufgabennotizbuch. Verknüpfe eine Seite mit einem Ticket, wenn das aktuelle Dokument den Aufgabenkontext liefert; der Ressourcentitel folgt einer Umbenennung der Seite.
+Markiere eine Seite als Favorit, damit sie oben im Seitenbaum des Projekts erscheint. Diese Favoriten werden im Projekt geteilt, anders als eine private Notiz im Aufgabennotizbuch. Verknüpfe eine Seite mit einem Ticket, wenn das aktuelle Dokument den Aufgabenkontext liefert; der Ressourcentitel folgt einer Umbenennung der Seite. Im `…`-Menü der geöffneten Seite bietet **Kopieren** die Einträge **Link kopieren** und **Seiteninhalt kopieren**; Letzteres kopiert Titel und Inhalt als Markdown (bei einer Datenbank nicht angeboten). Command+Umschalt+L unter macOS oder Strg+Umschalt+L unter Windows/Linux kopiert den Link der geöffneten Seite.
 
-Das Löschen verschiebt Seiten, für die eine Wiederherstellung vorgesehen ist, in den Papierkorb. In einem Seitenmenü fragt **In den Papierkorb verschieben** zuerst nach und nennt die Seite und wie viele Unterseiten mitgehen; sie lassen sich 30 Tage lang aus dem Papierkorb wiederherstellen. Prüfe den ausgewählten Zweig vor dem Löschen und verwende die Wiederherstellung statt einer Neuerstellung, wenn der Inhalt einer verlorenen Seite erhalten bleiben soll. Einträge mit gespeicherten Datenbankwerten lassen sich innerhalb ihrer Datenbank umordnen, aber nicht aus ihr heraus verschieben. Prüfe bei einem abgewiesenen Verschieben Hierarchie und Eintragstyp, statt es wiederholt zu erzwingen.
+Das Löschen verschiebt Seiten, für die eine Wiederherstellung vorgesehen ist, in den Papierkorb. In einem Seitenmenü fragt **In den Papierkorb verschieben** zuerst nach und nennt die Seite und wie viele Unterseiten mitgehen; sie lassen sich 30 Tage lang aus dem Papierkorb wiederherstellen. Das Löschen einer Erwähnung verschiebt nie eine Seite in den Papierkorb. Wenn du eine Unterseite im Seitenbaum in den Papierkorb verschiebst, wird die Zeile der übergeordneten Seite entfernt, die nur ihre Erwähnung enthält; beim Wiederherstellen wird diese Zeile am Ende der übergeordneten Seite wieder angefügt, außer die übergeordnete Seite erwähnt sie noch an anderer Stelle. Eine Erwähnung innerhalb eines Satzes wird nie entfernt. Prüfe den ausgewählten Zweig vor dem Löschen und verwende die Wiederherstellung statt einer Neuerstellung, wenn der Inhalt einer verlorenen Seite erhalten bleiben soll. Einträge mit gespeicherten Datenbankwerten lassen sich innerhalb ihrer Datenbank umordnen, aber nicht aus ihr heraus verschieben. Prüfe bei einem abgewiesenen Verschieben Hierarchie und Eintragstyp, statt es wiederholt zu erzwingen.
 
 
 ![Erstellungsmenü mit Neue Seite und Neue Datenbank.](/documentation/de/page-create-menu.png)
@@ -283,12 +295,20 @@ Anders als eine übernommene Aufgabe aus dem Aufgabennotizbuch wird die Seite ni
 
 Öffne die Seite und bearbeite als Eigentümer oder Mitglied Titel oder Inhalt. Leser können Seiten öffnen und lesen, sie aber weder bearbeiten, importieren, duplizieren, zu Favoriten hinzufügen oder veröffentlichen noch eine Version wiederherstellen. Verwende das Slash-Befehlsmenü und die Formatierungsfunktionen für Überschriften, Text, Aufzählungs-, nummerierte und Aufgabenlisten, Zitate, Hinweisblöcke, Codeblöcke, Teiler, Umschalter (aufklappbare Abschnitte), Unterseiten, Bilder und Dateien. Ein Hinweisblock kann ein Emoji-Symbol und eine Palettenfarbe haben. Unterscheide damit hilfreiche Informationen, ohne eine Warnung allein durch Symbol oder Farbe auszudrücken.
 
-Verwende Erwähnungen, um passende Tickets, Ziele, Personen oder Seiten zu verknüpfen. Tippe `@` gefolgt von einer Kennung, Wörtern aus dem Titel oder einer kurzen Beschreibung; eine beschreibende Anfrage listet nach den Textübereinstimmungen auch [inhaltlich gefundene](/docs/navigation#search-by-meaning) Tickets unter **Inhaltlich verwandt** auf. Rückverweise helfen Lesern, Seiten zu finden, die auf die aktuelle Seite verweisen. Ein Link liefert Kontext, gewährt aber keinen Zugriff auf private Objekte eines anderen Projekts.
+Verwende Erwähnungen, um passende Tickets, Ziele, Personen oder Seiten zu verknüpfen. Tippe `@` gefolgt von einer Kennung, Wörtern aus dem Titel oder einer kurzen Beschreibung; eine beschreibende Anfrage listet nach den Textübereinstimmungen auch [inhaltlich gefundene](/docs/navigation#search-by-meaning) Tickets unter **Inhaltlich verwandt** auf. Rückverweise helfen Lesern, Seiten zu finden, die auf die aktuelle Seite verweisen. Ein Link liefert Kontext, gewährt aber keinen Zugriff auf private Objekte eines anderen Projekts. Die Erwähnung einer Seite, die noch keinen Titel hat, lautet **Ohne Titel**.
 
 Ein Klick auf die Erwähnung einer Seite, einen Rückverweis, eine an ein Ticket oder Ziel angehängte Seite oder einen Link auf eine Seite in einem Kommentar oder einer Antwort von Numo öffnet diese Seite in einem Seitenpanel über dem, was du gerade gelesen hast. Lies oder bearbeite sie dort, wähle **Vergrößern**, um die ganze Seite zu öffnen, oder schließe das Panel, um zurückzukehren. Eine Datenbank öffnet sich nicht im Panel, sondern als ganze Seite.
 
 
 ![Demoseite mit Überschriften, Absätzen, Aufgaben mit Kontrollkästchen und einer Ticketreferenz.](/documentation/de/page-editor.png)
+
+### Text formatieren und auf dem Smartphone schreiben {#editor-formatting}
+
+Seiten, Beschreibungen, Kommentare und das Aufgabennotizbuch verwenden denselben Editor. Markiere Text, um die Auswahlleiste zu öffnen. Ihre erste Zeile zeigt den aktuellen Blocktyp: Wähle sie, um **Umwandeln in** zu öffnen und den Block zu ändern. Danach folgen **Farbe** für Text oder Hintergrund, **Fett**, **Kursiv**, **Durchgestrichen**, **Code**, **Link hinzufügen** (oder **Link entfernen** auf einem Link) und **Formatierung entfernen**. Auf einer Seite verankert eine Zeile **Kommentieren** einen Kommentar an der Auswahl. **Umwandeln in** markiert nur den Typ des Blocks, in dem die Auswahl liegt. In den Farblisten, hier und im Blockmenü, erscheint jede Farbe mit ihrem Namen, in dieser Farbe oder auf diesem Hintergrund geschrieben. Ein Klick außerhalb des Editors beendet die Auswahl und blendet die Leiste aus, ebenso die Wahl von **Kommentieren**. Die Tooltips zeigen die Tastenkürzel: Command+B, Command+I, Command+Umschalt+S und Command+E unter macOS oder Strg mit denselben Tasten unter Windows/Linux. In einem Editor formatiert Command/Strg+B den Text fett; außerhalb blendet das Kürzel weiterhin die Seitenleiste ein oder aus.
+
+Umschalt+Eingabetaste beginnt eine neue Zeile im selben Block. Command/Strg+Eingabetaste fügt keinen Zeilenumbruch ein: In einem Kommentar oder einem anderen Eingabebereich sendet es, unabhängig vom Sende-Kürzel in deinen [Einstellungen](/de/dokumentation/accounts#preferences), und wenn du die Eingabetaste als Sende-Kürzel gewählt hast, sendet auch die Eingabetaste.
+
+Auf dem Smartphone zeigt der Editor weder Blockgriffe noch Auswahlleiste, und ein getipptes `@` bleibt ein normales Zeichen. Solange ein Editor den Fokus hat, schwebt eine Leiste über der Tastatur, die sich beim Schließen der Tastatur ausblendet: **Block einfügen** (+) listet die Blöcke dieses Editors auf und fügt den gewählten an der Cursorposition ein, wie `/`; **Erwähnen** (@) listet Personen, Tickets, Ziele und Seiten zum Erwähnen auf; danach folgen **Fett**, **Kursiv**, **Durchgestrichen**, **Code**, **Farbe** (ein Blatt für Text- oder Hintergrundfarbe), **Link hinzufügen**, **Ausrücken** und **Einrücken** in einer Liste, **Kommentieren** auf einer Seite sowie **Tastatur ausblenden**, das fest am rechten Ende bleibt. Ein unteres Blatt, in dem du schreibst, wächst auf die volle Bildschirmhöhe, und die Zeile, die du gerade tippst, bleibt über der Tastatur. Langes Drücken markiert Text in einem Editor, und die Leiste mit ihren Blättern funktioniert auch im Aufgabennotizbuch. Die untere Navigation wird ausgeblendet, solange ein Textfeld den Fokus hat, etwa ein Seitentitel oder ein Kommentar. Auf einem Touchscreen ist **Symbol hinzufügen** auf einer Seite immer sichtbar.
 
 ### Speichern und Übertragbarkeit {#editor-save}
 
@@ -296,11 +316,11 @@ Eine Seite speichert, während du tippst: Jede Änderung erreicht den Server nac
 
 Bricht die Verbindung ab, lass die Seite geöffnet. Ungespeicherte Änderungen bleiben auf der Seite und werden gesendet, sobald die Verbindung zurückkehrt; Änderungen anderer treffen gleichzeitig ein und werden mit deinen zusammengeführt. minddy öffnet eine andere Seite erst, wenn deine Änderungen gespeichert sind: Solange sie nicht gesendet werden können, bleibst du auf der Seite und minddy meldet, dass das Speichern fehlgeschlagen ist. Schließt du einen Browser-Tab mit ungespeicherten Änderungen, bittet dich der Browser vorher um Bestätigung; beim Beenden der Desktop-App gibt es keine Rückfrage, und ungespeicherte Änderungen gehen verloren. Verlierst du den Zugriff auf die Seite oder das Recht, sie zu bearbeiten, während Änderungen ungespeichert sind, macht minddy sie rückgängig und zeigt eine Meldung an. Lehnt der Server eine Änderung ab, etwa einen Titel mit mehr als 500 Zeichen oder einen Link mit einem nicht zulässigen Protokoll, macht minddy diese Änderung rückgängig und zeigt eine Meldung an. Der Seitenverlauf hilft, früher gespeicherte Versionen zu prüfen.
 
-Markdown-Exporte und Seitenzugriffe durch Agenten erhalten Symbole und Farben von Hinweisblöcken in der unterstützten Darstellung. Exportformate unterscheiden sich in Wiedergabetreue und Anhangsbehandlung. Prüfe das entstandene Dokument, bevor du eine Originalquelle ersetzt. Verwende Codeblöcke für wörtliche Befehle und bewahre Voraussetzungen und Warnungen im umgebenden Text.
+Markdown-Exporte und Seitenzugriffe durch Agenten erhalten Symbole und Farben von Hinweisblöcken in der unterstützten Darstellung. Auch ein in der Größe angepasstes Bild behält seine Breite, die als Bildtitel geschrieben wird (`![alt](src "width=60%")`), sodass Änderungen durch Numo, MCP-Agenten oder das Aufgabennotizbuch sie nicht zurücksetzen. Agenten lesen und schreiben eine Seitenerwähnung als `[@Title](mention:page/<id>)`; die ältere Form `[[page:<id>]]` wird weiterhin akzeptiert und als dieselbe Erwähnung gelesen, auch innerhalb einer Zeile. Exportformate unterscheiden sich in Wiedergabetreue und Anhangsbehandlung. Prüfe das entstandene Dokument, bevor du eine Originalquelle ersetzt. Verwende Codeblöcke für wörtliche Befehle und bewahre Voraussetzungen und Warnungen im umgebenden Text.
 
 ## Eine Seite besprechen und Konflikte lösen {#page-comments-and-collaboration}
 
-Öffne eine Projektseite und ihre Kommentarfunktionen. Wähle passende Inhalte aus, wenn du einen verankerten Kommentar erstellst, erkläre die Frage oder Änderung und erwähne bei Bedarf ein Projektmitglied. Ein Leser kann kommentieren, wenn der Eigentümer **Darf kommentieren** für ihn aktiviert hat. Antworte im Verlauf, damit die Entscheidung bei ihrem Kontext bleibt. Markiere den Verlauf erst als erledigt, wenn seine Frage tatsächlich beantwortet wurde.
+Öffne eine Projektseite und ihre Kommentarfunktionen. Wähle passende Inhalte aus, wenn du einen verankerten Kommentar erstellst, erkläre die Frage oder Änderung und erwähne bei Bedarf ein Projektmitglied. Ein Leser kann kommentieren, wenn der Eigentümer **Darf kommentieren** für ihn aktiviert hat. Antworte im Verlauf, damit die Entscheidung bei ihrem Kontext bleibt. Markiere den Verlauf erst als erledigt, wenn seine Frage tatsächlich beantwortet wurde. Der Verlauf eines Blocks öffnet sich am Computer in einem Dialog und auf dem Smartphone in einem unteren Blatt statt neben dem Block: Er zeigt die zitierte Passage, die vorhandenen Diskussionen mit ihren Antworten und ein Feld für einen neuen Kommentar. Öffne ihn über das Kommentar-Abzeichen des Blocks, **Kommentieren** in der Auswahlleiste oder das Blockmenü.
 
 Anwesenheitsavatare zeigen Personen, die die Seite ansehen. Während jemand bearbeitet, erscheinen sein Cursor und seine Auswahl im Inhalt und im Titel, in einer eigenen Farbe und mit seinem Namen beschriftet. Der Cursor eines Lesers wird nicht angezeigt. Ein Cursor zeigt, wo jemand arbeitet, nicht dass sein Text gespeichert ist: Die Speicheranzeige spiegelt nur deine eigenen Änderungen wider.
 
@@ -357,7 +377,7 @@ Stelle als berechtigtes Projektmitglied die gewählte Version erst wieder her, n
 
 Kopiere den erzeugten /p/-Link nach erfolgreicher Veröffentlichung. Hat die Seite Unterseiten, prüfe die Option zum Einschließen und deren Anzahl. Das Einschließen veröffentlicht den gewählten Zweig; ohne Einschließen bleiben die Inhalte außerhalb dieser Veröffentlichung. Eine Datenbank ohne veröffentlichte Unterseiten legt nicht automatisch alle Eintragsinhalte offen.
 
-Öffne den Link in einer gesonderten Browsersitzung ohne dein Konto. Prüfe ein aktiviertes Passwort, Seiteninhalt, vorgesehene Unterseiten und Dateidownloads. So prüfst du den Lesezugriff von Besuchern statt deiner weitergehenden Mitgliedsrechte.
+Öffne den Link in einer gesonderten Browsersitzung ohne dein Konto. Prüfe ein aktiviertes Passwort, Seiteninhalt, vorgesehene Unterseiten und Dateidownloads. Eine Erwähnung einer Seite aus dem veröffentlichten Satz zeigt ihren Titel und öffnet sie unter demselben Link; eine Erwähnung jeder anderen Seite zeigt **Unterseite nicht veröffentlicht** und lässt sich nicht öffnen. So prüfst du den Lesezugriff von Besuchern statt deiner weitergehenden Mitgliedsrechte.
 
 
 ![Veröffentlichungsdialog mit ausgewähltem Privat und Alternativen für Passwort oder Link.](/documentation/de/page-publish.png)
@@ -372,7 +392,7 @@ Benutzerseitenlinks bleiben auf `noindex` und sind von der indexierten offiziell
 
 Öffne das Dokumentmenü der Seite und wähle Exportieren. Wähle Markdown für eine Seite (.md) oder einen Zweig (.zip), PDF für die Druckansicht oder das Datenbankarchiv, wenn die Seite eine Datenbank ist. Prüfe vor dem Bestätigen den angebotenen Umfang: Eine einzelne Seite, ihr Zweig und ein Datenbankarchiv enthalten unterschiedliche Inhalte.
 
-Öffne den Export und prüfe die Überschriften, Hinweisblöcke, Links und Anhänge, die die Leser benötigen. Die PDF-Aktion öffnet eine lesbare Druckansicht ohne die gesamte Anwendungsnavigation. Verwende die Druckfunktionen deines Browsers zum Drucken oder Speichern als PDF. Im Dokumentmenü gibt es keine allgemeine Importaktion. Unterstützte Importe starten von einer leeren Datenbank aus, wie im Leitfaden zum Datenbankimport beschrieben.
+Öffne den Export und prüfe die Überschriften, Hinweisblöcke, Links und Anhänge, die die Leser benötigen. Im Export zeigen Erwähnungen die aktuellen Seitentitel, und Erwähnungen von Seiten, die im Export enthalten sind, werden zu relativen Links. Die PDF-Aktion öffnet eine lesbare Druckansicht ohne die gesamte Anwendungsnavigation. Verwende die Druckfunktionen deines Browsers zum Drucken oder Speichern als PDF. Im Dokumentmenü gibt es keine allgemeine Importaktion. Unterstützte Importe starten von einer leeren Datenbank aus, wie im Leitfaden zum Datenbankimport beschrieben.
 
 
 ![Exportmenü des Dokuments mit Markdown (.md) und Drucken / PDF.](/documentation/de/page-export.png)
