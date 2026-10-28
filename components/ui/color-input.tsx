@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { HexColorPicker } from "react-colorful";
 import { Input } from "./input";
 import {
@@ -43,12 +44,13 @@ export function ColorInput({
   value,
   onChange,
   onBlur,
-  placeholder = "#xxxxxx",
+  placeholder,
   className,
   label,
   size = "md",
   disabled = false,
 }: ColorInputProps) {
+  const t = useTranslations("Common");
   const [draft, setDraft] = useState(value);
   const [lastValue, setLastValue] = useState(value);
   const [open, setOpen] = useState(false);
@@ -146,7 +148,7 @@ export function ColorInput({
             value={draft}
             onChange={(event) => handleInputChange(event.target.value)}
             onBlur={handleInputBlur}
-            placeholder={placeholder}
+            placeholder={placeholder ?? t("hexColorPlaceholder")}
             className="h-9 font-sans text-sm"
             maxLength={7}
             aria-label={label}
@@ -158,7 +160,7 @@ export function ColorInput({
         value={draft}
         onChange={(event) => handleInputChange(event.target.value)}
         onBlur={handleInputBlur}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t("hexColorPlaceholder")}
         disabled={disabled}
         className={cn(
           "min-w-0 flex-1 bg-transparent font-sans tracking-wide outline-none",

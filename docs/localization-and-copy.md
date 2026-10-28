@@ -37,6 +37,11 @@ glossary below.
   check the call site before writing the string.
 - Keep a value short when its control is narrow (select triggers, tabs, filter
   placeholders, toggle labels). A longer translation is clipped in the UI.
+- An input placeholder asks the question the field answers or names what goes
+  in it ("Your email address"), never a sample value such as
+  `you@example.com` or "e.g. …". Translate it as an instruction in the
+  locale's register; samples go in the hint
+  ([DESIGN.md](../DESIGN.md#copy)).
 
 ## Glossary
 

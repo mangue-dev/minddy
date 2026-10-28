@@ -9,6 +9,14 @@ regexTarget = "secret"
 regexes = ['''^private-fixture@example\.invalid$''']
 
 [[allowlists]]
+description = "Exact localized sample address the placeholder-copy guard must flag, never a real account."
+targetRules = ["minddy-personal-email-marker"]
+condition = "AND"
+paths = ['''(?:^|/)lib/placeholder-copy\.test\.ts$''']
+regexTarget = "secret"
+regexes = ['''^nom@exemple\.fr$''']
+
+[[allowlists]]
 description = "Exact synthetic scheduler credential used only by its scheduling regression."
 targetRules = ["generic-api-key"]
 condition = "AND"

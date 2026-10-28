@@ -259,6 +259,14 @@ Exceptions, which need no dialog:
   plan's budget. Dollars appear only on the admin finance view.
 - Marketing pages keep blocks short (8 to 16 words) and never cite keyboard
   shortcuts.
+- **A placeholder says what to enter, never a sample value.** Ask the question
+  the field answers or name what goes in it ("Which tasks are assigned to
+  {name}?", "Your email address", "Address of the MCP server"), not an
+  example of an answer (`you@example.com`, `https://example.com`, "e.g. …",
+  `sk-…`, `#xxxxxx`). A sample reads like a value already typed and vanishes
+  on the first keystroke. When a format, a default or an example really
+  helps, put it in the hint under the field or in the validation message.
+  Placeholders come from the catalogs, like every other visible string.
 
 ## Accessibility
 
@@ -282,4 +290,6 @@ Exceptions, which need no dialog:
   Escape ownership.
 - `lib/query-loading.test.ts`: no empty-state flash while loading.
 - `lib/i18n-contract.test.ts`: catalog parity and placeholders.
+- `lib/placeholder-copy.test.ts`: input placeholders hold no sample values
+  and no hardcoded strings.
 - `lib/ui-components-ownership.test.ts`: the primitives stay owned here.

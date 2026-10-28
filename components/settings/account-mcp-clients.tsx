@@ -348,7 +348,7 @@ export function AccountMcpClients() {
           type="url"
           required
           maxLength={2048}
-          placeholder="https://example.com/mcp"
+          placeholder={t("urlPlaceholder")}
           value={url}
           onChange={(event) => setUrl(event.target.value)}
           disabled={busy}
@@ -540,7 +540,7 @@ export function AccountMcpClients() {
                 maxLength={64000}
                 disabled={busy}
                 onChange={(event) => setHeaders(event.target.value)}
-                placeholder={'{"X-API-Key": "…"}'}
+                placeholder={t("headersPlaceholder")}
               />
               <p className="text-xs text-muted-foreground">{t("headersHint")}</p>
             </Field>

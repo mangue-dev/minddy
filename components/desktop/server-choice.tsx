@@ -322,7 +322,7 @@ export function DesktopServerChoice({ env }: { env: AppEnv }) {
                   required
                   spellCheck={false}
                   className="h-10 bg-background/80 text-foreground"
-                  placeholder="https://minddy.example.com"
+                  placeholder={t("serverPlaceholder")}
                   value={serverAddress}
                   onChange={(event) => setServerAddress(event.target.value)}
                   aria-describedby="server-help server-message"

@@ -347,10 +347,21 @@ export function ByokConnectPanel({
               <Input
                 value={baseUrlDraft}
                 onChange={(event) => setBaseUrlDraft(event.target.value)}
-                placeholder={selectedDef.localDefaultBaseUrl}
+                placeholder={
+                  localProvider
+                    ? t("aiKeyLocalBaseUrlPlaceholder")
+                    : t("aiKeyBaseUrlPlaceholder")
+                }
                 spellCheck={false}
                 className="font-mono text-[13px]"
               />
+              {selectedDef.localDefaultBaseUrl ? (
+                <span className="font-normal">
+                  {t("aiKeyLocalBaseUrlHint", {
+                    url: selectedDef.localDefaultBaseUrl,
+                  })}
+                </span>
+              ) : null}
             </label>
           ) : null}
           {selectedDef ? (
@@ -362,7 +373,7 @@ export function ByokConnectPanel({
                 placeholder={
                   localProvider
                     ? t("aiKeyOptionalPlaceholder")
-                    : selectedDef.keyPlaceholder
+                    : t("aiKeyPlaceholder")
                 }
                 type="password"
                 autoComplete="new-password"

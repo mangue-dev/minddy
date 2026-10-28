@@ -114,7 +114,7 @@ export function useWebhookSteps({
               if (normalized !== value.url)
                 onChange({ ...value, url: normalized });
             }}
-            placeholder="https://example.com/minddy-webhook"
+            placeholder={t("webhookUrlPlaceholder")}
             aria-label={t("webhookUrlLabel")}
             className="font-mono text-sm"
           />
