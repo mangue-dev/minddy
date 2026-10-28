@@ -213,7 +213,8 @@ mark, the mark at about 72 % of the icon body. Paths starting with
 | Surface | Files |
 | --- | --- |
 | macOS app icon | `desktop/build/icon.icon`, the Icon Composer document (logo layer, light fill, Liquid Glass, dark and tinted variants); open and save it in Icon Composer, then run `node scripts/build-dmg-assets.mjs`. Other themes: `icones/macos/` |
-| Linux and Windows app icons | `desktop/build/icon-iOS-Default-1024x1024@1x.png`, `desktop/build/icon-windows.png` (the light tile on the Apple grid), Store tiles in `desktop/build/appx/` |
+| Linux and Windows app icons | The light tile on the Apple grid: `desktop/build/icon-windows.png` and the Linux icon named in `desktop/electron-builder.yml` |
+| Windows Store package | `desktop/build/appx/`: the manifest tiles, and `Square44x44Logo.targetsize-*` in three forms (plain, `_altform-unplated`, `_altform-lightunplated`) for every size from 16 to 256 px. Windows takes the taskbar, Start and search icon from these; without the unplated forms it draws the icon on a dark plate |
 | Favicon | `app/icon.tsx` (vector, tinted per environment), `app/favicon.ico`, `app/icon1.png` |
 | PWA | `public/web-app-manifest-*.png` (rounded tiles, `any`), `public/web-app-manifest-maskable-512x512.png` (full bleed, `maskable`), `public/apple-icon.png`; each has a blue `-preview` twin served by preview builds (`lib/pwa-icons.ts`) |
 | Share card | `app/og/route.tsx`; reference composition `exemples/carte-partage-og-1200x630.*` |

@@ -1,0 +1,4 @@
+# Reviewed false positives, one fingerprint per finding (commit:file:rule:line).
+# The email rule reads the file name 1024x1024@1x.png in the first MIN-838 brand
+# guide commit as an address; a later commit of the same pull request removes it.
+945af58a268922c86bb8d64cedace5cf577868d3:docs/brand.md:minddy-personal-email-marker:216
