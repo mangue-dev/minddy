@@ -59,7 +59,7 @@ describe("resolveAiRuntime", () => {
       apiKey: "platform-key",
       model: "platform/chat",
     });
-    expect(getUserByok).toHaveBeenCalledWith("u1", "assistant", "text");
+    expect(getUserByok).toHaveBeenCalledWith("u1", "assistant", "text", "assistant_model");
   });
 
   it("uses the managed allowance for documentation even with an active personal provider", async () => {

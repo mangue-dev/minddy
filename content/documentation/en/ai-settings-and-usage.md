@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 20,
-  "sourceRevision": 20,
+  "revision": 21,
+  "sourceRevision": 21,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -61,10 +61,10 @@
     ]
   },
   "review": {
-    "revision": 20,
-    "fact": "agent:claude/min773 (dictation pill, discard confirmation, cleanup preference and vocabulary checked against the changed source and the running app; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:claude/min773 (en changed passages with catalog UI labels; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 21,
+    "fact": "agent:claude-code/MIN-826 (provider per usage, connected providers and Numo provider then model checked against components/settings/account-ai-keys-section.tsx, components/assistant/conversation-settings.tsx and lib/server/ai-routes.ts, and in the running app on the preview demo account; diagram and its SVG fallback rebuilt; no form submitted; earlier evidence retained in git history)",
+    "language": "agent:claude-code/MIN-826 (en changed passages with catalog UI labels; informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "scheduled-routines"
@@ -83,11 +83,11 @@
       "id": "ai-keys-and-models-workflow",
       "kind": "diagram",
       "src": "/documentation/en/ai-providers-and-numo-defaults-flow.svg",
-      "alt": "Connected providers, capability routing and a personal Numo model are separate settings.",
-      "caption": "Several providers can stay connected. Routing chooses the provider for each capability; the Numo default is saved per account and provider.",
-      "revision": 20,
+      "alt": "Connected providers, a provider for each usage, and Numo's provider and model are separate settings.",
+      "caption": "Each usage runs on minddy Cloud or a connected provider. Numo's default is saved per provider; a conversation can choose its own provider and model.",
+      "revision": 21,
       "reviewed": true,
-      "capturedAt": "2026-10-11",
+      "capturedAt": "2026-10-28",
       "viewport": [
         816,
         390
@@ -95,19 +95,19 @@
       "theme": "neutral",
       "diagram": {
         "layout": "sequence",
-        "title": "Providers and Numo defaults",
+        "title": "Providers, usages and Numo",
         "items": [
           {
             "title": "Connected providers",
-            "detail": "Keep several API providers connected; adding one preserves the others."
+            "detail": "minddy Cloud and your API keys stay available side by side."
           },
           {
-            "title": "Provider by capability",
-            "detail": "Assign text, transcription and embeddings independently, then enable the required usages."
+            "title": "A provider per usage",
+            "detail": "Each precise usage, from Numo's titles to transcription, chooses its provider."
           },
           {
-            "title": "Default Numo model",
-            "detail": "Follow the app default or save a personal model. A conversation choice takes precedence."
+            "title": "Numo provider and model",
+            "detail": "Pick a provider, then its model. A conversation can choose its own."
           }
         ]
       }
@@ -125,15 +125,15 @@ The **Minddy AI** section of account AI settings configures the API providers us
 
 ## Configure personal AI keys and model defaults {#ai-keys-and-models}
 
-In account AI settings, **AI provider** selects the text-model provider from Minddy Cloud or your connected compatible providers. **Connected providers** keeps the full list visible. Choose **Add provider**, select a provider, enter its API key and any required base URL, then save. You can connect several providers; adding or selecting one does not delete the others. Never paste a key into a conversation or screenshot.
+In account AI settings, **Connected providers** lists minddy Cloud, included in your plan, and the API providers you connected. Choose **Add provider**, select a provider, enter its API key and any required base URL, then save. You can connect several providers; adding one neither removes the others nor changes what your usages run on. Never paste a key into a conversation or screenshot.
 
-Assign text, transcription and embedding families independently. Each family uses one provider at a time. Per-provider usage switches determine whether Numo, automations, voice and feedback use that key or managed Minddy usage. For example, you can keep text on OpenRouter and transcription on OpenAI. Selecting a text provider does not enable a previously disabled Numo usage switch.
+Below, **Numo**, **Automations**, **Voice dictation** and **Feedback** list their precise usages, such as Numo's conversations, conversation titles and web search, or Smart Fill and speech to text. Each usage chooses its own provider, minddy Cloud or a connected one, and changes alone: you can keep everything on minddy Cloud except Numo's conversations. A usage only offers the providers that can serve it: transcription and search by meaning need a provider with those models, and web search needs minddy Cloud or an OpenRouter key. When a usage runs on one of your keys, its model appears under the provider: keep the provider's preselected model or choose another. Choices apply at once. On an instance without minddy Cloud, a newly connected provider serves every usage that has none yet.
 
-Under **Default Numo model**, choose **App default** or a specific model from the active Numo provider. This choice is saved for your account and separately for each provider, across reloads and new sessions. App default follows the application’s configured model for that provider. An explicit conversation model takes precedence; conversations following your default pick up subsequent account changes. Already admitted turns retain their frozen model. A saved model that becomes unavailable or exceeds your plan is refused: choose another model or App default. Account export/import includes these model preferences, without provider credentials.
+For Numo's **Conversations**, choose the provider, then **App default** or a specific model from that provider. This default is saved for your account and separately for each provider, across reloads and new sessions. In a conversation, the model list next to the microphone opens on the providers when several are available; choose one to see its models. The conversation keeps that provider and model, and conversations following your default pick up later account changes. Already admitted turns retain their frozen provider and model. A saved model that becomes unavailable or exceeds your plan is refused: choose another model or App default. If a conversation's provider is removed, Numo asks you to choose another one instead of switching on its own. Account export/import includes these model preferences, without provider credentials.
 
 An unconfirmed or unreachable key may leave supported general AI calls on managed Minddy usage when managed AI is configured. Your provider bills calls made with its key. Validated personal keys and Minddy-funded work follow the [budget rules below](#consumption).
 
-![Connected providers, capability routing and a personal Numo model are separate settings.](/documentation/en/ai-providers-and-numo-defaults-flow.svg)
+![Connected providers, a provider for each usage, and Numo's provider and model are separate settings.](/documentation/en/ai-providers-and-numo-defaults-flow.svg)
 
 ### Local models {#models}
 

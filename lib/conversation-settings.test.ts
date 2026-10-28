@@ -9,7 +9,14 @@ import {
 } from "@/lib/conversation-settings";
 
 const h = vi.hoisted(() => ({
+  providers: [] as Array<{ id: string; label: string }>,
+  providerStep: null as null | {
+    providers: Array<{ id: string; label: string }>;
+    current: string | null;
+    onSelect: (provider: string, model: string) => void;
+  },
   state: {
+    conversationProvider: null as string | null,
     conversationModel: null as string | null,
     conversationReasoningLevel: "high" as const,
     conversationConfigError: null as string | null,
@@ -35,6 +42,8 @@ vi.mock("@/lib/assistant-chat-context", () => ({
 vi.mock("@/lib/use-agent-models-query", () => ({
   useAgentModelsQuery: () => ({
     provider: "openrouter",
+    defaultProvider: "minddy",
+    providers: h.providers,
     defaultModel: "z-ai/glm-5.3-flash",
     defaultReasoning: "medium",
     models: [{
@@ -45,7 +54,10 @@ vi.mock("@/lib/use-agent-models-query", () => ({
   useReasoningLevelsFor: () => ["low"],
 }));
 vi.mock("@/components/agent/model-combobox", () => ({
-  ModelCombobox: () => null,
+  ModelCombobox: (props: { providerStep?: unknown }) => {
+    h.providerStep = props.providerStep as typeof h.providerStep;
+    return null;
+  },
 }));
 vi.mock("@/components/model-logo", () => ({
   ModelLogo: () => null,
@@ -105,6 +117,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   h.sliderProps = null;
+  h.providers = [];
+  h.providerStep = null;
+  h.state.conversationProvider = null;
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
@@ -144,9 +159,37 @@ describe("ConversationSettings", () => {
       'button[aria-label="modelSettingsReset"]',
     );
     await act(async () => reset?.click());
-    expect(h.update).toHaveBeenCalledWith({ model: null, reasoningLevel: null });
+    expect(h.update).toHaveBeenCalledWith({ provider: null, model: null, reasoningLevel: null });
 
     await act(async () => h.sliderProps?.onValueChange([0]));
     expect(h.update).toHaveBeenCalledWith({ reasoningLevel: "off" });
+  });
+
+  it("hands the providers to the model list and saves the provider with its model (MIN-826)", async () => {
+    h.providers = [
+      { id: "minddy", label: "minddy Cloud" },
+      { id: "anthropic", label: "Anthropic" },
+    ];
+    await act(async () => root.render(createElement(ConversationSettings)));
+    expect(h.providerStep).toMatchObject({ providers: h.providers, current: "minddy" });
+
+    await act(async () => h.providerStep!.onSelect("anthropic", "claude-opus-5-5"));
+    expect(h.update).toHaveBeenCalledWith({ provider: "anthropic", model: "claude-opus-5-5" });
+
+    // Another provider's default model stores no model override.
+    await act(async () => h.providerStep!.onSelect("anthropic", ""));
+    expect(h.update).toHaveBeenLastCalledWith({ provider: "anthropic", model: null });
+
+    // A model of the current provider keeps the provider and places the reasoning.
+    h.update.mockClear();
+    await act(async () => h.providerStep!.onSelect("minddy", "z-ai/glm-5.3-flash"));
+    expect(h.update).toHaveBeenCalledWith(expect.objectContaining({ model: "z-ai/glm-5.3-flash" }));
+    expect(h.update.mock.calls[0]![0]).not.toHaveProperty("provider");
+
+    // Back to the default provider stores no provider override.
+    h.state.conversationProvider = "anthropic";
+    await act(async () => root.render(createElement(ConversationSettings, { key: "anthropic" })));
+    await act(async () => h.providerStep!.onSelect("minddy", ""));
+    expect(h.update).toHaveBeenLastCalledWith({ provider: null, model: null });
   });
 });

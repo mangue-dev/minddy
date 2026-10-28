@@ -2,6 +2,7 @@ import "server-only";
 
 import {
   getUserByok,
+  getUserByokForProvider,
   resolveAgentApiKey,
   type UserByok,
 } from "./model";
@@ -30,7 +31,7 @@ import {
   DEFAULT_AGENT_PROVIDER,
   type AgentProviderId,
 } from "@/lib/agent-providers";
-import type { AiSurface, ByokModelKey } from "@/lib/ai-surfaces";
+import { MINDDY_CLOUD_PROVIDER, type AiProviderChoice, type AiSurface, type ByokModelKey } from "@/lib/ai-surfaces";
 import { isManagedAiEnabled } from "@/lib/managed-services";
 import { fetchAiProviderBytes } from "@/lib/server/ai-provider-request";
 import type {
@@ -407,13 +408,22 @@ export async function getAgentModelsForUser(
   surface: Extract<AiSurface, "agent" | "assistant"> = "agent",
   /** This request's `getUserByok(userId, "assistant")`, when the caller already started it. */
   assistantByok?: Promise<UserByok | null>,
+  /**
+   * Lists one provider's models instead of the usage's route (MIN-826): the
+   * Numo picker shows the models of the provider chosen first.
+   */
+  providerChoice?: AiProviderChoice | null,
 ): Promise<AgentModelsCatalog> {
   const modelKey: ByokModelKey = "assistant_model";
   // The assistant catalog reads the same assignment for its endpoint and for
   // its feature default: resolve it once.
-  const byokRead = surface === "assistant"
-    ? assistantByok ?? getUserByok(userId, surface)
-    : undefined;
+  const byokRead = providerChoice === MINDDY_CLOUD_PROVIDER
+    ? Promise.resolve(null)
+    : providerChoice
+      ? getUserByokForProvider(userId, providerChoice, { surface })
+      : surface === "assistant"
+        ? assistantByok ?? getUserByok(userId, surface)
+        : undefined;
   // Active Provider: BYOK of the account, or OpenRouter platform key.
   let provider: AgentProviderId = DEFAULT_AGENT_PROVIDER;
   let baseUrl = resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER)!;
@@ -507,20 +517,25 @@ export async function getAgentModelsForUser(
   }
 }
 
-/** Catalog for Numo conversations, using the assistant BYOK surface. */
+/** Catalog for Numo conversations: the assistant route, or one chosen provider. */
 export function getAssistantModelsForUser(
   userId: string,
   byok?: Promise<UserByok | null>,
+  providerChoice?: AiProviderChoice | null,
 ): Promise<AgentModelsCatalog> {
-  return getAgentModelsForUser(userId, "assistant", byok);
+  return getAgentModelsForUser(userId, "assistant", byok, providerChoice);
 }
 
 /** Capability-aware catalog for the active BYOK settings screen. */
 export async function getActiveByokModelCatalog(
   userId: string,
   capability: ModelCatalogCapability,
+  /** The credential whose models the settings list; the Numo route otherwise. */
+  provider?: AgentProviderId,
 ): Promise<AgentModelsCatalog> {
-  const byok = await getUserByok(userId, undefined, capability);
+  const byok = provider
+    ? await getUserByokForProvider(userId, provider, { capability })
+    : await getUserByok(userId, undefined, capability);
   if (!byok) {
     return {
       provider: DEFAULT_AGENT_PROVIDER,

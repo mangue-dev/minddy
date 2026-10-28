@@ -642,6 +642,7 @@
     "clear": {
       "operational_configuration": [
         "model",
+        "provider",
         "reasoning_level",
         "status"
       ],
@@ -4294,6 +4295,24 @@
       ],
       "timestamp": [
         "checked_at"
+      ]
+    }
+  },
+  "user_ai_usage_routes": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "ai_key_id",
+        "usage_key",
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "updated_at"
       ]
     }
   }

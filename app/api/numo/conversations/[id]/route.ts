@@ -33,7 +33,8 @@ export async function PATCH(request: NextRequest, { params }: Context) {
   if (!NUMO_UUID.test(id) || !validNumoPatch(patch)) {
     return Response.json({ error: "Invalid conversation update" }, { status: 400 });
   }
-  const hasConfigPatch = Object.hasOwn(patch, "model") || Object.hasOwn(patch, "reasoningLevel");
+  const hasConfigPatch = Object.hasOwn(patch, "provider") || Object.hasOwn(patch, "model")
+    || Object.hasOwn(patch, "reasoningLevel");
   if (hasConfigPatch) {
     try {
       const config = await getNumoConversationConfig(auth.supabase, id);
@@ -45,6 +46,7 @@ export async function PATCH(request: NextRequest, { params }: Context) {
       }
       await resolveNumoTurnConfiguration({
         userId: auth.user.id,
+        provider: Object.hasOwn(patch, "provider") ? patch.provider : config.provider,
         model: Object.hasOwn(patch, "model") ? patch.model : config.model,
         reasoningLevel: Object.hasOwn(patch, "reasoningLevel")
           ? patch.reasoningLevel

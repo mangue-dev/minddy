@@ -73,3 +73,13 @@ export function providerSupportsModelCapability(
 export function providerSupportsModelKey(provider: AgentProviderId, modelKey: string): boolean {
   return providerSupportsModelCapability(provider, modelCatalogCapabilityForKey(modelKey));
 }
+
+/**
+ * Whether a credential of this provider can serve a call type (MIN-826): it
+ * offers the model family, and web search, which runs on OpenRouter's web
+ * plugin, needs an OpenRouter key.
+ */
+export function providerServesModelKey(provider: AgentProviderId, modelKey: string): boolean {
+  if (modelKey === "web_search_model") return provider === "openrouter";
+  return providerSupportsModelKey(provider, modelKey);
+}

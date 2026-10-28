@@ -297,5 +297,8 @@
   "20270109200085_auth_check_plan_cache.sql": "a11031ac3387556bda766b7d37634ec2c3aea4670ae52fbf727a764afb7faf7d",
   "20270109200086_definer_execute_grants.sql": "8939906e1316330caf99db8ec4495c734a623c10132177523b5baaad2e10f50b",
   "20270109200087_function_search_path.sql": "cace871fd86ca878208dd905f9990ba7648eb1b1db8a4096d14f9e5953cd707b",
-  "20270109200088_project_scope_policy_reads.sql": "442a81f8f63b399d5c92dd5d4a06ed8bd5c0f8c7dd2cdcedcc3c9fc57ebdb0a7"
+  "20270109200088_project_scope_policy_reads.sql": "442a81f8f63b399d5c92dd5d4a06ed8bd5c0f8c7dd2cdcedcc3c9fc57ebdb0a7",
+  "20270109200089_ai_usage_routes.sql": "e8b7f335cae744e35719a62a9fc131d08503410da847c8e2417517436936b9aa",
+  "20270109200090_numo_conversation_provider_patch.sql": "6e9c17597cd56c4a4a9b845fcebae8b8daf1c301306bd74c16948178d0a0ac80",
+  "20270109200091_ai_routes_per_call_type.sql": "b58fdc590fc9d63de204c225bd0db8a9158d2256b8f6b7bb5319833ffc77f00a"
 }

@@ -22,6 +22,7 @@ import {
   useReasoningLevelsFor,
 } from "@/lib/use-agent-models-query";
 import { formatModelName } from "@/lib/model-display";
+import type { AiProviderChoice } from "@/lib/ai-surfaces";
 import { catalogModelReasoning } from "@/lib/model-reasoning-rules";
 import {
   conversationReasoningIndex,
@@ -48,7 +49,13 @@ const REASONING_LABEL_KEYS: Record<ReasoningLevel, MessageKey<"Agent">> = {
 export function ConversationSettings() {
   const t = useTranslations("Agent");
   const { state, updateConversationConfig } = useAssistantChatContext();
-  const catalog = useAgentModelsQuery("assistant");
+  // Numo's default provider and the providers the account can choose; then
+  // the catalog of the provider this conversation uses (MIN-826).
+  const defaults = useAgentModelsQuery("assistant");
+  const providerChoice = (state.conversationProvider as AiProviderChoice | null) ?? null;
+  const chosenCatalog = useAgentModelsQuery("assistant", "text", providerChoice);
+  const catalog = providerChoice ? chosenCatalog : defaults;
+  const currentProvider = providerChoice ?? defaults.defaultProvider;
   const [open, setOpen] = useState(false);
   const defaultModel = catalog.defaultModel;
   const model = state.conversationModel;
@@ -56,6 +63,7 @@ export function ConversationSettings() {
   const modelReasoningLevels = useReasoningLevelsFor(
     resolvedModel,
     "assistant",
+    providerChoice,
   );
   const reasoningLevels = conversationReasoningLevels(modelReasoningLevels);
   const defaultReasoning = catalog.defaultReasoning ?? DEFAULT_REASONING_LEVEL;
@@ -118,7 +126,20 @@ export function ConversationSettings() {
   };
 
   const reset = () => {
-    void updateConversationConfig({ model: null, reasoningLevel: null });
+    void updateConversationConfig({ provider: null, model: null, reasoningLevel: null });
+  };
+  // The model list starts with the provider (MIN-826). Another provider's
+  // model is saved with it; the reasoning choice stays and is placed on that
+  // model's levels once its catalog loads.
+  const selectProviderModel = (next: AiProviderChoice, nextModel: string) => {
+    if (next === currentProvider) {
+      handleModelChange(nextModel);
+      return;
+    }
+    void updateConversationConfig({
+      provider: next === defaults.defaultProvider ? null : next,
+      model: nextModel || null,
+    });
   };
   const selectReasoningIndex = (index: number) => {
     const level = reasoningLevels[index];
@@ -184,6 +205,12 @@ export function ConversationSettings() {
                   </span>
                 )}
                 scope="assistant"
+                providerChoice={providerChoice}
+                providerStep={{
+                  providers: defaults.providers,
+                  current: currentProvider,
+                  onSelect: selectProviderModel,
+                }}
               />
             </div>
             <Tooltip>

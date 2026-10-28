@@ -56,16 +56,17 @@ export async function getNumoConversation(supabase: SupabaseClient, id: string) 
 export async function getNumoConversationConfig(
   supabase: SupabaseClient,
   id: string,
-): Promise<{ model: string | null; reasoningLevel: string | null } | null> {
+): Promise<{ provider: string | null; model: string | null; reasoningLevel: string | null } | null> {
   const conversation = await getNumoConversation(supabase, id);
   if (!conversation) return null;
   const { data, error } = await supabase
     .from("conversations")
-    .select("model, reasoning_level")
+    .select("provider, model, reasoning_level")
     .eq("id", conversation.legacy_id)
     .maybeSingle();
   if (error) throw new Error(error.message);
   return {
+    provider: typeof data?.provider === "string" ? data.provider : null,
     model: typeof data?.model === "string" ? data.model : null,
     reasoningLevel: isReasoningLevel(data?.reasoning_level) ? data.reasoning_level : null,
   };
@@ -106,7 +107,7 @@ export async function getNumoConversationDetail(
   return {
     conversation: {
       ...conversation,
-      ...(config ? { model: config.model, reasoning_level: config.reasoningLevel } : {}),
+      ...(config ? { provider: config.provider, model: config.model, reasoning_level: config.reasoningLevel } : {}),
     },
     messages: safeMessages.filter((m) => m.kind !== "action"),
     actions: safeMessages.filter((m) => m.kind === "action"),
@@ -139,6 +140,7 @@ export function validNumoPatch(value: unknown): value is Record<string, unknown>
   const entries = Object.entries(value);
   return entries.length > 0 && entries.every(([key, v]) => {
     if (key === "title") return v === null || (typeof v === "string" && v.length <= 200);
+    if (key === "provider") return v === null || (typeof v === "string" && /^[a-z0-9_-]{1,64}$/.test(v));
     if (key === "model") return v === null || (typeof v === "string" && v.length <= 300);
     if (key === "reasoningLevel") return v === null || isReasoningLevel(v);
     return ["archived", "pinned", "read"].includes(key) && typeof v === "boolean";

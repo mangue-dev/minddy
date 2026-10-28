@@ -4,12 +4,55 @@
  * share exactly the same identifiers and the same default values.
  */
 
+import type { AgentProviderId } from "./agent-providers";
+
 export const AI_SURFACES = ["agent", "assistant", "automations", "voice", "feedback"] as const;
 
 export type AiSurface = (typeof AI_SURFACES)[number];
 
 /** An existing or newly created key covers everything as long as the user does not uncheck anything. */
 export const DEFAULT_BYOK_SURFACES: AiSurface[] = [...AI_SURFACES];
+
+/**
+ * The groups the account's AI settings show (MIN-826): each lists its precise
+ * usages, the call types, and every call type chooses its own provider in
+ * `user_ai_usage_routes` (no route means Minddy Cloud). The retired code-agent
+ * surface is not one of them.
+ */
+export const ROUTED_AI_SURFACES = ["assistant", "automations", "voice", "feedback"] as const;
+
+export type RoutedAiSurface = (typeof ROUTED_AI_SURFACES)[number];
+
+export function isRoutedAiSurface(value: unknown): value is RoutedAiSurface {
+  return typeof value === "string" && (ROUTED_AI_SURFACES as readonly string[]).includes(value);
+}
+
+/**
+ * The call type that answers for a whole surface when a caller does not name
+ * one: the conversation model for Numo, the main model of each other surface
+ * for its capability.
+ */
+export function usageKeyFor(
+  surface: AiSurface | undefined,
+  capability: "text" | "transcription" | "embedding" = "text",
+): ByokModelKey {
+  switch (surface) {
+    case "automations":
+      return capability === "embedding" ? "issue_embedding_model" : "smart_fill_model";
+    case "voice":
+      return capability === "transcription" ? "transcription_model" : "dictate_model";
+    case "feedback":
+      return capability === "embedding" ? "feedback_embedding_model" : "feedback_analysis_model";
+    default:
+      return "assistant_model";
+  }
+}
+
+/** The managed provider, next to the account's own credentials. */
+export const MINDDY_CLOUD_PROVIDER = "minddy" as const;
+
+/** A provider an account can choose for a usage or a conversation. */
+export type AiProviderChoice = typeof MINDDY_CLOUD_PROVIDER | AgentProviderId;
 
 /**
  * Call types whose template may differ. They correspond to the real

@@ -5,32 +5,50 @@ import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import messages from "@/messages/en.json";
 import type { AiKey } from "@/lib/agent-keys-api";
-import { AccountAiKeysSection, NumoModelPreference } from "./account-ai-keys-section";
+import type { AiProviderOption } from "@/lib/ai-provider-options";
+import { AccountAiKeysSection } from "./account-ai-keys-section";
+
+const minddy: AiProviderOption = { id: "minddy", label: "minddy Cloud" };
+const anthropic: AiProviderOption = { id: "anthropic", label: "Anthropic" };
 
 const h = vi.hoisted(() => ({
-  keys: [] as AiKey[], invalidate: vi.fn(), update: vi.fn(),
-  saveNumo: vi.fn(), numoModel: null as string | null,
-  numoProvider: "openrouter", numoError: null as Error | null, numoLoaded: true,
+  keys: [] as AiKey[],
+  saveNumo: vi.fn(),
+  setRoute: vi.fn(),
+  numo: null as null | { provider: string; default_model: string | null; application_model: string | null; providers: unknown[] },
+  numoError: null as Error | null,
+  routes: {} as Record<string, string>,
+  options: [] as unknown[],
 }));
 vi.mock("@/lib/use-numo-preferences-query", () => ({
-  numoPreferencesQueryKey: ["numo-preferences"],
-  useNumoPreferencesQuery: () => ({ data: h.numoLoaded ? { provider: h.numoProvider, default_model: h.numoModel, application_model: "provider/model" } : undefined, isPending: false, error: h.numoError }),
-  saveNumoPreferencesApi: h.saveNumo,
+  useNumoPreferencesQuery: () => ({ data: h.numo ?? undefined, isPending: false, error: h.numoError }),
+  useSaveNumoPreferences: () => ({ mutate: h.saveNumo }),
 }));
-vi.mock("@/components/model-logo", () => ({ ProviderLogo: () => null }));
-vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQueries: h.invalidate }) }));
+vi.mock("@/lib/use-ai-routes-query", () => ({
+  useAiRoutesQuery: () => ({ data: {
+    routes: new Proxy(h.routes, { get: (target, usage: string) => target[usage] ?? "minddy" }),
+    options: new Proxy({}, { get: () => h.options }),
+  } }),
+  useSetAiRoute: () => ({ mutate: h.setRoute }),
+}));
+vi.mock("@/components/ai-provider-label", () => ({
+  ProviderOptionLabel: ({ option }: { option: { label: string } }) => <span>{option.label}</span>,
+}));
+vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQueries: vi.fn() }) }));
 vi.mock("@/lib/use-ai-keys-query", () => ({ aiKeysQueryKey: ["keys"], useAiKeysQuery: () => ({ keys: h.keys, loading: false }) }));
-vi.mock("@/lib/use-agent-models-query", () => ({
-  agentModelsQueryKey: ["models"], useAgentModelsQuery: () => ({ defaultModel: "provider/model" }),
-}));
-vi.mock("@/lib/agent-keys-api", () => ({
-  updateAiKeyPreferencesApi: h.update, assignAiCapabilityApi: vi.fn(),
-}));
+vi.mock("@/lib/agent-keys-api", () => ({ updateAiKeyPreferencesApi: vi.fn() }));
 vi.mock("@/components/settings/byok-connect-panel", () => ({ ByokConnectPanel: () => <div>General API credentials</div> }));
-vi.mock("@/components/agent/model-combobox", () => ({ ModelCombobox: ({ scope, value, onChange, disabled, triggerContent }: { scope?: string; value: string; onChange: (value: string) => void; disabled: boolean; triggerContent?: ReactNode }) => <div data-model-scope={scope ?? "code"}>{triggerContent}<select aria-label="Fixture model" value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)}><option value="">App default</option><option value="provider/model">Specific model</option></select></div> }));
+vi.mock("@/components/agent/model-combobox", () => ({
+  ModelCombobox: ({ scope, value, onChange, disabled, providerChoice }: { scope?: string; value: string; onChange: (value: string) => void; disabled: boolean; providerChoice?: string | null }) => (
+    <select aria-label={`Fixture model ${scope}`} data-provider={providerChoice ?? ""} value={value} disabled={disabled}
+      onChange={(event) => onChange(event.target.value)}>
+      <option value="">App default</option><option value="provider/model">Specific model</option>
+    </select>
+  ),
+}));
 vi.mock("@/components/settings/settings-ui", () => ({
   SettingsGroup: ({ title, children }: { title: string; children: ReactNode }) => <section><h3>{title}</h3>{children}</section>,
-  SettingsRow: ({ label, control, children }: { label: ReactNode; control: ReactNode; children: ReactNode }) => <article>{label}{control}{children}</article>,
+  SettingsRow: ({ label, hint, control, children }: { label: ReactNode; hint?: ReactNode; control: ReactNode; children: ReactNode }) => <article>{label}<p>{hint}</p>{control}{children}</article>,
 }));
 vi.mock("sonner", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
@@ -38,15 +56,11 @@ vi.mock("sonner", async (importOriginal) => ({
 }));
 vi.mock("@/components/ui/select", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
-  Select: ({ value, disabled, onValueChange, children }: { value: string; disabled?: boolean; onValueChange: (value: string) => void; children: ReactNode }) => <select value={value} disabled={disabled} onChange={(event) => onValueChange(event.target.value)}>{children}</select>,
+  Select: ({ value, disabled, onValueChange, children }: { value: string; disabled?: boolean; onValueChange: (value: string) => void; children: ReactNode }) => <select aria-label="Fixture provider" value={value} disabled={disabled} onChange={(event) => onValueChange(event.target.value)}>{children}</select>,
   SelectTrigger: () => null,
   SelectValue: () => null,
   SelectContent: ({ children }: { children: ReactNode }) => <>{children}</>,
   SelectItem: ({ value, children }: { value: string; children: ReactNode }) => <option value={value}>{children}</option>,
-}));
-vi.mock("@/components/ui/switch", async (importOriginal) => ({
-  ...(await importOriginal<Record<string, unknown>>()),
-  Switch: ({ checked, onCheckedChange }: { checked: boolean; onCheckedChange: (value: boolean) => void }) => <input type="checkbox" checked={checked} onChange={(event) => onCheckedChange(event.target.checked)} />,
 }));
 
 let root: ReturnType<typeof createRoot>;
@@ -54,14 +68,11 @@ let host: HTMLDivElement;
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
-  h.numoModel = null;
-  h.numoProvider = "openrouter";
-  h.numoError = null;
-  h.numoLoaded = true;
-  h.saveNumo.mockResolvedValue(undefined);
   h.keys = [];
-  h.update.mockResolvedValue(undefined);
-  h.invalidate.mockResolvedValue(undefined);
+  h.numo = { provider: "minddy", default_model: null, application_model: "provider/model", providers: [minddy, anthropic] };
+  h.numoError = null;
+  h.routes = {};
+  h.options = [minddy, anthropic];
   host = document.createElement("div");
   document.body.appendChild(host);
   root = createRoot(host);
@@ -74,63 +85,81 @@ afterEach(async () => {
 async function render() {
   await act(() => root.render(<NextIntlClientProvider locale="en" messages={messages}><AccountAiKeysSection /></NextIntlClientProvider>));
 }
-function apiKey(surfaces: AiKey["enabled_surfaces"]): AiKey {
-  return { id: "text-key", provider: "openrouter", key_prefix: "prefix", base_url: null,
-    created_at: "2026-10-10", updated_at: "2026-10-10", last_used_at: null, validated_at: "2026-10-10",
-    enabled_surfaces: surfaces, feature_models: {}, supported_capabilities: ["text"], assigned_capabilities: ["text"] };
+const providerSelects = () => [...host.querySelectorAll<HTMLSelectElement>('select[aria-label="Fixture provider"]')];
+async function change(select: HTMLSelectElement, value: string) {
+  await act(async () => { select.value = value; select.dispatchEvent(new Event("change", { bubbles: true })); });
 }
 
-it("shows only the general AI routing, with no code-agent settings (MIN-721)", async () => {
-  h.keys = [apiKey(["assistant", "automations", "agent"])];
+const anthropicKey = (featureModels: Record<string, string> = {}): AiKey => ({
+  id: "key-anthropic", provider: "anthropic", key_prefix: "sk-ant", base_url: null,
+  created_at: "2026-10-10", updated_at: "2026-10-10", last_used_at: null, validated_at: "2026-10-10",
+  enabled_surfaces: [], feature_models: featureModels, supported_capabilities: ["text"], assigned_capabilities: [],
+});
+
+it("groups every precise usage under its category, Numo included, with no code-agent settings (MIN-721, MIN-826)", async () => {
   await render();
-  const general = host.querySelector('[aria-labelledby="minddy-ai-title"]')!;
-  expect(general.textContent).toContain("General API credentials");
-  expect(general.textContent).toContain("Numo conversations and comments");
-  expect(host.textContent).not.toContain("Numo code work");
-  expect(host.textContent).not.toContain("byokSurface_agent");
-  expect(host.querySelector('[data-model-scope="code"]')).toBeNull();
-  expect(host.textContent).not.toContain("Sandbox");
+  const text = host.textContent ?? "";
+  expect(text).toContain("General API credentials");
+  for (const heading of ["Numo", "Automations", "Voice dictation", "Feedback"]) {
+    expect([...host.querySelectorAll("h3")].map((h3) => h3.textContent)).toContain(heading);
+  }
+  for (const usage of ["Conversations", "Conversation titles", "Web search", "Smart Fill", "Speech to text", "Feedback similarity"]) {
+    expect(text).toContain(usage);
+  }
+  expect(text).not.toContain("Numo code work");
+  // One provider choice per call type.
+  expect(providerSelects()).toHaveLength(14);
 });
 
-async function renderNumo() {
-  await act(() => root.render(<NextIntlClientProvider locale="en" messages={messages}><NumoModelPreference /></NextIntlClientProvider>));
-}
-async function chooseNumo(model: string) {
-  const select = host.querySelector<HTMLSelectElement>("select")!;
-  await act(async () => { select.value = model; select.dispatchEvent(new Event("change", { bubbles: true })); });
-}
-it("saves a Numo model for the active provider and refreshes settings and conversation pickers", async () => {
-  await renderNumo();
-  await chooseNumo("provider/model");
-  expect(h.saveNumo).toHaveBeenCalledWith({ provider: "openrouter", default_model: "provider/model" });
-  expect(h.invalidate).toHaveBeenCalledWith({ queryKey: ["numo-preferences"] });
-  expect(h.invalidate).toHaveBeenCalledWith({ queryKey: ["models"] });
-});
-it("restores a saved Numo choice and clears it explicitly to the application default", async () => {
-  h.numoModel = "provider/model";
-  h.numoProvider = "anthropic";
-  await renderNumo();
-  expect(host.querySelector<HTMLSelectElement>("select")!.value).toBe("provider/model");
-  await chooseNumo("");
+it("moves Numo conversations to another provider and restarts on that provider's default model", async () => {
+  h.numo = { ...h.numo!, default_model: "provider/model" };
+  await render();
+  await change(providerSelects()[0]!, "anthropic");
   expect(h.saveNumo).toHaveBeenCalledWith({ provider: "anthropic", default_model: null });
+  expect(h.setRoute).not.toHaveBeenCalled();
 });
-it("retains the saved choice when saving fails and reports a load failure", async () => {
-  h.numoModel = "provider/model";
-  h.saveNumo.mockRejectedValueOnce(new Error("Fixture save failure"));
-  await renderNumo();
-  await chooseNumo("");
-  expect(h.invalidate).not.toHaveBeenCalled();
-  expect(host.querySelector<HTMLSelectElement>("select")!.value).toBe("provider/model");
-  h.numoError = new Error("Fixture load failure");
-  h.numoLoaded = false;
-  await renderNumo();
-  expect(host.querySelector('[role="alert"]')?.textContent).toBe(messages.Account.numoModelLoadError);
+
+it("saves Numo's default model for its current provider", async () => {
+  h.numo = { ...h.numo!, provider: "anthropic" };
+  await render();
+  const model = host.querySelector<HTMLSelectElement>('select[aria-label="Fixture model assistant"]')!;
+  expect(model.dataset.provider).toBe("anthropic");
+  await change(model, "provider/model");
+  expect(h.saveNumo).toHaveBeenCalledWith({ provider: "anthropic", default_model: "provider/model" });
 });
-it("keeps a loaded Numo choice usable when a background refresh fails (MIN-722)", async () => {
-  h.numoModel = "provider/model";
+
+it("routes one precise usage alone", async () => {
+  await render();
+  // Conversation titles, right after Numo conversations.
+  await change(providerSelects()[1]!, "anthropic");
+  expect(h.setRoute).toHaveBeenCalledWith({ usage: "conversation_title_model", provider: "anthropic" });
+  expect(h.saveNumo).not.toHaveBeenCalled();
+});
+
+it("shows a key's model under its provider, and none for minddy Cloud", async () => {
+  h.keys = [anthropicKey({ smart_fill_model: "provider/model" })];
+  h.routes = { smart_fill_model: "anthropic" };
+  await render();
+  const byok = [...host.querySelectorAll<HTMLSelectElement>('select[aria-label="Fixture model byok"]')];
+  expect(byok).toHaveLength(1);
+  expect(byok[0]!.value).toBe("provider/model");
+  expect(byok[0]!.dataset.provider).toBe("anthropic");
+});
+
+it("shows a single available provider as text rather than a choice", async () => {
+  h.numo = { ...h.numo!, providers: [minddy] };
+  h.options = [minddy];
+  await render();
+  expect(providerSelects()).toHaveLength(0);
+  expect(host.textContent).toContain("minddy Cloud");
+});
+
+it("reports a preference that never loaded, but keeps a loaded one usable after a refresh failure (MIN-722)", async () => {
   h.numoError = new Error("Fixture refresh failure");
-  await renderNumo();
+  await render();
   expect(host.querySelector('[role="alert"]')).toBeNull();
-  expect(host.querySelector<HTMLSelectElement>("select")!.value).toBe("provider/model");
-  expect(host.querySelector<HTMLSelectElement>("select")!.disabled).toBe(false);
+  expect(host.querySelector<HTMLSelectElement>('select[aria-label="Fixture model assistant"]')!.disabled).toBe(false);
+  h.numo = null;
+  await render();
+  expect(host.querySelector('[role="alert"]')?.textContent).toBe(messages.Account.numoModelLoadError);
 });

@@ -107,6 +107,8 @@ export interface AssistantChatState {
   conversationId: string | null;
   /** Legacy project metadata retained when loading older conversations. */
   conversationProjectId: string | null;
+  /** Explicit provider (MIN-826); null follows Numo's default provider. */
+  conversationProvider: string | null;
   /** Explicit model override; null follows the active assistant default. */
   conversationModel: string | null;
   /** Explicit reasoning override; null follows the compatible legacy default. */
@@ -129,6 +131,7 @@ const initialState: AssistantChatState = {
   toolCallResults: new Map(),
   conversationId: null,
   conversationProjectId: null,
+  conversationProvider: null,
   conversationModel: null,
   conversationReasoningLevel: null,
   conversationConfigError: null,
@@ -148,6 +151,7 @@ type Action =
     }
   | {
       type: "SET_CONVERSATION_CONFIG";
+      provider: string | null;
       model: string | null;
       reasoningLevel: ReasoningLevel | null;
       error?: string | null;
@@ -190,6 +194,7 @@ type Action =
       messages: AssistantMessage[];
       conversationId: string;
       projectId: string | null;
+      provider?: string | null;
       model?: string | null;
       reasoningLevel?: ReasoningLevel | null;
       routineOccurrence?: NonNullable<NumoConversationDetail["routine_occurrence"]> | null;
@@ -222,6 +227,7 @@ function reducer(
     case "SET_CONVERSATION_CONFIG":
       return {
         ...state,
+        conversationProvider: action.provider,
         conversationModel: action.model,
         conversationReasoningLevel: action.reasoningLevel,
         conversationConfigError: action.error ?? null,
@@ -471,6 +477,7 @@ function reducer(
         toolCallResults: buildToolCallResultsFromMessages(action.messages),
         conversationId: action.conversationId,
         conversationProjectId: action.projectId,
+        ...(action.provider !== undefined ? { conversationProvider: action.provider } : {}),
         ...(action.model !== undefined ? { conversationModel: action.model } : {}),
         ...(action.reasoningLevel !== undefined
           ? { conversationReasoningLevel: action.reasoningLevel }
@@ -489,6 +496,7 @@ function reducer(
       // the CHOSEN model (a picked id) travels across conversations.
       return {
         ...initialState,
+        conversationProvider: state.conversationProvider,
         conversationModel: state.conversationModel,
         conversationReasoningLevel: state.conversationReasoningLevel,
       };
@@ -573,11 +581,13 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
     projectId: null,
   });
   const configRef = useRef<{
+    provider: string | null;
     model: string | null;
     reasoningLevel: ReasoningLevel | null;
-  }>({ model: null, reasoningLevel: null });
+  }>({ provider: null, model: null, reasoningLevel: null });
   const configWritesRef = useRef(createSerialQueue());
   const confirmedConfigsRef = useRef(new Map<string, {
+    provider: string | null;
     model: string | null;
     reasoningLevel: ReasoningLevel | null;
   }>());
@@ -862,6 +872,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           message,
           conversationId: requestConversationId || undefined,
           ...(!requestConversationId ? { newConversationId: sending.conversationId } : {}),
+          provider: configRef.current.provider,
           model: configRef.current.model,
           reasoningLevel: configRef.current.reasoningLevel,
           ...(options?.pageContext ? { pageContext: options.pageContext } : {}),
@@ -1035,11 +1046,12 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         liveConvRef.current = { id: conversationId, projectId: conversationProjectId };
         const messages = [...detail.messages, ...detail.actions]
           .sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
+        const provider = detail.conversation.provider ?? null;
         const model = detail.conversation.model ?? null;
         const reasoningLevel = isReasoningLevel(detail.conversation.reasoning_level)
           ? detail.conversation.reasoning_level
           : null;
-        const serverConfig = { model, reasoningLevel };
+        const serverConfig = { provider, model, reasoningLevel };
         const configChangedWhileLoading = configRevision !== configRevisionRef.current;
         if (!configChangedWhileLoading || !confirmedConfigsRef.current.has(conversationId)) {
           confirmedConfigsRef.current.set(conversationId, serverConfig);
@@ -1051,6 +1063,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
             messages,
             conversationId,
             projectId: conversationProjectId,
+            provider,
             model,
             reasoningLevel,
             routineOccurrence: detail.routine_occurrence ?? null,
@@ -1096,11 +1109,13 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
 
   const updateConversationConfig = useCallback(
     async (patch: {
+      provider?: string | null;
       model?: string | null;
       reasoningLevel?: ReasoningLevel | null;
     }): Promise<boolean> => {
       const previous = configRef.current;
       const next = {
+        provider: patch.provider === undefined ? previous.provider : patch.provider,
         model: patch.model === undefined ? previous.model : patch.model,
         reasoningLevel:
           patch.reasoningLevel === undefined
@@ -1119,6 +1134,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       } = { current: undefined };
       await configWritesRef.current(async () => {
         resultRef.current = await updateConversationWithResult(conversationId, {
+          provider: next.provider,
           model: next.model,
           reasoningLevel: next.reasoningLevel,
         });
@@ -1129,6 +1145,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         if (
           configRevision === configRevisionRef.current &&
           liveConvRef.current.id === conversationId &&
+          configRef.current.provider === next.provider &&
           configRef.current.model === next.model &&
           configRef.current.reasoningLevel === next.reasoningLevel
         ) {
@@ -1142,6 +1159,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       if (
         configRevision === configRevisionRef.current &&
         liveConvRef.current.id === conversationId &&
+        configRef.current.provider === next.provider &&
         configRef.current.model === next.model &&
         configRef.current.reasoningLevel === next.reasoningLevel
       ) {

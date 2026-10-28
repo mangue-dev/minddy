@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Select,
@@ -10,43 +11,36 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { toast } from "sonner";
 
-import {
-  SettingsGroup,
-  SettingsRow,
-} from "@/components/settings/settings-ui";
-import { ProviderLogo } from "@/components/model-logo";
-import { numoPreferencesQueryKey, saveNumoPreferencesApi, useNumoPreferencesQuery } from "@/lib/use-numo-preferences-query";
-import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
+import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
+import { ProviderOptionLabel } from "@/components/ai-provider-label";
 import { ModelCombobox } from "@/components/agent/model-combobox";
 import { ByokConnectPanel } from "@/components/settings/byok-connect-panel";
-import {
-  assignAiCapabilityApi,
-  updateAiKeyPreferencesApi,
-} from "@/lib/agent-keys-api";
-import type { AiKey } from "@/lib/agent-keys-api";
-import {
-  agentModelsQueryKey,
-  useAgentModelsQuery,
-} from "@/lib/use-agent-models-query";
+import { SETTINGS_SECTIONS, type SettingsSectionId } from "@/lib/settings-sections";
+import { useNumoPreferencesQuery, useSaveNumoPreferences } from "@/lib/use-numo-preferences-query";
+import { useAiRoutesQuery, useSetAiRoute } from "@/lib/use-ai-routes-query";
 import { aiKeysQueryKey, useAiKeysQuery } from "@/lib/use-ai-keys-query";
-import { AI_SURFACE_DEFINITIONS } from "@/lib/ai-surfaces";
-import type { AiSurface, ByokModelKey } from "@/lib/ai-surfaces";
-import { getAgentProvider, isLocalAgentProvider } from "@/lib/agent-providers";
+import { updateAiKeyPreferencesApi, type AiKey } from "@/lib/agent-keys-api";
 import {
-  MODEL_CATALOG_CAPABILITIES,
-  modelCatalogCapabilityForKey,
-} from "@/lib/model-catalog-capability";
-import type { ModelCatalogCapability } from "@/lib/model-catalog-capability";
+  AI_SURFACE_DEFINITIONS,
+  MINDDY_CLOUD_PROVIDER,
+  ROUTED_AI_SURFACES,
+  type AiProviderChoice,
+  type ByokModelKey,
+  type RoutedAiSurface,
+} from "@/lib/ai-surfaces";
+import type { AiProviderOption } from "@/lib/ai-provider-options";
+import { modelCatalogCapabilityForKey } from "@/lib/model-catalog-capability";
 
-/** General Minddy AI routing: provider, Numo's model and BYOK keys. */
+/**
+ * Minddy's AI settings (MIN-826): the providers the account can use, then a
+ * provider for every precise usage, grouped as Numo, automations, voice and
+ * feedback. Each call type is independent, so Numo conversations can run on a
+ * personal key while their titles and everything else stay on minddy Cloud.
+ * Choices apply at once and roll back if the server refuses them.
+ */
 export function AccountAiKeysSection() {
   const t = useTranslations("Account");
-  const { keys } = useAiKeysQuery();
-  const { defaultModel: providerDefaultModel } = useAgentModelsQuery();
-
   return (
     <section aria-labelledby="minddy-ai-title" className="space-y-5">
       <header className="space-y-1">
@@ -54,253 +48,165 @@ export function AccountAiKeysSection() {
         <p className="text-sm text-muted-foreground">{t("aiGeneralDescription")}</p>
       </header>
       <SettingsGroup anchor={SETTINGS_SECTIONS.accountAiProvider}
-        title={t("aiProviderTitle")} variant="block">
-        <ByokCapabilityAssignments keys={keys} capabilities={["text"]} />
-        <NumoModelPreference />
+        title={t("aiConnectedProviders")} variant="block">
         <ByokConnectPanel mode="settings" />
       </SettingsGroup>
-      {keys.length > 0 ? <SettingsGroup title={t("byokRoutingTitle")}><ByokCapabilityAssignments keys={keys} capabilities={MODEL_CATALOG_CAPABILITIES.filter((capability) => capability !== "text")} /></SettingsGroup> : null}
-      {keys.filter((key) => key.assigned_capabilities.length > 0).map((key) => (
-        <ByokSurfacePreferences key={key.id} aiKey={key}
-          providerDefaultModel={providerDefaultModel} />
+      <UsageGroup surface="assistant" anchor={SETTINGS_SECTIONS.accountAiUsages} />
+      {ROUTED_AI_SURFACES.filter((surface) => surface !== "assistant").map((surface) => (
+        <UsageGroup key={surface} surface={surface} />
       ))}
     </section>
   );
 }
 
-export function NumoModelPreference() {
-  const t = useTranslations("Account");
-  const ta = useTranslations("Agent");
-  const queryClient = useQueryClient();
-  const preferences = useNumoPreferencesQuery();
-  const [saving, setSaving] = useState(false);
-  const save = async (value: string) => {
-    if (!preferences.data || saving) return;
-    setSaving(true);
-    try {
-      await saveNumoPreferencesApi({ provider: preferences.data.provider, default_model: value || null });
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: numoPreferencesQueryKey }),
-        queryClient.invalidateQueries({ queryKey: agentModelsQueryKey }),
-      ]);
-      toast.success(t("agentModelSavedToast"));
-    } catch {
-      toast.error(t("numoModelSaveError"));
-    } finally { setSaving(false); }
-  };
-  return <SettingsRow label={t("numoDefaultModel")} hint={t("numoDefaultModelHint")}
-    control={<ModelCombobox scope="assistant" value={preferences.data?.default_model ?? ""}
-      onChange={(value) => void save(value)} disabled={preferences.isPending || saving || !preferences.data}
-      defaultLabel={t("numoApplicationDefault")} defaultModelId={preferences.data?.application_model}
-      placeholder={ta("modelSearchPlaceholder")} emptyLabel={ta("modelSearchEmpty")}
-      loadingLabel={ta("modelSearchLoading")} freeTextLabel={(model) => ta("modelUseCustom", { model })}
-      ariaLabel={t("numoDefaultModel")} />}>
-    {/* A failed background refresh keeps the loaded preference usable, as
-        every other read does; only a preference that never loaded is an error. */}
-    {preferences.error && !preferences.data && <p role="alert" className="py-2 text-sm text-destructive">{t("numoModelLoadError")}</p>}
-  </SettingsRow>;
+function usageKeysOf(surface: RoutedAiSurface): readonly ByokModelKey[] {
+  return AI_SURFACE_DEFINITIONS.find((entry) => entry.id === surface)?.modelKeys ?? [];
 }
 
-function ByokCapabilityAssignments({ keys, capabilities }: { keys: AiKey[]; capabilities: readonly ModelCatalogCapability[] }) {
+/** One category of usages: a row per call type. */
+function UsageGroup({ surface, anchor }: { surface: RoutedAiSurface; anchor?: SettingsSectionId }) {
   const t = useTranslations("Account");
-  const queryClient = useQueryClient();
-  const assignedKey = (capability: ModelCatalogCapability) =>
-    keys.find((key) => key.assigned_capabilities.includes(capability));
-  const saveAssignment = async (
-    capability: ModelCatalogCapability,
-    keyId: string,
-  ) => {
-    try {
-      await assignAiCapabilityApi(
-        capability,
-        keyId === "minddy" ? null : keyId,
-      );
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: aiKeysQueryKey }),
-        queryClient.invalidateQueries({ queryKey: agentModelsQueryKey }),
-        queryClient.invalidateQueries({ queryKey: numoPreferencesQueryKey }),
-      ]);
-      toast.success(t("agentModelSavedToast"));
-    } catch (error) {
-      toast.error((error as Error).message);
-    }
-  };
-
   return (
-    <div>
-      {capabilities.map((capability) => (
-        <SettingsRow
-          key={capability}
-          label={capability === "text" ? t("aiProviderTitle") : t(`byokCapability_${capability}`)}
-          hint={t("byokRoutingHint")}
-          control={
-            <Select
-              value={assignedKey(capability)?.id ?? "minddy"}
-              onValueChange={(value) => void saveAssignment(capability, value)}
-            >
-              <SelectTrigger className="w-72 max-w-full" aria-label={capability === "text" ? t("aiProviderTitle") : t(`byokCapability_${capability}`)}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="minddy">{t("aiProviderMinddy")}</SelectItem>
-                {keys
-                  .filter((key) =>
-                    key.supported_capabilities.includes(capability),
-                  )
-                  .map((key) => (
-                    <SelectItem key={key.id} value={key.id}>
-                      <span className="inline-flex items-center gap-2"><ProviderLogo provider={key.provider} size={16} />{getAgentProvider(key.provider)?.label ?? key.provider}</span>
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          }
-        />
-      ))}
+    <SettingsGroup anchor={anchor} title={t(`aiUsage_${surface}`)}>
+      {usageKeysOf(surface).map((usageKey) => usageKey === "assistant_model"
+        ? <NumoConversationsRow key={usageKey} />
+        : <UsageRow key={usageKey} usageKey={usageKey} />)}
+    </SettingsGroup>
+  );
+}
+
+/** Provider choice for a call type; a single option is shown as plain text. */
+function ProviderSelect({ value, options, onChange, ariaLabel, disabled }: {
+  value: AiProviderChoice;
+  options: AiProviderOption[];
+  onChange: (value: AiProviderChoice) => void;
+  ariaLabel: string;
+  disabled?: boolean;
+}) {
+  const current = options.find((option) => option.id === value) ?? { id: value, label: value };
+  if (options.length <= 1) {
+    return <span className="flex h-9 items-center text-sm"><ProviderOptionLabel option={current} /></span>;
+  }
+  return (
+    <Select value={value} onValueChange={(next) => onChange(next as AiProviderChoice)} disabled={disabled}>
+      <SelectTrigger className="w-full" aria-label={ariaLabel}>
+        <SelectValue><ProviderOptionLabel option={current} /></SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((option) => (
+          <SelectItem key={option.id} value={option.id}><ProviderOptionLabel option={option} /></SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+/** The row's controls: the provider, then the model when one can be chosen. */
+function UsageControls({ provider, model }: { provider: ReactNode; model?: ReactNode }) {
+  return (
+    <div className="flex w-full flex-col gap-2 sm:w-72">
+      {provider}
+      {model}
     </div>
   );
 }
 
-type OfferedSurfaceDefinition = (typeof AI_SURFACE_DEFINITIONS)[number] & {
-  id: Exclude<AiSurface, "agent">;
-};
-
-function capabilitiesForSurface(
-  surface: (typeof AI_SURFACE_DEFINITIONS)[number],
-): ModelCatalogCapability[] {
-  if (surface.id === "agent") return ["text"];
-  return [...new Set(surface.modelKeys.map(modelCatalogCapabilityForKey))];
+function useModelCopy() {
+  const ta = useTranslations("Agent");
+  return {
+    placeholder: ta("modelSearchPlaceholder"),
+    emptyLabel: ta("modelSearchEmpty"),
+    loadingLabel: ta("modelSearchLoading"),
+    freeTextLabel: (model: string) => ta("modelUseCustom", { model }),
+  };
 }
 
-/** Areas covered by the key and explicit model of each type of call. */
-function ByokSurfacePreferences({
-  aiKey: key,
-  providerDefaultModel,
-}: {
-  aiKey: AiKey;
-  providerDefaultModel: string | null;
-}) {
+/** Numo conversations: provider, then that provider's default model. */
+function NumoConversationsRow() {
   const t = useTranslations("Account");
-  const tAgent = useTranslations("Agent");
-  const tAdmin = useTranslations("Admin");
-  const queryClient = useQueryClient();
-  // The retired code-agent surface stays in stored keys but is never offered.
-  const visibleSurfaces = AI_SURFACE_DEFINITIONS.filter(
-    (surface): surface is OfferedSurfaceDefinition =>
-      surface.id !== "agent" && !isLocalAgentProvider(key.provider),
-  )
-    .map((surface) => ({
-      surface,
-      assignedCapabilities: capabilitiesForSurface(surface).filter((capability) =>
-        key.assigned_capabilities.includes(capability),
-      ),
-    }))
-    .filter(({ assignedCapabilities }) => assignedCapabilities.length > 0);
-
-  const saveSurfaces = async (surface: AiSurface, enabled: boolean) => {
-    const current = key.enabled_surfaces ?? [];
-    const next = enabled
-      ? [...current.filter((entry) => entry !== surface), surface]
-      : current.filter((entry) => entry !== surface);
-    try {
-      await updateAiKeyPreferencesApi({
-        key_id: key.id,
-        enabled_surfaces: next,
-      });
-      await Promise.all([queryClient.invalidateQueries({ queryKey: aiKeysQueryKey }),
-        queryClient.invalidateQueries({ queryKey: agentModelsQueryKey }),
-        queryClient.invalidateQueries({ queryKey: numoPreferencesQueryKey })]);
-      toast.success(t("agentModelSavedToast"));
-    } catch (err) {
-      toast.error((err as Error).message);
-    }
-  };
-
-  const saveModel = async (modelKey: ByokModelKey, model: string) => {
-    try {
-      await updateAiKeyPreferencesApi({
-        key_id: key.id,
-        feature_models: { ...key.feature_models, [modelKey]: model },
-      });
-      await Promise.all([queryClient.invalidateQueries({ queryKey: aiKeysQueryKey }),
-        queryClient.invalidateQueries({ queryKey: agentModelsQueryKey }),
-        queryClient.invalidateQueries({ queryKey: numoPreferencesQueryKey })]);
-      toast.success(t("agentModelSavedToast"));
-    } catch (err) {
-      toast.error((err as Error).message);
-    }
-  };
-
-  if (!visibleSurfaces.length) return null;
+  const modelCopy = useModelCopy();
+  const preferences = useNumoPreferencesQuery();
+  const save = useSaveNumoPreferences(() => toast.error(t("numoModelSaveError")));
+  const data = preferences.data;
+  const provider = data?.provider ?? MINDDY_CLOUD_PROVIDER;
+  const label = t("aiUsageKey_assistant_model");
   return (
-    <SettingsGroup
-      title={`${t("byokSurfacesTitle")} · ${getAgentProvider(key.provider)?.label ?? key.provider}`}
+    <SettingsRow
+      label={label}
+      hint={t("aiUsageKeyHint_assistant_model")}
+      control={
+        <UsageControls
+          provider={<ProviderSelect value={provider} options={data?.providers ?? []}
+            ariaLabel={t("aiUsageProvider", { usage: label })} disabled={!data}
+            onChange={(next) => save.mutate({ provider: next, default_model: null })} />}
+          model={<ModelCombobox scope="assistant" providerChoice={provider}
+            value={data?.default_model ?? ""}
+            onChange={(value) => data && save.mutate({ provider, default_model: value || null })}
+            disabled={!data}
+            defaultLabel={t("numoApplicationDefault")} defaultModelId={data?.application_model}
+            {...modelCopy} ariaLabel={t("numoDefaultModel")} />}
+        />
+      }
     >
-      {visibleSurfaces.map(({ surface, assignedCapabilities }) => {
-        const enabled = key.enabled_surfaces.includes(surface.id);
-        return (
-          <div
-            key={surface.id}
-            className="border-b border-border/60 last:border-b-0"
-          >
-            <SettingsRow
-              label={t(`byokSurface_${surface.id}`)}
-              hint={
-                enabled
-                    ? t("byokSurfaceUsesKeyFor", {
-                      capabilities: assignedCapabilities
-                        .map((capability) => t(`byokCapability_${capability}`))
-                        .join(", "),
-                    })
-                  : t("byokSurfaceUsesQuota")
-              }
-              control={
-                <Switch
-                  checked={enabled}
-                  onCheckedChange={(checked) =>
-                    void saveSurfaces(surface.id, checked)
-                  }
-                />
-              }
-            />
-            {enabled && surface.modelKeys.length > 0 ? (
-              <div className="mb-3 ml-4 border-l border-border/70 pl-4">
-                {surface.modelKeys
-                  .filter((modelKey) =>
-                    modelKey !== "assistant_model" && key.assigned_capabilities.includes(
-                      modelCatalogCapabilityForKey(modelKey),
-                    ),
-                  )
-                  .map((modelKey) => (
-                    <SettingsRow
-                      key={modelKey}
-                      label={tAdmin(`fields.${modelKey}.label` as never)}
-                      control={
-                        <ModelCombobox
-                          scope="byok"
-                          capability={modelCatalogCapabilityForKey(modelKey)}
-                          value={key.feature_models[modelKey] ?? ""}
-                          onChange={(value) => void saveModel(modelKey, value)}
-                          defaultLabel={t("byokModelDefault")}
-                          defaultModelId={
-                            key.resolved_feature_models?.[modelKey] ??
-                            providerDefaultModel
-                          }
-                          placeholder={tAgent("modelSearchPlaceholder")}
-                          emptyLabel={tAgent("modelSearchEmpty")}
-                          loadingLabel={tAgent("modelSearchLoading")}
-                          freeTextLabel={(q) =>
-                            tAgent("modelUseCustom", { model: q })
-                          }
-                        />
-                      }
-                    />
-                  ))}
-              </div>
-            ) : null}
-          </div>
-        );
-      })}
-    </SettingsGroup>
+      {/* A failed background refresh keeps the loaded preference usable, as
+          every other read does; only a preference that never loaded is an error. */}
+      {preferences.error && !data && <p role="alert" className="py-2 text-sm text-destructive">{t("numoModelLoadError")}</p>}
+    </SettingsRow>
+  );
+}
+
+/** Any other call type: a provider, and a key's model for it. */
+function UsageRow({ usageKey }: { usageKey: Exclude<ByokModelKey, "assistant_model"> }) {
+  const t = useTranslations("Account");
+  const routes = useAiRoutesQuery();
+  const { keys } = useAiKeysQuery();
+  const setRoute = useSetAiRoute(() => toast.error(t("aiUsageSaveError")));
+  const provider = routes.data?.routes[usageKey] ?? MINDDY_CLOUD_PROVIDER;
+  const key = provider === MINDDY_CLOUD_PROVIDER ? undefined : keys.find((entry) => entry.provider === provider);
+  const label = t(`aiUsageKey_${usageKey}`);
+  return (
+    <SettingsRow
+      label={label}
+      hint={t(`aiUsageKeyHint_${usageKey}`)}
+      control={
+        <UsageControls
+          provider={<ProviderSelect value={provider} options={routes.data?.options[usageKey] ?? []}
+            ariaLabel={t("aiUsageProvider", { usage: label })} disabled={!routes.data}
+            onChange={(next) => setRoute.mutate({ usage: usageKey, provider: next })} />}
+          model={key ? <KeyModel aiKey={key} usageKey={usageKey} label={label} /> : undefined}
+        />
+      }
+    />
+  );
+}
+
+/** The model a key runs for one call type, saved optimistically. */
+function KeyModel({ aiKey, usageKey, label }: { aiKey: AiKey; usageKey: ByokModelKey; label: string }) {
+  const t = useTranslations("Account");
+  const modelCopy = useModelCopy();
+  const queryClient = useQueryClient();
+  const saveModel = async (model: string) => {
+    const previous = queryClient.getQueryData<{ keys: AiKey[] }>(aiKeysQueryKey);
+    const featureModels = { ...aiKey.feature_models, [usageKey]: model };
+    queryClient.setQueryData<{ keys: AiKey[] }>(aiKeysQueryKey, (data) => data && {
+      keys: data.keys.map((entry) => entry.id === aiKey.id ? { ...entry, feature_models: featureModels } : entry),
+    });
+    try {
+      await updateAiKeyPreferencesApi({ key_id: aiKey.id, feature_models: featureModels });
+    } catch {
+      if (previous) queryClient.setQueryData(aiKeysQueryKey, previous);
+      toast.error(t("aiUsageSaveError"));
+    } finally {
+      void queryClient.invalidateQueries({ queryKey: aiKeysQueryKey });
+    }
+  };
+  return (
+    <ModelCombobox scope="byok" providerChoice={aiKey.provider}
+      capability={modelCatalogCapabilityForKey(usageKey)}
+      value={aiKey.feature_models[usageKey] ?? ""}
+      onChange={(value) => void saveModel(value)}
+      defaultLabel={t("byokModelDefault")}
+      defaultModelId={aiKey.resolved_feature_models?.[usageKey] ?? null}
+      {...modelCopy} ariaLabel={t("aiUsageModel", { usage: label })} />
   );
 }

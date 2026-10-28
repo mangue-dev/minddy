@@ -3,15 +3,14 @@ import { NextRequest } from "next/server";
 
 /**
  * Round trips of GET /api/assistant/models, the Numo composer's catalog. The
- * catalog endpoint, its feature default and the preference namespace all
- * depend on the same BYOK assignment: it is read once per request, and the
- * preference read does not wait for the catalog's plan limit. The body stays
- * the same in platform and BYOK modes.
+ * Numo usage route names the default provider (MIN-826); the catalog lists
+ * that provider, or the one the picker asks for. A key is decoded once and
+ * never returned, and the platform plan limit is not read for a BYOK catalog.
  */
 
 const h = vi.hoisted(() => ({
   log: [] as string[],
-  assignment: null as { ai_key_id: string } | null,
+  route: null as { ai_key_id: string } | null,
   preference: null as string | null,
   holdPlan: false,
   releasePlan: () => {},
@@ -25,25 +24,31 @@ vi.mock("@/lib/server/api-auth", () => ({
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({
     from: (table: string) => {
+      const key = {
+        id: "key-1", user_id: "user-1", provider: "anthropic", key_encrypted: "sealed",
+        base_url: null, validated_at: "2026-01-01T00:00:00.000Z",
+        updated_at: "2026-01-02T00:00:00.000Z", enabled_surfaces: null, feature_models: {},
+      };
+      const list = () => {
+        h.log.push(table);
+        if (table === "user_ai_usage_routes") {
+          return { data: h.route ? [{ usage_key: "assistant_model", ...h.route }] : [], error: null };
+        }
+        if (table === "user_ai_keys") return { data: [key], error: null };
+        if (table === "user_numo_preferences") {
+          return { data: h.preference ? [{ provider: "minddy", model: h.preference }] : [], error: null, status: 200 };
+        }
+        return { data: [], error: null };
+      };
       const query = {
         select: () => query,
         eq: () => query,
+        in: () => query,
+        then: (resolve: (value: unknown) => unknown) => Promise.resolve(list()).then(resolve),
         maybeSingle: async () => {
           h.log.push(table);
-          if (table === "user_ai_capability_assignments") return { data: h.assignment, error: null };
-          if (table === "user_ai_keys") {
-            return {
-              data: {
-                id: "key-1", user_id: "user-1", provider: "anthropic", key_encrypted: "sealed",
-                base_url: null, validated_at: "2026-01-01T00:00:00.000Z",
-                updated_at: "2026-01-02T00:00:00.000Z", enabled_surfaces: null, feature_models: {},
-              },
-              error: null,
-            };
-          }
-          if (table === "user_numo_preferences") {
-            return { data: h.preference ? { model: h.preference } : null, error: null, status: 200 };
-          }
+          if (table === "user_ai_usage_routes") return { data: h.route, error: null };
+          if (table === "user_ai_keys") return { data: key, error: null };
           return { data: null, error: null };
         },
       };
@@ -92,7 +97,7 @@ const reads = (table: string) => h.log.filter((entry) => entry === table).length
 
 beforeEach(() => {
   h.log = [];
-  h.assignment = null;
+  h.route = null;
   h.preference = null;
   h.holdPlan = false;
   h.decode.mockClear();
@@ -100,32 +105,34 @@ beforeEach(() => {
 });
 
 describe("GET /api/assistant/models", () => {
-  it("reads the platform assignment once and the preference while the plan limit is pending", async () => {
-    h.holdPlan = true;
+  it("lists minddy Cloud with the saved model when Numo has no route", async () => {
     h.preference = "deepseek/deepseek-v4-flash";
-    const response = call();
-    await vi.waitFor(() => expect(h.log).toContain("plan-limit"));
-    await vi.waitFor(() => expect(h.log).toContain("user_numo_preferences"));
-    h.releasePlan();
-    const body = await (await response).json();
+    const body = await (await call()).json();
     expect(body).toMatchObject({
       provider: "openrouter",
+      providerChoice: "minddy",
+      defaultProvider: "minddy",
       defaultModel: "deepseek/deepseek-v4-flash",
       defaultReasoning: "off",
     });
     expect(body.models.map((model: { id: string }) => model.id)).toEqual(["deepseek/deepseek-v4-flash"]);
-    expect(reads("user_ai_capability_assignments")).toBe(1);
+    expect(reads("plan-limit")).toBe(1);
     expect(JSON.stringify(body)).not.toContain("platform-key");
   });
 
-  it("decodes an assigned key once and never returns it", async () => {
-    h.assignment = { ai_key_id: "key-1" };
+  it("decodes the routed key once and never returns it", async () => {
+    h.route = { ai_key_id: "key-1" };
     const body = await (await call()).json();
-    expect(body).toMatchObject({ provider: "anthropic", defaultModel: "app-model", models: [] });
-    expect(reads("user_ai_capability_assignments")).toBe(1);
-    expect(reads("user_ai_keys")).toBe(1);
+    expect(body).toMatchObject({ provider: "anthropic", providerChoice: "anthropic", defaultModel: "app-model", models: [] });
     expect(h.decode).toHaveBeenCalledTimes(1);
     expect(reads("plan-limit")).toBe(0);
     expect(JSON.stringify(body)).not.toContain("sk-test");
+  });
+
+  it("lists another provider's models on request", async () => {
+    h.route = { ai_key_id: "key-1" };
+    const body = await (await GET(new NextRequest("https://minddy.test/api/assistant/models?provider=minddy"))).json();
+    expect(body).toMatchObject({ provider: "openrouter", providerChoice: "minddy", defaultProvider: "anthropic" });
+    expect(h.decode).not.toHaveBeenCalled();
   });
 });

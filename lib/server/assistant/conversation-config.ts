@@ -10,16 +10,18 @@ import {
 import { getAssistantModelsForUser, getOpenRouterConversationModels, type AgentModelEntry } from "@/lib/server/agent/models-catalog";
 import type { ResolvedBilling } from "@/lib/server/billing-accounts";
 import { ensureModelInPlan } from "@/lib/server/agent/model-plan";
+import { ChosenProviderUnavailableError } from "@/lib/server/ai-provider-errors";
 import {
   resolveAiRuntime,
   type ResolvedAiRuntime,
 } from "@/lib/server/ai-runtime";
-import { isLocalAgentProvider } from "@/lib/agent-providers";
+import { isKnownAgentProvider, isLocalAgentProvider } from "@/lib/agent-providers";
+import { MINDDY_CLOUD_PROVIDER, type AiProviderChoice } from "@/lib/ai-surfaces";
 import { catalogModelReasoning } from "@/lib/model-reasoning-rules";
 import { getAssistantReasoningLevel } from "@/lib/server/assistant/reasoning";
 import { conversationReasoningLevels } from "@/lib/conversation-settings";
 
-import { getNumoPreferences } from "./model-preferences";
+import { getNumoDefaultModel, getNumoPreferences } from "./model-preferences";
 
 const MAX_MODEL_LENGTH = 300;
 
@@ -28,6 +30,8 @@ export type NumoConversationConfigErrorCode =
   | "invalid_reasoning"
   | "model_unavailable"
   | "model_catalog_unavailable"
+  | "provider_unavailable"
+  | "invalid_provider"
   | "reasoning_unsupported";
 
 /** A user-facing validation failure for a conversation choice. */
@@ -50,6 +54,7 @@ export interface ResolvedNumoTurnConfiguration {
   /** The provider and credential selected for this request. */
   runtime: ResolvedAiRuntime;
   /** Values persisted on the conversation; null means follow the default. */
+  persistedProvider: AiProviderChoice | null;
   persistedModel: string | null;
   persistedReasoningLevel: ReasoningLevel | null;
 }
@@ -65,6 +70,17 @@ function normalizeModel(value: unknown): string | null {
   const model = value.trim();
   if (!model) return null;
   return model;
+}
+
+function normalizeProvider(value: unknown): AiProviderChoice | null {
+  if (value === undefined || value === null || value === "") return null;
+  if (value === MINDDY_CLOUD_PROVIDER || (typeof value === "string" && isKnownAgentProvider(value))) {
+    return value as AiProviderChoice;
+  }
+  throw new NumoConversationConfigError(
+    "invalid_provider",
+    "The selected provider is invalid. Choose a provider from the list.",
+  );
 }
 
 function normalizeReasoning(value: unknown): ReasoningLevel | null {
@@ -89,6 +105,8 @@ function findModel(models: AgentModelEntry[], model: string): AgentModelEntry | 
  */
 export async function resolveNumoTurnConfiguration(input: {
   userId: string;
+  /** The conversation's provider (MIN-826); null follows the Numo usage route. */
+  provider?: unknown;
   model?: unknown;
   reasoningLevel?: unknown;
   admittedBilling?: ResolvedBilling;
@@ -96,25 +114,39 @@ export async function resolveNumoTurnConfiguration(input: {
   /** Validation only: the returned runtime must not pay for a call (MIN-761). */
   catalogOnly?: boolean;
 }): Promise<ResolvedNumoTurnConfiguration> {
+  const persistedProvider = input.managedOnly ? null : normalizeProvider(input.provider);
   const persistedModel = normalizeModel(input.model);
   const persistedReasoningLevel = normalizeReasoning(input.reasoningLevel);
   let hasExplicitModel = persistedModel !== null;
   const hasExplicitReasoning = persistedReasoningLevel !== null;
 
-  const account = !hasExplicitModel && !input.managedOnly ? await getNumoPreferences(input.userId) : null;
-  hasExplicitModel ||= account?.default_model != null;
-  const runtime = await resolveAiRuntime({
-    userId: input.userId,
-    modelKey: "assistant_model",
-    surface: "assistant",
-    modelOverride: persistedModel ?? account?.default_model,
-    applicationModelDefault: true,
-    ...(input.managedOnly ? { managedOnly: true } : {}),
-    ...(input.catalogOnly ? { catalogOnly: true } : {}),
-  });
-
-  if (account?.default_model && account.provider !== runtime.provider) {
-    throw new NumoConversationConfigError("model_unavailable", "The Numo provider changed. Choose a model for the current provider.");
+  // Without a model, the provider's saved default applies: the account's
+  // Numo default for its own provider, or the default saved for the
+  // conversation's provider.
+  let defaultModel: string | null = null;
+  if (!hasExplicitModel && !input.managedOnly) {
+    defaultModel = persistedProvider
+      ? await getNumoDefaultModel(input.userId, persistedProvider)
+      : (await getNumoPreferences(input.userId)).default_model;
+  }
+  hasExplicitModel ||= defaultModel != null;
+  let runtime: ResolvedAiRuntime;
+  try {
+    runtime = await resolveAiRuntime({
+      userId: input.userId,
+      modelKey: "assistant_model",
+      surface: "assistant",
+      provider: persistedProvider,
+      modelOverride: persistedModel ?? defaultModel,
+      applicationModelDefault: true,
+      ...(input.managedOnly ? { managedOnly: true } : {}),
+      ...(input.catalogOnly ? { catalogOnly: true } : {}),
+    });
+  } catch (error) {
+    if (error instanceof ChosenProviderUnavailableError) {
+      throw new NumoConversationConfigError("provider_unavailable", error.message);
+    }
+    throw error;
   }
 
   // Inherited settings must use the same model capabilities as the picker.
@@ -123,7 +155,7 @@ export async function resolveNumoTurnConfiguration(input: {
   const [models, configuredReasoning] = await Promise.all([
     runtime.provider === "openrouter"
       ? getOpenRouterConversationModels(runtime.apiKey)
-      : getAssistantModelsForUser(input.userId).then(catalog => catalog.models),
+      : getAssistantModelsForUser(input.userId, undefined, persistedProvider).then(catalog => catalog.models),
     getAssistantReasoningLevel(),
   ]);
   const modelEntry = findModel(models, runtime.model);
@@ -169,6 +201,7 @@ export async function resolveNumoTurnConfiguration(input: {
     ? persistedReasoningLevel
     : nearestReasoningLevel(configuredReasoning ?? DEFAULT_REASONING_LEVEL, allowedReasoning);
   return {
+    persistedProvider,
     model: runtime.model,
     // The slider always starts at "Off", but a model that must reason cannot
     // honor it: its lowest level is what really runs (MIN-826).

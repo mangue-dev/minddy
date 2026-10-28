@@ -9,8 +9,10 @@ import {
   type ProviderRequestProfile,
 } from "@/lib/agent-providers";
 import {
+  MINDDY_CLOUD_PROVIDER,
   byokFeatureDefaultModelKey,
   surfaceForModelKey,
+  type AiProviderChoice,
   type AiSurface,
   type ByokModelKey,
 } from "@/lib/ai-surfaces";
@@ -19,6 +21,7 @@ import { getAppConfigValues } from "@/lib/server/app-config";
 import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
 import {
   getUserByok,
+  getUserByokForProvider,
   LocalEndpointRequiresLocalRunError,
 } from "@/lib/server/agent/model";
 import { chatCompletionsUrl, normalizeBaseUrl } from "@/lib/agent-providers";
@@ -32,7 +35,11 @@ import { fetchOpenRouterWithSuffixFallback } from "@/lib/server/model-config";
 import { isManagedAiEnabled, managedAiKeyMode } from "@/lib/managed-services";
 import { PlanLimitError } from "@/lib/server/plan-limit-error";
 import { fetchAiProvider } from "@/lib/server/ai-provider-request";
-import { providerErrorFromResponse, reportProviderError } from "@/lib/server/ai-provider-errors";
+import {
+  ChosenProviderUnavailableError,
+  providerErrorFromResponse,
+  reportProviderError,
+} from "@/lib/server/ai-provider-errors";
 import {
   ANTHROPIC_API_VERSION,
   toAnthropicMessagesBody,
@@ -173,6 +180,13 @@ export async function resolveAiRuntime(params: {
   surface?: AiSurface;
   /** A conversation choice, frozen by the caller before the turn is admitted. */
   modelOverride?: string | null;
+  /**
+   * A provider chosen explicitly (a Numo conversation, MIN-826) instead of the
+   * usage's route: `minddy` for Minddy Cloud, or one of the account's
+   * credentials. A credential that no longer serves raises
+   * `ChosenProviderUnavailableError` rather than silently paying elsewhere.
+   */
+  provider?: AiProviderChoice | null;
   /** Public documentation help always uses the account's managed allowance. */
   managedOnly?: boolean;
   /** Numo account defaults supersede legacy per-key assistant model settings. */
@@ -186,14 +200,20 @@ export async function resolveAiRuntime(params: {
 }): Promise<ResolvedAiRuntime> {
   const surface = params.surface ?? surfaceForModelKey(params.modelKey);
   const modelOverride = params.modelOverride?.trim() || null;
+  const capability = modelCatalogCapabilityForKey(params.modelKey);
+  const chosenProvider = params.managedOnly ? MINDDY_CLOUD_PROVIDER : params.provider ?? null;
   const [byok, rootModel] = await Promise.all([
-    params.managedOnly ? Promise.resolve(null) : getUserByok(
-      params.userId,
-      surface,
-      modelCatalogCapabilityForKey(params.modelKey),
-    ),
+    chosenProvider === MINDDY_CLOUD_PROVIDER
+      ? Promise.resolve(null)
+      : chosenProvider
+        ? getUserByokForProvider(params.userId, chosenProvider, { surface, capability })
+        : getUserByok(params.userId, surface, capability, params.modelKey),
     platformModel(params.modelKey),
   ]);
+  if (chosenProvider && chosenProvider !== MINDDY_CLOUD_PROVIDER &&
+    (!byok || !providerSupportsModelKey(byok.provider, params.modelKey))) {
+    throw new ChosenProviderUnavailableError(chosenProvider);
+  }
 
   if (byok && providerSupportsModelKey(byok.provider, params.modelKey)) {
     if (isLocalAgentProvider(byok.provider)) {
@@ -272,7 +292,7 @@ export async function usesByokForSurface(
     return (await getUserByok(userId, surface, "text")) !== null;
   const credentials = await Promise.all(
     required.map((modelKey) =>
-      getUserByok(userId, surface, modelCatalogCapabilityForKey(modelKey)),
+      getUserByok(userId, surface, modelCatalogCapabilityForKey(modelKey), modelKey),
     ),
   );
   return credentials.every(

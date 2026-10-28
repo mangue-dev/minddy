@@ -1,9 +1,12 @@
 "use client";
 
 import { CommandList } from "@/components/ui/command";
+import type { AiProviderChoice } from "@/lib/ai-surfaces";
+import type { AiProviderOption } from "@/lib/ai-provider-options";
+import { ProviderOptionLabel } from "@/components/ai-provider-label";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AddToListIcon, ArrowUpDownIcon, CheckIcon } from "@hugeicons/core-free-icons";
+import { AddToListIcon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUpDownIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useMemo, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -85,6 +88,8 @@ export function ModelCombobox({
   triggerClassName,
   scope = "user",
   capability = "text",
+  providerChoice,
+  providerStep,
 }: {
   /** "" = follows my default template; otherwise a model id. */
   value: string;
@@ -127,13 +132,35 @@ export function ModelCombobox({
   scope?: AgentModelsScope;
   /** Runtime capability used to filter the platform admin catalog. */
   capability?: AdminCatalogCapability;
+  /** Lists one provider's models (MIN-826): the picker chose the provider first. */
+  providerChoice?: AiProviderChoice | null;
+  /**
+   * A provider step before the models (MIN-826): with several providers, the
+   * list opens on them, and choosing one shows its models. The choice then
+   * comes back as a provider and a model (`""` = that provider's default).
+   */
+  providerStep?: {
+    providers: AiProviderOption[];
+    current: AiProviderChoice | null;
+    onSelect: (provider: AiProviderChoice, model: string) => void;
+  };
 }) {
-  const { provider, models, maxMultiplier, planId, recommended, loading } =
-    useAgentModelsQuery(scope, capability);
+  const stepped = !!providerStep && providerStep.providers.length > 1;
+  // The provider whose models are listed; null shows the providers.
+  const [browsing, setBrowsing] = useState<AiProviderChoice | null>(null);
+  const listedProvider = stepped ? browsing ?? providerStep.current : providerChoice;
+  const otherProvider = stepped && browsing !== null && browsing !== providerStep.current;
+  const catalog = useAgentModelsQuery(scope, capability, listedProvider);
+  const { provider, models, maxMultiplier, planId, recommended, loading } = catalog;
+  // Another provider's models start on its own default, with nothing checked.
+  const shownValue = otherProvider ? "\u0000" : value;
+  const shownDefaultModelId = otherProvider ? catalog.defaultModel : defaultModelId;
   const locale = useLocale();
   const t = useTranslations("Agent");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  // With a provider step, the list opens on the providers.
+  const [view, setView] = useState<"providers" | "models">("models");
   // “See all models”: explicit unfolding, flattened when closed
   // like search — reopen the picker should always reopen on advice.
   const [showAll, setShowAll] = useState(false);
@@ -206,11 +233,22 @@ export function ModelCombobox({
       </span>
     ) : null;
 
-  const select = (next: string) => {
-    onChange(next);
+  const close = () => {
     setQuery("");
     setShowAll(false);
+    setBrowsing(null);
     setOpen(false);
+  };
+  const select = (next: string) => {
+    if (stepped && listedProvider) providerStep.onSelect(listedProvider, next);
+    else onChange(next);
+    close();
+  };
+  const browseProvider = (next: AiProviderChoice) => {
+    setBrowsing(next);
+    setQuery("");
+    setShowAll(false);
+    setView("models");
   };
 
   /** A model line — rendered as is, or in the tips group. */
@@ -226,7 +264,7 @@ export function ModelCombobox({
       {logoFor(m.id)}
       <span className="flex-1 truncate">{formatModelName(m.id)}</span>
       {multiplierBadge(m)}
-      <HugeiconsIcon icon={CheckIcon} className={cn("size-4 shrink-0", value === m.id ? "opacity-100" : "opacity-0")} />
+      <HugeiconsIcon icon={CheckIcon} className={cn("size-4 shrink-0", shownValue === m.id ? "opacity-100" : "opacity-0")} />
     </CommandItem>
   );
 
@@ -246,6 +284,22 @@ export function ModelCombobox({
       {defaultEntry ? <span className="ml-auto">{multiplierBadge(defaultEntry, true)}</span> : null}
     </span>
   );
+  const listDefaultEntry = shownDefaultModelId ? models.find((m) => m.id === shownDefaultModelId) : undefined;
+  const listDefaultRow = (
+    <span className="flex min-w-0 flex-1 items-center gap-2">
+      {shownDefaultModelId ? logoFor(shownDefaultModelId) : null}
+      <span className="truncate text-muted-foreground">{defaultLabel}</span>
+      {shownDefaultModelId ? (
+        <span className="truncate text-xs text-muted-foreground/70">
+          {formatModelName(shownDefaultModelId)}
+        </span>
+      ) : null}
+      {listDefaultEntry ? <span className="ml-auto">{multiplierBadge(listDefaultEntry, true)}</span> : null}
+    </span>
+  );
+  const listedOption = stepped
+    ? providerStep.providers.find((option) => option.id === listedProvider)
+    : undefined;
 
   // Locked (agent launched): static chip + tooltip, WITHOUT popover. The <span>
   // outside carries the hover (a `disabled` button does not emit a pointer event,
@@ -273,11 +327,12 @@ export function ModelCombobox({
     <ResponsivePopover
       open={open}
       onOpenChange={(next) => {
-        setOpen(next);
         if (!next) {
-          setQuery("");
-          setShowAll(false);
+          close();
+          return;
         }
+        setView(stepped ? "providers" : "models");
+        setOpen(true);
       }}
     >
       <ResponsivePopoverTrigger asChild>
@@ -354,6 +409,30 @@ export function ModelCombobox({
         align="start"
       >
         <Command shouldFilter={false}>
+          {stepped && view === "providers" ? (
+            <CommandList className="p-1">
+              <CommandGroup className="p-0" heading={t("providerLabel")}>
+                {providerStep.providers.map((option) => (
+                  <CommandItem key={option.id} value={`__provider__${option.id}`}
+                    onSelect={() => browseProvider(option.id)}>
+                    <span className="flex min-w-0 flex-1 items-center">
+                      <ProviderOptionLabel option={option} />
+                    </span>
+                    <HugeiconsIcon icon={CheckIcon}
+                      className={cn("size-4 shrink-0", option.id === providerStep.current ? "opacity-100" : "opacity-0")} />
+                    <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5 shrink-0 text-muted-foreground" />
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          ) : <>
+          {stepped && listedOption ? (
+            <button type="button" onClick={() => setView("providers")}
+              className="flex w-full items-center gap-2 border-b px-3 py-2 text-left text-sm text-muted-foreground hover:text-foreground">
+              <HugeiconsIcon icon={ArrowLeft01Icon} className="size-3.5 shrink-0" />
+              <ProviderOptionLabel option={listedOption} />
+            </button>
+          ) : null}
           <CommandInput value={query} onValueChange={setQuery} placeholder={placeholder} />
           {/* `p-1` and not `px-1`: on top of the `p-1` of `Command`, it does the
  SAME removal of 8px from all four sides — that of the search field.
@@ -362,8 +441,8 @@ export function ModelCombobox({
           <CommandList className="p-1">
             {allowDefault ? (
               <CommandItem value="__default__" onSelect={() => select("")}>
-                {defaultRow}
-                <HugeiconsIcon icon={CheckIcon} className={cn("size-4 shrink-0", value ? "opacity-0" : "opacity-100")} />
+                {listDefaultRow}
+                <HugeiconsIcon icon={CheckIcon} className={cn("size-4 shrink-0", shownValue ? "opacity-0" : "opacity-100")} />
               </CommandItem>
             ) : null}
             {/* Grouped under its title when it is the recommended selection: the
@@ -393,7 +472,7 @@ export function ModelCombobox({
               <CommandItem value={`__free__${trimmed}`} onSelect={() => select(trimmed)}>
                 {logoFor(trimmed)}
                 <span className="flex-1 truncate">{freeTextLabel?.(trimmed)}</span>
-                <HugeiconsIcon icon={CheckIcon} className={cn("size-4 shrink-0", value === trimmed ? "opacity-100" : "opacity-0")} />
+                <HugeiconsIcon icon={CheckIcon} className={cn("size-4 shrink-0", shownValue === trimmed ? "opacity-100" : "opacity-0")} />
               </CommandItem>
             ) : null}
             {results.length === 0 && !showFreeText ? (
@@ -417,6 +496,7 @@ export function ModelCombobox({
               {t("modelPlanCap", { plan: planLabel(planId), limit: maxMultiplier })}
             </p>
           ) : null}
+          </>}
         </Command>
       </ResponsivePopoverContent>
     </ResponsivePopover>

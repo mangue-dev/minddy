@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/server/assistant/model-preferences", () => ({ getNumoPreferences: vi.fn(async () => ({ provider: "openrouter", default_model: null, application_model: "account-default" })) }));
+vi.mock("@/lib/server/assistant/model-preferences", () => ({
+  getNumoPreferences: vi.fn(async () => ({ provider: "minddy", default_model: null, application_model: "account-default", providers: [] })),
+  getNumoDefaultModel: vi.fn(async () => null),
+}));
 
 const h = vi.hoisted(() => ({
   runtime: vi.fn(),
@@ -24,7 +27,8 @@ vi.mock("@/lib/server/assistant/reasoning", () => ({
   getAssistantReasoningLevel: h.defaultReasoning,
 }));
 
-const { getNumoPreferences } = await import("./model-preferences");
+const { getNumoDefaultModel, getNumoPreferences } = await import("./model-preferences");
+const { ChosenProviderUnavailableError } = await import("@/lib/server/ai-provider-errors");
 const { resolveNumoTurnConfiguration } = await import("./conversation-config");
 
 const runtime = {
@@ -38,7 +42,7 @@ const runtime = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(getNumoPreferences).mockResolvedValue({ provider: "openrouter", default_model: null, application_model: "account-default" });
+  vi.mocked(getNumoPreferences).mockResolvedValue({ provider: "minddy", default_model: null, application_model: "account-default", providers: [] });
   h.runtime.mockImplementation(async (input: { modelOverride?: string | null }) => ({
     ...runtime,
     model: input.modelOverride || runtime.model,
@@ -117,7 +121,7 @@ describe("Numo conversation configuration", () => {
   });
 
   it("inherits the personal default without freezing it onto the conversation", async () => {
-    vi.mocked(getNumoPreferences).mockResolvedValue({ provider: "openrouter", default_model: "chosen-model", application_model: "account-default" });
+    vi.mocked(getNumoPreferences).mockResolvedValue({ provider: "minddy", default_model: "chosen-model", application_model: "account-default", providers: [] });
     const result = await resolveNumoTurnConfiguration({ userId: "user" });
     expect(result).toMatchObject({ model: "chosen-model", persistedModel: null });
     expect(getNumoPreferences).toHaveBeenCalledWith("user");
@@ -143,12 +147,24 @@ describe("Numo conversation configuration", () => {
     expect(getNumoPreferences).not.toHaveBeenCalled();
     expect(h.runtime).toHaveBeenCalledWith(expect.objectContaining({ managedOnly: true, applicationModelDefault: true }));
   });
-  it("refuses provider changes during preference resolution", async () => {
-    vi.mocked(getNumoPreferences).mockResolvedValue({ provider: "anthropic", default_model: "chosen-model", application_model: "account-default" });
-    await expect(resolveNumoTurnConfiguration({ userId: "user" })).rejects.toMatchObject({ code: "model_unavailable" });
+  it("runs a conversation's provider with that provider's saved model (MIN-826)", async () => {
+    vi.mocked(getNumoDefaultModel).mockResolvedValue("chosen-model");
+    const resolved = await resolveNumoTurnConfiguration({ userId: "user", provider: "anthropic" });
+    expect(getNumoDefaultModel).toHaveBeenCalledWith("user", "anthropic");
+    expect(h.runtime).toHaveBeenCalledWith(expect.objectContaining({ provider: "anthropic", modelOverride: "chosen-model" }));
+    expect(resolved).toMatchObject({ persistedProvider: "anthropic", model: "chosen-model" });
+  });
+  it("reports a chosen provider whose key is gone instead of paying elsewhere", async () => {
+    h.runtime.mockRejectedValue(new ChosenProviderUnavailableError("anthropic"));
+    await expect(resolveNumoTurnConfiguration({ userId: "user", provider: "anthropic", model: "chosen-model" }))
+      .rejects.toMatchObject({ code: "provider_unavailable" });
+  });
+  it("rejects an unknown provider", async () => {
+    await expect(resolveNumoTurnConfiguration({ userId: "user", provider: "nope" }))
+      .rejects.toMatchObject({ code: "invalid_provider" });
   });
   it("refuses a removed personal model instead of silently replacing it", async () => {
-    vi.mocked(getNumoPreferences).mockResolvedValue({ provider: "openrouter", default_model: "removed-model", application_model: "account-default" });
+    vi.mocked(getNumoPreferences).mockResolvedValue({ provider: "minddy", default_model: "removed-model", application_model: "account-default", providers: [] });
     await expect(resolveNumoTurnConfiguration({ userId: "user" })).rejects.toMatchObject({ code: "model_unavailable" });
   });
   it("keeps legacy conversations on the account default when no override is stored", async () => {

@@ -50,6 +50,8 @@ export interface NumoConversation extends Omit<Conversation, "user_id"> {
   /** Time of Numo's latest answer; null while the conversation has none. */
   last_answer_at: string | null;
   /** Explicit conversation choice; null preserves the account default. */
+  /** Provider of the conversation (MIN-826); null follows Numo's default provider. */
+  provider?: string | null;
   model?: string | null;
   /** Explicit conversation choice; null preserves the compatible legacy default. */
   reasoning_level?: ReasoningLevel | null;
@@ -92,6 +94,8 @@ export interface NumoConversationPatch {
   archived?: boolean;
   read?: boolean;
   /** Empty or null follows the active assistant provider default. */
+  /** Provider of the conversation (MIN-826); null follows Numo's default provider. */
+  provider?: string | null;
   model?: string | null;
   /** Null follows the instance assistant reasoning default. */
   reasoningLevel?: ReasoningLevel | null;
@@ -367,6 +371,8 @@ export interface AssistantChatRequest {
     questionId: string;
   };
   /** Model selected for this conversation; omitted/null follows its default. */
+  /** Conversation provider (MIN-826): `minddy` or a credential provider; null follows the Numo default. */
+  provider?: string | null;
   model?: string | null;
   /** Reasoning selected for this conversation; omitted/null follows its default. */
   reasoningLevel?: ReasoningLevel | null;

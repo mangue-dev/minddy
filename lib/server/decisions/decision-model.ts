@@ -101,7 +101,7 @@ async function resolveDecisionApiKey(billTo: AiUsageBillTo): Promise<{
     billedUserId = (data as { owner_id?: string } | null)?.owner_id ?? null;
   }
   if (billedUserId) {
-    const byok = await getUserByok(billedUserId).catch(() => null);
+    const byok = await getUserByok(billedUserId, "automations", "text", "issue_relation_model").catch(() => null);
     if (byok && byok.provider === "openrouter" && byok.apiKey) {
       return { apiKey: byok.apiKey, baseUrl: byok.baseUrl, keyMode: "byok" };
     }

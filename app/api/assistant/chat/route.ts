@@ -319,6 +319,10 @@ export async function POST(request: NextRequest) {
     (typeof body.model !== "string" || body.model.length > 300)) {
     return Response.json({ error: "Invalid model" }, { status: 400 });
   }
+  if (body.provider !== undefined && body.provider !== null &&
+    (typeof body.provider !== "string" || !/^[a-z0-9_-]{1,64}$/.test(body.provider))) {
+    return Response.json({ error: "Invalid provider" }, { status: 400 });
+  }
   if (body.reasoningLevel !== undefined && body.reasoningLevel !== null &&
     !isReasoningLevel(body.reasoningLevel)) {
     return Response.json({ error: "Invalid reasoning level" }, { status: 400 });
@@ -366,13 +370,14 @@ export async function POST(request: NextRequest) {
   let convId = conversationId;
   let existingConversation: {
     id: string;
+    provider?: string | null;
     model?: string | null;
     reasoning_level?: string | null;
   } | null = null;
   if (convId) {
     const { data, error } = await supabase
       .from("conversations")
-      .select("id, model, reasoning_level")
+      .select("id, provider, model, reasoning_level")
       .eq("id", convId)
       .eq("user_id", user.id)
       .single();
@@ -381,6 +386,7 @@ export async function POST(request: NextRequest) {
     }
     existingConversation = data as {
       id: string;
+      provider?: string | null;
       model?: string | null;
       reasoning_level?: string | null;
     };
@@ -481,6 +487,7 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       admittedBilling: admittedUsage.billing,
       ...(pageContext?.documentation ? { managedOnly: true } : {}),
+      provider: pageContext?.documentation ? null : body.provider !== undefined ? body.provider : existingConversation?.provider,
       model: pageContext?.documentation ? null : body.model !== undefined ? body.model : existingConversation?.model,
       reasoningLevel: pageContext?.documentation ? null : body.reasoningLevel !== undefined
         ? body.reasoningLevel
@@ -518,7 +525,7 @@ export async function POST(request: NextRequest) {
     try {
       ({ created } = await ensureNumoRequestConversation({
         service, conversationId: reservedConversationId, userId: user.id,
-        title: storedTitle, model: configuration.persistedModel,
+        title: storedTitle, provider: configuration.persistedProvider, model: configuration.persistedModel,
         reasoningLevel: configuration.persistedReasoningLevel,
       }));
     } catch {
@@ -550,6 +557,7 @@ export async function POST(request: NextRequest) {
         timezone,
         numoDefaultStatus,
         webSearchEnabled: true,
+        ...(configuration.persistedProvider ? { provider: configuration.persistedProvider } : {}),
         ...(pageContext?.documentation ? { documentation: { articleId: pageContext.documentation.articleId,
           ...(pageContext.documentation.selfHosting ? { selfHosting: pageContext.documentation.selfHosting } : {}) } } : {}),
         ...(routineContinuation
