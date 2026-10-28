@@ -129,6 +129,7 @@ export function AccountMcpClients() {
   const errorText = (err: unknown) => {
     const code = err instanceof Error ? err.message : "save";
     if (code === "oauth") return t("errorOAuth");
+    if (code === "oauth_client_rejected") return t("errorOAuthClientRejected");
     if (code === "headers") return t("errorHeaders");
     if (code === "endpoint") return t("errorEndpoint");
     if (code === "encryption") return t("errorEncryption");
@@ -193,7 +194,13 @@ export function AccountMcpClients() {
         if (!result?.url) throw new Error("oauth");
         window.location.replace(result.url);
       })
-      .catch(() => toast.error(t("errorOAuth")))
+      .catch((err) =>
+        toast.error(
+          err instanceof Error && err.message === "oauth_client_rejected"
+            ? t("errorOAuthClientRejected")
+            : t("errorOAuth"),
+        ),
+      )
       .finally(() => {
         setBusy(false);
         setAutoStarting(false);
@@ -298,9 +305,10 @@ export function AccountMcpClients() {
         if (!result?.url) throw new Error("oauth");
         return result.url;
       });
-    } catch {
+    } catch (err) {
       tab.close();
       // The saved connection stays visible with its authentication tooltip.
+      toast.error(errorText(err));
     } finally {
       await queryClient.invalidateQueries({ queryKey });
       setBusy(false);

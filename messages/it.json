@@ -6588,6 +6588,7 @@
     "errorHeaders": "Inserisci un oggetto JSON con nomi e valori degli header.",
     "popupBlocked": "Consenti i popup per Minddy, poi riprova ad accedere.",
     "errorOAuth": "Autorizzazione non riuscita. Controlla guida del fornitore, credenziali OAuth e URL di callback, poi ricollega.",
+    "errorOAuthClientRejected": "Questo fornitore accetta solo i client MCP che ha approvato, e minddy non è ancora tra questi. Se ti permette di creare una tua app OAuth, inserisci le sue credenziali in «Impostazioni app OAuth (se richieste)».",
     "saveAndConnect": "Salva e collega",
     "manageConnections": "Gestisci MCP",
     "unauthenticated": "Questo MCP non è autenticato",

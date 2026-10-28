@@ -6588,6 +6588,7 @@
     "errorHeaders": "Introduce un objeto JSON con nombres y valores de cabeceras.",
     "popupBlocked": "Permite las ventanas emergentes de Minddy y vuelve a iniciar sesión.",
     "errorOAuth": "No se pudo autorizar. Revisa la guía del proveedor, las credenciales OAuth y la URL de retorno y vuelve a conectar.",
+    "errorOAuthClientRejected": "Este proveedor solo acepta los clientes MCP que ha aprobado, y minddy aún no es uno de ellos. Si te permite crear tu propia aplicación OAuth, introduce sus credenciales en «Configuración de aplicación OAuth (si hace falta)».",
     "saveAndConnect": "Guardar y conectar",
     "manageConnections": "Gestionar MCP",
     "unauthenticated": "Este MCP no está autenticado",

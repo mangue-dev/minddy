@@ -147,7 +147,10 @@ export const MCP_PRESETS: McpPreset[] = [
     name: "Vercel",
     url: "https://mcp.vercel.com",
     auth: "oauth",
-    setup: "standard",
+    // Vercel only accepts MCP clients it has reviewed: its registration
+    // endpoint refuses minddy's callback with `invalid_redirect_uri`
+    // (verified 2026-10-28, MIN-828).
+    setup: "approvedClient",
     docs: "https://vercel.com/docs/agent-resources/vercel-mcp",
   },
   {

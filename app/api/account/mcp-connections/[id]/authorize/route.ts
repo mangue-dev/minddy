@@ -1,7 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getMcpConnection } from "@/lib/server/mcp-client";
-import { startMcpOAuth } from "@/lib/server/mcp-oauth";
+import {
+  McpClientNotApprovedError,
+  startMcpOAuth,
+} from "@/lib/server/mcp-oauth";
 import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
 import { MCP_DESKTOP_RETURN_COOKIE } from "@/lib/mcp-authorization";
 export const maxDuration = 60;
@@ -49,7 +52,15 @@ export async function POST(
         path: "/",
       });
     return response;
-  } catch {
-    return NextResponse.json({ error: "oauth" }, { status: 400 });
+  } catch (err) {
+    return NextResponse.json(
+      {
+        error:
+          err instanceof McpClientNotApprovedError
+            ? "oauth_client_rejected"
+            : "oauth",
+      },
+      { status: 400 },
+    );
   }
 }

@@ -2,6 +2,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { auth } from "@modelcontextprotocol/client";
 import { mcpFetch } from "./mcp-http";
 import {
+  McpClientNotApprovedError,
   startMcpOAuth,
   completeMcpOAuth,
   initialMcpOAuth,
@@ -31,6 +32,7 @@ const state = vi.hoisted(() => ({
   streaming: false,
   canceled: 0,
   session: false,
+  rejectRegistration: false,
   store: null as EncryptedStore | null,
 }));
 vi.mock("./encryption/registry", () => ({ getEncryptedStore: () => state.store }));
@@ -89,6 +91,15 @@ vi.mock("./safe-fetch", () => ({
         code_challenge_methods_supported: ["S256"],
         token_endpoint_auth_methods_supported: ["none", "client_secret_post"],
       });
+    if (url.endsWith("/register") && state.rejectRegistration)
+      return Response.json(
+        {
+          error: "invalid_redirect_uri",
+          error_description:
+            "The provided redirect URIs are not approved for use by this authorization server.",
+        },
+        { status: 400 },
+      );
     if (url.endsWith("/register"))
       return Response.json({
         ...JSON.parse(String(init.body)),
@@ -204,6 +215,7 @@ beforeEach(() => {
   state.streaming = false;
   state.canceled = 0;
   state.session = false;
+  state.rejectRegistration = false;
   const key = randomBytes(32);
   state.store = new EncryptedStore({
     current: async () => ({ version: 1, bytes: Buffer.from(key) }),
@@ -215,6 +227,21 @@ afterEach(() => {
 });
 
 describe("generic MCP OAuth", () => {
+  it("reports a provider that refuses to register minddy as a client", async () => {
+    // Vercel answers its registration endpoint this way (MIN-828).
+    state.rejectRegistration = true;
+    const started = startMcpOAuth(connection);
+    await expect(started).rejects.toBeInstanceOf(McpClientNotApprovedError);
+    await expect(started).rejects.toMatchObject({ status: 400 });
+    expect(state.tables.user_mcp_oauth_attempts).toHaveLength(0);
+  });
+  it("keeps other authorization failures generic", async () => {
+    state.challengeOnly = true;
+    state.challenge = 'Bearer resource_metadata="https://mcp.example.com/missing"';
+    const started = startMcpOAuth(connection);
+    await expect(started).rejects.toThrow();
+    await expect(started).rejects.not.toBeInstanceOf(McpClientNotApprovedError);
+  });
   it("keeps the callback attempt and refreshed connection sealed", async () => {
     state.tables.mcp_content_scope = [{ id: true }];
     const protectedColumns = await protectMcpConnection({ ...connection,
