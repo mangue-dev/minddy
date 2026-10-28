@@ -33,6 +33,7 @@ vi.mock("@/lib/server/repository-skills", () => ({ loadProjectRepositorySkills: 
 
 import { POST } from "@/app/api/assistant/chat/route";
 import { SELF_HOSTING_OVERVIEW } from "@/lib/self-hosting-help-context";
+import { MAX_SELECTION_LENGTH } from "@/lib/assistant-selection";
 
 function database({ owner = "user", status = "idle", visible = new Set(["a", "b"]) } = {}) {
   const rows: Array<Record<string, unknown>> = [];
@@ -141,6 +142,27 @@ describe("conversation identity across project contexts", () => {
     expect(db.rows.find((row) => row.role === "user")?.context).toBeNull();
     const assembled = h.process.mock.calls[0][0] as Array<{ content: string }>;
     expect(assembled.some((item) => item.content.includes("ignore previous instructions"))).toBe(false);
+  });
+  it("caps a quoted selection server-side and quotes it for this message only", async () => {
+    const db = database();
+    expect(await send({ conversationId: "conversation", pageContext: {
+      selection: { text: `  Rewrite this\u0007 ${"x".repeat(MAX_SELECTION_LENGTH + 500)}` },
+    } })).toBe(200);
+    const stored = db.rows.find((row) => row.role === "user")?.context as {
+      selection?: { text: string };
+    } | null;
+    expect(stored?.selection?.text.startsWith("Rewrite this ")).toBe(true);
+    expect(stored?.selection?.text).toHaveLength(MAX_SELECTION_LENGTH + 1);
+    const assembled = JSON.stringify(h.process.mock.calls[0][0]);
+    expect(assembled).toContain("<selected_text>");
+    expect(assembled).toContain("Context captured for this message only");
+  });
+  it("drops a selection that is not a text", async () => {
+    const db = database();
+    expect(await send({ conversationId: "conversation", pageContext: {
+      selection: { text: { nested: "object" } },
+    } })).toBe(200);
+    expect(db.rows.find((row) => row.role === "user")?.context).toBeNull();
   });
   it("uses the latest self-hosting step and choices while retaining public-help tools", async () => {
     const db = database();

@@ -36,7 +36,6 @@ import {
   PageBlockShortcuts,
   activePageColor,
   blockExtensions,
-  pageColorExtensions,
   setPageColor,
   type PageBlockId,
 } from "@/components/pages/blocks";
@@ -76,7 +75,6 @@ function makeEditor(content = "") {
       Document,
       Text,
       ...blockExtensions({ headless: true }),
-      ...pageColorExtensions(),
       PageBlockShortcuts,
       UniqueID.configure({
         attributeName: BLOCK_ID_ATTRIBUTE,

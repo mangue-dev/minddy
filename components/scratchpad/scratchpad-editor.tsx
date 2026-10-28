@@ -433,6 +433,7 @@ export function ScratchpadEditor({
           slashFirst={SCRATCHPAD_SLASH_FIRST}
           extensions={extensions}
           nodeExtensions={nodeExtensions}
+          find
           uploads={canUpload ? imageUploads : undefined}
           immediateRender
           autoFocus

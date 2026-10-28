@@ -1,6 +1,7 @@
 import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
 import type { AnyExtension, NodeViewRenderer } from "@tiptap/core";
 import { common, createLowlight } from "lowlight";
+import { PAGE_COLOR_MARK } from "@/components/pages/blocks/color";
 
 const lowlight = createLowlight(common);
 export type CodeBlockLowlight = ReturnType<typeof createLowlight>;
@@ -33,6 +34,11 @@ export function createHighlightedCodeBlock(
     lowlight: highlightLowlight,
     defaultLanguage: "plaintext",
   }).extend({
+    // Code takes no formatting, but it takes the page's two COLOR marks,
+    // which override the syntax highlighting where they are set
+    // (app/globals.css). The block catalog mounts those marks with the
+    // blocks (blocks/index.ts), so the schema can always name them.
+    marks: `${PAGE_COLOR_MARK.text} ${PAGE_COLOR_MARK.background}`,
     renderHTML({ node, HTMLAttributes }) {
       const language = node.attrs.language as string | null | undefined;
       return [

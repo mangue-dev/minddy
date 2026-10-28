@@ -6,7 +6,7 @@ import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, File02Icon } from "@hugeicons/core-free-icons";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAppNavigation } from "@/lib/use-app-router";
 import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
@@ -96,6 +96,19 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
     if (extend) openDestination(href, () => pushPagesHistory(href));
     else pushPagesHistory(href);
   };
+
+  // A database entry open beside its table carries its page menu in the
+  // panel's header; trashing it returns to the table without saving it first.
+  const [previewMenuSlot, setPreviewMenuSlot] = useState<HTMLElement | null>(null);
+  const previewMenu = useMemo(
+    () => ({
+      slot: previewMenuSlot,
+      onTrashed: () => {
+        if (activePageId) pushPagesHistory(pageHref(projectId, activePageId));
+      },
+    }),
+    [previewMenuSlot, projectId, activePageId]
+  );
 
   // Remember the last selection in the project shell, including returning to
   // the list after trashing. The project's Pages route reads it when reopened.
@@ -294,8 +307,9 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
       expandLabel={tDatabase("extend")}
       onExpand={() => void leavePreview(true)}
       onClose={() => void leavePreview()}
+      actionsSlot={setPreviewMenuSlot}
     >
-      {shownPreview && <PageView panel key={shownPreview.id} projectId={projectId} pageId={shownPreview.id} onNavigate={openPage} onNavigationReady={registerPreviewFlush} />}
+      {shownPreview && <PageView panel panelMenu={previewMenu} key={shownPreview.id} projectId={projectId} pageId={shownPreview.id} onNavigate={openPage} onNavigationReady={registerPreviewFlush} />}
     </PagePeekPanel>
     </PagePromotionProvider>
     </PagePresenceProvider>

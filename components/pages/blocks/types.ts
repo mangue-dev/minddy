@@ -54,6 +54,7 @@ export type PageBlockId =
   | "quote"
   | "callout"
   | "codeBlock"
+  | "equation"
   | "divider"
   | "details"
   | "subpage"

@@ -4,6 +4,9 @@
    the mode overrides below, so the import can stay with the others. */
 @import "./theme-presets.css";
 @import "streamdown/styles.css";
+/* KaTeX, for the editor's equations (components/pages/blocks/math.ts). Tailwind
+   inlines it and rebases its font URLs onto the package. */
+@import "katex/dist/katex.min.css";
 /* Streamdown (Numo markdown rendering): without these @sources, Tailwind does not generate
    classes used by components and everything renders in unstyled boxes. */
 @source "../node_modules/streamdown/dist/*.js";
@@ -1845,6 +1848,57 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
   background-color: color-mix(in oklab, var(--page-tint) 24%, transparent);
 }
 
+/* In a code block a chosen text color overrides the syntax highlighting: a
+   highlight span inside the color mark takes the mark's color (a mark inside
+   a highlight span colors itself). "Default" sets no mark, so the
+   highlighting stays; a background keeps the token colors. */
+pre [data-page-text] [class*="hljs-"] {
+  color: inherit;
+}
+
+/* Equations (components/pages/blocks/math.ts). KaTeX sets no color, so an
+   equation takes the text color of its theme; its error red is the app's
+   destructive token. A display equation wider than the column scrolls inside
+   its block instead of overflowing the page. */
+.page-math {
+  border-radius: 0.375rem;
+}
+.page-math-inline {
+  padding: 0 0.125rem;
+}
+.page-math-block {
+  margin: 0.5rem 0;
+}
+.page-math-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.25rem 0;
+}
+.page-math-scroll .katex-display,
+.page-math-preview .katex-display {
+  margin: 0;
+}
+.page-math.is-empty {
+  color: var(--muted-foreground);
+  font-size: 0.875em;
+}
+.page-math-block.is-empty {
+  padding: 0.5rem 0.75rem;
+  background-color: var(--control);
+  text-align: center;
+}
+.ProseMirror[contenteditable="true"] .page-math:hover {
+  background-color: var(--control);
+}
+.page-math.ProseMirror-selectednode {
+  background-color: color-mix(in oklab, var(--primary) 14%, transparent);
+  outline: none;
+}
+.page-math .katex-error,
+.page-math-preview .katex-error {
+  color: var(--destructive) !important;
+}
+
 /* A callout carries a palette name, never a fixed color. The same document is
    therefore legible in both themes, and the editor, published page, history,
    and print view all render the same semantic `<aside>`. */
@@ -1923,6 +1977,33 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
   margin: 0;
 }
 
+/* Find and replace (components/editor/find-bar.tsx): every match takes a
+   light tint of the accent behind text that keeps its own color, like the
+   text selection; the current one a stronger tint and an accent outline, so
+   it stands out by shape as well as by color. A black or white accent gives
+   gray tints, still told apart by the outline. */
+.page-editor .ProseMirror .ProseMirror-search-match,
+.page-editor .ProseMirror .ProseMirror-active-search-match {
+  border-radius: 2px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  background-color: color-mix(in oklab, var(--primary) 22%, transparent);
+}
+.page-editor .ProseMirror .ProseMirror-active-search-match {
+  background-color: color-mix(in oklab, var(--primary) 42%, transparent);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+@media (forced-colors: active) {
+  .page-editor .ProseMirror .ProseMirror-search-match,
+  .page-editor .ProseMirror .ProseMirror-active-search-match {
+    background-color: Mark;
+    color: MarkText;
+  }
+  .page-editor .ProseMirror .ProseMirror-active-search-match {
+    outline: 2px solid Highlight;
+  }
+}
+
 /* ─── The GUTTER flies over ITSELF ───────────────────────────────────
    The chrome of a block (the handle and the `+`) appears when hovering over the block, and
    not when hovering over the empty strip to your left — even though that's THERE we're going
@@ -1971,6 +2052,30 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
     padding-left: 96px;
     margin-left: -96px;
   }
+  /* The right reserve of a page column (`app-desktop:pr-10`), where the
+     hovered block's comment button sits. */
+  .page-editor[data-comment-gutter] .ProseMirror {
+    padding-right: 40px;
+    margin-right: -40px;
+  }
+}
+
+/* The comment button on the right of a hovered page block fades with the
+   gutter, and is placed by script in the drag handle's wrapper — which
+   ignores the pointer, so the button takes it back, as the handle does. */
+.page-editor [data-block-comment-button] {
+  position: absolute;
+  z-index: 1;
+  pointer-events: auto;
+  transition: opacity 120ms ease-out, visibility 120ms ease-out;
+}
+.page-editor [data-block-comment-button][data-shown="false"] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-editor [data-block-comment-button] { transition: none; }
 }
 
 /* ─── The disclosure block (MIN-270) ─────────────────────────────────────

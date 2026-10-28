@@ -8,6 +8,7 @@
 // plus the actions a surface adds, and places a block with `insertBlock()`.
 // Adding a table block will not require coming back here.
 
+import { OVERLAY_COLLISION_PADDING } from "@/components/ui/menu-surface";
 import {
   forwardRef,
   useEffect,
@@ -212,7 +213,7 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
  distinguish a click inside it from a click outside it. */
 export const PAGE_SLASH_MENU_ATTR = "data-page-slash-menu";
 
-const EDGE = 8;
+const EDGE = OVERLAY_COLLISION_PADDING;
 const GAP = 6;
 
 export function renderSlashMenu() {

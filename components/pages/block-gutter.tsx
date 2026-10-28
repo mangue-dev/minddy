@@ -34,8 +34,9 @@
 
 import { onEditorDom } from "@/components/editor/editor-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, DragDropVerticalIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, DragDropVerticalIcon, MessageAdd01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import type { Editor } from "@tiptap/core";
 import type { Node } from "@tiptap/pm/model";
@@ -45,6 +46,7 @@ import { scrollPane } from "@/lib/scroll-pane";
 import { BlockMenu } from "@/components/pages/block-menu";
 import type { PageCommentAnchor } from "@/components/pages/page-comment-bubble";
 import { COMMENTED_BLOCK_CLASS } from "@/components/pages/block-comments";
+import { PAGE_BLOCK_ID_ATTRIBUTE } from "@/lib/pages-mentions";
 import {
   GUTTER_WIDTH,
   blockRange,
@@ -74,6 +76,15 @@ const BUTTONS_WIDTH = 24 + BUTTON_SIZE;
     up to `GUTTER_GAP_EXTRA` while the pane leaves the room for it. */
 const GUTTER_GAP_MIN = 4;
 const GUTTER_GAP_EXTRA = 10;
+
+/** The margin the buttons keep from the pane's edge (a side panel's border):
+    the gap to the text gives way first. */
+const GUTTER_EDGE_MIN = 8;
+
+/** The comment button on the right of a hovered page block, and its gap to
+    the text. It lives in the column's right reserve (`app-desktop:pr-10`). */
+const COMMENT_BUTTON_SIZE = 24;
+const COMMENT_BUTTON_GAP = 6;
 
 /** How long the buttons take to fade in beside a newly hovered block. */
 const GUTTER_FADE_MS = 120;
@@ -174,11 +185,52 @@ export function BlockGutter({
   const gutter = useRef<HTMLDivElement>(null);
   const shownAt = useRef<HTMLElement | null>(null);
 
+  // The comment button mirrors the gutter on the RIGHT of the block, in
+  // pages only. It is portaled next to the handle, in the drag handle's own
+  // wrapper: leaving the text for it is then not leaving the editor, and the
+  // handle stays. A block that already has comments shows its count badge
+  // there instead, which opens its thread.
+  const commentButton = useRef<HTMLButtonElement>(null);
+  const [commentHost, setCommentHost] = useState<HTMLElement | null>(null);
+  // The last placement asked for, replayed once the button is mounted: the
+  // first hover finds the host, and the button only exists after it.
+  const lastComment = useRef<[HTMLElement | null, number, boolean]>([null, 0, false]);
+  const placeComment = useCallback(
+    (dom: HTMLElement | null, marginTop: number, commented: boolean) => {
+      const button = commentButton.current;
+      const handle = gutter.current?.parentElement;
+      if (!onComment) return;
+      lastComment.current = [dom, marginTop, commented];
+      if (!commentHost && handle?.parentElement) setCommentHost(handle.parentElement);
+      if (!button) return;
+      const parent = handle?.offsetParent;
+      if (!dom || commented || !(parent instanceof HTMLElement)) {
+        button.dataset.shown = "false";
+        return;
+      }
+      const block = dom.getBoundingClientRect();
+      const frame = parent.getBoundingClientRect();
+      const top =
+        block.top - frame.top + parent.scrollTop + marginTop + (BUTTON_SIZE - COMMENT_BUTTON_SIZE) / 2;
+      const left = block.right - frame.left + parent.scrollLeft + COMMENT_BUTTON_GAP;
+      button.style.top = `${Math.round(top)}px`;
+      button.style.left = `${Math.round(left)}px`;
+      button.dataset.shown = "true";
+    },
+    [onComment, commentHost]
+  );
+  useEffect(() => {
+    if (commentHost) placeComment(...lastComment.current);
+  }, [commentHost, placeComment]);
+
   const onNodeChange = useCallback(
     ({ node, pos }: { node: Node | null; pos: number }) => {
       hovered.current = { node, pos };
       const element = gutter.current;
-      if (!element || pos < 0 || editor.isDestroyed) return;
+      if (!element || pos < 0 || editor.isDestroyed) {
+        placeComment(null, 0, false);
+        return;
+      }
       const dom = editor.view.nodeDOM(pos);
       if (!(dom instanceof HTMLElement)) {
         // No measurable block: we RESET to zero rather than leaving the
@@ -186,6 +238,7 @@ export function BlockGutter({
         // block without ever corresponding to the one below.
         element.style.marginTop = "0px";
         element.style.transform = "";
+        placeComment(null, 0, false);
         return;
       }
       // A new block: the buttons fade in beside it rather than jump there.
@@ -200,14 +253,14 @@ export function BlockGutter({
         }
       }
       // The buttons stand a little away from the text, unless the pane is
-      // too narrow on the left for that: then they move closer instead of
-      // leaving it.
+      // too narrow on the left for that (a side panel): then they move
+      // closer to the text rather than to the pane's edge.
       const room =
         dom.getBoundingClientRect().left -
         scrollPane(dom).getBoundingClientRect().left;
       const extra = Math.max(
         0,
-        Math.min(GUTTER_GAP_EXTRA, room - BUTTONS_WIDTH - GUTTER_GAP_MIN)
+        Math.min(GUTTER_GAP_EXTRA, room - BUTTONS_WIDTH - GUTTER_GAP_MIN - GUTTER_EDGE_MIN)
       );
       element.style.paddingRight = `${GUTTER_GAP_MIN + Math.floor(extra)}px`;
       const box = styledBox(dom);
@@ -232,6 +285,7 @@ export function BlockGutter({
           blockRect.top +
           (triggerRect.height - BUTTON_SIZE) / 2;
         element.style.marginTop = `${Math.round(offset)}px`;
+        placeComment(dom, Math.round(offset), commented);
         return;
       }
       // Text does not always start at the block's top edge: quotes, callouts,
@@ -250,9 +304,21 @@ export function BlockGutter({
       // rise above the block's top, so the offset may be negative.
       const offset = inset + (lineHeight - BUTTON_SIZE) / 2;
       element.style.marginTop = `${Math.round(offset)}px`;
+      placeComment(dom, Math.round(offset), commented);
     },
-    [editor]
+    [editor, placeComment]
   );
+
+  // While a block is dragged, every place it passes over answers "move":
+  // ProseMirror's own dragover accepts the drop without naming an effect.
+  useEffect(() => {
+    if (!dragging) return;
+    const onDragOver = (event: DragEvent) => {
+      if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+    };
+    window.addEventListener("dragover", onDragOver, true);
+    return () => window.removeEventListener("dragover", onDragOver, true);
+  }, [dragging]);
 
   // As long as the menu is open, the handle should not disappear under the
   // mouse going to the menu. The extension reads this flag in a meta of
@@ -312,7 +378,12 @@ export function BlockGutter({
         editor={editor}
         computePositionConfig={POSITION}
         onNodeChange={onNodeChange}
-        onElementDragStart={() => setDragging(true)}
+        onElementDragStart={(event) => {
+          // A block drag MOVES the block. Left unset, the drag allows every
+          // effect and the browser shows its "copy" cursor (a +) over the text.
+          if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+          setDragging(true);
+        }}
         onElementDragEnd={() => setDragging(false)}
       >
         {/* The width is WRITTEN, not deduced from the content: it is the same
@@ -387,6 +458,33 @@ export function BlockGutter({
           </Tooltip>
         </div>
       </DragHandle>
+
+      {onComment && commentHost
+        ? createPortal(
+            <Tooltip delayDuration={TOOLTIP_DELAY_MS} disableHoverableContent>
+              <TooltipTrigger asChild>
+                <button
+                  ref={commentButton}
+                  type="button"
+                  aria-label={t("commentBlock")}
+                  data-block-comment-button=""
+                  data-shown="false"
+                  className={cn(BUTTON, "size-6")}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    const { node } = hovered.current;
+                    const blockId = node?.attrs?.[PAGE_BLOCK_ID_ATTRIBUTE];
+                    if (typeof blockId === "string" && blockId) onComment({ blockId, startNew: true });
+                  }}
+                >
+                  <HugeiconsIcon icon={MessageAdd01Icon} className="size-5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">{t("commentBlock")}</TooltipContent>
+            </Tooltip>,
+            commentHost
+          )
+        : null}
 
       <BlockMenu
         editor={editor}

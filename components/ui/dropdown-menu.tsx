@@ -9,6 +9,7 @@ import { useMediaQuery } from "@/lib/use-media-query"
 import { ChevronRightIcon } from "lucide-react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { CheckIcon } from "@hugeicons/core-free-icons"
+import { OVERLAY_COLLISION_PADDING } from "@/components/ui/menu-surface"
 
 // Below 768px, side-opening flyout submenus can't fit on narrow screens (Radix
 // only flips them left/right and can't shift them horizontally to overlap the
@@ -59,7 +60,7 @@ function DropdownMenuContent({
   className,
   align = "start",
   sideOffset = 4,
-  collisionPadding = 8,
+  collisionPadding = OVERLAY_COLLISION_PADDING,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
   return (
@@ -322,7 +323,7 @@ function DropdownMenuSubTrigger({
 function DropdownMenuSubContent({
   className,
   children,
-  collisionPadding = 8,
+  collisionPadding = OVERLAY_COLLISION_PADDING,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.SubContent>) {
   const ctx = React.useContext(DropdownSubInlineContext)

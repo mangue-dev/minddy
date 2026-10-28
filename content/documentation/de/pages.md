@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 21,
-  "sourceRevision": 19,
+  "revision": 22,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-28",
   "compatibility": {
@@ -82,13 +82,24 @@
       "lib/pages-export.ts",
       "components/public-page-body.tsx",
       "components/pages/page-comment-dialog.tsx",
-      "lib/keyboard/shortcuts.ts"
+      "lib/keyboard/shortcuts.ts",
+      "components/editor/find-bar.tsx",
+      "components/editor/find-replace.ts",
+      "lib/keyboard/find-shortcut.ts",
+      "components/pages/blocks/math.ts",
+      "components/editor/math-edit-menu.tsx",
+      "components/code-block-lowlight.ts",
+      "app/globals.css",
+      "components/pages/page-peek-panel.tsx",
+      "components/global-page-panel.tsx",
+      "components/pages/pages-shell.tsx",
+      "components/pages/block-gutter.tsx"
     ]
   },
   "review": {
-    "revision": 21,
-    "fact": "agent:claude-code (new editor-formatting section (selection toolbar, shortcuts, Shift+Enter line break and send keys, phone keyboard toolbar) and image width kept in Markdown checked against components/pages/page-comment-bubble.tsx, lib/keyboard/keyboard-context.tsx, components/editor/document-editor.tsx, components/pages/page-extensions.ts, components/editor/mobile-editor-toolbar.tsx, components/editor/rich-editor.tsx, components/pages/blocks/image.ts and lib/pages-markdown.ts; retired subpage block: \"/\" Sub-page inserting a mention and opening the child, legacy blocks converted on a writer's first opening with block ids kept, trash and restore of a child's mention line, mention deletion never trashing, duplication remapping mentions, `[@Title](mention:page/<id>)` with `[[page:<id>]]` still read, export relative links and current titles, published mentions checked against components/pages/blocks/subpage.ts, components/pages/page-editor.tsx, lib/server/pages.ts, lib/pages-subpage.ts, lib/pages-export.ts, lib/server/pages-export.ts and components/public-page-body.tsx; block comment dialog or bottom sheet, phone long-press selection, notebook toolbar, bottom navigation hidden while typing and Add icon on touch screens checked against components/pages/page-comment-dialog.tsx and components/editor/mobile-editor-toolbar.tsx; Sub-page opening in the side panel with Expand (sidebar creation still full page), color lists showing each color by name in that color, selection ended by an outside click or Comment, Turn into marking only the selection's block, and Untitled page mentions checked against components/pages/page-view.tsx and components/pages/page-comment-bubble.tsx; page Copy submenu (Copy link, Copy page content as Markdown, not on databases) and the Command/Ctrl+Shift+L link shortcut checked against components/pages/page-document-actions.tsx and lib/keyboard/shortcuts.ts; floating phone toolbar hiding with the keyboard, its Color sheet and pinned Hide keyboard button checked against components/editor/mobile-editor-toolbar.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; equivalent meaning to en revision 19; self-reviewed; agent review, not human acceptance)",
+    "revision": 22,
+    "fact": "agent:claude-code (new find-and-replace section (Command/Ctrl+F on a page on screen, in the side panel and under another dialog, seeded selection, highlights and position count, Enter and Shift+Enter, Match case, Whole word and Regular expression, invalid expressions, Show replace, Replace and Replace all for editors only, `$1` to `$9` and `$&`, plain replacement as typed, undo in one step, Escape, body only) checked against components/editor/find-bar.tsx, components/editor/find-replace.ts, lib/keyboard/find-shortcut.ts, components/editor/rich-editor.tsx and components/pages/page-editor.tsx; equations (the `/` Equation entry, `$$…$$` typed in a line, click to edit the LaTeX with a live preview in a popover or phone sheet, red error, empty save removing it, `$…$` and `$$` fence Markdown with prices kept as text) checked against components/pages/blocks/math.ts, components/editor/math-edit-menu.tsx and lib/pages-math.test.ts; selection toolbar order with Underline, Inline equation, Copy, Ask Numo and Comment, the code-block toolbar and its colors, the toolbar following the scrolled selection, Page options in the side panel, and the Comment on this block hover button checked against components/pages/page-comment-bubble.tsx, components/code-block-lowlight.ts, app/globals.css, components/pages/page-peek-panel.tsx, components/global-page-panel.tsx, components/pages/pages-shell.tsx, components/pages/page-view.tsx and components/pages/block-gutter.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; equivalent meaning to en revision 20; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-28"
   },
   "related": [
@@ -124,7 +135,7 @@
       "src": "/documentation/de/page-create-menu.png",
       "alt": "Erstellungsmenü mit Neue Seite und Neue Datenbank.",
       "caption": "Wähle über die Seitenfunktionen des Projekts ein Dokument oder eine Datenbank.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -140,7 +151,7 @@
       "src": "/documentation/de/page-editor.png",
       "alt": "Demoseite mit Überschriften, Absätzen, Aufgaben mit Kontrollkästchen und einer Ticketreferenz.",
       "caption": "Überschriften, Aufgabenblöcke und die Referenz AUR-2 gliedern die Seite. Der Inhalt dient als Demobeispiel.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -157,7 +168,7 @@
       "src": "/documentation/de/page-comments.png",
       "alt": "Seitenaktivität ohne bisherige Einträge und ein leeres Kommentarfeld.",
       "caption": "Lies die Seitenaktivität und verfasse einen Kommentar im Eingabefeld. In diesem Beispiel wurde keiner abgesendet.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -174,7 +185,7 @@
       "src": "/documentation/de/page-file-states.png",
       "alt": "Demoseite mit einem unvollständigen Upload und einer gespeicherten Datei von 67 Byte mit Downloadfunktion.",
       "caption": "Prüfe den tatsächlichen Dateizustand: Der zweite Anhang ist verfügbar, der erste unvollständige Upload nicht.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -190,7 +201,7 @@
       "src": "/documentation/de/page-history-preview.png",
       "alt": "Versionen-Tab mit aufgeklapptem früherem Zustand, Autor, Wiederherstellen und Hinweis auf 30 Tage Aufbewahrung.",
       "caption": "Prüfe einen gespeicherten Zustand in der Vorschau und vergleiche ihn vor dem Wiederherstellen mit der aktuellen Seite.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -206,7 +217,7 @@
       "src": "/documentation/de/page-publish.png",
       "alt": "Veröffentlichungsdialog mit ausgewähltem Privat und Alternativen für Passwort oder Link.",
       "caption": "Privat hält die Seite im Projekt. Prüfe die vorgesehene Zielgruppe vor einer Änderung der Freigabe.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -222,7 +233,7 @@
       "src": "/documentation/de/page-export.png",
       "alt": "Exportmenü des Dokuments mit Markdown (.md) und Drucken / PDF.",
       "caption": "Wähle Markdown zum Herunterladen oder Drucken / PDF für die Druckansicht.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -238,7 +249,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Umbenennen und Entfernen.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -293,22 +304,28 @@ Anders als eine übernommene Aufgabe aus dem Aufgabennotizbuch wird die Seite ni
 
 ## Eine Seite mit Blöcken und Erwähnungen schreiben {#page-editor}
 
-Öffne die Seite und bearbeite als Eigentümer oder Mitglied Titel oder Inhalt. Leser können Seiten öffnen und lesen, sie aber weder bearbeiten, importieren, duplizieren, zu Favoriten hinzufügen oder veröffentlichen noch eine Version wiederherstellen. Verwende das Slash-Befehlsmenü und die Formatierungsfunktionen für Überschriften, Text, Aufzählungs-, nummerierte und Aufgabenlisten, Zitate, Hinweisblöcke, Codeblöcke, Teiler, Umschalter (aufklappbare Abschnitte), Unterseiten, Bilder und Dateien. Ein Hinweisblock kann ein Emoji-Symbol und eine Palettenfarbe haben. Unterscheide damit hilfreiche Informationen, ohne eine Warnung allein durch Symbol oder Farbe auszudrücken.
+Öffne die Seite und bearbeite als Eigentümer oder Mitglied Titel oder Inhalt. Leser können Seiten öffnen und lesen, sie aber weder bearbeiten, importieren, duplizieren, zu Favoriten hinzufügen oder veröffentlichen noch eine Version wiederherstellen. Verwende das Slash-Befehlsmenü und die Formatierungsfunktionen für Überschriften, Text, Aufzählungs-, nummerierte und Aufgabenlisten, Zitate, Hinweisblöcke, Codeblöcke, Gleichungen, Teiler, Umschalter (aufklappbare Abschnitte), Unterseiten, Bilder und Dateien. Ein Hinweisblock kann ein Emoji-Symbol und eine Palettenfarbe haben. Unterscheide damit hilfreiche Informationen, ohne eine Warnung allein durch Symbol oder Farbe auszudrücken. Eine **Gleichung** wird in LaTeX geschrieben und mit KaTeX dargestellt. Wähle sie im `/`-Menü für eine Gleichung in eigener Zeile, oder tippe LaTeX in einem Satz zwischen `$$`, etwa `$$x^2$$`, für eine Gleichung im Text. Klicke auf eine Gleichung, um ihr LaTeX mit Live-Vorschau zu bearbeiten, am Computer in einem Popover, auf dem Telefon in einem Bereich am unteren Rand. LaTeX, das nicht dargestellt werden kann, erscheint rot mit einem Hinweis, und eine leer gespeicherte Gleichung wird entfernt.
 
 Verwende Erwähnungen, um passende Tickets, Ziele, Personen oder Seiten zu verknüpfen. Tippe `@` gefolgt von einer Kennung, Wörtern aus dem Titel oder einer kurzen Beschreibung; eine beschreibende Anfrage listet nach den Textübereinstimmungen auch [inhaltlich gefundene](/docs/navigation#search-by-meaning) Tickets unter **Inhaltlich verwandt** auf. Rückverweise helfen Lesern, Seiten zu finden, die auf die aktuelle Seite verweisen. Ein Link liefert Kontext, gewährt aber keinen Zugriff auf private Objekte eines anderen Projekts. Die Erwähnung einer Seite, die noch keinen Titel hat, lautet **Ohne Titel**.
 
-Ein Klick auf die Erwähnung einer Seite, einen Rückverweis, eine an ein Ticket oder Ziel angehängte Seite oder einen Link auf eine Seite in einem Kommentar oder einer Antwort von Numo öffnet diese Seite in einem Seitenpanel über dem, was du gerade gelesen hast. Lies oder bearbeite sie dort, wähle **Vergrößern**, um die ganze Seite zu öffnen, oder schließe das Panel, um zurückzukehren. Eine Datenbank öffnet sich nicht im Panel, sondern als ganze Seite.
+Ein Klick auf die Erwähnung einer Seite, einen Rückverweis, eine an ein Ticket oder Ziel angehängte Seite oder einen Link auf eine Seite in einem Kommentar oder einer Antwort von Numo öffnet diese Seite in einem Seitenpanel über dem, was du gerade gelesen hast. Lies oder bearbeite sie dort, wähle **Vergrößern**, um die ganze Seite zu öffnen, oder schließe das Panel, um zurückzukehren. Zwischen **Vergrößern** und Schließen bietet das Menü **Seitenoptionen** (`…`) des Panels dieselben Aktionen wie auf der ganzen Seite; wenn du die Seite dort in den Papierkorb verschiebst, schließt sich das Panel und du bleibst auf der Seite darunter. Eine Datenbank öffnet sich nicht im Panel, sondern als ganze Seite.
 
 
 ![Demoseite mit Überschriften, Absätzen, Aufgaben mit Kontrollkästchen und einer Ticketreferenz.](/documentation/de/page-editor.png)
 
 ### Text formatieren und auf dem Smartphone schreiben {#editor-formatting}
 
-Seiten, Beschreibungen, Kommentare und das Aufgabennotizbuch verwenden denselben Editor. Markiere Text, um die Auswahlleiste zu öffnen. Ihre erste Zeile zeigt den aktuellen Blocktyp: Wähle sie, um **Umwandeln in** zu öffnen und den Block zu ändern. Danach folgen **Farbe** für Text oder Hintergrund, **Fett**, **Kursiv**, **Durchgestrichen**, **Code**, **Link hinzufügen** (oder **Link entfernen** auf einem Link) und **Formatierung entfernen**. Auf einer Seite verankert eine Zeile **Kommentieren** einen Kommentar an der Auswahl. **Umwandeln in** markiert nur den Typ des Blocks, in dem die Auswahl liegt. In den Farblisten, hier und im Blockmenü, erscheint jede Farbe mit ihrem Namen, in dieser Farbe oder auf diesem Hintergrund geschrieben. Ein Klick außerhalb des Editors beendet die Auswahl und blendet die Leiste aus, ebenso die Wahl von **Kommentieren**. Die Tooltips zeigen die Tastenkürzel: Command+B, Command+I, Command+Umschalt+S und Command+E unter macOS oder Strg mit denselben Tasten unter Windows/Linux. In einem Editor formatiert Command/Strg+B den Text fett; außerhalb blendet das Kürzel weiterhin die Seitenleiste ein oder aus.
+Seiten, Beschreibungen, Kommentare und das Aufgabennotizbuch verwenden denselben Editor. Markiere Text, um die Auswahlleiste zu öffnen. Ihre erste Zeile zeigt den aktuellen Blocktyp: Wähle sie, um **Umwandeln in** zu öffnen und den Block zu ändern. Danach folgen **Farbe** für Text oder Hintergrund, **Fett**, **Kursiv**, **Unterstrichen**, **Durchgestrichen**, **Code**, **Link hinzufügen** (oder **Link entfernen** auf einem Link), **Inline-Gleichung**, das den markierten Text in eine Inline-Gleichung umwandelt oder zurück, **Formatierung entfernen** und **Kopieren**, das die Auswahl kopiert. Am Computer sendet eine Zeile **Numo fragen** die Passage an Numo, wie in der [Numo-Anleitung](/de/dokumentation/numo#work-with-numo) beschrieben, und auf einer Seite verankert eine Zeile **Kommentieren** einen Kommentar an der Auswahl. **Umwandeln in** markiert nur den Typ des Blocks, in dem die Auswahl liegt. In den Farblisten, hier und im Blockmenü, erscheint jede Farbe mit ihrem Namen, in dieser Farbe oder auf diesem Hintergrund geschrieben. Ein Klick außerhalb des Editors beendet die Auswahl und blendet die Leiste aus, ebenso die Wahl von **Kommentieren**. Die Tooltips zeigen die Tastenkürzel: Command+B, Command+I, Command+U, Command+Umschalt+S und Command+E unter macOS oder Strg mit denselben Tasten unter Windows/Linux. In einem Editor formatiert Command/Strg+B den Text fett; außerhalb blendet das Kürzel weiterhin die Seitenleiste ein oder aus. In einem Codeblock zeigt die Leiste nur den Blocktyp, **Farbe**, **Kopieren**, **Numo fragen** und **Kommentieren**: Eine Textfarbe ersetzt die Syntaxhervorhebung des Codes, eine Hintergrundfarbe behält sie bei, und die Standardfarbe stellt sie wieder her. Text- und Hintergrundfarben bleiben in Markdown nicht erhalten. Die Leiste folgt der markierten Passage, während die Seite scrollt, und schließt sich, sobald die Passage aus dem sichtbaren Bereich scrollt.
 
 Umschalt+Eingabetaste beginnt eine neue Zeile im selben Block. Command/Strg+Eingabetaste fügt keinen Zeilenumbruch ein: In einem Kommentar oder einem anderen Eingabebereich sendet es, unabhängig vom Sende-Kürzel in deinen [Einstellungen](/de/dokumentation/accounts#preferences), und wenn du die Eingabetaste als Sende-Kürzel gewählt hast, sendet auch die Eingabetaste.
 
 Auf dem Smartphone zeigt der Editor weder Blockgriffe noch Auswahlleiste, und ein getipptes `@` bleibt ein normales Zeichen. Solange ein Editor den Fokus hat, schwebt eine Leiste über der Tastatur, die sich beim Schließen der Tastatur ausblendet: **Block einfügen** (+) listet die Blöcke dieses Editors auf und fügt den gewählten an der Cursorposition ein, wie `/`; **Erwähnen** (@) listet Personen, Tickets, Ziele und Seiten zum Erwähnen auf; danach folgen **Fett**, **Kursiv**, **Durchgestrichen**, **Code**, **Farbe** (ein Blatt für Text- oder Hintergrundfarbe), **Link hinzufügen**, **Ausrücken** und **Einrücken** in einer Liste, **Kommentieren** auf einer Seite sowie **Tastatur ausblenden**, das fest am rechten Ende bleibt. Ein unteres Blatt, in dem du schreibst, wächst auf die volle Bildschirmhöhe, und die Zeile, die du gerade tippst, bleibt über der Tastatur. Langes Drücken markiert Text in einem Editor, und die Leiste mit ihren Blättern funktioniert auch im Aufgabennotizbuch. Die untere Navigation wird ausgeblendet, solange ein Textfeld den Fokus hat, etwa ein Seitentitel oder ein Kommentar. Auf einem Touchscreen ist **Symbol hinzufügen** auf einer Seite immer sichtbar.
+
+### Auf einer Seite suchen und ersetzen {#find-and-replace}
+
+Solange eine Seite auf dem Bildschirm ist, öffnet Command+F unter macOS oder Strg+F unter Windows/Linux oben rechts im Dokument eine Suchleiste, egal wo der Cursor steht; bei einer Seite im Seitenpanel durchsucht sie diese Seite. Markierter Text wird zum Suchbegriff. Jeder Treffer wird hervorgehoben, der aktuelle stärker, und die Leiste zeigt seine Position, etwa 2 von 7. Die Eingabetaste springt zum nächsten Treffer, Umschalt+Eingabetaste zum vorherigen; ein erneutes Command/Strg+F markiert den Suchtext. **Groß-/Kleinschreibung beachten**, **Ganzes Wort** und **Regulärer Ausdruck** verfeinern die Suche; ein ungültiger Ausdruck wird gemeldet und hebt nichts hervor. Gesucht wird im Text der Seite, nicht in ihrem Titel.
+
+Wenn du die Seite bearbeiten darfst, fügt **Ersetzen einblenden** ein Feld für den Ersatztext hinzu, mit **Ersetzen**, das den aktuellen Treffer ersetzt und zum nächsten springt, und **Alle ersetzen**. In einem regulären Ausdruck fügen `$1` bis `$9` die gefundenen Gruppen ein und `$&` den ganzen Treffer; eine einfache Suche fügt den Text genau so ein, wie du ihn getippt hast. Ein Ersetzen ist eine normale Bearbeitung: Es wird gespeichert und erreicht die anderen Bearbeitenden wie Tippen, und Command/Strg+Z macht es rückgängig, **Alle ersetzen** in einem Schritt. Escape schließt die Leiste und kehrt zum Text zurück. Das Aufgabennotizbuch hat dieselbe Leiste. Anderswo in minddy und wenn ein anderer Dialog über der Seite geöffnet ist, öffnet Command/Strg+F die Suche des Browsers.
 
 ### Speichern und Übertragbarkeit {#editor-save}
 
@@ -316,11 +333,11 @@ Eine Seite speichert, während du tippst: Jede Änderung erreicht den Server nac
 
 Bricht die Verbindung ab, lass die Seite geöffnet. Ungespeicherte Änderungen bleiben auf der Seite und werden gesendet, sobald die Verbindung zurückkehrt; Änderungen anderer treffen gleichzeitig ein und werden mit deinen zusammengeführt. minddy öffnet eine andere Seite erst, wenn deine Änderungen gespeichert sind: Solange sie nicht gesendet werden können, bleibst du auf der Seite und minddy meldet, dass das Speichern fehlgeschlagen ist. Schließt du einen Browser-Tab mit ungespeicherten Änderungen, bittet dich der Browser vorher um Bestätigung; beim Beenden der Desktop-App gibt es keine Rückfrage, und ungespeicherte Änderungen gehen verloren. Verlierst du den Zugriff auf die Seite oder das Recht, sie zu bearbeiten, während Änderungen ungespeichert sind, macht minddy sie rückgängig und zeigt eine Meldung an. Lehnt der Server eine Änderung ab, etwa einen Titel mit mehr als 500 Zeichen oder einen Link mit einem nicht zulässigen Protokoll, macht minddy diese Änderung rückgängig und zeigt eine Meldung an. Der Seitenverlauf hilft, früher gespeicherte Versionen zu prüfen.
 
-Markdown-Exporte und Seitenzugriffe durch Agenten erhalten Symbole und Farben von Hinweisblöcken in der unterstützten Darstellung. Auch ein in der Größe angepasstes Bild behält seine Breite, die als Bildtitel geschrieben wird (`![alt](src "width=60%")`), sodass Änderungen durch Numo, MCP-Agenten oder das Aufgabennotizbuch sie nicht zurücksetzen. Agenten lesen und schreiben eine Seitenerwähnung als `[@Title](mention:page/<id>)`; die ältere Form `[[page:<id>]]` wird weiterhin akzeptiert und als dieselbe Erwähnung gelesen, auch innerhalb einer Zeile. Exportformate unterscheiden sich in Wiedergabetreue und Anhangsbehandlung. Prüfe das entstandene Dokument, bevor du eine Originalquelle ersetzt. Verwende Codeblöcke für wörtliche Befehle und bewahre Voraussetzungen und Warnungen im umgebenden Text.
+Markdown-Exporte und Seitenzugriffe durch Agenten erhalten Symbole und Farben von Hinweisblöcken in der unterstützten Darstellung. Auch ein in der Größe angepasstes Bild behält seine Breite, die als Bildtitel geschrieben wird (`![alt](src "width=60%")`), sodass Änderungen durch Numo, MCP-Agenten oder das Aufgabennotizbuch sie nicht zurücksetzen. Agenten lesen und schreiben eine Seitenerwähnung als `[@Title](mention:page/<id>)`; die ältere Form `[[page:<id>]]` wird weiterhin akzeptiert und als dieselbe Erwähnung gelesen, auch innerhalb einer Zeile. Gleichungen werden als LaTeX übertragen: `$E = mc^2$` innerhalb einer Zeile und ein Block zwischen zwei Zeilen `$$`. Ein Betrag wie `$5` bleibt Text. Exportformate unterscheiden sich in Wiedergabetreue und Anhangsbehandlung. Prüfe das entstandene Dokument, bevor du eine Originalquelle ersetzt. Verwende Codeblöcke für wörtliche Befehle und bewahre Voraussetzungen und Warnungen im umgebenden Text.
 
 ## Eine Seite besprechen und Konflikte lösen {#page-comments-and-collaboration}
 
-Öffne eine Projektseite und ihre Kommentarfunktionen. Wähle passende Inhalte aus, wenn du einen verankerten Kommentar erstellst, erkläre die Frage oder Änderung und erwähne bei Bedarf ein Projektmitglied. Ein Leser kann kommentieren, wenn der Eigentümer **Darf kommentieren** für ihn aktiviert hat. Antworte im Verlauf, damit die Entscheidung bei ihrem Kontext bleibt. Markiere den Verlauf erst als erledigt, wenn seine Frage tatsächlich beantwortet wurde. Der Verlauf eines Blocks öffnet sich am Computer in einem Dialog und auf dem Smartphone in einem unteren Blatt statt neben dem Block: Er zeigt die zitierte Passage, die vorhandenen Diskussionen mit ihren Antworten und ein Feld für einen neuen Kommentar. Öffne ihn über das Kommentar-Abzeichen des Blocks, **Kommentieren** in der Auswahlleiste oder das Blockmenü.
+Öffne eine Projektseite und ihre Kommentarfunktionen. Wähle passende Inhalte aus, wenn du einen verankerten Kommentar erstellst, erkläre die Frage oder Änderung und erwähne bei Bedarf ein Projektmitglied. Ein Leser kann kommentieren, wenn der Eigentümer **Darf kommentieren** für ihn aktiviert hat. Antworte im Verlauf, damit die Entscheidung bei ihrem Kontext bleibt. Markiere den Verlauf erst als erledigt, wenn seine Frage tatsächlich beantwortet wurde. Der Verlauf eines Blocks öffnet sich am Computer in einem Dialog und auf dem Smartphone in einem unteren Blatt statt neben dem Block: Er zeigt die zitierte Passage, die vorhandenen Diskussionen mit ihren Antworten und ein Feld für einen neuen Kommentar. Öffne ihn über das Kommentar-Abzeichen des Blocks, **Kommentieren** in der Auswahlleiste oder das Blockmenü. Am Computer zeigt ein Block ohne Kommentare beim Darüberfahren rechts eine Schaltfläche **Diesen Block kommentieren** auf Höhe des Blockgriffs; ein kommentierter Block zeigt dort stattdessen sein Kommentar-Abzeichen. Auf dem Smartphone erscheint diese Schaltfläche nicht.
 
 Anwesenheitsavatare zeigen Personen, die die Seite ansehen. Während jemand bearbeitet, erscheinen sein Cursor und seine Auswahl im Inhalt und im Titel, in einer eigenen Farbe und mit seinem Namen beschriftet. Der Cursor eines Lesers wird nicht angezeigt. Ein Cursor zeigt, wo jemand arbeitet, nicht dass sein Text gespeichert ist: Die Speicheranzeige spiegelt nur deine eigenen Änderungen wider.
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { OVERLAY_COLLISION_PADDING } from "@/components/ui/menu-surface";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
@@ -76,11 +77,11 @@ export function DatabaseCellEditor({
       const y = viewport?.offsetTop ?? 0;
       const width = viewport?.width ?? window.innerWidth;
       const height = viewport?.height ?? window.innerHeight;
-      const leftEdge = Math.max(x, panelBox?.left ?? x) + 8;
-      const rightEdge = Math.min(x + width, panelBox?.right ?? x + width) - 8;
-      const topEdge = Math.max(y, panelBox?.top ?? y) + 8;
+      const leftEdge = Math.max(x, panelBox?.left ?? x) + OVERLAY_COLLISION_PADDING;
+      const rightEdge = Math.min(x + width, panelBox?.right ?? x + width) - OVERLAY_COLLISION_PADDING;
+      const topEdge = Math.max(y, panelBox?.top ?? y) + OVERLAY_COLLISION_PADDING;
       const bottomEdge =
-        Math.min(y + height, panelBox?.bottom ?? y + height) - 8;
+        Math.min(y + height, panelBox?.bottom ?? y + height) - OVERLAY_COLLISION_PADDING;
       const editorWidth = Math.min(
         Math.max(anchor.width + 24, 240),
         rightEdge - leftEdge,

@@ -79,6 +79,7 @@ export function PageEditor({
       blocks="page"
       blockChrome
       bottomReserve
+      find
       size="page"
       pages={pages}
       uploads={uploads}

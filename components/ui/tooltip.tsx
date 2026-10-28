@@ -8,6 +8,7 @@ import {
   isFocusNavigationKey,
   shouldOpenTooltipOnFocus,
 } from "@/lib/tooltip-focus";
+import { OVERLAY_COLLISION_PADDING } from "@/components/ui/menu-surface";
 
 /**
  * Minddy's tooltip primitives, built on Radix with two guards.
@@ -183,7 +184,7 @@ export function TooltipContent({
   className,
   sideOffset = 5,
   // A tooltip never touches the window's edges: it keeps 10 px from each.
-  collisionPadding = 10,
+  collisionPadding = OVERLAY_COLLISION_PADDING,
   children,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Content>) {

@@ -46,6 +46,9 @@ import { detailsBlock } from "@/components/pages/blocks/details";
 import { subpageBlock } from "@/components/pages/blocks/subpage";
 import { imageBlock } from "@/components/pages/blocks/image";
 import { fileBlock } from "@/components/pages/blocks/file";
+import { mathBlock } from "@/components/pages/blocks/math";
+
+import { pageColorExtensions } from "@/components/pages/blocks/color";
 
 export type {
   BlockSet,
@@ -81,6 +84,7 @@ export const PAGE_BLOCKS: readonly PageBlock[] = [
   quoteBlock,
   calloutBlock,
   codeBlock,
+  mathBlock,
   dividerBlock,
   detailsBlock,
   subpageBlock,
@@ -202,6 +206,12 @@ export function blockExtensions(
             : withStorage
       );
     }
+  }
+  // The page's two color marks belong to the catalog: the code block names
+  // them in its schema (blocks/code.ts), so they are mounted with the blocks,
+  // in every set, rather than beside them by each caller.
+  for (const mark of pageColorExtensions()) {
+    if (!seen.has(mark.name)) extensions.push(mark);
   }
   return extensions;
 }

@@ -8,6 +8,7 @@ import { COARSE_INSET_HIT_AREA, COARSE_ROW } from "./touch-target"
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { CheckIcon } from "@hugeicons/core-free-icons"
+import { OVERLAY_COLLISION_PADDING } from "@/components/ui/menu-surface"
 
 function Select({
   ...props
@@ -65,6 +66,7 @@ function SelectContent({
   children,
   position = "item-aligned",
   align = "center",
+  collisionPadding = OVERLAY_COLLISION_PADDING,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
   return (
@@ -80,6 +82,7 @@ function SelectContent({
                                 )}
         position={position}
         align={align}
+        collisionPadding={collisionPadding}
         {...props}
       >
         <SelectScrollUpButton />

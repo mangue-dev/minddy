@@ -364,6 +364,8 @@ export interface ChatInputProps {
 
 export interface ChatInputHandle {
   fill: (text: string) => void;
+  /** Put the caret at the end of the composer, leaving its text as it is. */
+  focus: () => void;
 }
 
 export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
@@ -1482,6 +1484,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             sel.addRange(range);
           }
           publishDraft();
+        },
+        focus() {
+          const el = editorRef.current;
+          if (el) focusContentEditableAtEnd(el);
         },
       }),
       [publishDraft]

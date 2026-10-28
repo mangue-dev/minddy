@@ -76,7 +76,9 @@ const PAGE_BODY_DESCRIPTION =
   "The page BODY in markdown. Supported: headings (## and ###, since a single " +
   "'# ' is the page title), bold/italic/inline code, links, bullet and numbered " +
   "lists, task lists ('- [ ]' / '- [x]'), quotes, fenced code blocks, horizontal " +
-  "rules, <details><summary>…</summary>…</details> collapsibles, and " +
+  "rules, <details><summary>…</summary>…</details> collapsibles, LaTeX equations " +
+  "('$E = mc^2$' inline; a block is a '$$' line, the LaTeX, then a closing '$$' " +
+  "line), and " +
   "page mentions '[@Title](mention:page/<page_id>)' to link another page (inline: text " +
   "can follow it; '[[page:<page_id>]]' is read as the same mention). Anything " +
   "else degrades to plain text. " +

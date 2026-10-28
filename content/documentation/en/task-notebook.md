@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 10,
+  "revision": 11,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-28",
   "compatibility": {
@@ -44,12 +44,16 @@
       "components/scratchpad/scratchpad-editor.tsx",
       "lib/scratchpad-search.ts",
       "components/command-palette.tsx",
-      "components/editor/mobile-editor-toolbar.tsx"
+      "components/editor/mobile-editor-toolbar.tsx",
+      "components/editor/find-bar.tsx",
+      "lib/keyboard/find-shortcut.ts",
+      "components/pages/blocks/math.ts",
+      "components/editor/math-edit-menu.tsx"
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:claude-code (phone keyboard toolbar sentence checked against components/editor/mobile-editor-toolbar.tsx and components/editor/rich-editor.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "revision": 11,
+    "fact": "agent:claude-code (Command/Ctrl+F find and replace bar in the open notebook checked against components/scratchpad/scratchpad-editor.tsx, components/editor/find-bar.tsx and lib/keyboard/find-shortcut.ts; equations (the `/` Equation entry, `$$…$$` typed in a line, click to edit the LaTeX with a live preview in a popover or phone sheet, red error, empty save removing it, `$…$` and `$$` fence Markdown with prices kept as text) checked against components/pages/blocks/math.ts, components/editor/math-edit-menu.tsx and lib/pages-math.test.ts; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the changed controls)",
     "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-28"
   },
@@ -69,7 +73,7 @@
       "src": "/documentation/en/work-task-notebook.png",
       "alt": "Localized demonstration tasks in the personal notebook.",
       "caption": "The notebook keeps personal steps outside the project issue hierarchy. The sample task states remain unchanged.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -92,7 +96,7 @@ Open the task notebook from the personal application controls, or use Command+Sh
 
 To find a task again, open the command palette with Command+K on macOS or Ctrl+K on Windows/Linux and type words from it. Tasks still to do appear under **Task notebook**, with their section; completed and canceled tasks and questions do not. Choose one to open the notebook on that task. Before you type, the palette does not list notebook tasks.
 
-The notebook uses the same editor as project pages, with the same block handles: hover a block to drag it, open its menu or add a block with **+**. Type `/` to insert a task, listed first, or a heading, list, quote, **Callout**, code block, **Toggle** or divider, or choose **Dictate a task** to speak tasks aloud. The notebook is still saved as Markdown, so Numo and connected agents read the same tasks and states. Select text to format it or add a link. Paste or drop an image, or choose **Image** in the `/` menu, to insert it in a note. Other kinds of files belong in pages. On a phone, the toolbar above the keyboard replaces the block handles, the selection toolbar and the typed `@` menu; the [Pages guide](/docs/pages#editor-formatting) describes it.
+The notebook uses the same editor as project pages, with the same block handles: hover a block to drag it, open its menu or add a block with **+**. Type `/` to insert a task, listed first, or a heading, list, quote, **Callout**, code block, **Equation**, **Toggle** or divider, or choose **Dictate a task** to speak tasks aloud. The notebook is still saved as Markdown, so Numo and connected agents read the same tasks and states. Select text to format it or add a link. Paste or drop an image, or choose **Image** in the `/` menu, to insert it in a note. Other kinds of files belong in pages. On a phone, the toolbar above the keyboard replaces the block handles, the selection toolbar and the typed `@` menu; the [Pages guide](/docs/pages#editor-formatting) describes it. Command+F on macOS or Ctrl+F on Windows/Linux opens the same [find and replace bar](/docs/pages#find-and-replace) as on a page while the notebook is open.
 
 The **Notebook actions** menu (`…`) offers **Copy all as prompt**, which copies the whole notebook for your own coding agent, and **Remove done and dropped tasks**. Removal asks for confirmation, deletes completed and canceled tasks with the headings they leave empty, and keeps tasks to do or in progress. To copy less, use a heading's **Copy section as prompt** control or a task's **Copy as prompt**. If **Start the issue or task when I copy its prompt** is enabled in **Account settings** → **Issues**, copying also moves the copied pending tasks to in progress.
 

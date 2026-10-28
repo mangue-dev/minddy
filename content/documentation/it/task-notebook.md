@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 10,
+  "revision": 12,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-28",
   "compatibility": {
@@ -44,13 +44,17 @@
       "components/scratchpad/scratchpad-editor.tsx",
       "lib/scratchpad-search.ts",
       "components/command-palette.tsx",
-      "components/editor/mobile-editor-toolbar.tsx"
+      "components/editor/mobile-editor-toolbar.tsx",
+      "components/editor/find-bar.tsx",
+      "lib/keyboard/find-shortcut.ts",
+      "components/pages/blocks/math.ts",
+      "components/editor/math-edit-menu.tsx"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:claude-code (phone keyboard toolbar sentence checked against components/editor/mobile-editor-toolbar.tsx and components/editor/rich-editor.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (it changed passages with catalog UI labels; equivalent meaning to en revision 10; self-reviewed; agent review, not human acceptance)",
+    "revision": 12,
+    "fact": "agent:claude-code (Command/Ctrl+F find and replace bar in the open notebook checked against components/scratchpad/scratchpad-editor.tsx, components/editor/find-bar.tsx and lib/keyboard/find-shortcut.ts; equations (the `/` Equation entry, `$$…$$` typed in a line, click to edit the LaTeX with a live preview in a popover or phone sheet, red error, empty save removing it, `$…$` and `$$` fence Markdown with prices kept as text) checked against components/pages/blocks/math.ts, components/editor/math-edit-menu.tsx and lib/pages-math.test.ts; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the changed controls)",
+    "language": "agent:claude-code (it changed passages with catalog UI labels; equivalent meaning to en revision 11; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-28"
   },
   "related": [
@@ -69,7 +73,7 @@
       "src": "/documentation/it/work-task-notebook.png",
       "alt": "Attività personali dimostrative tradotte nel taccuino.",
       "caption": "Il taccuino segue passaggi personali fuori dalla gerarchia dei ticket del progetto. Gli stati delle attività d’esempio restano invariati.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -93,7 +97,7 @@ Apri il taccuino delle attività dai comandi personali dell’applicazione, oppu
 
 Per ritrovare un’attività, apri la palette dei comandi con Command+K su macOS o Ctrl+K su Windows/Linux e digita alcune parole dell’attività. Le attività ancora da fare compaiono sotto **Taccuino delle attività**, con la loro sezione; le attività completate o annullate e le domande non compaiono. Scegline una per aprire il taccuino su quell’attività. Finché non digiti nulla, la palette non elenca le attività del taccuino.
 
-Il taccuino usa lo stesso editor delle pagine del progetto, con le stesse maniglie dei blocchi: passa sopra un blocco per trascinarlo, aprirne il menu o aggiungere un blocco con **+**. Digita `/` per inserire un'attività, proposta per prima, o un titolo, un elenco, una citazione, un **Riquadro**, un blocco di codice, un **Blocco a scomparsa** o un divisore, oppure scegli **Detta un'attività** per dettare le attività a voce. Il taccuino resta salvato in Markdown, quindi Numo e gli agenti collegati leggono le stesse attività e gli stessi stati. Seleziona del testo per formattarlo o aggiungere un link. Incolla o trascina un'immagine, oppure scegli **Immagine** nel menu `/`, per inserirla in una nota. Gli altri tipi di file vanno nelle pagine. Sul telefono, la barra sopra la tastiera sostituisce le maniglie dei blocchi, la barra di selezione e il menu `@` digitato; la [guida alle pagine](/it/documentazione/pages#editor-formatting) la descrive.
+Il taccuino usa lo stesso editor delle pagine del progetto, con le stesse maniglie dei blocchi: passa sopra un blocco per trascinarlo, aprirne il menu o aggiungere un blocco con **+**. Digita `/` per inserire un'attività, proposta per prima, o un titolo, un elenco, una citazione, un **Riquadro**, un blocco di codice, un'**Equazione**, un **Blocco a scomparsa** o un divisore, oppure scegli **Detta un'attività** per dettare le attività a voce. Il taccuino resta salvato in Markdown, quindi Numo e gli agenti collegati leggono le stesse attività e gli stessi stati. Seleziona del testo per formattarlo o aggiungere un link. Incolla o trascina un'immagine, oppure scegli **Immagine** nel menu `/`, per inserirla in una nota. Gli altri tipi di file vanno nelle pagine. Sul telefono, la barra sopra la tastiera sostituisce le maniglie dei blocchi, la barra di selezione e il menu `@` digitato; la [guida alle pagine](/it/documentazione/pages#editor-formatting) la descrive. Mentre il taccuino è aperto, Command+F su macOS o Ctrl+F su Windows/Linux apre la stessa [barra di ricerca e sostituzione](/it/documentazione/pages#find-and-replace) di una pagina.
 
 Il menu **Azioni del taccuino** (`…`) offre **Copia tutto come prompt**, che copia l’intero taccuino per il tuo agente di programmazione, e **Rimuovi le attività completate e annullate**. La rimozione chiede una conferma, elimina le attività completate e annullate insieme ai titoli che restano vuoti e conserva le attività da fare o in corso. Per copiare meno, usa **Copia la sezione come prompt** su un titolo o **Copia come prompt** su un’attività. Se **Avvia il ticket o l'attività quando ne copio il prompt** è attivo in **Impostazioni account** → **Ticket**, la copia porta anche in corso le attività in attesa copiate.
 

@@ -10,7 +10,7 @@ import { Text } from "@tiptap/extension-text";
 import { EditorContent } from "@tiptap/react";
 import { CODE_LANGUAGE_OPTIONS } from "@/components/code-block-full-language-catalog";
 import { codeBlockEditorExtension } from "@/components/code-block-node-view";
-import { blockExtensions } from "@/components/pages/blocks";
+import { blockExtensions, pageColorExtensions } from "@/components/pages/blocks";
 
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) =>
@@ -115,7 +115,8 @@ function makeLiveEditor() {
         },
       ],
     },
-    extensions: [Document, Text, codeBlockEditorExtension()] as never,
+    // The code block names the page's color marks in its schema.
+    extensions: [Document, Text, codeBlockEditorExtension(), ...pageColorExtensions()] as never,
   });
   const host = document.createElement("div");
   document.body.append(host);

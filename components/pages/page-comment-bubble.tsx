@@ -21,13 +21,15 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { ArrowLeft01Icon, ArrowRight01Icon, CheckIcon, CodeSimpleIcon as Code2, Link02Icon, MessageAdd01Icon, TextBoldIcon, TextClearIcon, TextItalicIcon, TextStrikethroughIcon, Unlink01Icon } from "@hugeicons/core-free-icons";
-import { useEffect, useState } from "react";
+import { ArrowLeft01Icon, ArrowRight01Icon, CheckIcon, CodeSimpleIcon as Code2, Copy01Icon, Link02Icon, MessageAdd01Icon, TextBoldIcon, TextClearIcon, TextItalicIcon, TextStrikethroughIcon, TextUnderlineIcon, Unlink01Icon } from "@hugeicons/core-free-icons";
+import { useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import type { Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import { useEditorState } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
+import { posToDOMRect } from "@tiptap/core";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { MarkdownLinkEditDialog } from "@/components/markdown-link-menu";
 import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
@@ -41,10 +43,14 @@ import {
   type PageColorKind,
 } from "@/components/pages/blocks";
 import { turnBlocksInto } from "@/components/pages/block-actions";
+import { INLINE_MATH_NODE, MATH_ICON, inlineMathActive, toggleInlineMath } from "@/components/pages/blocks/math";
 
 import { PAGE_BLOCK_ID_ATTRIBUTE } from "@/lib/pages-mentions";
 import { MAX_QUOTE_LENGTH } from "@/lib/page-comments";
 import { AppTooltip } from "@/components/ui/app-tooltip";
+import { NumoIcon } from "@/components/numo-icon";
+import { useAskNumoAboutSelection } from "@/lib/use-ask-numo-about-selection";
+import { OVERLAY_COLLISION_PADDING } from "@/components/ui/menu-surface";
 
 /** What clicking on the bubble does: where to anchor, and what we're talking about. */
 export interface PageCommentAnchor {
@@ -77,6 +83,9 @@ export function commentAtCaret(editor: Editor, onComment: (anchor: PageCommentAn
 
 const SELECTION_MENU_DELAY_MS = 300;
 
+/** The selection card's plugin key: a "hide" meta on it closes the card. */
+const SELECTION_MENU_KEY = "selectionMenu";
+
 export function shouldShowSelectionMenu({ editor }: { editor: Editor }): boolean {
   // Activity can detach the view before a delayed BubbleMenu update runs.
   // Tiptap retains editor state during unmount, but view access is unavailable.
@@ -88,7 +97,6 @@ export function shouldShowSelectionMenu({ editor }: { editor: Editor }): boolean
     editor.view.hasFocus() &&
     selection instanceof TextSelection &&
     !empty &&
-    !editor.isActive("codeBlock") &&
     !!editor.state.doc.textBetween(from, to, " ").trim()
   );
 }
@@ -217,6 +225,9 @@ export function PageCommentBubble({
 }) {
   const t = useTranslations("Pages");
   const colorName = useTranslations("Categories.colors");
+  const tBulk = useTranslations("BulkActions");
+  // Absent where Numo is not (a public page, an account without AI).
+  const askNumo = useAskNumoAboutSelection();
   const mod = useModKey();
   const [editLinkOpen, setEditLinkOpen] = useState(false);
   // The block type and the colors open in place, inside the same card: a
@@ -239,7 +250,11 @@ export function PageCommentBubble({
       italic: current.isActive("italic"),
       strike: current.isActive("strike"),
       code: current.isActive("code"),
+      underline: current.isActive("underline"),
+      math: inlineMathActive(current),
       link: current.isActive("link"),
+      // Code takes only colors: the formats do not apply inside it.
+      inCode: current.isActive("codeBlock"),
       text: activePageColor(current, "text"),
       background: activePageColor(current, "background"),
       // The block the selection is in: the card re-renders when it moves to
@@ -267,6 +282,17 @@ export function PageCommentBubble({
     editor.commands.setTextSelection(to);
   };
 
+  // The passage goes to the composer as its context; the card closes, as
+  // for a comment, and the selection collapses behind it.
+  const ask = () => {
+    if (!askNumo || editor.isDestroyed) return;
+    const { from, to } = editor.state.selection;
+    const text = editor.state.doc.textBetween(from, to, "\n").trim();
+    if (!text) return;
+    askNumo({ text });
+    editor.commands.setTextSelection(to);
+  };
+
   // A click outside the editor ends the selection, like in any text editor:
   // the card would otherwise stay over a passage nobody is working on. A click
   // in the card itself, or in a menu or dialog it opened (the link dialog),
@@ -290,6 +316,68 @@ export function PageCommentBubble({
     return () => document.removeEventListener("pointerdown", onPointerDown, true);
   }, [editor]);
 
+  // The selection copied as the editor copies it (rich text and plain text):
+  // the card keeps the editor's selection, so the browser's copy reads it.
+  const copySelection = () => {
+    editor.view.focus();
+    if (document.execCommand("copy")) toast.success(t("selectionCopied"));
+    else {
+      const { from, to } = editor.state.selection;
+      void navigator.clipboard
+        .writeText(editor.state.doc.textBetween(from, to, "\n"))
+        .then(() => toast.success(t("selectionCopied")), () => toast.error(t("copyFailed")));
+    }
+  };
+
+  // The card follows the passage while its pane scrolls (the reference is
+  // measured afresh on every update), and closes once the passage has left
+  // the visible part of that pane.
+  const reference = useMemo(
+    () => () => {
+      if (editor.isDestroyed || !editor.view.dom.isConnected) return null;
+      const { from, to } = editor.state.selection;
+      const rect = () => posToDOMRect(editor.view, from, to);
+      return { getBoundingClientRect: rect, getClientRects: () => [rect()], contextElement: editor.view.dom };
+    },
+    [editor]
+  );
+  // Scrolls are caught in the capture phase on the document: they do not
+  // bubble, and the pane an editor ends up in is only known once it is laid
+  // out (a retained page, a side panel). Only a scroll of something that
+  // contains this editor concerns the card.
+  useEffect(() => {
+    // One update per frame while the pane scrolls, read once the frame's
+    // layout is known: an update read from inside the scroll event itself
+    // lands one position behind.
+    let frame = 0;
+    let scroller: Element | null = null;
+    const update = () => {
+      frame = 0;
+      if (editor.isDestroyed || editor.state.selection.empty || !scroller) return;
+      const { from, to } = editor.state.selection;
+      const passage = posToDOMRect(editor.view, from, to);
+      const visible = scroller === document.documentElement
+        ? { top: 0, bottom: window.innerHeight }
+        : scroller.getBoundingClientRect();
+      const gone = passage.bottom < visible.top || passage.top > visible.bottom;
+      editor.view.dispatch(
+        editor.state.tr.setMeta(SELECTION_MENU_KEY, gone ? "hide" : "updatePosition")
+      );
+    };
+    const onScroll = (event: Event) => {
+      if (editor.isDestroyed || editor.state.selection.empty) return;
+      const target = event.target === document ? document.documentElement : event.target;
+      if (!(target instanceof Element) || !target.contains(editor.view.dom)) return;
+      scroller = target;
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    document.addEventListener("scroll", onScroll, { capture: true, passive: true });
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      document.removeEventListener("scroll", onScroll, { capture: true });
+    };
+  }, [editor]);
+
   const colorRows = (kind: PageColorKind) =>
     [null, ...PAGE_COLORS].map((color) => (
       <ToolbarRow key={`${kind}:${color ?? "none"}`} onClick={() => {
@@ -307,11 +395,22 @@ export function PageCommentBubble({
     <>
       <BubbleMenu
         editor={editor}
+        pluginKey={SELECTION_MENU_KEY}
         updateDelay={SELECTION_MENU_DELAY_MS}
+        // Repositioned on every scroll frame rather than after a pause, so it
+        // moves with the passage instead of jumping after it.
+        resizeDelay={0}
         shouldShow={shouldShowSelectionMenu}
-        // Shifted on both axes so the whole card stays in the window, even
-        // when the selected passage itself runs out of it.
-        options={{ placement: "top-start", offset: 8, flip: { padding: 8 }, shift: { padding: 8, crossAxis: true } }}
+        getReferencedVirtualElement={reference}
+        // Kept whole along the line, and flipped under the passage near the
+        // top: it stays WITH the passage rather than pinned to the window's
+        // edge, and closes when the passage scrolls away (above).
+        options={{
+          placement: "top-start",
+          offset: 8,
+          flip: { padding: OVERLAY_COLLISION_PADDING },
+          shift: { padding: OVERLAY_COLLISION_PADDING },
+        }}
         appendTo={floating ? () => document.body : undefined}
         data-floating-surface
         {...{ [SELECTION_TOOLBAR_ATTR]: "" }}
@@ -335,74 +434,102 @@ export function PageCommentBubble({
                 <Separator />
               </>
             )}
-            <div className="grid grid-cols-5 gap-1 px-1 py-0.5">
+            <div className="grid grid-cols-6 gap-1 px-1 py-0.5">
               <ToolbarButton label={t("color")} onClick={() => setPanel("color")}>
                 <ColorSwatch kind="text" color={active?.text ?? null} />
               </ToolbarButton>
-              <ToolbarButton
-                label={t("selectionBold")}
-                shortcut={[mod, "B"]}
-                active={active?.bold}
-                onClick={() => editor.chain().focus().toggleBold().run()}
-              >
-                <HugeiconsIcon icon={TextBoldIcon} className="size-4" />
-              </ToolbarButton>
-              <ToolbarButton
-                label={t("selectionItalic")}
-                shortcut={[mod, "I"]}
-                active={active?.italic}
-                onClick={() => editor.chain().focus().toggleItalic().run()}
-              >
-                <HugeiconsIcon icon={TextItalicIcon} className="size-4" />
-              </ToolbarButton>
-              <ToolbarButton
-                label={t("selectionStrike")}
-                shortcut={[mod, "⇧", "S"]}
-                active={active?.strike}
-                onClick={() => editor.chain().focus().toggleStrike().run()}
-              >
-                <HugeiconsIcon icon={TextStrikethroughIcon} className="size-4" />
-              </ToolbarButton>
-              <ToolbarButton
-                label={t("selectionCode")}
-                shortcut={[mod, "E"]}
-                active={active?.code}
-                onClick={() => editor.chain().focus().toggleCode().run()}
-              >
-                <AppIcon icon={Code2} className="size-4" />
-              </ToolbarButton>
-              <ToolbarButton
-                label={active?.link ? t("selectionEditLink") : t("selectionAddLink")}
-                active={active?.link}
-                onClick={() => setEditLinkOpen(true)}
-              >
-                <HugeiconsIcon icon={Link02Icon} className="size-4" />
-              </ToolbarButton>
-              {active?.link ? (
-                <ToolbarButton
-                  label={t("selectionRemoveLink")}
-                  onClick={() =>
-                    editor.chain().focus().extendMarkRange("link").unsetLink().run()
-                  }
-                >
-                  <HugeiconsIcon icon={Unlink01Icon} className="size-4" />
-                </ToolbarButton>
-              ) : null}
-              <ToolbarButton
-                label={t("selectionClearFormatting")}
-                onClick={() => editor.chain().focus().unsetAllMarks().run()}
-              >
-                <HugeiconsIcon icon={TextClearIcon} className="size-4" />
+              {active?.inCode ? null : (
+                <>
+                  <ToolbarButton
+                    label={t("selectionBold")}
+                    shortcut={[mod, "B"]}
+                    active={active?.bold}
+                    onClick={() => editor.chain().focus().toggleBold().run()}
+                  >
+                    <HugeiconsIcon icon={TextBoldIcon} className="size-4" />
+                  </ToolbarButton>
+                  <ToolbarButton
+                    label={t("selectionItalic")}
+                    shortcut={[mod, "I"]}
+                    active={active?.italic}
+                    onClick={() => editor.chain().focus().toggleItalic().run()}
+                  >
+                    <HugeiconsIcon icon={TextItalicIcon} className="size-4" />
+                  </ToolbarButton>
+                  <ToolbarButton
+                    label={t("selectionUnderline")}
+                    shortcut={[mod, "U"]}
+                    active={active?.underline}
+                    onClick={() => editor.chain().focus().toggleUnderline().run()}
+                  >
+                    <HugeiconsIcon icon={TextUnderlineIcon} className="size-4" />
+                  </ToolbarButton>
+                  <ToolbarButton
+                    label={t("selectionStrike")}
+                    shortcut={[mod, "⇧", "S"]}
+                    active={active?.strike}
+                    onClick={() => editor.chain().focus().toggleStrike().run()}
+                  >
+                    <HugeiconsIcon icon={TextStrikethroughIcon} className="size-4" />
+                  </ToolbarButton>
+                  <ToolbarButton
+                    label={t("selectionCode")}
+                    shortcut={[mod, "E"]}
+                    active={active?.code}
+                    onClick={() => editor.chain().focus().toggleCode().run()}
+                  >
+                    <AppIcon icon={Code2} className="size-4" />
+                  </ToolbarButton>
+                  <ToolbarButton
+                    label={active?.link ? t("selectionEditLink") : t("selectionAddLink")}
+                    active={active?.link}
+                    onClick={() => setEditLinkOpen(true)}
+                  >
+                    <HugeiconsIcon icon={Link02Icon} className="size-4" />
+                  </ToolbarButton>
+                  {active?.link ? (
+                    <ToolbarButton
+                      label={t("selectionRemoveLink")}
+                      onClick={() =>
+                        editor.chain().focus().extendMarkRange("link").unsetLink().run()
+                      }
+                    >
+                      <HugeiconsIcon icon={Unlink01Icon} className="size-4" />
+                    </ToolbarButton>
+                  ) : null}
+                  {editor.schema.nodes[INLINE_MATH_NODE] ? (
+                    <ToolbarButton
+                      label={t("mathInline")}
+                      active={active?.math}
+                      onClick={() => toggleInlineMath(editor)}
+                    >
+                      <HugeiconsIcon icon={MATH_ICON} className="size-4" />
+                    </ToolbarButton>
+                  ) : null}
+                  <ToolbarButton
+                    label={t("selectionClearFormatting")}
+                    onClick={() => editor.chain().focus().unsetAllMarks().run()}
+                  >
+                    <HugeiconsIcon icon={TextClearIcon} className="size-4" />
+                  </ToolbarButton>
+                </>
+              )}
+              <ToolbarButton label={t("selectionCopy")} shortcut={[mod, "C"]} onClick={copySelection}>
+                <HugeiconsIcon icon={Copy01Icon} className="size-4" />
               </ToolbarButton>
             </div>
+            {onComment || askNumo ? <Separator /> : null}
+            {askNumo ? (
+              <ToolbarRow onClick={ask}>
+                <NumoIcon animated={false} className="size-4 shrink-0" />
+                <span className="truncate">{tBulk("askNumo")}</span>
+              </ToolbarRow>
+            ) : null}
             {onComment ? (
-              <>
-                <Separator />
-                <ToolbarRow onClick={comment}>
-                  <HugeiconsIcon icon={MessageAdd01Icon} className="size-4 shrink-0 text-muted-foreground" />
-                  <span className="truncate">{t("commentSelection")}</span>
-                </ToolbarRow>
-              </>
+              <ToolbarRow onClick={comment}>
+                <HugeiconsIcon icon={MessageAdd01Icon} className="size-4 shrink-0 text-muted-foreground" />
+                <span className="truncate">{t("commentSelection")}</span>
+              </ToolbarRow>
             ) : null}
           </>
         ) : (

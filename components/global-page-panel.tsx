@@ -7,7 +7,7 @@
 // not a document to read beside something, so it never stays in the panel.
 // Callers only know an id; the project's page list knows what it is.
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { PageView } from "@/components/pages/page-view";
@@ -84,6 +84,9 @@ export function GlobalPagePanel({
   );
 
   const showsDocument = !loading && !isDatabase;
+  // The page's menu sits in the panel's header; a trashed page closes it.
+  const [menuSlot, setMenuSlot] = useState<HTMLElement | null>(null);
+  const panelMenu = useMemo(() => ({ slot: menuSlot, onTrashed: onClose }), [menuSlot, onClose]);
   return (
     <PagePeekPanel
       open={open}
@@ -91,10 +94,12 @@ export function GlobalPagePanel({
       expandLabel={t("expand")}
       onExpand={() => void leave(() => openFullPage(projectId, openId))}
       onClose={() => void leave()}
+      actionsSlot={showsDocument ? setMenuSlot : undefined}
     >
       {showsDocument ? (
         <PageView
           panel
+          panelMenu={panelMenu}
           key={openId}
           projectId={projectId}
           pageId={openId}

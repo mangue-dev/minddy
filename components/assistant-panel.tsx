@@ -116,6 +116,7 @@ export function AssistantPanel() {
       attachments,
       intent,
       displayMode,
+      focusComposer,
     } = pendingOptions;
     const targetProjectId =
       projectId === undefined ? scopeProjectId : projectId;
@@ -149,6 +150,8 @@ export function AssistantPanel() {
 
     if (draft) {
       handle.fill(draft);
+    } else if (focusComposer) {
+      handle.focus();
     }
 
     clearPendingOptions();

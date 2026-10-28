@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 18,
-  "sourceRevision": 17,
+  "revision": 19,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-28",
   "compatibility": {
@@ -59,13 +59,15 @@
       "components/settings/account-smart-fill-section.tsx",
       "components/objective-relations-section.tsx",
       "components/create-issue-dialog.tsx",
-      "components/app-shell-chrome.tsx"
+      "components/app-shell-chrome.tsx",
+      "components/editor/find-bar.tsx",
+      "lib/keyboard/find-shortcut.ts"
     ]
   },
   "review": {
-    "revision": 18,
-    "fact": "agent:claude-code (New page in the project new-tab palette checked against components/app-shell-chrome.tsx and components/command-palette.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (es changed passages with catalog UI labels; equivalent meaning to en revision 17; self-reviewed; agent review, not human acceptance)",
+    "revision": 19,
+    "fact": "agent:claude-code (Command/Ctrl+F scope (page or task notebook on screen, the browser's find elsewhere and under another dialog) checked against lib/keyboard/find-shortcut.ts, components/editor/find-bar.tsx and lib/keyboard/shortcuts.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (es changed passages with catalog UI labels; equivalent meaning to en revision 18; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-28"
   },
   "related": [
@@ -87,7 +89,7 @@
       "src": "/documentation/es/work-navigation.png",
       "alt": "Navegación del proyecto junto al tablero de incidencias de demostración.",
       "caption": "La barra del proyecto da acceso a incidencias, objetivos, páginas y clasificación de entradas.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -104,7 +106,7 @@
       "src": "/documentation/es/work-search.png",
       "alt": "Resultados de búsqueda del identificador de una incidencia de demostración.",
       "caption": "La paleta encuentra la incidencia por identificador junto a las páginas del proyecto; abrir un resultado conserva sus reglas de acceso.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -164,6 +166,8 @@ Abre la paleta de comandos desde el control de búsqueda de la navegación. Busc
 Pulsa Command+K en macOS o Ctrl+K en Windows/Linux para abrir la paleta de comandos; Command/Ctrl+P es un atajo alternativo de la aplicación. Fuera del texto editable, ? abre la ayuda de atajos y C la creación de incidencias. Sobre una tarjeta de incidencia bajo el puntero o en sus controles de detalle compatibles, S abre el estado, P la prioridad, E el esfuerzo, A el responsable, L las categorías, D la fecha límite y O el objetivo. R añade una relación desde esos mismos lugares, en la página de un objetivo y en el formulario de nueva incidencia: elige el tipo de relación y después la otra incidencia u objetivo. Si la tarjeta forma parte de una selección, estas teclas cambian todas las incidencias seleccionadas; el responsable, el objetivo, las categorías y las relaciones solo se aplican a las incidencias seleccionadas del proyecto de esa tarjeta. Mayús+C lleva a un campo de comentario listo para escribir, con el hilo desplazado hasta su último mensaje: el de una tarjeta de incidencia bajo el puntero o de una fila bajo el puntero en la lista de objetivos, sugerencias, pull requests, páginas o clasificación, o, si no hay nada bajo el puntero, el de la incidencia, el objetivo, la sugerencia, la pull request o la página en pantalla. Una página abre para ello su panel **Actividad**. Mayús+C solo actúa sobre ese elemento, aunque la tarjeta forme parte de una selección. En la página de un objetivo y en el formulario de nuevo objetivo, S abre su estado, A su responsable, D su fecha objetivo y C su color; ahí, C no crea una incidencia. Estas acciones de una sola tecla no interceptan la escritura en campos, áreas de texto ni editores de contenido. Las secuencias de navegación como G y después H (Inicio) o G y después I (Bandeja de entrada) usan dos teclas sucesivas. G y después W lleva a Páginas solo dentro de un proyecto.
 
 Para llegar a un ajuste, escribe su nombre en la paleta de comandos o en el campo de filtro de la parte superior de la barra lateral de ajustes. Ambos encuentran cada tarjeta de ajustes y los ajustes individuales, como el idioma, el tema, cada paleta, la transparencia y los dos interruptores de **Iniciar una incidencia**. Al elegir un resultado se abre la pestaña de ajustes correcta, se desplaza hasta la tarjeta o la fila y la resalta. Comando+T en macOS o Ctrl+T en Windows/Linux abre la paleta de nueva pestaña; un ajuste elegido allí se abre en una nueva pestaña de la app. Dentro de un proyecto, también ofrece **Nueva página**, que crea una página en ese proyecto y la abre en una nueva pestaña. Las palabras clave en inglés y en francés funcionan sea cual sea el idioma de la interfaz.
+
+Comando+F en macOS o Ctrl+F en Windows/Linux busca en la página o el cuaderno de tareas en pantalla con la [barra de búsqueda y reemplazo](/es/documentacion/pages#find-and-replace) de minddy. En otras pantallas, y cuando hay otro cuadro de diálogo abierto sobre la página, abre la búsqueda del navegador.
 
 Utiliza la ayuda de atajos para consultar los comandos disponibles en tu plataforma. minddy distingue los atajos de la aplicación, las acciones de propiedades de incidencias y los atajos nativos de pestañas o ventanas de escritorio. Comprueba dónde está el foco antes de usar un comando: escribir en un editor y actuar sobre la incidencia que lo rodea son contextos diferentes.
 

@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 21,
+  "revision": 23,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-28",
   "compatibility": {
@@ -57,6 +57,8 @@
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
       "components/assistant/assistant-context-bar.tsx",
+      "lib/use-ask-numo-about-selection.ts",
+      "lib/assistant-selection.ts",
       "lib/server/issue-reads.ts",
       "components/settings/account-settings-page.tsx",
       "lib/settings-sections.ts",
@@ -66,9 +68,9 @@
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code/MIN-826 (step 2 now names the conversation provider, checked against components/assistant/conversation-settings.tsx and the running app on the preview demo account; no figure recaptured, existing figures still match; earlier evidence retained in git history)",
-    "language": "agent:claude-code/MIN-826 (de translation of the changed passages with catalog UI labels; informal register; self-reviewed; agent review, not human acceptance)",
+    "revision": 23,
+    "fact": "agent:claude-code (new paragraph on asking Numo about a selected passage, checked against lib/use-ask-numo-about-selection.ts, lib/assistant-context.ts and components/assistant/assistant-shell.tsx; not checked in the running app; no figure recaptured, existing figures still match; earlier evidence retained in git history)",
+    "language": "agent:claude-code (de translation of the added paragraph with catalog UI labels; informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-28"
   },
   "related": [
@@ -99,7 +101,7 @@
       "src": "/documentation/de/work-with-numo-workflow.png",
       "alt": "Numo-Demonstrationsgespräch mit Seitenkontext, Prioritätsänderung und gespeicherter Antwort.",
       "caption": "Vorhandener Demonstrationsverlauf, für die Anzeige übersetzt. Die gespeicherte Antwort nennt AUR-11 und AUR-7. Die Aufnahme belegt keine neue Ausführung.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -116,7 +118,7 @@
       "src": "/documentation/de/numo-permissions-and-approvals-workflow.svg",
       "alt": "Numo-Berechtigungsmatrix für Projektaktionen, persönliche Verbindungen und Routinen.",
       "caption": "Projektzugriff und ausdrückliche Aufträge begrenzen Numo-Aktionen. Externe Inhalte können keine Berechtigung erteilen.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -177,7 +179,7 @@
       "src": "/documentation/de/numo-execution-model-flow.svg",
       "alt": "Diagramm: Absicht, Nachricht und UUID speichern. Turn beanspruchen, Werkzeuge und Ergebnisse sichern. Auf deine Antwort warten, wenn eine Eingabe nötig ist. Ereignisse wiedergeben; unklare Writes klären.",
       "caption": "Lies die Schritte in dieser Reihenfolge. Absicht, Nachricht und UUID speichern. Turn beanspruchen, Werkzeuge und Ergebnisse sichern. Auf deine Antwort warten, wenn eine Eingabe nötig ist. Ereignisse wiedergeben; unklare Writes klären.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -209,7 +211,7 @@
       "src": "/documentation/de/numo-mcp-connections-workflow.png",
       "alt": "Persönliche MCP-Einstellungen mit leerer Liste und Schaltfläche zum Hinzufügen eines Servers.",
       "caption": "Numo-Verbindungen sind persönlich. Projektroutinen verwenden die Verbindungen des Projektinhabers.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -226,7 +228,7 @@
       "src": "/documentation/de/numo-mcp-connections-config-workflow.png",
       "alt": "Notion-Verbindungsassistent mit der aus dem Katalog bekannten Anmeldemethode.",
       "caption": "Anmeldeschritt eines Katalogdienstes. Es wurden keine Zugangsdaten eingegeben und kein Server kontaktiert.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -260,6 +262,8 @@ Numo arbeitet mit dem Kontext deiner Unterhaltung und den Berechtigungen deines 
 4. Lies die Antwort und öffne Ticket- oder Quellenlinks. Prüfe nach einer Änderung das betroffene Objekt.
 
 In einem neuen, leeren Gespräch schlagen vier Zeilen über dem Eingabefeld Aufträge vor, die zur aktuellen Seite passen, etwa **Dieses Ticket zusammenfassen** oder **Einen Umsetzungsplan schreiben**, wenn ein Ticket im Seitenpanel geöffnet ist. Eine Zeile füllt das Eingabefeld, ohne es abzusenden, sodass du den Auftrag zuerst anpassen kannst. Die Zeilen verschwinden, sobald das Eingabefeld Text enthält, und erscheinen wieder, wenn du es leerst. Sie werden im Desktop-Layout angezeigt, nicht auf einem Telefon.
+
+Um Numo zu einer Textstelle zu fragen, markiere sie in einem Editor, etwa auf einer Seite oder in einer Ticketbeschreibung, und wähle am Computer **Numo fragen** in der Auswahlleiste. Das Panel öffnet sich, ohne etwas zu senden: Neben der Seite oder dem Ticket, aus dem sie stammt, erscheint die Textstelle als Kontext-Pill mit ihren ersten Wörtern; fährst du mit der Maus über die Pill, siehst du die ganze Stelle. Tippe deine Frage, etwa „Formuliere das knapper“ oder „Mach daraus Tickets“, und sende sie ab. Die Textstelle geht nur mit dieser Nachricht mit. Um sie wegzulassen, entferne ihre Pill mit dem Kreuz.
 
 Numo kann sich außerdem die Bilder in einer Ticket- oder Zielbeschreibung, einem Plan, einem Kommentar, einer Seite oder deinem Notizbuch ansehen, wenn das Modell der Unterhaltung Bilder annimmt. Ohne diese Fähigkeit sagt Numo, dass es ein Bild nicht ansehen konnte, statt es zu beschreiben.
 

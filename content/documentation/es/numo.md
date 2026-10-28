@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 21,
+  "revision": 23,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-28",
   "compatibility": {
@@ -57,6 +57,8 @@
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
       "components/assistant/assistant-context-bar.tsx",
+      "lib/use-ask-numo-about-selection.ts",
+      "lib/assistant-selection.ts",
       "lib/server/issue-reads.ts",
       "components/settings/account-settings-page.tsx",
       "lib/settings-sections.ts",
@@ -66,9 +68,9 @@
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code/MIN-826 (step 2 now names the conversation provider, checked against components/assistant/conversation-settings.tsx and the running app on the preview demo account; no figure recaptured, existing figures still match; earlier evidence retained in git history)",
-    "language": "agent:claude-code/MIN-826 (es translation of the changed passages with catalog UI labels; informal register; self-reviewed; agent review, not human acceptance)",
+    "revision": 23,
+    "fact": "agent:claude-code (new paragraph on asking Numo about a selected passage, checked against lib/use-ask-numo-about-selection.ts, lib/assistant-context.ts and components/assistant/assistant-shell.tsx; not checked in the running app; no figure recaptured, existing figures still match; earlier evidence retained in git history)",
+    "language": "agent:claude-code (es translation of the added paragraph with catalog UI labels; informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-28"
   },
   "related": [
@@ -99,7 +101,7 @@
       "src": "/documentation/es/work-with-numo-workflow.png",
       "alt": "Conversación de demostración de Numo con contexto, cambio de prioridad y respuesta guardada.",
       "caption": "Conversación de demostración existente, traducida para mostrarla. La respuesta guardada cita AUR-11 y AUR-7; la captura no acredita una nueva ejecución.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -116,7 +118,7 @@
       "src": "/documentation/es/numo-permissions-and-approvals-workflow.svg",
       "alt": "Matriz de permisos de Numo para acciones del proyecto, conexiones personales y rutinas.",
       "caption": "El acceso al proyecto y las peticiones explícitas limitan las acciones de Numo; el contenido externo no concede permisos.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -177,7 +179,7 @@
       "src": "/documentation/es/numo-execution-model-flow.svg",
       "alt": "Diagrama: Persistir intención, mensaje y UUID. Reclamar turno, guardar herramientas y resultados. Esperar tu respuesta cuando haga falta información. Releer eventos y conciliar escrituras inciertas.",
       "caption": "Sigue las etapas en este orden. Persistir intención, mensaje y UUID. Reclamar turno, guardar herramientas y resultados. Esperar tu respuesta cuando haga falta información. Releer eventos y conciliar escrituras inciertas.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -209,7 +211,7 @@
       "src": "/documentation/es/numo-mcp-connections-workflow.png",
       "alt": "Ajustes MCP personales, lista vacía y botón para añadir otro servidor.",
       "caption": "Las conexiones de Numo son personales; las rutinas usan las del propietario del proyecto.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -226,7 +228,7 @@
       "src": "/documentation/es/numo-mcp-connections-config-workflow.png",
       "alt": "Asistente de conexión de Notion con el método de inicio de sesión conocido por el catálogo.",
       "caption": "Paso de inicio de sesión de un servicio del catálogo. No se introdujeron credenciales ni se contactó con ningún servidor.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-21",
       "viewport": [
@@ -260,6 +262,8 @@ Abre la incidencia o el proyecto y usa el botón flotante de Numo. La página ac
 4. Lee la respuesta y abre sus enlaces a incidencias o fuentes. Si pediste una modificación, comprueba el objeto modificado.
 
 En una conversación nueva y vacía, cuatro filas de sugerencias encima del campo de redacción proponen peticiones adaptadas a la página actual, por ejemplo **Resumir esta incidencia** o **Escribir un plan de implementación** cuando hay una incidencia abierta en el panel lateral. Elegir una fila rellena el campo sin enviarlo, para que puedas ajustar la petición antes. Las filas desaparecen en cuanto el campo contiene texto y vuelven cuando lo vacías. Aparecen en el diseño de escritorio, no en un teléfono.
+
+Para preguntar a Numo por un fragmento, selecciónalo en un editor, como una página o la descripción de una incidencia, y elige **Pregúntale a Numo** en la barra de herramientas de selección, en un ordenador. El panel se abre sin enviar nada: junto a la página o la incidencia de la que procede, el fragmento aparece como una píldora de contexto con sus primeras palabras, y al pasar el cursor sobre la píldora ves el fragmento completo. Escribe tu pregunta, por ejemplo «Reescribe esto de forma más concisa» o «Crea incidencias a partir de esto», y envíala. El fragmento acompaña solo a ese mensaje. Para no incluirlo, quita su píldora con su cruz.
 
 Numo también puede ver las imágenes de la descripción de una incidencia o de un objetivo, de un plan, de un comentario, de una página o de tu cuaderno cuando el modelo de la conversación acepta imágenes. Sin esa capacidad, Numo indica que no pudo ver la imagen en lugar de describirla.
 

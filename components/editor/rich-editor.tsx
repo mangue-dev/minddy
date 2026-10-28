@@ -102,6 +102,8 @@ import {
 } from "@/components/pages/pages-lookup";
 import { TitleBridge } from "@/components/pages/title-bridge";
 import { MarkdownLinkMenu } from "@/components/markdown-link-menu";
+import { MathEditMenu } from "@/components/editor/math-edit-menu";
+import { setMathLabels } from "@/components/pages/blocks/math";
 import {
   PageCollaboration,
   pageCaretsKey,
@@ -114,6 +116,8 @@ import { MobileEditorToolbar } from "@/components/editor/mobile-editor-toolbar";
 import { useMarginCaret } from "@/components/editor/margin-caret";
 import { isMobileLayout } from "@/lib/app-layout";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
+import { FindReplace } from "@/components/editor/find-replace";
+import { FindBar } from "@/components/editor/find-bar";
 
 export interface RichEditorMentions extends MentionSuggestOptions {
   /** Rebuild mention nodes from the plain-text form stored by agent writes. */
@@ -334,6 +338,9 @@ export interface RichEditorProps {
    name and schema; only its behavior and serialization change. Read at
    build time. */
   nodeExtensions?: Record<string, AnyExtension>;
+  /** The find and replace bar on ⌘F (find-bar.tsx): pages and the notebook
+   only, never descriptions, comments or composers. Read at build time. */
+  find?: boolean;
   autoFocus?: boolean;
   /**
    * Build the editor during the first render rather than in an effect, so the
@@ -373,6 +380,7 @@ export function RichEditor({
   slashFirst,
   extensions: surfaceExtensions,
   nodeExtensions,
+  find = false,
   autoFocus = false,
   immediateRender = false,
   onFocus,
@@ -432,6 +440,8 @@ export function RichEditor({
     copied: tCommon("copied"),
     language: tCommon("codeLanguage"),
   });
+  // Same for an empty equation's placeholder (blocks/math.ts).
+  setMathLabels({ empty: t("mathEmpty") });
 
   // The title bracket goes through a ref, and the function given to the extension
   // NEVER change identity: tiptap reapplies what moved, and a function remade
@@ -484,6 +494,7 @@ export function RichEditor({
 
   const [fixedSurfaceExtensions] = useState(() => surfaceExtensions ?? []);
   const [fixedNodeExtensions] = useState(() => nodeExtensions);
+  const [hasFind] = useState(find);
 
   const extensions = useMemo(
     () =>
@@ -545,6 +556,7 @@ export function RichEditor({
             uploadsRef.current ? { imagesOnly: Boolean(uploadsRef.current.imagesOnly) } : null,
         }),
         ...fixedSurfaceExtensions,
+        ...(hasFind ? [FindReplace] : []),
         // The transition to the TITLE, last and in low priority: it does not
         // takes ⌫ and ↑ only if no one else wanted them (title-bridge.ts).
         ...(hasTitle ? [TitleBridge.configure({ onLeaveTop: leaveTop })] : []),
@@ -558,6 +570,7 @@ export function RichEditor({
       blocks,
       fixedSurfaceExtensions,
       fixedNodeExtensions,
+      hasFind,
     ]
   );
 
@@ -818,6 +831,9 @@ export function RichEditor({
       ref={rootRef}
       className={cn("page-editor", className)}
       data-gutter={chrome ? "" : undefined}
+      // The hover surface also reaches into the right margin, where a page
+      // shows the hovered block's comment button (block-gutter.tsx).
+      data-comment-gutter={chrome && onComment ? "" : undefined}
     >
       {chrome && <BlockGutter editor={editor} onComment={onComment} blockLinks={blockLinks} />}
       {/* The selection toolbar (bold, italic, link…) belongs to the editor,
@@ -836,8 +852,11 @@ export function RichEditor({
           onComment={onComment ? () => commentAtCaret(editor, onComment) : undefined}
         />
       )}
+      {editor && hasFind && <FindBar editor={editor} editable={canEdit} />}
       <EditorContent editor={editor} className={contentClassName} />
       <MarkdownLinkMenu editor={editor} />
+      {/* The LaTeX editor of an equation, opened by a click on it (blocks/math.ts). */}
+      {editor && canEdit && <MathEditMenu editor={editor} />}
       {/* The RESERVE at the bottom: around ten empty lines under the last
  block, clickable, which return the cursor to the end of the document.
  This is NOT around ten empty paragraphs — these would start in

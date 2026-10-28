@@ -24,7 +24,10 @@ describe("page interface regressions", () => {
   it("shows a grab cursor only once a block drag actually starts", () => {
     const gutter = source("components/pages/block-gutter.tsx");
 
-    expect(gutter).toContain("onElementDragStart={() => setDragging(true)}");
+    expect(gutter).toContain("setDragging(true);");
+    // A block drag is a move: no "copy" (+) cursor while it passes the text.
+    expect(gutter).toContain('event.dataTransfer.effectAllowed = "move"');
+    expect(gutter).toContain('event.dataTransfer.dropEffect = "move"');
     expect(gutter).toContain("onElementDragEnd={() => setDragging(false)}");
     expect(gutter).toContain('dragging && "cursor-grabbing"');
     expect(gutter).not.toContain('"cursor-grab"');

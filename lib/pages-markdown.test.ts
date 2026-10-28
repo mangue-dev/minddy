@@ -300,6 +300,13 @@ describe("un document qui contient tout", () => {
     "const fence = `un backtick dans du code`",
     "```",
     "",
+    // Equations, as a `$$` fence and inline.
+    "$$",
+    "\\frac{a}{b} = c",
+    "$$",
+    "",
+    "An inline equation $a^2 + b^2 = c^2$ beside a price of $5.",
+    "",
     "---",
     "",
     "<details>",

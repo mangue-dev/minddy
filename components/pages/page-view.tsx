@@ -22,6 +22,7 @@ import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
 import { useAppNavigation } from "@/lib/use-app-router";
 import { useAppTabDeparture } from "@/lib/app-tabs-context";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useFormatter, useTranslations } from "next-intl";
 import {
@@ -251,6 +252,14 @@ function isEmptyDoc(content: unknown): boolean {
  * to catch both by hand, we go back up - exactly what a
  * navigation from one page to another.
  */
+/** Where a page open in the side panel puts its menu: the panel's header
+    owns the slot, and trashing the page closes the panel instead of leaving
+    the screen underneath. */
+export interface PanelMenu {
+  slot: HTMLElement | null;
+  onTrashed: () => void;
+}
+
 /** The side panel's closing animation, before the history unmounts. */
 const HISTORY_CLOSE_MS = 400;
 
@@ -261,6 +270,7 @@ export function PageView({
   onNavigationReady,
   active = true,
   panel = false,
+  panelMenu,
 }: {
   projectId: string;
   pageId: string;
@@ -268,6 +278,7 @@ export function PageView({
   onNavigationReady?: (flush: () => Promise<boolean>) => void;
   active?: boolean;
   panel?: boolean;
+  panelMenu?: PanelMenu;
 }) {
   const [reload, setReload] = useState(0);
   return (
@@ -277,6 +288,7 @@ export function PageView({
       pageId={pageId}
       active={active}
       panel={panel}
+      panelMenu={panelMenu}
       onNavigate={onNavigate}
       onNavigationReady={onNavigationReady}
       onRestored={() => setReload((n) => n + 1)}
@@ -292,9 +304,11 @@ function PageSurface({
   onNavigationReady,
   active = true,
   panel = false,
+  panelMenu,
 }: {
   projectId: string;
   pageId: string;
+  panelMenu?: PanelMenu;
   /** A version has just been put back in place: the surface is going back up. */
   onRestored: () => void;
   onNavigate?: (pageId: string, databaseId?: string) => void;
@@ -848,7 +862,9 @@ function PageSurface({
       void (async () => {
         try {
           const trashed = await trashPage(target.id);
-          pushPagesHistory(base);
+          // In the side panel the page underneath stays: only the panel goes.
+          if (panelMenu) panelMenu.onTrashed();
+          else pushPagesHistory(base);
           toast.success(
             trashed > 1
               ? t("trashedWithChildren", { count: trashed })
@@ -859,7 +875,7 @@ function PageSurface({
         }
       })();
     },
-    [base, t, trashPage]
+    [base, t, trashPage, panelMenu]
   );
 
   const documentMenu = usePageDocumentMenu({
@@ -876,6 +892,27 @@ function PageSurface({
       favorite: summary?.favorite ?? page?.favorite ?? false,
     }),
     [pageId, title, summary?.favorite, page?.favorite]
+  );
+
+  // The page's menu: in the header of a full page, and in the side panel's
+  // own header (between Expand and Close) when the page is open there.
+  const pageMenu = (
+    <IssueActionsMenu
+      searchable={false}
+      // The key is ONLY displayed there: ⌘⇧L aims at the open page, which is
+      // this one and not the tree line we are flying over.
+      actions={documentMenu.actionsFor(pageRef, { shortcut: true })}
+      trigger={
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="text-muted-foreground hover:text-foreground"
+          aria-label={t("pageOptions")}
+        >
+          <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
+        </Button>
+      }
+    />
   );
 
   /* ── ⌘⇧L: copy this page's link ─────────────────────────────────── */
@@ -1046,25 +1083,11 @@ function PageSurface({
             </TooltipTrigger>
             <TooltipContent side="bottom">{t("comments")}</TooltipContent>
           </Tooltip>
-          <IssueActionsMenu
-            searchable={false}
-            // The key is ONLY displayed there: ⌘⇧L aims at the open page, which is
-            // this one and not the tree line we are flying over.
-            actions={documentMenu.actionsFor(pageRef, { shortcut: true })}
-            trigger={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="text-muted-foreground hover:text-foreground"
-                aria-label={t("pageOptions")}
-              >
-                <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
-              </Button>
-            }
-          />
+          {pageMenu}
         </div>
       </AppContentHeader>}
       {documentMenu.dialogs}
+      {panelMenu?.slot ? createPortal(pageMenu, panelMenu.slot) : null}
 
       {/* The table of contents floats at the right edge of the PANEL, therefore out of the
           container that moves by: it stays in its place while we go down

@@ -20,6 +20,7 @@ export function PagePeekPanel({
   expandLabel,
   onExpand,
   onClose,
+  actionsSlot,
   children,
 }: {
   open: boolean;
@@ -28,6 +29,9 @@ export function PagePeekPanel({
   expandLabel: string;
   onExpand: () => void;
   onClose: () => void;
+  /** Receives the element between Expand and Close where the page puts its
+      own menu (PageView's `panelMenu`). */
+  actionsSlot?: (element: HTMLElement | null) => void;
   children: ReactNode;
 }) {
   const tCommon = useTranslations("Common");
@@ -48,6 +52,7 @@ export function PagePeekPanel({
             <HugeiconsIcon icon={ExpandIcon} className="size-3.5" />
             {expandLabel}
           </Button>
+          {actionsSlot ? <div ref={actionsSlot} className="flex items-center" /> : null}
           <Button variant="ghost" size="icon-sm" aria-label={tCommon("close")} shortcut={["Esc"]} onClick={onClose}>
             <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
           </Button>

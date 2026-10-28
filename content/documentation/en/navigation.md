@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
-  "sourceRevision": 17,
+  "revision": 18,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-28",
   "compatibility": {
@@ -59,12 +59,14 @@
       "components/settings/account-smart-fill-section.tsx",
       "components/objective-relations-section.tsx",
       "components/create-issue-dialog.tsx",
-      "components/app-shell-chrome.tsx"
+      "components/app-shell-chrome.tsx",
+      "components/editor/find-bar.tsx",
+      "lib/keyboard/find-shortcut.ts"
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:claude-code (New page in the project new-tab palette checked against components/app-shell-chrome.tsx and components/command-palette.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "revision": 18,
+    "fact": "agent:claude-code (Command/Ctrl+F scope (page or task notebook on screen, the browser's find elsewhere and under another dialog) checked against lib/keyboard/find-shortcut.ts, components/editor/find-bar.tsx and lib/keyboard/shortcuts.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
     "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-28"
   },
@@ -87,7 +89,7 @@
       "src": "/documentation/en/work-navigation.png",
       "alt": "Project navigation beside the demonstration issue board.",
       "caption": "Use the project sidebar to switch between issues, objectives, pages and triage.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -103,7 +105,7 @@
       "src": "/documentation/en/work-search.png",
       "alt": "Search results for a demonstration issue identifier.",
       "caption": "The palette finds the issue by identifier alongside project pages; opening a result preserves its access rules.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -162,6 +164,8 @@ Open the command palette from the navigation search control. Search for a distin
 Press Command+K on macOS or Ctrl+K on Windows/Linux to open the command palette; Command/Ctrl+P is an alternative application binding. Outside editable text, ? opens shortcut help and C opens issue creation. On a hovered issue card or its supported detail controls, S opens status, P priority, E effort, A assignee, L categories, D due date and O objective. R adds a relation from the same places, on an objective page and in the new-issue form: choose the relation type, then the other issue or objective. When the card is part of a selection, these keys change every selected issue; assignee, objective, categories and relations only reach the selected issues of that card's project. Shift+C goes to a comment field, ready for typing, with the thread scrolled to its latest message: that of a hovered issue card or of a hovered row in the objectives, feedback, pull requests, pages or triage list, or, with nothing hovered, that of the issue, objective, feedback, pull request or page on screen. A page opens its **Activity** panel for it. Shift+C acts on that one item, even when the card is part of a selection. On an objective page and in the new-objective form, S opens its status, A its lead, D its target date and C its color; there, C does not create an issue. These single-key actions do not intercept typing in an input, textarea or content editor. Navigation sequences such as G then H (Home) and G then I (Inbox) use two successive keys; G then W reaches Pages only in a project context.
 
 To reach a setting, type its name in the command palette or in the filter field at the top of the settings sidebar. Both find every settings card and individual settings such as the language, the theme, each palette, transparency and the two **Starting an issue** switches. Choosing a result opens the right settings tab, scrolls to the card or row and highlights it. Command+T on macOS or Ctrl+T on Windows/Linux opens the new-tab palette; a setting chosen there opens in a new app tab. Inside a project, it also offers **New page**, which creates a page in that project and opens it in a new tab. English and French keywords work whatever the interface language.
+
+Command+F on macOS or Ctrl+F on Windows/Linux searches the page or the task notebook on screen with minddy's [find and replace bar](/docs/pages#find-and-replace). On other screens, and when another dialog is open over the page, it opens the browser's find.
 
 Use the keyboard shortcuts help to inspect the commands available on your platform. minddy distinguishes application shortcuts, issue-property actions and native desktop tab or window shortcuts. Check where focus is before using a command: typing inside an editor and acting on the surrounding issue are different contexts.
 

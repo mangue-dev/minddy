@@ -26,12 +26,13 @@ import { MarkdownLinkMark } from "@/components/markdown-link-mark";
 import UniqueID from "@tiptap/extension-unique-id";
 import { Markdown } from "tiptap-markdown";
 import { MentionNodeBase } from "@/components/mention-node";
+import { writeTextEscapingMath } from "@/components/pages/blocks/math";
+import type { MarkdownState } from "@/components/pages/blocks/types";
 import {
   BLOCK_ID_ATTRIBUTE,
   BLOCK_ID_TYPES,
   PageBlockShortcuts,
   blockExtensions,
-  pageColorExtensions,
   type BlockSet,
 } from "@/components/pages/blocks";
 
@@ -115,8 +116,10 @@ const MarkdownText = Text.extend({
   addStorage() {
     return {
       markdown: {
-        serialize(state: { text(text: string): void }, node: { text?: string }) {
-          state.text(escapeMarkdownTags(node.text ?? ""));
+        serialize(state: MarkdownState, node: { text?: string }) {
+          // A literal "$x$" in text is escaped so it does not read back as an
+          // equation (blocks/math.ts); prices never need it.
+          writeTextEscapingMath(state, () => state.text(escapeMarkdownTags(node.text ?? "")));
         },
         parse: {},
       },
@@ -158,8 +161,8 @@ export function pageExtensions(
     MarkdownText,
     ShiftEnterHardBreak,
     MarkdownLinkMark,
+    // The color marks come with the blocks (blocks/index.ts).
     ...blockExtensions({ headless, nodeViews, extensions, set: blocks }),
-    ...pageColorExtensions(),
     PageBlockShortcuts,
     mention,
     // The stable ID of the blocks, placed on BOTH sides: a page written in markdown

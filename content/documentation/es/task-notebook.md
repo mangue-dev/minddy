@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 10,
+  "revision": 12,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-28",
   "compatibility": {
@@ -44,13 +44,17 @@
       "components/scratchpad/scratchpad-editor.tsx",
       "lib/scratchpad-search.ts",
       "components/command-palette.tsx",
-      "components/editor/mobile-editor-toolbar.tsx"
+      "components/editor/mobile-editor-toolbar.tsx",
+      "components/editor/find-bar.tsx",
+      "lib/keyboard/find-shortcut.ts",
+      "components/pages/blocks/math.ts",
+      "components/editor/math-edit-menu.tsx"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:claude-code (phone keyboard toolbar sentence checked against components/editor/mobile-editor-toolbar.tsx and components/editor/rich-editor.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (es changed passages with catalog UI labels; equivalent meaning to en revision 10; self-reviewed; agent review, not human acceptance)",
+    "revision": 12,
+    "fact": "agent:claude-code (Command/Ctrl+F find and replace bar in the open notebook checked against components/scratchpad/scratchpad-editor.tsx, components/editor/find-bar.tsx and lib/keyboard/find-shortcut.ts; equations (the `/` Equation entry, `$$…$$` typed in a line, click to edit the LaTeX with a live preview in a popover or phone sheet, red error, empty save removing it, `$…$` and `$$` fence Markdown with prices kept as text) checked against components/pages/blocks/math.ts, components/editor/math-edit-menu.tsx and lib/pages-math.test.ts; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the changed controls)",
+    "language": "agent:claude-code (es changed passages with catalog UI labels; equivalent meaning to en revision 11; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-28"
   },
   "related": [
@@ -69,7 +73,7 @@
       "src": "/documentation/es/work-task-notebook.png",
       "alt": "Tareas personales de demostración traducidas en el cuaderno.",
       "caption": "El cuaderno mantiene los pasos personales fuera de la jerarquía de incidencias del proyecto. Los estados del ejemplo no se modifican.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -93,7 +97,7 @@ Abre el cuaderno de tareas desde los controles personales de la aplicación, o p
 
 Para volver a encontrar una tarea, abre la paleta de comandos con Command+K en macOS o Ctrl+K en Windows/Linux y escribe palabras de la tarea. Las tareas pendientes aparecen en **Cuaderno de tareas**, con su sección; las tareas completadas o canceladas y las preguntas no aparecen. Elige una para abrir el cuaderno en esa tarea. Mientras no escribas nada, la paleta no muestra las tareas del cuaderno.
 
-El cuaderno usa el mismo editor que las páginas del proyecto, con los mismos controles de bloque: pasa el cursor sobre un bloque para arrastrarlo, abrir su menú o añadir un bloque con **+**. Escribe `/` para insertar una tarea, que aparece primero, o un encabezado, una lista, una cita, un **Destacado**, un bloque de código, un **Desplegable** o un divisor, o elige **Dictar una tarea** para dictar tareas en voz alta. El cuaderno se sigue guardando en Markdown, así que Numo y los agentes conectados leen las mismas tareas y estados. Selecciona texto para darle formato o añadir un enlace. Pega o suelta una imagen, o elige **Imagen** en el menú `/`, para insertarla en una nota. Los demás tipos de archivo van en las páginas. En un teléfono, la barra encima del teclado sustituye a los tiradores de bloque, a la barra de selección y al menú `@` al escribir; la [guía de páginas](/es/documentacion/pages#editor-formatting) la describe.
+El cuaderno usa el mismo editor que las páginas del proyecto, con los mismos controles de bloque: pasa el cursor sobre un bloque para arrastrarlo, abrir su menú o añadir un bloque con **+**. Escribe `/` para insertar una tarea, que aparece primero, o un encabezado, una lista, una cita, un **Destacado**, un bloque de código, una **Ecuación**, un **Desplegable** o un divisor, o elige **Dictar una tarea** para dictar tareas en voz alta. El cuaderno se sigue guardando en Markdown, así que Numo y los agentes conectados leen las mismas tareas y estados. Selecciona texto para darle formato o añadir un enlace. Pega o suelta una imagen, o elige **Imagen** en el menú `/`, para insertarla en una nota. Los demás tipos de archivo van en las páginas. En un teléfono, la barra encima del teclado sustituye a los tiradores de bloque, a la barra de selección y al menú `@` al escribir; la [guía de páginas](/es/documentacion/pages#editor-formatting) la describe. Mientras el cuaderno está abierto, Command+F en macOS o Ctrl+F en Windows/Linux abre la misma [barra de búsqueda y reemplazo](/es/documentacion/pages#find-and-replace) que en una página.
 
 El menú **Acciones del cuaderno** (`…`) ofrece **Copiar todo como prompt**, que copia el cuaderno completo para tu propio agente de código, y **Eliminar las tareas completadas y descartadas**. La eliminación pide confirmación, borra las tareas completadas y canceladas junto con los encabezados que quedan vacíos, y conserva las tareas pendientes o en curso. Para copiar menos, usa **Copiar la sección como prompt** en un encabezado o **Copiar como prompt** en una tarea. Si **Iniciar la incidencia o la tarea cuando copio su prompt** está activado en **Ajustes de la cuenta** → **Incidencias**, copiar también pasa a en curso las tareas pendientes copiadas.
 

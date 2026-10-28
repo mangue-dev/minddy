@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
-  "sourceRevision": 19,
+  "revision": 20,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-28",
   "compatibility": {
@@ -82,12 +82,23 @@
       "lib/pages-export.ts",
       "components/public-page-body.tsx",
       "components/pages/page-comment-dialog.tsx",
-      "lib/keyboard/shortcuts.ts"
+      "lib/keyboard/shortcuts.ts",
+      "components/editor/find-bar.tsx",
+      "components/editor/find-replace.ts",
+      "lib/keyboard/find-shortcut.ts",
+      "components/pages/blocks/math.ts",
+      "components/editor/math-edit-menu.tsx",
+      "components/code-block-lowlight.ts",
+      "app/globals.css",
+      "components/pages/page-peek-panel.tsx",
+      "components/global-page-panel.tsx",
+      "components/pages/pages-shell.tsx",
+      "components/pages/block-gutter.tsx"
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:claude-code (new editor-formatting section (selection toolbar, shortcuts, Shift+Enter line break and send keys, phone keyboard toolbar) and image width kept in Markdown checked against components/pages/page-comment-bubble.tsx, lib/keyboard/keyboard-context.tsx, components/editor/document-editor.tsx, components/pages/page-extensions.ts, components/editor/mobile-editor-toolbar.tsx, components/editor/rich-editor.tsx, components/pages/blocks/image.ts and lib/pages-markdown.ts; retired subpage block: \"/\" Sub-page inserting a mention and opening the child, legacy blocks converted on a writer's first opening with block ids kept, trash and restore of a child's mention line, mention deletion never trashing, duplication remapping mentions, `[@Title](mention:page/<id>)` with `[[page:<id>]]` still read, export relative links and current titles, published mentions checked against components/pages/blocks/subpage.ts, components/pages/page-editor.tsx, lib/server/pages.ts, lib/pages-subpage.ts, lib/pages-export.ts, lib/server/pages-export.ts and components/public-page-body.tsx; block comment dialog or bottom sheet, phone long-press selection, notebook toolbar, bottom navigation hidden while typing and Add icon on touch screens checked against components/pages/page-comment-dialog.tsx and components/editor/mobile-editor-toolbar.tsx; Sub-page opening in the side panel with Expand (sidebar creation still full page), color lists showing each color by name in that color, selection ended by an outside click or Comment, Turn into marking only the selection's block, and Untitled page mentions checked against components/pages/page-view.tsx and components/pages/page-comment-bubble.tsx; page Copy submenu (Copy link, Copy page content as Markdown, not on databases) and the Command/Ctrl+Shift+L link shortcut checked against components/pages/page-document-actions.tsx and lib/keyboard/shortcuts.ts; floating phone toolbar hiding with the keyboard, its Color sheet and pinned Hide keyboard button checked against components/editor/mobile-editor-toolbar.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "revision": 20,
+    "fact": "agent:claude-code (new find-and-replace section (Command/Ctrl+F on a page on screen, in the side panel and under another dialog, seeded selection, highlights and position count, Enter and Shift+Enter, Match case, Whole word and Regular expression, invalid expressions, Show replace, Replace and Replace all for editors only, `$1` to `$9` and `$&`, plain replacement as typed, undo in one step, Escape, body only) checked against components/editor/find-bar.tsx, components/editor/find-replace.ts, lib/keyboard/find-shortcut.ts, components/editor/rich-editor.tsx and components/pages/page-editor.tsx; equations (the `/` Equation entry, `$$…$$` typed in a line, click to edit the LaTeX with a live preview in a popover or phone sheet, red error, empty save removing it, `$…$` and `$$` fence Markdown with prices kept as text) checked against components/pages/blocks/math.ts, components/editor/math-edit-menu.tsx and lib/pages-math.test.ts; selection toolbar order with Underline, Inline equation, Copy, Ask Numo and Comment, the code-block toolbar and its colors, the toolbar following the scrolled selection, Page options in the side panel, and the Comment on this block hover button checked against components/pages/page-comment-bubble.tsx, components/code-block-lowlight.ts, app/globals.css, components/pages/page-peek-panel.tsx, components/global-page-panel.tsx, components/pages/pages-shell.tsx, components/pages/page-view.tsx and components/pages/block-gutter.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
     "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-28"
   },
@@ -124,7 +135,7 @@
       "src": "/documentation/en/page-create-menu.png",
       "alt": "Page creation menu offering New page and New database.",
       "caption": "Use the project page controls to choose a document or a database.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -140,7 +151,7 @@
       "src": "/documentation/en/page-editor.png",
       "alt": "Demonstration page with headings, paragraphs, task checkboxes and an issue mention.",
       "caption": "Headings, task blocks and the AUR-2 mention keep the page structured. This is demonstration content.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -156,7 +167,7 @@
       "src": "/documentation/en/page-comments.png",
       "alt": "Page activity dialog with a demonstration edit event and an empty comment composer.",
       "caption": "Read page activity and write a comment in the composer. No comment has been submitted in this example.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -172,7 +183,7 @@
       "src": "/documentation/en/page-file-states.png",
       "alt": "Demo page with an unfinished upload and a saved 67-byte file offering Download.",
       "caption": "Check the actual file state: the second attachment is available, while the first unfinished upload is not.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -188,7 +199,7 @@
       "src": "/documentation/en/page-history-preview.png",
       "alt": "Versions tab with an expanded earlier state, its author, Restore and the 30-day retention notice.",
       "caption": "Preview a saved state and compare it with the current page before restoring.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -204,7 +215,7 @@
       "src": "/documentation/en/page-publish.png",
       "alt": "Page publication dialog with Private selected and password or bearer-link alternatives.",
       "caption": "Private keeps the page within the project. Review the intended audience before changing publication.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -220,7 +231,7 @@
       "src": "/documentation/en/page-export.png",
       "alt": "Document export menu with Markdown (.md) and Print / PDF.",
       "caption": "Choose Markdown to download the document, or Print / PDF to open the printable view.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -236,7 +247,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -291,22 +302,28 @@ Unlike a promoted notebook task, the page is not removed: it stays in its place 
 
 ## Write a page with blocks and mentions {#page-editor}
 
-Open the page and edit its title or body as the owner or a Member. Readers can open and read pages, but cannot edit, import, duplicate, favorite or publish them, or restore a version. Use the slash-command menu and formatting controls to insert headings, text, bullet, numbered and task lists, quotes, callouts, code blocks, dividers, toggles (collapsible sections), sub-pages, images and files. A callout can have an emoji icon and palette color; choose them to distinguish useful information rather than as the only way to communicate a warning.
+Open the page and edit its title or body as the owner or a Member. Readers can open and read pages, but cannot edit, import, duplicate, favorite or publish them, or restore a version. Use the slash-command menu and formatting controls to insert headings, text, bullet, numbered and task lists, quotes, callouts, code blocks, equations, dividers, toggles (collapsible sections), sub-pages, images and files. A callout can have an emoji icon and palette color; choose them to distinguish useful information rather than as the only way to communicate a warning. An **Equation** is written in LaTeX and rendered with KaTeX. Choose it in the `/` menu for an equation on its own line, or type LaTeX between `$$` in a sentence, as in `$$x^2$$`, for one inside the text. Click an equation to edit its LaTeX with a live preview, in a popover on a computer or a sheet on a phone. LaTeX that cannot be rendered shows in red with a message, and saving an equation empty removes it.
 
 Use mentions to link relevant issues, objectives, people or pages. Type `@` followed by an identifier, title words or a short description; a descriptive query also lists issues found [by meaning](/docs/navigation#search-by-meaning) under **Related by meaning**, after the text matches. Backlinks help readers find pages that reference the current one. A link supplies context rather than granting a reader access to another project's private object. A mention of a page that has no title yet reads **Untitled**.
 
-Clicking a page mention, a backlink, a page attached to an issue or objective, or a link to a page in a comment or a Numo answer opens that page in a side panel above what you were reading. Read or edit it there, choose **Expand** to open the full page, or close the panel to return. A database does not open in the panel: it opens as a full page.
+Clicking a page mention, a backlink, a page attached to an issue or objective, or a link to a page in a comment or a Numo answer opens that page in a side panel above what you were reading. Read or edit it there, choose **Expand** to open the full page, or close the panel to return. Between **Expand** and close, the panel's **Page options** menu (`…`) offers the same actions as on the full page; moving the page to the trash from there closes the panel and leaves you on the page underneath. A database does not open in the panel: it opens as a full page.
 
 
 ![Demonstration page with headings, paragraphs, task checkboxes and an issue mention.](/documentation/en/page-editor.png)
 
 ### Format text and write on a phone {#editor-formatting}
 
-Pages, descriptions, comments and the task notebook share the same editor. Select text to open the selection toolbar. Its first row shows the current block type: choose it to open **Turn into** and change the block. Then come **Color**, for the text or background, **Bold**, **Italic**, **Strikethrough**, **Code**, **Add link** (or **Remove link** on a link) and **Clear formatting**. On a page, a **Comment** row anchors a comment on the selection. **Turn into** marks only the type of the block the selection is in. In the color lists, here and in the block menu, each color appears by its name, written in that color or on that background. Clicking outside the editor ends the selection and hides the toolbar, and so does choosing **Comment**. Tooltips show the shortcuts: Command+B, Command+I, Command+Shift+S and Command+E on macOS, or Ctrl with the same keys on Windows/Linux. In an editor, Command/Ctrl+B makes text bold; elsewhere it still shows or hides the sidebar.
+Pages, descriptions, comments and the task notebook share the same editor. Select text to open the selection toolbar. Its first row shows the current block type: choose it to open **Turn into** and change the block. Then come **Color**, for the text or background, **Bold**, **Italic**, **Underline**, **Strikethrough**, **Code**, **Add link** (or **Remove link** on a link), **Inline equation**, which turns the selected text into an inline equation or back, **Clear formatting** and **Copy**, which copies the selection. On a computer, an **Ask Numo** row sends the passage to Numo, as described in the [Numo guide](/docs/numo#work-with-numo), and on a page a **Comment** row anchors a comment on the selection. **Turn into** marks only the type of the block the selection is in. In the color lists, here and in the block menu, each color appears by its name, written in that color or on that background. Clicking outside the editor ends the selection and hides the toolbar, and so does choosing **Comment**. Tooltips show the shortcuts: Command+B, Command+I, Command+U, Command+Shift+S and Command+E on macOS, or Ctrl with the same keys on Windows/Linux. In an editor, Command/Ctrl+B makes text bold; elsewhere it still shows or hides the sidebar. In a code block, the toolbar shows only the block type, **Color**, **Copy**, **Ask Numo** and **Comment**: a text color overrides the code's syntax highlighting, a background color keeps it, and the default color restores it. Text and background colors are not kept in Markdown. The toolbar follows the selected passage while the page scrolls and closes once the passage scrolls out of view.
 
 Shift+Enter starts a new line inside the same block. Command/Ctrl+Enter does not insert a line break: in a comment or another composer it sends, whichever send shortcut you chose in your [preferences](/docs/accounts#preferences), and if you chose Enter as the send shortcut, Enter sends too.
 
 On a phone, the editor shows no block handles or selection toolbar, and typing `@` leaves a plain character. While an editor has focus, a floating toolbar sits above the keyboard and hides when the keyboard closes: **Insert a block** (+) lists this editor's blocks and inserts the chosen one at the cursor, like `/`; **Mention** (@) lists people, issues, objectives and pages to mention; then come **Bold**, **Italic**, **Strikethrough**, **Code**, **Color** (a sheet for the text or background color), **Add link**, **Outdent** and **Indent** in a list, **Comment** on a page, and **Hide keyboard**, which stays pinned at the right end. A bottom sheet you type in grows to the full screen height, and the line you are typing stays above the keyboard. Long-press selects text in an editor, and the toolbar and its sheets also work in the task notebook. The bottom navigation hides while any text field has focus, such as a page title or a comment. On a touch screen, **Add icon** is always visible on a page.
+
+### Find and replace in a page {#find-and-replace}
+
+While a page is on screen, Command+F on macOS or Ctrl+F on Windows/Linux opens a find bar at the top right of the document, wherever the cursor is; on a page open in the side panel, it searches that page. Text you had selected becomes the search. Every match is highlighted, the current one more strongly, and the bar shows its position, such as 2 of 7. Enter goes to the next match and Shift+Enter to the previous one; Command/Ctrl+F again selects the search text. **Match case**, **Whole word** and **Regular expression** refine the search; an invalid expression is flagged and highlights nothing. The search covers the page body, not its title.
+
+If you can edit the page, **Show replace** adds a field for the replacement text, with **Replace**, which replaces the current match and moves to the next one, and **Replace all**. In a regular expression, `$1` to `$9` insert the matching groups and `$&` the whole match; a plain search inserts the text exactly as typed. A replacement is an ordinary edit: it saves and reaches the other editors like typing, and Command/Ctrl+Z undoes it, a **Replace all** in one step. Escape closes the bar and returns to the text. The task notebook has the same bar. Elsewhere in minddy, and when another dialog is open over the page, Command/Ctrl+F opens the browser's find.
 
 ### Saving and portability {#editor-save}
 
@@ -314,11 +331,11 @@ A page saves as you type: each change reaches the server within a moment, and th
 
 If the connection drops, keep the page open. Unsaved changes stay on the page and are sent when the connection returns; changes from others arrive at the same time and merge with yours. minddy opens another page only once your changes are saved: while they cannot be sent, it keeps you on the page and says the save failed. Closing a browser tab with unsaved changes asks you to confirm first; quitting the desktop app does not ask, and unsaved changes are lost. If you lose access to the page or your edit rights while changes are unsaved, minddy undoes them and shows a message. When the server refuses a change, for example a title longer than 500 characters or a link whose protocol is not allowed, minddy undoes that change and shows a message. Page history can help inspect earlier saved versions.
 
-Markdown exports and agent page reads preserve callout icons and colors in their supported representation. A resized image keeps its width too, written as the image title (`![alt](src "width=60%")`), so edits by Numo, MCP agents or the task notebook do not reset it. Agents read and write a page mention as `[@Title](mention:page/<id>)`; the older `[[page:<id>]]` form is still accepted and read as the same mention, inline too. Export formats have different fidelity and attachment handling, so check the resulting document before replacing an original source. Use code blocks for literal commands and retain their prerequisites and warnings in the surrounding text.
+Markdown exports and agent page reads preserve callout icons and colors in their supported representation. A resized image keeps its width too, written as the image title (`![alt](src "width=60%")`), so edits by Numo, MCP agents or the task notebook do not reset it. Agents read and write a page mention as `[@Title](mention:page/<id>)`; the older `[[page:<id>]]` form is still accepted and read as the same mention, inline too. Equations travel as LaTeX: `$E = mc^2$` inside a line, and a block between two `$$` lines. A dollar amount such as `$5` stays text. Export formats have different fidelity and attachment handling, so check the resulting document before replacing an original source. Use code blocks for literal commands and retain their prerequisites and warnings in the surrounding text.
 
 ## Discuss a page and handle conflicts {#page-comments-and-collaboration}
 
-Open a project page and its comment controls. Select relevant content when creating an anchored comment, explain the question or proposed change, and use mentions to involve a project member. A reader can comment when the owner turned on **Can comment** for them. Reply in the thread to keep the decision with the context it concerns. Resolve a thread when its question has actually been addressed. A block's thread opens in a dialog on a computer and in a bottom sheet on a phone, rather than beside the block: it shows the quoted passage, the existing discussions with their replies and a field for a new comment. Open it from the block's comment badge, **Comment** in the selection toolbar or the block menu.
+Open a project page and its comment controls. Select relevant content when creating an anchored comment, explain the question or proposed change, and use mentions to involve a project member. A reader can comment when the owner turned on **Can comment** for them. Reply in the thread to keep the decision with the context it concerns. Resolve a thread when its question has actually been addressed. A block's thread opens in a dialog on a computer and in a bottom sheet on a phone, rather than beside the block: it shows the quoted passage, the existing discussions with their replies and a field for a new comment. Open it from the block's comment badge, **Comment** in the selection toolbar or the block menu. On a computer, hovering a block without comments shows a **Comment on this block** button at its right, at the height of the block handle; a commented block shows its comment badge there instead. This button is not shown on a phone.
 
 Presence `avatars` identify people viewing the page. While someone edits, their caret and selection appear in the body and in the title, in a color of their own and labeled with their name. A reader's caret is not shown. A caret shows where someone is working, not that their text is saved: the save indicator reflects your own changes only.
 

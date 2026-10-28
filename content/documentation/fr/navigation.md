@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
-  "sourceRevision": 17,
+  "revision": 18,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-28",
   "compatibility": {
@@ -59,13 +59,15 @@
       "components/settings/account-smart-fill-section.tsx",
       "components/objective-relations-section.tsx",
       "components/create-issue-dialog.tsx",
-      "components/app-shell-chrome.tsx"
+      "components/app-shell-chrome.tsx",
+      "components/editor/find-bar.tsx",
+      "lib/keyboard/find-shortcut.ts"
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:claude-code (New page in the project new-tab palette checked against components/app-shell-chrome.tsx and components/command-palette.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (fr changed passages with catalog UI labels; equivalent meaning to en revision 17; self-reviewed; agent review, not human acceptance)",
+    "revision": 18,
+    "fact": "agent:claude-code (Command/Ctrl+F scope (page or task notebook on screen, the browser's find elsewhere and under another dialog) checked against lib/keyboard/find-shortcut.ts, components/editor/find-bar.tsx and lib/keyboard/shortcuts.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (fr changed passages with catalog UI labels; equivalent meaning to en revision 18; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-28"
   },
   "related": [
@@ -87,7 +89,7 @@
       "src": "/documentation/fr/work-navigation.png",
       "alt": "Navigation du projet à côté du tableau de tickets de démonstration.",
       "caption": "La barre du projet donne accès aux tickets, objectifs, pages et arrivées en triage.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -103,7 +105,7 @@
       "src": "/documentation/fr/work-search.png",
       "alt": "Résultats de recherche pour l’identifiant d’un ticket de démonstration.",
       "caption": "La palette retrouve le ticket par identifiant avec les pages du projet ; ouvrir un résultat conserve ses règles d’accès.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -162,6 +164,8 @@ Ouvrez la palette de commandes depuis la recherche de navigation. Cherchez un ti
 Utilisez Commande+K sur macOS ou Ctrl+K sur Windows/Linux pour ouvrir la palette ; Commande/Ctrl+P constitue une autre combinaison de l’application. Hors d’un champ de texte, ? ouvre l’aide des raccourcis et C la création de ticket. Sur une carte survolée ou les commandes de détail compatibles, S ouvre l’état, P la priorité, E l’effort, A le responsable, L les catégories, D l’échéance et O l’objectif. R ajoute une relation depuis les mêmes endroits, sur la page d’un objectif et dans le formulaire de nouveau ticket : choisissez le type de relation, puis l’autre ticket ou objectif. Si la carte fait partie d’une sélection, ces touches modifient tous les tickets sélectionnés ; le responsable, l’objectif, les catégories et les relations ne s’appliquent qu’aux tickets sélectionnés du projet de cette carte. Maj+C mène à un champ de commentaire prêt pour la saisie, le fil défilé jusqu’à son dernier message : celui d’une carte de ticket survolée ou d’une ligne survolée dans la liste des objectifs, des retours, des pull requests, des pages ou du triage, ou, sans rien survoler, celui du ticket, de l’objectif, du retour, de la pull request ou de la page à l’écran. Une page ouvre pour cela son panneau **Activité**. Maj+C ne concerne que cet élément, même si la carte fait partie d’une sélection. Sur la page d’un objectif et dans le formulaire de nouvel objectif, S ouvre son état, A son responsable, D sa date cible et C sa couleur ; à ces endroits, C ne crée pas de ticket. Ces touches seules n’interceptent pas la saisie dans un champ, une zone de texte ou un éditeur. Les séquences G puis H (Accueil) et G puis I (Boîte de réception) utilisent deux touches successives ; G puis W ouvre les pages uniquement dans le contexte d’un projet.
 
 Pour atteindre un réglage, tapez son nom dans la palette de commandes ou dans le champ de filtre en haut de la barre latérale des paramètres. Les deux trouvent chaque carte de réglages et les réglages individuels, comme la langue, le thème, chaque palette, la transparence et les deux interrupteurs de **Démarrer un ticket**. Choisir un résultat ouvre le bon onglet des paramètres, fait défiler jusqu’à la carte ou la ligne et la met en évidence. Commande+T sur macOS ou Ctrl+T sur Windows/Linux ouvre la palette du nouvel onglet ; un réglage choisi depuis celle-ci s’ouvre dans un nouvel onglet de l’app. Dans un projet, elle propose aussi **Nouvelle page**, qui crée une page dans ce projet et l’ouvre dans un nouvel onglet. Les mots-clés anglais et français fonctionnent quelle que soit la langue de l’interface.
+
+Commande+F sur macOS ou Ctrl+F sur Windows/Linux recherche dans la page ou le carnet de tâches à l’écran avec la [barre de recherche et de remplacement](/fr/documentation/pages#find-and-replace) de minddy. Sur les autres écrans, et lorsqu’une autre boîte de dialogue est ouverte au-dessus de la page, il ouvre la recherche du navigateur.
 
 Consultez l’aide des raccourcis pour votre plateforme. minddy distingue raccourcis de l’application, actions de propriétés des tickets et commandes natives d’onglets ou de fenêtres desktop. Vérifiez le focus avant une commande : saisir dans un éditeur et agir sur le ticket environnant sont des contextes différents.
 

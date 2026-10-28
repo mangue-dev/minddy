@@ -89,7 +89,10 @@ const BODY = z
       "blocks, horizontal rules, <details><summary>…</summary>…</details> " +
       "collapsibles, <aside data-type=\"callout\" " +
       "data-page-callout-color=\"blue\" data-page-callout-icon=\"💡\">…</aside> " +
-      "callouts, and page mentions '[@Title](mention:page/<page_id>)' to link " +
+      "callouts, LaTeX equations ('$E = mc^2$' inline; a block is a '$$' line, the " +
+      "LaTeX, then a closing '$$' line; a dollar that is not math, like a price, " +
+      "stays plain), " +
+      "and page mentions '[@Title](mention:page/<page_id>)' to link " +
       "another page (inline: text can follow it; '[[page:<page_id>]]' is read as " +
       "the same mention). Anything else degrades to plain text. Never send " +
       "ProseMirror JSON — markdown is the contract. " +

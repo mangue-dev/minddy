@@ -116,6 +116,9 @@ export const CHEATSHEET: CheatsheetSection[] = [
       { id: "gen.accountSettings", labelKey: "accountSettings", keys: [["mod", ","]] },
       { id: "gen.undo", labelKey: "undo", keys: [["mod", "Z"]] },
       { id: "gen.redo", labelKey: "redo", keys: [["mod", "⇧", "Z"]] },
+      // Only where a page or the notebook is on screen (components/editor/
+      // find-bar.tsx); everywhere else the browser keeps its own find.
+      { id: "gen.find", labelKey: "findInDocument", keys: [["mod", "F"]] },
       { id: "gen.cheatsheet", labelKey: "cheatsheet", keys: [["?"]] },
       // The comment field, ready to type, with the thread at its latest
       // message (MIN-803): of the hovered issue card or sidebar row

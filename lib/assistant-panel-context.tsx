@@ -66,6 +66,18 @@ export interface OpenAssistantOptions {
    * work session, not a popover glance.
    */
   displayMode?: PanelDisplayMode;
+  /**
+   * Put the caret in the composer once the panel is ready, without sending or
+   * filling anything: the opener hands the user a context to ask about.
+   */
+  focusComposer?: boolean;
+}
+
+/** Opening-time presentation choices of `openIntent`. */
+export interface OpenIntentOptions {
+  displayMode?: PanelDisplayMode;
+  /** See `OpenAssistantOptions.focusComposer`. */
+  focusComposer?: boolean;
 }
 
 export interface AssistantPanelContextValue {
@@ -109,10 +121,18 @@ export interface AssistantPanelContextValue {
   /** The common entry for every voluntary request to Numo. `opts` carries the
       opening-time presentation choices (e.g. the home composer opens
       fullscreen). */
-  openIntent: (
-    intent: NumoIntent,
-    opts?: { displayMode?: PanelDisplayMode },
-  ) => void;
+  openIntent: (intent: NumoIntent, opts?: OpenIntentOptions) => void;
+  /**
+   * The ambient context at call time, read without subscribing: an action
+   * (such as "Ask Numo" on a selection) needs it once, when it runs, and must
+   * not rerender its toolbar whenever the page publishes a new context.
+   */
+  readAmbientContext: () => AssistantPageContext | null;
+  /**
+   * Drop the quoted selection from the open session's context. Called when
+   * the user removes its pill, and once the message carrying it is sent.
+   */
+  clearSelectionContext: () => void;
   close: () => void;
   toggle: () => void;
   /** Called by the panel after consuming pendingOptions. */
@@ -128,7 +148,8 @@ const AssistantPanelContext = createContext<AssistantPanelContextValue | null>(
 export type AssistantPanelActions = Pick<
   AssistantPanelContextValue,
   "setAmbientContext" | "setFabSuppressed" | "open" | "openIntent" |
-  "close" | "toggle" | "clearPendingOptions"
+  "close" | "toggle" | "clearPendingOptions" | "readAmbientContext" |
+  "clearSelectionContext"
 >;
 
 const AssistantPanelActionsContext = createContext<AssistantPanelActions | null>(null);
@@ -154,6 +175,13 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
   // clear it, so navigating A→B (B mounts before A's cleanup runs) never wipes
   // B's freshly-set context.
   const ambientOwnerRef = useRef<string | null>(null);
+  // Mirrors `ambientContext` for `readAmbientContext`, so the actions object
+  // stays stable while the page republishes its context.
+  const ambientContextRef = useRef<AssistantPageContext | null>(null);
+  useEffect(() => {
+    ambientContextRef.current = ambientContext;
+  }, [ambientContext]);
+  const readAmbientContext = useCallback(() => ambientContextRef.current, []);
 
   const setAmbientContext = useCallback(
     (ctx: AssistantPageContext | null, ownerId: string) => {
@@ -201,7 +229,7 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const openIntent = useCallback(
-    (intent: NumoIntent, opts?: { displayMode?: PanelDisplayMode }) => {
+    (intent: NumoIntent, opts?: OpenIntentOptions) => {
       open({
         projectId: intent.projectId,
         prompt: intent.prompt,
@@ -211,6 +239,7 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
         attachments: intent.attachments,
         intent: { source: intent.source, action: intent.action },
         displayMode: opts?.displayMode,
+        ...(opts?.focusComposer ? { focusComposer: true } : {}),
       });
     },
     [open],
@@ -241,6 +270,15 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
     setPendingOptions(null);
   }, []);
 
+  const clearSelectionContext = useCallback(() => {
+    setActivePageContext((prev) => {
+      if (!prev?.selection) return prev;
+      const rest: AssistantPageContext = { ...prev };
+      delete rest.selection;
+      return Object.values(rest).some((value) => value !== undefined) ? rest : null;
+    });
+  }, []);
+
   const actions = useMemo<AssistantPanelActions>(() => ({
     setAmbientContext,
     setFabSuppressed,
@@ -249,7 +287,9 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
     close,
     toggle,
     clearPendingOptions,
-  }), [setAmbientContext, setFabSuppressed, open, openIntent, close, toggle, clearPendingOptions]);
+    readAmbientContext,
+    clearSelectionContext,
+  }), [setAmbientContext, setFabSuppressed, open, openIntent, close, toggle, clearPendingOptions, readAmbientContext, clearSelectionContext]);
 
   const value = useMemo<AssistantPanelContextValue>(
     () => ({
@@ -265,6 +305,8 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
       close,
       toggle,
       clearPendingOptions,
+      readAmbientContext,
+      clearSelectionContext,
       routeProjectId,
     }),
     [
@@ -280,6 +322,8 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
       close,
       toggle,
       clearPendingOptions,
+      readAmbientContext,
+      clearSelectionContext,
       routeProjectId,
     ],
   );
@@ -300,6 +344,14 @@ export function useAssistantPanelActions(): AssistantPanelActions {
     throw new Error("useAssistantPanelActions must be used within an AssistantPanelProvider");
   }
   return actions;
+}
+
+/**
+ * The panel actions, or `null` outside an `AssistantPanelProvider`: public
+ * surfaces (`app/f/**`, `app/p/**`) mount the shared editor without Numo.
+ */
+export function useOptionalAssistantPanelActions(): AssistantPanelActions | null {
+  return useContext(AssistantPanelActionsContext);
 }
 
 export function useAssistantPanel(): AssistantPanelContextValue {

@@ -109,7 +109,6 @@ export function UsageIndicator({
       <ResponsivePopoverContent
         align="end"
         sideOffset={8}
-        collisionPadding={sidebar ? 10 : 8}
         mobileTitle={t("usageAria")}
         className="w-80 max-w-[calc(100vw-1.25rem)] p-0"
       >
