@@ -4,6 +4,7 @@ import {
   auth,
   extractWWWAuthenticateParams,
   LATEST_PROTOCOL_VERSION,
+  RegistrationRejectedError,
   type OAuthClientProvider,
 } from "@modelcontextprotocol/client";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -24,6 +25,19 @@ type OAuthData = {
   verifier?: string;
   scope?: string;
 };
+/**
+ * The authorization server refused to register minddy as a client. Some
+ * providers (Vercel, Figma) only accept MCP clients they have reviewed, so
+ * retrying or checking credentials cannot help: the user needs the provider's
+ * approval or an OAuth app of their own.
+ */
+export class McpClientNotApprovedError extends Error {
+  constructor(readonly status: number) {
+    super("The OAuth provider refused to register minddy as a client");
+    this.name = "McpClientNotApprovedError";
+  }
+}
+
 export const mcpOAuthCallback = () =>
   `${oauthAppOrigin()}/api/account/mcp-connections/oauth/callback`;
 
@@ -267,13 +281,19 @@ export async function startMcpOAuth(
     },
     state,
   );
-  await auth(provider, {
-    serverUrl: connection.url,
-    resourceMetadataUrl: challenge.resourceMetadataUrl,
-    scope: data.scope,
-    fetchFn,
-    forceReauthorization: true,
-  });
+  try {
+    await auth(provider, {
+      serverUrl: connection.url,
+      resourceMetadataUrl: challenge.resourceMetadataUrl,
+      scope: data.scope,
+      fetchFn,
+      forceReauthorization: true,
+    });
+  } catch (err) {
+    if (err instanceof RegistrationRejectedError)
+      throw new McpClientNotApprovedError(err.status);
+    throw err;
+  }
   if (!authorizationUrl || !data.verifier || !data.discovery)
     throw new Error("OAuth discovery failed");
   const service = getServiceClient();

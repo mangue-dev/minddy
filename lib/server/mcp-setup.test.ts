@@ -4,6 +4,7 @@ import { MCP_PRESETS } from "@/lib/mcp-catalog";
 import { executeMcpSetupTool } from "./mcp-setup";
 
 const mocks = vi.hoisted(() => ({
+  ClientNotApproved: class extends Error {},
   startOAuth: vi.fn(),
   rateLimit: vi.fn(),
   assertEndpoint: vi.fn(),
@@ -32,6 +33,7 @@ vi.mock("./mcp-registry", () => ({
 }));
 
 vi.mock("./mcp-oauth", () => ({
+  McpClientNotApprovedError: mocks.ClientNotApproved,
   initialMcpOAuth: (clientId?: string, clientSecret?: string) =>
     JSON.stringify(
       clientId ? { client: { client_id: clientId, clientSecret } } : {},
@@ -487,5 +489,20 @@ describe("configure_mcp_connection — update", () => {
     expect(result.authorization_url).toBeUndefined();
     expect(result.next_steps.join(" ")).toMatch(/Sign in/i);
     expect(result.callback_url).toContain("/oauth/callback");
+  });
+
+  it("says when the provider refuses to register minddy as a client", async () => {
+    mocks.startOAuth.mockRejectedValue(new mocks.ClientNotApproved());
+    const execution = await executeMcpSetupTool(
+      USER,
+      "configure_mcp_connection",
+      { connection_id: CONNECTION_ID },
+    );
+
+    expect(execution.success).toBe(true);
+    const steps = (execution.result as { next_steps: string[] }).next_steps
+      .join(" ");
+    expect(steps).toMatch(/approved/i);
+    expect(steps).not.toMatch(/press Sign in/i);
   });
 });
