@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 21,
+  "revision": 23,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-28",
   "compatibility": {
@@ -46,6 +46,7 @@
       "components/settings/account-preferences-section.tsx",
       "components/settings/dictation-vocabulary-section.tsx",
       "lib/dictation-vocabulary.ts",
+      "lib/dictation-hallucinations.ts",
       "app/api/transcribe/route.ts",
       "lib/use-issue-dictation.ts",
       "components/issue-side-panel.tsx",
@@ -61,9 +62,9 @@
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code/MIN-826 (provider per usage, connected providers and Numo provider then model checked against components/settings/account-ai-keys-section.tsx, components/assistant/conversation-settings.tsx and lib/server/ai-routes.ts, and in the running app on the preview demo account; diagram and its SVG fallback rebuilt; no form submitted; earlier evidence retained in git history)",
-    "language": "agent:claude-code/MIN-826 (de translation of the changed passages with catalog UI labels; informal register; self-reviewed; agent review, not human acceptance)",
+    "revision": 23,
+    "fact": "agent:claude-code/MIN-831 (removal of subtitle credits and sign-offs invented on silence, with cleanup on or off, checked against lib/dictation-hallucinations.ts and lib/server/openrouter-transcribe.ts and their tests; earlier evidence retained in git history)",
+    "language": "agent:claude-code/MIN-831 (de translation of the added sentence; locale register kept; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-28"
   },
   "related": [
@@ -85,7 +86,7 @@
       "src": "/documentation/de/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Verbundene Anbieter, ein Anbieter je Nutzung sowie Anbieter und Modell von Numo sind getrennte Einstellungen.",
       "caption": "Jede Nutzung läuft über minddy Cloud oder einen verbundenen Anbieter. Numos Standard wird je Anbieter gespeichert; ein Gespräch kann eigenen Anbieter und eigenes Modell wählen.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -174,7 +175,7 @@ Mit dem Mikrofon neben einem unterstützten Feld kannst du Tickets, Ziele, Komme
 
 ### Verbrauch und Aufnahmegrenzen {#voice-limits}
 
-Die Audiodaten werden an den konfigurierten Transkriptionsdienst gesendet und können anschließend von einem KI-Modell überarbeitet oder interpretiert werden. Die Bereinigung korrigiert Zeichensetzung, Füllwörter und Selbstkorrekturen; um die Wörter so einzufügen, wie sie gehört wurden, deaktiviere **Diktate bereinigen** unter **Kontoeinstellungen** > **Einstellungen** > **Spracheingabe**. Dann wird für deine Diktate kein Bereinigungsmodell aufgerufen. Öffentliches Feedback behält seine eigene Verarbeitung. Unter **Wortschatz**, direkt darunter, fügst du bis zu 50 Namen und Begriffe hinzu, die das Diktat in deiner Schreibweise schreiben soll; fülle **Gehört als** aus, um dieses Wort in jedem Diktat zu ersetzen, auch ohne Bereinigung. Es gelten die Anbieter- und Budgetregeln des Kontos; Aufnahme und anschließende Interpretation können getrennten Verbrauch verursachen. Öffentliches Feedback hat eigene Verfügbarkeits- und Abrechnungsregeln im [Feedback-Leitfaden](/docs/feedback). Die Demo auf der Startseite besitzt ein separates Limit und ist kein Diktatkontingent des Kontos.
+Die Audiodaten werden an den konfigurierten Transkriptionsdienst gesendet und können anschließend von einem KI-Modell überarbeitet oder interpretiert werden. Die Bereinigung korrigiert Zeichensetzung, Füllwörter und Selbstkorrekturen; um die Wörter so einzufügen, wie sie gehört wurden, deaktiviere **Diktate bereinigen** unter **Kontoeinstellungen** > **Einstellungen** > **Spracheingabe**. Dann wird für deine Diktate kein Bereinigungsmodell aufgerufen. Mit oder ohne Bereinigung entfernt minddy Sätze, die Transkriptionsmodelle bei Stille erfinden, etwa Untertitel-Hinweise oder ein abschließendes „Danke fürs Zuschauen“. Öffentliches Feedback behält seine eigene Verarbeitung. Unter **Wortschatz**, direkt darunter, fügst du bis zu 50 Namen und Begriffe hinzu, die das Diktat in deiner Schreibweise schreiben soll; fülle **Gehört als** aus, um dieses Wort in jedem Diktat zu ersetzen, auch ohne Bereinigung. Es gelten die Anbieter- und Budgetregeln des Kontos; Aufnahme und anschließende Interpretation können getrennten Verbrauch verursachen. Öffentliches Feedback hat eigene Verfügbarkeits- und Abrechnungsregeln im [Feedback-Leitfaden](/docs/feedback). Die Demo auf der Startseite besitzt ein separates Limit und ist kein Diktatkontingent des Kontos.
 
 Der Transkriptionsendpunkt für angemeldete Nutzer akzeptiert bis zu 10 MiB Audio und 30 Anfragen pro Konto und Stunde. Der gemeinsame Recorder stoppt nach 20 Minuten als Schutzmaßnahme. Kürzere Aufnahmen erleichtern die Prüfung. Behalte vorhandenen Text, bis das Ergebnis geprüft ist; der Recorder ist keine Audiosicherung.
 

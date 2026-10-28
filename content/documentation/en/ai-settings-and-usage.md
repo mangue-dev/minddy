@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 21,
-  "sourceRevision": 21,
+  "revision": 22,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-28",
   "compatibility": {
@@ -46,6 +46,7 @@
       "components/settings/account-preferences-section.tsx",
       "components/settings/dictation-vocabulary-section.tsx",
       "lib/dictation-vocabulary.ts",
+      "lib/dictation-hallucinations.ts",
       "app/api/transcribe/route.ts",
       "lib/use-issue-dictation.ts",
       "components/issue-side-panel.tsx",
@@ -61,9 +62,9 @@
     ]
   },
   "review": {
-    "revision": 21,
-    "fact": "agent:claude-code/MIN-826 (provider per usage, connected providers and Numo provider then model checked against components/settings/account-ai-keys-section.tsx, components/assistant/conversation-settings.tsx and lib/server/ai-routes.ts, and in the running app on the preview demo account; diagram and its SVG fallback rebuilt; no form submitted; earlier evidence retained in git history)",
-    "language": "agent:claude-code/MIN-826 (en changed passages with catalog UI labels; informal register; self-reviewed; agent review, not human acceptance)",
+    "revision": 22,
+    "fact": "agent:claude-code/MIN-831 (removal of subtitle credits and sign-offs invented on silence, with cleanup on or off, checked against lib/dictation-hallucinations.ts and lib/server/openrouter-transcribe.ts and their tests; earlier evidence retained in git history)",
+    "language": "agent:claude-code/MIN-831 (English source sentence; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-28"
   },
   "related": [
@@ -85,7 +86,7 @@
       "src": "/documentation/en/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Connected providers, a provider for each usage, and Numo's provider and model are separate settings.",
       "caption": "Each usage runs on minddy Cloud or a connected provider. Numo's default is saved per provider; a conversation can choose its own provider and model.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -174,7 +175,7 @@ Use the microphone beside a supported field to dictate an issue, objective, comm
 
 ### Usage and recording limits {#voice-limits}
 
-Audio is sent to the configured transcription service, then may be cleaned up or interpreted by an AI model. The cleanup fixes punctuation, filler words and self-corrections; to insert the words as they were heard, turn off **Clean up dictations** under **Account settings** > **Preferences** > **Voice dictation**, and no cleanup model is called for your dictations. Public feedback keeps its own processing. Under **Vocabulary**, below that setting, add up to 50 names and terms dictation should spell your way; fill in **Heard as** to replace that word in every dictation, even with cleanup off. Usage follows the account's provider and budget rules; a recording and its subsequent interpretation can incur separate usage. Public feedback has its own availability and charging rules, described in the [feedback guide](/docs/feedback). The public landing-page demo uses a separate limit and is not an account dictation allowance.
+Audio is sent to the configured transcription service, then may be cleaned up or interpreted by an AI model. The cleanup fixes punctuation, filler words and self-corrections; to insert the words as they were heard, turn off **Clean up dictations** under **Account settings** > **Preferences** > **Voice dictation**, and no cleanup model is called for your dictations. With cleanup on or off, minddy removes the phrases transcription models invent on silence, such as subtitle credits or a closing “Thanks for watching”. Public feedback keeps its own processing. Under **Vocabulary**, below that setting, add up to 50 names and terms dictation should spell your way; fill in **Heard as** to replace that word in every dictation, even with cleanup off. Usage follows the account's provider and budget rules; a recording and its subsequent interpretation can incur separate usage. Public feedback has its own availability and charging rules, described in the [feedback guide](/docs/feedback). The public landing-page demo uses a separate limit and is not an account dictation allowance.
 
 The signed-in transcription endpoint accepts up to 10 MiB of audio and 30 requests per account per hour. The shared recorder stops after 20 minutes as a safeguard. Prefer shorter takes so you can inspect each result. Keep existing text until the result is verified; the recorder is not an audio backup.
 
