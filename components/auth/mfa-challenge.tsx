@@ -152,7 +152,7 @@ export function MfaChallenge({
               autoComplete="off"
               autoFocus
               maxLength={14}
-              placeholder="XXXX-XXXX-XXXX"
+              placeholder={t("mfaRecoveryPlaceholder")}
               value={recoveryCode}
               onChange={(e) => setRecoveryCode(e.target.value)}
             />

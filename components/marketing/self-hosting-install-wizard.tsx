@@ -641,14 +641,14 @@ export function SelfHostingInstallWizard({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label className="text-sm font-medium">
                 {serverAccess === "private" ? copy.serverIpLabel : copy.domainLabel}
-                <input value={serverAccess === "private" ? serverIp : domain} onChange={(event) => serverAccess === "private" ? setServerIp(event.target.value) : setDomain(event.target.value)} inputMode={serverAccess === "private" ? "decimal" : "url"} spellCheck={false} placeholder={serverAccess === "private" ? "192.168.1.50" : "tickets.example.com"} aria-invalid={serverAccess === "private" ? serverIp.length > 0 && !serverIpValid : domain.length > 0 && !domainValid} className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 font-normal outline-none transition-shadow focus:ring-2 focus:ring-ring" />
+                <input value={serverAccess === "private" ? serverIp : domain} onChange={(event) => serverAccess === "private" ? setServerIp(event.target.value) : setDomain(event.target.value)} inputMode={serverAccess === "private" ? "decimal" : "url"} spellCheck={false} placeholder={serverAccess === "private" ? copy.serverIpPlaceholder : copy.domainPlaceholder} aria-invalid={serverAccess === "private" ? serverIp.length > 0 && !serverIpValid : domain.length > 0 && !domainValid} className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 font-normal outline-none transition-shadow focus:ring-2 focus:ring-ring" />
                 <span className="mt-1.5 block text-xs font-normal text-muted-foreground">{serverAccess === "private" ? copy.serverIpHint : copy.domainHint}</span>
                 {serverAccess === "private" && serverIp.length > 0 && !serverIpValid && <span className="mt-1 block text-xs font-normal text-destructive" role="alert">{copy.serverIpError}</span>}
                 {serverAccess === "public" && domain.length > 0 && !domainValid && <span className="mt-1 block text-xs font-normal text-destructive" role="alert">{copy.domainError}</span>}
               </label>
               <label className="text-sm font-medium">
                 {copy.emailLabel}
-                <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" placeholder="ops@example.com" aria-invalid={email.length > 0 && !emailValid} className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 font-normal outline-none transition-shadow focus:ring-2 focus:ring-ring" />
+                <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" placeholder={copy.emailPlaceholder} aria-invalid={email.length > 0 && !emailValid} className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 font-normal outline-none transition-shadow focus:ring-2 focus:ring-ring" />
                 <span className="mt-1.5 block text-xs font-normal text-muted-foreground">{copy.emailHint}</span>
                 {email.length > 0 && !emailValid && <span className="mt-1 block text-xs font-normal text-destructive" role="alert">{copy.emailError}</span>}
               </label>

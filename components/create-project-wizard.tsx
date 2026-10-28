@@ -985,7 +985,7 @@ export function CreateProjectWizard({
                   setKeyTouched(true);
                   setKey(normalizeKey(e.target.value));
                 }}
-                placeholder="MIND"
+                placeholder={t("keyPlaceholder")}
                 className="font-mono uppercase tracking-wide"
                 maxLength={5}
               />

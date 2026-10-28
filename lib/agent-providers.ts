@@ -87,8 +87,6 @@ export interface AgentProviderDef {
  * really works is read there, not here.
  */
   defaultModel?: string;
-  /** Key placeholder displayed in the wizard. */
-  keyPlaceholder: string;
   /**
  * “Sample” template id to derive the logo via `providerFromModel`
  * (reuses @lobehub/icons mapping). "" = no logo (generic → Cpu).
@@ -115,7 +113,6 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     baseUrl: "https://openrouter.ai/api/v1",
     // No own default: takes over the platform settings of each call type,
     // exactly like the minddy quota (same OpenRouter endpoint).
-    keyPlaceholder: "sk-or-v1-…",
     logoModel: "openrouter/x",
     listStrategy: "openrouter",
     requestProfile: {
@@ -134,7 +131,6 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     label: "OpenAI",
     baseUrl: "https://api.openai.com/v1",
     defaultModel: "gpt-5.6-sol",
-    keyPlaceholder: "sk-…",
     logoModel: "openai/x",
     listStrategy: "openai",
     requestProfile: {
@@ -149,7 +145,6 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     label: "Anthropic",
     baseUrl: "https://api.anthropic.com/v1",
     defaultModel: "claude-sonnet-5",
-    keyPlaceholder: "sk-ant-…",
     logoModel: "anthropic/x",
     listStrategy: "anthropic",
     // Native Messages API (MIN-826): the ceiling is `max_tokens`, usage is
@@ -166,7 +161,6 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     label: "Google (Gemini)",
     baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
     defaultModel: "gemini-3.5-flash",
-    keyPlaceholder: "AIza…",
     logoModel: "google/x",
     listStrategy: "openai",
     requestProfile: {
@@ -188,7 +182,6 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     label: "OpenCode Go",
     baseUrl: "https://opencode.ai/zen/go/v1",
     defaultModel: "glm-5.3-flash",
-    keyPlaceholder: "Your OpenCode key",
     logoModel: "opencode/x",
     listStrategy: "openai",
     // Conservative profile: the gateway tolerance for reasoning fields is not
@@ -207,7 +200,6 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     label: "OpenCode Zen",
     baseUrl: "https://opencode.ai/zen/v1",
     defaultModel: "glm-5.3-flash",
-    keyPlaceholder: "Your OpenCode key",
     logoModel: "opencode/x",
     listStrategy: "openai",
     requestProfile: {
@@ -220,7 +212,6 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     id: "generic",
     label: "Générique (OpenAI-compatible)",
     requiresBaseUrl: true,
-    keyPlaceholder: "sk-…",
     logoModel: "",
     listStrategy: "generic",
     // A generic server can only implement the old Chat contract
@@ -234,7 +225,6 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     // Default port of LM Studio, the local OpenAI-compatible implementation
     // more widespread. The user can of course replace it.
     localDefaultBaseUrl: "http://127.0.0.1:1234/v1",
-    keyPlaceholder: "sk-…",
     logoModel: "",
     listStrategy: "none",
     localOnly: true,
@@ -247,7 +237,6 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     label: "Ollama (local)",
     requiresBaseUrl: true,
     localDefaultBaseUrl: "http://127.0.0.1:11434",
-    keyPlaceholder: "ollama",
     logoModel: "",
     listStrategy: "none",
     localOnly: true,
