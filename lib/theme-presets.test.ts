@@ -16,6 +16,7 @@ import {
 } from "./theme-presets";
 
 const CSS = readFileSync(join(__dirname, "../app/theme-presets.css"), "utf8");
+const TOKENS_CSS = readFileSync(join(__dirname, "../app/tokens.css"), "utf8");
 
 /** Minddy's own values (app/tokens.css and the globals.css shell
  * overrides, converted from oklch): what a preset block leaves undeclared. */
@@ -23,14 +24,14 @@ const MINDDY_TOKENS = {
   light: {
     "--background": "#ffffff", "--card": "#ffffff", "--popover": "#ffffff", "--sidebar": "#f3f4f6",
     "--foreground": "#0a0a0a", "--muted-foreground": "#606369", "--muted": "#e7e9ef",
-    "--accent": "#eaedf4", "--control": "#f4f6f9", "--primary": "#16181e", "--primary-foreground": "#ffffff",
-    "--ring": "#555555", "--border": "#d9dce5",
+    "--accent": "#eaedf4", "--control": "#f4f6f9", "--primary": "#7059c4", "--primary-foreground": "#ffffff",
+    "--ring": "#7059c4", "--border": "#d9dce5",
   },
   dark: {
     "--background": "#0f0f0f", "--card": "#0f0f0f", "--popover": "#0f0f0f", "--sidebar": "#0d0e10",
     "--foreground": "#fafafa", "--muted-foreground": "#858688", "--muted": "#1d1e21",
-    "--accent": "#222326", "--control": "#232427", "--primary": "#f4f5f8", "--primary-foreground": "#0f1216",
-    "--ring": "#b7b7b7", "--border": "#1e1e1e",
+    "--accent": "#222326", "--control": "#232427", "--primary": "#b6a5f0", "--primary-foreground": "#1b1530",
+    "--ring": "#b6a5f0", "--border": "#1e1e1e",
   },
 } as const;
 
@@ -94,9 +95,16 @@ function topLevelSelectors(list: string): string[] {
   return [...parts, current];
 }
 
-const CUSTOM_PRESETS = (Object.keys(THEME_PRESETS) as ThemePresetId[]).filter(
-  (id) => !id.startsWith("minddy-"),
-);
+/** The value app/tokens.css declares for a token in its first `:root` or `.dark` block. */
+function tokensCssValue(mode: "light" | "dark", token: string): string | undefined {
+  const selector = mode === "light" ? "\n:root {" : "\n.dark {";
+  const start = TOKENS_CSS.indexOf(selector);
+  const body = TOKENS_CSS.slice(start, TOKENS_CSS.indexOf("\n}", start));
+  return body.match(new RegExp(`\\n\\s*${token}:\\s*([^;]+);`))?.[1].trim();
+}
+
+const ALL_PRESETS = Object.keys(THEME_PRESETS) as ThemePresetId[];
+const CUSTOM_PRESETS = ALL_PRESETS.filter((id) => !id.startsWith("minddy-"));
 
 describe("theme preset catalog", () => {
   it("keeps every id in exactly one mode", () => {
@@ -119,6 +127,30 @@ describe("theme preset catalog", () => {
   it("offers a high-contrast palette in each mode", () => {
     expect(LIGHT_THEME_PRESETS.filter((id) => THEME_PRESETS[id].highContrast)).toHaveLength(1);
     expect(DARK_THEME_PRESETS.filter((id) => THEME_PRESETS[id].highContrast)).toHaveLength(1);
+  });
+});
+
+describe("minddy's default accent (MIN-840)", () => {
+  it.each(["light", "dark"] as const)("%s: app/tokens.css carries the lavender accent the tests measure", (mode) => {
+    for (const token of ["--primary", "--primary-foreground", "--ring"] as const) {
+      expect(tokensCssValue(mode, token), token).toBe(MINDDY_TOKENS[mode][token]);
+    }
+    for (const token of ["--brand", "--sidebar-primary"]) {
+      expect(tokensCssValue(mode, token), token).toBe(MINDDY_TOKENS[mode]["--primary"]);
+    }
+    expect(tokensCssValue(mode, "--brand-foreground")).toBe(MINDDY_TOKENS[mode]["--primary-foreground"]);
+  });
+
+  it("keeps ink actions as the Noir / Blanc presets and retires Violet", () => {
+    expect(declaredTokens("ink-light")["--primary"]).toBe("#16181e");
+    expect(declaredTokens("ink-dark")["--primary"]).toBe("#f4f5f8");
+    expect(LIGHT_THEME_PRESETS[1]).toBe("ink-light");
+    expect(DARK_THEME_PRESETS[1]).toBe("ink-dark");
+    expect(CSS).not.toMatch(/data-theme-(light|dark)="violet-/);
+    // An account that saved the retired preset lands on the lavender default.
+    expect(resolveThemeAppearance({ theme_light: "violet-light", theme_dark: "violet-dark" })).toEqual(
+      DEFAULT_THEME_APPEARANCE,
+    );
   });
 });
 
@@ -186,7 +218,7 @@ describe("app/theme-presets.css", () => {
     }
   });
 
-  it.each(CUSTOM_PRESETS)("%s: the settings swatch and chrome color mirror its CSS", (id) => {
+  it.each(ALL_PRESETS)("%s: the settings swatch and chrome color mirror its CSS", (id) => {
     const tokens = presetTokens(id);
     const { swatch, chromeColor } = THEME_PRESETS[id];
     expect(tokens["--background"]).toBe(swatch.background);
@@ -199,7 +231,7 @@ describe("app/theme-presets.css", () => {
       : tokens["--sidebar"]);
   });
 
-  it.each(CUSTOM_PRESETS)("%s: text, actions and focus keep WCAG contrast", (id) => {
+  it.each(ALL_PRESETS)("%s: text, actions and focus keep WCAG contrast", (id) => {
     const t = presetTokens(id);
     const { highContrast } = THEME_PRESETS[id];
     const text = highContrast ? 7 : 4.5;

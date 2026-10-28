@@ -14,7 +14,8 @@
    presets live in their own file without having to come last.
 
    The minddy presets have NO rule here: an absent or default attribute leaves
-   the existing tokens untouched, pixel for pixel.
+   app/tokens.css untouched, pixel for pixel, with its lavender accent
+   (MIN-840). An unknown id, such as the retired `violet-*`, falls back to it.
 
    Only neutral surfaces, text, borders, focus rings and the primary action
    move. Status, priority, destructive, project, mention and rich-text colors
@@ -25,7 +26,30 @@
 
 /* ── Accent presets ── only the accent color changes: primary actions and
    the focus ring. Every surface — content, sidebar, top and bottom bars,
-   tabs, selection — keeps minddy's own neutral values. */
+   tabs, selection — keeps minddy's own neutral values, and `--brand` stays
+   lavender.
+
+   "Noir" (light) and "Blanc" (dark) are the ink actions minddy had before
+   lavender became its default: near-black buttons in light mode, near-white
+   ones in dark mode, with a neutral focus ring. */
+html:not(.dark)[data-theme-light="ink-light"] {
+  --primary: #16181e;
+  --primary-foreground: #ffffff;
+  --ring: #555555;
+  --sidebar-primary: #16181e;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-ring: #555555;
+}
+
+html.dark[data-theme-dark="ink-dark"] {
+  --primary: #f4f5f8;
+  --primary-foreground: #0f1216;
+  --ring: #b7b7b7;
+  --sidebar-primary: #f4f5f8;
+  --sidebar-primary-foreground: #0f1216;
+  --sidebar-ring: #b7b7b7;
+}
+
 html:not(.dark)[data-theme-light="blue-light"] {
   --primary: #2563eb;
   --primary-foreground: #ffffff;
@@ -42,24 +66,6 @@ html.dark[data-theme-dark="blue-dark"] {
   --sidebar-primary: #60a5fa;
   --sidebar-primary-foreground: #0a0a0a;
   --sidebar-ring: #60a5fa;
-}
-
-html:not(.dark)[data-theme-light="violet-light"] {
-  --primary: #7c3aed;
-  --primary-foreground: #ffffff;
-  --ring: #7c3aed;
-  --sidebar-primary: #7c3aed;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-ring: #7c3aed;
-}
-
-html.dark[data-theme-dark="violet-dark"] {
-  --primary: #a78bfa;
-  --primary-foreground: #0a0a0a;
-  --ring: #a78bfa;
-  --sidebar-primary: #a78bfa;
-  --sidebar-primary-foreground: #0a0a0a;
-  --sidebar-ring: #a78bfa;
 }
 
 html:not(.dark)[data-theme-light="green-light"] {

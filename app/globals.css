@@ -2055,10 +2055,10 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
    would believe the highlighted block for real, and it overflows text
    (`box-shadow`) to designate the entire block, not its words.
 
-   The color does NOT come from --primary, and that's what was missing: in this
-   --primary product is INK — almost black in light, almost white in
-   dark. An 18% ink background is a pale gray which, over a period of time,
-   scrolling, cannot be seen passing; the blink was there and did not
+   The color does NOT come from --primary, and that's what was missing: under
+   the Noir / Blanc presets --primary is INK — almost black in light, almost
+   white in dark — and any accent preset can recolor it. An 18% ink
+   background is a pale gray which, while scrolling, cannot be seen passing; the blink was there and did not
    meant nothing. It needs a shade of ATTENTION, which neither resembles the
    text nor to a selection: the blue of the block color register, diluted
    enough to remain soft, and already available in both themes.

@@ -20,9 +20,11 @@ when redesigning those surfaces.
   white (or near-black) floating pane; navigation lives on the quieter
   sidebar chrome around it. Decoration never competes with the work.
 - **Restraint in type and color.** Hierarchy comes from size, weight and
-  spacing, not from color. The primary color is ink (near-black in light
-  mode, near-white in dark mode); the brand blue (`brand`) marks identity and
-  a few indicators, not every button.
+  spacing, not from color. minddy's color is lavender (`#7059C4` in light
+  mode, `#B6A5F0` in dark mode): it is the default accent (`primary`, the focus
+  ring, switches and segmented controls) and the identity color (`brand`). Keep
+  one accent action per view; secondary actions stay outline or ghost, so the
+  lavender stays light.
 - **Details never move the layout.** Hover states, loading and
   disclosures appear in place without shifting what the reader is looking at.
 - **Every gesture has one home.** A command lives in the place where it acts,
@@ -51,8 +53,10 @@ where `lib/theme-presets.test.ts` measures their contrast.
   Style dark mode with the `dark:` variant only when a token cannot express
   the difference.
 - **Palettes.** Each mode has its own palette (`lib/theme-presets.ts`). Accent
-  palettes change only `primary`, `ring` and the sidebar accent; full palettes
-  (Solarized, Catppuccin, Nord) recolor neutrals, text, borders and primary.
+  palettes change only `primary`, `ring` and the sidebar accent, never
+  `brand`; "Noir" (light) and "Blanc" (dark) give ink actions instead of
+  lavender. Full palettes (Solarized, Catppuccin, Nord) recolor neutrals,
+  text, borders and primary.
   Status, priority, destructive, project and mention colors never change with
   the palette, so never encode meaning in a token a palette recolors.
 - **High contrast** adds borders to controls, edges to floating surfaces and a
