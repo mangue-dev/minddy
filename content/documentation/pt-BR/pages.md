@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 20,
+  "revision": 23,
+  "sourceRevision": 21,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-28",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -102,14 +102,16 @@
       "app/tokens.css",
       "components/pages/block-actions.ts",
       "lib/selection-menu-visibility.test.ts",
-      "lib/mention-menu.ts"
+      "lib/mention-menu.ts",
+      "components/pages/block-menu.tsx",
+      "lib/action-menu-search.ts"
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (new find-and-replace section (Command/Ctrl+F on a page on screen, in the side panel and under another dialog, seeded selection, highlights and position count, Enter and Shift+Enter, Match case, Whole word and Regular expression, invalid expressions, Show replace, Replace and Replace all for editors only, `$1` to `$9` and `$&`, plain replacement as typed, undo in one step, Escape, body only) checked against components/editor/find-bar.tsx, components/editor/find-replace.ts, lib/keyboard/find-shortcut.ts, components/editor/rich-editor.tsx and components/pages/page-editor.tsx; equations (the `/` Equation entry, `$$…$$` typed in a line, click to edit the LaTeX with a live preview in a popover or phone sheet, red error, empty save removing it, `$…$` and `$$` fence Markdown with prices kept as text) checked against components/pages/blocks/math.ts, components/editor/math-edit-menu.tsx and lib/pages-math.test.ts; selection toolbar order with Underline, Inline equation, Copy, Ask Numo and Comment, the code-block toolbar and its colors, the toolbar following the scrolled selection, Page options in the side panel, and the Comment on this block hover button checked against components/pages/page-comment-bubble.tsx, components/code-block-lowlight.ts, app/globals.css, components/pages/page-peek-panel.tsx, components/global-page-panel.tsx, components/pages/pages-shell.tsx, components/pages/page-view.tsx and components/pages/block-gutter.tsx; a database opened from a link now stays in the side panel, with entries opened in place and Back returning to the table, checked against components/global-page-panel.tsx and components/pages/page-peek-panel.tsx; the `/` and `@` menus grouped in sections (Basic blocks, Lists, Advanced blocks; people, projects, issues, objectives, pages, resources, Related by meaning), the Close menu row with its esc hint reached by the arrow keys, the search chip with Type to search, a space or Escape closing the menu and leaving the text, and the phone sheets grouped the same way checked against components/editor/suggestion-menu.tsx, components/editor/suggestion-chip.ts, components/pages/page-slash-command.tsx, components/markdown-mention.tsx, components/mention-suggest.tsx and components/editor/mobile-editor-toolbar.tsx; the @ menu keeping spaces in its query and closing with Escape, Close menu or a choice, while a space still closes the / menu, checked against components/markdown-mention.tsx (allowSpaces) and components/editor/suggestion-menu.test.tsx; block selection (a drag across blocks or from the margin beside the text, Shift-click and Shift+Up or Shift+Down past a block's edge, Escape to select the current block and again to clear it, Up and Down to move the selection, Backspace or Delete, Command/Ctrl+C and Command/Ctrl+X, Enter on one block, typing ignored, Command/Ctrl+A selecting the current block's text first and then every block, the block menu acting on every selected block, the rounded highlight in the selected-text color on blocks, images, files, code blocks, equations, dividers, mentions and inline code, Escape kept by comment composers, no block selection by drag on a touch screen) checked against components/editor/block-selection.ts, components/editor/block-selection.test.ts, components/editor/rich-editor.tsx, components/editor/document-editor.tsx, components/pages/block-actions.ts, app/globals.css and app/tokens.css, and in the browser on a page; selection toolbar opening above selected whole blocks, its actions applying to every selected block and blocks staying selected after Turn into checked against components/pages/page-comment-bubble.tsx (shouldShowSelectionMenu), components/pages/block-actions.ts (turnBlocksInto) and lib/selection-menu-visibility.test.ts; both / and @ menus keeping one space in their query and closing on two consecutive spaces, and the Comment on this block button highlighting its block on hover, checked against components/editor/suggestion-chip.ts (findSpacedSuggestionMatch), lib/mention-menu.ts (findActiveTriggerQuery) and components/editor/suggestion-menu.test.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; equivalent meaning to en revision 20; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-28"
+    "revision": 23,
+    "fact": "agent:claude-code (block menu search field reaching every action, block types and colors included, with submenu entries shown behind their path such as Turn into › Heading 1 (MIN-845), checked against components/pages/block-menu.tsx, components/issue-context-menu.tsx and lib/action-menu-search.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; equivalent meaning to en revision 21; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "notifications-and-inbox",
@@ -145,7 +147,7 @@
       "src": "/documentation/pt-BR/page-create-menu.png",
       "alt": "Menu de criação com Nova página e Novo banco de dados.",
       "caption": "Use os controles de páginas do projeto para escolher um documento ou um banco de dados.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -161,7 +163,7 @@
       "src": "/documentation/pt-BR/page-editor.png",
       "alt": "Página de demonstração com títulos, parágrafos, caixas de tarefas e menção a um ticket.",
       "caption": "Os títulos, os blocos de tarefas e a menção AUR-2 organizam a página. O conteúdo é um exemplo de demonstração.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -178,7 +180,7 @@
       "src": "/documentation/pt-BR/page-comments.png",
       "alt": "Atividade da página ainda sem eventos e campo de comentário vazio.",
       "caption": "Leia a atividade e escreva um comentário no campo. Nenhum comentário foi enviado neste exemplo.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -195,7 +197,7 @@
       "src": "/documentation/pt-BR/page-file-states.png",
       "alt": "Página de demonstração com um upload incompleto e um arquivo salvo de 67 bytes com a opção Baixar.",
       "caption": "Confira o estado real do arquivo: o segundo anexo está disponível, mas o primeiro upload incompleto não.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -211,7 +213,7 @@
       "src": "/documentation/pt-BR/page-history-preview.png",
       "alt": "Aba Versões com um estado anterior expandido, autor, Restaurar e aviso de retenção por 30 dias.",
       "caption": "Confira a prévia de um estado salvo e compare com a página atual antes de restaurá-lo.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -227,7 +229,7 @@
       "src": "/documentation/pt-BR/page-publish.png",
       "alt": "Janela de publicação com Privado selecionado e opções de senha ou link.",
       "caption": "Privado mantém a página no projeto. Confira quem deve ler o conteúdo antes de mudar a publicação.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -243,7 +245,7 @@
       "src": "/documentation/pt-BR/page-export.png",
       "alt": "Menu de exportação do documento com Markdown (.md) e Imprimir / PDF.",
       "caption": "Escolha Markdown para baixar o documento ou Imprimir / PDF para abrir a visualização de impressão.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -259,7 +261,7 @@
       "src": "/documentation/pt-BR/file-preview.png",
       "alt": "Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar, Renomear e Remover.",
       "caption": "O visualizador compartilhado mantém Fechar abaixo da prévia. O menu Ações do arquivo oferece Baixar e, quando permitido, Renomear e Remover.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -331,7 +333,7 @@ Páginas, descrições, comentários e o caderno de tarefas compartilham o mesmo
 
 Shift+Enter começa uma nova linha dentro do mesmo bloco. Command/Ctrl+Enter não insere quebra de linha: em um comentário ou outro compositor, ele envia, qualquer que seja o atalho de envio escolhido nas suas [preferências](/pt-br/documentacao/accounts#preferences), e, se você escolheu Enter como atalho de envio, Enter também envia.
 
-Para selecionar blocos inteiros, arraste de um bloco para outro ou desenhe um retângulo de seleção de fora do texto: pressione na margem ao lado dele ou no espaço vazio abaixo da página e arraste sobre os blocos. Cada bloco que o retângulo toca é selecionado; um clique ali sem arrastar continua colocando o cursor nessa linha, e Esc cancela o retângulo. Cada bloco alcançado é destacado com cantos arredondados, na cor do texto selecionado. Quando um único bloco está selecionado, a barra de seleção abre acima dele: suas ações (**Transformar em**, **Cor**, **Negrito** e os outros formatos, **Copiar**, **Pergunte ao Numo**, **Comentário**) se aplicam ao bloco, e depois de **Transformar em** ele continua selecionado para que outra ação possa vir em seguida. Com vários blocos selecionados, a barra fica oculta: abra o menu da alça de um bloco selecionado, que age sobre todos. Shift+clique em outro bloco, ou Shift+seta para cima e Shift+seta para baixo na borda de um bloco, ampliam a seleção em blocos inteiros. Esc seleciona o bloco em que você está escrevendo, e Esc de novo limpa a seleção. Command+A no macOS ou Ctrl+A no Windows/Linux seleciona primeiro o texto do bloco em que você está, inclusive em um bloco de código, e, pressionado de novo, todos os blocos. Com blocos selecionados, a seta para cima e a seta para baixo selecionam o bloco acima ou abaixo, Shift+seta para cima e Shift+seta para baixo adicionam ou removem blocos, Backspace ou Delete os exclui, Command/Ctrl+C os copia, Command/Ctrl+X os recorta, e Enter em um único bloco coloca o cursor no fim dele; digitar não faz nada. O menu do bloco age sobre todos os blocos selecionados. Imagens, arquivos, blocos de código, equações, divisores, menções e código em linha mostram o mesmo destaque quando estão selecionados, sozinhos ou dentro de uma seleção. Enquanto você escreve ou edita um comentário, Esc continua fechando ou cancelando o comentário. Em uma tela sensível ao toque, o toque longo continua selecionando texto, e arrastar não seleciona blocos.
+Para selecionar blocos inteiros, arraste de um bloco para outro ou desenhe um retângulo de seleção de fora do texto: pressione na margem ao lado dele ou no espaço vazio abaixo da página e arraste sobre os blocos. Cada bloco que o retângulo toca é selecionado; um clique ali sem arrastar continua colocando o cursor nessa linha, e Esc cancela o retângulo. Cada bloco alcançado é destacado com cantos arredondados, na cor do texto selecionado. Quando um único bloco está selecionado, a barra de seleção abre acima dele: suas ações (**Transformar em**, **Cor**, **Negrito** e os outros formatos, **Copiar**, **Pergunte ao Numo**, **Comentário**) se aplicam ao bloco, e depois de **Transformar em** ele continua selecionado para que outra ação possa vir em seguida. Com vários blocos selecionados, a barra fica oculta: abra o menu da alça de um bloco selecionado, que age sobre todos. Shift+clique em outro bloco, ou Shift+seta para cima e Shift+seta para baixo na borda de um bloco, ampliam a seleção em blocos inteiros. Esc seleciona o bloco em que você está escrevendo, e Esc de novo limpa a seleção. Command+A no macOS ou Ctrl+A no Windows/Linux seleciona primeiro o texto do bloco em que você está, inclusive em um bloco de código, e, pressionado de novo, todos os blocos. Com blocos selecionados, a seta para cima e a seta para baixo selecionam o bloco acima ou abaixo, Shift+seta para cima e Shift+seta para baixo adicionam ou removem blocos, Backspace ou Delete os exclui, Command/Ctrl+C os copia, Command/Ctrl+X os recorta, e Enter em um único bloco coloca o cursor no fim dele; digitar não faz nada. O menu do bloco age sobre todos os blocos selecionados. Digite no campo de busca do menu do bloco para chegar a qualquer uma das suas ações, incluindo tipos de bloco e cores: uma entrada de um submenu mostra o caminho, por exemplo **Transformar em** › **Título 1**. Imagens, arquivos, blocos de código, equações, divisores, menções e código em linha mostram o mesmo destaque quando estão selecionados, sozinhos ou dentro de uma seleção. Enquanto você escreve ou edita um comentário, Esc continua fechando ou cancelando o comentário. Em uma tela sensível ao toque, o toque longo continua selecionando texto, e arrastar não seleciona blocos.
 
 No celular, o editor não mostra alças de bloco nem barra de seleção, e digitar `@` deixa um caractere comum. Enquanto um editor está em foco, uma barra flutuante fica acima do teclado e se oculta quando o teclado fecha: **Inserir um bloco** (+) lista os blocos deste editor, nas mesmas seções do menu `/`, e insere o escolhido no cursor, como `/`; **Mencionar** (@) lista pessoas, tickets, objetivos e páginas para mencionar, agrupados por tipo; depois vêm **Negrito**, **Itálico**, **Tachado**, **Código**, **Cor** (uma folha para a cor do texto ou do fundo), **Adicionar link**, **Diminuir recuo** e **Aumentar recuo** em uma lista, **Comentário** em uma página e **Ocultar teclado**, que fica fixo na extremidade direita. Uma folha inferior em que você escreve cresce até a altura total da tela, e a linha que você está digitando fica acima do teclado. Um toque longo seleciona texto em um editor, e a barra e suas folhas também funcionam no caderno de tarefas. A navegação inferior se oculta enquanto um campo de texto está em foco, como o título de uma página ou um comentário. Em uma tela sensível ao toque, **Adicionar ícone** fica sempre visível em uma página.
 

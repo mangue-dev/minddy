@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 40,
-  "sourceRevision": 40,
+  "revision": 41,
+  "sourceRevision": 41,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -121,13 +121,14 @@
       "lib/issue-hierarchy.ts",
       "components/editor/mobile-editor-toolbar.tsx",
       "lib/palette-picker.ts",
-      "lib/creation-relations.ts"
+      "lib/creation-relations.ts",
+      "lib/action-menu-search.ts"
     ]
   },
   "review": {
-    "revision": 40,
-    "fact": "agent:claude-code (content pickers moved to the command palette (MIN-844): relation targets and page resource pickers, plus Parent of / Sub-issue of in the new-issue form, checked against lib/palette-picker.ts, components/palette-picker-rows.tsx, components/relations-section.tsx, components/creation-relations.tsx, lib/creation-relations.ts and components/resources.tsx; rest of the article unchanged since the previous review; issue-dependencies-steps recaptured in the palette)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 41,
+    "fact": "agent:claude-code (searchable card and issue-panel action menus also find submenu entries shown with their path, such as Relations › Mark as blocked by… (MIN-845), checked against components/issue-context-menu.tsx, lib/action-menu-search.ts and lib/issue-context-menu-search.test.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; equivalent meaning to en revision 41; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -173,7 +174,7 @@
       "src": "/documentation/de/new-issue.png",
       "alt": "Noch nicht abgesendeter Ticketentwurf im Projekt Aurora mit Titel, Beschreibung, manuell wählbaren Eigenschaften und der Schaltfläche AUR-21 erstellen.",
       "caption": "Beschreibe das erwartete Ergebnis und wähle vor der Erstellung die passenden Eigenschaften.",
-      "revision": 40,
+      "revision": 41,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -190,7 +191,7 @@
       "src": "/documentation/de/triage-incoming.png",
       "alt": "Eingegangenes Demoticket AUR-19 mit Bericht, Eigenschaften und Funktionen für Duplikat, Ablehnen und Akzeptieren.",
       "caption": "Lies den eingegangenen Bericht, bevor du ihn akzeptierst, ablehnst oder mit einem Duplikat verknüpfst.",
-      "revision": 40,
+      "revision": 41,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -207,7 +208,7 @@
       "src": "/documentation/de/issue-statuses.png",
       "alt": "Die acht Ticketstatus im Auswahlmenü, mit ausgewähltem Backlog-Status.",
       "caption": "Das Häkchen zeigt den aktuellen Status. Wähle den Status, der dem tatsächlichen Arbeitsstand entspricht.",
-      "revision": 40,
+      "revision": 41,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -224,7 +225,7 @@
       "src": "/documentation/de/work-resources.png",
       "alt": "Dialog zum Hinzufügen eines Links mit einer Beispiel-Kontaktadresse.",
       "caption": "Prüfe das Ziel, bevor du die Ressource hinzufügst. Dieser Beispiellink wurde nicht gesendet.",
-      "revision": 40,
+      "revision": 41,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -240,7 +241,7 @@
       "src": "/documentation/de/work-dependencies.png",
       "alt": "Die Befehlspalette zeigt die Tickets, die dieses blockieren können, mit der Frage der Beziehung im Suchfeld.",
       "caption": "Wähle zuerst die Richtung der Beziehung und dann ihr Ziel. Hier wurde keine Beziehung gespeichert.",
-      "revision": 40,
+      "revision": 41,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -256,7 +257,7 @@
       "src": "/documentation/de/work-sub-issues.png",
       "alt": "Eingabefeld für ein Unterticket in einem Demo-Elternticket.",
       "caption": "Das Feld erstellt ein Kind dieses Elterntickets; jedes Kind behält seinen eigenen Status und Diskussionsverlauf.",
-      "revision": 40,
+      "revision": 41,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -273,7 +274,7 @@
       "src": "/documentation/de/work-implementation-plan.png",
       "alt": "Demo-Plan mit zwei von sechs abgeschlossenen Arbeitsschritten.",
       "caption": "Der gespeicherte Demo-Plan unterscheidet abgeschlossene, laufende und ausstehende Schritte. Der Fortschritt belegt nicht, dass die fiktive Codeaufgabe ausgeführt wurde.",
-      "revision": 40,
+      "revision": 41,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -290,7 +291,7 @@
       "src": "/documentation/de/issue-date-recurrence.png",
       "alt": "Fälligkeitsauswahl im wiederkehrenden Modus mit Sonntagsvorschau und optionaler Uhrzeit.",
       "caption": "Der wiederkehrende Modus zeigt die wöchentliche Folge. Bestätige die erste Fälligkeit vor der Ticketerstellung.",
-      "revision": 40,
+      "revision": 41,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -307,7 +308,7 @@
       "src": "/documentation/de/import-issues-preview-workflow.png",
       "alt": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen.",
       "caption": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen. Es wurde nichts importiert; die optionale KI-Planung war für die Aufnahme gesperrt.",
-      "revision": 40,
+      "revision": 41,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -324,7 +325,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Umbenennen und Entfernen.",
-      "revision": 40,
+      "revision": 41,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -500,7 +501,7 @@ Indexierung und Beziehungsentscheidungen nutzen KI. Sie zählen zum Anteil **Aut
 
 Öffne das übergeordnete Ticket und verwende seine Unterticket-Funktionen, um kleinere Arbeitsschritte zu erstellen. Gib jedem Unterticket ein eigenes Ergebnis. Prüfe nach der Erstellung sein Projekt, seine Eigenschaften und die Kennung des übergeordneten Tickets. Die Hierarchie soll die Nachverfolgung erleichtern, nicht die Beschreibung der Ergebnisse jedes Untertickets ersetzen.
 
-Um bestehende Tickets zuzuordnen, drücke R auf einer Karte unter dem Mauszeiger oder im Seitenbereich des Tickets, oder öffne **Beziehungen** über das Kontextmenü einer Karte. **Übergeordnet zu** listet die Tickets, die ein Unterticket dieses Tickets werden können; **Unterticket von** listet die Tickets der obersten Ebene, die sein übergeordnetes Ticket werden können. Jede Liste bietet nur an, was die Regel einer einzigen Ebene erlaubt: Ein Unterticket hat keinen Eintrag **Übergeordnet zu**, und ein Ticket mit Untertickets hat keinen Eintrag **Unterticket von**. Wählst du ein Ticket, das bereits ein anderes übergeordnetes Ticket hat, wird es unter das neue verschoben. Bei einer Auswahl von Karten ordnet **Unterticket von** jedes geeignete ausgewählte Ticket dem gewählten übergeordneten Ticket unter. Im Formular für ein neues Ticket bietet **Beziehungen** dieselben beiden Einträge: **Unterticket von** erstellt das Ticket unter dem gewählten übergeordneten Ticket, und **Übergeordnet zu** ordnet die gewählten Tickets nach dem Erstellen darunter ein. Ein neues Ticket erhält ein übergeordnetes Ticket oder Untertickets, nicht beides.
+Um bestehende Tickets zuzuordnen, drücke R auf einer Karte unter dem Mauszeiger oder im Seitenbereich des Tickets, oder öffne **Beziehungen** über das Kontextmenü einer Karte. **Übergeordnet zu** listet die Tickets, die ein Unterticket dieses Tickets werden können; **Unterticket von** listet die Tickets der obersten Ebene, die sein übergeordnetes Ticket werden können. Jede Liste bietet nur an, was die Regel einer einzigen Ebene erlaubt: Ein Unterticket hat keinen Eintrag **Übergeordnet zu**, und ein Ticket mit Untertickets hat keinen Eintrag **Unterticket von**. Wählst du ein Ticket, das bereits ein anderes übergeordnetes Ticket hat, wird es unter das neue verschoben. Bei einer Auswahl von Karten ordnet **Unterticket von** jedes geeignete ausgewählte Ticket dem gewählten übergeordneten Ticket unter. Im Formular für ein neues Ticket bietet **Beziehungen** dieselben beiden Einträge: **Unterticket von** erstellt das Ticket unter dem gewählten übergeordneten Ticket, und **Übergeordnet zu** ordnet die gewählten Tickets nach dem Erstellen darunter ein. Ein neues Ticket erhält ein übergeordnetes Ticket oder Untertickets, nicht beides. Wenn du im Suchfeld des Kontextmenüs einer Karte oder des `…`-Menüs im Seitenbereich des Tickets tippst, findest du auch die Einträge seiner Untermenüs, jeweils mit ihrem Pfad, etwa **Beziehungen** › **Als blockiert durch… markieren**.
 
 Die Hierarchie erlaubt eine Ebene: Das übergeordnete Ticket muss ein Ticket der obersten Ebene im selben Projekt sein, und ein Unterticket kann selbst keine Untertickets haben. Wird bei der Erstellung kein Ziel ausdrücklich gewählt, übernimmt das Unterticket das Ziel seines übergeordneten Tickets. Prüfe die entstandenen Eigenschaften, statt anzunehmen, dass spätere Änderungen am übergeordneten Ticket automatisch übertragen werden.
 
