@@ -31,7 +31,13 @@ import {
   type IconComponent,
 } from "@/components/icon";
 import { InboxPopover } from "@/components/inbox-popover";
-import { openInbox } from "@/lib/inbox-launcher";
+import { openInbox, openInboxAtNotification } from "@/lib/inbox-launcher";
+import { buildWorkspaceGroups } from "@/lib/palette-workspace-groups";
+import { useRoutinesQuery } from "@/lib/use-routines-query";
+import { allPullRequestsQueryOptions } from "@/lib/use-agent-runs";
+import { fetchViewsApi } from "@/lib/views-api";
+import { notificationActor, notificationTitle } from "@/lib/notification-line";
+import { notificationLineKey } from "@/lib/notification-target";
 import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
@@ -287,6 +293,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const tProjects = useTranslations("Projects");
   const tPages = useTranslations("Pages");
   const tCommon = useTranslations("Common");
+  const tInbox = useTranslations("Inbox");
+  const tTimeline = useTranslations("Timeline");
   const { agentsAllowed, projectLimitReached } = usePlanGates();
   const pathname = usePathname();
   // The stable session: activation re-renders only the tab panel below.
@@ -305,7 +313,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const { openCreateIssue, openCreateObjective } = useCreate();
   const { drafts: creationDrafts } = useAllDrafts();
   const { open: openScratchpad } = useScratchpad();
-  const { unreadCount } = useNotifications();
+  const { notifications, unreadCount } = useNotifications();
   const {
     openIssue: openIssuePanel,
     closeIssue: closeIssuePanel,
@@ -1187,6 +1195,63 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     palettePages,
   );
 
+  // ── Workspace groups: routines, pull requests, views, inbox (MIN-846) ──
+  // Each reads the cache of its own screen, and only while the palette is
+  // open: these lists are not in the search index, and keeping them warm
+  // on every page would poll for a search nobody started. Routines and pull
+  // requests follow the plan gate of their navigation entries.
+  const workspaceReads = paletteOpen;
+  const { routines: paletteRoutines } = useRoutinesQuery({
+    enabled: workspaceReads && agentsAllowed,
+  });
+  const { data: palettePullRequests } = useQuery({
+    ...allPullRequestsQueryOptions("all"),
+    enabled: workspaceReads && agentsAllowed,
+  });
+  // The views of the global board and of the project at hand, under the
+  // keys the boards use. Every project's views would cost one request per
+  // project, each seeding that project's baseline views.
+  const { data: globalViews } = useQuery({
+    queryKey: ["views", "global"],
+    queryFn: ({ signal }) => fetchViewsApi({ kind: "global" }, signal),
+    enabled: workspaceReads,
+  });
+  const { data: projectViews } = useQuery({
+    queryKey: ["views", currentProjectId ?? ""],
+    queryFn: ({ signal }) =>
+      fetchViewsApi({ kind: "project", projectId: currentProjectId as string }, signal),
+    enabled: workspaceReads && !!currentProjectId,
+  });
+  const workspaceGroups = useMemo<PaletteGroup[]>(() => {
+    if (!paletteMounted) return [];
+    const labels = {
+      someone: tInbox("someone"),
+      mcpFallback: tTimeline("mcpFallback"),
+      somePageFallback: tInbox("somePageFallback"),
+      someIssueFallback: tInbox("someIssueFallback", { entity: ti("entity").toLowerCase() }),
+    };
+    return buildWorkspaceGroups({
+      routines: agentsAllowed ? paletteRoutines : [],
+      pullRequests: agentsAllowed ? (palettePullRequests?.pullRequests ?? []) : [],
+      views: [...(globalViews ?? []), ...(currentProjectId ? (projectViews ?? []) : [])],
+      notifications,
+      projectById: paletteProjectById,
+      labels: {
+        routines: t("routines"),
+        pullRequests: t("pullRequests"),
+        views: t("boardViews"),
+        notifications: t("inbox"),
+        globalBoard: t("allIssues"),
+        notificationTitle: (notification) => notificationTitle(notification, labels),
+        notificationLine: (notification) =>
+          tInbox(notificationLineKey(notification.type, notification.from_numo), {
+            actor: notificationActor(notification, labels),
+          }),
+      },
+      navigate: (href) => router.push(href),
+      openNotification: openInboxAtNotification,
+    });
+  }, [paletteMounted, agentsAllowed, paletteRoutines, palettePullRequests, globalViews, projectViews, currentProjectId, notifications, paletteProjectById, router, t, ti, tInbox, tTimeline]);
 
   const inboxItem: AppNavItem = {
     key: "inbox",
@@ -1480,9 +1545,10 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       ...commandGroups,
       ...settingsGroups,
       ...desktopDataGroups,
+      ...workspaceGroups,
       accountCommandGroup,
     ],
-    [commandGroups, settingsGroups, desktopDataGroups, accountCommandGroup]
+    [commandGroups, settingsGroups, desktopDataGroups, workspaceGroups, accountCommandGroup]
   );
 
   const mobileNavigation = useMemo(() => {

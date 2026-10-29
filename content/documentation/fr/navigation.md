@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 18,
-  "sourceRevision": 18,
+  "revision": 19,
+  "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-28",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -61,14 +61,17 @@
       "components/create-issue-dialog.tsx",
       "components/app-shell-chrome.tsx",
       "components/editor/find-bar.tsx",
-      "lib/keyboard/find-shortcut.ts"
+      "lib/keyboard/find-shortcut.ts",
+      "lib/palette-workspace-groups.ts",
+      "components/inbox-content.tsx",
+      "lib/inbox-launcher.ts"
     ]
   },
   "review": {
-    "revision": 18,
-    "fact": "agent:claude-code (Command/Ctrl+F scope (page or task notebook on screen, the browser's find elsewhere and under another dialog) checked against lib/keyboard/find-shortcut.ts, components/editor/find-bar.tsx and lib/keyboard/shortcuts.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (fr changed passages with catalog UI labels; equivalent meaning to en revision 18; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-28"
+    "revision": 19,
+    "fact": "agent:claude-code (palette search of routines, pull requests, views and inbox notifications (MIN-846) checked against lib/palette-workspace-groups.ts, components/app-shell-chrome.tsx, components/inbox-content.tsx and lib/inbox-launcher.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the new rows)",
+    "language": "agent:claude-code (fr new paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "views",
@@ -89,7 +92,7 @@
       "src": "/documentation/fr/work-navigation.png",
       "alt": "Navigation du projet à côté du tableau de tickets de démonstration.",
       "caption": "La barre du projet donne accès aux tickets, objectifs, pages et arrivées en triage.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -105,7 +108,7 @@
       "src": "/documentation/fr/work-search.png",
       "alt": "Résultats de recherche pour l’identifiant d’un ticket de démonstration.",
       "caption": "La palette retrouve le ticket par identifiant avec les pages du projet ; ouvrir un résultat conserve ses règles d’accès.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -160,6 +163,8 @@ L’application desktop ajoute des onglets natifs et un sélecteur de serveur. U
 ## Retrouver le travail et agir au clavier {#search-and-shortcuts}
 
 Ouvrez la palette de commandes depuis la recherche de navigation. Cherchez un titre distinctif ou un identifiant de ticket, puis choisissez un résultat. La recherche couvre le travail accessible au compte ; connaître un identifiant n’ouvre pas un autre projet. La commande Documentation ouvre le manuel public dans votre langue actuelle.
+
+Dès que vous tapez, la palette trouve aussi les routines, les pull requests, les vues et les notifications de l’**Inbox** ; elles n’apparaissent pas dans la liste affichée avant la saisie. Les routines et les pull requests apparaissent si votre offre les inclut, et les pull requests couvrent les 100 plus récemment mises à jour dans vos dépôts liés. Les vues couvrent **Tous les tickets** et le projet dans lequel vous vous trouvez. Choisir une routine, une pull request ou une vue l’ouvre. Choisir une notification ouvre l’**Inbox** sur l’onglet qui la liste, **Non lues** ou **Toutes**, fait défiler jusqu’à elle et la met brièvement en évidence ; elle reste non lue tant que vous ne l’ouvrez pas. Les projets que vous avez masqués restent absents de ces résultats.
 
 Utilisez Commande+K sur macOS ou Ctrl+K sur Windows/Linux pour ouvrir la palette ; Commande/Ctrl+P constitue une autre combinaison de l’application. Hors d’un champ de texte, ? ouvre l’aide des raccourcis et C la création de ticket. Sur une carte survolée ou les commandes de détail compatibles, S ouvre l’état, P la priorité, E l’effort, A le responsable, L les catégories, D l’échéance et O l’objectif. R ajoute une relation depuis les mêmes endroits, sur la page d’un objectif et dans le formulaire de nouveau ticket : choisissez le type de relation, puis l’autre ticket ou objectif. Si la carte fait partie d’une sélection, ces touches modifient tous les tickets sélectionnés ; le responsable, l’objectif, les catégories et les relations ne s’appliquent qu’aux tickets sélectionnés du projet de cette carte. Maj+C mène à un champ de commentaire prêt pour la saisie, le fil défilé jusqu’à son dernier message : celui d’une carte de ticket survolée ou d’une ligne survolée dans la liste des objectifs, des retours, des pull requests, des pages ou du triage, ou, sans rien survoler, celui du ticket, de l’objectif, du retour, de la pull request ou de la page à l’écran. Une page ouvre pour cela son panneau **Activité**. Maj+C ne concerne que cet élément, même si la carte fait partie d’une sélection. Sur la page d’un objectif et dans le formulaire de nouvel objectif, S ouvre son état, A son responsable, D sa date cible et C sa couleur ; à ces endroits, C ne crée pas de ticket. Ces touches seules n’interceptent pas la saisie dans un champ, une zone de texte ou un éditeur. Les séquences G puis H (Accueil) et G puis I (Boîte de réception) utilisent deux touches successives ; G puis W ouvre les pages uniquement dans le contexte d’un projet.
 

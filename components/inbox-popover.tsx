@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Spinner } from "@/components/ui/spinner";
 import { ResponsivePopover, ResponsivePopoverAnchor, ResponsivePopoverContent } from "@/components/ui/responsive-popover";
-import { OPEN_INBOX_EVENT } from "@/lib/inbox-launcher";
+import { OPEN_INBOX_EVENT, type OpenInboxDetail } from "@/lib/inbox-launcher";
+import type { InboxFocus } from "@/components/inbox-content";
 
 const InboxContent = dynamic(() => import("@/components/inbox-content"), {
   loading: () => (
@@ -36,9 +37,19 @@ export function InboxPopover({ open, onOpenChange: setOpen }: {
       ?? new DOMRect(window.innerWidth / 2, window.innerHeight - 72, 0, 0),
   });
 
+  // The notification a launch asked to show. `seq` makes a second request for
+  // the same row a new one, so it pulses again.
+  const [focus, setFocus] = useState<InboxFocus | null>(null);
+
   useEffect(() => {
-    const launch = () => {
+    const launch = (event: Event) => {
       returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      const notificationId = (event as CustomEvent<OpenInboxDetail | null>).detail?.notificationId;
+      if (notificationId) {
+        setFocus((current) => ({ id: notificationId, seq: (current?.seq ?? 0) + 1 }));
+        setOpen(true);
+        return;
+      }
       setOpen((current) => !current);
     };
     window.addEventListener(OPEN_INBOX_EVENT, launch);
@@ -85,7 +96,7 @@ export function InboxPopover({ open, onOpenChange: setOpen }: {
           else visibleTrigger()?.focus();
         }}
       >
-        <InboxContent onNavigate={() => setOpen(false)} />
+        <InboxContent onNavigate={() => setOpen(false)} focus={focus} />
       </ResponsivePopoverContent>
     </ResponsivePopover>
   );

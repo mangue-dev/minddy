@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 18,
-  "sourceRevision": 18,
+  "revision": 19,
+  "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-28",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -61,14 +61,17 @@
       "components/create-issue-dialog.tsx",
       "components/app-shell-chrome.tsx",
       "components/editor/find-bar.tsx",
-      "lib/keyboard/find-shortcut.ts"
+      "lib/keyboard/find-shortcut.ts",
+      "lib/palette-workspace-groups.ts",
+      "components/inbox-content.tsx",
+      "lib/inbox-launcher.ts"
     ]
   },
   "review": {
-    "revision": 18,
-    "fact": "agent:claude-code (Command/Ctrl+F scope (page or task notebook on screen, the browser's find elsewhere and under another dialog) checked against lib/keyboard/find-shortcut.ts, components/editor/find-bar.tsx and lib/keyboard/shortcuts.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-28"
+    "revision": 19,
+    "fact": "agent:claude-code (palette search of routines, pull requests, views and inbox notifications (MIN-846) checked against lib/palette-workspace-groups.ts, components/app-shell-chrome.tsx, components/inbox-content.tsx and lib/inbox-launcher.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the new rows)",
+    "language": "agent:claude-code (en new paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "views",
@@ -89,7 +92,7 @@
       "src": "/documentation/en/work-navigation.png",
       "alt": "Project navigation beside the demonstration issue board.",
       "caption": "Use the project sidebar to switch between issues, objectives, pages and triage.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -105,7 +108,7 @@
       "src": "/documentation/en/work-search.png",
       "alt": "Search results for a demonstration issue identifier.",
       "caption": "The palette finds the issue by identifier alongside project pages; opening a result preserves its access rules.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -160,6 +163,8 @@ The desktop app adds native tabs and a server picker around the application. A t
 ## Find work and use keyboard actions {#search-and-shortcuts}
 
 Open the command palette from the navigation search control. Search for a distinctive title or issue identifier and choose a result. Results are limited to work your account can access; a known identifier does not grant access to another project. The Documentation command opens the public manual in your current language.
+
+Once you type, the palette also finds routines, pull requests, views and inbox notifications; they stay out of the list shown before typing. Routines and pull requests appear when your plan includes them, and pull requests cover the 100 most recently updated in your linked repositories. Views cover **All issues** and the project you are in. Choosing a routine, a pull request or a view opens it. Choosing a notification opens the **Inbox** on the tab that lists it, **Unread** or **All**, scrolls to it and highlights it briefly; it stays unread until you open it. Projects you hid stay out of these results.
 
 Press Command+K on macOS or Ctrl+K on Windows/Linux to open the command palette; Command/Ctrl+P is an alternative application binding. Outside editable text, ? opens shortcut help and C opens issue creation. On a hovered issue card or its supported detail controls, S opens status, P priority, E effort, A assignee, L categories, D due date and O objective. R adds a relation from the same places, on an objective page and in the new-issue form: choose the relation type, then the other issue or objective. When the card is part of a selection, these keys change every selected issue; assignee, objective, categories and relations only reach the selected issues of that card's project. Shift+C goes to a comment field, ready for typing, with the thread scrolled to its latest message: that of a hovered issue card or of a hovered row in the objectives, feedback, pull requests, pages or triage list, or, with nothing hovered, that of the issue, objective, feedback, pull request or page on screen. A page opens its **Activity** panel for it. Shift+C acts on that one item, even when the card is part of a selection. On an objective page and in the new-objective form, S opens its status, A its lead, D its target date and C its color; there, C does not create an issue. These single-key actions do not intercept typing in an input, textarea or content editor. Navigation sequences such as G then H (Home) and G then I (Inbox) use two successive keys; G then W reaches Pages only in a project context.
 

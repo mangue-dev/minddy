@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
-  "sourceRevision": 18,
+  "revision": 20,
+  "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-28",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -61,14 +61,17 @@
       "components/create-issue-dialog.tsx",
       "components/app-shell-chrome.tsx",
       "components/editor/find-bar.tsx",
-      "lib/keyboard/find-shortcut.ts"
+      "lib/keyboard/find-shortcut.ts",
+      "lib/palette-workspace-groups.ts",
+      "components/inbox-content.tsx",
+      "lib/inbox-launcher.ts"
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:claude-code (Command/Ctrl+F scope (page or task notebook on screen, the browser's find elsewhere and under another dialog) checked against lib/keyboard/find-shortcut.ts, components/editor/find-bar.tsx and lib/keyboard/shortcuts.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; equivalent meaning to en revision 18; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-28"
+    "revision": 20,
+    "fact": "agent:claude-code (palette search of routines, pull requests, views and inbox notifications (MIN-846) checked against lib/palette-workspace-groups.ts, components/app-shell-chrome.tsx, components/inbox-content.tsx and lib/inbox-launcher.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the new rows)",
+    "language": "agent:claude-code (pt-BR new paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "views",
@@ -89,7 +92,7 @@
       "src": "/documentation/pt-BR/work-navigation.png",
       "alt": "Navegação do projeto ao lado do quadro de tickets de demonstração.",
       "caption": "A barra do projeto dá acesso aos tickets, objetivos, páginas e triagem.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -106,7 +109,7 @@
       "src": "/documentation/pt-BR/work-search.png",
       "alt": "Resultados de busca do identificador de um ticket de demonstração.",
       "caption": "A paleta encontra o ticket pelo identificador junto às páginas do projeto; abrir um resultado preserva suas regras de acesso.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -162,6 +165,8 @@ O aplicativo desktop acrescenta abas nativas e um seletor de servidor ao redor d
 ## Encontrar trabalho e usar ações de teclado {#search-and-shortcuts}
 
 Abra a paleta de comandos pelo controle de pesquisa da navegação. Pesquise um título distintivo ou um identificador de ticket e escolha um resultado. Os resultados se limitam ao trabalho que sua conta pode acessar; saber um identificador não concede acesso a outro projeto. O comando Documentação abre o manual público no seu idioma atual.
+
+Assim que você digita, a paleta também encontra rotinas, pull requests, visualizações e notificações da **Caixa de entrada**; elas não aparecem na lista exibida antes da digitação. Rotinas e pull requests aparecem quando seu plano os inclui, e os pull requests abrangem os 100 atualizados mais recentemente nos seus repositórios vinculados. As visualizações abrangem **Todos os tickets** e o projeto em que você está. Escolher uma rotina, um pull request ou uma visualização o abre. Escolher uma notificação abre a **Caixa de entrada** na aba que a lista, **Não lidas** ou **Todas**, rola até ela e a destaca por um instante; ela continua não lida até você abri-la. Os projetos que você ocultou ficam fora desses resultados.
 
 Pressione Command+K no macOS ou Ctrl+K no Windows/Linux para abrir a paleta de comandos; Command/Ctrl+P é um atalho alternativo do aplicativo. Fora de texto editável, ? abre a ajuda de atalhos e C abre a criação de tickets. Em um cartão de ticket sob o ponteiro ou nos controles de detalhe compatíveis, S abre o estado, P a prioridade, E o esforço, A o responsável, L as categorias, D o prazo e O o objetivo. R adiciona uma relação nos mesmos lugares, na página de um objetivo e no formulário de novo ticket: escolha o tipo de relação e depois o outro ticket ou objetivo. Se o cartão fizer parte de uma seleção, essas teclas alteram todos os tickets selecionados; responsável, objetivo, categorias e relações só se aplicam aos tickets selecionados do projeto desse cartão. Shift+C leva a um campo de comentário pronto para digitar, com a conversa rolada até a mensagem mais recente: o de um cartão de ticket sob o ponteiro ou de uma linha sob o ponteiro na lista de objetivos, feedback, pull requests, páginas ou triagem, ou, sem nada sob o ponteiro, o do ticket, objetivo, feedback, pull request ou página na tela. Uma página abre para isso o painel **Atividade**. Shift+C age só nesse item, mesmo que o cartão faça parte de uma seleção. Na página de um objetivo e no formulário de novo objetivo, S abre o estado, A o responsável, D a data prevista e C a cor; ali, C não cria um ticket. Essas ações de uma tecla não interceptam a digitação em campos, áreas de texto ou editores de conteúdo. Sequências de navegação como G e depois H (Início) ou G e depois I (Caixa de entrada) usam duas teclas sucessivas. G e depois W leva a Páginas apenas no contexto de um projeto.
 

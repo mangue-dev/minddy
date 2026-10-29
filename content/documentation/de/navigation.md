@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
-  "sourceRevision": 18,
+  "revision": 20,
+  "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-28",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -61,14 +61,17 @@
       "components/create-issue-dialog.tsx",
       "components/app-shell-chrome.tsx",
       "components/editor/find-bar.tsx",
-      "lib/keyboard/find-shortcut.ts"
+      "lib/keyboard/find-shortcut.ts",
+      "lib/palette-workspace-groups.ts",
+      "components/inbox-content.tsx",
+      "lib/inbox-launcher.ts"
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:claude-code (Command/Ctrl+F scope (page or task notebook on screen, the browser's find elsewhere and under another dialog) checked against lib/keyboard/find-shortcut.ts, components/editor/find-bar.tsx and lib/keyboard/shortcuts.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; equivalent meaning to en revision 18; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-28"
+    "revision": 20,
+    "fact": "agent:claude-code (palette search of routines, pull requests, views and inbox notifications (MIN-846) checked against lib/palette-workspace-groups.ts, components/app-shell-chrome.tsx, components/inbox-content.tsx and lib/inbox-launcher.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the new rows)",
+    "language": "agent:claude-code (de new paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "views",
@@ -89,7 +92,7 @@
       "src": "/documentation/de/work-navigation.png",
       "alt": "Projektnavigation neben dem Demo-Ticketboard.",
       "caption": "Über die Projektseitenleiste erreichst du Tickets, Ziele, Seiten und Triage.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -106,7 +109,7 @@
       "src": "/documentation/de/work-search.png",
       "alt": "Suchergebnisse für die Kennung eines Demo-Tickets.",
       "caption": "Die Palette findet das Ticket über seine Kennung neben Projektseiten; beim Öffnen bleiben die Zugriffsregeln bestehen.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -162,6 +165,8 @@ Die Desktop-App ergänzt die Anwendung um native Tabs und eine Serverauswahl. Ei
 ## Arbeit finden und Tastaturaktionen verwenden {#search-and-shortcuts}
 
 Öffne die Befehlspalette über die Suchfunktion der Navigation. Suche nach einem eindeutigen Titel oder einer Ticketkennung und wähle ein Ergebnis. Ergebnisse sind auf Arbeit beschränkt, auf die dein Konto zugreifen kann; eine bekannte Kennung gewährt keinen Zugriff auf ein anderes Projekt. Der Befehl Dokumentation öffnet das öffentliche Handbuch in deiner aktuellen Sprache.
+
+Sobald du tippst, findet die Palette auch Routinen, Pull Requests, Ansichten und Benachrichtigungen aus dem **Posteingang**; in der Liste vor der Eingabe erscheinen sie nicht. Routinen und Pull Requests erscheinen, wenn dein Plan sie enthält, und Pull Requests umfassen die 100 zuletzt aktualisierten deiner verknüpften Repositorys. Ansichten umfassen **Alle Tickets** und das Projekt, in dem du dich befindest. Wählst du eine Routine, einen Pull Request oder eine Ansicht, öffnet sie sich. Wählst du eine Benachrichtigung, öffnet sich der **Posteingang** auf dem Tab, der sie auflistet, **Ungelesen** oder **Alle**, scrollt zu ihr und hebt sie kurz hervor; sie bleibt ungelesen, bis du sie öffnest. Projekte, die du ausgeblendet hast, bleiben aus diesen Ergebnissen heraus.
 
 Drücke Command+K unter macOS oder Strg+K unter Windows/Linux, um die Befehlspalette zu öffnen; Command/Strg+P ist ein alternatives Anwendungskürzel. Außerhalb bearbeitbarer Texte öffnet ? die Kürzelhilfe und C die Ticketerstellung. Auf einer Ticketkarte unter dem Mauszeiger oder an den unterstützten Detailfunktionen öffnet S den Status, P die Priorität, E den Aufwand, A die zuständige Person, L die Kategorien, D das Fälligkeitsdatum und O das Ziel. R fügt an denselben Stellen, auf der Seite eines Ziels und im Formular für ein neues Ticket eine Beziehung hinzu: Wähle die Beziehungsart und dann das andere Ticket oder Ziel. Gehört die Karte zu einer Auswahl, ändern diese Tasten alle ausgewählten Tickets; zuständige Person, Ziel, Kategorien und Beziehungen gelten nur für die ausgewählten Tickets aus dem Projekt dieser Karte. Umschalt+C führt zu einem Kommentarfeld, bereit zur Eingabe, mit dem Verlauf bis zur neuesten Nachricht gescrollt: dem einer Ticketkarte unter dem Mauszeiger oder einer Zeile unter dem Mauszeiger in der Liste der Ziele, des Feedbacks, der Pull Requests, der Seiten oder der Triage, oder, wenn nichts unter dem Mauszeiger liegt, dem des angezeigten Tickets, Ziels, Feedbacks, Pull Requests oder der angezeigten Seite. Eine Seite öffnet dafür ihr Panel **Aktivität**. Umschalt+C wirkt nur auf dieses eine Element, auch wenn die Karte zu einer Auswahl gehört. Auf der Seite eines Ziels und im Formular für ein neues Ziel öffnet S seinen Status, A die verantwortliche Person, D sein Zieldatum und C seine Farbe; dort erstellt C kein Ticket. Diese Einzelbuchstaben unterbrechen keine Eingabe in einem Eingabefeld, Textbereich oder Inhaltseditor. Navigationsfolgen wie G, dann H (Startseite) und G, dann I (Posteingang) verwenden zwei nacheinander gedrückte Tasten. G, dann W führt nur innerhalb eines Projekts zu den Seiten.
 

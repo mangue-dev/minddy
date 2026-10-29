@@ -2412,7 +2412,8 @@ html.marquee-drawing * {
   background: var(--ring);
 }
 
-.page-block-target {
+.page-block-target,
+.inbox-row-target {
   position: relative;
   border-radius: 0.375rem;
   animation: page-block-pulse 1.6s ease-in-out;
@@ -2438,7 +2439,8 @@ html.marquee-drawing * {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .page-block-target {
+  .page-block-target,
+  .inbox-row-target {
     animation: none;
     background-color: color-mix(in oklab, var(--page-color-blue) 26%, transparent);
     box-shadow: 0 0 0 6px
