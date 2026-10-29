@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 23,
-  "sourceRevision": 22,
+  "revision": 24,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-28",
   "compatibility": {
@@ -64,14 +64,16 @@
       "lib/settings-sections.ts",
       "lib/server/assistant/conversation-attachments.ts",
       "lib/server/assistant/markdown-pdf.ts",
-      "components/assistant/generated-file-cards.tsx"
+      "components/assistant/generated-file-cards.tsx",
+      "components/assistant/assistant-starter-list.tsx",
+      "components/home/home-numo-composer.tsx"
     ]
   },
   "review": {
-    "revision": 23,
-    "fact": "agent:claude-code (new paragraph on asking Numo about a selected passage, checked against lib/use-ask-numo-about-selection.ts, lib/assistant-context.ts and components/assistant/assistant-shell.tsx; not checked in the running app; no figure recaptured, existing figures still match; earlier evidence retained in git history)",
-    "language": "agent:claude-code (es translation of the added paragraph with catalog UI labels; informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-28"
+    "revision": 24,
+    "fact": "agent:claude-code (Home composer showing the same suggestion rows as the empty panel, checked against components/home/home-numo-composer.tsx, components/assistant/assistant-starter-list.tsx, lib/assistant-starters.ts and the Assistant.starters.home catalog entries; not checked in the running app; no figure recaptured, existing figures do not show Home; earlier evidence retained in git history)",
+    "language": "agent:claude-code (es sentence added on the Home composer with catalog UI labels; informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "code-work",
@@ -101,7 +103,7 @@
       "src": "/documentation/es/work-with-numo-workflow.png",
       "alt": "Conversación de demostración de Numo con contexto, cambio de prioridad y respuesta guardada.",
       "caption": "Conversación de demostración existente, traducida para mostrarla. La respuesta guardada cita AUR-11 y AUR-7; la captura no acredita una nueva ejecución.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -118,7 +120,7 @@
       "src": "/documentation/es/numo-permissions-and-approvals-workflow.svg",
       "alt": "Matriz de permisos de Numo para acciones del proyecto, conexiones personales y rutinas.",
       "caption": "El acceso al proyecto y las peticiones explícitas limitan las acciones de Numo; el contenido externo no concede permisos.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -179,7 +181,7 @@
       "src": "/documentation/es/numo-execution-model-flow.svg",
       "alt": "Diagrama: Persistir intención, mensaje y UUID. Reclamar turno, guardar herramientas y resultados. Esperar tu respuesta cuando haga falta información. Releer eventos y conciliar escrituras inciertas.",
       "caption": "Sigue las etapas en este orden. Persistir intención, mensaje y UUID. Reclamar turno, guardar herramientas y resultados. Esperar tu respuesta cuando haga falta información. Releer eventos y conciliar escrituras inciertas.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -211,7 +213,7 @@
       "src": "/documentation/es/numo-mcp-connections-workflow.png",
       "alt": "Ajustes MCP personales, lista vacía y botón para añadir otro servidor.",
       "caption": "Las conexiones de Numo son personales; las rutinas usan las del propietario del proyecto.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -228,7 +230,7 @@
       "src": "/documentation/es/numo-mcp-connections-config-workflow.png",
       "alt": "Asistente de conexión de Notion con el método de inicio de sesión conocido por el catálogo.",
       "caption": "Paso de inicio de sesión de un servicio del catálogo. No se introdujeron credenciales ni se contactó con ningún servidor.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-21",
       "viewport": [
@@ -261,7 +263,7 @@ Abre la incidencia o el proyecto y usa el botón flotante de Numo. La página ac
 3. Envía una petición acotada, por ejemplo: «Lee esta incidencia y propón criterios de aceptación. No cambies su estado».
 4. Lee la respuesta y abre sus enlaces a incidencias o fuentes. Si pediste una modificación, comprueba el objeto modificado.
 
-En una conversación nueva y vacía, cuatro filas de sugerencias encima del campo de redacción proponen peticiones adaptadas a la página actual, por ejemplo **Resumir esta incidencia** o **Escribir un plan de implementación** cuando hay una incidencia abierta en el panel lateral. Elegir una fila rellena el campo sin enviarlo, para que puedas ajustar la petición antes. Las filas desaparecen en cuanto el campo contiene texto y vuelven cuando lo vacías. Aparecen en el diseño de escritorio, no en un teléfono.
+En una conversación nueva y vacía, cuatro filas de sugerencias encima del campo de redacción proponen peticiones adaptadas a la página actual, por ejemplo **Resumir esta incidencia** o **Escribir un plan de implementación** cuando hay una incidencia abierta en el panel lateral. Elegir una fila rellena el campo sin enviarlo, para que puedas ajustar la petición antes. Las filas desaparecen en cuanto el campo contiene texto y vuelven cuando lo vacías. Aparecen en el diseño de escritorio, no en un teléfono. El campo de redacción al pie de **Inicio** muestra las mismas filas, con sugerencias como **Elegir en qué centrarme hoy** o **Encontrar lo atrasado**; si envías desde ahí, el panel se abre en su diseño ampliado.
 
 Para preguntar a Numo por un fragmento, selecciónalo en un editor, como una página o la descripción de una incidencia, y elige **Pregúntale a Numo** en la barra de herramientas de selección, en un ordenador. El panel se abre sin enviar nada: junto a la página o la incidencia de la que procede, el fragmento aparece como una píldora de contexto con sus primeras palabras, y al pasar el cursor sobre la píldora ves el fragmento completo. Escribe tu pregunta, por ejemplo «Reescribe esto de forma más concisa» o «Crea incidencias a partir de esto», y envíala. El fragmento acompaña solo a ese mensaje. Para no incluirlo, quita su píldora con su cruz.
 

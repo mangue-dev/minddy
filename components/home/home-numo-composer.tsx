@@ -1,7 +1,9 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { ChatInput } from "@/components/assistant/chat-input";
+import { AssistantStarterList } from "@/components/assistant/assistant-starter-list";
+import { ChatInput, type ChatInputHandle } from "@/components/assistant/chat-input";
 import { ConversationSettings } from "@/components/assistant/conversation-settings";
 import { useSlashCommands } from "@/components/assistant/slash-menu";
 import {
@@ -49,6 +51,10 @@ import { useNumoMentionables } from "@/lib/use-numo-mentionables";
  * roads, for the same reason as the others: it is the COMPOSER which makes the
  * FOB superfluous, not the URL. The rule therefore follows this component wherever it is
  * mounted — docking block as onboarding screen.
+ *
+ * Above it sit the same suggestion rows as the empty Numo panel (MIN-842),
+ * the home set: a row fills the composer without sending, and the rows step
+ * aside while the composer holds text.
  */
 export function HomeNumoComposer() {
   const t = useTranslations("Home");
@@ -57,28 +63,39 @@ export function HomeNumoComposer() {
   const commands = useSlashCommands();
   const resumable = useResumableConversation();
   useSuppressAssistantFab(!resumable);
+  const inputRef = useRef<ChatInputHandle>(null);
+  const [empty, setEmpty] = useState(true);
 
   return (
-    <ChatInput
-      className="px-0"
-      placeholder={t("numoPlaceholder")}
-      mentionables={mentionables}
-      onMentionQuery={onMentionQuery}
-      commands={commands}
-      leadingControls={<ConversationSettings />}
-      onSend={(message, attachments, mentions, command) =>
-        openIntent({
-          source: "home",
-          action: "discuss",
-          projectId: null,
-          prompt: message,
-          mentions,
-          command,
-          attachments,
-          // A message sent from the dashboard is a work session, not a
-          // popover glance: the panel opens fullscreen, not compact.
-        }, { displayMode: "expanded" })
-      }
-    />
+    <>
+      <AssistantStarterList
+        page="home"
+        visible={empty}
+        onPick={(prompt) => inputRef.current?.fill(prompt)}
+      />
+      <ChatInput
+        ref={inputRef}
+        className="px-0"
+        placeholder={t("numoPlaceholder")}
+        mentionables={mentionables}
+        onMentionQuery={onMentionQuery}
+        commands={commands}
+        leadingControls={<ConversationSettings />}
+        onEmptyChange={setEmpty}
+        onSend={(message, attachments, mentions, command) =>
+          openIntent({
+            source: "home",
+            action: "discuss",
+            projectId: null,
+            prompt: message,
+            mentions,
+            command,
+            attachments,
+            // A message sent from the dashboard is a work session, not a
+            // popover glance: the panel opens fullscreen, not compact.
+          }, { displayMode: "expanded" })
+        }
+      />
+    </>
   );
 }

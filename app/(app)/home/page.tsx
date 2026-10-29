@@ -12,14 +12,15 @@ import { HomeProjectSignals } from "@/components/home/home-project-signals";
 import { HomeNumoComposer } from "@/components/home/home-numo-composer";
 import { DesktopInstallBanner } from "@/components/home/desktop-install-banner";
 import { MobileInstallHint } from "@/components/home/mobile-install-hint";
-import { HomeTip } from "@/components/home/home-tip";
 
 type AuthMeta = { display_name?: string; full_name?: string; name?: string };
 
-// Keep the shared composer centered within the content pane.
+// The greeting and the banners read as one centered column.
 const HERO_COLUMN = "mx-auto w-full max-w-xl";
 
-const HEADER_OFFSET = "desktop:pb-[var(--app-content-header-height)]";
+// The composer and its suggestions take the expanded Numo panel's column, so
+// the home page and the panel opened from it start from the same layout.
+const COMPOSER_COLUMN = "mx-auto w-full max-w-3xl";
 
 // Resolve local time after hydration and keep the greeting stable for this visit.
 function useGreeting(name: string): string {
@@ -50,26 +51,19 @@ export default function HomePage() {
   const greeting = useGreeting(name);
 
   return (
-    <section
-      className={cn(
-        // `minmax(0,1fr)`: the implicit column is `auto`, which never shrinks
-        // below its content's min-content width — a long model name in the
-        // composer widened the whole column past a phone's screen.
-        "grid min-h-full grid-cols-[minmax(0,1fr)] grid-rows-[1fr_auto_1fr] px-6",
-        HEADER_OFFSET,
-      )}
-    >
-      <div className={cn(HERO_COLUMN, "flex items-end pb-5 pt-10")}>
-        <h1 className="w-full text-center font-display text-2xl font-semibold tracking-tight">
+    // The greeting and the banners sit centered in the space the composer
+    // leaves; the composer and its suggestions stay at the foot. When the
+    // banners need more room than that, the page grows and scrolls as one
+    // column: nothing is pinned over the banners.
+    <section className="flex min-h-full flex-col px-6">
+      <div className="flex-1" aria-hidden />
+
+      {/* `min-w-0`: a long model name in the composer must not widen the
+      column past a phone's screen. */}
+      <div className={cn(HERO_COLUMN, "flex min-w-0 flex-col gap-3 pt-10")}>
+        <h1 className="mb-2 w-full text-center font-display text-2xl font-semibold tracking-tight">
           {greeting}
         </h1>
-      </div>
-
-      <div className={HERO_COLUMN}>
-        <HomeNumoComposer />
-      </div>
-
-      <div className={cn(HERO_COLUMN, "flex flex-col gap-3 pb-10 pt-3")}>
         <PendingInvitationsBanner />
         <HomeSmartAssignWarning />
         <HomeProjectSignals />
@@ -77,7 +71,11 @@ export default function HomePage() {
         <MobileInstallHint key={user?.id} />
       </div>
 
-      <HomeTip />
+      <div className="flex-1" aria-hidden />
+
+      <div className={cn(COMPOSER_COLUMN, "min-w-0 pb-4 pt-8")}>
+        <HomeNumoComposer />
+      </div>
     </section>
   );
 }

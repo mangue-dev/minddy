@@ -5,7 +5,6 @@ import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { ResponsivePopover, ResponsivePopoverContent, ResponsivePopoverTrigger } from "@/components/ui/responsive-popover";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Cancel01Icon, Clock01Icon, CollapseIcon, ExpandIcon } from "@hugeicons/core-free-icons";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { usePathname } from "next/navigation";
 import {
   useCallback,
@@ -49,7 +48,6 @@ import {
 import { WorkEvents } from "@/components/assistant/work-events";
 import { workEventsRevealKey, type WorkEvent } from "@/lib/work-event-groups";
 import { liveSecretRevealKey } from "@/components/assistant/secret-callout";
-import { AppIcon } from "@/components/icon";
 import { parseAskUserQuestions, type AskUserQuestion } from "@/lib/ask-user";
 import {
   buildAssistantBlocks,
@@ -89,7 +87,8 @@ import { ReasoningBlock } from "@/components/agent/reasoning-block";
 import { assistantMessageReasoning } from "@/lib/assistant-reasoning";
 import { SidebarFilterField } from "@/components/sidebar-filter-field";
 import { SIDEBAR_HEADER_ACTION_CLASS } from "@/lib/sidebar-control-styles";
-import { assistantStarterPage, assistantStarters } from "@/lib/assistant-starters";
+import { assistantStarterPage } from "@/lib/assistant-starters";
+import { AssistantStarterList } from "@/components/assistant/assistant-starter-list";
 
 export type AssistantDisplayMode = "compact" | "expanded";
 
@@ -403,9 +402,7 @@ export const AssistantShell = forwardRef<
   // as the user starts writing their own message.
   const pathname = usePathname();
   const starterPage = assistantStarterPage(pathname, pageContext);
-  const starters = useMemo(() => assistantStarters(starterPage), [starterPage]);
   const [composerEmpty, setComposerEmpty] = useState(true);
-  const reducedMotion = useReducedMotion();
   const showStarters = !hasMessages && !mobile && composerEmpty && !embeddedConversationId;
 
   // Question ask_user ACTIVE: the last visible message is a message
@@ -1082,46 +1079,11 @@ export const AssistantShell = forwardRef<
                 "sticky bottom-0 pb-4",
               )}
             >
-              {/* "wait" keeps the leaving rows in flow until their exit ends.
-              "popLayout" would pull them out of flow: this bottom-anchored
-              container then shrinks at once and the rows land behind the
-              composer instead of fading where they stood. */}
-              <AnimatePresence initial={false} mode="wait">
-                {showStarters && (
-                  <motion.div
-                    key={starterPage}
-                    role="list"
-                    aria-label={t("startersLabel")}
-                    className="mb-2 hidden flex-col divide-y divide-border/70 app-desktop:flex"
-                    initial={reducedMotion ? { opacity: 0 } : { opacity: 0, filter: "blur(6px)", y: 6 }}
-                    animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
-                    exit={reducedMotion ? { opacity: 0 } : { opacity: 0, filter: "blur(6px)", y: 6 }}
-                    transition={reducedMotion ? { duration: 0 } : { duration: 0.2, ease: "easeOut" }}
-                  >
-                    {starters.map(({ key, icon, iconClassName }) => {
-                      const title = t(`starters.${starterPage}.${key}.title` as const);
-                      const prompt = t(`starters.${starterPage}.${key}.prompt` as const);
-                      return (
-                        <div key={key} role="listitem" className="py-0.5">
-                          <Button
-                            className="h-auto w-full justify-start gap-3 rounded-lg px-3 py-2 text-left font-normal whitespace-normal text-muted-foreground hover:text-foreground"
-                            onClick={() => chatInputRef.current?.fill(prompt)}
-                            type="button"
-                            variant="ghost"
-                          >
-                            <AppIcon
-                              icon={icon}
-                              className={cn("size-4 shrink-0", iconClassName)}
-                              aria-hidden
-                            />
-                            <span className="text-sm leading-5">{title}</span>
-                          </Button>
-                        </div>
-                      );
-                    })}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              <AssistantStarterList
+                page={starterPage}
+                visible={showStarters}
+                onPick={(prompt) => chatInputRef.current?.fill(prompt)}
+              />
               {/* Active question: the card takes the PLACE of the composer. THE
  ChatInput remains MOUNTED (hidden in CSS) — its draft and its
  focus scope survive, it reappears intact after the response. */}
