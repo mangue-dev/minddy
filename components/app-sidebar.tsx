@@ -188,7 +188,7 @@ function SidebarRow({ item }: { item: AppNavItem }) {
     ROW_PL,
     "pr-3",
     active
-      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+      ? "sidebar-row-active bg-sidebar-accent text-sidebar-accent-foreground"
       : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
     item.disabled && "pointer-events-none opacity-50",
   );

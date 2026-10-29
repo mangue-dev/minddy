@@ -2991,16 +2991,17 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
       --sidebar: transparent;
     }
     /* A solid light-gray highlight vanishes on a light wallpaper behind the
-       veil. A tint of the text color darkens whatever lies behind it by the
-       same step, so the selected and hovered rows keep their contrast on any
-       desktop. Dark mode already reads well against its denser veil. */
+       veil. A light tint of the text color darkens whatever lies behind it by
+       the same step, so hovered rows keep their contrast on any desktop.
+       Dark mode already reads well against its denser veil. */
     &:not(.dark) .app-workspace {
-      --sidebar-accent: color-mix(in oklab, var(--foreground) 12%, transparent);
-      /* Tabs: the selected one keeps the opaque page white, which hardly
-         differs from a light veil, so the others take a firmer tint and the
-         selected one an edge and a slight lift. */
+      --sidebar-accent: color-mix(in oklab, var(--foreground) 6%, transparent);
+      /* The selected tab and the selected sidebar row read alike: the opaque
+         page white, which hardly differs from a light veil on its own, with
+         an edge and a slight lift; unselected tabs take a firmer tint. */
       --app-tab-background: color-mix(in oklab, var(--foreground) 7%, transparent);
-      & .app-tab[data-active] {
+      & :is(.app-tab[data-active], .sidebar-row-active) {
+        background-color: var(--background);
         box-shadow:
           0 0 0 1px color-mix(in oklab, var(--foreground) 12%, transparent),
           0 1px 3px color-mix(in oklab, var(--foreground) 10%, transparent);
