@@ -72,7 +72,8 @@ export function beginPendingNavigation(href: string): void {
   started = next;
   const settle = () => {
     if (started !== next) return;
-    if (window.location.pathname === next.from) publish(next);
+    // The window may be gone by then (a torn-down test environment).
+    if (typeof window !== "undefined" && window.location.pathname === next.from) publish(next);
     else clearPendingNavigation();
   };
   // A destination replacing one already on screen shows at once.

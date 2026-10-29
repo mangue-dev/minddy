@@ -6,6 +6,7 @@ import type { NextRouter } from "next/router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import AppLink from "@/components/app-link";
 import { useAppNavigation, useAppRouter } from "./use-app-router";
+import { clearPendingNavigation } from "./pending-navigation";
 
 const state = vi.hoisted(() => ({
   reuseDestination: vi.fn(() => true),
@@ -34,6 +35,8 @@ beforeEach(() => {
 afterEach(async () => {
   await act(() => root.unmount());
   container.remove();
+  // Desktop navigations start a pending destination and its timers.
+  clearPendingNavigation();
   vi.unstubAllGlobals();
 });
 
