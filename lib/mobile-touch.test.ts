@@ -2,7 +2,6 @@ import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import type { AtRule, Rule } from "postcss";
 import { describe, expect, it } from "vitest";
 
 import { THEME_PRESETS } from "./theme-presets";
@@ -295,22 +294,37 @@ describe("other touch pitfalls", () => {
     );
   });
 
-  it("keeps hand-written `:hover` rules to a fine pointer", async () => {
+  it("keeps hand-written `:hover` rules to a fine pointer", () => {
     // A `:hover` written by hand in a stylesheet is not a Tailwind variant:
     // it sits inside the same media query, or it stays stuck after a tap.
     // Scrollbar thumbs are exempt: touch browsers draw no scrollbar to hover.
-    const postcss = (await import("postcss")).default;
+    // The blocks are walked by hand: `postcss` is not a direct dependency, so
+    // pnpm does not install it where this test could import it.
     for (const path of [GLOBALS, TOKENS]) {
+      const css = read(path).replace(/\/\*[\s\S]*?\*\//g, (comment) => " ".repeat(comment.length));
       const loose: string[] = [];
-      postcss.parse(read(path)).walkRules((rule) => {
-        if (!rule.selector.includes(":hover") || /scrollbar/.test(rule.toString())) return;
-        for (let parent = rule.parent; parent && parent.type !== "root"; parent = parent.parent) {
-          if (parent.type === "atrule" && (parent as AtRule).params === "(hover: hover) and (pointer: fine)") return;
-          // The mobile layout resets a hover rather than painting one.
-          if (parent.type === "rule" && (parent as Rule).selector === ':root[data-app-layout="mobile"]') return;
+      const open: { header: string; start: number }[] = [];
+      let statement = 0;
+      for (let i = 0; i < css.length; i++) {
+        if (css[i] === "{") {
+          open.push({ header: css.slice(statement, i).trim(), start: i });
+          statement = i + 1;
+        } else if (css[i] === "}") {
+          const block = open.pop();
+          statement = i + 1;
+          if (!block?.header.includes(":hover")) continue;
+          if (/scrollbar/.test(block.header + css.slice(block.start, i))) continue;
+          const guarded = open.some(({ header }) =>
+            header === "@media (hover: hover) and (pointer: fine)" ||
+            // The mobile layout resets a hover rather than painting one.
+            header === ':root[data-app-layout="mobile"]',
+          );
+          if (!guarded) loose.push(block.header);
+        } else if (css[i] === ";") {
+          statement = i + 1;
         }
-        loose.push(rule.selector);
-      });
+      }
+      expect(open, path).toEqual([]);
       expect(loose, path).toEqual([]);
     }
   });
