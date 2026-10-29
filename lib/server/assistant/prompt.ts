@@ -593,6 +593,18 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
       `When they refer to these settings or ask for a change without another explicit target, they mean this project's settings. Use update_project for changes.${ctx.projectId ? ` The current project id is ${ctx.projectId}.` : ""}`,
     );
   }
+  if (ctx.admin) {
+    const tab = { accounts: "Accounts", costs: "Costs", models: "Models" }[ctx.admin];
+    lines.push(
+      `- The user opened Numo from the ${tab} tab of the instance admin dashboard.`,
+      ctx.admin === "models"
+        ? "When they refer to these settings without another target, they mean the instance AI model configuration: read it with admin_get_instance_models before changing it."
+        : ctx.admin === "accounts"
+          ? "When they ask about an account without another target, they mean account support: find it with admin_find_account by its exact email address."
+          : "When they ask about costs without another target, they mean this instance's AI spend: read it with admin_get_costs, using the period and filters they mention.",
+      "These admin tools exist only while the session is an administrator one; if they are missing, say the user must reopen Numo from an administrator session with two-factor authentication.",
+    );
+  }
   if (ctx.issueId) {
     lines.push(
       `- Open issue: ${ctx.issueIdentifier ?? "(unknown identifier)"}${ctx.issueTitle ? ` — "${ctx.issueTitle}"` : ""} (id: ${ctx.issueId})${ctx.projectId ? ` in project (id: ${ctx.projectId})` : ""}.`,

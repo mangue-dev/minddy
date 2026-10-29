@@ -2,18 +2,34 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 
 const mocks = vi.hoisted(() => ({
-  auth: vi.fn(), admin: vi.fn(), lookup: vi.fn(), usage: vi.fn(), rpc: vi.fn(), internal: vi.fn(),
+  auth: vi.fn(), admin: vi.fn(), lookup: vi.fn(), usage: vi.fn(), rpc: vi.fn(), listUsers: vi.fn(),
 }));
+vi.mock("server-only", () => ({}));
 vi.mock("@/lib/server/api-auth", () => ({ getAuthedUser: mocks.auth }));
 vi.mock("@/lib/server/admin", () => ({ isAdminUser: mocks.admin }));
-vi.mock("@/lib/server/admin-users", () => ({ fetchAdminAccount: mocks.lookup, setUserInternal: mocks.internal }));
 vi.mock("@/lib/server/usage", () => ({ getUserUsage: mocks.usage }));
-vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => ({ rpc: mocks.rpc }) }));
+// `get_admin_account` answers the exact lookup; every other RPC is the month's usage.
+vi.mock("@/lib/supabase-service", () => ({
+  getServiceClient: () => ({
+    rpc: async (name: string, args: unknown) => {
+      if (name !== "get_admin_account") return mocks.rpc(name, args);
+      const account = await mocks.lookup(args);
+      return {
+        data: account
+          ? [{ user_id: account.userId, email: account.email, name: account.name, email_confirmed: account.emailConfirmed }]
+          : [],
+        error: null,
+      };
+    },
+    auth: { admin: { listUsers: mocks.listUsers } },
+  }),
+}));
 vi.mock("@/lib/server/billing-accounts", () => ({ activeAdminOverride: () => "pro" }));
 
-const { GET, POST, PATCH } = await import("@/app/api/admin/users/route");
+const { GET, POST } = await import("@/app/api/admin/users/route");
+const { GET: overview } = await import("@/app/api/admin/overview/route");
 const userId = "11111111-1111-4111-8111-111111111111";
-const account = { userId, name: "Support fixture", email: "support@example.test", internal: false, emailConfirmed: true };
+const account = { userId, name: "Support fixture", email: "support@example.test", emailConfirmed: true };
 const request = (method: string, body?: unknown, suffix = "") => new NextRequest(`https://minddy.app/api/admin/users${suffix}`, {
   method, ...(body === undefined ? {} : { body: JSON.stringify(body), headers: { "Content-Type": "application/json" } }),
 });
@@ -24,6 +40,7 @@ beforeEach(() => {
   mocks.admin.mockResolvedValue(true);
   mocks.lookup.mockResolvedValue(account);
   mocks.rpc.mockResolvedValue({ data: { total_cost: "12.5" }, error: null });
+  mocks.listUsers.mockResolvedValue({ data: { users: [{ id: "first" }], total: 42 }, error: null });
   mocks.usage.mockResolvedValue({
     usedUsd: 4, billing: {
       planId: "pro", source: "admin_override", plan: { includedUsageUsd: 20 },
@@ -38,7 +55,7 @@ describe("admin support routes", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ account });
     expect(response.headers.get("cache-control")).toBe("private, no-store");
-    expect(mocks.lookup).toHaveBeenCalledWith({ email: "support@example.test" });
+    expect(mocks.lookup).toHaveBeenCalledWith({ p_email: "support@example.test", p_user_id: null });
     expect(mocks.usage).not.toHaveBeenCalled();
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
@@ -58,12 +75,12 @@ describe("admin support routes", () => {
     const { user } = await response.json();
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("private, no-store");
-    expect(mocks.lookup).toHaveBeenCalledWith({ userId });
+    expect(mocks.lookup).toHaveBeenCalledWith({ p_email: null, p_user_id: userId });
     expect(mocks.usage).toHaveBeenCalledWith(userId);
     expect(user).toEqual({ ...account, billing: {
       planId: "pro", source: "admin_override", override: "pro", overrideNote: "Support credit", overrideExpiresAt: "2027-01-01T00:00:00Z", stripePlanId: "go", stripeStatus: "active",
     }, usage: { budgetUsd: 20, spentUsd: 4, spentMonthUsd: 12.5, blocked: false } });
-    expect(JSON.stringify(user)).not.toMatch(/private|onboarding|projects|issues|lastActivity|lastSignIn/);
+    expect(JSON.stringify(user)).not.toMatch(/private|onboarding|projects|issues|lastActivity|lastSignIn|internal/);
   });
 
   it.each(["", "?search=support@example.test", "?userId=invalid"])("rejects the previous directory API %s", async (suffix) => {
@@ -86,11 +103,10 @@ describe("admin support routes", () => {
     expect(await response.json()).toEqual({ error: "Query failed" });
   });
 
-  it.each([GET, POST, PATCH])("rechecks admin authorization before any account operation", async (handler) => {
+  it.each([GET, POST])("rechecks admin authorization before any account operation", async (handler) => {
     mocks.admin.mockResolvedValueOnce(false);
-    expect((await handler(request("POST", { email: account.email, userId, internal: true }))).status).toBe(403);
+    expect((await handler(request("POST", { email: account.email, userId }))).status).toBe(403);
     expect(mocks.lookup).not.toHaveBeenCalled();
-    expect(mocks.internal).not.toHaveBeenCalled();
     expect(mocks.usage).not.toHaveBeenCalled();
   });
 
@@ -98,5 +114,20 @@ describe("admin support routes", () => {
     mocks.auth.mockResolvedValueOnce({ ok: false, response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) });
     expect((await POST(request("POST", { email: account.email }))).status).toBe(401);
     expect(mocks.admin).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /api/admin/overview (MIN-829)", () => {
+  it("counts accounts from a one-row page, without listing them", async () => {
+    const response = await overview(request("GET"));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ totalAccounts: 42 });
+    expect(mocks.listUsers).toHaveBeenCalledWith({ page: 1, perPage: 1 });
+  });
+
+  it("forbids a non-admin", async () => {
+    mocks.admin.mockResolvedValueOnce(false);
+    expect((await overview(request("GET"))).status).toBe(403);
+    expect(mocks.listUsers).not.toHaveBeenCalled();
   });
 });

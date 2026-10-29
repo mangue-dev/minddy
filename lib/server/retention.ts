@@ -1,4 +1,6 @@
 import "server-only";
+import { isManagedAiEnabled, managedAiKeyMode } from "@/lib/managed-services";
+import { sweepOrphanKeys } from "@/lib/server/managed-ai-key";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { pruneCollaborationJournal } from "@/lib/server/page-collaboration";
@@ -407,6 +409,14 @@ export async function runRetentionSweep(now: Date = new Date()): Promise<Retenti
       sweepOrphanAttachments(service, cutoff(RETENTION_DAYS.orphanAttachments, now), 500, { now })
     ),
     await step("trash", () => purgeTrash(service, now)),
+    // Per-account OpenRouter keys no account references any more (MIN-761):
+    // an issuance that died half-way, a failed delete on account deletion.
+    // Swept here since MIN-829 removed the admin button that did it by hand.
+    await step("orphan_openrouter_keys", async () =>
+      isManagedAiEnabled() && managedAiKeyMode() === "per_user"
+        ? (await sweepOrphanKeys()).deleted
+        : 0
+    ),
   ];
 
   return {

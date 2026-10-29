@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Activity01Icon, AiAutoRotateIcon, ArrowRight01Icon, Book01Icon, Book02Icon, BookOpen01Icon, Cancel01Icon, DashboardSpeedIcon, Delete02Icon, FileAddIcon as FilePlus2, FileEditIcon as FilePen, FileSearchIcon, FileStackIcon as FileStack, FilterIcon, GitMergeIcon, GitPullRequestIcon, GlobeIcon, Image01Icon, InboxIcon, LayoutGridIcon, Link02Icon, ListIcon, MailRemove01Icon, Message01Icon, MessageCircleQuestionMarkIcon as MessageCircleQuestion, MessageMultiple01Icon, Notebook01Icon, NotebookIcon, Plug01Icon, Search01Icon, Settings02Icon, SlidersHorizontalIcon, SparklesIcon, Tag01Icon, TagsIcon, Target01Icon, TaskDone01Icon, CheckIcon, Undo02Icon, UserAdd01Icon, UserGroupIcon, UserIcon, UserMinus01Icon, UserSettings01Icon } from "@hugeicons/core-free-icons";
+import { Activity01Icon, AiAutoRotateIcon, BotIcon, FileImportIcon, GiftIcon, ArrowRight01Icon, Book01Icon, Book02Icon, BookOpen01Icon, Cancel01Icon, DashboardSpeedIcon, Delete02Icon, FileAddIcon as FilePlus2, FileEditIcon as FilePen, FileSearchIcon, FileStackIcon as FileStack, FilterIcon, GitMergeIcon, GitPullRequestIcon, GlobeIcon, Image01Icon, InboxIcon, LayoutGridIcon, Link02Icon, ListIcon, MailRemove01Icon, Message01Icon, MessageCircleQuestionMarkIcon as MessageCircleQuestion, MessageMultiple01Icon, Notebook01Icon, NotebookIcon, Plug01Icon, Search01Icon, Settings02Icon, SlidersHorizontalIcon, SparklesIcon, Tag01Icon, TagsIcon, Target01Icon, TaskDone01Icon, CheckIcon, Undo02Icon, UserAdd01Icon, UserGroupIcon, UserIcon, UserMinus01Icon, UserSettings01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -832,6 +832,57 @@ const TOOL_META: Record<string, ToolMeta> = {
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("loadingUserStats");
       return success ? t("userStatsLoaded") : t("loadUserStatsFailed");
+    },
+  },
+  // Instance administration (MIN-829), offered only to an admin session.
+  admin_get_instance_models: {
+    icon: BotIcon,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("loadingInstanceModels");
+      return success ? t("instanceModelsLoaded") : t("loadInstanceModelsFailed");
+    },
+  },
+  admin_get_costs: {
+    icon: DashboardSpeedIcon,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("loadingInstanceCosts");
+      return success ? t("instanceCostsLoaded") : t("loadInstanceCostsFailed");
+    },
+  },
+  admin_update_instance_models: {
+    icon: BotIcon,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("updatingInstanceModels");
+      return success ? t("instanceModelsUpdated") : t("updateInstanceModelsFailed");
+    },
+  },
+  admin_import_instance_models: {
+    icon: FileImportIcon,
+    getLabel: (args, _result, success, status, t) => {
+      if (status === "running") return t("importingInstanceModels");
+      if (!success) return t("importInstanceModelsFailed");
+      return args.apply === true ? t("instanceModelsImported") : t("instanceModelsImportPreviewed");
+    },
+  },
+  admin_find_account: {
+    icon: Search01Icon,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("findingAccount");
+      return success ? t("accountFound") : t("findAccountFailed");
+    },
+  },
+  admin_get_account: {
+    icon: UserIcon,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("loadingAccount");
+      return success ? t("accountLoaded") : t("loadAccountFailed");
+    },
+  },
+  admin_set_account_plan: {
+    icon: GiftIcon,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("settingAccountPlan");
+      return success ? t("accountPlanSet") : t("setAccountPlanFailed");
     },
   },
   get_plan_usage: {

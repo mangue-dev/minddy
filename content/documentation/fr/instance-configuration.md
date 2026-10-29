@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 12,
+  "revision": 13,
+  "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-23",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.1 (MIN-788 Supabase self-hosted/v0.8.3)",
     "editions": [
@@ -46,10 +46,10 @@
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:/root/min750 (schedule table and release delta sentence checked against vercel.json and deploy/self-hosted/scheduler.mjs after adding smart-fill-reevaluation; rest of the article unchanged since the 0.20.0 release review; no screenshot in scope); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope)",
-    "language": "agent:/root/min750 (fr table row and release delta sentence; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-788 changed passages; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-23"
+    "revision": 13,
+    "fact": "agent:claude-code (MIN-829 MINDDY_PUBLISH_MODEL_CONFIG sentence checked against app/api/recommended-models/route.ts); agent:/root/min750 (schedule table and release delta sentence checked against vercel.json and deploy/self-hosted/scheduler.mjs after adding smart-fill-reevaluation; rest of the article unchanged since the 0.20.0 release review; no screenshot in scope); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope)",
+    "language": "agent:claude-code (fr MIN-829 sentence; self-reviewed; agent review, not human acceptance); agent:/root/min750 (fr table row and release delta sentence; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-788 changed passages; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "workspace-encryption",
@@ -74,7 +74,7 @@
       "src": "/documentation/fr/optional-providers-flow.svg",
       "alt": "Schéma: L’opérateur choisit une capacité optionnelle. Identifiants complets et conditions fournisseur. Destination externe explicitement choisie. Vérifier le comportement et suivre les coûts.",
       "caption": "Activer un service optionnel ajoute ses propres identifiants, destinations de données et coûts d’utilisation.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -106,7 +106,7 @@
       "src": "/documentation/fr/proxy-network-and-jobs-flow.svg",
       "alt": "Schéma: Proxy HTTPS public. Origines application et Supabase public. Base et ports internes privés. Jobs authentifiés, arrêtés en maintenance.",
       "caption": "L’accès public utilise HTTPS, tandis que les services internes restent privés et les tâches planifiées sont arrêtées pendant la maintenance.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -152,7 +152,7 @@ L’installateur crée les valeurs manquantes de `GIT_STATE_SECRET`, `GIT_TOKEN_
 
 ### Appliquer et contrôler une modification {#capabilities}
 
-`MINDDY_PUBLIC_SITE_NAME` et `MINDDY_PUBLIC_CONTACT_EMAIL` identifient votre instance. `ADMIN_EMAILS` est une liste d’administrateurs séparés par des virgules ; l’accès privilégié exige aussi MFA. `OAUTH_ISSUER` reste normalement vide, sauf si vous publiez volontairement OAuth à une autre origine stable. Désactivez IA et facturation gérées en self-hosted. Activez les services optionnels avec leur configuration complète. Redémarrez ou recréez l’application après un changement de valeurs publiques au runtime ; l’image OCI ne nécessite pas de reconstruction. Le doctor distingue capacité incomplète et panne du cœur. Testez ensuite les liens de compte et callbacks sur l’origine prévue.
+`MINDDY_PUBLIC_SITE_NAME` et `MINDDY_PUBLIC_CONTACT_EMAIL` identifient votre instance. `ADMIN_EMAILS` est une liste d’administrateurs séparés par des virgules ; l’accès privilégié exige aussi MFA. `MINDDY_PUBLISH_MODEL_CONFIG=1` publie la configuration de modèles IA de l’instance à l’adresse `/api/recommended-models` (voir [la configuration de modèles recommandée](/docs/recommended-models)) ; laissez-la vide sauf si d’autres instances l’importent. `OAUTH_ISSUER` reste normalement vide, sauf si vous publiez volontairement OAuth à une autre origine stable. Désactivez IA et facturation gérées en self-hosted. Activez les services optionnels avec leur configuration complète. Redémarrez ou recréez l’application après un changement de valeurs publiques au runtime ; l’image OCI ne nécessite pas de reconstruction. Le doctor distingue capacité incomplète et panne du cœur. Testez ensuite les liens de compte et callbacks sur l’origine prévue.
 
 ### Configurer les retours et les signalements de documentation {#product-feedback}
 

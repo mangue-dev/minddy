@@ -1163,6 +1163,20 @@
     "section": "instance-administration"
   },
   {
+    "workflow": "H17",
+    "article": "recommended-models",
+    "outcome": "Import the model configuration Minddy Cloud recommends, or publish one's own",
+    "audiences": [
+      "operator"
+    ],
+    "type": "guide",
+    "source": "`app/api/recommended-models/route.ts`; `lib/ai-model-config-file.ts`; `components/admin/admin-models-dashboard.tsx`",
+    "gaps": "Live Cloud file, import preview and all-or-nothing apply, Numo import, self-hosted opt-in",
+    "illustration": "None; the file is downloaded",
+    "requiresFigures": false,
+    "section": "recommended-models"
+  },
+  {
     "workflow": "T01",
     "article": "glossary-and-data-model",
     "outcome": "Distinguish project issue objective cycle page database and feedback",

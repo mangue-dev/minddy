@@ -1,4 +1,5 @@
 import "server-only";
+import { ADMIN_READ_TOOLS } from "./admin-tools";
 import { withConversationAttachmentPreviews } from "./conversation-attachments";
 import { visibleAssistantContent } from "./visible-content";
 import { hasSerializedToolCall, looksLikePendingAction } from "@/lib/ai-completion";
@@ -300,6 +301,7 @@ const RETRYABLE_READ_TOOLS = new Set([
   "read_pull_request",
   "propose_backlog",
   "web_search",
+  ...ADMIN_READ_TOOLS,
   // A repeated report targets the same operation row and payload.
 ]);
 

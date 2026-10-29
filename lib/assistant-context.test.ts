@@ -74,6 +74,19 @@ describe("contextChips — routine", () => {
   });
 });
 
+describe("admin dashboard pill (MIN-829)", () => {
+  it("names the admin tab the assistant was opened from", () => {
+    const chips = contextChips({ admin: "models" }, { t });
+    expect(chips.find((c) => c.key === "admin")).toMatchObject({ kind: "admin", label: "contextAdminModels" });
+  });
+
+  it("drops the admin context when its pill is turned off", () => {
+    const sent = applyContextSelection({ admin: "costs", projectId: "p1" }, new Set(["admin"]));
+    expect(sent?.admin).toBeUndefined();
+    expect(sent?.projectId).toBe("p1");
+  });
+});
+
 describe("applyContextSelection", () => {
   it("removes both the routine id and title", () => {
     const sent = applyContextSelection(everything, new Set(["routine"]));

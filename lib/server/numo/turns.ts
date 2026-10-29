@@ -4,6 +4,12 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AiProviderChoice } from "@/lib/ai-surfaces";
+import {
+  ADMIN_ASSISTANT_TOOLS,
+  ADMIN_PROMPT_BLOCK,
+  adminGrantIsLive,
+  type AdminSessionGrant,
+} from "@/lib/server/assistant/admin-tools";
 import { ChosenProviderUnavailableError, ProviderRequestError, captureBackgroundException } from "@/lib/server/ai-provider-errors";
 
 import type {
@@ -117,6 +123,12 @@ export interface NumoTurnIntent {
   operationBudgetUsd?: number | null;
   /** User-facing percentage retained in the same unit as routine settings. */
   operationBudgetPercent?: number | null;
+  /**
+   * The administrator session a chat turn was admitted from (MIN-829). Only
+   * the chat route sets it, after `isAdminUser`; the turn re-verifies it
+   * before offering the admin tools, and each admin call verifies it again.
+   */
+  adminSession?: AdminSessionGrant | null;
 }
 
 export type NumoTurnCheckpoint =
@@ -469,6 +481,7 @@ async function buildExecutionInput(input: {
 }): Promise<{
   messages: ChatMessage[];
   tools: AssistantToolDef[];
+  adminGrant: AdminSessionGrant | null;
 }> {
   const { turn, readClient, service, runtime } = input;
   const intent = turn.intent;
@@ -496,6 +509,13 @@ async function buildExecutionInput(input: {
     systemPrompt = buildGlobalSystemPrompt(intent.locale, intent.numoDefaultStatus);
   }
   if (intent.timezone) systemPrompt += buildClockBlock(intent.timezone);
+  // Instance administration (MIN-829): re-verified on every execution, like
+  // the project role above, so a retried turn uses the session's state NOW.
+  const adminGrant = !intent.documentation && !intent.routineId && intent.triggerSource !== "mention" &&
+    intent.adminSession && await adminGrantIsLive(turn.user_id, intent.adminSession)
+    ? intent.adminSession
+    : null;
+  if (adminGrant) systemPrompt += ADMIN_PROMPT_BLOCK;
   if (intent.routineId) {
     const timing = intent.routineOrigin === "scheduled"
       ? `scheduled for ${intent.routineScheduledFor ?? "an unspecified time"}`
@@ -593,7 +613,9 @@ async function buildExecutionInput(input: {
       name: message.tool_name ?? undefined,
     });
   }
-  let tools: AssistantToolDef[] = CONVERSATION_ASSISTANT_TOOLS;
+  let tools: AssistantToolDef[] = adminGrant
+    ? [...CONVERSATION_ASSISTANT_TOOLS, ...ADMIN_ASSISTANT_TOOLS]
+    : CONVERSATION_ASSISTANT_TOOLS;
   if (!intent.webSearchEnabled) tools = withoutWebSearch(tools);
   if (intent.documentation) tools = CONVERSATION_ASSISTANT_TOOLS.filter(tool => tool.function.name === "get_help");
   // An @Numo mention runs on the shared surface of this one project: a
@@ -603,7 +625,7 @@ async function buildExecutionInput(input: {
   else if (readerAccess && intent.triggerSource === "mention") {
     tools = readerToolSet(tools, readerAccess.canComment);
   }
-  return { messages, tools };
+  return { messages, tools, adminGrant };
 }
 
 function createToolLedger(
@@ -1031,6 +1053,7 @@ async function executeClaimedNumoTurn(input: {
       locale: claimed.intent.locale,
       timezone: claimed.intent.timezone,
       numoDefaultStatus: claimed.intent.numoDefaultStatus,
+      adminGrant: execution.adminGrant,
       model: runtime.model,
       aiRuntime: runtime,
       conversationId: claimed.conversation_id,

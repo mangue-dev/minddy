@@ -301,5 +301,6 @@
   "20270109200089_ai_usage_routes.sql": "e8b7f335cae744e35719a62a9fc131d08503410da847c8e2417517436936b9aa",
   "20270109200090_numo_conversation_provider_patch.sql": "6e9c17597cd56c4a4a9b845fcebae8b8daf1c301306bd74c16948178d0a0ac80",
   "20270109200091_ai_routes_per_call_type.sql": "b58fdc590fc9d63de204c225bd0db8a9158d2256b8f6b7bb5319833ffc77f00a",
-  "20270109200092_page_database_views_realtime.sql": "783d41eeed32b974be3d2ce65e2ade7bf7112af267f805d5324b1e78ce56cdb7"
+  "20270109200092_page_database_views_realtime.sql": "783d41eeed32b974be3d2ce65e2ade7bf7112af267f805d5324b1e78ce56cdb7",
+  "20270109200093_ai_cost_breakdown.sql": "c5c3b48af5c9e30b9affe23ed187975f23d6cd22b8dda704154630ad1e072cde"
 }

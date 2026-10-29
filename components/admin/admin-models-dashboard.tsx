@@ -1,15 +1,18 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, Delete02Icon } from "@hugeicons/core-free-icons";
-import {useCallback, useEffect, useMemo, useState} from "react";
+import { Add01Icon, ArrowDown01Icon, Delete02Icon, FileExportIcon, FileImportIcon } from "@hugeicons/core-free-icons";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {useLocale, useTranslations} from "next-intl";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import type { MessageKey } from "@/lib/i18n-keys";
 import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
 import {HelpHint} from "@/components/settings/help-hint";
@@ -22,8 +25,22 @@ import {getAgentProvider} from "@/lib/agent-providers";
 import {byokProviderFromConfigKey, modelKeyFromByokConfigKey} from "@/lib/byok-model-catalog";
 import {isModelCatalogCapability} from "@/lib/model-catalog-capability";
 import type {ByokCatalogProvider} from "@/lib/byok-model-catalog";
-import {AI_MODEL_CONFIG_FIELDS, AI_MODEL_CONFIG_GROUPS, isSuffixableField, modelSuffixKey, MODEL_SUFFIXES} from "@/lib/ai-model-config";
-import type {AiConfigField, AiConfigGroup, ModelSuffix} from "@/lib/ai-model-config";
+import {
+  AI_MODEL_CONFIG_FIELDS,
+  AI_MODEL_CONFIG_GROUPS,
+  categoryMembers,
+  categoryModelKey,
+  getAiConfigField,
+  isSuffixableField,
+  modelSuffixKey,
+  MODEL_SUFFIXES,
+} from "@/lib/ai-model-config";
+import type {AiConfigField, AiConfigGroup, AiModelCategoryId, ModelSuffix} from "@/lib/ai-model-config";
+import {
+  buildModelConfigFile,
+  type ModelConfigChange,
+  type ModelConfigFileError,
+} from "@/lib/ai-model-config-file";
 import {DEFAULT_RECOMMENDED_MODELS, parseRecommendedModels} from "@/lib/recommended-models";
 import {REASONING_LEVELS, toReasoningLevel} from "@/lib/agent-reasoning";
 import {formatMultiplier} from "@/lib/model-multiplier";
@@ -44,16 +61,20 @@ class ConfigSaveError extends Error {
   }
 }
 
-async function patchConfig(key: string, value: string): Promise<void> {
+/** Saves one value; returns the seeded task rows a category default took over. */
+async function patchConfig(key: string, value: string): Promise<string[]> {
   const res = await fetch("/api/admin/app-config", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ key, value }),
   });
+  const body = (await res.json().catch(() => null)) as
+    | { error?: string; code?: string; released?: string[] }
+    | null;
   if (!res.ok) {
-    const body = (await res.json().catch(() => null)) as { error?: string; code?: string } | null;
     throw new ConfigSaveError(body?.error ?? `HTTP ${res.status}`, body?.code ?? null);
   }
+  return body?.released ?? [];
 }
 
 /** Decision-model refusals (MIN-694) — typed table, no key assembled at runtime. */
@@ -65,27 +86,59 @@ const DECISION_MODEL_ERROR_KEYS: Record<string, AdminKey> = {
   capability_mismatch: "decisionModelErrors.capability_mismatch",
 };
 
+/** Import refusals — typed table, no key assembled at runtime. */
+const FILE_ERROR_KEYS: Record<ModelConfigFileError | "refused", AdminKey> = {
+  invalid_json: "modelsFile.errors.invalid_json",
+  not_a_model_config: "modelsFile.errors.not_a_model_config",
+  newer_version: "modelsFile.errors.newer_version",
+  invalid_value: "modelsFile.errors.invalid_value",
+  refused: "modelsFile.errors.refused",
+};
+
+/** Records `onSaved` callers report: the saved key, plus released task rows. */
+type OnSaved = (key: string, value: string, released?: string[]) => void;
+
+/** A field's label, whatever kind of key it is. */
+function useFieldLabel() {
+  const t = useTranslations("Admin");
+  return useCallback(
+    (field: AiConfigField): string => {
+      if (field.adminLabel) return field.adminLabel;
+      const key = `fields.${field.key}.label` as AdminKey;
+      return t.has(key) ? t(key) : field.key;
+    },
+    [t],
+  );
+}
+
 /**
- * Admin-only dashboard to edit the AI models minddy runs from `app_config`.
- * Platform rows are chosen in the OpenRouter catalog (`ModelCombobox`); BYOK
- * defaults are grouped one card per provider and picked in that provider's
- * native namespace (`ByokModelCombobox`, MIN-416). The feedback
- * classification flag is a switch that saves immediately. Access is enforced
- * server-side by `app/(app)/admin/layout.tsx` and the API — this is UI only.
+ * Admin-only screen to choose the AI models minddy runs (MIN-829). Each card
+ * is a CATEGORY with one default model; a task follows it until it is
+ * overridden, and its row hides under “Per-task models” until asked for.
+ * Tasks of a capability alone in their card (decision, transcription, voice
+ * cleanup) keep a row of their own. BYOK defaults are folded at the bottom:
+ * they only matter to members who use their own provider key. Access is
+ * enforced server-side by `app/(app)/admin/layout.tsx` and the API — this is
+ * UI only.
  */
 export function AdminModelsDashboard() {
   const t = useTranslations("Admin");
   const [values, setValues] = useState<ConfigValues | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const load = useCallback(async () => {
+    const res = await fetch("/api/admin/app-config", { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = (await res.json()) as { values: ConfigValues };
+    return data.values ?? {};
+  }, []);
+
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const res = await fetch("/api/admin/app-config");
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = (await res.json()) as { values: ConfigValues };
-        if (alive) setValues(data.values ?? {});
+        const next = await load();
+        if (alive) setValues(next);
       } catch (e) {
         if (alive) setError((e as Error).message);
       }
@@ -93,26 +146,20 @@ export function AdminModelsDashboard() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [load]);
 
   const fieldsByGroup = useMemo(() => {
-    const map: Record<AiConfigGroup, AiConfigField[]> = {
-      assistant: [],
-      automations: [],
-      byok: [],
-      voice: [],
-      feedback: [],
-      site: [],
-    };
-    for (const f of AI_MODEL_CONFIG_FIELDS) map[f.group].push(f);
+    const map = Object.fromEntries(AI_MODEL_CONFIG_GROUPS.map((group) => [group, [] as AiConfigField[]])) as Record<
+      AiConfigGroup,
+      AiConfigField[]
+    >;
+    for (const f of AI_MODEL_CONFIG_FIELDS) if (f.kind !== "recommended") map[f.group].push(f);
     return map;
   }, []);
 
-  // The BYOK group is not rendered flat: one section per provider (MIN-416),
-  // so the admin sees each vendor's namespace as a unit instead of a mixed
-  // list where "OpenAI · transcription_model" sits next to Google rows.
-  // Fields of a provider without catalog support (generic) stay in the
-  // leftover bucket and render as free-text rows.
+  // One section per BYOK provider (MIN-416), so each vendor's namespace
+  // reads as a unit. Fields of a provider without catalog support (generic)
+  // stay in the leftover bucket and render as free-text rows.
   const byokByProvider = useMemo(() => {
     const map: Partial<Record<ByokCatalogProvider, AiConfigField[]>> = {};
     const other: AiConfigField[] = [];
@@ -124,18 +171,31 @@ export function AdminModelsDashboard() {
     return { map, other };
   }, [fieldsByGroup]);
 
-  // Reflect a saved value back into local state so the row's dirty check resets.
-  const onSaved = useCallback((key: string, value: string) => {
-    setValues((prev) => ({ ...prev, [key]: value }));
+  // Reflect a saved value back into local state so the row's dirty check
+  // resets; released task rows now follow their category.
+  const onSaved = useCallback<OnSaved>((key, value, released = []) => {
+    setValues((prev) => ({
+      ...prev,
+      [key]: value,
+      ...Object.fromEntries(released.map((releasedKey) => [releasedKey, null])),
+    }));
   }, []);
 
+  const reload = useCallback(async () => {
+    setValues(await load());
+  }, [load]);
+
+  const recommendedField = getAiConfigField("recommended_models")!;
+
   return (
-    /* Width and margins inherited from shell (`admin-dashboard`) — only one
- container for all four tabs. */
+    /* Width and margins inherited from the shell (`admin-dashboard`). */
     <div className="space-y-8">
-      <header>
-        <h2 className="text-sm font-semibold">{t("title")}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold">{t("title")}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
+        </div>
+        <ModelsFileActions values={values} onImported={reload} />
       </header>
 
       {error ? (
@@ -143,39 +203,264 @@ export function AdminModelsDashboard() {
           {t("loadError")}
         </div>
       ) : (
-        /* It's literally a settings screen: one group per family, one
- field per row. Same grammar as /settings (MIN-167). */
-        <div className="flex flex-col gap-4">
+        /* It's literally a settings screen: one card per category, one row
+           per setting. Same grammar as /settings (MIN-167). */
+        <div className="flex flex-col gap-6">
           {AI_MODEL_CONFIG_GROUPS.filter((group) => group !== "byok").map((group) => (
-            <SettingsGroup
+            <ModelGroupCard
               key={group}
-              id={adminSectionAnchor(MODEL_GROUP_SECTIONS[group])}
-              title={t(`groups.${group}.title`)}
-            >
-              {fieldsByGroup[group].map((field) => (
-                <ConfigRow
-                  key={field.key}
-                  field={field}
-                  value={values?.[field.key] ?? null}
-                  suffix={values?.[modelSuffixKey(field.key)] ?? null}
-                  loading={values === null}
-                  onSaved={onSaved}
-                />
-              ))}
-            </SettingsGroup>
+              group={group}
+              fields={fieldsByGroup[group]}
+              values={values}
+              onSaved={onSaved}
+            />
           ))}
 
-          {/* ── Personal keys: one modular section per BYOK provider ── */}
-          <section
-            id={adminSectionAnchor(ADMIN_SECTIONS.modelsByok)}
-            className="flex scroll-mt-20 flex-col gap-4 rounded-xl"
+          <SettingsGroup
+            id={adminSectionAnchor(ADMIN_SECTIONS.modelsRecommended)}
+            title={t("fields.recommended_models.label")}
+            help={t("fields.recommended_models.desc")}
           >
-            <div className="flex items-center gap-1.5 px-0.5">
-              <h2 className="text-sm font-semibold tracking-tight text-foreground">
-                {t("groups.byok.title")}
-              </h2>
-              <HelpHint>{t("groups.byok.desc")}</HelpHint>
-            </div>
+            {values === null ? (
+              <RowSkeleton />
+            ) : (
+              <RecommendedRow
+                field={recommendedField}
+                value={values.recommended_models ?? null}
+                onSaved={onSaved}
+              />
+            )}
+          </SettingsGroup>
+
+          <ByokSection byokByProvider={byokByProvider} values={values} onSaved={onSaved} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** The search destination of each card (lib/admin-sections.ts). */
+const MODEL_GROUP_ANCHORS: Record<AiConfigGroup, AdminSectionId> = {
+  assistant: ADMIN_SECTIONS.modelsAssistant,
+  automations: ADMIN_SECTIONS.modelsAutomations,
+  embeddings: ADMIN_SECTIONS.modelsEmbeddings,
+  voice: ADMIN_SECTIONS.modelsVoice,
+  feedback: ADMIN_SECTIONS.modelsFeedback,
+  byok: ADMIN_SECTIONS.modelsByok,
+};
+
+function RowSkeleton() {
+  return (
+    <div className="flex flex-col gap-2 py-3.5">
+      <Skeleton className="h-4 w-40" />
+      <Skeleton className="h-9 w-full max-w-md" />
+    </div>
+  );
+}
+
+/**
+ * One card: the category default first, then the settings that stand alone
+ * in it, then the tasks folded under “Per-task models”.
+ */
+function ModelGroupCard({
+  group,
+  fields,
+  values,
+  onSaved,
+}: {
+  group: AiConfigGroup;
+  fields: AiConfigField[];
+  values: ConfigValues | null;
+  onSaved: OnSaved;
+}) {
+  const t = useTranslations("Admin");
+  const categoryField = fields.find((field) => field.categoryDefault);
+  const category = categoryField?.categoryDefault;
+  const standalone = fields.filter((field) => !field.categoryDefault && !field.category);
+  const loading = values === null;
+  const descKey = `groups.${group}.desc` as AdminKey;
+
+  return (
+    <SettingsGroup
+      id={adminSectionAnchor(MODEL_GROUP_ANCHORS[group])}
+      title={t(`groups.${group}.title`)}
+      help={t.has(descKey) ? t(descKey) : undefined}
+    >
+      {loading ? (
+        <RowSkeleton />
+      ) : categoryField && category ? (
+        <CategoryDefaultRow field={categoryField} category={category} values={values} onSaved={onSaved} />
+      ) : null}
+      {standalone.map((field) =>
+        loading ? (
+          <RowSkeleton key={field.key} />
+        ) : (
+          <ConfigRow
+            key={field.key}
+            field={field}
+            value={values?.[field.key] ?? null}
+            suffix={values?.[modelSuffixKey(field.key)] ?? null}
+            onSaved={onSaved}
+          />
+        ),
+      )}
+      {!loading && category ? (
+        <TaskOverrides category={category} values={values} onSaved={onSaved} />
+      ) : null}
+    </SettingsGroup>
+  );
+}
+
+/**
+ * Whether a task really uses its own model. A row equal to the task's
+ * built-in default, without a shortcut, while the category is unset runs
+ * exactly like no row at all: it is a seeded row, not a choice, and setting
+ * the category releases it (`lib/server/admin-model-config.ts`).
+ */
+function isOverride(field: AiConfigField, values: ConfigValues): boolean {
+  const own = values[field.key]?.trim();
+  if (!own) return false;
+  const categorySet = field.category ? !!values[categoryModelKey(field.category)]?.trim() : false;
+  return categorySet || own !== field.fallback || !!values[modelSuffixKey(field.key)]?.trim();
+}
+
+/** The model a task runs on while it follows its category. */
+function inheritedModel(field: AiConfigField, values: ConfigValues): string {
+  const category = field.category;
+  return (category ? values[categoryModelKey(category)]?.trim() : "") || field.fallback;
+}
+
+function CategoryDefaultRow({
+  field,
+  category,
+  values,
+  onSaved,
+}: {
+  field: AiConfigField;
+  category: AiModelCategoryId;
+  values: ConfigValues;
+  onSaved: OnSaved;
+}) {
+  const t = useTranslations("Admin");
+  // Unset, a category hands each task its own built-in default. When they
+  // all share one, it is the one to show; otherwise the label says so.
+  const fallbacks = [...new Set(categoryMembers(category).map((member) => member.fallback))];
+  const sharedFallback = fallbacks.length === 1 ? fallbacks[0] : null;
+  return (
+    <ModelRow
+      field={field}
+      label={t("categoryDefault.label")}
+      desc={t(`categoryDefault.hint_${category}`)}
+      value={values[field.key] ?? null}
+      suffix={values[modelSuffixKey(field.key)] ?? null}
+      defaultLabel={sharedFallback ? t("fieldDefault") : t("categoryDefault.builtIn")}
+      defaultModelId={sharedFallback}
+      onSaved={onSaved}
+    />
+  );
+}
+
+/**
+ * The tasks of a category, folded by default: most instances never need to
+ * pin one. The trigger counts the overrides, so a pinned task never hides.
+ */
+function TaskOverrides({
+  category,
+  values,
+  onSaved,
+}: {
+  category: AiModelCategoryId;
+  values: ConfigValues;
+  onSaved: OnSaved;
+}) {
+  const t = useTranslations("Admin");
+  const label = useFieldLabel();
+  const members = categoryMembers(category);
+  const overridden = members.filter((field) => isOverride(field, values)).length;
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen} className="py-1">
+      <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 rounded-md py-2.5 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <span className="flex min-w-0 flex-col">
+          <span className="font-medium">{t("categoryDefault.tasks", { count: members.length })}</span>
+          <span className="text-xs text-muted-foreground">
+            {t("categoryDefault.overridden", { count: overridden })}
+          </span>
+        </span>
+        <HugeiconsIcon
+          icon={ArrowDown01Icon}
+          className={cn("size-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")}
+        />
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="divide-y divide-border border-t border-border">
+          {members.map((field) => {
+            const own = values[field.key]?.trim() ?? "";
+            const overrides = isOverride(field, values);
+            const descKey = `fields.${field.key}.desc` as AdminKey;
+            return (
+              <ModelRow
+                key={field.key}
+                field={field}
+                label={label(field)}
+                desc={
+                  overrides
+                    ? t("categoryDefault.overrides")
+                    : t.has(descKey)
+                      ? t(descKey)
+                      : t("categoryDefault.follows")
+                }
+                value={own}
+                suffix={values[modelSuffixKey(field.key)] ?? null}
+                // The suffix of a task that follows its category is the
+                // category's: offering the task's own would mean nothing.
+                showSuffix={!!own || !!values[modelSuffixKey(field.key)]?.trim()}
+                defaultLabel={t("categoryDefault.useDefault")}
+                defaultModelId={inheritedModel(field, values)}
+                onSaved={onSaved}
+              />
+            );
+          })}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+/** Personal-key provider defaults, folded: they only concern BYOK members. */
+function ByokSection({
+  byokByProvider,
+  values,
+  onSaved,
+}: {
+  byokByProvider: {
+    map: Partial<Record<ByokCatalogProvider, AiConfigField[]>>;
+    other: AiConfigField[];
+  };
+  values: ConfigValues | null;
+  onSaved: OnSaved;
+}) {
+  const t = useTranslations("Admin");
+  const [open, setOpen] = useState(false);
+  return (
+    <section
+      id={adminSectionAnchor(ADMIN_SECTIONS.modelsByok)}
+      className="scroll-mt-20 rounded-xl"
+    >
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <div className="flex items-center gap-1.5 px-0.5">
+          <CollapsibleTrigger className="flex min-w-0 items-center gap-1.5 rounded-md text-left text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            {t("groups.byok.title")}
+            <HugeiconsIcon
+              icon={ArrowDown01Icon}
+              className={cn("size-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")}
+            />
+          </CollapsibleTrigger>
+          <HelpHint>{t("groups.byok.desc")}</HelpHint>
+        </div>
+        <CollapsibleContent>
+          <div className="mt-3 flex flex-col gap-4">
             {(Object.keys(byokByProvider.map) as ByokCatalogProvider[]).map((provider) => (
               <ByokProviderSection
                 key={provider}
@@ -188,33 +473,210 @@ export function AdminModelsDashboard() {
             ))}
             {byokByProvider.other.length > 0 ? (
               <SettingsGroup title={t("groups.byokOther")}>
-                {byokByProvider.other.map((field) => (
-                  <ConfigRow
-                    key={field.key}
-                    field={field}
-                    value={values?.[field.key] ?? null}
-                    suffix={null}
-                    loading={values === null}
-                    onSaved={onSaved}
-                  />
-                ))}
+                {byokByProvider.other.map((field) =>
+                  values === null ? (
+                    <RowSkeleton key={field.key} />
+                  ) : (
+                    <ConfigRow
+                      key={field.key}
+                      field={field}
+                      value={values[field.key] ?? null}
+                      suffix={null}
+                      onSaved={onSaved}
+                    />
+                  ),
+                )}
               </SettingsGroup>
             ) : null}
-          </section>
-        </div>
-      )}
-    </div>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </section>
   );
 }
 
-const MODEL_GROUP_SECTIONS: Record<AiConfigGroup, AdminSectionId> = {
-  assistant: ADMIN_SECTIONS.modelsAssistant,
-  automations: ADMIN_SECTIONS.modelsAutomations,
-  byok: ADMIN_SECTIONS.modelsByok,
-  voice: ADMIN_SECTIONS.modelsVoice,
-  feedback: ADMIN_SECTIONS.modelsFeedback,
-  site: ADMIN_SECTIONS.modelsSite,
-};
+/** A changed key, in words: its card, its setting, and whether it is a shortcut. */
+function useChangeLabel() {
+  const t = useTranslations("Admin");
+  const label = useFieldLabel();
+  return useCallback(
+    (key: string): string => {
+      const suffixOf = AI_MODEL_CONFIG_FIELDS.find((field) => modelSuffixKey(field.key) === key);
+      const field = suffixOf ?? getAiConfigField(key);
+      if (!field) return key;
+      const name = field.categoryDefault
+        ? `${t(`groups.${field.group}.title`)} · ${t("categoryDefault.label")}`
+        : label(field);
+      return suffixOf ? `${name} · ${t("suffix.label")}` : name;
+    },
+    [label, t],
+  );
+}
+
+/**
+ * Export and import of the configuration (MIN-829). Export writes the stored
+ * values as a versioned file; import sends the file for a dry run first, shows
+ * every change, and applies only on confirmation — all or nothing.
+ */
+function ModelsFileActions({
+  values,
+  onImported,
+}: {
+  values: ConfigValues | null;
+  onImported: () => Promise<void>;
+}) {
+  const t = useTranslations("Admin");
+  const changeLabel = useChangeLabel();
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<{
+    file: unknown;
+    name: string;
+    changes: ModelConfigChange[];
+    ignored: string[];
+    upgraded: boolean;
+  } | null>(null);
+
+  const exportFile = () => {
+    if (!values) return;
+    const file = buildModelConfigFile(values);
+    const blob = new Blob([`${JSON.stringify(file, null, 2)}\n`], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `minddy-models-${file.exportedAt.slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const send = async (file: unknown, apply: boolean) => {
+    const res = await fetch("/api/admin/app-config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file, apply }),
+    });
+    const body = (await res.json().catch(() => null)) as
+      | { error?: string; detail?: string; key?: string; changes?: ModelConfigChange[]; ignored?: string[]; upgraded?: boolean }
+      | null;
+    if (!res.ok) {
+      const key = FILE_ERROR_KEYS[body?.error as keyof typeof FILE_ERROR_KEYS];
+      throw new Error(
+        key
+          ? t(key, { setting: body?.key ? changeLabel(body.key) : "", detail: body?.detail ?? "" })
+          : body?.error ?? `HTTP ${res.status}`,
+      );
+    }
+    return body ?? {};
+  };
+
+  const pick = async (picked: File | undefined) => {
+    if (!picked) return;
+    setBusy(true);
+    try {
+      let file: unknown;
+      try {
+        file = JSON.parse(await picked.text());
+      } catch {
+        throw new Error(t("modelsFile.errors.invalid_json"));
+      }
+      const preview = await send(file, false);
+      setPending({
+        file,
+        name: picked.name,
+        changes: preview.changes ?? [],
+        ignored: preview.ignored ?? [],
+        upgraded: preview.upgraded === true,
+      });
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+      if (input.current) input.current.value = "";
+    }
+  };
+
+  const apply = async () => {
+    if (!pending) return;
+    setBusy(true);
+    try {
+      await send(pending.file, true);
+      setPending(null);
+      await onImported();
+      toast.success(t("modelsFile.applied"));
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const shown = (value: string | null) => value ? formatModelName(value) || value : t("modelsFile.defaultValue");
+
+  return (
+    <div id={adminSectionAnchor(ADMIN_SECTIONS.modelsFile)} className="flex shrink-0 scroll-mt-20 items-center gap-2 rounded-lg">
+      <Button variant="outline" size="sm" onClick={exportFile} disabled={!values}>
+        <HugeiconsIcon icon={FileExportIcon} className="size-4" />
+        {t("modelsFile.export")}
+      </Button>
+      <Button variant="outline" size="sm" onClick={() => input.current?.click()} disabled={busy || !values}>
+        {busy && !pending ? <Spinner /> : <HugeiconsIcon icon={FileImportIcon} className="size-4" />}
+        {t("modelsFile.import")}
+      </Button>
+      <input
+        ref={input}
+        type="file"
+        accept="application/json,.json"
+        className="hidden"
+        aria-label={t("modelsFile.import")}
+        onChange={(event) => void pick(event.target.files?.[0])}
+      />
+
+      <Dialog open={pending !== null} onOpenChange={(open) => !open && !busy && setPending(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t("modelsFile.previewTitle")}</DialogTitle>
+            <DialogDescription>
+              {pending && pending.changes.length > 0
+                ? t("modelsFile.previewDescription", { count: pending.changes.length, file: pending.name })
+                : t("modelsFile.previewNone", { file: pending?.name ?? "" })}
+            </DialogDescription>
+          </DialogHeader>
+          {pending && pending.changes.length > 0 ? (
+            <ul className="max-h-72 divide-y divide-border overflow-y-auto rounded-lg border border-border text-sm">
+              {pending.changes.map((change) => (
+                <li key={change.key} className="flex flex-col gap-0.5 px-3 py-2">
+                  <span className="font-medium">{changeLabel(change.key)}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {t("modelsFile.change", { from: shown(change.from), to: shown(change.to) })}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {pending?.upgraded ? (
+            <p className="text-xs text-muted-foreground">{t("modelsFile.upgraded")}</p>
+          ) : null}
+          {pending && pending.ignored.length > 0 ? (
+            <p className="text-xs text-muted-foreground">
+              {t("modelsFile.ignored", { count: pending.ignored.length, entries: pending.ignored.join(", ") })}
+            </p>
+          ) : null}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPending(null)} disabled={busy}>
+              {t("modelsFile.cancel")}
+            </Button>
+            {pending && pending.changes.length > 0 ? (
+              <Button onClick={() => void apply()} disabled={busy}>
+                {busy ? <Spinner /> : null}
+                {t("modelsFile.apply")}
+              </Button>
+            ) : null}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
 
 /**
  * One BYOK provider, as one card: its account-wide default on top, then one
@@ -233,7 +695,7 @@ function ByokProviderSection({
   fields: AiConfigField[];
   values: ConfigValues | null;
   loading: boolean;
-  onSaved: (key: string, value: string) => void;
+  onSaved: OnSaved;
 }) {
   const t = useTranslations("Admin");
   const tAgent = useTranslations("Agent");
@@ -298,7 +760,7 @@ function ByokModelRow({
   label: string;
   value: string | null;
   loading: boolean;
-  onSaved: (key: string, value: string) => void;
+  onSaved: OnSaved;
   defaultLabel: string;
   placeholder: string;
   useCustomLabel: (query: string) => string;
@@ -358,42 +820,29 @@ function ByokModelRow({
   );
 }
 
+/** A standalone setting: its label and description come from the catalog. */
 function ConfigRow({
   field,
   value,
   suffix,
-  loading,
   onSaved,
 }: {
   field: AiConfigField;
   value: string | null;
   /** OpenRouter routing suffix for the field, when it accepts one (MIN-263). */
   suffix: string | null;
-  loading: boolean;
-  onSaved: (key: string, value: string) => void;
+  onSaved: OnSaved;
 }) {
   const t = useTranslations("Admin");
-  // Casts: `field.key` comes from the server config, so the key is built at
-  // execution and escapes the typed catalog (see lib/i18n-keys.ts).
-  const label = field.adminLabel ?? t(`fields.${field.key}.label` as AdminKey);
+  const label = useFieldLabel()(field);
   // Optional description: a field whose label is sufficient does not have one.
+  // Cast: the key is built at runtime and escapes the typed catalog.
   const descKey = `fields.${field.key}.desc` as AdminKey;
   const desc = field.adminLabel ? null : t.has(descKey) ? t(descKey) : null;
 
-  if (loading) {
-    return (
-      <div className="flex flex-col gap-2 py-3.5">
-        <Skeleton className="h-4 w-40" />
-        <Skeleton className="h-9 w-full max-w-md" />
-      </div>
-    );
-  }
-
   switch (field.kind) {
     case "recommended":
-      return (
-        <RecommendedRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} />
-      );
+      return <RecommendedRow field={field} value={value} onSaved={onSaved} />;
     case "reasoning":
       return (
         <ReasoningRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} />
@@ -425,7 +874,7 @@ function ReasoningRow({
   label: string;
   desc: string | null;
   value: string | null;
-  onSaved: (key: string, value: string) => void;
+  onSaved: OnSaved;
 }) {
   const t = useTranslations("Admin");
   const saved = toReasoningLevel(value ?? field.fallback);
@@ -489,6 +938,9 @@ function ModelRow({
   desc,
   value,
   suffix,
+  showSuffix = true,
+  defaultLabel,
+  defaultModelId,
   onSaved,
 }: {
   field: AiConfigField;
@@ -496,7 +948,12 @@ function ModelRow({
   desc: string | null;
   value: string | null;
   suffix: string | null;
-  onSaved: (key: string, value: string) => void;
+  /** A task that follows its category is served the category's way. */
+  showSuffix?: boolean;
+  /** What “no value” means here: the built-in default, or the category's. */
+  defaultLabel?: string;
+  defaultModelId?: string | null;
+  onSaved: OnSaved;
 }) {
   const t = useTranslations("Admin");
   // The picker labels live in the Agent namespace: it’s the SAME
@@ -512,10 +969,10 @@ function ModelRow({
     if (busy || next === saved) return;
     setBusy(true);
     try {
-      await patchConfig(field.key, next);
+      const released = await patchConfig(field.key, next);
       // Only a save the server accepted moves the picker: a refused model is
       // never displayed as the one in use.
-      onSaved(field.key, next);
+      onSaved(field.key, next, released);
       toast.success(t("saved"));
     } catch (e) {
       const code = e instanceof ConfigSaveError ? e.code : null;
@@ -542,8 +999,8 @@ function ModelRow({
               value={saved}
               onChange={(next) => void select(next)}
               disabled={busy}
-              defaultLabel={t("fieldDefault")}
-              defaultModelId={field.fallback}
+              defaultLabel={defaultLabel ?? t("fieldDefault")}
+              defaultModelId={defaultModelId === undefined ? field.fallback : defaultModelId}
               placeholder={tAgent("modelSearchPlaceholder")}
               emptyLabel={tAgent("modelSearchEmpty")}
               loadingLabel={tAgent("modelSearchLoading")}
@@ -553,7 +1010,7 @@ function ModelRow({
             />
             {busy ? <Spinner className="shrink-0" /> : null}
           </div>
-          {isSuffixableField(field) ? (
+          {showSuffix && isSuffixableField(field) ? (
             <SuffixSelect field={field} value={suffix} onSaved={onSaved} />
           ) : null}
         </div>
@@ -585,7 +1042,7 @@ function SuffixSelect({
 }: {
   field: AiConfigField;
   value: string | null;
-  onSaved: (key: string, value: string) => void;
+  onSaved: OnSaved;
 }) {
   const t = useTranslations("Admin");
   const key = modelSuffixKey(field.key);
@@ -648,7 +1105,7 @@ function ModelIdRow({
   label: string;
   desc: string | null;
   value: string | null;
-  onSaved: (key: string, value: string) => void;
+  onSaved: OnSaved;
 }) {
   const t = useTranslations("Admin");
   const saved = (value ?? "").trim();
@@ -722,16 +1179,12 @@ function ModelIdRow({
  */
 function RecommendedRow({
   field,
-  label,
-  desc,
   value,
   onSaved,
 }: {
   field: AiConfigField;
-  label: string;
-  desc: string | null;
   value: string | null;
-  onSaved: (key: string, value: string) => void;
+  onSaved: OnSaved;
 }) {
   const t = useTranslations("Admin");
   const tAgent = useTranslations("Agent");
@@ -802,7 +1255,8 @@ function RecommendedRow({
   const save = () => void write(ordered.length > 0 ? JSON.stringify(ordered) : "");
 
   return (
-    <SettingsRow label={label} hint={desc ?? undefined} orientation="vertical">
+    <div className="flex flex-col gap-3 py-3.5">
+      <p className="text-xs text-muted-foreground">{t("recommended.hint")}</p>
       <div className="space-y-2">
         {ordered.map((id, index) => (
           <div key={id || `empty-${index}`} className="flex items-center gap-2">
@@ -911,6 +1365,6 @@ function RecommendedRow({
           <p className="text-xs text-muted-foreground">{t("recommended.duplicate")}</p>
         ) : null}
       </div>
-    </SettingsRow>
+    </div>
   );
 }

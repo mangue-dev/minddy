@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { randomUUID } from "node:crypto";
 import { getLocale, getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { adminGrantForRequest } from "@/lib/server/assistant/admin-tools";
 import { getServiceClient } from "@/lib/supabase-service";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { ensureUsageBudget, type UserUsage } from "@/lib/server/usage";
@@ -196,6 +197,10 @@ function parsePageContext(raw: unknown): AssistantPageContext | null {
     settings:
       obj.settings === "account" || obj.settings === "project"
         ? obj.settings
+        : undefined,
+    admin:
+      obj.admin === "accounts" || obj.admin === "costs" || obj.admin === "models"
+        ? obj.admin
         : undefined,
     pinned,
     onglet: obj.onglet === "my" || obj.onglet === "all" ? obj.onglet : undefined,
@@ -446,6 +451,13 @@ export async function POST(request: NextRequest) {
   // Account → Preferences choice (defaults to triage).
   const numoDefaultStatus = resolveNumoDefaultStatus(user.user_metadata);
 
+  // Instance administration (MIN-829): an administrator's chat turn records
+  // the session it was admitted from; the turn re-verifies it before offering
+  // the admin tools. Public help and routine continuations never carry it.
+  const adminSession = pageContext?.documentation || routineContinuation
+    ? null
+    : await adminGrantForRequest(user, auth.claims as Record<string, unknown> | undefined);
+
   // Fetch project (only when projectId is provided — project-scoped mode).
   // RLS does the access check: an invisible project reads as not found.
   if (projectId) {
@@ -566,6 +578,7 @@ export async function POST(request: NextRequest) {
         timezone,
         numoDefaultStatus,
         webSearchEnabled: true,
+        ...(adminSession ? { adminSession } : {}),
         ...(configuration.persistedProvider ? { provider: configuration.persistedProvider } : {}),
         ...(pageContext?.documentation ? { documentation: { articleId: pageContext.documentation.articleId,
           ...(pageContext.documentation.selfHosting ? { selfHosting: pageContext.documentation.selfHosting } : {}) } } : {}),

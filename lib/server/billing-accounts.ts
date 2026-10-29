@@ -5,13 +5,11 @@ import {
   DEFAULT_BILLING_PLAN_ID,
   getBillingPlan,
   coerceBillingPlanId,
-  type BillingInterval,
   type BillingPlan,
   type BillingPlanId,
 } from "@/lib/billing-plans";
 import {
   fetchStripeSubscription,
-  getIntervalForStripePrice,
   getPlanIdForStripePrice,
   getStripeSubscriptionPeriod,
   coerceStripePlanId,
@@ -117,34 +115,6 @@ export function resolvePlanFromBillingAccount(
   return resolveBasePlanFromBillingAccount(account);
 }
 
-/**
- * “How much does this account PAY?” » — not to be confused with
- * `resolvePlanFromBillingAccount`, which answers “what is he RIGHT TO?” .
- *
- * Two separate questions, hence two resolvers. An admin override gives
- * rights without generating a cent: it's a gift, never income. A free
- * account with a pro override therefore pays €0; a paid Go account with an override
- * pro pays Go. This resolver therefore IGNORES `admin_override_plan_id` and only reads
- * the real Stripe subscription.
- *
- * (On the graph the question does not even arise — the income comes from
- * balance transactions, and a gift produces no transactions. It is the theoretical MRR
- *, calculated from base subscriptions, that needs the rule.)
- */
-export function resolvePaidPlanFromBillingAccount(
-  account: BillingAccount | null
-): { planId: BillingPlanId; interval: BillingInterval } | null {
-  const stripePlanId = coerceBillingPlanId(account?.stripe_plan_id);
-  if (!stripePlanId || stripePlanId === "free") return null;
-  if (!shouldUseStripePlan(account?.stripe_subscription_status)) return null;
-  return {
-    planId: stripePlanId,
-    // Price unknown (promo, old price) → monthly, the most
-    // conservative: it does not inflate the MRR.
-    interval: getIntervalForStripePrice(account?.stripe_price_id) ?? "month",
-  };
-}
-
 export async function getBillingAccountForUser(
   userId: string
 ): Promise<BillingAccount | null> {
@@ -229,37 +199,6 @@ export async function applyStripeBillingEvent(
     throw new Error(error?.message ?? "Stripe billing event returned no account");
   }
   return decodeBillingAccount(userId, data as BillingAccount);
-}
-
-const ADMIN_BILLING_SCAN_PAGE_SIZE = 500;
-
-/** Reads every billing row in bounded pages for exact admin aggregates. */
-export async function fetchAllBillingAccountsForAdmin(): Promise<
-  Array<Partial<BillingAccount>>
-> {
-  const service = getServiceClient();
-  const accounts: Array<Partial<BillingAccount>> = [];
-  let offset = 0;
-  let total: number | null = null;
-
-  while (total === null || accounts.length < total) {
-    const { data, error, count } = await service
-      .from("billing_accounts")
-      .select(
-        "user_id, admin_override_plan_id, admin_override_expires_at, stripe_plan_id, stripe_subscription_status",
-        { count: "exact" },
-      )
-      .range(offset, offset + ADMIN_BILLING_SCAN_PAGE_SIZE - 1);
-    if (error) throw new Error(error.message);
-    if (total === null && count !== null) total = count;
-    const page = (data ?? []) as Array<Partial<BillingAccount>>;
-    accounts.push(...page);
-    if (page.length === 0) break;
-    offset += page.length;
-    if (total === null && page.length < ADMIN_BILLING_SCAN_PAGE_SIZE) break;
-  }
-
-  return accounts;
 }
 
 // ── Sync Stripe ──────────────────────────────────────────────────────────────

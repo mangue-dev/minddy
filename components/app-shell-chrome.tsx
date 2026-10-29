@@ -1,10 +1,13 @@
 "use client";
 
+import { useIsAdmin } from "@/lib/use-is-admin";
+import { ADMIN_SECTION_PARAM, useAdminSections } from "@/lib/admin-sections";
+import { ADMIN_TABS, type AdminTabId } from "@/lib/admin-tabs";
 import { pageHref } from "@/lib/pages-navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { documentationPath } from "@/lib/documentation-core.mjs";
 import { ContentToaster } from "@/components/content-toaster";
-import { Add01Icon, AiAutoRotateIcon as CycleIcon, Alert01Icon, ArrowLeft01Icon, CircleDotDashedIcon, Clock01Icon as FileClock, Delete02Icon, Download01Icon, File02Icon, GitPullRequestIcon, Home01Icon, InboxIcon, KeyboardIcon, MessageMultiple01Icon, Settings01Icon, StickyNote02Icon, Target01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, AiAutoRotateIcon as CycleIcon, BotIcon, DollarCircleIcon, UserGroupIcon, Alert01Icon, ArrowLeft01Icon, CircleDotDashedIcon, Clock01Icon as FileClock, Delete02Icon, Download01Icon, File02Icon, GitPullRequestIcon, Home01Icon, InboxIcon, KeyboardIcon, MessageMultiple01Icon, Settings01Icon, StickyNote02Icon, Target01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
 import {
   startTransition,
   useCallback,
@@ -1023,6 +1026,37 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // To set another one, the “Project Settings” line in the Pages group
   // (she, offered for all) takes there first.
   const settingsSections = useSettingsSections();
+  // Admin dashboard tabs and sections (MIN-829), for administrators only: the
+  // palette opens the tab, and a section lands on its card like a setting.
+  const isAdmin = useIsAdmin();
+  const adminSections = useAdminSections();
+  const tAdmin = useTranslations("Admin");
+  const adminGroups = useMemo<PaletteGroup[]>(() => {
+    if (!isAdmin) return [];
+    const tabIcons: Record<AdminTabId, AppIcon> = { accounts: UserGroupIcon, costs: DollarCircleIcon, models: BotIcon };
+    const tabRows: PaletteItem[] = ADMIN_TABS.map((tab) => ({
+      key: `admin-tab-${tab}`,
+      label: tAdmin(`tabs.${tab}`),
+      icon: tabIcons[tab],
+      keywords: [tAdmin("pageTitle"), "admin"],
+      href: `/admin?tab=${tab}`,
+      entityType: "navigation",
+      onSelect: () => router.push(`/admin?tab=${tab}`),
+    }));
+    const sectionRows: PaletteItem[] = adminSections.map((section) => {
+      const href = `/admin?tab=${section.tab}&${ADMIN_SECTION_PARAM}=${section.id}`;
+      return {
+        key: `admin-section-${section.id}`,
+        label: section.title,
+        icon: section.icon,
+        keywords: [...section.keywords, section.tabLabel, tAdmin("pageTitle")],
+        href,
+        entityType: "navigation",
+        onSelect: () => router.push(href),
+      };
+    });
+    return [{ key: "admin", heading: tAdmin("pageTitle"), items: [...tabRows, ...sectionRows] }];
+  }, [isAdmin, adminSections, router, tAdmin]);
   const settingsGroups = useMemo<PaletteGroup[]>(() => {
     const row = (s: SettingsSection, project: Project | null): PaletteItem => ({
       key: `settings-${s.id}`,
@@ -1554,11 +1588,12 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     () => [
       ...commandGroups,
       ...settingsGroups,
+      ...adminGroups,
       ...desktopDataGroups,
       ...workspaceGroups,
       accountCommandGroup,
     ],
-    [commandGroups, settingsGroups, desktopDataGroups, workspaceGroups, accountCommandGroup]
+    [commandGroups, settingsGroups, adminGroups, desktopDataGroups, workspaceGroups, accountCommandGroup]
   );
 
   const mobileNavigation = useMemo(() => {

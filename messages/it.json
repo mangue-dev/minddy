@@ -931,7 +931,11 @@
     "slashCreateIssueLabel": "crea ticket",
     "slashCreateIssueDescription": "Numo raccoglie il contesto, quindi crea il ticket",
     "stopConfirmTitle": "Fermare Numo?",
-    "stopConfirmDescription": "Il turno in corso verrà interrotto. Tutto ciò che è già stato scritto e salvato resta nella conversazione."
+    "stopConfirmDescription": "Il turno in corso verrà interrotto. Tutto ciò che è già stato scritto e salvato resta nella conversazione.",
+    "contextAdminAccounts": "Admin · Account",
+    "contextAdminCosts": "Admin · Costi",
+    "contextAdminModels": "Admin · Modelli",
+    "contextAdminTooltip": "Dashboard di amministrazione dell’istanza nel contesto"
   },
   "Auth": {
     "callbackFailed": "Questo link di accesso non è più valido. Prova ad accedere di nuovo.",
@@ -3984,7 +3988,29 @@
     "secretStoreServerSide": "Copiala ora nell'ambiente del tuo server. Non viene conservata in questa conversazione e non verrà più mostrata.",
     "secretReveal": "Mostra credenziale",
     "secretHide": "Nascondi credenziale",
-    "secretCopy": "Copia credenziale"
+    "secretCopy": "Copia credenziale",
+    "loadingInstanceModels": "Lettura dei modelli dell’istanza…",
+    "instanceModelsLoaded": "Modelli dell’istanza letti",
+    "loadInstanceModelsFailed": "Impossibile leggere i modelli dell’istanza",
+    "updatingInstanceModels": "Aggiornamento dei modelli dell’istanza…",
+    "instanceModelsUpdated": "Modelli dell’istanza aggiornati",
+    "updateInstanceModelsFailed": "Impossibile aggiornare i modelli dell’istanza",
+    "importingInstanceModels": "Lettura del file di configurazione…",
+    "instanceModelsImportPreviewed": "Modifiche dell’importazione elencate",
+    "instanceModelsImported": "Configurazione importata",
+    "importInstanceModelsFailed": "Impossibile importare la configurazione",
+    "findingAccount": "Ricerca dell’account…",
+    "accountFound": "Ricerca dell’account completata",
+    "findAccountFailed": "Impossibile cercare l’account",
+    "loadingAccount": "Lettura del piano e dell’utilizzo dell’account…",
+    "accountLoaded": "Piano e utilizzo dell’account letti",
+    "loadAccountFailed": "Impossibile leggere l’account",
+    "settingAccountPlan": "Aggiornamento del piano dell’account…",
+    "accountPlanSet": "Piano dell’account aggiornato",
+    "setAccountPlanFailed": "Impossibile aggiornare il piano dell’account",
+    "loadingInstanceCosts": "Lettura dei costi dell’istanza…",
+    "instanceCostsLoaded": "Costi dell’istanza letti",
+    "loadInstanceCostsFailed": "Impossibile leggere i costi dell’istanza"
   },
   "PullRequests": {
     "descriptionMoreActions": "Azioni della descrizione",
@@ -4526,10 +4552,9 @@
     "pageTitle": "Amministrazione",
     "filterPlaceholder": "Filtra {count, plural, =0 {sezioni di amministrazione} one {# sezione di amministrazione} other {# sezioni di amministrazione}}…",
     "tabs": {
-      "overview": "Panoramica",
-      "users": "Utenti",
-      "finances": "Finanze",
-      "models": "Modelli"
+      "models": "Modelli",
+      "accounts": "Account",
+      "costs": "Costi"
     },
     "billing": {
       "title": "Regala un piano",
@@ -4563,7 +4588,7 @@
       "saved": "Piano aggiornato."
     },
     "title": "Modelli di IA",
-    "subtitle": "Modelli eseguiti da minddy. Ogni scelta si applica immediatamente; «modello predefinito» ripristina l'impostazione predefinita del prodotto.",
+    "subtitle": "Ogni scheda ha un modello predefinito; apri «Modelli per attività» per dare a un’attività un modello proprio. Ogni scelta si applica subito.",
     "loadError": "Impossibile caricare la configurazione.",
     "saved": "Impostazione salvata",
     "fieldDefault": "Modello predefinito",
@@ -4576,12 +4601,12 @@
     },
     "groups": {
       "assistant": {
-        "title": "Conversazioni con Numo",
-        "desc": "Numo nelle conversazioni e nei commenti."
+        "title": "Assistente",
+        "desc": "Numo nelle conversazioni e nei commenti, con i suoi titoli e la ricerca web."
       },
       "automations": {
         "title": "Automazioni",
-        "desc": "Assegnazione intelligente, riempimento intelligente, brief, importazioni e messaggi dei commit di unione."
+        "desc": "Smart Fill, Smart Assign, relazioni, brief, importazioni e messaggi di commit per le unioni."
       },
       "byok": {
         "title": "Chiavi personali",
@@ -4591,14 +4616,14 @@
         "title": "Voce"
       },
       "feedback": {
-        "title": "Feedback",
-        "desc": "Elaborazione della bacheca dei feedback."
+        "title": "Feedback e sito pubblico",
+        "desc": "Elaborazione della bacheca dei feedback e risposte IA offerte ai visitatori senza account."
       },
-      "site": {
-        "title": "Sito pubblico",
-        "desc": "Funzioni di IA per i visitatori senza account."
-      },
-      "byokOther": "Altri endpoint"
+      "byokOther": "Altri endpoint",
+      "embeddings": {
+        "title": "Embedding",
+        "desc": "Trasforma ticket e feedback in vettori per trovare ciò che è collegato."
+      }
     },
     "fields": {
       "assistant_model": {
@@ -4608,10 +4633,6 @@
       "assistant_reasoning_level": {
         "label": "Livello di ragionamento",
         "desc": "I livelli più alti possono migliorare le attività complesse, ma richiedono più tempo e token. Si applica alle chat e ai commenti di Numo."
-      },
-      "fallback_model": {
-        "label": "Modello di riserva",
-        "desc": "Utilizzato quando il modello Numo è lasciato vuoto."
       },
       "recommended_models": {
         "label": "Modelli consigliati",
@@ -4679,6 +4700,18 @@
       "faq_ask_model": {
         "label": "Modello del riquadro FAQ",
         "desc": "Risponde alla domanda di un visitatore a partire dalle FAQ della pagina e dalla documentazione del prodotto. Qualcuno aspetta la risposta, e il riquadro funziona tutto il giorno sul sito pubblico: scegli un modello veloce ed economico."
+      },
+      "category_assistant_model": {
+        "label": "Modello predefinito dell’assistente"
+      },
+      "category_automations_model": {
+        "label": "Modello predefinito delle automazioni"
+      },
+      "category_embeddings_model": {
+        "label": "Modello predefinito degli embedding"
+      },
+      "category_feedback_model": {
+        "label": "Modello predefinito di feedback e sito pubblico"
       }
     },
     "decisionModelErrors": {
@@ -4687,82 +4720,65 @@
       "compatibility_check_failed": "Questo modello non ha superato la decisione di prova (rifiutata, non valida o più lenta di 5 secondi). Il modello attuale è stato mantenuto.",
       "capability_mismatch": "Questo modello non corrisponde a questo campo (ad esempio un modello di chat in un campo di embedding). Il modello attuale è stato mantenuto."
     },
-    "finance": {
-      "title": "Finanze",
-      "summary": "Riepilogo mensile",
-      "subtitle": "Ciò che entra e ciò che esce, sulla stessa linea temporale. Gli incassi provengono dalle transazioni del saldo Stripe (al netto di commissioni e rimborsi), i costi da OpenRouter, convertiti al tasso di ogni giorno.",
-      "window": "{days} g",
-      "loadError": "Impossibile caricare le finanze.",
-      "empty": "Nessuna chiamata.",
-      "noData": "Nessun movimento in questo periodo.",
-      "netCollected": "Incassato questo mese",
-      "netCollectedInfo": "Ciò che è effettivamente arrivato sul conto Stripe questo mese, al netto di commissioni e rimborsi Stripe. Una forzatura dell'amministratore non è mai un ricavo; un regalo non produce alcuna transazione.",
-      "stripeFees": "di cui {amount} di commissioni Stripe",
-      "mrr": "MRR",
-      "mrrInfo": "Ricavi ricorrenti teorici: la somma degli abbonamenti attivi, con i piani annuali contati al loro equivalente mensile. Un indicatore di ricorrenza; non è ciò che determina il margine. Le forzature dell'amministratore sono ignorate.",
-      "payingAccounts": "{count, plural, =0 {nessun abbonato} one {# abbonato} other {# abbonati}}",
-      "monthCost": "Costo dell'IA questo mese",
-      "monthCostInfo": "Costo reale delle chiamate IA di questo mese, convertito in euro al tasso di ogni giorno. Gli account interni sono inclusi: il denaro speso per loro esce davvero dal conto.",
-      "monthCostUsd": "{amount} USD",
-      "margin": "Margine",
-      "marginHint": "incassato − costo IA",
-      "marginInfo": "Incasso netto meno il costo dell'IA di questo mese. Solo queste due voci: hosting e altre spese non sono incluse.",
-      "fxRate": "1 USD = €{rate} (tasso del {date})",
-      "fxMissing": "Tasso di cambio non disponibile; i costi restano in USD.",
-      "stripeFresh": "Stripe aggiornato {minutes} min fa",
-      "stripeUnreachable": "Stripe non raggiungibile",
-      "testMode": "Modalità di prova",
-      "refresh": "Aggiorna",
-      "chartTitle": "Introiti e costi al giorno",
-      "chartInfo": "I ricavi vanno verso l'alto, i costi verso il basso, su un'unica scala in euro. Ogni pagamento è mostrato PER INTERO nel giorno in cui arriva; un addebito mensile è una sola barra alla data dell'addebito, non una media livellata. I rimborsi seguono la stessa regola.",
-      "legendRevenue": "Incassi",
-      "legendCost": "Costi IA",
-      "tooltipRevenue": "Incassi: {amount}",
-      "tooltipCost": "Costi: {amount}",
-      "tooltipMargin": "Margine: {amount}",
-      "capTitle": "Limite della chiave OpenRouter",
-      "capInfo": "Il limite mensile della chiave minddy. Quando viene raggiunto, Numo, la dettatura e l'elaborazione dei feedback si fermano fino al mese successivo. Al 90% viene inviata una notifica push.",
-      "capUnavailable": "Limite illeggibile; controlla la chiave OpenRouter.",
-      "capUsage": "{usage} di {limit}",
-      "capPercent": "{percent}% del limite",
-      "capRemaining": "Restante",
-      "capProjected": "Limite raggiunto il",
-      "capProjectedInfo": "Proiettato al ritmo degli ultimi 7 giorni.",
-      "capNotBeforeReset": "Non prima del reset",
-      "capReset": "Si azzera",
-      "managedKeysTitle": "Chiavi OpenRouter per account",
-      "managedKeysInfo": "Ogni account paga con la propria chiave OpenRouter, limitata all'utilizzo che il suo piano include ancora. OpenRouter rifiuta una chiave al suo limite, anche se il controllo di Minddy non se ne accorge.",
-      "managedKeysUnavailable": "Chiavi illeggibili; controlla la chiave di gestione OpenRouter.",
-      "managedKeysAccounts": "Chiavi degli account",
-      "managedKeysRemaining": "Ancora spendibile",
-      "managedKeysRemainingInfo": "Quanto tutte le chiavi degli account possono ancora spendere prima che OpenRouter le rifiuti.",
-      "managedKeysToday": "Speso oggi",
-      "managedKeysPublic": "Chiave pubblica oggi",
-      "managedKeysPublicInfo": "La chiave della demo di dettatura e delle risposte delle FAQ, limitata al giorno.",
-      "managedKeysPublicUsage": "{usage} su {limit}",
-      "managedKeysSweep": "Elimina chiavi orfane",
-      "managedKeysSweepTitle": "Eliminare le chiavi orfane?",
-      "managedKeysSweepDescription": "Le chiavi emesse da Minddy che nessun account usa più vengono eliminate su OpenRouter. Le chiavi create negli ultimi 10 minuti e quelle non emesse da Minddy vengono mantenute.",
-      "managedKeysSweepConfirm": "Elimina",
-      "managedKeysSweepCancel": "Annulla",
-      "managedKeysSweepDone": "{count, plural, =0 {Nessuna chiave orfana trovata} one {# chiave orfana eliminata} other {# chiavi orfane eliminate}}",
-      "managedKeysSweepFailed": "Impossibile eliminare le chiavi orfane.",
-      "byType": "Costi per funzione",
-      "logs": "Registro",
-      "recentRuns": "Esecuzioni recenti",
-      "recentRunsHint": "Un'esecuzione raggruppa le chiamate di un'azione.",
-      "colType": "Funzionalità",
+    "quotas": {
+      "usersTitle": "Uso dell'IA per utente",
+      "usersDescription": "Ogni utente è limitato dal budget mensile del suo piano, su tutte le funzionalità di IA. Un azzeramento fa ripartire il conteggio da adesso; nessuna spesa viene cancellata.",
+      "empty": "Nessun uso dell'IA questo mese.",
+      "counted": "Conteggiato nel budget",
+      "realSpend": "Spesa di questo mese",
+      "blocked": "Bloccato",
+      "calls": "{count, plural, one {# chiamata} other {# chiamate}}",
+      "reset": "Azzera",
+      "resetsTitle": "Azzeramenti in questo periodo",
+      "resetsHint": "Conta solo il più recente; rimuoverlo ripristina il precedente.",
+      "resetsCount": "{count, plural, one {# azzeramento} other {# azzeramenti}}",
+      "resetActive": "corrente",
+      "undoOne": "Annulla questo azzeramento",
+      "resetToast": "Quota di {name} azzerata.",
+      "undoToast": "Azzeramento annullato per {name}."
+    },
+    "users": {
+      "subtitle": "Cerca un account con il suo indirizzo email esatto, poi aprilo per gestire il piano o il budget.",
+      "searchPlaceholder": "Indirizzo email dell'account",
+      "clearSearch": "Cancella ricerca",
+      "empty": "Nessun account trovato per questo indirizzo email.",
+      "emailStatus": "Email",
+      "confirmed": "Confermato",
+      "unconfirmed": "Non confermato",
+      "overrideMark": "forzato",
+      "accountTitle": "Account",
+      "usageDescription": "La finestra attuale e la spesa reale di questo mese.",
+      "usageTitle": "Budget di utilizzo dell'IA",
+      "usageSubtitle": "Un azzeramento fa ripartire il conteggio da adesso; nessuna spesa viene cancellata.",
+      "emailLabel": "Indirizzo email",
+      "findAccount": "Cerca account",
+      "openAccount": "Apri account",
+      "supportPurpose": "Apri gli account solo per assistenza o fatturazione. Le attività e i contenuti personali non sono mostrati qui.",
+      "lookupFailed": "Impossibile trovare l’account. Controlla l’indirizzo e riprova.",
+      "detailsFailed": "Impossibile caricare il piano e il budget. Apri l’account per riprovare."
+    },
+    "recommended": {
+      "pickModel": "Scegli un modello",
+      "add": "Aggiungi un modello",
+      "save": "Salva",
+      "cancel": "Annulla",
+      "reset": "Torna alla selezione predefinita",
+      "remove": "Rimuovi questo modello",
+      "empty": "Nessun consiglio: il selettore si apre sull'intero catalogo. Salvare un elenco vuoto ripristina la selezione predefinita.",
+      "incomplete": "Scegli un modello per ogni riga prima di salvare.",
+      "duplicate": "Lo stesso modello compare due volte: rimuovine uno prima di salvare.",
+      "hint": "Mostrati per primi in ogni selettore di modelli, dal più economico."
+    },
+    "byok": {
+      "borderDefault": "Predefinito per tutto l'account"
+    },
+    "costs": {
+      "callCount": "{count, plural, one {# chiamata} other {# chiamate}}",
+      "colCompletion": "Token in uscita",
       "colCost": "Costo",
-      "colRuns": "Esecuzioni",
-      "colCalls": "Chiamate",
-      "colAvgRun": "Costo medio/esecuzione",
-      "colAvgCall": "Costo medio/chiamata",
-      "colTokens": "Token",
       "colModel": "Modello",
       "colPrompt": "Token in ingresso",
-      "colCompletion": "Token in uscita",
-      "callCount": "{count} chiamate",
-      "loadingCalls": "Caricamento delle chiamate…",
+      "empty": "Nessuna chiamata.",
       "features": {
         "numo_chat": "Numo; chat",
         "numo_comment": "Numo; commenti",
@@ -4787,98 +4803,93 @@
         "jev_shadow": "Verifiche delle decisioni",
         "issue_embedding": "Embedding dei ticket",
         "issue_relation": "Relazioni Smart-fill",
-        "issue_search": "Ricerca dei ticket"
+        "issue_search": "Ricerca dei ticket",
+        "faq_ask": "Riquadro domande delle FAQ"
       },
-      "stripeHidden": "Il ricavo di Stripe è nascosto: la fatturazione non è collegata in questa istanza."
+      "loadingCalls": "Caricamento delle chiamate…",
+      "noData": "Nessuna chiamata IA in questo periodo.",
+      "recentRunsHint": "Un'esecuzione raggruppa le chiamate di un'azione.",
+      "logsTitle": "Esecuzioni recenti",
+      "title": "Costi",
+      "subtitle": "Quanto costano i fornitori di IA a questa istanza, per funzione e per modello. Gli importi sono in dollari, come li fatturano i fornitori.",
+      "summaryTitle": "Panoramica",
+      "loadError": "Impossibile caricare i costi.",
+      "periodLabel": "Periodo",
+      "period": "Ultimi {days} giorni",
+      "filterFamily": "Tutte le funzioni",
+      "filterModel": "Tutti i modelli",
+      "filterKey": "Chiave usata",
+      "keyAll": "Tutte le chiavi",
+      "keyPlatform": "Chiave dell’istanza",
+      "keyByok": "Chiavi personali",
+      "clearFilters": "Cancella filtri",
+      "kpiSpend": "Spesa totale",
+      "kpiRequests": "Richieste",
+      "kpiTokens": "Token",
+      "kpiCostPerMillion": "Costo per 1 mln di token",
+      "vsPrevious": "rispetto al periodo precedente",
+      "noPrevious": "Nessun periodo precedente da confrontare",
+      "topFeaturesTitle": "Funzioni più costose",
+      "topModelsTitle": "Modelli più costosi",
+      "spendByModelTitle": "Spesa per modello",
+      "spendByGroupTitle": "Spesa per famiglia di funzioni",
+      "requestsByModelTitle": "Richieste per modello",
+      "otherSeries": "Altri",
+      "noModel": "Nessun modello",
+      "total": "Totale",
+      "runsPageOf": "Pagina {page} di {pages}",
+      "runsPrev": "Pagina precedente",
+      "runsNext": "Pagina successiva",
+      "groups": {
+        "numo": "Numo",
+        "routines": "Routine",
+        "automations": "Automazioni",
+        "dictation": "Dettatura",
+        "feedback": "Feedback",
+        "site": "Sito pubblico",
+        "other": "Altri"
+      }
     },
-    "quotas": {
-      "usersTitle": "Uso dell'IA per utente",
-      "usersDescription": "Ogni utente è limitato dal budget mensile del suo piano, su tutte le funzionalità di IA. Un azzeramento fa ripartire il conteggio da adesso; nessuna spesa viene cancellata.",
-      "empty": "Nessun uso dell'IA questo mese.",
-      "counted": "Conteggiato nel budget",
-      "realSpend": "Spesa di questo mese",
-      "blocked": "Bloccato",
-      "calls": "{count, plural, one {# chiamata} other {# chiamate}}",
-      "reset": "Azzera",
-      "resetsTitle": "Azzeramenti in questo periodo",
-      "resetsHint": "Conta solo il più recente; rimuoverlo ripristina il precedente.",
-      "resetsCount": "{count, plural, one {# azzeramento} other {# azzeramenti}}",
-      "resetActive": "corrente",
-      "undoOne": "Annulla questo azzeramento",
-      "resetToast": "Quota di {name} azzerata.",
-      "undoToast": "Azzeramento annullato per {name}."
+    "accounts": {
+      "countLabel": "Account",
+      "countHint": "Tutti gli account di questa istanza.",
+      "countFailed": "Impossibile contare gli account.",
+      "supportTitle": "Assistenza account"
     },
-    "users": {
-      "title": "Assistenza account",
-      "subtitle": "Cerca un account con il suo indirizzo email esatto, poi aprilo per gestire il piano o il budget.",
-      "searchPlaceholder": "Indirizzo email dell'account",
-      "clearSearch": "Cancella ricerca",
-      "empty": "Nessun account trovato per questo indirizzo email.",
-      "emailStatus": "Email",
-      "confirmed": "Confermato",
-      "unconfirmed": "Non confermato",
-      "overrideMark": "forzato",
-      "accountTitle": "Account",
-      "internalHint": "Escluso da ogni statistica.",
-      "usageDescription": "La finestra attuale e la spesa reale di questo mese.",
-      "usageTitle": "Budget di utilizzo dell'IA",
-      "usageSubtitle": "Un azzeramento fa ripartire il conteggio da adesso; nessuna spesa viene cancellata.",
-      "internalTitle": "Account interno",
-      "internalBadge": "Interno",
-      "internalSubtitle": "Il team, gli account demo, i bot. L'account resta elencato e gestibile qui, ma non entra in nessuna statistica: né account, né attivi, né iscrizioni, né piani, né onboarding, né i suoi progetti e ticket.",
-      "internalOnToast": "{name} è ora un account interno.",
-      "internalOffToast": "{name} conta di nuovo per le statistiche.",
-      "emailLabel": "Indirizzo email",
-      "findAccount": "Cerca account",
-      "openAccount": "Apri account",
-      "supportPurpose": "Apri gli account solo per assistenza o fatturazione. Le attività e i contenuti personali non sono mostrati qui.",
-      "lookupFailed": "Impossibile trovare l’account. Controlla l’indirizzo e riprova.",
-      "detailsFailed": "Impossibile caricare il piano e il budget. Apri l’account per riprovare."
+    "categoryDefault": {
+      "label": "Modello predefinito",
+      "builtIn": "Valori integrati",
+      "hint_assistant": "Usato da Numo, dai titoli delle conversazioni e dalla ricerca web.",
+      "hint_automations": "Usato da ogni automazione qui sotto che non ha un modello proprio.",
+      "hint_embeddings": "Cambiarlo avvia un nuovo indice: i ticket vengono indicizzati di nuovo.",
+      "hint_feedback": "Usato dall’analisi dei feedback e dal riquadro domande delle FAQ.",
+      "tasks": "Modelli per attività ({count})",
+      "overridden": "{count, plural, =0 {Tutte le attività usano il modello predefinito} one {# attività usa un proprio modello} other {# attività usano un proprio modello}}",
+      "overrides": "Usa un proprio modello invece di quello predefinito.",
+      "follows": "Usa il modello predefinito.",
+      "useDefault": "Modello predefinito"
     },
-    "overview": {
-      "summary": "Metriche chiave",
-      "totalUsers": "Account",
-      "newUsers": "{count, plural, one {# nuovo questa settimana} other {# nuovi questa settimana}}",
-      "newUsers30d": "Nuovi in 30 g",
-      "activeWeek": "Attivi questa settimana",
-      "activeMonth": "{count} su 30 giorni",
-      "activeToday": "Attivi oggi",
-      "activeInfo": "Un account conta come attivo in un dato giorno se ha effettuato l'accesso o lasciato una traccia: ticket creato o completato, commento, chiamata IA.",
-      "signupsToday": "{count, plural, one {# iscrizione oggi} other {# iscrizioni oggi}}",
-      "internalExcluded": "{count, plural, one {# account interno escluso} other {# account interni esclusi}}",
-      "internalInfo": "Gli account interni (team, demo e bot) non contribuiscono ai conteggi di questa pagina. Il contrassegno si imposta dal record dell'account nella scheda Utenti.",
-      "tooltipValue": "{label}: {value}",
-      "activity": "Ultimi 30 giorni",
-      "activeDaily": "Attivi al giorno",
-      "signupsDaily": "Iscrizioni al giorno",
-      "noActivity": "Nessuna attività nel periodo.",
-      "noSignups": "Nessuna iscrizione nel periodo.",
-      "onboarding": "Onboarding",
-      "onboardingInfo": "Calcolato sugli account a cui l'onboarding è stato mostrato almeno una volta.",
-      "onboardingStarted": "Mostrato",
-      "onboardingCompleted": "Completato",
-      "onboardingDismissed": "Saltato",
-      "onboardingNeverSeen": "Mai mostrato",
-      "plans": "Piani",
-      "plansInfo": "Il piano effettivo di ogni account: forzatura dell'amministratore, altrimenti abbonamento Stripe, altrimenti il piano predefinito.",
-      "content": "Contenuto",
-      "totalProjects": "Progetti",
-      "totalIssues": "Ticket",
-      "issuesPerProject": "Ticket per progetto"
-    },
-    "recommended": {
-      "pickModel": "Scegli un modello",
-      "add": "Aggiungi un modello",
-      "save": "Salva",
+    "modelsFile": {
+      "title": "Esporta e importa",
+      "export": "Esporta",
+      "import": "Importa",
+      "previewTitle": "Importare questa configurazione?",
+      "previewDescription": "{count, plural, one {Cambierà # impostazione} other {Cambieranno # impostazioni}} con {file}. Le impostazioni che il file non contiene tornano al loro valore predefinito.",
+      "previewNone": "{file} corrisponde alla configurazione attuale. Non cambierà nulla.",
+      "change": "{from} → {to}",
+      "defaultValue": "Predefinito",
+      "upgraded": "Questo file viene da una versione precedente di minddy ed è stato aggiornato al formato attuale.",
+      "ignored": "{count, plural, one {# voce è sconosciuta} other {# voci sono sconosciute}} a questa versione e {count, plural, one {verrà ignorata} other {verranno ignorate}}: {entries}",
       "cancel": "Annulla",
-      "reset": "Torna alla selezione predefinita",
-      "remove": "Rimuovi questo modello",
-      "empty": "Nessun consiglio: il selettore si apre sull'intero catalogo. Salvare un elenco vuoto ripristina la selezione predefinita.",
-      "incomplete": "Scegli un modello per ogni riga prima di salvare.",
-      "duplicate": "Lo stesso modello compare due volte: rimuovine uno prima di salvare."
-    },
-    "byok": {
-      "borderDefault": "Predefinito per tutto l'account"
+      "apply": "Applica",
+      "applied": "Configurazione importata",
+      "errors": {
+        "invalid_json": "Questo file non è un JSON valido.",
+        "not_a_model_config": "Questo file non è una configurazione di modelli di minddy.",
+        "newer_version": "Questo file viene da una versione più recente di minddy. Aggiorna questa istanza, poi importalo di nuovo.",
+        "invalid_value": "Questo file contiene un’impostazione non valida: {detail}",
+        "refused": "{setting} è stato rifiutato: {detail} Non è stato cambiato nulla."
+      }
     }
   },
   "Legal": {

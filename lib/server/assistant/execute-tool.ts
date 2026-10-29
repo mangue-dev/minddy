@@ -8,6 +8,11 @@ import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
+import {
+  ADMIN_TOOL_NAMES,
+  executeAdminTool,
+  type AdminSessionGrant,
+} from "./admin-tools";
 import { decodeView } from "@/lib/server/view-content";
 import { decodePageProjection } from "@/lib/server/page-content";
 import { decodeProjectName } from "@/lib/server/project-content";
@@ -290,6 +295,12 @@ export interface ToolContext {
   operationBudgetPercent?: number | null;
   routineId?: string | null;
   /** Automation chain that owns this parent Numo operation, if any. */
+  /**
+   * The administrator session this turn was admitted from (MIN-829). Present
+   * only on a chat turn whose session passed `isAdminUser`; every admin tool
+   * re-verifies it before running.
+   */
+  adminGrant?: AdminSessionGrant | null;
 }
 
 /** Status of web search for ONE round (one Numo response, one @Numo). */
@@ -847,6 +858,9 @@ async function executeToolUnlisted(
     }
     if (MCP_SETUP_TOOL_NAMES.has(toolName)) {
       return executeMcpSetupTool(ctx.userId, toolName, args);
+    }
+    if (ADMIN_TOOL_NAMES.has(toolName)) {
+      return executeAdminTool(toolName, args, ctx);
     }
     if (toolName === "get_help") {
       const topic = typeof args.topic === "string" ? args.topic : "";

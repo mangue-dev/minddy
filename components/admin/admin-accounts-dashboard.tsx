@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, Search01Icon, Undo02Icon, ViewOffIcon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, Search01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import {useCallback, useEffect, useRef, useState} from "react";
 import type {ReactNode} from "react";
 import {useFormatter, useTranslations} from "next-intl";
@@ -12,16 +12,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
-import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {UserAvatar} from "@/components/user-avatar";
 import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
+import {Metric, StatsCard} from "@/components/stats/stats-chrome";
 import {BILLING_PLANS} from "@/lib/billing-plans";
 import type {BillingPlanId} from "@/lib/billing-plans";
 import {DEFAULT_GIFT_DURATION, GIFT_DURATIONS, giftExpiresAt} from "@/lib/billing-gift";
 import type {GiftDuration} from "@/lib/billing-gift";
 import type {
+  AdminAccountsOverview,
   AdminQuotaReset,
   AdminQuotaResetsResponse,
   AdminUserRow,
@@ -34,7 +35,12 @@ import {ADMIN_SECTIONS, adminSectionAnchor} from "@/lib/admin-sections";
 import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 
-/** Account support: exact lookup, then billing and quota actions on demand. */
+/**
+ * `/admin` → “Accounts” (MIN-829): how many accounts the instance has, then
+ * support on ONE of them — exact lookup, then billing and quota actions on
+ * demand. No directory, no activity, no content: an administrator opens an
+ * account for a support or billing task, nothing else.
+ */
 
 const NO_OVERRIDE = "none";
 /** Duration selector value that sends NO duration: the deadline in place
@@ -86,22 +92,6 @@ function PlanBadge({ user }: { user: AdminUserRow }) {
   );
 }
 
-/** “Internal account” mark: present in the list, absent from the statistics. */
-function InternalBadge() {
-  const t = useTranslations("Admin");
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Badge variant="outline" className="h-5 shrink-0 gap-1 text-[10px]">
-          <HugeiconsIcon icon={ViewOffIcon} className="size-2.5" />
-          {t("users.internalBadge")}
-        </Badge>
-      </TooltipTrigger>
-      <TooltipContent>{t("users.internalSubtitle")}</TooltipContent>
-    </Tooltip>
-  );
-}
-
 /** Support panel: account confirmation, billing and budget actions. */
 function UserSheet({
   user,
@@ -125,7 +115,6 @@ function UserSheet({
   const [note, setNote] = useState("");
   const [savingPlan, setSavingPlan] = useState(false);
   const [busyQuota, setBusyQuota] = useState(false);
-  const [savingInternal, setSavingInternal] = useState(false);
   /** The period reset register — `null` as long as it loads. */
   const [resets, setResets] = useState<AdminQuotaReset[] | null>(null);
 
@@ -229,30 +218,6 @@ function UserSheet({
     }
   };
 
-  const toggleInternal = async (next: boolean) => {
-    if (savingInternal) return;
-    setSavingInternal(true);
-    try {
-      const response = await fetch("/api/admin/users", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.userId, internal: next }),
-      });
-      const data = (await response.json()) as { error?: string };
-      if (!response.ok) throw new Error(data.error);
-      onChanged({ userId: user.userId, internal: next });
-      toast.success(
-        next
-          ? t("users.internalOnToast", { name: user.name })
-          : t("users.internalOffToast", { name: user.name }),
-      );
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setSavingInternal(false);
-    }
-  };
-
   /**
    * Installs one more reset (`undoId` absent), or removes one.
    *
@@ -339,7 +304,6 @@ function UserSheet({
               stuck to the name is what truncated it. */}
           <div className="flex flex-wrap items-center gap-1.5">
             <PlanBadge user={user} />
-            {user.internal ? <InternalBadge /> : null}
             {user.usage.blocked ? (
               <Badge variant="destructive" className="h-5 shrink-0 text-[10px]">
                 {t("quotas.blocked")}
@@ -360,28 +324,6 @@ function UserSheet({
                     ? t("users.confirmed")
                     : t("users.unconfirmed")}
                 </Badge>
-              }
-            />
-            <SettingsRow
-              htmlFor="admin-user-internal"
-              label={t("users.internalTitle")}
-              hint={t("users.internalHint")}
-              // The exhaustive list of what stops counting is true and
-              // useful — but it's prose: it lives behind the ⓘ.
-              help={t("users.internalSubtitle")}
-              control={
-                <>
-                  {/* The switch remains in place while writing: the
-                      replacing with the spinner would point the label to a
-                      `id` disappeared, and skip the line. */}
-                  {savingInternal ? <Spinner /> : null}
-                  <Switch
-                    id="admin-user-internal"
-                    checked={user.internal}
-                    disabled={savingInternal}
-                    onCheckedChange={(next) => void toggleInternal(next)}
-                  />
-                </>
               }
             />
           </SettingsGroup>
@@ -612,7 +554,48 @@ function Value({
 }
 
 
-export function AdminUsersDashboard() {
+/**
+ * The instance in one figure. Read once per visit: an account count does not
+ * move fast enough to deserve a refresh button.
+ */
+function AccountCount() {
+  const t = useTranslations("Admin");
+  const format = useFormatter();
+  const [total, setTotal] = useState<number | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      try {
+        const response = await fetch("/api/admin/overview", { cache: "no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = (await response.json()) as AdminAccountsOverview;
+        if (alive) setTotal(data.totalAccounts);
+      } catch {
+        if (alive) setFailed(true);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  return (
+    <StatsCard id={adminSectionAnchor(ADMIN_SECTIONS.accountsSummary)}>
+      <Metric
+        variant="hero"
+        label={t("accounts.countLabel")}
+        value={
+          failed ? "—" : total === null ? <Skeleton className="h-9 w-16" /> : format.number(total)
+        }
+        hint={failed ? t("accounts.countFailed") : t("accounts.countHint")}
+      />
+    </StatsCard>
+  );
+}
+
+export function AdminAccountsDashboard() {
   const t = useTranslations("Admin");
   const billingAvailable = useAdminCapabilities().configured("managedBilling");
   const giftVisible = useCallback(
@@ -719,16 +702,17 @@ export function AdminUsersDashboard() {
 
   const applyChange = (patch: Partial<AdminUserRow> & { userId: string }) => {
     if (selectedIdRef.current !== patch.userId) return;
-    setAccount((prev) => prev?.userId === patch.userId ? { ...prev, internal: patch.internal ?? prev.internal } : prev);
     setSelected((prev) => prev?.userId === patch.userId ? { ...prev, ...patch } : prev);
     // Re-read the effective plan and budget after a support action.
     void loadDetails(patch.userId);
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <div id={adminSectionAnchor(ADMIN_SECTIONS.usersAccounts)} className="flex scroll-mt-20 flex-col gap-1 rounded-lg">
-        <h2 className="text-sm font-semibold">{t("users.title")}</h2>
+    <div className="flex flex-col gap-6">
+      <AccountCount />
+      <div className="flex flex-col gap-4">
+      <div id={adminSectionAnchor(ADMIN_SECTIONS.accountsSupport)} className="flex scroll-mt-20 flex-col gap-1 rounded-lg">
+        <h2 className="text-sm font-semibold">{t("accounts.supportTitle")}</h2>
         <p className="text-sm text-muted-foreground">{t("users.subtitle")}</p>
       </div>
       <form className="flex flex-col gap-2" onSubmit={(event) => { event.preventDefault(); void lookup(); }}>
@@ -760,16 +744,14 @@ export function AdminUsersDashboard() {
             className="flex w-full items-center gap-3 rounded-xl border border-border px-3 py-3 text-left transition-colors hover:bg-muted/50">
             <UserAvatar seed={account.userId} className="size-8" />
             <div className="flex min-w-0 flex-1 flex-col">
-              <span className="flex items-center gap-2">
-                <span className="truncate text-sm font-medium">{account.name}</span>
-                {account.internal ? <InternalBadge /> : null}
-              </span>
+              <span className="truncate text-sm font-medium">{account.name}</span>
               <span className="truncate text-xs text-muted-foreground">{account.email ?? "—"}</span>
             </div>
             {loadingDetails ? <Spinner /> : <span className="text-xs text-muted-foreground">{t("users.openAccount")}</span>}
           </button>
         ) : searched ? <p className="text-sm text-muted-foreground">{t("users.empty")}</p> : null}
         {error ? <p role="alert" className="mt-2 text-sm text-destructive">{error}</p> : null}
+      </div>
       </div>
       {selected ? <UserSheet key={selected.userId} user={selected} giftVisible={giftVisible} onClose={closeDetails} onChanged={applyChange} /> : null}
     </div>

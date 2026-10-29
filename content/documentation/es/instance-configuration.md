@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 12,
+  "revision": 13,
+  "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-23",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.1 (MIN-788 Supabase self-hosted/v0.8.3)",
     "editions": [
@@ -46,10 +46,10 @@
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:/root/min750 (schedule table and release delta sentence checked against vercel.json and deploy/self-hosted/scheduler.mjs after adding smart-fill-reevaluation; rest of the article unchanged since the 0.20.0 release review; no screenshot in scope); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope)",
-    "language": "agent:/root/min750 (es table row and release delta sentence; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-788 changed passages; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-23"
+    "revision": 13,
+    "fact": "agent:claude-code (MIN-829 MINDDY_PUBLISH_MODEL_CONFIG sentence checked against app/api/recommended-models/route.ts); agent:/root/min750 (schedule table and release delta sentence checked against vercel.json and deploy/self-hosted/scheduler.mjs after adding smart-fill-reevaluation; rest of the article unchanged since the 0.20.0 release review; no screenshot in scope); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope)",
+    "language": "agent:claude-code (es MIN-829 sentence; self-reviewed; agent review, not human acceptance); agent:/root/min750 (es table row and release delta sentence; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-788 changed passages; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "workspace-encryption",
@@ -74,7 +74,7 @@
       "src": "/documentation/es/optional-providers-flow.svg",
       "alt": "Diagrama: Operador elige capacidad opcional. Credenciales completas y condiciones. Destino de datos externo explícito. Verificar conducta y controlar costes.",
       "caption": "Antes de activar una integración, comprueba adónde envía los datos y qué costes continuados genera.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -106,7 +106,7 @@
       "src": "/documentation/es/proxy-network-and-jobs-flow.svg",
       "alt": "Diagrama: Proxy HTTPS público. Orígenes públicos de la aplicación y Supabase. Base de datos y puertos internos privados. Tareas autenticadas; paradas en mantenimiento.",
       "caption": "El acceso público queda separado de los servicios internos; el trabajo programado se autentica y se detiene durante el mantenimiento.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -152,7 +152,7 @@ El instalador genera los valores ausentes de `GIT_STATE_SECRET`, `GIT_TOKEN_ENCR
 
 ### Aplicar y comprobar un cambio {#capabilities}
 
-`MINDDY_PUBLIC_SITE_NAME` y `MINDDY_PUBLIC_CONTACT_EMAIL` identifican la instancia. `ADMIN_EMAILS` contiene las direcciones de los administradores, separadas por comas; el acceso privilegiado también exige MFA. `OAUTH_ISSUER` normalmente queda vacío, salvo que publiques OAuth de forma intencionada en otra URL de origen estable. Mantén desactivadas la IA y la facturación gestionadas en self-hosted. Activa los servicios opcionales solo cuando su configuración esté completa. Reinicia o recrea la aplicación tras cambiar los valores públicos de ejecución; la imagen OCI no requiere recompilación. Ejecuta doctor para distinguir capacidades incompletas de fallos del núcleo y prueba los enlaces de cuenta y callbacks en la URL de origen prevista.
+`MINDDY_PUBLIC_SITE_NAME` y `MINDDY_PUBLIC_CONTACT_EMAIL` identifican la instancia. `ADMIN_EMAILS` contiene las direcciones de los administradores, separadas por comas; el acceso privilegiado también exige MFA. `MINDDY_PUBLISH_MODEL_CONFIG=1` publica la configuración de modelos de IA de la instancia en `/api/recommended-models` (consulta [la configuración de modelos recomendada](/docs/recommended-models)); déjala vacía salvo que otras instancias la importen. `OAUTH_ISSUER` normalmente queda vacío, salvo que publiques OAuth de forma intencionada en otra URL de origen estable. Mantén desactivadas la IA y la facturación gestionadas en self-hosted. Activa los servicios opcionales solo cuando su configuración esté completa. Reinicia o recrea la aplicación tras cambiar los valores públicos de ejecución; la imagen OCI no requiere recompilación. Ejecuta doctor para distinguir capacidades incompletas de fallos del núcleo y prueba los enlaces de cuenta y callbacks en la URL de origen prevista.
 
 ### Configurar comentarios e informes de documentación {#product-feedback}
 

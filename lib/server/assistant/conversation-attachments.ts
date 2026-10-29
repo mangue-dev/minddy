@@ -168,6 +168,24 @@ export async function readConversationAttachment(ctx: ToolContext, reference: un
 }
 
 /**
+ * The WHOLE text of an attached file, for a tool that consumes it as data (an
+ * imported model configuration, MIN-829) rather than reading it page by page.
+ * Bounded: past `maxCharacters` the file is refused, not truncated.
+ */
+export async function readConversationAttachmentText(
+  ctx: ToolContext,
+  reference: unknown,
+  maxCharacters: number,
+): Promise<{ fileName: string; text: string }> {
+  const file = await resolveConversationAttachment(ctx, reference);
+  const bytes = file.storage_path ? await downloadAttachment(ctx.service, file.storage_path) : null;
+  if (!bytes) throw new Error("Attachment file is unavailable.");
+  const text = bytes.toString("utf8").replace(/^\ufeff/, "");
+  if (text.length > maxCharacters) throw new Error("Attachment is too large for this tool.");
+  return { fileName: file.file_name, text };
+}
+
+/**
  * `create_file` (MIN-793): render a file and keep it in the user's private chat
  * storage, like a file they drop into the composer — same encryption, same
  * account quota, same door. The result is the file's descriptor: the loop

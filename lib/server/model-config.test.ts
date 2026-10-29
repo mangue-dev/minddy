@@ -60,6 +60,48 @@ describe("resolveConfiguredModel", () => {
   });
 });
 
+describe("category defaults (MIN-829)", () => {
+  it("reads the task and its category in one batch", () => {
+    expect(modelConfigKeys("smart_fill_model")).toEqual([
+      "smart_fill_model",
+      "smart_fill_model_suffix",
+      "category_automations_model",
+      "category_automations_model_suffix",
+    ]);
+  });
+
+  it("inherits the category default, served the way the category asks", async () => {
+    config.set("category_automations_model", "openai/gpt-5-mini");
+    config.set("category_automations_model_suffix", "floor");
+    // The task's own suffix belongs to its override, absent here.
+    config.set("smart_fill_model_suffix", "nitro");
+    const resolved = await resolveConfiguredModel("smart_fill_model");
+    expect(resolved.model).toBe("openai/gpt-5-mini:floor");
+  });
+
+  it("lets an explicit task override win over the category", async () => {
+    config.set("category_automations_model", "openai/gpt-5-mini");
+    config.set("category_automations_model_suffix", "floor");
+    config.set("brief_model", "anthropic/claude-sonnet-5");
+    const resolved = await resolveConfiguredModel("brief_model");
+    expect(resolved.model).toBe("anthropic/claude-sonnet-5");
+  });
+
+  it("keeps each task's own built-in default while the category is unset", async () => {
+    expect((await resolveConfiguredModel("merge_message_model")).base).toBe(
+      aiModelFallback("merge_message_model"),
+    );
+    expect((await resolveConfiguredModel("issue_embedding_model")).base).toBe(
+      aiModelFallback("issue_embedding_model"),
+    );
+  });
+
+  it("never lends a category to a standalone task", async () => {
+    config.set("category_automations_model", "openai/gpt-5-mini");
+    expect((await resolveConfiguredModel("jev_model")).base).toBe(aiModelFallback("jev_model"));
+  });
+});
+
 describe("resolveCascadeFromValues", () => {
   const KEYS = ["assistant_model", "fallback_model"];
 

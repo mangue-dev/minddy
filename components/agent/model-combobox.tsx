@@ -1,12 +1,13 @@
 "use client";
 
+import { ChevronDownIcon } from "lucide-react";
 import { CommandList } from "@/components/ui/command";
 import type { AiProviderChoice } from "@/lib/ai-surfaces";
 import type { AiProviderOption } from "@/lib/ai-provider-options";
 import { ProviderOptionLabel } from "@/components/ai-provider-label";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AddToListIcon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUpDownIcon, CheckIcon } from "@hugeicons/core-free-icons";
+import { AddToListIcon, ArrowLeft01Icon, ArrowRight01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useMemo, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -365,7 +366,7 @@ export function ModelCombobox({
                       ? formatModelName(defaultModelId)
                       : defaultLabel}
                 </span>
-                <HugeiconsIcon icon={ArrowUpDownIcon} className="size-3 shrink-0 opacity-50" />
+                <ChevronDownIcon className="pointer-events-none size-4 shrink-0 text-muted-foreground" />
               </>
             )}
           </Button>
@@ -387,7 +388,7 @@ export function ModelCombobox({
             ) : (
               defaultRow
             )}
-            <HugeiconsIcon icon={ArrowUpDownIcon} className="ml-2 size-4 shrink-0 opacity-50" />
+            <ChevronDownIcon className="pointer-events-none ml-2 size-4 shrink-0 text-muted-foreground" />
           </Button>
         )}
       </ResponsivePopoverTrigger>

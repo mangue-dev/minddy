@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 12,
+  "revision": 13,
+  "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-23",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.1 (MIN-788 Supabase self-hosted/v0.8.3)",
     "editions": [
@@ -46,10 +46,10 @@
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:/root/min750 (schedule table and release delta sentence checked against vercel.json and deploy/self-hosted/scheduler.mjs after adding smart-fill-reevaluation; rest of the article unchanged since the 0.20.0 release review; no screenshot in scope); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope)",
-    "language": "agent:/root/min750 (pt-BR table row and release delta sentence; agent review, not human acceptance); agent:claude-code (pt-BR manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-788 changed passages; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-23"
+    "revision": 13,
+    "fact": "agent:claude-code (MIN-829 MINDDY_PUBLISH_MODEL_CONFIG sentence checked against app/api/recommended-models/route.ts); agent:/root/min750 (schedule table and release delta sentence checked against vercel.json and deploy/self-hosted/scheduler.mjs after adding smart-fill-reevaluation; rest of the article unchanged since the 0.20.0 release review; no screenshot in scope); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope)",
+    "language": "agent:claude-code (pt-BR MIN-829 sentence; self-reviewed; agent review, not human acceptance); agent:/root/min750 (pt-BR table row and release delta sentence; agent review, not human acceptance); agent:claude-code (pt-BR manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-788 changed passages; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "workspace-encryption",
@@ -74,7 +74,7 @@
       "src": "/documentation/pt-BR/optional-providers-flow.svg",
       "alt": "Diagrama: Operador escolhe capacidade opcional. Credenciais completas e condições. Destino externo explícito dos dados. Verificar comportamento e acompanhar custos.",
       "caption": "Antes de ativar uma integração, confira as credenciais, as condições e o destino dos dados.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -106,7 +106,7 @@
       "src": "/documentation/pt-BR/proxy-network-and-jobs-flow.svg",
       "alt": "Diagrama: Proxy HTTPS público. Origens app e Supabase públicas. Banco e portas internas privadas. Tarefas autenticadas; paradas em manutenção.",
       "caption": "O proxy expõe as origens públicas e mantém os serviços internos privados; durante a manutenção, pare também as tarefas agendadas.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -152,7 +152,7 @@ O instalador cria `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET`, `AI_KEY_ENC
 
 ### Aplicar e conferir uma mudança {#capabilities}
 
-`MINDDY_PUBLIC_SITE_NAME` e `MINDDY_PUBLIC_CONTACT_EMAIL` identificam a instância. `ADMIN_EMAILS` contém administradores separados por vírgulas, também sujeitos a MFA. `OAUTH_ISSUER` normalmente fica vazio, salvo publicação intencional de OAuth em outra origem estável. Desligue IA e cobrança gerenciadas em self-hosted. Cada serviço opcional exige configuração completa. Reinicie ou recrie a aplicação após mudar valores públicos de execução, sem rebuild OCI. doctor distingue capacidades incompletas de falhas do núcleo. Confira links de conta e callbacks na origem correta.
+`MINDDY_PUBLIC_SITE_NAME` e `MINDDY_PUBLIC_CONTACT_EMAIL` identificam a instância. `ADMIN_EMAILS` contém administradores separados por vírgulas, também sujeitos a MFA. `MINDDY_PUBLISH_MODEL_CONFIG=1` publica a configuração de modelos de IA da instância em `/api/recommended-models` (veja [a configuração de modelos recomendada](/docs/recommended-models)); deixe-a vazia, a menos que outras instâncias a importem. `OAUTH_ISSUER` normalmente fica vazio, salvo publicação intencional de OAuth em outra origem estável. Desligue IA e cobrança gerenciadas em self-hosted. Cada serviço opcional exige configuração completa. Reinicie ou recrie a aplicação após mudar valores públicos de execução, sem rebuild OCI. doctor distingue capacidades incompletas de falhas do núcleo. Confira links de conta e callbacks na origem correta.
 
 ### Configurar feedback e relatos sobre a documentação {#product-feedback}
 

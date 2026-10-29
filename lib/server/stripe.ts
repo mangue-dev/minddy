@@ -16,10 +16,6 @@ import {
  * that of the Stripe price, the amounts from lib/billing-plans.ts are the display.
  */
 
-interface StripeList<T> {
-  data: T[];
-}
-
 export interface StripeCustomer {
   id: string;
   email: string | null;
@@ -56,30 +52,6 @@ export interface StripeSubscription {
   current_period_end?: number;
   items: { data: StripeSubscriptionItem[] };
   metadata?: Record<string, string>;
-}
-
-/**
- * A line of the LEDGER Stripe (MIN-92) — everything that has moved money on the
- * counts. Better source than charges alone for a finances page:
- * refunds and disputes are counted alone (negative lines,
- * `type: refund` / `adjustment`), and each line carries its `fee`, therefore the `net`
- * actually collected — a margin calculated on gross would be false.
- */
-export interface StripeBalanceTransaction {
-  id: string;
-  /** `charge`, `refund`, `adjustment`, `payout`, `stripe_fee`… */
-  type: string;
-  /** Raw, in smallest unit (cents). Negative for a refund. */
-  amount: number;
-  /** Stripe commission charged on this line. */
-  fee: number;
-  /** `amount - fee`: what really lands on the account. */
-  net: number;
-  currency: string;
-  created: number;
-  description: string | null;
-  /** Id of the original object (charge, refund…). Not expanded. */
-  source?: string | null;
 }
 
 export interface StripeEvent<T = unknown> {
@@ -147,31 +119,6 @@ export function getPlanIdForStripePrice(
   return null;
 }
 
-/**
- * The CADENCE of a configured price. The counterpart of `getPlanIdForStripePrice`:
- * one says which plan, the other at what rate it is billed. Used by the page
- * Finances, which must spread an annual collection over twelve months and not over one.
- * `null` for an unknown price (promo, old price) — the caller decides.
- */
-export function getIntervalForStripePrice(
-  priceId: string | null | undefined
-): BillingInterval | null {
-  if (!priceId) return null;
-  if (
-    priceId === process.env.STRIPE_PRICE_ID_GO_YEARLY ||
-    priceId === process.env.STRIPE_PRICE_ID_PRO_YEARLY
-  ) {
-    return "year";
-  }
-  if (
-    priceId === process.env.STRIPE_PRICE_ID_GO ||
-    priceId === process.env.STRIPE_PRICE_ID_PRO
-  ) {
-    return "month";
-  }
-  return null;
-}
-
 export function coerceStripePlanId(value: unknown): BillingPlanId | null {
   return coerceBillingPlanId(value);
 }
@@ -217,8 +164,7 @@ type StripeRequestTarget =
   | { resource: "customers" }
   | { resource: "checkoutSessions" }
   | { resource: "portalSessions" }
-  | { resource: "subscription"; subscriptionId: string }
-  | { resource: "balanceTransactions"; query: URLSearchParams };
+  | { resource: "subscription"; subscriptionId: string };
 
 function stripeRequestUrl(target: StripeRequestTarget): URL {
   switch (target.resource) {
@@ -232,11 +178,6 @@ function stripeRequestUrl(target: StripeRequestTarget): URL {
       return new URL(
         `https://api.stripe.com/v1/subscriptions/${encodeURIComponent(target.subscriptionId)}`,
       );
-    case "balanceTransactions": {
-      const url = new URL("https://api.stripe.com/v1/balance_transactions");
-      url.search = target.query.toString();
-      return url;
-    }
   }
 }
 
@@ -393,47 +334,6 @@ export async function setStripeCancelAtPeriodEnd(
     { resource: "subscription", subscriptionId },
     body
   );
-}
-
-/** Beyond that, we stop paging. See the function comment. */
-const BALANCE_TX_MAX_PAGES = 10;
-const BALANCE_TX_PAGE_SIZE = 100;
-
-/**
- * The ledger since a date (MIN-92). Each line has its `net` and its day:
- * this is all the Finances page needs, since a receipt is
- * displayed in full on the day it falls. (No `expand[]=data.source`: it was only used to find the customer to spread the amount over their period.)
- *
- * Pagination limited to 1,000 lines. This is not a bothersome limit today
- * (the count has two) but it is an explicit safeguard: the day the
- * volume touches it, it is precisely the signal that a mirror table
- * is needed rather than replaying the entire history on each page load.
- */
-export async function listStripeBalanceTransactions(params: {
-  since: Date;
-}): Promise<{ transactions: StripeBalanceTransaction[]; truncated: boolean }> {
-  const transactions: StripeBalanceTransaction[] = [];
-  let startingAfter: string | null = null;
-
-  for (let page = 0; page < BALANCE_TX_MAX_PAGES; page++) {
-    const query = new URLSearchParams();
-    query.set("limit", String(BALANCE_TX_PAGE_SIZE));
-    query.set("created[gte]", String(Math.floor(params.since.getTime() / 1000)));
-    if (startingAfter) query.set("starting_after", startingAfter);
-
-    const result: StripeList<StripeBalanceTransaction> & { has_more?: boolean } =
-      await stripeRequest<StripeList<StripeBalanceTransaction> & { has_more?: boolean }>(
-        { resource: "balanceTransactions", query },
-      );
-
-    transactions.push(...result.data);
-    if (!result.has_more || result.data.length === 0) {
-      return { transactions, truncated: false };
-    }
-    startingAfter = result.data[result.data.length - 1].id;
-  }
-
-  return { transactions, truncated: true };
 }
 
 export function stripeUnixToIso(value: number | null | undefined): string | null {

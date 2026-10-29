@@ -931,7 +931,11 @@
     "slashCreateIssueLabel": "create issue",
     "slashCreateIssueDescription": "Numo gathers the context, then creates the issue",
     "stopConfirmTitle": "Stop Numo?",
-    "stopConfirmDescription": "The current turn will be interrupted. Everything already written and saved stays in the conversation."
+    "stopConfirmDescription": "The current turn will be interrupted. Everything already written and saved stays in the conversation.",
+    "contextAdminAccounts": "Admin · Accounts",
+    "contextAdminCosts": "Admin · Costs",
+    "contextAdminModels": "Admin · Models",
+    "contextAdminTooltip": "Instance admin dashboard in context"
   },
   "Auth": {
     "callbackFailed": "This sign-in link is no longer valid. Try signing in again.",
@@ -3984,7 +3988,29 @@
     "secretStoreServerSide": "Copy it now into your server environment. It is not kept in this conversation and will not be shown again.",
     "secretReveal": "Show credential",
     "secretHide": "Hide credential",
-    "secretCopy": "Copy credential"
+    "secretCopy": "Copy credential",
+    "loadingInstanceModels": "Reading the instance models…",
+    "instanceModelsLoaded": "Instance models read",
+    "loadInstanceModelsFailed": "Couldn’t read the instance models",
+    "updatingInstanceModels": "Updating the instance models…",
+    "instanceModelsUpdated": "Instance models updated",
+    "updateInstanceModelsFailed": "Couldn’t update the instance models",
+    "importingInstanceModels": "Reading the configuration file…",
+    "instanceModelsImportPreviewed": "Import changes listed",
+    "instanceModelsImported": "Configuration imported",
+    "importInstanceModelsFailed": "Couldn’t import the configuration",
+    "findingAccount": "Looking up the account…",
+    "accountFound": "Account lookup done",
+    "findAccountFailed": "Couldn’t look up the account",
+    "loadingAccount": "Reading the account’s plan and usage…",
+    "accountLoaded": "Account’s plan and usage read",
+    "loadAccountFailed": "Couldn’t read the account",
+    "settingAccountPlan": "Updating the account’s plan…",
+    "accountPlanSet": "Account’s plan updated",
+    "setAccountPlanFailed": "Couldn’t update the account’s plan",
+    "loadingInstanceCosts": "Reading the instance costs…",
+    "instanceCostsLoaded": "Instance costs read",
+    "loadInstanceCostsFailed": "Couldn’t read the instance costs"
   },
   "PullRequests": {
     "descriptionMoreActions": "Description actions",
@@ -4526,10 +4552,9 @@
     "pageTitle": "Admin",
     "filterPlaceholder": "Filter {count, plural, =0 {admin sections} one {# admin section} other {# admin sections}}…",
     "tabs": {
-      "overview": "Overview",
-      "users": "Users",
-      "finances": "Finances",
-      "models": "Models"
+      "models": "Models",
+      "accounts": "Accounts",
+      "costs": "Costs"
     },
     "billing": {
       "title": "Gift a plan",
@@ -4563,7 +4588,7 @@
       "saved": "Plan updated."
     },
     "title": "AI models",
-    "subtitle": "Models minddy runs. Every pick applies right away; “default model” hands the setting back to the product default.",
+    "subtitle": "Each card has one default model; open “Per-task models” to give a task its own. Every choice applies right away.",
     "loadError": "Couldn’t load the configuration.",
     "saved": "Setting saved",
     "fieldDefault": "Default model",
@@ -4576,12 +4601,12 @@
     },
     "groups": {
       "assistant": {
-        "title": "Numo conversations",
-        "desc": "Numo in conversations and comments."
+        "title": "Assistant",
+        "desc": "Numo in conversations and comments, with its titles and web search."
       },
       "automations": {
         "title": "Automations",
-        "desc": "Smart assignment, smart fill, briefs, imports and merge commit messages."
+        "desc": "Smart Fill, Smart Assign, relations, briefs, imports and merge commit messages."
       },
       "byok": {
         "title": "Personal keys",
@@ -4591,14 +4616,14 @@
         "title": "Voice"
       },
       "feedback": {
-        "title": "Feedback",
-        "desc": "Feedback board processing."
+        "title": "Feedback and public site",
+        "desc": "Feedback board processing, and the AI answers offered to visitors without an account."
       },
-      "site": {
-        "title": "Public site",
-        "desc": "AI features offered to visitors who do not have an account."
-      },
-      "byokOther": "Other endpoints"
+      "byokOther": "Other endpoints",
+      "embeddings": {
+        "title": "Embeddings",
+        "desc": "Turns issues and feedback into vectors to find what is related."
+      }
     },
     "fields": {
       "assistant_model": {
@@ -4608,10 +4633,6 @@
       "assistant_reasoning_level": {
         "label": "Reasoning level",
         "desc": "Higher levels can improve complex work, but take longer and use more tokens. Applies to Numo chat and comments."
-      },
-      "fallback_model": {
-        "label": "Fallback model",
-        "desc": "Used when the Numo model is left empty."
       },
       "recommended_models": {
         "label": "Recommended models",
@@ -4679,6 +4700,18 @@
       "faq_ask_model": {
         "label": "FAQ question box model",
         "desc": "Answers a visitor's question from the page FAQ and the product documentation. Someone is waiting on it, and it runs all day on the public site: pick a fast, cheap model."
+      },
+      "category_assistant_model": {
+        "label": "Assistant default model"
+      },
+      "category_automations_model": {
+        "label": "Automations default model"
+      },
+      "category_embeddings_model": {
+        "label": "Embeddings default model"
+      },
+      "category_feedback_model": {
+        "label": "Feedback and public site default model"
       }
     },
     "decisionModelErrors": {
@@ -4687,82 +4720,65 @@
       "compatibility_check_failed": "This model failed the test decision (refused, invalid or slower than 5 seconds). The current model was kept.",
       "capability_mismatch": "This model does not fit this field (for example a chat model in an embeddings field). The current model was kept."
     },
-    "finance": {
-      "title": "Finances",
-      "summary": "Monthly summary",
-      "subtitle": "What comes in and what goes out, on the same timeline. Income comes from Stripe balance transactions (net of fees and refunds), costs from OpenRouter, converted at each day's rate.",
-      "window": "{days}d",
-      "loadError": "Couldn’t load the finances.",
-      "empty": "No calls.",
-      "noData": "Nothing moved over this period.",
-      "netCollected": "Collected this month",
-      "netCollectedInfo": "What actually landed in the Stripe account this month: net of Stripe fees and refunds. An admin override is never revenue; a gift produces no transaction.",
-      "stripeFees": "including {amount} in Stripe fees",
-      "mrr": "MRR",
-      "mrrInfo": "Theoretical recurring revenue: the sum of active subscriptions, yearly plans counted at their monthly equivalent. A recurrence indicator; it is not what computes the margin. Admin overrides are ignored.",
-      "payingAccounts": "{count, plural, =0 {no subscribers} one {# subscriber} other {# subscribers}}",
-      "monthCost": "AI cost this month",
-      "monthCostInfo": "Real cost of this month's AI calls, converted to euros at each day's rate. Internal accounts are counted: the money spent on them really does leave the account.",
-      "monthCostUsd": "{amount} in USD",
-      "margin": "Margin",
-      "marginHint": "collected − AI cost",
-      "marginInfo": "Net collected minus this month's AI cost. Only those two lines: hosting and other charges are not in it.",
-      "fxRate": "1 USD = €{rate} (rate of {date})",
-      "fxMissing": "Exchange rate unavailable; costs stay in USD.",
-      "stripeFresh": "Stripe refreshed {minutes} min ago",
-      "stripeUnreachable": "Stripe unreachable",
-      "testMode": "Test mode",
-      "refresh": "Refresh",
-      "chartTitle": "Income and costs per day",
-      "chartInfo": "Revenue goes up, cost goes down, on a single euro scale. Each payment is shown WHOLE on the day it lands; a monthly charge is one bar on the charge date, not a smoothed average. Refunds follow the same rule.",
-      "legendRevenue": "Income",
-      "legendCost": "AI costs",
-      "tooltipRevenue": "Income: {amount}",
-      "tooltipCost": "Costs: {amount}",
-      "tooltipMargin": "Margin: {amount}",
-      "capTitle": "OpenRouter key cap",
-      "capInfo": "The monthly cap on the minddy key. Hitting it stops Numo, dictation and feedback processing until next month. A push notification fires at 90%.",
-      "capUnavailable": "Cap unreadable; check the OpenRouter key.",
-      "capUsage": "{usage} of {limit}",
-      "capPercent": "{percent}% of the cap",
-      "capRemaining": "Remaining",
-      "capProjected": "Cap reached on",
-      "capProjectedInfo": "Projected at the pace of the last 7 days.",
-      "capNotBeforeReset": "Not before the reset",
-      "capReset": "Resets",
-      "managedKeysTitle": "OpenRouter keys per account",
-      "managedKeysInfo": "Each account pays with its own OpenRouter key, capped at the usage its plan still includes. OpenRouter refuses a key at its cap, even if Minddy's own check misses it.",
-      "managedKeysUnavailable": "Keys unreadable; check the OpenRouter management key.",
-      "managedKeysAccounts": "Account keys",
-      "managedKeysRemaining": "Still spendable",
-      "managedKeysRemainingInfo": "What all account keys may still spend before OpenRouter refuses them.",
-      "managedKeysToday": "Spent today",
-      "managedKeysPublic": "Public key today",
-      "managedKeysPublicInfo": "The key of the dictation demo and the FAQ answers, capped per day.",
-      "managedKeysPublicUsage": "{usage} of {limit}",
-      "managedKeysSweep": "Delete orphan keys",
-      "managedKeysSweepTitle": "Delete orphan keys?",
-      "managedKeysSweepDescription": "Keys Minddy issued that no account uses any more are deleted at OpenRouter. Keys created in the last 10 minutes and keys Minddy did not issue are kept.",
-      "managedKeysSweepConfirm": "Delete",
-      "managedKeysSweepCancel": "Cancel",
-      "managedKeysSweepDone": "{count, plural, =0 {No orphan key found} one {# orphan key deleted} other {# orphan keys deleted}}",
-      "managedKeysSweepFailed": "Could not delete the orphan keys.",
-      "byType": "Costs by feature",
-      "logs": "Log",
-      "recentRuns": "Recent runs",
-      "recentRunsHint": "A run groups the calls of one action.",
-      "colType": "Feature",
+    "quotas": {
+      "usersTitle": "AI usage by user",
+      "usersDescription": "Each user is capped by their plan's monthly budget, across all AI features. A reset restarts the count from now; no spend is erased.",
+      "empty": "No AI usage this month.",
+      "counted": "Counted toward budget",
+      "realSpend": "Spend this month",
+      "blocked": "Blocked",
+      "calls": "{count, plural, one {# call} other {# calls}}",
+      "reset": "Reset",
+      "resetsTitle": "Resets this period",
+      "resetsHint": "Only the most recent one counts; removing it hands back to the previous one.",
+      "resetsCount": "{count, plural, one {# reset} other {# resets}}",
+      "resetActive": "current",
+      "undoOne": "Undo this reset",
+      "resetToast": "{name}'s quota reset.",
+      "undoToast": "Reset undone for {name}."
+    },
+    "users": {
+      "subtitle": "Find an account by its exact email address, then open it to manage billing or usage.",
+      "searchPlaceholder": "Account email address",
+      "clearSearch": "Clear search",
+      "empty": "No account found for this email address.",
+      "emailStatus": "Email",
+      "confirmed": "Confirmed",
+      "unconfirmed": "Unconfirmed",
+      "overrideMark": "forced",
+      "accountTitle": "Account",
+      "usageDescription": "The current window, and the real spend this month.",
+      "usageTitle": "AI usage budget",
+      "usageSubtitle": "A reset restarts the count from now; no spend is erased.",
+      "emailLabel": "Email address",
+      "findAccount": "Find account",
+      "openAccount": "Open account",
+      "supportPurpose": "Open accounts only for support or billing tasks. Activity and personal content are not shown here.",
+      "lookupFailed": "Could not find the account. Check the address and try again.",
+      "detailsFailed": "Could not load billing and usage. Open the account to try again."
+    },
+    "recommended": {
+      "pickModel": "Pick a model",
+      "add": "Add a model",
+      "save": "Save",
+      "cancel": "Cancel",
+      "reset": "Back to the default selection",
+      "remove": "Remove this model",
+      "empty": "No recommendations: the picker opens on the whole catalogue. Saving an empty list hands the setting back to the default selection.",
+      "incomplete": "Pick a model for every line before saving.",
+      "duplicate": "The same model appears twice: remove one before saving.",
+      "hint": "Shown first in every model picker, cheapest first."
+    },
+    "byok": {
+      "borderDefault": "Account-wide default"
+    },
+    "costs": {
+      "callCount": "{count, plural, one {# call} other {# calls}}",
+      "colCompletion": "Output tokens",
       "colCost": "Cost",
-      "colRuns": "Runs",
-      "colCalls": "Calls",
-      "colAvgRun": "Avg cost/run",
-      "colAvgCall": "Avg cost/call",
-      "colTokens": "Tokens",
       "colModel": "Model",
       "colPrompt": "Input tokens",
-      "colCompletion": "Output tokens",
-      "callCount": "{count} calls",
-      "loadingCalls": "Loading calls…",
+      "empty": "No calls.",
       "features": {
         "numo_chat": "Numo; chat",
         "numo_comment": "Numo; comments",
@@ -4787,98 +4803,93 @@
         "jev_shadow": "Decision checks",
         "issue_embedding": "Issue embeddings",
         "issue_relation": "Smart-fill relations",
-        "issue_search": "Issue search"
+        "issue_search": "Issue search",
+        "faq_ask": "FAQ question box"
       },
-      "stripeHidden": "Stripe revenue is hidden: billing is not connected on this instance."
+      "loadingCalls": "Loading calls…",
+      "noData": "No AI calls over this period.",
+      "recentRunsHint": "A run groups the calls of one action.",
+      "logsTitle": "Recent runs",
+      "title": "Costs",
+      "subtitle": "What AI providers cost this instance, by feature and by model. Amounts are in dollars, as the providers bill them.",
+      "summaryTitle": "Overview",
+      "loadError": "Couldn’t load the costs.",
+      "periodLabel": "Period",
+      "period": "Last {days} days",
+      "filterFamily": "All features",
+      "filterModel": "All models",
+      "filterKey": "Key used",
+      "keyAll": "All keys",
+      "keyPlatform": "Instance key",
+      "keyByok": "Personal keys",
+      "clearFilters": "Clear filters",
+      "kpiSpend": "Total spend",
+      "kpiRequests": "Requests",
+      "kpiTokens": "Tokens",
+      "kpiCostPerMillion": "Cost per 1M tokens",
+      "vsPrevious": "vs previous period",
+      "noPrevious": "No previous period to compare",
+      "topFeaturesTitle": "Top features",
+      "topModelsTitle": "Top models",
+      "spendByModelTitle": "Spend by model",
+      "spendByGroupTitle": "Spend by feature family",
+      "requestsByModelTitle": "Requests by model",
+      "otherSeries": "Other",
+      "noModel": "No model",
+      "total": "Total",
+      "runsPageOf": "Page {page} of {pages}",
+      "runsPrev": "Previous page",
+      "runsNext": "Next page",
+      "groups": {
+        "numo": "Numo",
+        "routines": "Routines",
+        "automations": "Automations",
+        "dictation": "Dictation",
+        "feedback": "Feedback",
+        "site": "Public site",
+        "other": "Other"
+      }
     },
-    "quotas": {
-      "usersTitle": "AI usage by user",
-      "usersDescription": "Each user is capped by their plan's monthly budget, across all AI features. A reset restarts the count from now; no spend is erased.",
-      "empty": "No AI usage this month.",
-      "counted": "Counted toward budget",
-      "realSpend": "Spend this month",
-      "blocked": "Blocked",
-      "calls": "{count, plural, one {# call} other {# calls}}",
-      "reset": "Reset",
-      "resetsTitle": "Resets this period",
-      "resetsHint": "Only the most recent one counts; removing it hands back to the previous one.",
-      "resetsCount": "{count, plural, one {# reset} other {# resets}}",
-      "resetActive": "current",
-      "undoOne": "Undo this reset",
-      "resetToast": "{name}'s quota reset.",
-      "undoToast": "Reset undone for {name}."
+    "accounts": {
+      "countLabel": "Accounts",
+      "countHint": "Every account on this instance.",
+      "countFailed": "Couldn’t count the accounts.",
+      "supportTitle": "Account support"
     },
-    "users": {
-      "title": "Account support",
-      "subtitle": "Find an account by its exact email address, then open it to manage billing or usage.",
-      "searchPlaceholder": "Account email address",
-      "clearSearch": "Clear search",
-      "empty": "No account found for this email address.",
-      "emailStatus": "Email",
-      "confirmed": "Confirmed",
-      "unconfirmed": "Unconfirmed",
-      "overrideMark": "forced",
-      "accountTitle": "Account",
-      "internalHint": "Left out of every statistic.",
-      "usageDescription": "The current window, and the real spend this month.",
-      "usageTitle": "AI usage budget",
-      "usageSubtitle": "A reset restarts the count from now; no spend is erased.",
-      "internalTitle": "Internal account",
-      "internalBadge": "Internal",
-      "internalSubtitle": "The team, demo accounts, bots. The account stays listed and manageable here, but counts toward no statistic: not accounts, actives, sign-ups, plans, onboarding, nor its projects and issues.",
-      "internalOnToast": "{name} is now an internal account.",
-      "internalOffToast": "{name} counts toward statistics again.",
-      "emailLabel": "Email address",
-      "findAccount": "Find account",
-      "openAccount": "Open account",
-      "supportPurpose": "Open accounts only for support or billing tasks. Activity and personal content are not shown here.",
-      "lookupFailed": "Could not find the account. Check the address and try again.",
-      "detailsFailed": "Could not load billing and usage. Open the account to try again."
+    "categoryDefault": {
+      "label": "Default model",
+      "builtIn": "Built-in defaults",
+      "hint_assistant": "Used by Numo, conversation titles and web search.",
+      "hint_automations": "Used by every automation below that is not overridden.",
+      "hint_embeddings": "Changing it starts a new index: issues are indexed again.",
+      "hint_feedback": "Used by feedback analysis and the FAQ question box.",
+      "tasks": "Per-task models ({count})",
+      "overridden": "{count, plural, =0 {Every task uses the default model} one {# task uses its own model} other {# tasks use their own model}}",
+      "overrides": "Uses its own model instead of the default.",
+      "follows": "Uses the default model.",
+      "useDefault": "Default model"
     },
-    "overview": {
-      "summary": "Key metrics",
-      "totalUsers": "Accounts",
-      "newUsers": "{count, plural, one {# new this week} other {# new this week}}",
-      "newUsers30d": "New in 30d",
-      "activeWeek": "Active this week",
-      "activeMonth": "{count} over 30 days",
-      "activeToday": "Active today",
-      "activeInfo": "An account counts as active on a given day if it signed in or left a trace: issue created or completed, comment, AI call.",
-      "signupsToday": "{count, plural, one {# sign-up today} other {# sign-ups today}}",
-      "internalExcluded": "{count, plural, one {# internal account excluded} other {# internal accounts excluded}}",
-      "internalInfo": "Internal accounts (team, demo, bots) enter none of the numbers on this page. The flag is set from an account's record, in the Users tab.",
-      "tooltipValue": "{label}: {value}",
-      "activity": "Last 30 days",
-      "activeDaily": "Active per day",
-      "signupsDaily": "Sign-ups per day",
-      "noActivity": "No activity over the period.",
-      "noSignups": "No sign-up over the period.",
-      "onboarding": "Onboarding",
-      "onboardingInfo": "Counted over the accounts that were shown the onboarding at least once.",
-      "onboardingStarted": "Shown",
-      "onboardingCompleted": "Completed",
-      "onboardingDismissed": "Skipped",
-      "onboardingNeverSeen": "Never shown",
-      "plans": "Plans",
-      "plansInfo": "Each account's effective plan: admin override, else Stripe subscription, else the default plan.",
-      "content": "Content",
-      "totalProjects": "Projects",
-      "totalIssues": "Issues",
-      "issuesPerProject": "Issues per project"
-    },
-    "recommended": {
-      "pickModel": "Pick a model",
-      "add": "Add a model",
-      "save": "Save",
+    "modelsFile": {
+      "title": "Export and import",
+      "export": "Export",
+      "import": "Import",
+      "previewTitle": "Import this configuration?",
+      "previewDescription": "{count, plural, one {# setting will change} other {# settings will change}} with {file}. Settings the file leaves out go back to their default.",
+      "previewNone": "{file} matches the current configuration. Nothing will change.",
+      "change": "{from} → {to}",
+      "defaultValue": "Default",
+      "upgraded": "This file comes from an earlier version of minddy and was updated to the current format.",
+      "ignored": "{count, plural, one {# entry is} other {# entries are}} unknown to this version and will be skipped: {entries}",
       "cancel": "Cancel",
-      "reset": "Back to the default selection",
-      "remove": "Remove this model",
-      "empty": "No recommendations: the picker opens on the whole catalogue. Saving an empty list hands the setting back to the default selection.",
-      "incomplete": "Pick a model for every line before saving.",
-      "duplicate": "The same model appears twice: remove one before saving."
-    },
-    "byok": {
-      "borderDefault": "Account-wide default"
+      "apply": "Apply",
+      "applied": "Configuration imported",
+      "errors": {
+        "invalid_json": "This file is not valid JSON.",
+        "not_a_model_config": "This file is not a minddy model configuration.",
+        "newer_version": "This file comes from a newer version of minddy. Update this instance, then import it again.",
+        "invalid_value": "This file contains an invalid setting: {detail}",
+        "refused": "{setting} was refused: {detail} Nothing was changed."
+      }
     }
   },
   "Legal": {

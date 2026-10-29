@@ -2,39 +2,18 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { isAdminUser } from "@/lib/server/admin";
 import {
-  clearAppConfigValue,
-  getAppConfigValues,
-  setAppConfigValue,
-} from "@/lib/server/app-config";
-import {
-  AI_MODEL_CONFIG_FIELDS,
-  AI_MODEL_CONFIG_KEYS,
-  AI_MODEL_SUFFIX_KEYS,
-  getAiConfigField,
-  isModelSuffix,
-  isModelSuffixKey,
-  MODEL_SUFFIXES,
-} from "@/lib/ai-model-config";
-import { parseRecommendedModels } from "@/lib/recommended-models";
-import { isReasoningLevel, REASONING_LEVELS } from "@/lib/agent-reasoning";
-import { validateDecisionModelChoice } from "@/lib/server/decisions/model-validation";
-import { validateCatalogCapabilityChoice } from "@/lib/server/model-capability-validation";
+  importAiConfigFile,
+  readAiConfigValues,
+  writeAiConfigValue,
+} from "@/lib/server/admin-model-config";
 
-/** Error text per decision-model refusal; the dashboard localizes by `code`. */
-const DECISION_MODEL_ERRORS = {
-  catalog_unavailable: "The decision model catalog is unavailable; the setting was not changed",
-  not_a_decision_model: "Model is not a decision model of the platform catalog",
-  compatibility_check_failed: "Model failed the decision compatibility check",
-} as const;
+const PRIVATE_HEADERS = { "Cache-Control": "private, no-store" };
 
 /**
  * Admin gate for the app-config endpoints: authenticate the request (JWT via
  * getClaims), then require the caller to be a minddy admin. Returns the error
  * response to short-circuit with, or null when the caller is cleared.
  */
-/** Roomy bound — the longest legitimate value is the recommended-models JSON list. */
-const MAX_VALUE_LENGTH = 10_000;
-
 async function requireAdmin(request: NextRequest): Promise<NextResponse | null> {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
@@ -44,130 +23,80 @@ async function requireAdmin(request: NextRequest): Promise<NextResponse | null> 
   return null;
 }
 
+async function readObject(request: NextRequest): Promise<Record<string, unknown> | null> {
+  try {
+    const parsed: unknown = await request.json();
+    // Non-object body (null, string…): reject here instead of crashing below.
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 /** GET /api/admin/app-config — current value of every AI knob in the registry. */
 export async function GET(request: NextRequest) {
   const denied = await requireAdmin(request);
   if (denied) return denied;
-
-  // Routing suffixes (MIN-263) are keys in their own right: the
-  // dashboard reads them in the same object as the model they accompany.
-  const values = await getAppConfigValues([
-    ...AI_MODEL_CONFIG_FIELDS.map((f) => f.key),
-    ...AI_MODEL_SUFFIX_KEYS,
-  ]);
-  return NextResponse.json({ values });
+  // Routing suffixes (MIN-263) are keys in their own right: the dashboard
+  // reads them in the same object as the model they accompany.
+  return NextResponse.json({ values: await readAiConfigValues() }, { headers: PRIVATE_HEADERS });
 }
 
 /**
- * PATCH /api/admin/app-config — set one AI knob. Only registry keys are
- * writable; a recommended-models list must survive the runtime parser
- * (`parseRecommendedModels`) — otherwise we would store a value the picker
- * silently ignores, replacing it with the built-in defaults. Any key accepts
- * an EMPTY value, which clears the row so the registry fallback applies again — that's the picker's "default model" option (MIN-90).
+ * PATCH /api/admin/app-config { key, value } — set one AI knob. Only registry
+ * keys are writable, through the checks of `lib/server/admin-model-config.ts`.
+ * An EMPTY value clears the row so the default applies again — the picker's
+ * "default model" option (MIN-90). `released` lists the seeded task rows a
+ * new category default took over (MIN-829).
  */
 export async function PATCH(request: NextRequest) {
   const denied = await requireAdmin(request);
   if (denied) return denied;
 
-  let body: { key?: unknown; value?: unknown };
+  const body = await readObject(request);
+  if (!body) return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+
+  const key = typeof body.key === "string" ? body.key : "";
   try {
-    const parsed: unknown = await request.json();
-    // Non-object body (null, string…): reject here instead of crashing below.
-    if (!parsed || typeof parsed !== "object") throw new Error("not an object");
-    body = parsed as { key?: unknown; value?: unknown };
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
-
-  const { key, value } = body;
-  if (typeof key !== "string" || !AI_MODEL_CONFIG_KEYS.has(key)) {
-    return NextResponse.json({ error: "Invalid key" }, { status: 400 });
-  }
-  if (typeof value !== "string") {
-    return NextResponse.json(
-      { error: "Value must be a string" },
-      { status: 400 }
-    );
-  }
-  if (value.length > MAX_VALUE_LENGTH) {
-    return NextResponse.json({ error: "Value too long" }, { status: 400 });
-  }
-
-  const trimmed = value.trim();
-  const kind = getAiConfigField(key)?.kind;
-  if (kind === "reasoning" && trimmed && !isReasoningLevel(trimmed)) {
-    return NextResponse.json(
-      { error: `Reasoning level must be one of: ${REASONING_LEVELS.join(", ")}` },
-      { status: 400 }
-    );
-  }
-  // A routing suffix has three legal values. An empty value removes the row;
-  // reject typos here instead of letting OpenRouter return 404 on every call.
-  if (isModelSuffixKey(key) && trimmed && !isModelSuffix(trimmed)) {
-    return NextResponse.json(
-      { error: `Suffix must be one of: ${MODEL_SUFFIXES.join(", ")}` },
-      { status: 400 }
-    );
-  }
-  // What the runtime ignores when reading, we refuse to write, rather than
-  // saving a setting without effect.
-  if (kind === "recommended" && trimmed && parseRecommendedModels(trimmed) === null) {
-    return NextResponse.json(
-      { error: "Recommended models must be a JSON array with at least one model id" },
-      { status: 400 }
-    );
-  }
-
-  // The global decision model (MIN-694) is checked against the decision
-  // catalog and probed before it is written: a refused choice must never be
-  // stored, or every decision would silently fall back to the LLM. Clearing
-  // the row (the registry default) needs no check.
-  if (getAiConfigField(key)?.catalogCapability === "decision" && trimmed) {
-    const check = await validateDecisionModelChoice(trimmed);
-    if (!check.ok) {
-      return NextResponse.json(
-        {
-          error: DECISION_MODEL_ERRORS[check.code],
-          code: check.code,
-          ...(check.reason ? { reason: check.reason } : {}),
-        },
-        { status: check.status }
-      );
+    const result = await writeAiConfigValue(key, body.value);
+    if (!result.ok) {
+      const { status, ok: _ok, ...refusal } = result;
+      return NextResponse.json(refusal, { status });
     }
-  }
-
-  // Embedding and transcription fields (MIN-717) must name a model of that
-  // family in the platform catalog. Only the platform namespace can be
-  // checked: BYOK provider defaults (`modelId`) live in the provider's own
-  // namespace, which this catalog does not describe.
-  const field = getAiConfigField(key);
-  if (
-    field?.kind === "model" &&
-    (field.catalogCapability === "embedding" || field.catalogCapability === "transcription") &&
-    trimmed
-  ) {
-    const check = await validateCatalogCapabilityChoice(trimmed, field.catalogCapability);
-    if (!check.ok) {
-      return NextResponse.json(
-        {
-          error: `Model is not a ${field.catalogCapability} model of the platform catalog`,
-          code: check.code,
-        },
-        { status: 400 }
-      );
-    }
-  }
-
-  try {
-    // Model emptied = return to register default: delete the line instead
-    // than write the fault id there, so that the setting follows its developments.
-    if (!trimmed) await clearAppConfigValue(key);
-    else await setAppConfigValue(key, trimmed);
+    return NextResponse.json({ key: result.key, value: result.value, released: result.released });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Save failed";
     console.error("[admin/app-config PATCH]", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
+}
 
-  return NextResponse.json({ key, value: trimmed });
+/**
+ * POST /api/admin/app-config { file, apply } — import a configuration file
+ * (`lib/ai-model-config-file.ts`). `apply: false` only returns the changes it
+ * would make; `apply: true` checks every changed value, then writes them all
+ * or none.
+ */
+export async function POST(request: NextRequest) {
+  const denied = await requireAdmin(request);
+  if (denied) return denied;
+
+  const body = await readObject(request);
+  if (!body || !("file" in body)) {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+  try {
+    const result = await importAiConfigFile(body.file, body.apply === true);
+    if (!result.ok) {
+      const { status, ok: _ok, ...refusal } = result;
+      return NextResponse.json(refusal, { status, headers: PRIVATE_HEADERS });
+    }
+    const { ok: _ok, ...summary } = result;
+    return NextResponse.json(summary, { headers: PRIVATE_HEADERS });
+  } catch (e) {
+    console.error("[admin/app-config POST]", e instanceof Error ? e.message : "import failed");
+    return NextResponse.json({ error: "Import failed" }, { status: 500 });
+  }
 }

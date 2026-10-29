@@ -1466,7 +1466,6 @@ export interface AdminAccountSummary {
   name: string;
   email: string | null;
   emailConfirmed: boolean;
-  internal: boolean;
 }
 
 /** Billing and quota details loaded only when a support account is opened. */
@@ -1514,117 +1513,36 @@ export interface AdminQuotaResetsResponse {
   };
 }
 
-/** One day in the overview activity series. */
-export interface AdminOverviewDay {
-  day: string;
-  signups: number;
-  active: number;
+/**
+ * `GET /api/admin/overview` (MIN-829): the instance in one figure. Activity,
+ * sign-ups, onboarding and content volumes were removed with the commercial
+ * dashboard; an instance administrator only needs to know how many accounts
+ * there are.
+ */
+export interface AdminAccountsOverview {
+  totalAccounts: number;
 }
 
-/**
- * Everything this object carries EXCLUDES internal accounts — that's the point of
- * the big picture. `internalUsers` says how many have been set aside, so that a falling figure remains explainable.
- */
-export interface AdminOverview {
-  totalUsers: number;
-  internalUsers: number;
-  newUsers7d: number;
-  newUsers30d: number;
-  activeToday: number;
-  active7d: number;
-  active30d: number;
-  totalProjects: number;
-  totalIssues: number;
-  days: AdminOverviewDay[];
-  /** Accounts by effective plan (admin override → Stripe → free). */
-  plans: Array<{ planId: BillingPlanId; count: number }>;
-  onboarding: {
-    /** Accounts to which onboarding has been presented. */
-    started: number;
-    /** Among them, those who have completed the four stages. */
-    completed: number;
-    /** Among them, those who have explicitly passed it. */
-    dismissed: number;
-  };
-}
-
-/**
- * A day of the Finance page (MIN-92). The series is DENSIFIED on the SQL side:
- * a day without an AI call is a zero bar, not a hole.
- */
-export interface AdminFinanceDay {
-  /** `YYYY-MM-DD`, UTC. */
+/** One aggregate of the AI ledger: a day, a feature, a model, a key mode. */
+export interface AdminCostRow {
   day: string;
+  feature: string;
+  /** Empty when the ledger did not record it (machine time, for example). */
+  model: string;
+  /** `byok` = the account's own key: the instance paid nothing for it. */
+  keyMode: "platform" | "byok";
   costUsd: number;
-  /** `null` as long as no rate is known — as distinguished from “zero euros”. */
-  costEur: number | null;
-  /** COMPLETE receipts, on the day they fall — never smoothed. */
-  revenueEur: number;
-  marginEur: number | null;
-  usdEur: number | null;
   calls: number;
-  runs: number;
-}
-
-/**
- * The payload of `/api/admin/finance`. `days` carries the curve (smoothed income),
- * `month` carries the REAL unsmoothed numbers of the tiles: the two do not
- * add up, and that is intended.
- */
-export interface AdminManagedKeysSummary {
-  /** Account keys issued by Minddy. */
-  accountKeys: number;
-  /** What the account keys may still spend before OpenRouter refuses them. */
-  remainingUsd: number;
-  /** Usage of the account keys today (UTC). */
-  usageTodayUsd: number;
-  /** The key of the anonymous surfaces (demo, FAQ); `null` before its first use. */
-  publicKey: { limitUsd: number | null; usageTodayUsd: number } | null;
+  promptTokens: number;
+  completionTokens: number;
+  cachedTokens: number;
 }
 
 export interface AdminFinance {
   windowDays: number;
-  days: AdminFinanceDay[];
-  month: {
-    /** Collected net of Stripe fees AND reimbursements, in the current month. */
-    netCollectedEur: number;
-    stripeFeesEur: number;
-    costUsd: number;
-    costEur: number | null;
-    marginEur: number | null;
-  };
-  /** Theoretical recurring revenue — indicator, never the basis of the margin. */
-  mrrEur: number;
-  payingAccounts: number;
-  byPlan: Array<{ planId: BillingPlanId; count: number; mrrEur: number }>;
-  /** Most recent applied rate, with its date (a silent cron becomes visible). */
-  fx: { day: string; usdEur: number } | null;
-  /** Monthly cap for the OpenRouter key. `null` if unreadable. */
-  cap: {
-    limitUsd: number | null;
-    usageUsd: number;
-    remainingUsd: number | null;
-    percent: number | null;
-    /** First day of the following month: reset of the ceiling. */
-    resetDay: string;
-    projectedExhaustionDay: string | null;
-  } | null;
-  /**
-   * Per-account OpenRouter keys (MIN-761), shown instead of `cap` on Minddy
-   * Cloud. `null` on a shared-key deployment; `summary` is `null` when the
-   * keys could not be read.
-   */
-  managedKeys: { summary: AdminManagedKeysSummary | null } | null;
-  stripe: {
-    configured: boolean;
-    reachable: boolean;
-    /** `sk_test_` key: the API is the same, the amounts are not real. */
-    testMode: boolean;
-    /** Ledger paging interrupted by the guardrail. */
-    truncated: boolean;
-    /** At least one line in a currency other than EUR was ignored. */
-    ignoredCurrency: boolean;
-  };
-  /** Instant of Stripe reading — the UI gets “refreshed X min ago”. */
+  /** First day of the window (`YYYY-MM-DD`); `breakdown` also covers the window before. */
+  windowStartDay: string;
+  breakdown: AdminCostRow[];
+  /** When the ledger was read. */
   fetchedAt: string;
 }

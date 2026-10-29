@@ -42,10 +42,28 @@ export type AiConfigKind =
 export type AiConfigGroup =
   | "assistant"
   | "automations"
+  | "embeddings"
   | "byok"
   | "voice"
-  | "feedback"
-  | "site";
+  | "feedback";
+
+/**
+ * A CATEGORY of tasks sharing one default model (MIN-829). Its own
+ * `app_config` key holds that default; each member task keeps its historical
+ * key, which now acts as an explicit override. Resolution order, in
+ * `lib/server/model-config.ts`: the task's row, then the category's row, then
+ * the task's own registry fallback — an instance that never set the category
+ * keeps every built-in default it had.
+ *
+ * Members share a catalog capability: a chat model cannot stand in for an
+ * embedding one. Tasks whose capability is alone in their group (decision,
+ * transcription, voice cleanup) stay standalone rows.
+ */
+export type AiModelCategoryId =
+  | "assistant"
+  | "automations"
+  | "embeddings"
+  | "feedback";
 
 export interface AiConfigField {
   /** `app_config` key. */
@@ -66,6 +84,15 @@ export interface AiConfigField {
   noSuffix?: true;
   /** Technical label generated for provider × feature defects. */
   adminLabel?: string;
+  /** Member of a category: inherits its default until overridden. */
+  category?: AiModelCategoryId;
+  /** This field IS the default of that category. */
+  categoryDefault?: AiModelCategoryId;
+}
+
+/** `app_config` key holding a category's default model. */
+export function categoryModelKey(id: AiModelCategoryId): string {
+  return `category_${id}_model`;
 }
 
 /**
@@ -106,23 +133,45 @@ export const ASSISTANT_REASONING_CONFIG_KEY = "assistant_reasoning_level";
 /** The global decision model (MIN-694); historical key name, see the registry entry. */
 export const DECISION_MODEL_CONFIG_KEY = "jev_model";
 
+/**
+ * A category default. Its fallback is EMPTY on purpose: an unset category
+ * defers to each member's own fallback, so `merge_message_model` keeps its
+ * writer model and the embedding tasks theirs.
+ */
+function categoryField(
+  id: AiModelCategoryId,
+  group: AiConfigGroup,
+  catalogCapability?: AdminCatalogCapability,
+): AiConfigField {
+  return {
+    key: categoryModelKey(id),
+    kind: "model",
+    fallback: "",
+    group,
+    categoryDefault: id,
+    ...(catalogCapability ? { catalogCapability } : {}),
+  };
+}
+
 export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
-  // Numo assistant and text helpers.
-  { key: "assistant_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
+  // Numo assistant and text helpers. `fallback_model` used to sit here: no
+  // runtime reader was left, so its seeded row is simply ignored (MIN-829).
+  categoryField("assistant", "assistant"),
+  { key: "assistant_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant", category: "assistant" },
   {
     key: ASSISTANT_REASONING_CONFIG_KEY,
     kind: "reasoning",
     fallback: DEFAULT_REASONING_LEVEL,
     group: "assistant",
   },
-  { key: "fallback_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
-  { key: "smart_assign_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations" },
+  categoryField("automations", "automations"),
+  { key: "smart_assign_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations", category: "automations" },
   // Smart-fill (lib/server/smart-fill.ts, MIN-260): ONE call per ticket created at
   // the hand, on its sole title + its description, and which gives priority, effort,
   // categories and objective. He holds the person in front of his screen (the line
   // is only inserted once completed): it therefore needs a FAST model, not
   // a clever model — the task is tidying up, not reasoning.
-  { key: "smart_fill_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations" },
+  { key: "smart_fill_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations", category: "automations" },
   // Smart Fill titles (lib/server/smart-fill-title.ts, MIN-798): one call per
   // issue created without a title, side by side with the property pass, and
   // again on a re-evaluation that owns the title. Short output, someone
@@ -132,6 +181,7 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
     kind: "model",
     fallback: "deepseek/deepseek-v4-flash",
     group: "automations",
+    category: "automations",
   },
   // Smart Fill relations (lib/server/issue-relation-inference.ts, MIN-717):
   // issues are indexed AFTER they are saved, and a bounded decision pass
@@ -144,23 +194,24 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
     key: "issue_embedding_model",
     kind: "model",
     fallback: "openai/text-embedding-3-small",
-    group: "automations",
+    group: "embeddings",
     catalogCapability: "embedding",
+    category: "embeddings",
   },
-  { key: "issue_relation_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations" },
+  { key: "issue_relation_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations", category: "automations" },
   // Title of a Numo conversation (lib/server/assistant/title.ts): a call from
   // a few dozen tokens per new conversation — a small model is enough,
   // and that's exactly the kind of call where a big guy doesn't justify himself.
-  { key: "conversation_title_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
+  { key: "conversation_title_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant", category: "assistant" },
   // Correspondance des colonnes d'un import CSV (lib/server/import-mapping-ai.ts) :
   // ONE call per file submitted, never per line — the model only sees one
   // column summary. It is the price of an import which loses nothing.
-  { key: "import_map_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations" },
+  { key: "import_map_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations", category: "automations" },
   // Breaking a brief into objectives + tickets (lib/server/brief-to-issues.ts,
   // MIN-172): ONE call per pasted brief, never per ticket — the model renders the
   // lot entier d'un coup, ce que vingt `create_issue` en file ne feraient ni au
   // same price nor at the same latency.
-  { key: "brief_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations" },
+  { key: "brief_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations", category: "automations" },
   // AI decision layer (MIN-557, MIN-694): ONE decision model for the whole
   // instance — Smart Fill, Smart Assign and the feedback review all read it,
   // nothing selects a model per project, user or use case. A decision model
@@ -183,13 +234,13 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   },
   // Web search (tool `web_search` from Numo and agents): the model that reads
   // the results of the OpenRouter plugin.
-  { key: "web_search_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
+  { key: "web_search_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant", category: "assistant" },
   // Commit message of a merge generated with "Numo" (MIN-548): ONE call per
   // merge prepared, on the diff of the PR + its commits, and which returns
   // the title and the message in a single forced call. The admin model is
   // the only lever — the gesture merges AS SOON AS the generation lands, so
   // a clever model is not needed; a fast, cheap one is.
-  { key: "merge_message_model", kind: "model", fallback: "z-ai/glm-5.3", group: "automations" },
+  { key: "merge_message_model", kind: "model", fallback: "z-ai/glm-5.3", group: "automations", category: "automations" },
   // RECOMMENDED models, shown at the top of the model picker when opened
   // (see lib/recommended-models.ts), read by a human choosing a model. They
   // don't restrict anything — the whole catalog remains searchable.
@@ -211,20 +262,23 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   // Feedback board. Dictating feedback, on the public board as well as in the
   // dashboard, runs the two voice models (`transcription_model` then
   // `dictate_model`): it's the same take, stored in other fields.
-  { key: "feedback_analysis_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "feedback" },
+  categoryField("feedback", "feedback"),
+  { key: "feedback_analysis_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "feedback", category: "feedback" },
+  categoryField("embeddings", "embeddings", "embedding"),
   {
     key: "feedback_embedding_model",
     kind: "model",
     fallback: "openai/text-embedding-3-small",
-    group: "feedback",
+    group: "embeddings",
     catalogCapability: "embedding",
+    category: "embeddings",
   },
   // FAQ ask box (MIN-590): an AI answer to a visitor's own question, offered
   // on every public page that carries a FAQ section. It is anonymous traffic
   // on the public site — like the landing demo it is bounded by an IP meter
   // and a per-instance daily ceiling, and it stays on the
   // cheap fast model of the registry: one small completion per question.
-  { key: "faq_ask_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "site" },
+  { key: "faq_ask_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "feedback", category: "feedback" },
 ];
 
 /**
@@ -264,11 +318,29 @@ for (const provider of AGENT_PROVIDERS.filter((entry) => entry.id !== "openroute
 export const AI_MODEL_CONFIG_GROUPS: AiConfigGroup[] = [
   "assistant",
   "automations",
-  "byok",
+  "embeddings",
   "voice",
   "feedback",
-  "site",
+  "byok",
 ];
+
+export const AI_MODEL_CATEGORY_IDS: AiModelCategoryId[] = [
+  "assistant",
+  "automations",
+  "embeddings",
+  "feedback",
+];
+
+/** The tasks of a category, in registry order. */
+export function categoryMembers(id: AiModelCategoryId): AiConfigField[] {
+  return AI_MODEL_CONFIG_FIELDS.filter((field) => field.category === id);
+}
+
+/** The `app_config` key a task inherits its model from, if any. */
+export function categoryKeyOf(key: string): string | null {
+  const category = getAiConfigField(key)?.category;
+  return category ? categoryModelKey(category) : null;
+}
 
 /**
  * Does a field accept a routing suffix? Models except those marked

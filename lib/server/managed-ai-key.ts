@@ -505,7 +505,7 @@ function isManagedKey(key: ManagedKeyInfo): boolean {
  * Deletes every key this environment issued that no row references any more
  * (an issuance that died between OpenRouter and the database, a failed delete
  * on account deletion). Keys of another environment, and keys Minddy did not
- * issue, are never touched. Triggered by an admin from the Finances page.
+ * issue, are never touched. Run nightly by the retention sweep (lib/server/retention.ts).
  */
 export async function sweepOrphanKeys(): Promise<{ managed: number; deleted: number }> {
   ensurePerUserMode();
@@ -521,36 +521,6 @@ export async function sweepOrphanKeys(): Promise<{ managed: number; deleted: num
     if (await deleteKey(key.hash)) deleted += 1;
   }
   return { managed, deleted };
-}
-
-export interface ManagedKeysSummary {
-  /** Account keys issued by Minddy. */
-  accountKeys: number;
-  /** What the account keys may still spend before OpenRouter refuses them. */
-  remainingUsd: number;
-  /** Usage of the account keys today (UTC). */
-  usageTodayUsd: number;
-  /** The public key, or `null` before its first use. */
-  publicKey: { limitUsd: number | null; usageTodayUsd: number } | null;
-}
-
-/** What the Finances page shows of the per-account keys. */
-export async function summarizeManagedKeys(): Promise<ManagedKeysSummary> {
-  ensurePerUserMode();
-  const keys = (await listKeys()).filter(isManagedKey);
-  const prefix = keyNamePrefix();
-  const accounts = keys.filter((key) => key.name.startsWith(`${prefix}user:`));
-  const publicKey = keys.find((key) => key.name === `${prefix}public`) ?? null;
-  return {
-    accountKeys: accounts.length,
-    remainingUsd: roundUsd(
-      accounts.reduce((sum, key) => sum + Math.max(0, (key.limit ?? key.usage) - key.usage), 0),
-    ),
-    usageTodayUsd: roundUsd(accounts.reduce((sum, key) => sum + key.usageDaily, 0)),
-    publicKey: publicKey
-      ? { limitUsd: publicKey.limit, usageTodayUsd: roundUsd(publicKey.usageDaily) }
-      : null,
-  };
 }
 
 /** Clears the in-process key cache (tests). */

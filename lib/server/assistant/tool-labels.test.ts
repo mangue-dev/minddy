@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { ASSISTANT_TOOLS, GLOBAL_ASSISTANT_TOOLS } from "./tools";
+import { ADMIN_ASSISTANT_TOOLS } from "./admin-tools";
 import en from "@/messages/en.json";
 import fr from "@/messages/fr.json";
 import de from "@/messages/de.json";
@@ -59,7 +60,7 @@ const usedKeys = new Set(
  either shows the same on the screen. */
 const EVERY_TOOL = [
   ...new Set(
-    [...ASSISTANT_TOOLS, ...GLOBAL_ASSISTANT_TOOLS].map((t) => t.function.name)
+    [...ASSISTANT_TOOLS, ...GLOBAL_ASSISTANT_TOOLS, ...ADMIN_ASSISTANT_TOOLS].map((t) => t.function.name)
   ),
 ];
 
