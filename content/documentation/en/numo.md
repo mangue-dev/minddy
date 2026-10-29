@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 22,
+  "revision": 23,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-28",
   "compatibility": {
@@ -64,14 +64,16 @@
       "lib/settings-sections.ts",
       "lib/server/assistant/conversation-attachments.ts",
       "lib/server/assistant/markdown-pdf.ts",
-      "components/assistant/generated-file-cards.tsx"
+      "components/assistant/generated-file-cards.tsx",
+      "components/assistant/assistant-starter-list.tsx",
+      "components/home/home-numo-composer.tsx"
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (new paragraph on asking Numo about a selected passage, checked against lib/use-ask-numo-about-selection.ts, lib/assistant-context.ts and components/assistant/assistant-shell.tsx; not checked in the running app; no figure recaptured, existing figures still match; earlier evidence retained in git history)",
-    "language": "agent:claude-code (en added paragraph; catalog UI labels; informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-28"
+    "revision": 23,
+    "fact": "agent:claude-code (Home composer showing the same suggestion rows as the empty panel, checked against components/home/home-numo-composer.tsx, components/assistant/assistant-starter-list.tsx, lib/assistant-starters.ts and the Assistant.starters.home catalog entries; not checked in the running app; no figure recaptured, existing figures do not show Home; earlier evidence retained in git history)",
+    "language": "agent:claude-code (en sentence added on the Home composer with catalog UI labels; informal register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "code-work",
@@ -101,7 +103,7 @@
       "src": "/documentation/en/work-with-numo-workflow.png",
       "alt": "Numo demonstration conversation with page context, a priority-change request and its saved answer.",
       "caption": "Existing demonstration thread, localized for display. The saved answer names AUR-11 and AUR-7; this capture does not prove a new execution.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -118,7 +120,7 @@
       "src": "/documentation/en/numo-permissions-and-approvals-workflow.svg",
       "alt": "Permission matrix for Numo project actions, personal connections and routines.",
       "caption": "Project access and explicit instructions limit Numo actions; external content cannot grant permission.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -179,7 +181,7 @@
       "src": "/documentation/en/numo-execution-model-flow.svg",
       "alt": "Diagram: Persist the intent, message and request UUID. Claim turn, checkpoint tools and their outcomes. Wait for your answer when input is needed. Replay durable events; reconcile uncertain writes.",
       "caption": "Read the stages in order. Persist the intent, message and request UUID. Claim turn, checkpoint tools and their outcomes. Wait for your answer when input is needed. Replay durable events; reconcile uncertain writes.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -211,7 +213,7 @@
       "src": "/documentation/en/numo-mcp-connections-workflow.png",
       "alt": "Personal MCP settings, empty connection list and Add another MCP server control.",
       "caption": "Numo connections are personal; project routines use the project owner’s connections.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -228,7 +230,7 @@
       "src": "/documentation/en/numo-mcp-connections-config-workflow.png",
       "alt": "Notion connection wizard showing the sign-in method known from the catalog.",
       "caption": "Sign-in step for a catalog service. No credentials were entered and no server was contacted.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-21",
       "viewport": [
@@ -261,7 +263,7 @@ Open the issue or project you want to work on, then use the floating Numo button
 3. Send a bounded request, for example: “Read this issue and propose acceptance criteria. Do not change its status.”
 4. Read the answer and follow its issue or source links. For an action request, open the changed object and check the result.
 
-In a new, empty conversation, four suggestion rows above the composer offer requests suited to the current page, for example **Summarize this issue** or **Write an implementation plan** when an issue is open in the side panel. Choosing a row fills the composer without sending it, so you can edit the request first. The rows disappear as soon as the composer contains text and return when you clear it. They appear in the desktop layout, not on a phone.
+In a new, empty conversation, four suggestion rows above the composer offer requests suited to the current page, for example **Summarize this issue** or **Write an implementation plan** when an issue is open in the side panel. Choosing a row fills the composer without sending it, so you can edit the request first. The rows disappear as soon as the composer contains text and return when you clear it. They appear in the desktop layout, not on a phone. The composer at the bottom of **Home** shows the same rows, with suggestions such as **Choose what to focus on today** or **Find what's overdue**; sending from there opens the panel in its expanded layout.
 
 To ask about a passage, select it in an editor, such as a page or an issue description, then choose **Ask Numo** in the selection toolbar on desktop. The panel opens without sending anything: next to the page or issue it comes from, the passage appears as a context pill showing its first words, and hovering the pill shows the whole passage. Type your question, for example “Rewrite this more concisely” or “Make issues from this”, and send it. The passage goes with that message only. To leave it out, remove its pill with its cross.
 

@@ -93,10 +93,9 @@ describe("catalogue", () => {
     ).values(),
   ];
 
-  // `Home` no longer only wears chains since he also holds the
-  // pool of tips (`Home.tips`, an object). Hence the value in `unknown`, then
-  // the filter on the type: the lower `toBeTypeOf("string")` remain like this
-  // tests for key presence, not sub-object reads.
+  // Read `Home` as `unknown` values and keep only strings, so the lower
+  // `toBeTypeOf("string")` checks test key presence even if the namespace
+  // gains a nested object again.
   const message = (
     catalog: typeof en | typeof fr,
     key: string,
