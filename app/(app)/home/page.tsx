@@ -51,39 +51,30 @@ export default function HomePage() {
   const greeting = useGreeting(name);
 
   return (
-    <section
-      className={
-        // `minmax(0,1fr)`: the implicit column is `auto`, which never shrinks
-        // below its content's min-content width — a long model name in the
-        // composer widened the whole column past a phone's screen.
-        // Equal outer rows keep the greeting at the center of the page; the
-        // last one grows past its share only when the banners and the
-        // composer need more room than half the screen.
-        "grid min-h-full grid-cols-[minmax(0,1fr)] grid-rows-[1fr_auto_1fr] px-6"
-      }
-    >
-      <div aria-hidden />
+    // The greeting and the banners sit centered in the space the composer
+    // leaves; the composer and its suggestions stay at the foot. When the
+    // banners need more room than that, the page grows and scrolls as one
+    // column: nothing is pinned over the banners.
+    <section className="flex min-h-full flex-col px-6">
+      <div className="flex-1" aria-hidden />
 
-      <div className={HERO_COLUMN}>
-        <h1 className="w-full text-center font-display text-2xl font-semibold tracking-tight">
+      {/* `min-w-0`: a long model name in the composer must not widen the
+      column past a phone's screen. */}
+      <div className={cn(HERO_COLUMN, "flex min-w-0 flex-col gap-3 pt-10")}>
+        <h1 className="mb-2 w-full text-center font-display text-2xl font-semibold tracking-tight">
           {greeting}
         </h1>
+        <PendingInvitationsBanner />
+        <HomeSmartAssignWarning />
+        <HomeProjectSignals />
+        <DesktopInstallBanner />
+        <MobileInstallHint key={user?.id} />
       </div>
 
-      <div className="flex flex-col">
-        <div className={cn(HERO_COLUMN, "flex flex-col gap-3 pt-5")}>
-          <PendingInvitationsBanner />
-          <HomeSmartAssignWarning />
-          <HomeProjectSignals />
-          <DesktopInstallBanner />
-          <MobileInstallHint key={user?.id} />
-        </div>
+      <div className="flex-1" aria-hidden />
 
-        {/* Pinned at the foot like the panel's composer: sticky keeps it in
-        view when the banners make the page scroll. */}
-        <div className={cn(COMPOSER_COLUMN, "sticky bottom-0 mt-auto pb-4 pt-6")}>
-          <HomeNumoComposer />
-        </div>
+      <div className={cn(COMPOSER_COLUMN, "min-w-0 pb-4 pt-8")}>
+        <HomeNumoComposer />
       </div>
     </section>
   );
