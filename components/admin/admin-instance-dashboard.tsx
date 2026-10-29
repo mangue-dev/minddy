@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { OtpInput } from "@/components/otp-input";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -104,29 +105,51 @@ const ERROR_KEYS: Record<string, AdminKey> = {
   no_such_version: "instance.errors.no_such_version",
 };
 
+interface ReauthRequest {
+  retry: () => Promise<void>;
+  /** Settles the pending write as not done: the dialog was dismissed. */
+  cancel: () => void;
+}
+
 /**
  * Runs a write; a refusal for a stale second factor asks for a code, then
- * the same write is replayed once the session carries a fresh one.
+ * the same write is replayed once the session carries a fresh one. The
+ * returned promise settles with the final outcome, so the dialog that asked
+ * for the write closes after a replay that succeeds.
  */
 function useGuardedWrite() {
   const t = useTranslations("Admin");
-  const [reauth, setReauth] = useState<{ retry: () => Promise<void> } | null>(null);
-  const run = useCallback(async (write: () => Promise<void>, success: string) => {
+  const [reauth, setReauth] = useState<ReauthRequest | null>(null);
+  const run = useCallback(async (write: () => Promise<void>, success: string): Promise<boolean> => {
     try {
       await write();
       toast.success(success);
       return true;
     } catch (error) {
       if (error instanceof SaveError && error.code === "reauth_required") {
-        setReauth({ retry: async () => { await write(); toast.success(success); } });
-        return false;
+        return new Promise<boolean>((resolve) => {
+          setReauth({
+            retry: async () => {
+              await write();
+              toast.success(success);
+              resolve(true);
+            },
+            cancel: () => resolve(false),
+          });
+        });
       }
       const key = error instanceof SaveError && error.code ? ERROR_KEYS[error.code] : undefined;
       toast.error(key ? t(key) : (error as Error).message);
       return false;
     }
   }, [t]);
-  return { run, reauth, closeReauth: () => setReauth(null) };
+  const closeReauth = useCallback(() => {
+    setReauth((current) => {
+      current?.cancel();
+      return null;
+    });
+  }, []);
+  return { run, reauth, closeReauth };
 }
 
 export function AdminInstanceDashboard() {
@@ -526,7 +549,7 @@ function EditDialog({
 }
 
 /** A second factor presented again, then the write that needed it, replayed. */
-function ReauthDialog({ request, onClose }: { request: { retry: () => Promise<void> } | null; onClose: () => void }) {
+function ReauthDialog({ request, onClose }: { request: ReauthRequest | null; onClose: () => void }) {
   const t = useTranslations("Admin");
   const { firstTotpFactorId, verifyTotp } = useAuth();
   const [code, setCode] = useState("");
@@ -539,18 +562,20 @@ function ReauthDialog({ request, onClose }: { request: { retry: () => Promise<vo
     }
   }, [request]);
 
-  const confirm = async () => {
-    if (!request) return;
+  // Six digits submit on their own (`onComplete`), like the sign-in challenge.
+  const confirm = async (value = code) => {
+    if (!request || busy) return;
     setBusy(true);
     setError(null);
     try {
       const factorId = await firstTotpFactorId();
       if (!factorId) throw new Error(t("instance.reauthNoFactor"));
-      await verifyTotp(factorId, code.trim());
+      await verifyTotp(factorId, value.trim());
       await request.retry();
       onClose();
     } catch (e) {
       setError(e instanceof SaveError && e.code && ERROR_KEYS[e.code] ? t(ERROR_KEYS[e.code]) : t("instance.reauthFailed"));
+      setCode("");
     } finally {
       setBusy(false);
     }
@@ -563,16 +588,14 @@ function ReauthDialog({ request, onClose }: { request: { retry: () => Promise<vo
           <DialogTitle>{t("instance.reauthTitle")}</DialogTitle>
           <DialogDescription>{t("instance.reauthDescription")}</DialogDescription>
         </DialogHeader>
-        <Input
+        <OtpInput
+          id="instance-reauth-code"
           value={code}
-          onChange={(event) => setCode(event.target.value)}
-          inputMode="numeric"
-          autoComplete="one-time-code"
-          maxLength={6}
+          onChange={setCode}
+          onComplete={(value) => void confirm(value)}
+          disabled={busy}
+          autoFocus
           aria-label={t("instance.reauthCode")}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && code.trim().length === 6) void confirm();
-          }}
         />
         {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
         <DialogFooter>

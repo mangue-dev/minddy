@@ -29,6 +29,16 @@ vi.mock("@/components/ui/dialog", () => {
 vi.mock("@/components/ui/app-tooltip", () => ({
   AppTooltip: ({ children, label }: { children: React.ReactNode; label: React.ReactNode }) => <>{children}<span data-tooltip>{label}</span></>,
 }));
+// The six-slot code field, reduced to what the dialog relies on: its value
+// and the submit on the sixth digit.
+vi.mock("@/components/otp-input", () => ({
+  OtpInput: ({ value, onChange, onComplete, "aria-label": label }: { value: string; onChange: (v: string) => void; onComplete?: (v: string) => void; "aria-label"?: string }) => (
+    <input data-otp aria-label={label} value={value} onChange={(event) => {
+      onChange(event.target.value);
+      if (event.target.value.length === 6) onComplete?.(event.target.value);
+    }} />
+  ),
+}));
 vi.mock("@/components/ui/confirm-delete-dialog", () => ({
   ConfirmDeleteDialog: ({ open, title }: { open: boolean; title: string }) => (open ? <div role="alertdialog">{title}</div> : null),
 }));
@@ -121,11 +131,15 @@ describe("Instance tab (MIN-847)", () => {
     await flush(() => button("Save", document.querySelector('[role="dialog"]')!).click());
     expect(document.body.textContent).toContain("Confirm it’s you");
     const dialogs = document.querySelectorAll('[role="dialog"]');
-    const codeInput = dialogs[dialogs.length - 1].querySelector("input") as HTMLInputElement;
+    const codeInput = dialogs[dialogs.length - 1].querySelector("input[data-otp]") as HTMLInputElement;
+    // The sixth digit submits on its own, without the Confirm button.
     await type(codeInput, "123456");
-    await flush(() => button("Confirm", dialogs[dialogs.length - 1]).click());
+    await flush();
+    expect(auth.verifyTotp).toHaveBeenCalledTimes(1);
     expect(auth.verifyTotp).toHaveBeenCalledWith("factor-1", "123456");
     expect(attempts).toBe(2);
+    // Both dialogs close once the replayed save succeeds.
+    expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(0);
   });
 
   it("finds a variable by its name, label or help, ignoring case and accents", async () => {
