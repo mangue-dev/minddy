@@ -386,7 +386,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
       ) : (
         <Tooltip><TooltipTrigger asChild><button type="button" aria-label={t("newTab")} disabled={busy || loading || loadError}
           onClick={onNewTab} onMouseEnter={onNewTabWarm} onFocus={onNewTabWarm}
-          className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40">
+          className="flex size-7 shrink-0 items-center justify-center rounded-md text-sidebar-foreground/65 outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40">
           <HugeiconsIcon icon={Add01Icon} className="size-4" aria-hidden />
         </button></TooltipTrigger><TooltipContent side="bottom" className="flex items-center gap-2">
           <span>{t("newTab")}</span>
