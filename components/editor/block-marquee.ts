@@ -131,6 +131,8 @@ function trackMarquee(editor: Editor, pane: HTMLElement, start: MouseEvent) {
   const { view } = editor;
   const initial: Selection = view.state.selection;
   const scroller = pane === document.body ? document.scrollingElement ?? document.documentElement : pane;
+  // A scrolling document fires its scroll events at the window, never at the body.
+  const scrollEvents: EventTarget = pane === document.body ? window : pane;
   let anchorX = start.clientX;
   let anchorY = start.clientY;
   let pointerX = anchorX;
@@ -225,7 +227,7 @@ function trackMarquee(editor: Editor, pane: HTMLElement, start: MouseEvent) {
     window.removeEventListener("mouseup", onUp, true);
     window.removeEventListener("keydown", onKey, true);
     window.removeEventListener("blur", finish);
-    pane.removeEventListener("scroll", onScroll);
+    scrollEvents.removeEventListener("scroll", onScroll);
     if (frame) cancelAnimationFrame(frame);
     overlay?.remove();
     document.body.style.userSelect = "";
@@ -250,7 +252,7 @@ function trackMarquee(editor: Editor, pane: HTMLElement, start: MouseEvent) {
   window.addEventListener("keydown", onKey, true);
   // Released outside the window: no mouseup will come.
   window.addEventListener("blur", finish);
-  pane.addEventListener("scroll", onScroll, { passive: true });
+  scrollEvents.addEventListener("scroll", onScroll, { passive: true });
 }
 
 /** The selection rectangle around an editor mounted in `rootRef`. */

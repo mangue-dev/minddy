@@ -268,6 +268,17 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
     const startLeft = container.scrollLeft;
     const startTops = new Map<HTMLElement, number>();
     const columnOf = new Map<HTMLElement, HTMLElement | null>();
+    // The boxes whose scroll the rectangle follows, per column: built once,
+    // not for every card at every frame.
+    const followed = new Map<HTMLElement | null, ReadonlySet<HTMLElement>>();
+    const followedBy = (scroller: HTMLElement | null): ReadonlySet<HTMLElement> => {
+      let boxes = followed.get(scroller);
+      if (!boxes) {
+        boxes = new Set(scroller ? [container, scroller] : [container]);
+        followed.set(scroller, boxes);
+      }
+      return boxes;
+    };
     const column = (el: HTMLElement): HTMLElement | null => {
       if (columnOf.has(el)) return columnOf.get(el) ?? null;
       let trims = clippers.get(el);
@@ -315,7 +326,7 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
         const id = el.dataset.issueId;
         if (!id) continue;
         const scroller = column(el);
-        const rect = reachableRect(el, container, clippers, new Set(scroller ? [container, scroller] : [container]));
+        const rect = reachableRect(el, container, clippers, followedBy(scroller));
         verdicts.set(id, !!rect && overlaps(rect, spanning(dx, scrolledBy(scroller))));
       }
       const touched = new Set<string>();

@@ -200,6 +200,8 @@ export function trackBlockDrag(
   const onKey = (event: KeyboardEvent) => {
     if (event.key !== "Escape" || !dragging) return;
     event.preventDefault();
+    // The editor's own Escape would otherwise clear the block selection.
+    event.stopPropagation();
     target = null;
     finish();
   };

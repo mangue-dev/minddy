@@ -148,6 +148,8 @@ export function trackRowDrag({
   const onKey = (event: KeyboardEvent) => {
     if (event.key !== "Escape" || !dragging) return;
     event.preventDefault();
+    // Only the drag ends: the panel or editor around it keeps its state.
+    event.stopPropagation();
     target = null;
     finish();
   };
