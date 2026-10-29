@@ -628,7 +628,7 @@ export function CommentBlock({
                 variant="ghost"
                 size="icon-sm"
                 aria-label={t("commentActions")}
-                className="-my-1 size-6 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover/comment:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+                className="-my-1 size-6 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover/comment:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 touch:opacity-100"
               >
                 <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
               </Button>

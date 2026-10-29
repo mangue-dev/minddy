@@ -456,7 +456,7 @@ export function RoutinesPanel({
                     variant="ghost"
                     onClick={() => openWizard(g.project?.id)}
                     aria-label={t("newInProject", { project: g.project?.name ?? "" })}
-                    className="pointer-events-none size-6 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/project:pointer-events-auto group-hover/project:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
+                    className="pointer-events-none size-6 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/project:pointer-events-auto group-hover/project:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 touch:pointer-events-auto touch:opacity-100"
                   >
                     <HugeiconsIcon icon={Add01Icon} className="size-3.5" />
                   </Button>

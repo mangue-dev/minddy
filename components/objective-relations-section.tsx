@@ -360,7 +360,7 @@ export function ObjectiveRelationsSection({
                         variant="ghost"
                         size="icon-sm"
                         aria-label={tCommon("remove")}
-                        className="size-6 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/relrow:opacity-100 focus-visible:opacity-100"
+                        className="size-6 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/relrow:opacity-100 focus-visible:opacity-100 touch:opacity-100"
                         onClick={() =>
                           setRemoveTarget({
                             id: r.id,

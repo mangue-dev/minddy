@@ -21,6 +21,29 @@
 @custom-variant app-mobile (&:where(html[data-app-layout="mobile"] *));
 @custom-variant app-desktop (&:where(html[data-app-layout="desktop"] *));
 
+/* Hover belongs to a fine pointer that hovers (MIN-836). A finger has no
+   hover: the browser fakes one on tap and keeps it until the next tap
+   elsewhere, so a pressed control looks selected. Tailwind's own `hover:`
+   only checks `(hover: hover)`, which some phones and tablets report with a
+   coarse primary pointer; this one also requires `(pointer: fine)`. Every
+   compound follows it (`group-hover:`, `peer-hover:`, `data-*:hover:`).
+   `touch:` is the exact complement: a control revealed on hover
+   (`opacity-0 group-hover:opacity-100`) adds `touch:opacity-100` so it is
+   always shown where nothing can hover. Hand-written `:hover` rules in the
+   stylesheets sit inside the same media query. */
+@custom-variant hover {
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      @slot;
+    }
+  }
+}
+@custom-variant touch {
+  @media (hover: none), (pointer: coarse) {
+    @slot;
+  }
+}
+
 /* The closed picker and its floating wrapper must both release board hit points. */
 [data-radix-popper-content-wrapper]:has(> [data-project-picker-menu][data-state="closed"]) {
   pointer-events: none;
@@ -256,10 +279,15 @@ a.markdown-link {
   text-decoration: none;
 }
 
-a.markdown-link:hover,
 a.markdown-link:focus-visible {
   color: #0085FF;
   text-decoration: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  a.markdown-link:hover {
+    color: #0085FF;
+    text-decoration: none;
+  }
 }
 
 /* The site's icon is glued to the link's first word: a line never ends on the
@@ -788,8 +816,10 @@ button[data-variant="ghost"] {
     -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M18 6L6.00081 17.9992M17.9992 18L6 6.00085' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
     mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M18 6L6.00081 17.9992M17.9992 18L6 6.00085' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
   }
-  input[type="search"]::-webkit-search-cancel-button:hover {
-    opacity: 1;
+  @media (hover: hover) and (pointer: fine) {
+    input[type="search"]::-webkit-search-cancel-button:hover {
+      opacity: 1;
+    }
   }
 }
 
@@ -1026,9 +1056,13 @@ button[data-variant="ghost"] {
   font-weight: 400;
   line-height: 1.2;
 }
-.code-block-node-language-trigger:hover,
 .code-block-node-language-trigger[data-state="open"] {
   color: var(--code-block-foreground);
+}
+@media (hover: hover) and (pointer: fine) {
+  .code-block-node-language-trigger:hover {
+    color: var(--code-block-foreground);
+  }
 }
 .code-block-node-language-label {
   display: flex;
@@ -1055,10 +1089,15 @@ button[data-variant="ghost"] {
 .code-block-node-actions button {
   color: var(--code-block-muted);
 }
-.code-block-node-wrap[data-active="true"],
-.code-block-node-actions button:hover {
+.code-block-node-wrap[data-active="true"] {
   background: var(--code-block-hover);
   color: var(--code-block-foreground);
+}
+@media (hover: hover) and (pointer: fine) {
+  .code-block-node-actions button:hover {
+    background: var(--code-block-hover);
+    color: var(--code-block-foreground);
+  }
 }
 .code-block-node-copy {
   margin-left: auto;
@@ -1066,9 +1105,11 @@ button[data-variant="ghost"] {
 .code-block-node-copy[data-copied="true"] {
   color: var(--primary);
 }
-.code-block-node-copy:hover {
-  background: var(--code-block-hover);
-  color: var(--code-block-foreground);
+@media (hover: hover) and (pointer: fine) {
+  .code-block-node-copy:hover {
+    background: var(--code-block-hover);
+    color: var(--code-block-foreground);
+  }
 }
 .code-block-node-view > pre {
   margin: 0;
@@ -1345,30 +1386,6 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
   overscroll-behavior-y: none;
 }
 
-/* ─── The hover that gets stuck ─────────────────────── ────────────────────────
-   There is no hovering with your finger: the browser simulates one when pressed, and it
-   STAY until the next tap elsewhere. A pressed button therefore keeps its background
-   hovering over it, making it appear selected.
-
-   Tailwind v4's `hover:` utilities are already safe — it compiles them
-   under `@media (hover: hover)`, checked in the generated sheet. There remain
-   some `:hover` written by hand in this file, which do not have this rule.
-   A `@media` not being able to wrap rules already written above, we
-   neutralizes them here for touch — the `:focus-visible` which accompanies the
-   The first two continue to do the work on the keyboard. */
-@media (hover: none) {
-  .scratchpad-editor .ProseMirror .scratchpad-section-copy:hover {
-    color: var(--muted-foreground);
-  }
-  .page-editor .page-details-toggle:hover {
-    background-color: transparent;
-    color: var(--muted-foreground);
-  }
-  .page-block-comment-badge:hover {
-    background-color: transparent;
-  }
-}
-
 /* Mobile full-screen search sheet: the <CommandList> primitive ships a default
    max-height (max-h-72 ≈ 288px) sized for the desktop popover. In the full-
    screen sheet that squishes the command palette into the top third with a big
@@ -1541,12 +1558,22 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
   transition: opacity 0.12s, color 0.12s;
   cursor: default;
 }
-.scratchpad-editor .ProseMirror :is(h1, h2, h3):hover .scratchpad-section-copy,
 .scratchpad-editor .ProseMirror .scratchpad-section-copy:focus-visible {
   opacity: 1;
 }
-.scratchpad-editor .ProseMirror .scratchpad-section-copy:hover {
-  color: var(--foreground);
+@media (hover: hover) and (pointer: fine) {
+  .scratchpad-editor .ProseMirror :is(h1, h2, h3):hover .scratchpad-section-copy {
+    opacity: 1;
+  }
+  .scratchpad-editor .ProseMirror .scratchpad-section-copy:hover {
+    color: var(--foreground);
+  }
+}
+/* Nothing hovers a heading on touch: the copy button is always there. */
+@media (hover: none), (pointer: coarse) {
+  .scratchpad-editor .ProseMirror .scratchpad-section-copy {
+    opacity: 1;
+  }
 }
 
 /* ─── Landing: hero entrance and scroll appearances ───────────────────
@@ -1936,8 +1963,10 @@ pre [data-page-text] [class*="hljs-"] {
   background-color: var(--control);
   text-align: center;
 }
-.ProseMirror[contenteditable="true"] .page-math:hover:not(.ProseMirror-selectednode, .is-inline-selected) {
-  background-color: var(--control);
+@media (hover: hover) and (pointer: fine) {
+  .ProseMirror[contenteditable="true"] .page-math:hover:not(.ProseMirror-selectednode, .is-inline-selected) {
+    background-color: var(--control);
+  }
 }
 .page-math .katex-error,
 .page-math-preview .katex-error {
@@ -1994,8 +2023,10 @@ pre [data-page-text] [class*="hljs-"] {
   color: inherit;
 }
 
-.page-editor .page-callout-icon-button:hover {
-  background-color: color-mix(in oklab, var(--page-callout-tone) 16%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .page-editor .page-callout-icon-button:hover {
+    background-color: color-mix(in oklab, var(--page-callout-tone) 16%, transparent);
+  }
 }
 
 .page-editor .page-callout-icon-button:focus-visible {
@@ -2230,9 +2261,11 @@ html.marquee-drawing * {
   cursor: default;
   transition: background-color 0.12s, transform 0.15s;
 }
-.page-editor .page-details-toggle:hover {
-  background-color: var(--muted);
-  color: var(--foreground);
+@media (hover: hover) and (pointer: fine) {
+  .page-editor .page-details-toggle:hover {
+    background-color: var(--muted);
+    color: var(--foreground);
+  }
 }
 .page-editor .page-details-toggle svg {
   width: 0.875rem;
@@ -2360,9 +2393,11 @@ html.marquee-drawing * {
   cursor: default;
 }
 
-.page-block-comment-badge:hover {
-  color: var(--page-comment-ink);
-  background-color: color-mix(in oklab, var(--page-comment-accent) 18%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .page-block-comment-badge:hover {
+    color: var(--page-comment-ink);
+    background-color: color-mix(in oklab, var(--page-comment-accent) 18%, transparent);
+  }
 }
 
 .page-block-comment-count {
@@ -2749,10 +2784,12 @@ html[data-desktop-platform="darwin"]
   transform: translateY(-50%);
 }
 
-[data-sonner-toaster][data-y-position]
-  [data-sonner-toast][data-styled="true"]
-  [data-close-button]:hover {
-  background: rgb(255 255 255 / 16%);
+@media (hover: hover) and (pointer: fine) {
+  [data-sonner-toaster][data-y-position]
+    [data-sonner-toast][data-styled="true"]
+    [data-close-button]:hover {
+    background: rgb(255 255 255 / 16%);
+  }
 }
 
 [data-sonner-toaster]

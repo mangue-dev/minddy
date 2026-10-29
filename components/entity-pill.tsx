@@ -131,7 +131,7 @@ export function EntityPill({
             // would rely on an invisible.
             persistent
               ? "opacity-100"
-              : "opacity-0 group-hover/pill:opacity-100 has-[:focus-visible]:opacity-100"
+              : "opacity-0 group-hover/pill:opacity-100 has-[:focus-visible]:opacity-100 touch:opacity-100"
           )}
         >
           {commands.map((command) => (

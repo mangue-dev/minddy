@@ -231,12 +231,15 @@ export function MarketingFooter() {
               })}
             </span>
           </div>
-          {/* The contact address, and its “copy” button on the left. It only shows KEEP_0_TOKEN on hover, but its box is there permanently KEEP 1 TOKEN (opacity, not display): the address does not move a pixel when KEEP 2 TOKEN it appears. Where there is no hover — a touch screen — it
- remains visible, hence the basic `opacity-100` that only
- `@media (hover: hover)` erases.
+          {/* The contact address, and its “copy” button on the left. The
+              button only shows on hover, but its box is always there
+              (opacity, not display): the address does not move a pixel when
+              it appears. Where nothing hovers — a touch screen — it stays
+              visible (`touch:`).
 
- The two gestures are too similar to do without a label:
- a “copy” icon stuck to a clickable address, with nothing to say which one does what. Hence a tooltip on each. */}
+              The two gestures are too similar to do without a label: a
+              “copy” icon next to a clickable address, with nothing to say
+              which one does what. Hence a tooltip on each. */}
           <span className="group inline-flex items-center gap-1">
             <span className="inline-flex size-[22px] items-center justify-center">
               {withHint(
@@ -246,7 +249,7 @@ export function MarketingFooter() {
                   label={t("footerCopyEmail")}
                   copiedLabel={t("footerEmailCopied")}
                   iconOnly
-                  className="opacity-100 group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:hover)]:opacity-0"
+                  className="opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 touch:opacity-100"
                 />,
               )}
             </span>

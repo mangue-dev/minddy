@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { GitBranchIcon as GitBranch } from "@hugeicons/core-free-icons";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
@@ -351,10 +351,14 @@ function GitAccountBlock({
       : t("gitIdentityAuthorized")
     : t("gitIdentityNotAuthorized");
 
-  /** Hover AND focus: the signal is not only addressed to the mouse. */
+  /** Hover AND focus: the signal is not only addressed to the mouse. A tap
+   *  fires a compatibility `mouseenter` that never leaves, so only a mouse
+   *  pointer lights the region (MIN-836). */
   const scope = (region: "account" | "identity") => ({
-    onMouseEnter: () => setDanger(region),
-    onMouseLeave: () => setDanger(null),
+    onPointerEnter: (event: PointerEvent) => {
+      if (event.pointerType === "mouse") setDanger(region);
+    },
+    onPointerLeave: () => setDanger(null),
     onFocus: () => setDanger(region),
     onBlur: () => setDanger(null),
   });

@@ -101,7 +101,7 @@ function CopyButton({ text }: { text: string }) {
         variant="ghost"
         size="sm"
         aria-label={tc("copy")}
-        className="size-5 rounded-md bg-transparent p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100"
+        className="size-5 rounded-md bg-transparent p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100 touch:opacity-100"
       >
         {copied ? (
           <HugeiconsIcon icon={CheckIcon} className="size-3 text-brand" />

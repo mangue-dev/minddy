@@ -1060,7 +1060,7 @@ export function PageDatabaseView({
                     its `data-state` would replace the checked state. */}
                 <AppTooltip label={t(rows.length > 0 && selectedRows.length === rows.length ? "deselectAllEntries" : "selectAllEntries")}>
                 <div
-                  className={`flex justify-end pr-2 ${selectedRows.length ? "" : "opacity-0 hover:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100"}`}
+                  className={`flex justify-end pr-2 ${selectedRows.length ? "" : "opacity-0 hover:opacity-100 focus-within:opacity-100 touch:opacity-100"}`}
                 >
                   <Checkbox
                     className="after:inset-x-0"
@@ -1147,7 +1147,7 @@ export function PageDatabaseView({
                   <td className="h-10 w-16 bg-background p-0">
                       <div
                         // Fades in and out with the hover, like a page block's gutter.
-                        className="flex h-10 items-center justify-end gap-0 pr-1 opacity-0 transition-opacity duration-[120ms] ease-out group-hover:opacity-100 focus-within:opacity-100 has-[[data-state=open]]:opacity-100 motion-reduce:transition-none [@media(hover:none)]:hidden"
+                        className="flex h-10 items-center justify-end gap-0 pr-1 opacity-0 transition-opacity duration-[120ms] ease-out group-hover:opacity-100 focus-within:opacity-100 has-[[data-state=open]]:opacity-100 motion-reduce:transition-none touch:hidden"
                       >
                         <AppTooltip label={t("insertEntryHint")}>
                           <button
@@ -1264,7 +1264,7 @@ export function PageDatabaseView({
                     data-selection-cell
                   >
                     <div
-                      className={`absolute inset-0 flex items-center justify-center bg-background ${checked ? "" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100"}`}
+                      className={`absolute inset-0 flex items-center justify-center bg-background ${checked ? "" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100 touch:opacity-100"}`}
                     >
                       <AppTooltip label={t(checked ? "deselectEntryTooltip" : "selectEntryTooltip")}>
                       <div className="pointer-events-auto flex size-6 items-center justify-center">
