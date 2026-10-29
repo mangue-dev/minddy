@@ -3011,6 +3011,23 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     & .app-workspace .sidebar-row-active {
       background-color: var(--app-tab-active-background);
     }
+    /* One hover for every control of the transparent chrome (tabs, the new
+       tab and window buttons, sidebar rows, Numo, the notebook): a share of
+       the selection's color, so hovering reads short of selecting yet stays
+       visible on the material. It replaces their own hover fills and the
+       tabs' brightness filter. A tab's own inner controls, a control nested
+       in another (which would double the fill), a selected control and a
+       filled button keep theirs. */
+    & .app-workspace {
+      --desktop-chrome-hover: color-mix(in oklab, var(--app-tab-active-background) 55%, transparent);
+      & .app-tab:not([data-active]):hover {
+        background-color: var(--desktop-chrome-hover);
+        filter: none;
+      }
+      & :is(.app-top-bar, aside[data-sidebar-navigation]) :is(button, a, [role="button"]):not(.app-tab *):not(:is(button, a, [role="button"]) *):not(.sidebar-row-active):not([data-variant="default"]):not(:disabled):hover {
+        background-color: var(--desktop-chrome-hover) !important;
+      }
+    }
     & .sidebar-nav-panel[data-floating="true"] {
       background: var(--desktop-sidebar-solid);
     }

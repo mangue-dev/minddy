@@ -84,7 +84,7 @@ function CommandList({
       <CommandPrimitive.List
         data-slot="command-list"
         className={cn(
-          "no-scrollbar max-h-72 scroll-py-8 overflow-x-hidden overflow-y-auto outline-none",
+          "no-scrollbar max-h-72 scroll-py-10 overflow-x-hidden overflow-y-auto outline-none",
           className
         )}
         ref={mergedRef}

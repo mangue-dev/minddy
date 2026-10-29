@@ -11,10 +11,10 @@ export const OVERLAY_COLLISION_PADDING = 10;
 /** Surface: radius, padding, elevation and edge. */
 export const MENU_SURFACE_CLASS = "rounded-xl bg-popover p-2 shadow-md ring-1 ring-foreground/10";
 
-/** A scrolling menu: a row the keyboard brings into view stops 32px from the
-    edge, clear of the 24px fade and its chevron (menu-scroll-fade.tsx). The
-    dropdown and command list primitives keep the same `scroll-py-8`. */
-export const MENU_SCROLL_CLASS = "overflow-y-auto overscroll-contain scroll-py-8";
+/** A scrolling menu: a row the keyboard brings into view stops 40px from the
+    edge, clear of the 32px fade and its chevron (menu-scroll-fade.tsx). The
+    dropdown and command list primitives keep the same `scroll-py-10`. */
+export const MENU_SCROLL_CLASS = "overflow-y-auto overscroll-contain scroll-py-10";
 
 /** A row, as a dropdown item. */
 export const MENU_ROW_CLASS = "flex min-h-8 w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm";
