@@ -20,7 +20,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { AppIcon } from "@/components/icon";
-import { useIssueMenuActionsWithNavigation } from "@/components/use-issue-menu-actions";
+import { useIssueMenuActionsWithNavigation, type IssueMenuSelection } from "@/components/use-issue-menu-actions";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { useAgentMenuActions } from "@/components/agent/use-agent-menu-actions";
 import { CustomPromptDialog } from "@/components/agent/custom-prompt-dialog";
@@ -1171,6 +1171,8 @@ const IssueCardContent = memo(function IssueCardContent({
   const [confirmDelete, setConfirmDelete] = useState(false);
   // “Custom”: the free-form prompt dialog that copies the external prompt.
   const [customPromptOpen, setCustomPromptOpen] = useState(false);
+  // Whether the dialog's request covers the card or its selection (MIN-833).
+  const [customPromptScope, setCustomPromptScope] = useState<"issue" | "selection">("issue");
   // A plan already exists → the “plan” entries (⋯ menu, copied prompt, agent)
   // switch from “generate” to “verify”.
   const issueHasPlan = hasPlanTasks(issue.plan);
@@ -1389,7 +1391,10 @@ const IssueCardContent = memo(function IssueCardContent({
     onCopyPrompt: useStableCallback(() => void copyPrompt()),
     onCopyPlanPrompt: useStableCallback(() => void copyPlanPrompt()),
     onCopyVerifyPrompt: useStableCallback(() => void copyVerifyPrompt()),
-    onCopyCustomPrompt: useStableCallback(() => setCustomPromptOpen(true)),
+    onCopyCustomPrompt: useStableCallback(() => {
+      setCustomPromptScope("issue");
+      setCustomPromptOpen(true);
+    }),
     onCopyCommentsPrompt: commentFollowUp ? copyCommentsPromptStable : undefined,
   });
 
@@ -1451,6 +1456,28 @@ const IssueCardContent = memo(function IssueCardContent({
     [shortcutsRef, askNumoRef],
   );
 
+  // A right-click on a card of a multi-ticket selection acts on the whole
+  // selection (MIN-833). It is read once, when the menu opens, and kept while
+  // it stays open: a rebuild (a realtime update of the ticket, the pull
+  // request probe) must not swap the selection entries for the card's own
+  // under the pointer, or the entry being clicked unmounts before it fires.
+  const menuSelectionRef = useRef<IssueMenuSelection | undefined>(undefined);
+  const menuSelection = (): IssueMenuSelection | undefined => {
+    if (!selected) return undefined;
+    const issues = selection.getSelectedIssues();
+    if (issues.length < 2) return undefined;
+    return {
+      count: issues.length,
+      planned: issues.filter((selectedIssue) => hasPlanTasks(selectedIssue.plan)).length,
+      onCopyPrompt: (action) => selection.copyPrompt(action),
+      onCustomPrompt: () => {
+        setCustomPromptScope("selection");
+        setCustomPromptOpen(true);
+      },
+      onCopyIdentifiers: selection.copyIdentifiers,
+    };
+  };
+
   /**
    * The right-click menu, builds ONLY when it opens (MIN-316).
    *
@@ -1481,6 +1508,7 @@ const IssueCardContent = memo(function IssueCardContent({
       onDelete: onDelete ? () => setConfirmDelete(true) : undefined,
       onLinkPullRequest: canWrite && hasLinkablePr ? () => setLinkPrOpen(true) : undefined,
       readOnly: !canWrite,
+      selection: menuSelectionRef.current,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -1526,6 +1554,7 @@ const IssueCardContent = memo(function IssueCardContent({
         e.stopPropagation();
         prefetchIssuePromptContext([issue.id]);
         pointerRef.current = { x: e.clientX, y: e.clientY };
+        menuSelectionRef.current = menuSelection();
         setMenuPosition(pointerRef.current);
       }}
       {...(canWrite ? drop.handlers : {})}
@@ -1626,7 +1655,8 @@ const IssueCardContent = memo(function IssueCardContent({
         open={customPromptOpen}
         onOpenChange={setCustomPromptOpen}
         onSubmit={(instructions) => {
-          void runCustomPrompt(instructions);
+          if (customPromptScope === "selection") selection.copyPrompt("custom", instructions);
+          else void runCustomPrompt(instructions);
         }}
       />
       {/* Portalized too, therefore rendered in the React tree of the map: the

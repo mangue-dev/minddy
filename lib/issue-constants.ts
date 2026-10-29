@@ -121,6 +121,20 @@ export function issueIdentifier(projectKey: string, number: number): string {
 }
 
 /**
+ * A selection's identifiers as one comma-separated line, smallest first
+ * (MIN-833): by issue number, then by project key when a cross-project
+ * selection holds the same number twice.
+ */
+export function sortedIdentifierList(
+  issues: ReadonlyArray<{ projectKey: string; number: number }>,
+): string {
+  return [...issues]
+    .sort((a, b) => a.number - b.number || a.projectKey.localeCompare(b.projectKey))
+    .map((issue) => issueIdentifier(issue.projectKey, issue.number))
+    .join(", ");
+}
+
+/**
  * The identifier the project's next issue will receive, e.g. "MIND-43", read
  * from the counter that reserves issue numbers. Null when the project row does
  * not carry the counter, so callers fall back to a generic label.

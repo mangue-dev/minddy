@@ -513,7 +513,7 @@ export const KanbanBoard = memo(function KanbanBoard({
           the button on the selection pill (MIN-105). */}
       <AskNumoProvider selectedIssues={selectedIssues} onAskNumo={onAskNumo}>
         {/* A picker on a selected card edits the whole selection (MIN-795). */}
-        <IssueSelectionProvider selectedIssues={selectedIssues} relationsByIssue={relationsByIssue}>
+        <IssueSelectionProvider selectedIssues={selectedIssues} relationsByIssue={relationsByIssue} copyActions={bulkPromptActions}>
           <DndContext
             accessibility={{ announcements: dragAnnouncements }}
             sensors={canWrite ? sensors : NO_SENSORS}

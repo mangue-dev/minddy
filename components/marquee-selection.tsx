@@ -226,6 +226,10 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
     if (!container) return;
     const target = event.target as HTMLElement | null;
     if (!target || target.closest(IGNORE_SELECTOR)) return;
+    // React bubbles a press inside a portal (a card's right-click menu, its
+    // field picker, a dialog) up to the board, but it never touched the board:
+    // a click there must not clear the selection the menu acts on (MIN-833).
+    if (!container.contains(target)) return;
     // A classic scrollbar (Windows, Linux) is in the frame but
     // is not from the bottom: without that, catching it would throw a lasso instead of making
     // scroll the board. Under macOS it floats and these two margins are worth zero.

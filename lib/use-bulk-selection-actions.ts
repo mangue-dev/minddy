@@ -30,7 +30,9 @@ import {
 import {
   buildMultiIssuePrompt,
   type IssuePromptInput,
+  type MultiIssueAction,
 } from "@/lib/issue-prompt";
+import { sortedIdentifierList } from "@/lib/issue-constants";
 import {
   loadIssuePromptContext,
   prefetchIssuePromptContext,
@@ -59,6 +61,8 @@ export function useBulkSelectionActions({
   onUpdateIssue,
 }: BulkSelectionActionsOptions) {
   const tBulk = useTranslations("BulkActions");
+  // The single-ticket “Copy identifier” says the same on a failed copy.
+  const tPr = useTranslations("PullRequests");
   const { user } = useAuth();
 
   // Mirror refs — the listener subscribes once and always reads the current
@@ -73,6 +77,8 @@ export function useBulkSelectionActions({
   userRef.current = user;
   const tBulkRef = useRef(tBulk);
   tBulkRef.current = tBulk;
+  const tPrRef = useRef(tPr);
+  tPrRef.current = tPr;
 
   // A selection owns ⇧P for as long as it exists: the gate the per-card
   // handlers stand down on. Acquire/release on the boolean only, so editing
@@ -92,15 +98,17 @@ export function useBulkSelectionActions({
 
   /**
    * One combined prompt for the whole selection, copied to the clipboard.
-   * The single-ticket side effects repeat per ticket: a waiting automation
-   * chain is canceled (MIN-147), and — when the account preference is on
-   * (MIN-20) — tickets still pre-work move to “In progress”, the prompt
-   * describing the REAL state after the move.
+   * Implementing (⇧P) repeats the single-ticket side effects per ticket: a
+   * waiting automation chain is canceled (MIN-147), and — when the account
+   * preference is on (MIN-20) — tickets still pre-work move to “In progress”,
+   * the prompt describing the REAL state after the move. Planning, verifying
+   * and a custom request start nothing, as for one ticket (MIN-833).
    */
-  const copyPrompt = useCallback(async () => {
+  const copyPrompt = useCallback(async (action: MultiIssueAction = "implement", request?: string) => {
     const issues = selectionRef.current;
     if (issues.length === 0) return;
-    const autoStart = resolvePromptCopyAutoStart(userRef.current?.user_metadata);
+    const autoStart =
+      action === "implement" && resolvePromptCopyAutoStart(userRef.current?.user_metadata);
     const moved = new Set<string>();
     for (const issue of issues) {
       if (autoStart && shouldAutoStartOnPromptCopy(issue.status)) {
@@ -118,19 +126,42 @@ export function useBulkSelectionActions({
         ),
         ...(forge.get(issue.id) ?? UNAVAILABLE_FORGE_CONTEXT),
       })),
+      action,
+      request,
     );
     await navigator.clipboard.writeText(prompt);
+    const count = issues.length;
     if (moved.size > 0) {
       for (const issue of issues) {
         if (moved.has(issue.id)) {
           onUpdateIssueRef.current?.(issue, { status: "in_progress" });
         }
       }
-      toast.success(
-        tBulkRef.current("promptCopiedMoved", { count: issues.length }),
-      );
+      toast.success(tBulkRef.current("promptCopiedMoved", { count }));
+    } else if (action === "plan") {
+      toast.success(tBulkRef.current("planPromptCopied", { count }));
+    } else if (action === "verify") {
+      toast.success(tBulkRef.current("verifyPromptCopied", { count }));
     } else {
-      toast.success(tBulkRef.current("promptCopied", { count: issues.length }));
+      toast.success(tBulkRef.current("promptCopied", { count }));
+    }
+  }, []);
+
+  /** The selection's identifiers, comma-separated and smallest first (MIN-833). */
+  const copyIdentifiers = useCallback(async () => {
+    const issues = selectionRef.current;
+    if (issues.length === 0) return;
+    const list = sortedIdentifierList(
+      issues.map((issue) => ({
+        projectKey: buildInputRef.current(issue).projectKey,
+        number: issue.number,
+      })),
+    );
+    try {
+      await navigator.clipboard.writeText(list);
+      toast.success(list);
+    } catch {
+      toast.error(tPrRef.current("copyFailed"));
     }
   }, []);
 
@@ -153,5 +184,5 @@ export function useBulkSelectionActions({
     return () => window.removeEventListener("keydown", onKey, true);
   }, [copyPrompt]);
 
-  return { copyPrompt };
+  return { copyPrompt, copyIdentifiers };
 }

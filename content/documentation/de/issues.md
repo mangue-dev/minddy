@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 41,
-  "sourceRevision": 41,
+  "revision": 42,
+  "sourceRevision": 42,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles; MIN-809 Smart Fill split button; MIN-813 Smart Fill title on request",
+    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles; MIN-809 Smart Fill split button; MIN-813 Smart Fill title on request; MIN-833 selection right-click menu",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -122,13 +122,15 @@
       "components/editor/mobile-editor-toolbar.tsx",
       "lib/palette-picker.ts",
       "lib/creation-relations.ts",
-      "lib/action-menu-search.ts"
+      "lib/action-menu-search.ts",
+      "components/use-issue-menu-actions.tsx",
+      "lib/use-bulk-selection-actions.ts"
     ]
   },
   "review": {
-    "revision": 41,
-    "fact": "agent:claude-code (searchable card and issue-panel action menus also find submenu entries shown with their path, such as Relations › Mark as blocked by… (MIN-845), checked against components/issue-context-menu.tsx, lib/action-menu-search.ts and lib/issue-context-menu-search.test.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; equivalent meaning to en revision 41; self-reviewed; agent review, not human acceptance)",
+    "revision": 42,
+    "fact": "agent:claude-code (right-clicking a card of a multi-issue selection acts on the selection: combined plan, implement, verify and custom prompts, the identifier list sorted by number, and the relation, objective and due-date pickers (MIN-833), checked against components/use-issue-menu-actions.tsx, components/issue-card.tsx, lib/use-bulk-selection-actions.ts and lib/issue-prompt.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; equivalent meaning to en revision 42; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -174,7 +176,7 @@
       "src": "/documentation/de/new-issue.png",
       "alt": "Noch nicht abgesendeter Ticketentwurf im Projekt Aurora mit Titel, Beschreibung, manuell wählbaren Eigenschaften und der Schaltfläche AUR-21 erstellen.",
       "caption": "Beschreibe das erwartete Ergebnis und wähle vor der Erstellung die passenden Eigenschaften.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -191,7 +193,7 @@
       "src": "/documentation/de/triage-incoming.png",
       "alt": "Eingegangenes Demoticket AUR-19 mit Bericht, Eigenschaften und Funktionen für Duplikat, Ablehnen und Akzeptieren.",
       "caption": "Lies den eingegangenen Bericht, bevor du ihn akzeptierst, ablehnst oder mit einem Duplikat verknüpfst.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -208,7 +210,7 @@
       "src": "/documentation/de/issue-statuses.png",
       "alt": "Die acht Ticketstatus im Auswahlmenü, mit ausgewähltem Backlog-Status.",
       "caption": "Das Häkchen zeigt den aktuellen Status. Wähle den Status, der dem tatsächlichen Arbeitsstand entspricht.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -225,7 +227,7 @@
       "src": "/documentation/de/work-resources.png",
       "alt": "Dialog zum Hinzufügen eines Links mit einer Beispiel-Kontaktadresse.",
       "caption": "Prüfe das Ziel, bevor du die Ressource hinzufügst. Dieser Beispiellink wurde nicht gesendet.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -241,7 +243,7 @@
       "src": "/documentation/de/work-dependencies.png",
       "alt": "Die Befehlspalette zeigt die Tickets, die dieses blockieren können, mit der Frage der Beziehung im Suchfeld.",
       "caption": "Wähle zuerst die Richtung der Beziehung und dann ihr Ziel. Hier wurde keine Beziehung gespeichert.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -257,7 +259,7 @@
       "src": "/documentation/de/work-sub-issues.png",
       "alt": "Eingabefeld für ein Unterticket in einem Demo-Elternticket.",
       "caption": "Das Feld erstellt ein Kind dieses Elterntickets; jedes Kind behält seinen eigenen Status und Diskussionsverlauf.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -274,7 +276,7 @@
       "src": "/documentation/de/work-implementation-plan.png",
       "alt": "Demo-Plan mit zwei von sechs abgeschlossenen Arbeitsschritten.",
       "caption": "Der gespeicherte Demo-Plan unterscheidet abgeschlossene, laufende und ausstehende Schritte. Der Fortschritt belegt nicht, dass die fiktive Codeaufgabe ausgeführt wurde.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -291,7 +293,7 @@
       "src": "/documentation/de/issue-date-recurrence.png",
       "alt": "Fälligkeitsauswahl im wiederkehrenden Modus mit Sonntagsvorschau und optionaler Uhrzeit.",
       "caption": "Der wiederkehrende Modus zeigt die wöchentliche Folge. Bestätige die erste Fälligkeit vor der Ticketerstellung.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -308,7 +310,7 @@
       "src": "/documentation/de/import-issues-preview-workflow.png",
       "alt": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen.",
       "caption": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen. Es wurde nichts importiert; die optionale KI-Planung war für die Aufnahme gesperrt.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -325,7 +327,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Umbenennen und Entfernen.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -562,7 +564,7 @@ Eine Numo-Routine ist ein anderes Objekt: Sie plant ein Gespräch und kann das K
 
 Halte auf einem Board die Umschalttaste gedrückt und klicke auf jede Ticketkarte, um sie aus- oder abzuwählen. Mit einer Maus kannst du außerdem von einer freien Boardfläche aus ein Auswahlrechteck ziehen. Umschalt, Command oder Strg ergänzt dabei die bestehende Auswahl. Nahe einem Rand scrollt das Board, und die Karten, die das Rechteck überstrichen hat, bleiben ausgewählt, auch wenn sie aus dem sichtbaren Bereich scrollen. Das Auswahlrechteck ist kein Auswahlverfahren für Touchscreens. Prüfe die Anzahl und die sichtbaren Kennungen, bevor du die Sammelaktionen öffnest. Die Auswahl ist eine Arbeitsmenge für die Aktion, keine gespeicherte Ansicht und keine Berechtigungserteilung. Öffne sie mit **Aktionen** in der Auswahlleiste oder drücke Befehl+K unter macOS bzw. Strg+K unter Windows/Linux, während Tickets ausgewählt sind.
 
-Wähle Aktionen in der schwebenden Auswahlleiste, um die Befehlspalette zu öffnen. Wähle Status, Priorität, Aufwand oder zuständige Person, setze den Wert und bestätige das Inline-Formular. Die Zielaktion erscheint nur, wenn die Auswahl zu einem einzigen Projekt mit verfügbaren Zielen gehört. Andere Aktionen, etwa das Hinzufügen zu oder Entfernen aus einem Zyklus, das Verknüpfen zweier Tickets oder das Senden der Auswahl an Numo, erscheinen nur, wenn das aktuelle Board sie unterstützt. Mit der Maus kannst du auch auf eine ausgewählte Karte zeigen und S, P, E, A, L, D, O oder R drücken: Das geöffnete Menü gilt für alle ausgewählten Tickets, für zuständige Person, Ziel, Kategorien und Beziehungen für die ausgewählten Tickets aus dem Projekt dieser Karte. Prüfe anschließend die betroffenen Tickets. Auf einem reinen Touchgerät ohne unterstützte Mehrfachauswahl bearbeitest du jedes Ticket im Detailpanel.
+Wähle Aktionen in der schwebenden Auswahlleiste, um die Befehlspalette zu öffnen. Wähle Status, Priorität, Aufwand oder zuständige Person, setze den Wert und bestätige das Inline-Formular. Die Zielaktion erscheint nur, wenn die Auswahl zu einem einzigen Projekt mit verfügbaren Zielen gehört. Andere Aktionen, etwa das Hinzufügen zu oder Entfernen aus einem Zyklus, das Verknüpfen zweier Tickets oder das Senden der Auswahl an Numo, erscheinen nur, wenn das aktuelle Board sie unterstützt. Mit der Maus kannst du auch auf eine ausgewählte Karte zeigen und S, P, E, A, L, D, O oder R drücken: Das geöffnete Menü gilt für alle ausgewählten Tickets, für zuständige Person, Ziel, Kategorien und Beziehungen für die ausgewählten Tickets aus dem Projekt dieser Karte. Klicke mit der rechten Maustaste auf eine ausgewählte Karte, um auf die ganze Auswahl zu wirken: **Kombinierten Prompt kopieren** bietet **Pläne erstellen** (**Pläne überprüfen**, wenn jedes ausgewählte Ticket einen hat, **Pläne erstellen oder überprüfen**, wenn nur einige einen haben), **Tickets umsetzen**, **Implementierungen überprüfen** und **Benutzerdefiniert…**; jeder Eintrag kopiert einen einzigen Prompt für alle ausgewählten Tickets. **Die 3 Kennungen kopieren** kopiert bei drei ausgewählten Tickets ihre Kennungen, durch Kommas getrennt und mit der kleinsten Nummer zuerst. **Beziehungen**, **Ziel verknüpfen** und **Fälligkeitsdatum hinzufügen** öffnen dieselben Menüs wie R, O und D. Prüfe anschließend die betroffenen Tickets. Auf einem reinen Touchgerät ohne unterstützte Mehrfachauswahl bearbeitest du jedes Ticket im Detailpanel.
 
 ### Teilergebnisse und destruktive Aktionen {#bulk-results}
 

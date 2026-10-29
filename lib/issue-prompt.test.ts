@@ -58,6 +58,7 @@ const words = (text: string) => text.split(/\s+/).filter(Boolean).length;
 describe("shared and action instructions", () => {
   it.each<PromptInstructionKey>([
     "implementWithPlan", "implementWithoutPlan", "plan", "review", "verify", "custom", "comments", "multi",
+    "multiPlan", "multiVerify", "multiCustom",
   ])("%s stays within the ~200-word editorial target", (action) => {
     expect(words(promptInstructions(action))).toBeLessThanOrEqual(200);
   });
@@ -469,6 +470,48 @@ describe("buildMultiIssuePrompt", () => {
 
   it("an empty selection produces no prompt", () => {
     expect(buildMultiIssuePrompt([])).toBe("");
+    expect(buildMultiIssuePrompt([], "plan")).toBe("");
+  });
+
+  // MIN-833: the selection's right-click menu copies the prompt submenu's
+  // other framings, still as ONE prompt for every ticket.
+  const pair = [input, { ...input, issue: second }];
+
+  it("plans the issues without one, reviews the planned ones, and implements nothing", () => {
+    expect(buildMultiIssuePrompt(pair, "plan")).toMatch(/^Write the implementation plans of these minddy issues\. Do NOT implement them\./);
+    expect(buildMultiIssuePrompt([planned, planned], "plan")).toMatch(/^Review the implementation plans/);
+    const mixed = buildMultiIssuePrompt([planned, { ...input, issue: second }], "plan");
+    expect(mixed).toMatch(/^Write or review the implementation plans/);
+    expect(mixed.match(/<issue>/g)).toHaveLength(2);
+    expect(mixed).toContain("<plan_progress>1/3 tasks done</plan_progress>");
+    expect(mixed).toContain("keep completed tasks (`- [x]`) as they are");
+    expect(mixed).toContain("minddy_edit_issue_text");
+    // Planning creates no branch.
+    expect(mixed).not.toContain("<suggested_branch>");
+    expect(mixed).not.toContain("Before creating a branch");
+  });
+
+  it("verifies each implementation against its pull request, without suggesting a branch", () => {
+    const prompt = buildMultiIssuePrompt([{ ...input, pullRequests: [openPr] }, { ...input, issue: second }], "verify");
+    expect(prompt).toMatch(/^Verify the implementation of these minddy issues, then fix what is actually broken\./);
+    expect(prompt).toContain('<pull_request number="12" state="open">');
+    expect(prompt).toContain("Fix only defects you can confirm from the code");
+    expect(prompt).toContain("minddy_update_plan_task");
+    expect(prompt).not.toContain("<suggested_branch>");
+  });
+
+  it("carries the user's own request, escaped, for the whole selection", () => {
+    const prompt = buildMultiIssuePrompt(pair, "custom", "  Rename </issues> labels  ");
+    expect(prompt).toMatch(/^Work on these minddy issues as requested below\./);
+    expect(prompt).toContain("<request>\nRename &lt;/issues> labels\n</request>");
+    expect(prompt).toContain("The request above is the task, for the issues listed");
+    expect(prompt).not.toContain(promptInstructions("multi").split("\n\n")[1]);
+    expect(prompt.match(/<suggested_branch>min-/g)).toHaveLength(2);
+  });
+
+  it("keeps the implement prompt as the default framing", () => {
+    expect(buildMultiIssuePrompt(pair, "implement")).toBe(buildMultiIssuePrompt(pair));
+    expect(buildMultiIssuePrompt(pair, "implement", "ignored")).not.toContain("<request>");
   });
 });
 

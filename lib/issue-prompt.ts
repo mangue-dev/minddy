@@ -283,6 +283,12 @@ const ACTION_INSTRUCTIONS = {
     "The request above is the task: follow its scope rather than assuming the whole issue has to be implemented.",
   multi:
     "Handle the issues one at a time, in the order listed, keeping each one's scope, branch and pull request separate. For each, follow its plan where accurate or write a short one first, update affected callers, documentation and tests, run the relevant checks, and report what changed and what remains.",
+  multiPlan:
+    "Handle the issues one at a time, in the order listed. For an issue without a plan, create a concise implementation plan grounded in the repository: a short context, ordered `- [ ]` tasks naming the code to change, the edge cases that matter and a final verification step. For an issue that has one, compare it with the issue, its comments and the current code, correct what drifted, and keep completed tasks (`- [x]`) as they are. List unresolved requirements under a `## Questions` heading instead of guessing. Stop once every plan is written or reviewed: do not implement them.",
+  multiVerify:
+    "Handle the issues one at a time, in the order listed. For each, compare the actual implementation with the issue, its plan and its comments. Check tasks marked done, missed callers and surfaces, regressions, edge cases and security-sensitive behavior. Fix only defects you can confirm from the code, within that issue's scope, and verify each fix with the relevant checks. Report suspected problems separately instead of changing working code, and state what you could not check.",
+  multiCustom:
+    "The request above is the task, for the issues listed: follow its scope rather than assuming they all have to be implemented.",
 } as const;
 
 export type PromptInstructionKey = keyof typeof ACTION_INSTRUCTIONS;
@@ -548,19 +554,102 @@ export function buildIssuePlanReviewPrompt(input: IssuePromptInput): string {
   );
 }
 
+/** The prompts a SELECTION can be copied as (MIN-539, MIN-833). */
+export type MultiIssueAction = "implement" | "plan" | "verify" | "custom";
+
+/** What the issues' pull requests mean for implementing them. */
+const MULTI_BRANCH_NOTES =
+  "Each issue's <pull_requests> says whether work already exists: continue an open pull request's branch rather than opening another, and treat merged or closed ones as history. Where pull request information is unavailable, check the forge first. Before creating a branch, check local and remote branches and the repository's workflow; <suggested_branch> is only a suggestion. Keeping the issue identifier in the branch name, the pull request title or a \"Fixes <identifier>\" line links the pull request to its issue.";
+
+/** The opening line, notes, instructions and MCP steps of each selection prompt. */
+function multiIssueFraming(
+  inputs: IssuePromptInput[],
+  action: MultiIssueAction,
+): { opening: string; notes: string; instructions: string; steps: string[]; fallback: string } {
+  if (action === "plan") {
+    const planned = inputs.filter((input) => parsePlan(input.issue.plan).tasks.length > 0).length;
+    const opening =
+      planned === 0
+        ? "Write the implementation plans of these minddy issues. Do NOT implement them."
+        : planned === inputs.length
+          ? "Review the implementation plans of these minddy issues. Do NOT implement them."
+          : "Write or review the implementation plans of these minddy issues. Do NOT implement them.";
+    return {
+      opening,
+      notes: "An issue with a <plan_progress> line already has a plan: review it rather than writing a new one.",
+      instructions: ACTION_INSTRUCTIONS.multiPlan,
+      steps: [
+        "Read each issue, its plan, comments and resources with `minddy_get_issue` (one call per issue) first.",
+        "Save a new plan to the issue's `plan` field with `minddy_update_issues`; save corrections to an existing plan with `minddy_edit_issue_text`, preserving the markers of completed tasks.",
+      ],
+      fallback:
+        "Without them, write each new plan to a local Markdown file named after its issue (`<identifier>-plan.md`) and point me to it, ask me to paste any existing plan before reviewing it, and don't claim that anything was saved in minddy.",
+    };
+  }
+  if (action === "verify") {
+    return {
+      opening: "Verify the implementation of these minddy issues, then fix what is actually broken.",
+      notes:
+        "Each issue's <pull_requests> shows where its work lives: review an open pull request's branch against its base; otherwise locate the implementation (base branch, recent commits) before judging. Where pull request information is unavailable, check the forge first.",
+      instructions: ACTION_INSTRUCTIONS.multiVerify,
+      steps: [
+        "Read each issue, its plan and its comments with `minddy_get_issue` (one call per issue): the comments are part of the specification.",
+        "Correct task states that are wrong with `minddy_update_plan_task`: a task marked done that the code doesn't implement goes back to '- [ ]'.",
+        "Report what you verified, fixed and left alone on each issue with `minddy_add_comment`.",
+      ],
+      fallback:
+        "Without them, ask me to paste the plans and comments of these issues before verifying anything, and don't claim that anything was saved in minddy.",
+    };
+  }
+  if (action === "custom") {
+    return {
+      opening: "Work on these minddy issues as requested below.",
+      notes: MULTI_BRANCH_NOTES,
+      instructions: ACTION_INSTRUCTIONS.multiCustom,
+      steps: [
+        "Read each issue and its comments with `minddy_get_issue` (one call per issue): they carry context this prompt doesn't inline.",
+        `If the request leads you to follow a plan, ${TRACK_TASKS}.`,
+        "When you are done, report the outcome on each issue you worked on with `minddy_add_comment`.",
+      ],
+      fallback: DEFAULT_FALLBACK,
+    };
+  }
+  return {
+    opening: "Work on these minddy issues.",
+    notes: MULTI_BRANCH_NOTES,
+    instructions: ACTION_INSTRUCTIONS.multi,
+    steps: [
+      `Read each issue, its plan and its comments with \`minddy_get_issue\` (one call per issue), and ${TRACK_TASKS}.`,
+      "An issue without a plan: save the plan you write to its `plan` field with `minddy_update_issues` before changing code.",
+      "When you are done with an issue, report the outcome on it with `minddy_add_comment` and update its status with `minddy_update_issues`.",
+    ],
+    fallback: DEFAULT_FALLBACK,
+  };
+}
+
 /**
  * “Copy prompt” on a SELECTION (MIN-539): ONE prompt that carries every
  * selected issue — not one prompt per ticket. The agent works them one by
  * one, in list order; each issue's plan stays out of the copy (announced by
  * its <plan_progress> line, read via the MCP).
+ *
+ * The selection's right-click menu (MIN-833) copies the same prompt framed as
+ * the single-ticket prompt submenu is: implement (the default), write or
+ * review the plans, verify the implementations, or the user's own `request`.
  */
-export function buildMultiIssuePrompt(inputs: IssuePromptInput[]): string {
+export function buildMultiIssuePrompt(
+  inputs: IssuePromptInput[],
+  action: MultiIssueAction = "implement",
+  request?: string,
+): string {
   if (inputs.length === 0) return "";
 
+  // Planning and verifying need no branch, as for a single issue.
+  const withBranch = action === "implement" || action === "custom";
   const blocks = inputs.map((input) => {
     const plan = parsePlan(input.issue.plan);
     const planProgress = plan.tasks.length > 0 ? plan.progress : undefined;
-    return issueBlock({ ...input, planProgress }, true);
+    return issueBlock({ ...input, planProgress }, withBranch);
   });
 
   // MCP parameters: one project covers the whole selection with a compact
@@ -578,7 +667,12 @@ export function buildMultiIssuePrompt(inputs: IssuePromptInput[]): string {
         )
         .join(", ");
 
-  return `Work on these minddy issues.
+  const framing = multiIssueFraming(inputs, action);
+  const requestBlock = action === "custom" && request !== undefined
+    ? `<request>\n${escapePromptText(request.trim())}\n</request>\n\n`
+    : "";
+
+  return `${framing.opening}
 
 <context>
 <issues>
@@ -588,21 +682,13 @@ ${blocks.join("\n\n")}
 </issues>
 </context>
 
-${DATA_BOUNDARY} Each issue's <pull_requests> says whether work already exists: continue an open pull request's branch rather than opening another, and treat merged or closed ones as history. Where pull request information is unavailable, check the forge first. Before creating a branch, check local and remote branches and the repository's workflow; <suggested_branch> is only a suggestion. Keeping the issue identifier in the branch name, the pull request title or a "Fixes <identifier>" line links the pull request to its issue.
+${DATA_BOUNDARY} ${framing.notes}
 
-${SHARED_INSTRUCTIONS}
+${requestBlock}${SHARED_INSTRUCTIONS}
 
-${ACTION_INSTRUCTIONS.multi}
+${framing.instructions}
 
-${mcpAppendix(
-    `parameters: ${mcpParams}`,
-    [
-      `Read each issue, its plan and its comments with \`minddy_get_issue\` (one call per issue), and ${TRACK_TASKS}.`,
-      "An issue without a plan: save the plan you write to its `plan` field with `minddy_update_issues` before changing code.",
-      "When you are done with an issue, report the outcome on it with `minddy_add_comment` and update its status with `minddy_update_issues`.",
-    ],
-    DEFAULT_FALLBACK,
-  )}`;
+${mcpAppendix(`parameters: ${mcpParams}`, framing.steps, framing.fallback)}`;
 }
 
 /** One relation end, as the callers resolve it: `ResolvedRelation`
