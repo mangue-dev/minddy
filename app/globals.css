@@ -3020,6 +3020,13 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
        filled button keep theirs. */
     & .app-workspace {
       --desktop-chrome-hover: color-mix(in oklab, var(--app-tab-active-background) 55%, transparent);
+      /* The sidebar's command band, filter, usage and what's-new controls
+         hover through an important utility (`hover:!bg-sidebar-accent`),
+         which a layered rule wins over any unlayered one: the token itself
+         takes the hover color in the chrome. */
+      & :is(.app-top-bar, aside[data-sidebar-navigation]) {
+        --sidebar-accent: var(--desktop-chrome-hover);
+      }
       & .app-tab:not([data-active]):hover {
         background-color: var(--desktop-chrome-hover);
         filter: none;
