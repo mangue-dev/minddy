@@ -20,7 +20,7 @@ import Link from "@/components/app-link";
 import dynamic from "next/dynamic";
 import { APP_VERSION } from "@/lib/app-version";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
-import { usePathname } from "next/navigation";
+import { useDisplayedPathname } from "@/lib/pending-navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useLocale, useTranslations } from "next-intl";
 import { documentationPath } from "@/lib/documentation-core.mjs";
@@ -392,7 +392,7 @@ export function ProjectContextRow({
 }) {
   const tk = useTranslations("Keyboard");
   const tNav = useTranslations("Nav");
-  const pathname = usePathname();
+  const pathname = useDisplayedPathname();
   const prefetchProject = usePrefetchProject();
   const queryClient = useQueryClient();
   const session = useOptionalAppTabSession();
@@ -1138,7 +1138,7 @@ export function AppSidebar({
 }) {
   const reduce = useReducedMotion();
   const t = useTranslations("Nav");
-  const pathname = usePathname();
+  const pathname = useDisplayedPathname();
   const { setHeaderSlot, setSlot, backLevel, goBack, resetBack } =
     useSecondarySidebar();
 

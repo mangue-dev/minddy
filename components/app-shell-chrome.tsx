@@ -17,6 +17,7 @@ import {
 } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
+import { usePendingNavigation } from "@/lib/pending-navigation";
 import { useAppNavigation, useAppRouter } from "@/lib/use-app-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations, useLocale } from "next-intl";
@@ -296,10 +297,19 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const tInbox = useTranslations("Inbox");
   const tTimeline = useTranslations("Timeline");
   const { agentsAllowed, projectLimitReached } = usePlanGates();
-  const pathname = usePathname();
+  // The sidebar selects a pending destination before the router commits it
+  // (MIN-843), so it follows the shown location rather than the committed one.
+  const pendingNavigation = usePendingNavigation();
+  const routePathname = usePathname();
+  const pathname = pendingNavigation?.pathname ?? routePathname;
   // The stable session: activation re-renders only the tab panel below.
   const appTabSession = useOptionalAppTabSession();
-  const searchParams = useSearchParams();
+  const routeSearchParams = useSearchParams();
+  const pendingSearch = pendingNavigation?.search;
+  const searchParams = useMemo(
+    () => pendingSearch === undefined ? routeSearchParams : new URLSearchParams(pendingSearch),
+    [pendingSearch, routeSearchParams],
+  );
   const router = useAppRouter();
   const openDestination = useAppNavigation();
   const { user } = useAuth();

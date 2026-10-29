@@ -4,6 +4,7 @@ import { useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useMobileNavigation } from "./mobile-navigation-context";
 import { useOptionalAppTabSession } from "./app-tabs-context";
+import { beginPendingNavigation } from "./pending-navigation";
 
 /** Opening is distinct from local selection changes and passive redirects. */
 export function useAppNavigation() {
@@ -11,7 +12,11 @@ export function useAppNavigation() {
   const mobile = useMobileNavigation();
   return useCallback((href: string, open: () => void) => {
     if (mobile) mobile.open(open);
-    else if (!session?.reuseDestination(href)) open();
+    else if (!session?.reuseDestination(href)) {
+      // Desktop shell: the destination shows before the router commits it.
+      if (session) beginPendingNavigation(href);
+      open();
+    }
   }, [session, mobile]);
 }
 

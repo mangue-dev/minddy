@@ -22,6 +22,8 @@ import { useTranslations } from "next-intl";
 import { QueryReadBoundary } from "./query-read-boundary";
 import { retainPageDocuments, retainedPageDocumentCost } from "@/lib/retained-page-documents";
 import { isDraftPage } from "@/lib/pages-draft";
+import { usePendingNavigation } from "@/lib/pending-navigation";
+import { RouteLoadingSkeleton } from "./route-loading-skeleton";
 
 const GlobalBoard = dynamic(() => appTabSurfaceLoaders["global-board"]().then((module) => module.GlobalBoard), { loading: () => <BoardLoadingSkeleton /> });
 const ProjectBoard = dynamic(appTabSurfaceLoaders["project-board"], { loading: () => <BoardLoadingSkeleton /> });
@@ -154,7 +156,13 @@ export function AppTabViewHost({ children }: { children: ReactNode }) {
   const route = useViewHostRoute(tabs);
   const { pathname } = route;
   const retained = !!tabs && !!retainedAppViewKind(pathname);
-  const home = pathname === "/home";
+  // A destination the router has not committed yet (MIN-843) replaces the
+  // page being left at once: its retained view when this tab keeps one, the
+  // Home surface this host owns, or the destination's skeleton.
+  const pending = usePendingNavigation();
+  const ahead = pending && pending.pathname !== pathname ? pending : null;
+  const aheadRetained = !!ahead && !!tabs && tabs.session.isRetainedDestination(tabs.activeId, ahead.href);
+  const home = (ahead?.pathname ?? pathname) === "/home";
   // One small Home working surface, shared across responsive layouts. Another
   // Home tab starts its own draft; resizing does not reconstruct the composer.
   const [homeState, setHomeState] = useState({ seen: home, id: home ? tabs?.activeId ?? null : null, generation: 0 });
@@ -173,12 +181,18 @@ export function AppTabViewHost({ children }: { children: ReactNode }) {
       inert={!home} aria-hidden={!home || undefined} style={{ display: home ? undefined : "none" }}>
       <RetainedHome tabId={current.id} active={home} />
     </div>}
-    {tabs ? <DesktopTabViews homeWeight={current.seen ? 1 : 0} route={route} /> : null}
-    {!retained && !home && children}
+    {tabs ? <DesktopTabViews homeWeight={current.seen ? 1 : 0} route={route}
+      ahead={ahead ? { pathname: ahead.pathname, retained: aheadRetained } : null} /> : null}
+    {ahead ? !home && !aheadRetained && <RouteLoadingSkeleton pathname={ahead.pathname} />
+      : !retained && !home && children}
   </>;
 }
 
-function DesktopTabViews({ homeWeight, route: { pathname, search } }: { homeWeight: number; route: ViewHostRoute }) {
+function DesktopTabViews({ homeWeight, route: { pathname, search }, ahead }: {
+  homeWeight: number; route: ViewHostRoute;
+  /** A pending destination: its retained view activates ahead of the router, any other suspends them all. */
+  ahead: { pathname: string; retained: boolean } | null;
+}) {
   const { tabs, activeId, session } = useAppTabs();
   const client = useQueryClient();
   const [state, setState] = useState<{ location: string; tabId: string | null; tabIds: string; hrefs: string; views: RetainedAppView[]; visits: string[] }>({ location: "", tabId: null, tabIds: "", hrefs: "", views: [], visits: [] });
@@ -264,7 +278,8 @@ function DesktopTabViews({ homeWeight, route: { pathname, search } }: { homeWeig
   useEffect(() => { retainedData.current?.update(views); }, [client, views]);
   return <>
     {views.map((view) => {
-      const active = !!retainedAppViewKind(pathname) && view.tabId === tabId && view.route.pathname === pathname;
+      const shown = ahead ? (ahead.retained ? ahead.pathname : null) : pathname;
+      const active = !!shown && !!retainedAppViewKind(shown) && view.tabId === tabId && view.route.pathname === shown;
       return <RetainedBoard key={view.key} view={view} active={active} roots={roots} />;
     })}
   </>;
