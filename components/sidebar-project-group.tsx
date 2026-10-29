@@ -1,5 +1,6 @@
 "use client";
 
+import { SIDEBAR_COMPOSITE_ROW_HOVER_CLASS } from "@/lib/sidebar-control-styles";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon, Folder01Icon } from "@hugeicons/core-free-icons";
 import type { ReactNode } from "react";
@@ -145,7 +146,7 @@ export function SidebarProjectGroup({
     <div className="flex flex-col">
       {/* The fallback and the header action are two distinct gestures: two
  buttons side by side, in a row that lights up as one on hover (a button within a button does not exist, in HTML as well as on a mouse). */}
-      <div className="group/project flex items-center rounded-md pr-1 transition-colors hover:bg-muted/60 focus-within:bg-muted/60">
+      <div data-sidebar-row className={cn("group/project flex items-center rounded-md pr-1 transition-colors", SIDEBAR_COMPOSITE_ROW_HOVER_CLASS)}>
         {collapsible ? (
           <button
             type="button"

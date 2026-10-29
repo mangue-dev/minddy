@@ -29,3 +29,13 @@ export const SIDEBAR_ROW_SELECTED_CLASS =
 /** The matching hover and keyboard focus of an unselected row. */
 export const SIDEBAR_ROW_HOVER_CLASS =
   "hover:bg-sidebar-accent/60 focus-visible:bg-sidebar-accent/60";
+
+/**
+ * The hover of a row that holds several controls (a page with its chevron
+ * and actions, a project group header with its "+"): the whole line hovers
+ * while the pointer or the focus is anywhere in it. Such a row carries
+ * `data-sidebar-row`, which the desktop window material styles as one
+ * surface (app/globals.css).
+ */
+export const SIDEBAR_COMPOSITE_ROW_HOVER_CLASS =
+  "hover:bg-sidebar-accent/60 focus-within:bg-sidebar-accent/60";

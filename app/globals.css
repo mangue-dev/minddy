@@ -3015,8 +3015,8 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
        tab and window buttons, sidebar rows, Numo, the notebook): a share of
        the selection's color, so hovering reads short of selecting yet stays
        visible on the material. It replaces their own hover fills and the
-       tabs' brightness filter. A tab's own inner controls, a page row's
-       (the row hovers), a control nested in another (which would double the
+       tabs' brightness filter. A tab's own inner controls, a composite
+       row's (the row hovers), a control nested in another (which would double the
        fill), a selected control and a filled button keep theirs. */
     & .app-workspace {
       --desktop-chrome-hover: color-mix(in oklab, var(--app-tab-active-background) 55%, transparent);
@@ -3031,12 +3031,13 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
         background-color: var(--desktop-chrome-hover);
         filter: none;
       }
-      & :is(.app-top-bar, aside[data-sidebar-navigation]) :is(button, a, [role="button"]):not(.app-tab *):not([data-sidebar-page-row] *):not(:is(button, a, [role="button"]) *):not(.sidebar-row-active):not([data-variant="default"]):not(:disabled):hover {
+      & :is(.app-top-bar, aside[data-sidebar-navigation]) :is(button, a, [role="button"]):not(.app-tab *):not([data-sidebar-row] *):not(:is(button, a, [role="button"]) *):not(.sidebar-row-active):not([data-variant="default"]):not(:disabled):hover {
         background-color: var(--desktop-chrome-hover) !important;
       }
-      /* A page tree row holds its chevron, its link and its actions: the
-         whole line hovers, not the link alone. */
-      & [data-sidebar-page-row]:not(.sidebar-row-active):is(:hover, :focus-within) {
+      /* A row of several controls (a page with its chevron and actions, a
+         project group header, a Numo conversation) hovers as one line, not
+         its link alone (SIDEBAR_COMPOSITE_ROW_HOVER_CLASS). */
+      & [data-sidebar-row]:not(.sidebar-row-active):is(:hover, :focus-within) {
         background-color: var(--desktop-chrome-hover);
       }
     }
