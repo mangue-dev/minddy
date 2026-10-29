@@ -1,5 +1,6 @@
 "use client";
 
+import { SIDEBAR_ROW_HOVER_CLASS, SIDEBAR_ROW_SELECTED_CLASS } from "@/lib/sidebar-control-styles";
 import { useId } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -76,7 +77,7 @@ export function SidebarNavRail({
                   "relative flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium outline-none transition-colors",
                   active
                     ? "text-foreground"
-                    : "text-foreground/60 hover:bg-muted/60 hover:text-foreground focus-visible:bg-muted/60 dark:text-muted-foreground dark:hover:text-foreground",
+                    : cn("text-foreground/60 hover:text-foreground dark:text-muted-foreground dark:hover:text-foreground", SIDEBAR_ROW_HOVER_CLASS),
                 )}
               >
                 {/* `layoutId`: only one pad mounted at a time, which
@@ -86,7 +87,7 @@ export function SidebarNavRail({
                   <motion.span
                     layoutId={pillId}
                     aria-hidden
-                    className="absolute inset-0 rounded-lg bg-muted"
+                    className={cn("absolute inset-0 rounded-lg", SIDEBAR_ROW_SELECTED_CLASS)}
                     transition={
                       reduceMotion
                         ? { duration: 0 }

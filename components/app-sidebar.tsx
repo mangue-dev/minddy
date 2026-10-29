@@ -76,6 +76,7 @@ import { SidebarOnboarding } from "@/components/sidebar-onboarding";
 import { UsageIndicator } from "@/components/usage-indicator";
 import {
   SIDEBAR_COMPACT_CONTROL_CLASS,
+  SIDEBAR_ROW_SELECTED_CLASS,
   SIDEBAR_TOOLTIP_DELAY_MS,
 } from "@/lib/sidebar-control-styles";
 import {
@@ -188,7 +189,7 @@ function SidebarRow({ item }: { item: AppNavItem }) {
     ROW_PL,
     "pr-3",
     active
-      ? "sidebar-row-active bg-sidebar-accent text-sidebar-accent-foreground"
+      ? SIDEBAR_ROW_SELECTED_CLASS
       : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
     item.disabled && "pointer-events-none opacity-50",
   );

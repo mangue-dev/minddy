@@ -65,7 +65,7 @@ import { usePublishCurrentView } from "@/lib/current-view-context";
 import { useProjects } from "@/lib/projects-context";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { prIdentifier } from "@/lib/repo-providers";
-import { SIDEBAR_HEADER_ACTION_CLASS } from "@/lib/sidebar-control-styles";
+import { SIDEBAR_HEADER_ACTION_CLASS, SIDEBAR_ROW_HOVER_CLASS, SIDEBAR_ROW_SELECTED_CLASS } from "@/lib/sidebar-control-styles";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type {
   AgentRunPrResponse,
@@ -252,7 +252,7 @@ function PrRow({
       className={cn(
         "flex flex-col gap-1 rounded-lg py-2 pr-2 text-left outline-none transition-colors",
         PROJECT_GROUP_INDENT,
-        selected ? "bg-muted" : "hover:bg-muted/60 focus-visible:bg-muted/60",
+        selected ? SIDEBAR_ROW_SELECTED_CLASS : SIDEBAR_ROW_HOVER_CLASS,
       )}
     >
       <div className="flex items-center gap-2">

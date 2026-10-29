@@ -55,7 +55,7 @@ import { SearchSelect } from "@/components/search-select";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { usePublishCurrentView } from "@/lib/current-view-context";
 import { buildViewHref } from "@/lib/view-href";
-import { SIDEBAR_HEADER_ACTION_CLASS } from "@/lib/sidebar-control-styles";
+import { SIDEBAR_HEADER_ACTION_CLASS, SIDEBAR_ROW_HOVER_CLASS, SIDEBAR_ROW_SELECTED_CLASS } from "@/lib/sidebar-control-styles";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { CategoryValue, ObjectiveValue, PropertyRow, TRIGGER } from "@/components/issue-property-fields";
 import { ObjectivePill } from "@/components/objective-label";
@@ -534,7 +534,7 @@ function FeedbackRow({
       aria-current={selected ? "true" : undefined}
       className={cn(
         "flex w-full flex-col gap-1 rounded-lg px-3 py-2.5 text-left outline-none transition-colors",
-        selected ? "bg-muted" : "hover:bg-muted/60 focus-visible:bg-muted/60"
+        selected ? SIDEBAR_ROW_SELECTED_CLASS : SIDEBAR_ROW_HOVER_CLASS
       )}
     >
       <div className="flex items-center gap-2">

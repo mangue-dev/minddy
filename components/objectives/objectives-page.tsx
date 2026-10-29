@@ -42,7 +42,7 @@ import { CollectionSidebar, type SidebarBrowseTarget } from "@/components/second
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";
-import { SIDEBAR_HEADER_ACTION_CLASS } from "@/lib/sidebar-control-styles";
+import { SIDEBAR_HEADER_ACTION_CLASS, SIDEBAR_ROW_HOVER_CLASS, SIDEBAR_ROW_SELECTED_CLASS } from "@/lib/sidebar-control-styles";
 import { ObjectiveDetail } from "@/components/objective-detail";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type { Member, Objective } from "@/lib/types";
@@ -226,7 +226,7 @@ function ObjectiveRow({
       aria-current={selected ? "true" : undefined}
       className={cn(
         "flex w-full flex-col gap-1.5 rounded-lg px-3 py-2.5 text-left outline-none transition-colors",
-        selected ? "bg-muted" : "hover:bg-muted/60 focus-visible:bg-muted/60"
+        selected ? SIDEBAR_ROW_SELECTED_CLASS : SIDEBAR_ROW_HOVER_CLASS
       )}
     >
       <div className="flex min-w-0 items-center gap-2">

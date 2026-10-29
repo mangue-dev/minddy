@@ -30,7 +30,7 @@ import { routinesQueryKey, useRoutinesQuery } from "@/lib/use-routines-query";
 import { describeSchedule } from "@/lib/routine-schedule";
 import { orderRoutinesWithinWeek } from "@/lib/routine-week-order";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
-import { SIDEBAR_HEADER_ACTION_CLASS } from "@/lib/sidebar-control-styles";
+import { SIDEBAR_HEADER_ACTION_CLASS, SIDEBAR_ROW_HOVER_CLASS, SIDEBAR_ROW_SELECTED_CLASS } from "@/lib/sidebar-control-styles";
 import type { Routine } from "@/lib/routines-api";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 import type { RoutineDetailIntent } from "@/components/routines/routine-detail";
@@ -655,7 +655,7 @@ function RoutineRow({
         // touched the right edge of the column.
         "flex items-center gap-2 rounded-md py-1.5 pr-3 text-left outline-none transition-colors",
         PROJECT_GROUP_INDENT,
-        selected ? "bg-muted" : "hover:bg-muted/60 focus-visible:bg-muted/60",
+        selected ? SIDEBAR_ROW_SELECTED_CLASS : SIDEBAR_ROW_HOVER_CLASS,
       )}
     >
       <span className="flex min-w-0 flex-1 flex-col">

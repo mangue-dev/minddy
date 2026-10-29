@@ -16,6 +16,7 @@
 // line. A sensor that only renders colliding rectangles would require
 // recalculate next.
 
+import { SIDEBAR_ROW_SELECTED_CLASS } from "@/lib/sidebar-control-styles";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, ArrowRight01Icon, DatabaseIcon, File02Icon, MoreHorizontalIcon, StarIcon } from "@hugeicons/core-free-icons";
 import {
@@ -380,7 +381,7 @@ function PageRow({
     <div data-sidebar-page-row
       className={cn(
         "group/page relative flex items-center rounded-md pr-1 transition-colors",
-        active ? "bg-muted" : "hover:bg-muted/60 focus-within:bg-muted/60",
+        active ? SIDEBAR_ROW_SELECTED_CLASS : "hover:bg-sidebar-accent/60 focus-within:bg-sidebar-accent/60",
         dragging && "opacity-40",
         // “Inside” is said by the bottom of the target line, “before/after” by
         // a line on its edge: two different signals for two gestures
