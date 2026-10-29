@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 20,
-  "sourceRevision": 20,
+  "revision": 21,
+  "sourceRevision": 21,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -49,12 +49,17 @@
       "components/pull-requests/pr-image-diff.tsx",
       "components/image-viewer.tsx",
       "components/issue-card.tsx",
-      "lib/palette-picker.ts"
+      "lib/palette-picker.ts",
+      "components/use-issue-menu-actions.tsx",
+      "lib/use-link-issues-to-pull-request.ts",
+      "lib/pr-issue-status.ts",
+      "lib/pr-merge-intent.ts",
+      "components/issue-pr-context.tsx"
     ]
   },
   "review": {
-    "revision": 20,
-    "fact": "agent:claude-code (content pickers moved to the command palette (MIN-844): Link an issue and Link to a pull request pickers checked against lib/palette-picker.ts, components/palette-picker-rows.tsx, components/pull-requests/pr-link-issue.tsx and components/pull-requests/pr-link-target-picker.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show these pickers)",
+    "revision": 21,
+    "fact": "agent:claude-code (card right-click menu: linked pull request entries grouped under a Pull request submenu with View pull request in its own tab, Merge, Enable/Disable auto-merge, Link to a pull request and Unlink from pull request; Link the other issues to #N from a selected card; cards move to the status the pull request implies when linked; auto-merge named in the readiness tooltip; checked against components/use-issue-menu-actions.tsx, lib/use-link-issues-to-pull-request.ts, lib/pr-issue-status.ts, lib/pr-merge-intent.ts and components/issue-pr-context.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the card menu)",
     "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
@@ -79,7 +84,7 @@
       "src": "/documentation/en/review-pull-requests-workflow.png",
       "alt": "Changes tab of the open demonstration PR, with the greeting function diff and an unavailable GitHub authorization notice.",
       "caption": "Demonstration PR that remains open and unmerged. Its diff trims the name and uses World for an empty value. This instance cannot request user GitHub authorization; the readiness label does not grant merge permission or prove successful provider CI.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -116,7 +121,9 @@ The prompt contents, branch suggestion and language rules are described in [Copy
 
 When the repository is linked to the project, keep the issue identifier in the branch name, the pull request title or a `Fixes MIN-42` line. Minddy then attaches the pull request to the issue, and later prompts tell the agent to continue the open pull request on its branch. To attach an issue by hand, use **Link an issue** on the pull request: the command palette opens on the project's issues, and the one you choose is linked once you confirm. Its search accepts an identifier or title words, and a description also lists issues of the project found [by meaning](/docs/navigation#search-by-meaning) under **Related by meaning**.
 
-From a board, right-click an issue without an open pull request and choose **Link to a pull request** to pick, in the command palette, one of its project's open pull requests, drafts included. The entry appears only when that project has at least one such pull request to link to. With several issues selected, **Actions** offers the same choice for the whole selection, and **Link the other issues to #N** when some of them already have pull request N. **Link to a pull request** is not offered once a selected issue has any linked pull request; **Unlink N issues from their pull requests** removes every link of the selection first, after you confirm. Links show on the cards immediately, and a refused link is put back when the board refreshes. A card with an open pull request shows its number, coloured by state, and its merge readiness, the same indicator as on **Code review**.
+From a board, right-click an issue without an open pull request and choose **Link to a pull request** to pick, in the command palette, one of its project's open pull requests, drafts included. The entry appears only when that project has at least one such pull request to link to. With several issues selected, **Actions** offers the same choice for the whole selection, and **Link the other issues to #N** when some of them already have pull request N; right-clicking one of the selected issues offers **Link the other issues to #N** too. **Link to a pull request** is not offered once a selected issue has any linked pull request; **Unlink N issues from their pull requests** removes every link of the selection first, after you confirm. Links show on the cards immediately, and each card moves at once to the status its pull request implies, such as **In review** for an open pull request; a refused link is put back when the board refreshes. A card with an open pull request shows its number, coloured by state, and its merge readiness, the same indicator as on **Code review**; when auto-merge is on, its tooltip adds **Auto-merge** after the state.
+
+When an issue has a linked pull request, its right-click menu gathers that pull request's actions in a **Pull request** submenu. **View pull request** opens the pull request in a tab of its own, or switches to the tab already showing it. **Merge** appears when the pull request is open and ready to merge and your provider account can write to the repository; it opens the pull request on its usual merge confirmation, where you choose the merge method and commit message or use **Merge with Numo**. **Enable auto-merge** appears while the pull request cannot merge yet and the repository allows auto-merge, and **Disable auto-merge** replaces it once auto-merge is on. When the linked pull request is merged or closed, **Link to a pull request** links the issue to another open pull request of the project. **Unlink from pull request**, set apart in red at the bottom, removes the link after you confirm.
 
 In **Account settings → Issues → Starting an issue**, **Start the issue or task when I copy its prompt** moves an issue or notebook task that has not started yet into progress when you copy its prompt. Leave it off if you copy prompts only to read them.
 

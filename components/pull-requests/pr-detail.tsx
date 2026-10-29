@@ -2097,7 +2097,7 @@ export function PrDetail({
             aria-label={t("scrollToTop")}
             className="absolute bottom-4 right-4 z-20 hidden rounded-full border border-border bg-card text-muted-foreground shadow-md hover:text-foreground app-desktop:inline-flex app-desktop:right-6"
             onClick={() =>
-              scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" })
+              scrollContainerRef.current?.scrollTo({ top: 0, behavior: "instant" })
             }
           >
             <HugeiconsIcon icon={ArrowUp01Icon} className="size-4" />

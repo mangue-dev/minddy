@@ -62,7 +62,8 @@ import {
   shortcutTargets,
   type ShortcutTargetField,
 } from "@/lib/issue-shortcut-targets";
-import { useIssuePr, useIssuePrReadiness } from "@/components/issue-pr-context";
+import { useIssuePr, useIssuePrReadiness, useIssuePrStore } from "@/components/issue-pr-context";
+import { bulkPullRequestLinks } from "@/lib/bulk-pull-request-links";
 import { PrReadinessIcon } from "@/components/pull-requests/pr-readiness";
 import type { IssuePrReadiness } from "@/lib/issue-pr-store";
 import { DATE_ICON, SMART_ASSIGN_ICON } from "@/components/feature-icons";
@@ -540,9 +541,10 @@ function DueDatePick({
 
 /** Read-only objective on the card's bottom line: the objective pill at its
     small size (MIN-785). */
+// The pill is as tall as the avatar, so it is concentric with the card corner too.
 function ObjectiveIndicator({ objective }: { objective: IssueCardObjective }) {
   const tField = useTranslations("Field");
-  return <ObjectiveBadge objective={objective} size="sm" tooltip={tField("objectiveLinked")} />;
+  return <ObjectiveBadge objective={objective} tooltip={tField("objectiveLinked")} />;
 }
 
 /** Compact plan progress on the card header: checklist icon + "done/total".
@@ -727,6 +729,7 @@ export const IssueCardBody = memo(function IssueCardBody({
   relations,
   onOpenParent,
   onOpenRelated,
+  onRemoveRelation,
   onOpenPlan,
   onUpdate,
   onSetCategories,
@@ -764,6 +767,8 @@ export const IssueCardBody = memo(function IssueCardBody({
   onOpenObjective?: (objectiveId: string) => void;
   /** Opens a related issue's side panel (clicking a relation chip). */
   onOpenRelated?: (issueId: string) => void;
+  /** Removes a relation from the relation popover (absent → no remove button). */
+  onRemoveRelation?: (relationId: string) => void;
   /** Opens this issue's side panel on the plan tab (clicking the plan indicator). */
   onOpenPlan?: () => void;
   /** The ticket's PR, in any state. The “PR available” chip is shown
@@ -844,10 +849,10 @@ export const IssueCardBody = memo(function IssueCardBody({
   return (
     <div
       className={cn(
-        // Cards sit on the column: in light mode, a border and black shadow
-        // around white content created an overly prominent band. The current
-        // contrast remains useful on a dark background.
-        "flex flex-col gap-2 rounded-xl border border-border/60 p-3 text-left shadow-none dark:border-border dark:shadow-xs",
+        // Cards sit flat on the column, outlined by their border alone; only
+        // the drag overlay lifts. Concentric corners: 24px radius around 12px
+        // of padding wrap the 24px avatar and objective pill (12px radius).
+        "flex flex-col gap-2 rounded-2xl border border-border/60 p-3 text-left shadow-none dark:border-border",
         // Bulk selection (MIN-75): blue-tinted background instead of an outline.
         selected ? "bg-primary/10" : "bg-card",
         dragging && "cursor-grabbing shadow-lg",
@@ -866,8 +871,10 @@ export const IssueCardBody = memo(function IssueCardBody({
       )}
 
       {/* Identifier (prefixed by cycle / integration icons when applicable) + assignee */}
-      <div className="flex items-center justify-between gap-2">
-        <span className="flex min-w-0 items-center gap-1 font-mono text-[11px] text-muted-foreground">
+      {/* One 24px line: the identifier, the plan or PR chip and the avatar
+          share its center. */}
+      <div className="flex h-6 items-center justify-between gap-2">
+        <span className="flex min-w-0 items-center gap-1 font-mono text-[11px] leading-4 text-muted-foreground">
           {inCurrentCycle && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -904,6 +911,7 @@ export const IssueCardBody = memo(function IssueCardBody({
               projectKey={projectKey}
               onOpen={onOpenRelated}
               onOpenObjective={onOpenObjective}
+              onRemove={onRemoveRelation}
               className="shrink-0"
             />
           )}
@@ -917,7 +925,8 @@ export const IssueCardBody = memo(function IssueCardBody({
             <span className="flex items-center gap-0.5">
               <PrPick state={pr.state} number={pr.prNumber} onOpen={onOpenPr} />
               {prReadiness && pr.state === "open" ? (
-                <PrReadinessIcon readiness={prReadiness.readiness} unavailable={prReadiness.unavailable} />
+                <PrReadinessIcon readiness={prReadiness.readiness} unavailable={prReadiness.unavailable}
+                  autoMerge={!!prReadiness.flow?.active} />
               ) : null}
             </span>
           ) : plan.total > 0 ? (
@@ -996,6 +1005,7 @@ const IssueCardContent = memo(function IssueCardContent({
   onOpenIssue,
   onOpenRelated,
   onAddRelation,
+  onRemoveRelation,
   onOpenPlan,
   onUpdateIssue,
   onSetCategories,
@@ -1033,6 +1043,8 @@ const IssueCardContent = memo(function IssueCardContent({
     targetId: string,
     kinds?: RelationKinds,
   ) => void;
+  /** Removes a relation from the card's relation popover. */
+  onRemoveRelation?: (relationId: string) => void;
   onOpenPlan?: (issue: Issue) => void;
   /** Shared public router action; cards do not subscribe to route context. */
   onNavigate: (href: string) => void;
@@ -1462,6 +1474,7 @@ const IssueCardContent = memo(function IssueCardContent({
   // request probe) must not swap the selection entries for the card's own
   // under the pointer, or the entry being clicked unmounts before it fires.
   const menuSelectionRef = useRef<IssueMenuSelection | undefined>(undefined);
+  const prStore = useIssuePrStore();
   const menuSelection = (): IssueMenuSelection | undefined => {
     if (!selected) return undefined;
     const issues = selection.getSelectedIssues();
@@ -1475,6 +1488,16 @@ const IssueCardContent = memo(function IssueCardContent({
         setCustomPromptOpen(true);
       },
       onCopyIdentifiers: selection.copyIdentifiers,
+      pullRequests: bulkPullRequestLinks(issues, prStore.get, [], prStore.linkedPullRequestIds).partial
+        .map((target) => ({
+          prId: target.prId,
+          prNumber: target.prNumber,
+          onLink: () => {
+            const targets = bulkPullRequestLinks(selection.getSelectedIssues(), prStore.get, [], prStore.linkedPullRequestIds)
+              .targets(target.prId);
+            void linkIssuesToPullRequest(targets, target);
+          },
+        })),
     };
   };
 
@@ -1500,6 +1523,7 @@ const IssueCardContent = memo(function IssueCardContent({
       projectKey,
       agentActions,
       pr,
+      prReadiness,
       hasObjectives: !!objectiveMap?.size,
       onSelectRelation: onAddRelation ? setRelationType : undefined,
       hierarchyRelations: onAddRelation && canWrite ? hierarchyRelations() : undefined,
@@ -1516,6 +1540,7 @@ const IssueCardContent = memo(function IssueCardContent({
     buildIssueMenuActions,
     agentActions,
     pr,
+    prReadiness,
     onAddRelation,
     issue,
     projectKey,
@@ -1562,7 +1587,7 @@ const IssueCardContent = memo(function IssueCardContent({
       // touch is free to scroll the board/columns natively. The grab cursor is
       // a DRAG signal, not an affordance: the card reads as a normal surface on
       // hover; `IssueCard` changes it only after the drag sensor activates.
-      className="relative rounded-xl"
+      className="relative rounded-2xl"
     >
       <DropOverlay
         show={drop.dragging}
@@ -1587,6 +1612,7 @@ const IssueCardContent = memo(function IssueCardContent({
             relations={relations}
             onOpenParent={openParent}
             onOpenRelated={onOpenRelated}
+            onRemoveRelation={canWrite ? onRemoveRelation : undefined}
             onOpenObjective={onOpenRelated ? openObjective : undefined}
             onOpenPlan={openPlan}
             pr={pr}
@@ -1600,8 +1626,7 @@ const IssueCardContent = memo(function IssueCardContent({
             selected={selected}
           />
         );
-        // The card's shadow lives on this wrapper; keep it aligned with the body.
-        return <div className="rounded-xl shadow-xs">{body}</div>;
+        return body;
       })()}
       <IssueContextMenu
         position={menuPosition}
@@ -1723,7 +1748,7 @@ export const IssueCard = memo(function IssueCard(props: IssueCardProps) {
       {...attributes}
       {...listeners}
       className={cn(
-        "rounded-xl transition-opacity duration-150 ease-out motion-reduce:transition-none",
+        "rounded-2xl transition-opacity duration-150 ease-out motion-reduce:transition-none",
         landingOutOfFlow
           ? "invisible absolute pointer-events-none"
           : "relative",

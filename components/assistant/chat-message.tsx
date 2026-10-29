@@ -7,6 +7,7 @@ import {
   useCallback,
   useMemo,
   useState,
+  type ComponentProps,
   type ReactNode,
 } from "react";
 import { useTranslations } from "next-intl";
@@ -41,6 +42,8 @@ import {
   type AdaptiveContextItem,
 } from "@/components/assistant/adaptive-context-row";
 import { PAGE_CODE_COMPONENTS } from "@/components/assistant/shared-code-renderer";
+import { TypedMentionChip } from "@/components/typed-mention-chip";
+import { parseMentionHref } from "@/lib/mention-link";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import {
   NumoUsageExhaustedCard,
@@ -376,12 +379,35 @@ function UserText({
 // ── Assistant text renderer ───────────────────────────────────────────
 // For assistant responses: AI Elements Response (Streamdown).
 
+// Numo cites what it can with typed mentions (`[@Label](mention:type/id)`).
+// Streamdown's sanitizer drops an unknown URL scheme, so each mention travels
+// as an in-page address and its link renders as the pill an editor shows.
+const ASSISTANT_MENTION_PREFIX = "#mention:";
+const ASSISTANT_MENTION_LINK = /(\[@(?:[^\]\\\n]|\\.){0,256}\])\(mention:([a-z]{1,16}\/[A-Za-z0-9_-]{1,64})\)/g;
+
+function AssistantLink(props: ComponentProps<typeof MarkdownLink>) {
+  const href = typeof props.href === "string" ? props.href : null;
+  const target = href?.startsWith(ASSISTANT_MENTION_PREFIX)
+    ? parseMentionHref(href.slice(1))
+    : null;
+  if (target) return <TypedMentionChip type={target.type} id={target.id} />;
+  return <MarkdownLink {...props} />;
+}
+
+const ASSISTANT_COMPONENTS = { ...PAGE_CODE_COMPONENTS, a: AssistantLink };
+
 // Fenced code uses the app's code block, the one Pages and the notebook show;
 // Streamdown keeps the rest of the response.
 function AssistantText({ content }: { content: string }) {
+  const rendered = useMemo(
+    () => content.includes("](mention:")
+      ? content.replace(ASSISTANT_MENTION_LINK, `$1(${ASSISTANT_MENTION_PREFIX}$2)`)
+      : content,
+    [content],
+  );
   return (
-    <MessageResponse components={PAGE_CODE_COMPONENTS}>
-      {content}
+    <MessageResponse components={ASSISTANT_COMPONENTS}>
+      {rendered}
     </MessageResponse>
   );
 }

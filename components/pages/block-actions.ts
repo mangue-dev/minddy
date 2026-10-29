@@ -494,6 +494,20 @@ export function insertBlockAround(
   const node = editor.state.doc.nodeAt(pos);
   if (!node) return false;
   const at = where === "below" ? pos + node.nodeSize : pos;
+  // A list item's `+` adds an item to its list, as Enter at its end would:
+  // a paragraph cannot sit between two items.
+  if (node.type.name === "listItem" || node.type.name === "taskItem") {
+    return editor
+      .chain()
+      .insertContentAt(at, {
+        type: node.type.name,
+        ...(node.type.name === "taskItem" ? { attrs: { checked: false } } : {}),
+        content: [{ type: "paragraph" }],
+      })
+      .focus(at + 2)
+      .insertContent("/")
+      .run();
+  }
   return editor
     .chain()
     .insertContentAt(at, { type: "paragraph" })

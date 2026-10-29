@@ -103,12 +103,13 @@ export function useScrollFade<T extends HTMLElement>(
     const el = node;
     if (!el) return;
     update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
+    // Absent from some environments (jsdom): the scroll handler still measures.
+    const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    ro?.observe(el);
     const mo = new MutationObserver(update);
     mo.observe(el, { childList: true, subtree: true });
     return () => {
-      ro.disconnect();
+      ro?.disconnect();
       mo.disconnect();
       if (frameRef.current != null) cancelAnimationFrame(frameRef.current);
       frameRef.current = null;

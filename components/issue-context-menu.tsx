@@ -47,7 +47,7 @@ export interface ContextMenuAction {
   icon?: React.ReactNode;
   /** Corresponding shortcut key, displayed on the right (e.g. “⇧P”). */
   shortcut?: string;
-  /** Separates the entry from the previous group (ignored if it opens the list). */
+  /** Separates the entry from the previous group, in a submenu too (ignored if it opens the list). */
   separatorBefore?: boolean;
   /** `destructive` = red, for irreversible actions (delete). */
   variant?: "default" | "destructive";
@@ -212,12 +212,11 @@ function ActionNode({
           )}
         </DropdownMenuSubTrigger>
         <DropdownMenuSubContent>
-          {action.children.map((child) => (
-            <LeafItem
-              key={child.id}
-              action={child}
-              onActionSelect={onActionSelect}
-            />
+          {action.children.map((child, i) => (
+            <React.Fragment key={child.id}>
+              {child.separatorBefore && i > 0 && <DropdownMenuSeparator />}
+              <LeafItem action={child} onActionSelect={onActionSelect} />
+            </React.Fragment>
           ))}
         </DropdownMenuSubContent>
       </DropdownMenuSub>

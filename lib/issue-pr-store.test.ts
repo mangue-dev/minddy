@@ -28,7 +28,22 @@ describe("issue PR store readiness", () => {
     expect(onB).toHaveBeenCalledTimes(1);
 
     store.updateReadiness({}, new Set(["pr-2"]));
-    expect(store.getReadiness("b")).toEqual({ readiness: null, unavailable: true });
+    expect(store.getReadiness("b")).toEqual({ readiness: null, unavailable: true, flow: null });
     expect(store.getReadiness("a")).toBeNull();
+  });
+
+  it("notifies when only the auto-merge state of a PR moves", () => {
+    const store = createIssuePrStore({ pullRequests: { a: { prId: "pr-1", prNumber: 1, state: "open" } } });
+    const onA = vi.fn();
+    store.subscribe("a", onA);
+    const flow = (active: boolean) => ({ "pr-1": { active, autoMergeAllowed: true, canWrite: true } });
+
+    store.updateReadiness({ "pr-1": readiness("checks_running") }, new Set(), flow(false));
+    store.updateReadiness({ "pr-1": readiness("checks_running") }, new Set(), flow(false));
+    expect(onA).toHaveBeenCalledTimes(1);
+
+    store.updateReadiness({ "pr-1": readiness("checks_running") }, new Set(), flow(true));
+    expect(onA).toHaveBeenCalledTimes(2);
+    expect(store.getReadiness("a")?.flow?.active).toBe(true);
   });
 });

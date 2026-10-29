@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 42,
-  "sourceRevision": 42,
+  "revision": 43,
+  "sourceRevision": 43,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -124,13 +124,14 @@
       "lib/creation-relations.ts",
       "lib/action-menu-search.ts",
       "components/use-issue-menu-actions.tsx",
-      "lib/use-bulk-selection-actions.ts"
+      "lib/use-bulk-selection-actions.ts",
+      "components/relation-chips.tsx"
     ]
   },
   "review": {
-    "revision": 42,
-    "fact": "agent:claude-code (right-clicking a card of a multi-issue selection acts on the selection: combined plan, implement, verify and custom prompts, the identifier list sorted by number, and the relation, objective and due-date pickers (MIN-833), checked against components/use-issue-menu-actions.tsx, components/issue-card.tsx, lib/use-bulk-selection-actions.ts and lib/issue-prompt.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (it changed passages with catalog UI labels; equivalent meaning to en revision 42; self-reviewed; agent review, not human acceptance)",
+    "revision": 43,
+    "fact": "agent:claude-code (remove button with the same confirmation on each relation of a board card's relation chip popover, none for relations inherited through an objective; checked against components/relation-chips.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the card chip popover)",
+    "language": "agent:claude-code (it changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -176,7 +177,7 @@
       "src": "/documentation/it/new-issue.png",
       "alt": "Bozza non inviata nel progetto Aurora con titolo, descrizione, proprietà selezionabili manualmente e il pulsante Crea AUR-21.",
       "caption": "Descrivi il risultato atteso e scegli le proprietà utili prima di creare il ticket.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -193,7 +194,7 @@
       "src": "/documentation/it/triage-incoming.png",
       "alt": "Ticket dimostrativo AUR-19 in arrivo con segnalazione, proprietà e comandi per duplicato, Rifiuta e Accetta.",
       "caption": "Leggi la segnalazione ricevuta prima di accettarla, rifiutarla o collegare un duplicato.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -210,7 +211,7 @@
       "src": "/documentation/it/issue-statuses.png",
       "alt": "Gli otto stati del ticket nel selettore, con Backlog selezionato.",
       "caption": "La spunta indica lo stato attuale. Scegli quello che rispecchia lo stato effettivo del lavoro.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -227,7 +228,7 @@
       "src": "/documentation/it/work-resources.png",
       "alt": "Finestra di aggiunta di un link con un indirizzo di contatto d’esempio.",
       "caption": "Controlla la destinazione prima di aggiungere la risorsa. Questo link d’esempio non è stato inviato.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -243,7 +244,7 @@
       "src": "/documentation/it/work-dependencies.png",
       "alt": "La palette dei comandi mostra i ticket che possono bloccare questo, con la domanda della relazione nel campo di ricerca.",
       "caption": "Scegli la direzione della relazione prima della destinazione. Il selettore è mostrato senza inviare la relazione.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -259,7 +260,7 @@
       "src": "/documentation/it/work-sub-issues.png",
       "alt": "Campo per creare un sottoticket in un ticket principale dimostrativo.",
       "caption": "Il campo crea un figlio di questo ticket; ogni figlio conserva stato e discussione propri.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -276,7 +277,7 @@
       "src": "/documentation/it/work-implementation-plan.png",
       "alt": "Piano dimostrativo con due attività di lavoro completate su sei.",
       "caption": "Il piano salvato distingue passaggi completati, attivi e in attesa. L’avanzamento non dimostra l’esecuzione dell’attività di codice fittizia.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -293,7 +294,7 @@
       "src": "/documentation/it/issue-date-recurrence.png",
       "alt": "Selettore di scadenza ricorrente con anteprima settimanale la domenica e orario facoltativo.",
       "caption": "La modalità ricorrente mostra la cadenza settimanale. Conferma la prima scadenza prima di creare il ticket.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -310,7 +311,7 @@
       "src": "/documentation/it/import-issues-preview-workflow.png",
       "alt": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate.",
       "caption": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate. L’importazione non è stata inviata; la pianificazione IA facoltativa è stata bloccata per la cattura.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -327,7 +328,7 @@
       "src": "/documentation/it/file-preview.png",
       "alt": "Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica, Rinomina e Rimuovi.",
       "caption": "Il visualizzatore condiviso colloca Chiudi sotto l’anteprima. Il menu Azioni del file offre Scarica e, con i permessi necessari, Rinomina e Rimuovi.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -489,7 +490,7 @@ Gli stati finali Fatto, Annullata e Duplicato fanno smettere a un ticket di bloc
 
 Un ticket aperto può ereditare un blocco attraverso il proprio obiettivo aperto. Se A blocca l’obiettivo B, i ticket aperti collegati a B mostrano A come blocco ereditato, anche senza una relazione diretta da A al ticket. La visualizzazione indica il prerequisito effettivo e l’obiettivo che trasmette il blocco. Esamina quella relazione dell’obiettivo prima di provare a rimuoverla dal ticket. Chiudere A, chiudere B o rimuovere il ticket da B elimina il blocco ereditato. Questo meccanismo segue l’appartenenza all’obiettivo, non la gerarchia tra ticket padre e sottoticket.
 
-Rimuovi una relazione dai suoi controlli quando non è più pertinente; una conferma nomina l’altro ticket o obiettivo, e sparisce solo il collegamento. Poi verifica etichetta e indicatore di blocco. Contrassegnare un ticket come duplicato ha effetti sul ciclo di vita e rimanda al lavoro mantenuto. Usalo per le attività duplicate invece di creare un collegamento ordinario e supporre che chiuda il duplicato.
+Rimuovi una relazione dai suoi controlli quando non è più pertinente; una conferma nomina l’altro ticket o obiettivo, e sparisce solo il collegamento. Su una scheda della board, il chip di un tipo di relazione apre l’elenco di quelle relazioni, ognuna con un pulsante di rimozione (✕) che chiede la stessa conferma; le relazioni ereditate da un obiettivo non lo hanno. Poi verifica etichetta e indicatore di blocco. Contrassegnare un ticket come duplicato ha effetti sul ciclo di vita e rimanda al lavoro mantenuto. Usalo per le attività duplicate invece di creare un collegamento ordinario e supporre che chiuda il duplicato.
 
 Se il selettore di relazione non trova un ticket, controlla accesso al progetto e identificativo. Non esporre il contenuto di un altro progetto incollando un URL privato di ticket in una risposta pubblica al feedback.
 

@@ -53,6 +53,7 @@ export const KanbanColumn = memo(function KanbanColumn({
   onUpdateIssue,
   onSetCategories,
   onAddRelation,
+  onRemoveRelation,
   onDeleteIssue,
   buildMenuActions,
   currentCycleId,
@@ -88,6 +89,7 @@ export const KanbanColumn = memo(function KanbanColumn({
     targetId: string,
     kinds?: RelationKinds,
   ) => void;
+  onRemoveRelation?: (relationId: string) => void;
   /** Trash from right-clicking a card (absent → entry disappears). */
   onDeleteIssue?: (issueId: string) => Promise<void>;
   /** Per-issue extra right-click actions (cycle add/remove — MIN-32). */
@@ -185,6 +187,7 @@ export const KanbanColumn = memo(function KanbanColumn({
                   getCandidateIssues={getCandidateIssues}
                   onOpenRelated={onOpenIssueById}
                   onAddRelation={onAddRelation}
+                  onRemoveRelation={onRemoveRelation}
                   onOpenPlan={onOpenPlan}
                   onOpenIssue={onOpenIssue}
                   onUpdateIssue={onUpdateIssue}
@@ -209,7 +212,7 @@ export const KanbanColumn = memo(function KanbanColumn({
           <button
             type="button"
             onClick={() => onCreateIssue(status.value)}
-            className="flex w-full shrink-0 items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-6 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-muted/40 hover:text-foreground"
+            className="flex w-full shrink-0 items-center justify-center gap-1.5 rounded-2xl border border-dashed border-border py-6 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-muted/40 hover:text-foreground"
           >
             <HugeiconsIcon icon={Add01Icon} className="size-4" />
             {t("newIssue")}

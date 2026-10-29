@@ -155,7 +155,7 @@ function projectHandler(onAddRelation: ProjectAdd): CardAdd {
 function globalHandler(onAddRelation: GlobalAdd): CardAdd {
   const column = evaluate<GlobalColumnAdd>(prop("global-kanban-board.tsx", "GlobalKanbanColumn", "onAddRelation"), { onAddRelation });
   const bind = evaluate<(projectId: string) => { onAddRelation: CardAdd }>(initializer("global-kanban-column.tsx", "bindToProject"), {
-    useMemo, onAddRelation: column, getCandidateIssues: undefined,
+    useMemo, onAddRelation: column, onRemoveRelation: undefined, getCandidateIssues: undefined,
     onUpdateIssue: vi.fn(), onSetCategories: vi.fn(), onDeleteIssue: undefined,
   });
   const bound = bind(issue.project_id);

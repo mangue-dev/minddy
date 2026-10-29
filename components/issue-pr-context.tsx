@@ -100,13 +100,13 @@ export function IssuePrProvider({
       .map((pr) => pr.prId))].sort().slice(0, READINESS_BATCH_MAX),
     [data],
   );
-  const { readinessByPrId, unavailablePrIds, error } = usePullRequestReadinessBatchQuery(livePrIds, { minPollMs: BOARD_READINESS_POLL_MS });
+  const { readinessByPrId, mergeFlowByPrId, unavailablePrIds, error } = usePullRequestReadinessBatchQuery(livePrIds, { minPollMs: BOARD_READINESS_POLL_MS });
   const unavailableKey = error ? livePrIds.join(",") : [...unavailablePrIds].sort().join(",");
   useLayoutEffect(
-    () => store.updateReadiness(readinessByPrId, new Set(unavailableKey ? unavailableKey.split(",") : [])),
+    () => store.updateReadiness(readinessByPrId, new Set(unavailableKey ? unavailableKey.split(",") : []), mergeFlowByPrId),
     // `unavailablePrIds` is a fresh Set each render; its sorted key is the dependency.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [store, readinessByPrId, unavailableKey],
+    [store, readinessByPrId, unavailableKey, mergeFlowByPrId],
   );
 
   return (

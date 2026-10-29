@@ -6,6 +6,8 @@ import { useIssueMenuActions, useIssueMenuActionsWithNavigation, type IssueMenuO
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { RELATION_TYPES } from "./relation-constants";
 import type { Issue } from "./types";
+import type { PullRequestReadiness } from "./pr-readiness";
+import { usePrMergeIntentStore } from "./pr-merge-intent";
 
 const dependencies = vi.hoisted(() => ({
   push: vi.fn(),
@@ -16,10 +18,17 @@ const dependencies = vi.hoisted(() => ({
   routerRead: vi.fn(),
   reuseDestination: vi.fn(() => false),
   toastSuccess: vi.fn(),
+  maintain: vi.fn(() => Promise.resolve({ ok: true })),
+  invalidate: vi.fn(),
+}));
+vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQueries: dependencies.invalidate }) }));
+vi.mock("@/lib/agent-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/agent-api")>()),
+  maintainPullRequestApi: dependencies.maintain,
 }));
 vi.mock("sonner", async (importOriginal) => ({
   ...(await importOriginal<typeof import("sonner")>()),
-  toast: { success: dependencies.toastSuccess },
+  toast: { success: dependencies.toastSuccess, error: vi.fn() },
 }));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("next/navigation", () => ({ useRouter: () => {
@@ -79,11 +88,13 @@ describe("shared issue menu actions", () => {
   it("keeps agent, PR, relation, field, cycle, and trash actions in the same order", () => {
     const { actions, action, options } = build();
     expect(actions.map((item) => item.id)).toEqual([
-      "copy-prompt", "launch-agent", "copy-identifier", "open-pr", "unlink-pr", "relations",
+      "copy-prompt", "launch-agent", "copy-identifier", "pull-request", "relations",
       "set-objective", "set-due-date", "cycle-add", "delete",
     ]);
     expect(actions.slice(0, 2)).toEqual(options.agentActions);
-    expect(action("open-pr").children?.map((item) => item.id)).toEqual(["open-pr-current-tab", "open-pr-new-tab"]);
+    // Without readiness, the submenu opens the PR and, apart, unlinks it.
+    expect(action("pull-request").children?.map((item) => item.id)).toEqual(["open-pr", "unlink-pr"]);
+    expect(action("unlink-pr")).toMatchObject({ separatorBefore: true, variant: "destructive" });
     for (const type of RELATION_TYPES) {
       action(`relation-${type}`).onSelect?.();
       expect(options.onSelectRelation).toHaveBeenLastCalledWith(type);
@@ -104,7 +115,7 @@ describe("shared issue menu actions", () => {
     for (const id of ["unlink-pr", "set-objective", "set-due-date", "delete", ...RELATION_TYPES.map((type) => `relation-${type}`)]) {
       expect(action(id).transfersFocus, id).toBe(true);
     }
-    for (const id of ["cycle-add", "open-pr-current-tab", "open-pr-new-tab"]) {
+    for (const id of ["cycle-add", "open-pr"]) {
       expect(action(id).transfersFocus, id).not.toBe(true);
     }
 
@@ -140,8 +151,10 @@ describe("shared issue menu actions", () => {
     unlinked.action("link-pr").onSelect?.();
     expect(onLinkPullRequest).toHaveBeenCalledOnce();
     expect(unlinked.action("link-pr").transfersFocus).toBe(true);
-    expect(build({ onLinkPullRequest }).actions.map((item) => item.id)).not.toContain("link-pr");
-    expect(build({ pr: { prId: "pr", state: "merged", prNumber: 42 }, onLinkPullRequest }).actions.map((item) => item.id)).toContain("link-pr");
+    expect(() => build({ onLinkPullRequest }).action("link-pr")).toThrow();
+    // A delivered PR stays in its submenu, which offers linking another.
+    const merged = build({ pr: { prId: "pr", state: "merged", prNumber: 42 }, onLinkPullRequest });
+    expect(merged.action("pull-request").children?.map((item) => item.id)).toEqual(["open-pr", "link-pr", "unlink-pr"]);
     expect(build({ pr: null, onLinkPullRequest, readOnly: true }).actions.map((item) => item.id)).not.toContain("link-pr");
   });
 
@@ -152,48 +165,63 @@ describe("shared issue menu actions", () => {
     await Promise.resolve();
     expect(writeText).toHaveBeenCalledWith("MIN-623");
     expect(dependencies.toastSuccess).toHaveBeenCalledWith("MIN-623");
-    expect(build({ readOnly: true }).actions.map((item) => item.id)).toEqual(["copy-identifier", "open-pr"]);
+    const reader = build({ readOnly: true });
+    expect(reader.actions.map((item) => item.id)).toEqual(["copy-identifier", "pull-request"]);
+    expect(reader.action("pull-request").children?.map((item) => item.id)).toEqual(["open-pr"]);
   });
 
-  it("opens PRs in the requested app tab and unlinks the exact issue", () => {
+  it("opens the PR in a tab of its own and unlinks the exact issue", () => {
     const { action } = build();
-    action("open-pr-current-tab").onSelect?.();
-    expect(dependencies.push).toHaveBeenCalledWith("/pull-requests?pr=pr");
-    action("open-pr-new-tab").onSelect?.();
+    action("open-pr").onSelect?.();
+    expect(dependencies.reuseDestination).toHaveBeenCalledWith("/pull-requests?pr=pr");
     expect(dependencies.create).toHaveBeenCalledWith("/pull-requests?pr=pr");
+    expect(dependencies.push).not.toHaveBeenCalled();
     action("unlink-pr").onSelect?.();
     expect(dependencies.mutate).toHaveBeenCalledWith({ prId: "pr", issueId: "issue", identifier: "MIN-623" });
     dependencies.isPending = true;
     expect(build().action("unlink-pr").disabled).toBe(true);
   });
 
-  it("uses a browser tab when the app tab provider is absent", () => {
-    dependencies.hasAppTabs = false;
-    const open = vi.fn();
-    vi.stubGlobal("window", { open });
-    build().action("open-pr-new-tab").onSelect?.();
-    expect(open).toHaveBeenCalledWith("/pull-requests?pr=pr", "_blank", "noopener,noreferrer");
-  });
-
-  it("reuses the PR tab for ordinary opening and bypasses reuse for explicit creation", () => {
+  it("switches to the tab already showing the PR", () => {
     dependencies.reuseDestination.mockReturnValue(true);
-    const { action } = build();
-    action("open-pr-current-tab").onSelect?.();
+    build().action("open-pr").onSelect?.();
     expect(dependencies.reuseDestination).toHaveBeenCalledExactlyOnceWith("/pull-requests?pr=pr");
-    expect(dependencies.push).not.toHaveBeenCalled();
-    action("open-pr-new-tab").onSelect?.();
-    expect(dependencies.create).toHaveBeenCalledWith("/pull-requests?pr=pr");
-    expect(dependencies.reuseDestination).toHaveBeenCalledTimes(1);
+    expect(dependencies.create).not.toHaveBeenCalled();
   });
 
-  it("uses the owning column's navigation action without reading Next route context", () => {
+  it("navigates in place when the app tab provider is absent, without reading Next route context", () => {
+    dependencies.hasAppTabs = false;
     const navigate = vi.fn();
-    const { action } = build({}, navigate);
-    action("open-pr-current-tab").onSelect?.();
+    build({}, navigate).action("open-pr").onSelect?.();
     expect(navigate).toHaveBeenCalledWith("/pull-requests?pr=pr");
     expect(dependencies.routerRead).not.toHaveBeenCalled();
-    action("open-pr-new-tab").onSelect?.();
+  });
+
+  const readiness = (mergeAllowed: boolean) => ({
+    state: mergeAllowed ? "ready" : "checks_running", blockers: [], passed: [], mergeAllowed,
+    methods: ["squash"], preferredMethod: "squash",
+  }) as PullRequestReadiness;
+  const flow = (active: boolean, canWrite = true) => ({ active, autoMergeAllowed: true, canWrite });
+
+  it("offers the Code review page's merge gestures to a viewer who can write", () => {
+    const ready = build({ prReadiness: { readiness: readiness(true), unavailable: false, flow: flow(false) } });
+    expect(ready.action("pull-request").children?.map((item) => item.id)).toEqual(["open-pr", "merge-pr", "unlink-pr"]);
+    ready.action("merge-pr").onSelect?.();
+    // The merge opens the PR's own dialog, in its tab.
+    expect(usePrMergeIntentStore.getState().prId).toBe("pr");
     expect(dependencies.create).toHaveBeenCalledWith("/pull-requests?pr=pr");
+
+    const waiting = build({ prReadiness: { readiness: readiness(false), unavailable: false, flow: flow(false) } });
+    expect(waiting.action("pull-request").children?.map((item) => item.id)).toEqual(["open-pr", "enable-auto-merge", "unlink-pr"]);
+    waiting.action("enable-auto-merge").onSelect?.();
+    expect(dependencies.maintain).toHaveBeenCalledWith("pr", "enable_auto_merge");
+
+    const armed = build({ prReadiness: { readiness: readiness(false), unavailable: false, flow: flow(true) } });
+    armed.action("disable-auto-merge").onSelect?.();
+    expect(dependencies.maintain).toHaveBeenLastCalledWith("pr", "disable_auto_merge");
+
+    const reader = build({ prReadiness: { readiness: readiness(true), unavailable: false, flow: flow(false, false) } });
+    expect(reader.action("pull-request").children?.map((item) => item.id)).toEqual(["open-pr", "unlink-pr"]);
   });
 
   // MIN-833: a right-click on a card of a multi-ticket selection.
@@ -218,6 +246,11 @@ describe("shared issue menu actions", () => {
     expect(actions.map((item) => item.id)).toEqual([
       "copy-selection-prompt", "copy-identifiers", "relations", "set-objective", "set-due-date",
     ]);
+    const onLink = vi.fn();
+    const linking = build({ selection: { ...selection(0), pullRequests: [{ prId: "pr", prNumber: 42, onLink }] } });
+    expect(linking.actions.map((item) => item.id)).toContain("link-others-pr-pr");
+    linking.action("link-others-pr-pr").onSelect?.();
+    expect(onLink).toHaveBeenCalledOnce();
     expect(action("copy-selection-prompt").children?.map((item) => item.id)).toEqual([
       "copy-selection-prompt-plan", "copy-selection-prompt-implement",
       "copy-selection-prompt-verify", "copy-selection-prompt-custom",

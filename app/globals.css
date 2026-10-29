@@ -2990,9 +2990,31 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     & .app-workspace {
       --sidebar: transparent;
     }
+    /* A solid light-gray highlight vanishes on a light wallpaper behind the
+       veil. A tint of the text color darkens whatever lies behind it by the
+       same step, so the selected and hovered rows keep their contrast on any
+       desktop. Dark mode already reads well against its denser veil. */
+    &:not(.dark) .app-workspace {
+      --sidebar-accent: color-mix(in oklab, var(--foreground) 9%, transparent);
+    }
     & .sidebar-nav-panel[data-floating="true"] {
       background: var(--desktop-sidebar-solid);
-    }  }
+    }
+    /* Menus opened from the chrome sit over the transparent window: their
+       backdrop blur has no page behind it to frost, so the desktop showed
+       through as is. Their translucent share is composited over the solid
+       chrome color instead. Glass turned off keeps its plain --popover. */
+    &:not([data-transparency="off"]) :is(
+      [data-slot="popover-content"],
+      [data-slot="dropdown-menu-content"],
+      [data-slot="dropdown-menu-sub-content"],
+      [data-slot="select-content"],
+      [data-floating-surface],
+      [role="menu"]
+    ) {
+      background-color: color-mix(in oklab, var(--popover) 84%, var(--desktop-sidebar-solid));
+    }
+  }
 }
 
 .app-update-slot button { max-width: 100%; }

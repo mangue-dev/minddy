@@ -9,6 +9,7 @@ import { ChevronDownIcon, ChevronUpIcon } from "lucide-react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { CheckIcon } from "@hugeicons/core-free-icons"
 import { OVERLAY_COLLISION_PADDING } from "@/components/ui/menu-surface"
+import { useListScrollFade } from "@/components/ui/menu-scroll-fade"
 
 function Select({
   ...props
@@ -69,6 +70,8 @@ function SelectContent({
   collisionPadding = OVERLAY_COLLISION_PADDING,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
+  // The viewport scrolls inside the surface: options past an edge fade there.
+  const fade = useListScrollFade<HTMLDivElement>()
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
@@ -87,6 +90,9 @@ function SelectContent({
       >
         <SelectScrollUpButton />
         <SelectPrimitive.Viewport
+          ref={fade.ref}
+          style={fade.scrollProps.style}
+          onScroll={fade.scrollProps.onScroll}
           data-position={position}
           className={cn(
             "data-[position=popper]:h-(--radix-select-trigger-height) data-[position=popper]:w-full data-[position=popper]:min-w-(--radix-select-trigger-width)",

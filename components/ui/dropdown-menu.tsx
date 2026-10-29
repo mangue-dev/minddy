@@ -10,6 +10,7 @@ import { ChevronRightIcon } from "lucide-react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { CheckIcon } from "@hugeicons/core-free-icons"
 import { OVERLAY_COLLISION_PADDING } from "@/components/ui/menu-surface"
+import { useMenuScrollFade, useMergedRef } from "@/components/ui/menu-scroll-fade"
 
 // Below 768px, side-opening flyout submenus can't fit on narrow screens (Radix
 // only flips them left/right and can't shift them horizontally to overlap the
@@ -85,8 +86,14 @@ function DropdownMenuContent({
   align = "start",
   sideOffset = 4,
   collisionPadding = OVERLAY_COLLISION_PADDING,
+  children,
+  ref,
+  onScroll,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
+  // Rows hidden past an edge fade out there (useMenuScrollFade).
+  const fade = useMenuScrollFade<HTMLDivElement>()
+  const mergedRef = useMergedRef(ref, fade.ref)
   return (
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
@@ -98,8 +105,17 @@ function DropdownMenuContent({
                                   "z-50 max-h-(--radix-dropdown-menu-content-available-height) w-max min-w-[max(var(--radix-dropdown-menu-trigger-width),12rem)] max-w-[calc(100vw-1rem)] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-xl bg-popover scroll-py-2 p-2 text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:overflow-hidden data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
                                   className
                                 )}
+        ref={mergedRef}
+        onScroll={(event) => {
+          onScroll?.(event)
+          fade.onScroll()
+        }}
         {...props}
-      />
+      >
+        {fade.start}
+        {children}
+        {fade.end}
+      </DropdownMenuPrimitive.Content>
     </DropdownMenuPrimitive.Portal>
   )
 }
@@ -352,9 +368,13 @@ function DropdownMenuSubContent({
   className,
   children,
   collisionPadding = OVERLAY_COLLISION_PADDING,
+  ref,
+  onScroll,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.SubContent>) {
   const ctx = React.useContext(DropdownSubInlineContext)
+  const fade = useMenuScrollFade<HTMLDivElement>()
+  const mergedRef = useMergedRef(ref, fade.ref)
 
   // Inline (mobile): render the items in place, indented under the trigger,
   // only while expanded. No portal/flyout — so it can never spill off screen.
@@ -388,9 +408,16 @@ function DropdownMenuSubContent({
                           "z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-40 max-w-[calc(100vw-1rem)] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-xl bg-popover scroll-py-2 p-2 text-popover-foreground shadow-lg ring-1 ring-foreground/10 duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
                           className
                         )}
+        ref={mergedRef}
+        onScroll={(event) => {
+          onScroll?.(event)
+          fade.onScroll()
+        }}
         {...props}
       >
+        {fade.start}
         {children}
+        {fade.end}
       </DropdownMenuPrimitive.SubContent>
     </DropdownMenuPrimitive.Portal>
   )

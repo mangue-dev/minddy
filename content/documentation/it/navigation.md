@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 23,
-  "sourceRevision": 21,
+  "revision": 24,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -68,13 +68,14 @@
       "lib/palette-picker.ts",
       "components/palette-picker-rows.tsx",
       "components/mobile-navigation.tsx",
-      "components/mobile-nav-actions.tsx"
+      "components/mobile-nav-actions.tsx",
+      "lib/keyboard/typeahead.ts"
     ]
   },
   "review": {
-    "revision": 23,
-    "fact": "agent:claude-code (mobile bottom bar reordered (MIN-837): new sentence on the bar order and Home in the drawer checked against components/mobile-navigation.tsx, components/mobile-nav-actions.tsx and the drawer sections of components/app-shell-chrome.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures show the desktop layout)",
-    "language": "agent:claude-code (it new sentence with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 24,
+    "fact": "agent:claude-code (pointer to the Numo type-ahead on Home and in the expanded Numo panel, checked against lib/keyboard/typeahead.ts and lib/keyboard/keyboard-context.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show this behavior)",
+    "language": "agent:claude-code (it changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -96,7 +97,7 @@
       "src": "/documentation/it/work-navigation.png",
       "alt": "Navigazione del progetto accanto alla bacheca dei ticket dimostrativi.",
       "caption": "La barra del progetto permette di aprire ticket, obiettivi, pagine e triage.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -113,7 +114,7 @@
       "src": "/documentation/it/work-search.png",
       "alt": "Risultati della ricerca dell’identificativo di un ticket dimostrativo.",
       "caption": "La palette trova il ticket tramite identificativo insieme alle pagine del progetto; aprire un risultato conserva le sue regole di accesso.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -174,7 +175,7 @@ Appena digiti, la palette trova anche routine, pull request, viste e notifiche d
 
 Anche ciò che colleghi si sceglie nella palette. Aggiungere una relazione, collegare un ticket a una pull request o una pull request a un ticket e allegare una pagina come risorsa la aprono solo sugli elementi che puoi scegliere, e il suo campo di ricerca indica cosa stai scegliendo. Per una relazione, scegli prima il tipo nel menu; la palette mostra poi i ticket e gli obiettivi che possono riceverla. Scegliere un elemento lo collega; Esc chiude la palette senza collegare nulla.
 
-Premi Command+K su macOS o Ctrl+K su Windows/Linux per aprire la palette dei comandi; Command/Ctrl+P è una scorciatoia alternativa dell’applicazione. Fuori dal testo modificabile, ? apre la guida delle scorciatoie e C la creazione di ticket. Su una scheda di ticket sotto il puntatore o nei suoi controlli di dettaglio supportati, S apre lo stato, P la priorità, E l’impegno, A l’assegnatario, L le categorie, D la scadenza e O l’obiettivo. R aggiunge una relazione dagli stessi punti, nella pagina di un obiettivo e nel modulo di nuovo ticket: scegli il tipo di relazione, poi l’altro ticket o obiettivo. Se la scheda fa parte di una selezione, questi tasti modificano tutti i ticket selezionati; assegnatario, obiettivo, categorie e relazioni valgono solo per i ticket selezionati del progetto di quella scheda. Maiusc+C porta a un campo del commento pronto per scrivere, con la conversazione scorsa fino all’ultimo messaggio: quello di una scheda di ticket sotto il puntatore o di una riga sotto il puntatore nell’elenco di obiettivi, feedback, pull request, pagine o triage, oppure, se non c’è nulla sotto il puntatore, quello del ticket, dell’obiettivo, del feedback, della pull request o della pagina sullo schermo. Una pagina apre per questo il suo pannello **Attività**. Maiusc+C agisce solo su quell’elemento, anche se la scheda fa parte di una selezione. Nella pagina di un obiettivo e nel modulo di nuovo obiettivo, S apre il suo stato, A il responsabile, D la data limite e C il colore; lì, C non crea un ticket. Queste azioni con un solo tasto non intercettano la scrittura in campi, aree di testo o editor di contenuti. Le sequenze di navigazione come G e poi H (Home) o G e poi I (Posta in arrivo) usano due tasti successivi. G e poi W porta a Pagine solo nel contesto di un progetto.
+Premi Command+K su macOS o Ctrl+K su Windows/Linux per aprire la palette dei comandi; Command/Ctrl+P è una scorciatoia alternativa dell’applicazione. Fuori dal testo modificabile, ? apre la guida delle scorciatoie e C la creazione di ticket. Su una scheda di ticket sotto il puntatore o nei suoi controlli di dettaglio supportati, S apre lo stato, P la priorità, E l’impegno, A l’assegnatario, L le categorie, D la scadenza e O l’obiettivo. R aggiunge una relazione dagli stessi punti, nella pagina di un obiettivo e nel modulo di nuovo ticket: scegli il tipo di relazione, poi l’altro ticket o obiettivo. Se la scheda fa parte di una selezione, questi tasti modificano tutti i ticket selezionati; assegnatario, obiettivo, categorie e relazioni valgono solo per i ticket selezionati del progetto di quella scheda. Maiusc+C porta a un campo del commento pronto per scrivere, con la conversazione scorsa fino all’ultimo messaggio: quello di una scheda di ticket sotto il puntatore o di una riga sotto il puntatore nell’elenco di obiettivi, feedback, pull request, pagine o triage, oppure, se non c’è nulla sotto il puntatore, quello del ticket, dell’obiettivo, del feedback, della pull request o della pagina sullo schermo. Una pagina apre per questo il suo pannello **Attività**. Maiusc+C agisce solo su quell’elemento, anche se la scheda fa parte di una selezione. Nella pagina di un obiettivo e nel modulo di nuovo obiettivo, S apre il suo stato, A il responsabile, D la data limite e C il colore; lì, C non crea un ticket. Queste azioni con un solo tasto non intercettano la scrittura in campi, aree di testo o editor di contenuti. Le sequenze di navigazione come G e poi H (Home) o G e poi I (Posta in arrivo) usano due tasti successivi. G e poi W porta a Pagine solo nel contesto di un progetto. Nella **Home** e nel pannello di Numo ingrandito, una rapida raffica di tasti viene invece scritta nel campo di Numo, e un singolo tasto esegue la sua scorciatoia dopo una breve pausa ([scrivere a Numo](/docs/numo#work-with-numo)).
 
 Per raggiungere un’impostazione, digitane il nome nella palette dei comandi o nel campo di filtro in cima alla barra laterale delle impostazioni. Entrambi trovano ogni riquadro di impostazioni e le singole impostazioni, come la lingua, il tema, ogni palette, la trasparenza e i due interruttori di **Avviare un ticket**. Scegliendo un risultato si apre la scheda di impostazioni giusta, la pagina scorre fino al riquadro o alla riga e lo evidenzia. Comando+T su macOS o Ctrl+T su Windows/Linux apre la palette della nuova scheda; un’impostazione scelta lì si apre in una nuova scheda dell’app. Dentro un progetto offre anche **Nuova pagina**, che crea una pagina in quel progetto e la apre in una nuova scheda. Le parole chiave in inglese e in francese funzionano qualunque sia la lingua dell’interfaccia.
 

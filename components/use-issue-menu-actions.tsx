@@ -5,7 +5,8 @@ import { useAppRouter } from "@/lib/use-app-router";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, Copy01Icon, Delete02Icon, LinkSquare01Icon, GitPullRequestIcon, Link02Icon, Cancel01Icon, Target01Icon } from "@hugeicons/core-free-icons";
+import { Copy01Icon, Delete02Icon, LinkSquare01Icon, GitMergeIcon, GitPullRequestIcon, Link02Icon, Target01Icon, Unlink01Icon } from "@hugeicons/core-free-icons";
+import { useQueryClient } from "@tanstack/react-query";
 import { RelationIcon } from "@/components/issue-indicators";
 import { KEY_FOR_FIELD, RELATION_SHORTCUT_HINT, type ShortcutField } from "@/components/issue-field-shortcuts";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
@@ -13,7 +14,10 @@ import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
 import { usePrUnlinkConfirmation } from "@/components/pull-requests/pr-unlink-confirmation";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { RELATION_TYPES } from "@/lib/relation-constants";
-import type { IssuePr } from "@/lib/agent-api";
+import { maintainPullRequestApi, type IssuePr } from "@/lib/agent-api";
+import type { IssuePrReadiness } from "@/lib/issue-pr-store";
+import { prMenuCanMerge } from "@/lib/pr-context-menu";
+import { requestPullRequestMerge } from "@/lib/pr-merge-intent";
 import type { HierarchyRelation, RelationMenuKind } from "@/lib/issue-hierarchy";
 import type { Issue } from "@/lib/types";
 import { DATE_ICON } from "@/components/feature-icons";
@@ -32,6 +36,8 @@ export interface IssueMenuSelection {
   /** Opens the custom request dialog, whose prompt covers the selection. */
   onCustomPrompt: () => void;
   onCopyIdentifiers: () => void;
+  /** Live pull requests some selected tickets have and others could take. */
+  pullRequests?: ReadonlyArray<{ prId: string; prNumber: number; onLink: () => void }>;
 }
 
 export interface IssueMenuOptions {
@@ -39,6 +45,8 @@ export interface IssueMenuOptions {
   projectKey: string;
   agentActions: ContextMenuAction[];
   pr: IssuePr | null;
+  /** Readiness and auto-merge state of the live PR, for its merge entries. */
+  prReadiness?: IssuePrReadiness | null;
   hasObjectives: boolean;
   onSelectRelation?: (type: RelationMenuKind) => void;
   /** The parent / sub-issue entries the ticket may take (MIN-804). */
@@ -70,10 +78,32 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
   const tPr = useTranslations("PullRequests");
   const tBulk = useTranslations("BulkActions");
   const appTabs = useOptionalAppTabSession();
+  const queryClient = useQueryClient();
   const { isPending, requestUnlink } = usePrUnlinkConfirmation();
 
+  // A pull request opens in its own tab, or in the tab already showing it.
+  const openPullRequest = useCallback((prId: string) => {
+    const href = `/pull-requests?pr=${prId}`;
+    if (!appTabs) navigate(href);
+    else if (!appTabs.reuseDestination(href)) void appTabs.create(href);
+  }, [appTabs, navigate]);
+
+  // The Code review page's toggle (pr-detail), run from the card: the server
+  // checks the viewer's rights and the repository's settings again.
+  const setAutoMerge = useCallback(async (prId: string, enable: boolean) => {
+    try {
+      await maintainPullRequestApi(prId, enable ? "enable_auto_merge" : "disable_auto_merge");
+      toast.success(enable ? tPr("autoMergeEnabledToast") : tPr("autoMergeDisabledToast"));
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      void queryClient.invalidateQueries({ queryKey: ["pull-request-readiness"] });
+      void queryClient.invalidateQueries({ queryKey: ["pull-request", prId] });
+    }
+  }, [queryClient, tPr]);
+
   return useCallback(({
-    issue, projectKey, agentActions, pr, hasObjectives, onSelectRelation, hierarchyRelations = [],
+    issue, projectKey, agentActions, pr, prReadiness = null, hasObjectives, onSelectRelation, hierarchyRelations = [],
     onOpenField, extraActions = [], onDelete, onLinkPullRequest, readOnly = false, selection,
   }: IssueMenuOptions): ContextMenuAction[] => {
     const identifier = issueIdentifier(projectKey, issue.number);
@@ -155,49 +185,94 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
       });
       // A reader copies identifiers, never prompts — as on one ticket.
       if (readOnly) return [copyIdentifiers];
+      // The selection's ⌘K row, here too: extends a pull request some
+      // selected tickets have to the others of its project.
+      const linkOthers = (selection.pullRequests ?? []).map((target): ContextMenuAction => ({
+        id: `link-others-pr-${target.prId}`,
+        label: tPr("linkOthersToPullRequest", { number: target.prNumber }),
+        keywords: ["pull request", "pr", "lier", "link", `#${target.prNumber}`],
+        icon: <HugeiconsIcon icon={GitPullRequestIcon} className="size-4" />,
+        onSelect: target.onLink,
+      }));
       return [
         prompts,
         copyIdentifiers,
+        ...linkOthers,
         ...relationsAction(),
         ...(hasObjectives ? [objectiveAction] : []),
         dueDateAction,
       ];
     }
-    const openPr: ContextMenuAction[] = pr
-      ? [
+    // An issue keeps at most one live pull request (the server refuses a
+    // second), so linking is offered only while it has none.
+    const linkPr: ContextMenuAction[] = onLinkPullRequest && !(pr && (pr.state === "open" || pr.state === "draft")) ? [{
+      id: "link-pr",
+      label: tPr("linkToPullRequest"),
+      keywords: ["link", "lier", "pull request", "pr", "merge request"],
+      icon: <HugeiconsIcon icon={GitPullRequestIcon} className="size-4" />,
+      transfersFocus: true,
+      onSelect: onLinkPullRequest,
+    }] : [];
+    // Everything about the linked pull request in one submenu: open it, the
+    // merge gestures of the Code review page, then unlinking, set apart.
+    const prMenu = (): ContextMenuAction[] => {
+      if (!pr) return linkPr;
+      const readiness = prReadiness?.readiness ?? null;
+      const flow = prReadiness?.flow ?? null;
+      const live = pr.state === "open";
+      // Same rule as the page's toggle: offered while the merge must wait,
+      // or to cancel it once it is set.
+      const autoMerge: ContextMenuAction[] = !readOnly && live && flow?.canWrite && readiness &&
+        (flow.active || (flow.autoMergeAllowed !== false && !readiness.mergeAllowed)) ? [{
+        id: flow.active ? "disable-auto-merge" : "enable-auto-merge",
+        label: flow.active ? tPr("disableAutoMerge") : tPr("enableAutoMerge"),
+        keywords: ["auto-merge", "automatic", "automatique", "merge", "fusion"],
+        icon: <HugeiconsIcon icon={GitMergeIcon} className="size-4" />,
+        onSelect: () => void setAutoMerge(pr.prId, !flow.active),
+      }] : [];
+      // The merge itself opens the page's dialog (method, commit message,
+      // Numo merge) on a fresh read, in the pull request's tab.
+      const merge: ContextMenuAction[] = !readOnly && live && flow?.canWrite && prMenuCanMerge(pr.state, false, readiness) ? [{
+        id: "merge-pr",
+        label: tPr("merge"),
+        keywords: ["merge", "fusionner", "pull request", "pr"],
+        icon: <HugeiconsIcon icon={GitMergeIcon} className="size-4" />,
+        transfersFocus: true,
+        onSelect: () => {
+          requestPullRequestMerge(pr.prId);
+          openPullRequest(pr.prId);
+        },
+      }] : [];
+      return [{
+        id: "pull-request",
+        label: tPr("pullRequestMenu"),
+        keywords: ["pull request", "pr", "review", "github", "gitlab", "merge"],
+        icon: <HugeiconsIcon icon={GitPullRequestIcon} className="size-4" />,
+        children: [
           {
             id: "open-pr",
             label: tAgent("viewPullRequest"),
-            keywords: [
-              "pull request",
-              "pr",
-              "review",
-              "github",
-              "gitlab",
-              "merge",
-            ],
-            icon: <HugeiconsIcon icon={GitPullRequestIcon} className="size-4" />,
-            children: [
-              {
-                id: "open-pr-current-tab",
-                label: tAction("openInCurrentTab"),
-                icon: <HugeiconsIcon icon={ArrowRight01Icon} className="size-4" />,
-                onSelect: () => navigate(`/pull-requests?pr=${pr.prId}`),
-              },
-              {
-                id: "open-pr-new-tab",
-                label: tAction("openInNewTab"),
-                icon: <HugeiconsIcon icon={LinkSquare01Icon} className="size-4" />,
-                onSelect: () => {
-                  const href = `/pull-requests?pr=${pr.prId}`;
-                  if (appTabs) void appTabs.create(href);
-                  else window.open(href, "_blank", "noopener,noreferrer");
-                },
-              },
-            ],
+            keywords: ["open", "ouvrir", "view", "voir"],
+            icon: <HugeiconsIcon icon={LinkSquare01Icon} className="size-4" />,
+            onSelect: () => openPullRequest(pr.prId),
           },
-        ]
-      : [];
+          ...merge,
+          ...autoMerge,
+          ...(readOnly ? [] : linkPr),
+          ...(readOnly ? [] : [{
+            id: "unlink-pr",
+            label: tPr("unlinkIssue"),
+            keywords: ["unlink", "délier", "detach", "pull request", "pr"],
+            icon: <HugeiconsIcon icon={Unlink01Icon} className="size-4" />,
+            separatorBefore: true,
+            variant: "destructive" as const,
+            disabled: isPending,
+            transfersFocus: true,
+            onSelect: () => requestUnlink({ prId: pr.prId, issueId: issue.id, identifier }),
+          }]),
+        ],
+      }];
+    };
     // Right under "Copy as prompt"; a reader may copy it too, since it
     // changes nothing. Same gesture and toast as the command palette's.
     const copyId: ContextMenuAction = {
@@ -212,31 +287,11 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
         );
       },
     };
-    if (readOnly) return [copyId, ...openPr];
+    if (readOnly) return [copyId, ...(pr ? prMenu() : [])];
     return [
       ...agentActions,
       copyId,
-      // Open pull request — only offered when a PR exists for the ticket.
-      ...openPr,
-      ...(pr ? [{
-        id: "unlink-pr",
-        label: tPr("unlinkIssue"),
-        keywords: ["unlink", "detach", "pull request", "pr"],
-        icon: <HugeiconsIcon icon={Cancel01Icon} className="size-4" />,
-        disabled: isPending,
-        transfersFocus: true,
-        onSelect: () => requestUnlink({ prId: pr.prId, issueId: issue.id, identifier }),
-      }] : []),
-      // An issue keeps at most one live pull request (the server refuses a
-      // second), so the entry only shows while it has none.
-      ...(onLinkPullRequest && !(pr && (pr.state === "open" || pr.state === "draft")) ? [{
-        id: "link-pr",
-        label: tPr("linkToPullRequest"),
-        keywords: ["link", "lier", "pull request", "pr", "merge request"],
-        icon: <HugeiconsIcon icon={GitPullRequestIcon} className="size-4" />,
-        transfersFocus: true,
-        onSelect: onLinkPullRequest,
-      }] : []),
+      ...prMenu(),
       ...relationsAction(),
       ...(!issue.objective_id && hasObjectives ? [objectiveAction] : []),
       ...(!issue.due_date ? [dueDateAction] : []),
@@ -263,5 +318,5 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
           ]
         : []),
     ];
-  }, [t, tAgent, tRel, tCommon, tAction, tPr, tBulk, navigate, appTabs, isPending, requestUnlink]);
+  }, [t, tAgent, tRel, tCommon, tAction, tPr, tBulk, isPending, requestUnlink, openPullRequest, setAutoMerge]);
 }

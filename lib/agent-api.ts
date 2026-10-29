@@ -272,8 +272,22 @@ export interface PullRequestReadinessResponse {
   readiness: PullRequestReadiness;
 }
 
+/**
+ * What a board needs to offer the merge gestures of a row (auto-merge state,
+ * whether the repository allows it, whether the viewer may write). The server
+ * gates each gesture again when it runs.
+ */
+export interface PullRequestMergeFlow {
+  /** Auto-merge or a merge queue entry is set on the pull request. */
+  active: boolean;
+  autoMergeAllowed: boolean | null;
+  canWrite: boolean;
+}
+
 export interface PullRequestReadinessBatchResponse {
   readiness: Record<string, PullRequestReadiness>;
+  /** Absent from responses of a server older than this field. */
+  mergeFlow?: Record<string, PullRequestMergeFlow>;
   unavailablePrIds: string[];
   retryStatus?: 403 | 429;
   /** Client-anchored transport deadline, never content freshness or write authority. */

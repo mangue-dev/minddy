@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 23,
-  "sourceRevision": 22,
+  "revision": 24,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-28",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -58,14 +58,15 @@
       "lib/ai-surfaces.ts",
       "components/billing/usage-segment-ui.tsx",
       "docs/security/project-roles.md",
-      "lib/project-roles.ts"
+      "lib/project-roles.ts",
+      "components/agent/model-combobox.tsx"
     ]
   },
   "review": {
-    "revision": 23,
-    "fact": "agent:claude-code/MIN-831 (removal of subtitle credits and sign-offs invented on silence, with cleanup on or off, checked against lib/dictation-hallucinations.ts and lib/server/openrouter-transcribe.ts and their tests; earlier evidence retained in git history)",
-    "language": "agent:claude-code/MIN-831 (es translation of the added sentence; locale register kept; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-28"
+    "revision": 24,
+    "fact": "agent:claude-code (model pickers show the default's model by name instead of App default when that model is in the catalog, and choosing it keeps following the default; checked against components/agent/model-combobox.tsx and components/settings/account-ai-keys-section.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure changed, the diagram does not show picker labels)",
+    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "scheduled-routines"
@@ -86,7 +87,7 @@
       "src": "/documentation/es/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Los proveedores conectados, un proveedor por uso, y el proveedor y modelo de Numo son ajustes separados.",
       "caption": "Cada uso funciona con minddy Cloud o un proveedor conectado. El valor predeterminado de Numo se guarda por proveedor; una conversación puede elegir su propio proveedor y modelo.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -130,7 +131,7 @@ En los ajustes de IA de la cuenta, **Proveedores conectados** muestra minddy Clo
 
 Debajo, **Numo**, **Automatizaciones**, **Dictado por voz** y **Sugerencias** muestran sus usos concretos, como las conversaciones, los títulos de conversaciones y la búsqueda web de Numo, o Smart Fill y voz a texto. Cada uso elige su proveedor, minddy Cloud o uno conectado, y cambia por separado: puedes dejarlo todo en minddy Cloud salvo las conversaciones de Numo. Un uso solo ofrece los proveedores que pueden atenderlo: la transcripción y la búsqueda por significado necesitan un proveedor con esos modelos, y la búsqueda web necesita minddy Cloud o una clave de OpenRouter. Cuando un uso funciona con una de tus claves, su modelo aparece bajo el proveedor: mantén el modelo preseleccionado del proveedor o elige otro. Los cambios se aplican al instante. En una instancia sin minddy Cloud, un proveedor recién conectado atiende cada uso que aún no tiene ninguno.
 
-Para las **Conversaciones** de Numo, elige el proveedor y después **Predeterminado de la app** o un modelo concreto de ese proveedor. Este valor se guarda para tu cuenta y por separado para cada proveedor, entre recargas y sesiones nuevas. En una conversación, la lista de modelos junto al micrófono se abre en los proveedores cuando hay varios disponibles; elige uno para ver sus modelos. La conversación conserva ese proveedor y ese modelo, y las conversaciones que siguen tu valor predeterminado recogen los cambios posteriores de la cuenta. Los turnos ya admitidos conservan su proveedor y su modelo fijados. Un modelo guardado que deja de estar disponible o supera tu plan se rechaza: elige otro modelo o **Predeterminado de la app**. Si se elimina el proveedor de una conversación, Numo te pide elegir otro en lugar de cambiarlo por su cuenta. La exportación e importación de la cuenta incluyen estas preferencias de modelo, sin las credenciales de los proveedores.
+Para las **Conversaciones** de Numo, elige el proveedor y después un modelo de ese proveedor. El selector muestra el modelo predeterminado de la app con su propio nombre, marcado mientras lo sigues; elegirlo mantiene tu ajuste siguiendo el predeterminado de la app, así que sus cambios posteriores se siguen aplicando. **Predeterminado de la app** solo aparece como opción cuando ese modelo no está en el catálogo. Este valor se guarda para tu cuenta y por separado para cada proveedor, entre recargas y sesiones nuevas. En una conversación, la lista de modelos junto al micrófono se abre en los proveedores cuando hay varios disponibles; elige uno para ver sus modelos. La conversación conserva ese proveedor y ese modelo, y las conversaciones que siguen tu valor predeterminado recogen los cambios posteriores de la cuenta. Los turnos ya admitidos conservan su proveedor y su modelo fijados. Un modelo guardado que deja de estar disponible o supera tu plan se rechaza: elige otro modelo o el modelo predeterminado de la app. Si se elimina el proveedor de una conversación, Numo te pide elegir otro en lugar de cambiarlo por su cuenta. La exportación e importación de la cuenta incluyen estas preferencias de modelo, sin las credenciales de los proveedores.
 
 Una clave sin confirmar o inaccesible puede dejar las llamadas generales de IA compatibles en la cuota de Minddy cuando la IA gestionada está configurada. Tu proveedor factura las llamadas realizadas con su clave. Las claves personales validadas y el trabajo financiado por Minddy siguen las [reglas de presupuesto siguientes](#consumption).
 

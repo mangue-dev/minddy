@@ -850,6 +850,7 @@ function ProjectBoard() {
               onOpenIssue={handleOpenIssue}
               onOpenIssueById={openIssueById}
               onAddRelation={handleAddRelation}
+              onRemoveRelation={handleRemoveRelation}
               onOpenPlan={handleOpenPlan}
               onCreateIssue={openCreate}
               onAskNumo={handleAskNumoForIssues}

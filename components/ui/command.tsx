@@ -6,6 +6,8 @@ import { Command as CommandPrimitive } from "cmdk"
 import { cn } from "@/lib/utils"
 import { COARSE_ROW } from "./touch-target"
 import { MobileSheetScrollArea } from "./mobile-sheet"
+import { useListScrollFade, useMergedRef } from "./menu-scroll-fade"
+import { useMobileLayout } from "@/lib/use-mobile-layout"
 import {
   InputGroup,
   InputGroupAddon,
@@ -67,8 +69,15 @@ function CommandInput({
 /** Every mobile option list uses the same scroll fade, including model catalogs. */
 function CommandList({
   className,
+  ref,
+  style,
+  onScroll,
   ...props
 }: React.ComponentProps<typeof CommandPrimitive.List>) {
+  // Rows hidden past an edge fade out there; the mobile sheet draws its own.
+  const mobile = useMobileLayout() === true
+  const fade = useListScrollFade<HTMLDivElement>()
+  const mergedRef = useMergedRef(ref, mobile ? undefined : fade.ref)
   return (
     <MobileSheetScrollArea asChild>
       <CommandPrimitive.List
@@ -77,6 +86,12 @@ function CommandList({
           "no-scrollbar max-h-72 scroll-py-1 overflow-x-hidden overflow-y-auto outline-none",
           className
         )}
+        ref={mergedRef}
+        style={mobile ? style : { ...fade.scrollProps.style, ...style }}
+        onScroll={(event) => {
+          onScroll?.(event)
+          if (!mobile) fade.scrollProps.onScroll()
+        }}
         {...props}
       />
     </MobileSheetScrollArea>

@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 21,
-  "sourceRevision": 21,
+  "revision": 22,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -68,13 +68,14 @@
       "lib/palette-picker.ts",
       "components/palette-picker-rows.tsx",
       "components/mobile-navigation.tsx",
-      "components/mobile-nav-actions.tsx"
+      "components/mobile-nav-actions.tsx",
+      "lib/keyboard/typeahead.ts"
     ]
   },
   "review": {
-    "revision": 21,
-    "fact": "agent:claude-code (mobile bottom bar reordered (MIN-837): new sentence on the bar order and Home in the drawer checked against components/mobile-navigation.tsx, components/mobile-nav-actions.tsx and the drawer sections of components/app-shell-chrome.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures show the desktop layout)",
-    "language": "agent:claude-code (fr new sentence with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 22,
+    "fact": "agent:claude-code (pointer to the Numo type-ahead on Home and in the expanded Numo panel, checked against lib/keyboard/typeahead.ts and lib/keyboard/keyboard-context.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show this behavior)",
+    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -96,7 +97,7 @@
       "src": "/documentation/fr/work-navigation.png",
       "alt": "Navigation du projet à côté du tableau de tickets de démonstration.",
       "caption": "La barre du projet donne accès aux tickets, objectifs, pages et arrivées en triage.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -112,7 +113,7 @@
       "src": "/documentation/fr/work-search.png",
       "alt": "Résultats de recherche pour l’identifiant d’un ticket de démonstration.",
       "caption": "La palette retrouve le ticket par identifiant avec les pages du projet ; ouvrir un résultat conserve ses règles d’accès.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -172,7 +173,7 @@ Dès que vous tapez, la palette trouve aussi les routines, les pull requests, le
 
 Le choix de ce que vous liez se fait aussi dans la palette. Ajouter une relation, lier un ticket à une pull request ou une pull request à un ticket, et joindre une page comme ressource l’ouvrent sur les seuls éléments que vous pouvez choisir, et son champ de recherche indique ce que vous cherchez. Pour une relation, choisissez d’abord son type dans le menu ; la palette liste ensuite les tickets et objectifs qui peuvent la prendre. Choisir un élément le lie ; Échap ferme la palette sans rien lier.
 
-Utilisez Commande+K sur macOS ou Ctrl+K sur Windows/Linux pour ouvrir la palette ; Commande/Ctrl+P constitue une autre combinaison de l’application. Hors d’un champ de texte, ? ouvre l’aide des raccourcis et C la création de ticket. Sur une carte survolée ou les commandes de détail compatibles, S ouvre l’état, P la priorité, E l’effort, A le responsable, L les catégories, D l’échéance et O l’objectif. R ajoute une relation depuis les mêmes endroits, sur la page d’un objectif et dans le formulaire de nouveau ticket : choisissez le type de relation, puis l’autre ticket ou objectif. Si la carte fait partie d’une sélection, ces touches modifient tous les tickets sélectionnés ; le responsable, l’objectif, les catégories et les relations ne s’appliquent qu’aux tickets sélectionnés du projet de cette carte. Maj+C mène à un champ de commentaire prêt pour la saisie, le fil défilé jusqu’à son dernier message : celui d’une carte de ticket survolée ou d’une ligne survolée dans la liste des objectifs, des retours, des pull requests, des pages ou du triage, ou, sans rien survoler, celui du ticket, de l’objectif, du retour, de la pull request ou de la page à l’écran. Une page ouvre pour cela son panneau **Activité**. Maj+C ne concerne que cet élément, même si la carte fait partie d’une sélection. Sur la page d’un objectif et dans le formulaire de nouvel objectif, S ouvre son état, A son responsable, D sa date cible et C sa couleur ; à ces endroits, C ne crée pas de ticket. Ces touches seules n’interceptent pas la saisie dans un champ, une zone de texte ou un éditeur. Les séquences G puis H (Accueil) et G puis I (Boîte de réception) utilisent deux touches successives ; G puis W ouvre les pages uniquement dans le contexte d’un projet.
+Utilisez Commande+K sur macOS ou Ctrl+K sur Windows/Linux pour ouvrir la palette ; Commande/Ctrl+P constitue une autre combinaison de l’application. Hors d’un champ de texte, ? ouvre l’aide des raccourcis et C la création de ticket. Sur une carte survolée ou les commandes de détail compatibles, S ouvre l’état, P la priorité, E l’effort, A le responsable, L les catégories, D l’échéance et O l’objectif. R ajoute une relation depuis les mêmes endroits, sur la page d’un objectif et dans le formulaire de nouveau ticket : choisissez le type de relation, puis l’autre ticket ou objectif. Si la carte fait partie d’une sélection, ces touches modifient tous les tickets sélectionnés ; le responsable, l’objectif, les catégories et les relations ne s’appliquent qu’aux tickets sélectionnés du projet de cette carte. Maj+C mène à un champ de commentaire prêt pour la saisie, le fil défilé jusqu’à son dernier message : celui d’une carte de ticket survolée ou d’une ligne survolée dans la liste des objectifs, des retours, des pull requests, des pages ou du triage, ou, sans rien survoler, celui du ticket, de l’objectif, du retour, de la pull request ou de la page à l’écran. Une page ouvre pour cela son panneau **Activité**. Maj+C ne concerne que cet élément, même si la carte fait partie d’une sélection. Sur la page d’un objectif et dans le formulaire de nouvel objectif, S ouvre son état, A son responsable, D sa date cible et C sa couleur ; à ces endroits, C ne crée pas de ticket. Ces touches seules n’interceptent pas la saisie dans un champ, une zone de texte ou un éditeur. Les séquences G puis H (Accueil) et G puis I (Boîte de réception) utilisent deux touches successives ; G puis W ouvre les pages uniquement dans le contexte d’un projet. Sur l’**Accueil** et dans le panneau Numo agrandi, une rafale rapide de touches s’écrit plutôt dans le champ de saisie de Numo, et une touche seule lance son raccourci après une courte pause ([écrire à Numo](/docs/numo#work-with-numo)).
 
 Pour atteindre un réglage, tapez son nom dans la palette de commandes ou dans le champ de filtre en haut de la barre latérale des paramètres. Les deux trouvent chaque carte de réglages et les réglages individuels, comme la langue, le thème, chaque palette, la transparence et les deux interrupteurs de **Démarrer un ticket**. Choisir un résultat ouvre le bon onglet des paramètres, fait défiler jusqu’à la carte ou la ligne et la met en évidence. Commande+T sur macOS ou Ctrl+T sur Windows/Linux ouvre la palette du nouvel onglet ; un réglage choisi depuis celle-ci s’ouvre dans un nouvel onglet de l’app. Dans un projet, elle propose aussi **Nouvelle page**, qui crée une page dans ce projet et l’ouvre dans un nouvel onglet. Les mots-clés anglais et français fonctionnent quelle que soit la langue de l’interface.
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUpRight01Icon, CreditCardIcon, Delete02Icon, HelpCircleIcon, HistoryIcon, Home01Icon, LogOutIcon, Megaphone01Icon, Settings01Icon, Shield01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUpRight01Icon, Book02Icon, CreditCardIcon, Delete02Icon, HelpCircleIcon, HistoryIcon, Home01Icon, LogOutIcon, Megaphone01Icon, Settings01Icon, Shield01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
 import { useMobileAccountIdentity } from "@/components/mobile-account";
 import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -821,7 +821,7 @@ function ChangelogButton({
         <MobileSheetScrollArea>
           <a href={documentationHref} target="_blank" rel="noopener noreferrer" onClick={() => handleMenuOpenChange(false)}
             className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm hover:bg-muted">
-            <AppIcon icon={HelpCircleIcon} className="size-[18px] shrink-0" />
+            <AppIcon icon={Book02Icon} className="size-[18px] shrink-0" />
             <span className="min-w-0 flex-1 truncate">{t("documentation")}</span>
             <AppIcon icon={ArrowUpRight01Icon} className="size-4 shrink-0 text-muted-foreground" />
           </a>
@@ -867,7 +867,7 @@ function ChangelogButton({
         >
           <DropdownMenuItem asChild>
             <a href={documentationHref} target="_blank" rel="noopener noreferrer">
-              <HugeiconsIcon icon={HelpCircleIcon} className="size-4 shrink-0 text-muted-foreground" />
+              <HugeiconsIcon icon={Book02Icon} className="size-4 shrink-0 text-muted-foreground" />
               <span className="min-w-0 flex-1 truncate">{t("documentation")}</span>
               <HugeiconsIcon icon={ArrowUpRight01Icon} className="ml-auto size-4 shrink-0 text-muted-foreground" aria-hidden />
             </a>

@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 12,
+  "revision": 13,
+  "sourceRevision": 13,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -53,13 +53,14 @@
       "lib/instance-variables.ts",
       "lib/server/instance-variables.ts",
       "app/api/admin/instance-variables/route.ts",
-      "components/admin/admin-instance-dashboard.tsx"
+      "components/admin/admin-instance-dashboard.tsx",
+      "components/agent/model-combobox.tsx"
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:claude-code (MIN-847 Instance tab section checked against lib/instance-variables.ts, lib/server/instance-variables.ts and app/api/admin/instance-variables/route.ts; figure captured on 2026-10-29 from a disposable local self-hosted instance with its own test administrator, every write blocked, and inspected); agent:claude-code (MIN-829 tabs, accounts, costs, model categories, configuration file and Numo admin tools checked against lib/admin-tabs.ts, lib/ai-model-config.ts, lib/ai-model-config-file.ts, lib/server/admin-model-config.ts, lib/server/finance.ts, lib/admin-costs.ts, lib/server/retention.ts and lib/server/assistant/admin-tools.ts, including admin_get_costs; both figures recaptured on 2026-10-29 with captures/shots/documentation-admin from a local candidate against the preview capture admin, every write blocked, and inspected); agent:claude-code (MIN-798 Smart-fill titles model paragraph checked against lib/ai-model-config.ts, lib/ai-surfaces.ts and lib/server/smart-fill-title.ts: automations group, fallback deepseek/deepseek-v4-flash, not answered by the decision model; no figure changed); agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:claude-code (fr MIN-829 sections with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-798 Smart-fill titles model paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "revision": 13,
+    "fact": "agent:claude-code (per-task model pickers show the category's model by name instead of Default model when that model is in the catalog, and choosing it makes the task follow the category again; checked against components/agent/model-combobox.tsx and components/admin/admin-models-dashboard.tsx; not checked in the running app; no figure recaptured, the Models figure may show the former picker wording); agent:claude-code (MIN-847 Instance tab section checked against lib/instance-variables.ts, lib/server/instance-variables.ts and app/api/admin/instance-variables/route.ts; figure captured on 2026-10-29 from a disposable local self-hosted instance with its own test administrator, every write blocked, and inspected); agent:claude-code (MIN-829 tabs, accounts, costs, model categories, configuration file and Numo admin tools checked against lib/admin-tabs.ts, lib/ai-model-config.ts, lib/ai-model-config-file.ts, lib/server/admin-model-config.ts, lib/server/finance.ts, lib/admin-costs.ts, lib/server/retention.ts and lib/server/assistant/admin-tools.ts, including admin_get_costs; both figures recaptured on 2026-10-29 with captures/shots/documentation-admin from a local candidate against the preview capture admin, every write blocked, and inspected); agent:claude-code (MIN-798 Smart-fill titles model paragraph checked against lib/ai-model-config.ts, lib/ai-surfaces.ts and lib/server/smart-fill-title.ts: automations group, fallback deepseek/deepseek-v4-flash, not answered by the decision model; no figure changed); agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-829 sections with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-798 Smart-fill titles model paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -78,7 +79,7 @@
       "src": "/documentation/fr/instance-administration-overview.png",
       "alt": "Onglet Comptes avec le nombre de comptes et la recherche d’un compte par adresse email exacte.",
       "caption": "Comptes affiche le nombre de comptes et la recherche de support ; la capture provient d’une instance de démonstration.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -95,7 +96,7 @@
       "src": "/documentation/fr/instance-administration-models.png",
       "alt": "Onglet Modèles avec un modèle par défaut par catégorie et les modèles par tâche repliés.",
       "caption": "Modèles affiche un modèle par défaut par catégorie ; les modèles par tâche restent repliés. Aucun réglage de modèle ou de fournisseur n’a été modifié pour cette capture.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -112,7 +113,7 @@
       "src": "/documentation/fr/instance-administration-instance.png",
       "alt": "Onglet Instance avec la source de chaque variable, une clé OpenRouter masquée définie ici et les adresses des administrateurs issues du fichier.",
       "caption": "Instance indique d’où vient chaque valeur ; les secrets ne gardent que leurs derniers caractères. Cette capture provient d’une instance auto-hébergée locale jetable.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -153,7 +154,7 @@ La console compte trois onglets : **Comptes**, **Coûts**, **Modèles** et, là 
 
 ## Choisir les modèles par catégorie {#models}
 
-Chaque carte de **Modèles** a un **Modèle par défaut** pour sa catégorie : **Assistant** (Numo, titres de conversation, recherche web), **Automatisations** (Smart Fill et ses titres, Smart Assign, décisions de relation, correspondance des imports CSV, découpage des briefs, messages de commit de fusion), **Embeddings** (embeddings des tickets et des retours) et **Retours et site public** (analyse des retours, boîte à questions de la FAQ). Une tâche suit le modèle par défaut de sa catégorie jusqu’à ce que vous lui donniez son propre modèle dans **Modèles par tâche** ; choisissez **Modèle par défaut** dans son sélecteur pour qu’elle suive à nouveau la catégorie. Tant que le modèle par défaut d’une catégorie n’est pas renseigné, chaque tâche garde sa propre valeur intégrée. **Niveau de raisonnement**, **Modèle de décision** et les deux réglages **Voix** ont leur propre ligne. Renseigner le modèle par défaut d’une catégorie libère les tâches qui portent encore leur valeur intégrée, comme celles qu’une nouvelle instance reçoit à l’installation ; une tâche réglée sur un autre modèle le garde. **Modèles conseillés** fixe la courte liste sur laquelle s’ouvre chaque sélecteur de modèle. **Clés personnelles** est replié en bas de page : il ne concerne que les membres qui utilisent leur propre clé de fournisseur.
+Chaque carte de **Modèles** a un **Modèle par défaut** pour sa catégorie : **Assistant** (Numo, titres de conversation, recherche web), **Automatisations** (Smart Fill et ses titres, Smart Assign, décisions de relation, correspondance des imports CSV, découpage des briefs, messages de commit de fusion), **Embeddings** (embeddings des tickets et des retours) et **Retours et site public** (analyse des retours, boîte à questions de la FAQ). Une tâche suit le modèle par défaut de sa catégorie jusqu’à ce que vous lui donniez son propre modèle dans **Modèles par tâche** ; pour qu’elle suive à nouveau la catégorie, choisissez dans son sélecteur le modèle de la catégorie, affiché sous son propre nom et coché tant que la tâche le suit. **Modèle par défaut** ne reste une option que si ce modèle ne figure pas au catalogue. Tant que le modèle par défaut d’une catégorie n’est pas renseigné, chaque tâche garde sa propre valeur intégrée. **Niveau de raisonnement**, **Modèle de décision** et les deux réglages **Voix** ont leur propre ligne. Renseigner le modèle par défaut d’une catégorie libère les tâches qui portent encore leur valeur intégrée, comme celles qu’une nouvelle instance reçoit à l’installation ; une tâche réglée sur un autre modèle le garde. **Modèles conseillés** fixe la courte liste sur laquelle s’ouvre chaque sélecteur de modèle. **Clés personnelles** est replié en bas de page : il ne concerne que les membres qui utilisent leur propre clé de fournisseur.
 
 ## Exporter et importer la configuration des modèles {#models-file}
 

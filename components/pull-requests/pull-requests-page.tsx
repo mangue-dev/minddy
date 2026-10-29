@@ -1,5 +1,6 @@
 "use client";
 
+import { takePullRequestMerge, usePrMergeIntentStore } from "@/lib/pr-merge-intent";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 
@@ -651,6 +652,12 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
     remaining.delete("action");
     router.replace(`/pull-requests${remaining.size ? `?${remaining}` : ""}`, { scroll: false });
   }, [tabActive, actionParam, prParam, router, searchParams]);
+  // The same request from a board card (lib/pr-merge-intent.ts).
+  const boardMergePrId = usePrMergeIntentStore((state) => state.prId);
+  useEffect(() => {
+    if (!tabActive || !prParam || boardMergePrId !== prParam) return;
+    if (takePullRequestMerge(prParam)) setMergeIntentPrId(prParam);
+  }, [tabActive, prParam, boardMergePrId]);
   const prContext = usePrContextActions({
     pullRequests,
     onOptimisticStateChange: applyOptimisticState,

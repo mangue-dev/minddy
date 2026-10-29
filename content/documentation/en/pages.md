@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 21,
-  "sourceRevision": 21,
+  "revision": 22,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -104,12 +104,13 @@
       "lib/selection-menu-visibility.test.ts",
       "lib/mention-menu.ts",
       "components/pages/block-menu.tsx",
-      "lib/action-menu-search.ts"
+      "lib/action-menu-search.ts",
+      "components/pages/block-drag.ts"
     ]
   },
   "review": {
-    "revision": 21,
-    "fact": "agent:claude-code (block menu search field reaching every action, block types and colors included, with submenu entries shown behind their path such as Turn into › Heading 1 (MIN-845), checked against components/pages/block-menu.tsx, components/issue-context-menu.tsx and lib/action-menu-search.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "revision": 22,
+    "fact": "agent:claude-code (list items as blocks with their own handle: handle left of the list, + adding an item of the same kind below or above with Alt/Option-click and the / menu open, dragging among lists of the same kind of item including nested lists, emptied lists removed, handle menu acting on the item or the selection; checked against components/pages/block-gutter.tsx, components/pages/block-actions.ts and components/pages/block-drag.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show list item handles)",
     "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
@@ -146,7 +147,7 @@
       "src": "/documentation/en/page-create-menu.png",
       "alt": "Page creation menu offering New page and New database.",
       "caption": "Use the project page controls to choose a document or a database.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -162,7 +163,7 @@
       "src": "/documentation/en/page-editor.png",
       "alt": "Demonstration page with headings, paragraphs, task checkboxes and an issue mention.",
       "caption": "Headings, task blocks and the AUR-2 mention keep the page structured. This is demonstration content.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -178,7 +179,7 @@
       "src": "/documentation/en/page-comments.png",
       "alt": "Page activity dialog with a demonstration edit event and an empty comment composer.",
       "caption": "Read page activity and write a comment in the composer. No comment has been submitted in this example.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -194,7 +195,7 @@
       "src": "/documentation/en/page-file-states.png",
       "alt": "Demo page with an unfinished upload and a saved 67-byte file offering Download.",
       "caption": "Check the actual file state: the second attachment is available, while the first unfinished upload is not.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -210,7 +211,7 @@
       "src": "/documentation/en/page-history-preview.png",
       "alt": "Versions tab with an expanded earlier state, its author, Restore and the 30-day retention notice.",
       "caption": "Preview a saved state and compare it with the current page before restoring.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -226,7 +227,7 @@
       "src": "/documentation/en/page-publish.png",
       "alt": "Page publication dialog with Private selected and password or bearer-link alternatives.",
       "caption": "Private keeps the page within the project. Review the intended audience before changing publication.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -242,7 +243,7 @@
       "src": "/documentation/en/page-export.png",
       "alt": "Document export menu with Markdown (.md) and Print / PDF.",
       "caption": "Choose Markdown to download the document, or Print / PDF to open the printable view.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -258,7 +259,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -331,6 +332,8 @@ Pages, descriptions, comments and the task notebook share the same editor. Selec
 Shift+Enter starts a new line inside the same block. Command/Ctrl+Enter does not insert a line break: in a comment or another composer it sends, whichever send shortcut you chose in your [preferences](/docs/accounts#preferences), and if you chose Enter as the send shortcut, Enter sends too.
 
 To select whole blocks, drag from one block into another, or draw a selection rectangle from outside the text: press in the margin beside it or in the empty space below the page, then drag over the blocks. Every block the rectangle touches is selected; a click there without dragging still puts the cursor on that line, and Escape cancels the rectangle. Every block the drag reaches is highlighted with rounded corners, in the color of selected text. When a single block is selected, the selection toolbar opens above it: its actions (**Turn into**, **Color**, **Bold** and the other formats, **Copy**, **Ask Numo**, **Comment**) apply to the block, and after **Turn into** it stays selected so another action can follow. With several blocks selected, the toolbar stays hidden: open the menu of a selected block's handle, which acts on all of them. Shift-click another block, or press Shift+Up or Shift+Down at the edge of a block, to extend the selection by whole blocks. Escape selects the block you are writing in, and Escape again clears the selection. Command+A on macOS or Ctrl+A on Windows/Linux first selects the text of the block you are in, a code block included, and pressed again selects every block. With blocks selected, the Up and Down arrows select the block above or below, Shift+Up and Shift+Down add or remove blocks, Backspace or Delete deletes them, Command/Ctrl+C copies them, Command/Ctrl+X cuts them, and Enter on a single block puts the cursor at its end; typing does nothing. The block menu acts on every selected block. Type in the block menu's search field to reach any of its actions, block types and colors included: an entry from a submenu shows its path, such as **Turn into** › **Heading 1**. Images, files, code blocks, equations, dividers, mentions and inline code show the same highlight when they are selected, on their own or within a selection. While you write or edit a comment, Escape keeps closing or canceling it. On a touch screen, long-press still selects text, and a drag does not select blocks.
+
+In a bulleted, numbered or task list, each item is a block with its own handle, shown left of its list when you hover the item; a list has no handle of its own, so select its items to act on all of them, and the handle menu acts on the item or on every selected item. The handle's + adds an item of the same kind below, or above with Alt/Option-click, with the `/` menu open. Dragging the handle moves the item, or the selected items, into any list that takes that kind of item, nested lists included: a bulleted item can go into a numbered list, a task only among tasks, and a list emptied this way is removed.
 
 On a phone, the editor shows no block handles or selection toolbar, and typing `@` leaves a plain character. While an editor has focus, a floating toolbar sits above the keyboard and hides when the keyboard closes: **Insert a block** (+) lists this editor's blocks, in the same sections as the `/` menu, and inserts the chosen one at the cursor, like `/`; **Mention** (@) lists people, issues, objectives and pages to mention, grouped by type; then come **Bold**, **Italic**, **Strikethrough**, **Code**, **Color** (a sheet for the text or background color), **Add link**, **Outdent** and **Indent** in a list, **Comment** on a page, and **Hide keyboard**, which stays pinned at the right end. A bottom sheet you type in grows to the full screen height, and the line you are typing stays above the keyboard. Long-press selects text in an editor, and the toolbar and its sheets also work in the task notebook. The bottom navigation hides while any text field has focus, such as a page title or a comment. On a touch screen, **Add icon** is always visible on a page.
 

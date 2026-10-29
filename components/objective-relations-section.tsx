@@ -383,7 +383,9 @@ export function ObjectiveRelationsSection({
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-96 max-w-[calc(100vw-2rem)] p-3">
-        <div className="max-h-96 overflow-y-auto">
+        {/* The scroll box spans the popover's padding: the add trigger keeps
+            the sidebar's `-mr-1.5`, which a box at the content edge clipped. */}
+        <div className="-mx-3 max-h-96 overflow-y-auto px-3">
           {content}
           {!resolved.length && (
             <p className="py-2 text-sm text-muted-foreground">{t("empty")}</p>

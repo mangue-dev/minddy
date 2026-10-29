@@ -176,9 +176,11 @@ export function ModelCombobox({
     if (recommended.length === 0) return [];
     const byId = new Map(models.map((m) => [m.id, m]));
     const list = recommended.map((id) => byId.get(id)).filter((m): m is AgentModel => !!m);
-    const current = value ? byId.get(value) : undefined;
-    return current && !recommended.includes(value) ? [...list, current] : list;
-  }, [models, recommended, value]);
+    // The chosen model, or the default it follows, stays listed and checked.
+    const shownId = value || shownDefaultModelId || "";
+    const current = shownId ? byId.get(shownId) : undefined;
+    return current && !recommended.includes(shownId) ? [...list, current] : list;
+  }, [models, recommended, value, shownDefaultModelId]);
 
   // Short list as long as there is advice, we don't seek and we don't have
   // not unfolded.
@@ -252,39 +254,46 @@ export function ModelCombobox({
     setView("models");
   };
 
+  /**
+   * The default a picker follows is shown by its model's own name, never as a
+   * “default of …” option: its catalog line stands for it, checked while the
+   * setting follows the default, and choosing it keeps following the default.
+   * The labeled option remains only when that model is not in the catalog.
+   */
+  const defaultInList = allowDefault && !!shownDefaultModelId && models.some((m) => m.id === shownDefaultModelId);
+  const isDefaultLine = (m: AgentModel) => defaultInList && m.id === shownDefaultModelId;
+
   /** A model line — rendered as is, or in the tips group. */
   const modelRow = (m: AgentModel) => (
     <CommandItem
       key={m.id}
       value={m.id}
       // Outside the ceiling: the line remains READABLE (cmdk opacity) but is neither
-      // cliquable ni navigable au clavier.
-      disabled={!allowed(m)}
-      onSelect={() => select(m.id)}
+      // cliquable ni navigable au clavier. The inherited default was already validated.
+      disabled={!isDefaultLine(m) && !allowed(m)}
+      onSelect={() => select(isDefaultLine(m) ? "" : m.id)}
     >
       {logoFor(m.id)}
       <span className="flex-1 truncate">{formatModelName(m.id)}</span>
-      {multiplierBadge(m)}
-      <HugeiconsIcon icon={CheckIcon} className={cn("size-4 shrink-0", shownValue === m.id ? "opacity-100" : "opacity-0")} />
+      {multiplierBadge(m, isDefaultLine(m))}
+      <HugeiconsIcon icon={CheckIcon} className={cn("size-4 shrink-0", shownValue === m.id || (shownValue === "" && isDefaultLine(m)) ? "opacity-100" : "opacity-0")} />
     </CommandItem>
   );
 
-  // Rendering of the “default” option: wording + resolved model (logo + name) separately.
-  // Its multiplier is displayed like that of the others, but it is never
-  // grayed out because the inherited value has already been validated.
-  const defaultEntry = defaultModelId ? models.find((m) => m.id === defaultModelId) : undefined;
-  const defaultRow = (
+  // The trigger names the model the default resolves to, as for a chosen one;
+  // the wording only shows while that model is unknown.
+  const defaultRow = defaultModelId ? (
+    <span className="flex min-w-0 items-center gap-2">
+      {logoFor(defaultModelId)}
+      <span className="truncate">{formatModelName(defaultModelId)}</span>
+    </span>
+  ) : (
     <span className="flex min-w-0 flex-1 items-center gap-2">
-      {defaultModelId ? logoFor(defaultModelId) : null}
       <span className="truncate text-muted-foreground">{defaultLabel}</span>
-      {defaultModelId ? (
-        <span className="truncate text-xs text-muted-foreground/70">
-          {formatModelName(defaultModelId)}
-        </span>
-      ) : null}
-      {defaultEntry ? <span className="ml-auto">{multiplierBadge(defaultEntry, true)}</span> : null}
     </span>
   );
+  // The labeled option, kept for a default outside the catalog. Its multiplier
+  // is never grayed out because the inherited value has already been validated.
   const listDefaultEntry = shownDefaultModelId ? models.find((m) => m.id === shownDefaultModelId) : undefined;
   const listDefaultRow = (
     <span className="flex min-w-0 flex-1 items-center gap-2">
@@ -440,7 +449,7 @@ export function ModelCombobox({
  A horizontal padding alone left the last option 4px from the bottom
  and 8px from the sides, and no ray can be right below there. */}
           <CommandList className="p-1">
-            {allowDefault ? (
+            {allowDefault && !defaultInList ? (
               <CommandItem value="__default__" onSelect={() => select("")}>
                 {listDefaultRow}
                 <HugeiconsIcon icon={CheckIcon} className={cn("size-4 shrink-0", shownValue ? "opacity-0" : "opacity-100")} />

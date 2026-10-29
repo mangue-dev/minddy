@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 12,
+  "revision": 13,
+  "sourceRevision": 13,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -53,13 +53,14 @@
       "lib/instance-variables.ts",
       "lib/server/instance-variables.ts",
       "app/api/admin/instance-variables/route.ts",
-      "components/admin/admin-instance-dashboard.tsx"
+      "components/admin/admin-instance-dashboard.tsx",
+      "components/agent/model-combobox.tsx"
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:claude-code (MIN-847 Instance tab section checked against lib/instance-variables.ts, lib/server/instance-variables.ts and app/api/admin/instance-variables/route.ts; figure captured on 2026-10-29 from a disposable local self-hosted instance with its own test administrator, every write blocked, and inspected); agent:claude-code (MIN-829 tabs, accounts, costs, model categories, configuration file and Numo admin tools checked against lib/admin-tabs.ts, lib/ai-model-config.ts, lib/ai-model-config-file.ts, lib/server/admin-model-config.ts, lib/server/finance.ts, lib/admin-costs.ts, lib/server/retention.ts and lib/server/assistant/admin-tools.ts, including admin_get_costs; both figures recaptured on 2026-10-29 with captures/shots/documentation-admin from a local candidate against the preview capture admin, every write blocked, and inspected); agent:claude-code (MIN-798 Smart-fill titles model paragraph checked against lib/ai-model-config.ts, lib/ai-surfaces.ts and lib/server/smart-fill-title.ts: automations group, fallback deepseek/deepseek-v4-flash, not answered by the decision model; no figure changed); agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:claude-code (pt-BR MIN-829 sections with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-798 Smart-fill titles model paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "revision": 13,
+    "fact": "agent:claude-code (per-task model pickers show the category's model by name instead of Default model when that model is in the catalog, and choosing it makes the task follow the category again; checked against components/agent/model-combobox.tsx and components/admin/admin-models-dashboard.tsx; not checked in the running app; no figure recaptured, the Models figure may show the former picker wording); agent:claude-code (MIN-847 Instance tab section checked against lib/instance-variables.ts, lib/server/instance-variables.ts and app/api/admin/instance-variables/route.ts; figure captured on 2026-10-29 from a disposable local self-hosted instance with its own test administrator, every write blocked, and inspected); agent:claude-code (MIN-829 tabs, accounts, costs, model categories, configuration file and Numo admin tools checked against lib/admin-tabs.ts, lib/ai-model-config.ts, lib/ai-model-config-file.ts, lib/server/admin-model-config.ts, lib/server/finance.ts, lib/admin-costs.ts, lib/server/retention.ts and lib/server/assistant/admin-tools.ts, including admin_get_costs; both figures recaptured on 2026-10-29 with captures/shots/documentation-admin from a local candidate against the preview capture admin, every write blocked, and inspected); agent:claude-code (MIN-798 Smart-fill titles model paragraph checked against lib/ai-model-config.ts, lib/ai-surfaces.ts and lib/server/smart-fill-title.ts: automations group, fallback deepseek/deepseek-v4-flash, not answered by the decision model; no figure changed); agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-829 sections with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-798 Smart-fill titles model paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -78,7 +79,7 @@
       "src": "/documentation/pt-BR/instance-administration-overview.png",
       "alt": "Aba Contas com o número de contas e a busca de uma conta pelo e-mail exato.",
       "caption": "Contas mostra o número de contas e a busca de suporte; a captura vem de uma instância de demonstração.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -95,7 +96,7 @@
       "src": "/documentation/pt-BR/instance-administration-models.png",
       "alt": "Aba Modelos com um modelo padrão por categoria e os modelos por tarefa recolhidos.",
       "caption": "Modelos mostra um modelo padrão por categoria; os modelos por tarefa ficam recolhidos. Nenhuma configuração de modelo ou provedor foi alterada para esta captura.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -112,7 +113,7 @@
       "src": "/documentation/pt-BR/instance-administration-instance.png",
       "alt": "Aba Instância com a origem de cada variável, uma chave do OpenRouter mascarada definida aqui e os endereços de administradores vindos do arquivo.",
       "caption": "Instância mostra de onde vem cada valor; os segredos mostram só os últimos caracteres. Esta captura vem de uma instância auto-hospedada local descartável.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -153,7 +154,7 @@ O console tem três abas: **Contas**, **Custos**, **Modelos** e, onde for permit
 
 ## Escolher os modelos por categoria {#models}
 
-Cada cartão de **Modelos** tem um **Modelo padrão** para sua categoria: **Assistente** (Numo, títulos de conversa, busca na web), **Automações** (Smart Fill e seus títulos, Smart Assign, decisões de relação, mapeamento de importações CSV, divisão de resumos, mensagens de commit ao mesclar), **Embeddings** (embeddings de tickets e de feedback) e **Feedback e site público** (análise de feedback, caixa de perguntas da FAQ). Uma tarefa segue o modelo padrão da sua categoria até você dar a ela um modelo próprio em **Modelos por tarefa**; escolha **Modelo padrão** no seletor para que ela volte a seguir a categoria. Enquanto o modelo padrão de uma categoria não está definido, cada tarefa mantém seu próprio padrão integrado. **Nível de raciocínio**, **Modelo de decisão** e as duas configurações de **Voz** têm linhas próprias. Definir o modelo padrão de uma categoria libera as tarefas que ainda têm o padrão integrado, como as que uma instância nova recebe; uma tarefa configurada com outro modelo o mantém. **Modelos recomendados** define a lista curta com que cada seletor de modelo abre. **Chaves pessoais** fica recolhida no fim: só diz respeito a membros que usam a própria chave do provedor.
+Cada cartão de **Modelos** tem um **Modelo padrão** para sua categoria: **Assistente** (Numo, títulos de conversa, busca na web), **Automações** (Smart Fill e seus títulos, Smart Assign, decisões de relação, mapeamento de importações CSV, divisão de resumos, mensagens de commit ao mesclar), **Embeddings** (embeddings de tickets e de feedback) e **Feedback e site público** (análise de feedback, caixa de perguntas da FAQ). Uma tarefa segue o modelo padrão da sua categoria até você dar a ela um modelo próprio em **Modelos por tarefa**; para que ela volte a seguir a categoria, escolha no seletor o modelo da categoria, mostrado pelo próprio nome e marcado enquanto a tarefa o segue. **Modelo padrão** só continua como opção quando esse modelo não está no catálogo. Enquanto o modelo padrão de uma categoria não está definido, cada tarefa mantém seu próprio padrão integrado. **Nível de raciocínio**, **Modelo de decisão** e as duas configurações de **Voz** têm linhas próprias. Definir o modelo padrão de uma categoria libera as tarefas que ainda têm o padrão integrado, como as que uma instância nova recebe; uma tarefa configurada com outro modelo o mantém. **Modelos recomendados** define a lista curta com que cada seletor de modelo abre. **Chaves pessoais** fica recolhida no fim: só diz respeito a membros que usam a própria chave do provedor.
 
 ## Exportar e importar a configuração de modelos {#models-file}
 

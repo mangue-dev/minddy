@@ -485,8 +485,12 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
       projectId={projectId}
       projectKey={project.key}
       onCreate={async (input) => {
-        const objective = await createObjective(input);
-        if (browse) browse.onSelect(`/projects/${projectId}/objectives?open=${encodeURIComponent(objective.id)}`);
+        const { objective, persisted } = createObjective(input);
+        // Its page opens once the server has the row it reads.
+        persisted.then(
+          (created) => browse?.onSelect(`/projects/${projectId}/objectives?open=${encodeURIComponent(created.id)}`),
+          () => undefined,
+        );
         return objective;
       }}
       onUpdate={updateObjective}

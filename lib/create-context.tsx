@@ -27,10 +27,9 @@ import { useMembersQuery } from "@/lib/use-members-query";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { createIssueApi } from "@/lib/issues-api";
-import { createObjectiveApi } from "@/lib/objectives-api";
+import { createObjectiveOptimistic } from "@/lib/optimistic-objective";
 import {
   insertIssueEverywhere,
-  insertObjectiveEverywhere,
   issueWrites,
   mergeServerIssue,
   removeIssueEverywhere,
@@ -241,30 +240,31 @@ export function CreateProvider({ children }: { children: ReactNode }) {
     [queryClient, user, record]
   );
 
+  // Optimistic: the objective is in the project cache and the cross-project
+  // board as soon as the dialog closes (lib/optimistic-objective.ts).
   const createObjectiveGlobal = useCallback(
     async (projectId: string, input: CreateObjectiveInput) => {
-      const objective = await createObjectiveApi(projectId, input);
-      // Placed in the two caches that read it (project cache + board
-      // cross-project) before invalidating: a ticket linked to this objective in the
-      // stride displays its name and color immediately.
-      insertObjectiveEverywhere(queryClient, projectId, objective);
-      void queryClient.invalidateQueries({ queryKey: ["objectives", projectId] });
+      const { objective, persisted } = createObjectiveOptimistic(queryClient, projectId, input);
+      // A refusal is reported by the creation itself.
+      persisted.catch(() => undefined);
       return objective;
     },
     [queryClient]
   );
 
   /** Creation from the dialog, in the targeted project: this is what the quick addition
- * of a picker is waiting for to link the objective to his ticket. */
+ * of a picker is waiting for to link the objective to his ticket. The link
+ * waits for the server row, which the ticket's reference requires. */
   const createObjectiveForTarget = useCallback(
     async (projectId: string, input: CreateObjectiveInput) => {
-      const objective = await createObjectiveGlobal(projectId, input);
+      const { objective, persisted } = createObjectiveOptimistic(queryClient, projectId, input);
       const notify = objectiveCreatedRef.current;
       objectiveCreatedRef.current = null;
-      notify?.(objective);
+      if (notify) persisted.then(notify, () => undefined);
+      else persisted.catch(() => undefined);
       return objective;
     },
-    [createObjectiveGlobal]
+    [queryClient]
   );
 
   const resolveTarget = useCallback(

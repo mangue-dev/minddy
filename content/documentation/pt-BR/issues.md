@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 42,
-  "sourceRevision": 42,
+  "revision": 43,
+  "sourceRevision": 43,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -124,13 +124,14 @@
       "lib/creation-relations.ts",
       "lib/action-menu-search.ts",
       "components/use-issue-menu-actions.tsx",
-      "lib/use-bulk-selection-actions.ts"
+      "lib/use-bulk-selection-actions.ts",
+      "components/relation-chips.tsx"
     ]
   },
   "review": {
-    "revision": 42,
-    "fact": "agent:claude-code (right-clicking a card of a multi-issue selection acts on the selection: combined plan, implement, verify and custom prompts, the identifier list sorted by number, and the relation, objective and due-date pickers (MIN-833), checked against components/use-issue-menu-actions.tsx, components/issue-card.tsx, lib/use-bulk-selection-actions.ts and lib/issue-prompt.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; equivalent meaning to en revision 42; self-reviewed; agent review, not human acceptance)",
+    "revision": 43,
+    "fact": "agent:claude-code (remove button with the same confirmation on each relation of a board card's relation chip popover, none for relations inherited through an objective; checked against components/relation-chips.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the card chip popover)",
+    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -177,7 +178,7 @@
       "src": "/documentation/pt-BR/new-issue.png",
       "alt": "Rascunho não enviado no projeto Aurora com título, descrição, propriedades que podem ser escolhidas manualmente e o botão Criar AUR-21.",
       "caption": "Descreva o resultado esperado e escolha as propriedades úteis antes de criar o ticket.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -194,7 +195,7 @@
       "src": "/documentation/pt-BR/triage-incoming.png",
       "alt": "Ticket recebido de demonstração AUR-19 com relato, propriedades e controles de duplicado, Recusar e Aceitar.",
       "caption": "Leia o relato recebido antes de aceitar, recusar ou vincular um duplicado.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -211,7 +212,7 @@
       "src": "/documentation/pt-BR/issue-statuses.png",
       "alt": "Os oito estados do ticket no seletor, com Backlog selecionado.",
       "caption": "A marca indica o estado atual. Escolha o que representa a situação real do trabalho.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -228,7 +229,7 @@
       "src": "/documentation/pt-BR/work-resources.png",
       "alt": "Janela para adicionar um link com um endereço de contato de exemplo.",
       "caption": "Confira o destino antes de adicionar o recurso. Este link de exemplo não foi enviado.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -244,7 +245,7 @@
       "src": "/documentation/pt-BR/work-dependencies.png",
       "alt": "A paleta de comandos lista os tickets que podem bloquear este, com a pergunta da relação no campo de busca.",
       "caption": "Escolha o sentido da relação antes do destino. O seletor é mostrado sem enviar a relação.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -260,7 +261,7 @@
       "src": "/documentation/pt-BR/work-sub-issues.png",
       "alt": "Campo de criação de um subticket em um ticket pai de demonstração.",
       "caption": "O campo cria um filho deste ticket; cada filho mantém seu próprio status e discussão.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -277,7 +278,7 @@
       "src": "/documentation/pt-BR/work-implementation-plan.png",
       "alt": "Plano de demonstração com duas tarefas de trabalho concluídas de seis.",
       "caption": "O plano salvo distingue etapas concluídas, ativas e pendentes. O progresso não comprova a execução da tarefa fictícia de código.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -294,7 +295,7 @@
       "src": "/documentation/pt-BR/issue-date-recurrence.png",
       "alt": "Seletor de prazo no modo recorrente com prévia semanal aos domingos e horário opcional.",
       "caption": "O modo recorrente mostra a frequência semanal. Confirme o primeiro prazo antes de criar o ticket.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -311,7 +312,7 @@
       "src": "/documentation/pt-BR/import-issues-preview-workflow.png",
       "alt": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas.",
       "caption": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas. A importação não foi enviada; o planejamento opcional com IA foi bloqueado para a captura.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -328,7 +329,7 @@
       "src": "/documentation/pt-BR/file-preview.png",
       "alt": "Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar, Renomear e Remover.",
       "caption": "O visualizador compartilhado mantém Fechar abaixo da prévia. O menu Ações do arquivo oferece Baixar e, quando permitido, Renomear e Remover.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -490,7 +491,7 @@ Os estados finais Concluído, Cancelado e Duplicado fazem um ticket deixar de bl
 
 Um ticket aberto pode herdar um bloqueio pelo seu objetivo aberto. Se A bloqueia o objetivo B, os tickets abertos vinculados a B mostram A como bloqueio herdado, mesmo sem uma relação direta de A ao ticket. A interface identifica o pré-requisito real e o objetivo que transmite o bloqueio. Examine essa relação do objetivo antes de tentar removê-la do ticket. Encerrar A, encerrar B ou retirar o ticket de B elimina o bloqueio herdado. Esse mecanismo segue a participação no objetivo, não a hierarquia entre ticket pai e subtickets.
 
-Remova uma relação pelos seus controles quando ela deixar de fazer sentido; uma confirmação nomeia o outro ticket ou objetivo, e só o vínculo é removido. Depois verifique tanto o rótulo quanto o indicador de bloqueio. Marcar um ticket como duplicata tem efeitos no ciclo de vida e aponta para o trabalho mantido. Use essa ação para tickets duplicados, em vez de criar uma relação comum e supor que isso encerra a duplicata.
+Remova uma relação pelos seus controles quando ela deixar de fazer sentido; uma confirmação nomeia o outro ticket ou objetivo, e só o vínculo é removido. Em um cartão do quadro, o chip de um tipo de relação abre a lista dessas relações, cada uma com um botão de remover (✕) que pede a mesma confirmação; relações herdadas de um objetivo não têm esse botão. Depois verifique tanto o rótulo quanto o indicador de bloqueio. Marcar um ticket como duplicata tem efeitos no ciclo de vida e aponta para o trabalho mantido. Use essa ação para tickets duplicados, em vez de criar uma relação comum e supor que isso encerra a duplicata.
 
 Se o seletor de relações não encontrar um ticket, confira o acesso ao projeto e o identificador. Não exponha conteúdo de outro projeto colando a URL de um ticket privado em uma resposta pública de feedback.
 

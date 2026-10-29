@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 42,
-  "sourceRevision": 42,
+  "revision": 43,
+  "sourceRevision": 43,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -124,13 +124,14 @@
       "lib/creation-relations.ts",
       "lib/action-menu-search.ts",
       "components/use-issue-menu-actions.tsx",
-      "lib/use-bulk-selection-actions.ts"
+      "lib/use-bulk-selection-actions.ts",
+      "components/relation-chips.tsx"
     ]
   },
   "review": {
-    "revision": 42,
-    "fact": "agent:claude-code (right-clicking a card of a multi-issue selection acts on the selection: combined plan, implement, verify and custom prompts, the identifier list sorted by number, and the relation, objective and due-date pickers (MIN-833), checked against components/use-issue-menu-actions.tsx, components/issue-card.tsx, lib/use-bulk-selection-actions.ts and lib/issue-prompt.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; equivalent meaning to en revision 42; self-reviewed; agent review, not human acceptance)",
+    "revision": 43,
+    "fact": "agent:claude-code (remove button with the same confirmation on each relation of a board card's relation chip popover, none for relations inherited through an objective; checked against components/relation-chips.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the card chip popover)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -176,7 +177,7 @@
       "src": "/documentation/de/new-issue.png",
       "alt": "Noch nicht abgesendeter Ticketentwurf im Projekt Aurora mit Titel, Beschreibung, manuell wählbaren Eigenschaften und der Schaltfläche AUR-21 erstellen.",
       "caption": "Beschreibe das erwartete Ergebnis und wähle vor der Erstellung die passenden Eigenschaften.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -193,7 +194,7 @@
       "src": "/documentation/de/triage-incoming.png",
       "alt": "Eingegangenes Demoticket AUR-19 mit Bericht, Eigenschaften und Funktionen für Duplikat, Ablehnen und Akzeptieren.",
       "caption": "Lies den eingegangenen Bericht, bevor du ihn akzeptierst, ablehnst oder mit einem Duplikat verknüpfst.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -210,7 +211,7 @@
       "src": "/documentation/de/issue-statuses.png",
       "alt": "Die acht Ticketstatus im Auswahlmenü, mit ausgewähltem Backlog-Status.",
       "caption": "Das Häkchen zeigt den aktuellen Status. Wähle den Status, der dem tatsächlichen Arbeitsstand entspricht.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -227,7 +228,7 @@
       "src": "/documentation/de/work-resources.png",
       "alt": "Dialog zum Hinzufügen eines Links mit einer Beispiel-Kontaktadresse.",
       "caption": "Prüfe das Ziel, bevor du die Ressource hinzufügst. Dieser Beispiellink wurde nicht gesendet.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -243,7 +244,7 @@
       "src": "/documentation/de/work-dependencies.png",
       "alt": "Die Befehlspalette zeigt die Tickets, die dieses blockieren können, mit der Frage der Beziehung im Suchfeld.",
       "caption": "Wähle zuerst die Richtung der Beziehung und dann ihr Ziel. Hier wurde keine Beziehung gespeichert.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -259,7 +260,7 @@
       "src": "/documentation/de/work-sub-issues.png",
       "alt": "Eingabefeld für ein Unterticket in einem Demo-Elternticket.",
       "caption": "Das Feld erstellt ein Kind dieses Elterntickets; jedes Kind behält seinen eigenen Status und Diskussionsverlauf.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -276,7 +277,7 @@
       "src": "/documentation/de/work-implementation-plan.png",
       "alt": "Demo-Plan mit zwei von sechs abgeschlossenen Arbeitsschritten.",
       "caption": "Der gespeicherte Demo-Plan unterscheidet abgeschlossene, laufende und ausstehende Schritte. Der Fortschritt belegt nicht, dass die fiktive Codeaufgabe ausgeführt wurde.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -293,7 +294,7 @@
       "src": "/documentation/de/issue-date-recurrence.png",
       "alt": "Fälligkeitsauswahl im wiederkehrenden Modus mit Sonntagsvorschau und optionaler Uhrzeit.",
       "caption": "Der wiederkehrende Modus zeigt die wöchentliche Folge. Bestätige die erste Fälligkeit vor der Ticketerstellung.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -310,7 +311,7 @@
       "src": "/documentation/de/import-issues-preview-workflow.png",
       "alt": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen.",
       "caption": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen. Es wurde nichts importiert; die optionale KI-Planung war für die Aufnahme gesperrt.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -327,7 +328,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Umbenennen und Entfernen.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -485,7 +486,7 @@ Die Abschlusszustände Erledigt, Abgebrochen und Duplikat beenden die blockieren
 
 Ein offenes Ticket kann über sein offenes Ziel eine Blockade erben. Wenn A das Ziel B blockiert, zeigen offene Tickets in B den Eintrag A als geerbte Blockade, auch ohne direkte Beziehung von A zum Ticket. Die Anzeige nennt die tatsächliche Voraussetzung und das Ziel, über das die Blockade vererbt wird. Prüfe diese Zielbeziehung, bevor du versuchst, sie am Ticket zu entfernen. Wird A oder B geschlossen oder das Ticket aus B entfernt, entfällt die geerbte Blockade. Dieser Mechanismus folgt der Zielzuordnung und nicht der Hierarchie zwischen über- und untergeordneten Tickets.
 
-Entferne eine Beziehung über ihre Steuerelemente, wenn sie nicht mehr zutrifft; eine Bestätigung nennt das andere Ticket oder Ziel, und nur die Verknüpfung verschwindet. Prüfe anschließend sowohl die Beschriftung als auch die Blockadeanzeige. Das Markieren eines Duplikats beeinflusst den Lebenszyklus und verweist auf die beibehaltene Arbeit. Verwende es für doppelte Aufgaben, statt eine normale verwandte Beziehung anzulegen und anzunehmen, diese würde das Duplikat schließen.
+Entferne eine Beziehung über ihre Steuerelemente, wenn sie nicht mehr zutrifft; eine Bestätigung nennt das andere Ticket oder Ziel, und nur die Verknüpfung verschwindet. Auf einer Board-Karte öffnet der Chip eines Beziehungstyps die Liste dieser Beziehungen, jede mit einer Schaltfläche zum Entfernen (✕), die dieselbe Bestätigung verlangt; über ein Ziel geerbte Beziehungen haben dort keine. Prüfe anschließend sowohl die Beschriftung als auch die Blockadeanzeige. Das Markieren eines Duplikats beeinflusst den Lebenszyklus und verweist auf die beibehaltene Arbeit. Verwende es für doppelte Aufgaben, statt eine normale verwandte Beziehung anzulegen und anzunehmen, diese würde das Duplikat schließen.
 
 Findet die Beziehungsauswahl ein Ticket nicht, prüfe Projektzugriff und Kennung. Lege keine Inhalte eines anderen Projekts offen, indem du eine private Ticket-URL in eine öffentliche Feedback-Antwort kopierst.
 

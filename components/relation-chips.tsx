@@ -16,6 +16,11 @@ import {
 } from "@/components/ui/tooltip";
 import { RelationIcon, StatusIndicator } from "@/components/issue-indicators";
 import { ObjectiveBadge } from "@/components/objective-label";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 
 export type ChipRelation = DisplayRelation;
 const stop = (e: React.SyntheticEvent) => e.stopPropagation();
@@ -26,16 +31,21 @@ export function RelationChips({
   projectKey,
   onOpen,
   onOpenObjective,
+  onRemove,
   className,
 }: {
   relations: ChipRelation[];
   projectKey: string;
   onOpen?: (issueId: string) => void;
   onOpenObjective?: (objectiveId: string) => void;
+  /** Removes a relation, after the same confirmation as the issue sidebar. */
+  onRemove?: (relationId: string) => void | Promise<void>;
   className?: string;
 }) {
   const t = useTranslations("Relations");
+  const tCommon = useTranslations("Common");
   const [expanded, setExpanded] = React.useState<string | null>(null);
+  const [removeTarget, setRemoveTarget] = React.useState<{ id: string; name: string } | null>(null);
   const active = relations.filter((r) => !r.resolved);
   if (!active.length) return null;
   return (
@@ -101,16 +111,19 @@ export function RelationChips({
                     : issueIdentifier(projectKey, r.otherNumber ?? 0);
                   const name = r.otherName ?? identifier ?? t("objectives");
                   const open = isObjective ? onOpenObjective : onOpen;
+                  // A relation inherited through an objective is removed on
+                  // the objective, as in the sidebar.
+                  const removable = !!onRemove && !r.inheritedObjectiveName;
                   return (
+                    <div key={r.id} className="group/relrow flex min-w-0 items-start gap-1 rounded-md hover:bg-muted">
                     <button
-                      key={r.id}
                       type="button"
                       disabled={!open}
                       onClick={() => {
                         setExpanded(null);
                         open?.(r.otherId);
                       }}
-                      className="flex w-full min-w-0 items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-100"
+                      className="flex min-w-0 flex-1 items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-100"
                     >
                       {r.otherStatus && (
                         <StatusIndicator
@@ -153,6 +166,21 @@ export function RelationChips({
                         )}
                       </span>
                     </button>
+                    {removable ? (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={tCommon("remove")}
+                        className="mt-1 mr-1 size-6 shrink-0 bg-transparent text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/relrow:opacity-100 focus-visible:opacity-100 touch:opacity-100"
+                        onClick={() => {
+                          setExpanded(null);
+                          setRemoveTarget({ id: r.id, name: [identifier, isObjective ? name : r.otherName].filter(Boolean).join(" ") });
+                        }}
+                      >
+                        <HugeiconsIcon icon={Cancel01Icon} />
+                      </Button>
+                    ) : null}
+                    </div>
                   );
                 })}
               </div>
@@ -160,6 +188,24 @@ export function RelationChips({
           </Popover>
         );
       })}
+      {onRemove ? (
+        <ConfirmDeleteDialog
+          open={removeTarget !== null}
+          onOpenChange={(open) => {
+            if (!open) setRemoveTarget(null);
+          }}
+          title={t("removeTitle", { name: removeTarget?.name ?? "" })}
+          description={t("removeDescription")}
+          confirmLabel={tCommon("remove")}
+          cancelLabel={tCommon("cancel")}
+          onConfirm={() => {
+            if (!removeTarget) return;
+            void Promise.resolve(onRemove(removeTarget.id)).catch(
+              (err) => toast.error((err as Error).message),
+            );
+          }}
+        />
+      ) : null}
     </span>
   );
 }

@@ -117,6 +117,8 @@ function objectiveGuardError(message: string):
   return null;
 }
 
+const OBJECTIVE_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function createObjective({
   projectId,
   actorId,
@@ -141,6 +143,9 @@ export async function createObjective({
     name: name.slice(0, MAX_NAME_LENGTH),
     description: null,
   };
+  // The client may name the row, as for issues: its optimistic objective then
+  // recognizes the realtime echo of this insert (lib/optimistic-objective.ts).
+  if (typeof input.id === "string" && OBJECTIVE_ID_RE.test(input.id)) row.id = input.id;
   if (typeof input.description === "string") {
     row.description = input.description.slice(0, MAX_OBJECTIVE_DESCRIPTION_LENGTH);
   }

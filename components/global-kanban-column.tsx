@@ -71,6 +71,7 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
   onSelect,
   onCreateIssue,
   onAddRelation,
+  onRemoveRelation,
   onDeleteIssue,
   buildMenuActions,
   currentCycleId,
@@ -115,6 +116,7 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
     projectId: string,
     kinds?: RelationKinds,
   ) => void;
+  onRemoveRelation?: (relationId: string, projectId: string) => void;
   /** Trash from right-clicking a card (the ticket project follows). */
   onDeleteIssue?: (issueId: string, projectId: string) => Promise<void>;
   /** Per-issue extra right-click actions (cycle add/remove — MIN-32). */
@@ -159,6 +161,7 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
           targetId: string,
           kinds?: RelationKinds,
         ) => void;
+        onRemoveRelation?: (relationId: string) => void;
         onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
         onSetCategories: (issueId: string, ids: string[]) => void;
         onDelete?: (issueId: string) => Promise<void>;
@@ -172,6 +175,9 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
           onAddRelation: onAddRelation
             ? (sourceId, type, targetId, kinds) =>
                 onAddRelation(sourceId, type, targetId, pid, kinds)
+            : undefined,
+          onRemoveRelation: onRemoveRelation
+            ? (relationId) => onRemoveRelation(relationId, pid)
             : undefined,
           onUpdateIssue: (id, patch) => onUpdateIssue(id, patch, pid),
           onSetCategories: (id, ids) => onSetCategories(id, ids, pid),
@@ -189,6 +195,7 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
   }, [
     getCandidateIssues,
     onAddRelation,
+    onRemoveRelation,
     onUpdateIssue,
     onSetCategories,
     onDeleteIssue,
@@ -255,6 +262,7 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
                   getCandidateIssues={bound.getCandidateIssues}
                   onOpenRelated={onOpenIssueById}
                   onAddRelation={bound.onAddRelation}
+                  onRemoveRelation={bound.onRemoveRelation}
                   onOpenPlan={onOpenPlan}
                   onOpenIssue={onOpenIssue}
                   onUpdateIssue={bound.onUpdateIssue}
@@ -279,7 +287,7 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
             <button
               type="button"
               onClick={() => onCreateIssue(status.value)}
-              className="flex w-full shrink-0 items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-6 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-muted/40 hover:text-foreground"
+              className="flex w-full shrink-0 items-center justify-center gap-1.5 rounded-2xl border border-dashed border-border py-6 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-muted/40 hover:text-foreground"
             >
               <HugeiconsIcon icon={Add01Icon} className="size-4" />
               {t("newIssue")}

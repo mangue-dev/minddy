@@ -16,6 +16,7 @@ import {
   fetchPullRequestReadinessBatchApi,
   fetchPrCommitDiffApi,
   type PrEndpoint,
+  type PullRequestMergeFlow,
   type PullRequestStateFilter,
 } from "./agent-api";
 import { refetchOnRevealWhenStale } from "./reveal-freshness";
@@ -105,6 +106,7 @@ export function usePullRequestQuery(prId: string, enabled: boolean) {
 }
 
 /** Stable when nothing is loaded, so consumers can depend on the identity. */
+const NO_MERGE_FLOW: Readonly<Record<string, PullRequestMergeFlow>> = Object.freeze({});
 const NO_READINESS: Readonly<Awaited<ReturnType<typeof fetchPullRequestReadinessBatchApi>>["readiness"]> = Object.freeze({});
 
 export function usePullRequestReadinessBatchQuery(
@@ -133,6 +135,7 @@ export function usePullRequestReadinessBatchQuery(
   });
   return {
     readinessByPrId: data?.readiness ?? NO_READINESS,
+    mergeFlowByPrId: data?.mergeFlow ?? NO_MERGE_FLOW,
     unavailablePrIds: new Set(data?.unavailablePrIds ?? []),
     loading: enabled && isPending,
     error: enabled && isError,

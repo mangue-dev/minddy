@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 21,
+  "revision": 23,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -104,13 +104,14 @@
       "lib/selection-menu-visibility.test.ts",
       "lib/mention-menu.ts",
       "components/pages/block-menu.tsx",
-      "lib/action-menu-search.ts"
+      "lib/action-menu-search.ts",
+      "components/pages/block-drag.ts"
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (block menu search field reaching every action, block types and colors included, with submenu entries shown behind their path such as Turn into › Heading 1 (MIN-845), checked against components/pages/block-menu.tsx, components/issue-context-menu.tsx and lib/action-menu-search.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (es changed passages with catalog UI labels; equivalent meaning to en revision 21; self-reviewed; agent review, not human acceptance)",
+    "revision": 23,
+    "fact": "agent:claude-code (list items as blocks with their own handle: handle left of the list, + adding an item of the same kind below or above with Alt/Option-click and the / menu open, dragging among lists of the same kind of item including nested lists, emptied lists removed, handle menu acting on the item or the selection; checked against components/pages/block-gutter.tsx, components/pages/block-actions.ts and components/pages/block-drag.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show list item handles)",
+    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -146,7 +147,7 @@
       "src": "/documentation/es/page-create-menu.png",
       "alt": "Menú de creación con Nueva página y Nueva base de datos.",
       "caption": "Utiliza los controles de páginas del proyecto para elegir un documento o una base de datos.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -162,7 +163,7 @@
       "src": "/documentation/es/page-editor.png",
       "alt": "Página de demostración con títulos, párrafos, casillas de tareas y una mención a un ticket.",
       "caption": "Los títulos, las tareas y la mención AUR-2 estructuran la página. El contenido es un ejemplo de demostración.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -179,7 +180,7 @@
       "src": "/documentation/es/page-comments.png",
       "alt": "Actividad de la página todavía sin eventos y el campo de comentario vacío.",
       "caption": "Consulta la actividad y escribe un comentario en el campo. En este ejemplo no se ha enviado ninguno.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -196,7 +197,7 @@
       "src": "/documentation/es/page-file-states.png",
       "alt": "Página de demostración con una carga incompleta y un archivo guardado de 67 bytes que ofrece Descargar.",
       "caption": "Comprueba el estado real del archivo: el segundo adjunto está disponible y la primera carga incompleta no.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -212,7 +213,7 @@
       "src": "/documentation/es/page-history-preview.png",
       "alt": "Pestaña Versiones con un estado anterior desplegado, su autor, Restaurar y el aviso de conservación durante 30 días.",
       "caption": "Previsualiza un estado guardado y compáralo con la página actual antes de restaurarlo.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -228,7 +229,7 @@
       "src": "/documentation/es/page-publish.png",
       "alt": "Diálogo de publicación con Privado seleccionado y opciones de contraseña o enlace.",
       "caption": "Privado mantiene la página dentro del proyecto. Revisa quién debe verla antes de cambiar la publicación.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -244,7 +245,7 @@
       "src": "/documentation/es/page-export.png",
       "alt": "Menú de exportación del documento con Markdown (.md) e Imprimir / PDF.",
       "caption": "Elige Markdown para descargar el documento o Imprimir / PDF para abrir la vista de impresión.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -260,7 +261,7 @@
       "src": "/documentation/es/file-preview.png",
       "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.",
       "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Cambiar nombre y Eliminar.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -333,6 +334,8 @@ Las páginas, las descripciones, los comentarios y el cuaderno de tareas compart
 Mayús+Intro empieza una línea nueva dentro del mismo bloque. Comando/Ctrl+Intro no inserta un salto de línea: en un comentario u otro compositor envía, sea cual sea el atajo de envío elegido en tus [preferencias](/es/documentacion/accounts#preferences), y si elegiste Intro como atajo de envío, Intro también envía.
 
 Para seleccionar bloques enteros, arrastra de un bloque a otro o traza un rectángulo de selección desde fuera del texto: pulsa en el margen junto a él o en el espacio vacío bajo la página y arrastra sobre los bloques. Se selecciona cada bloque que toca el rectángulo; un clic ahí sin arrastrar sigue colocando el cursor en esa línea, y Escape cancela el rectángulo. Cada bloque al que llegas se resalta con esquinas redondeadas, en el color del texto seleccionado. Cuando hay un solo bloque seleccionado, la barra de selección se abre encima: sus acciones (**Convertir en**, **Color**, **Negrita** y los demás formatos, **Copiar**, **Pregúntale a Numo**, **Comentar**) se aplican al bloque, y después de **Convertir en** sigue seleccionado para que puedas encadenar otra acción. Con varios bloques seleccionados, la barra no aparece: abre el menú del control de un bloque seleccionado, que actúa sobre todos. Mayús+clic en otro bloque, o Mayús+flecha arriba y Mayús+flecha abajo en el borde de un bloque, amplían la selección por bloques enteros. Escape selecciona el bloque en el que escribes, y Escape otra vez borra la selección. Comando+A en macOS o Ctrl+A en Windows/Linux selecciona primero el texto del bloque en el que estás, también en un bloque de código, y al pulsarlo otra vez, todos los bloques. Con bloques seleccionados, la flecha arriba y la flecha abajo seleccionan el bloque de encima o de debajo, Mayús+flecha arriba y Mayús+flecha abajo añaden o quitan bloques, Retroceso o Supr los elimina, Comando/Ctrl+C los copia, Comando/Ctrl+X los corta, e Intro en un solo bloque pone el cursor al final; escribir no hace nada. El menú del bloque actúa sobre todos los bloques seleccionados. Escribe en el campo de búsqueda del menú del bloque para llegar a cualquiera de sus acciones, incluidos los tipos de bloque y los colores: una entrada de un submenú muestra su ruta, por ejemplo **Convertir en** › **Encabezado 1**. Las imágenes, los archivos, los bloques de código, las ecuaciones, los divisores, las menciones y el código en línea muestran el mismo resaltado cuando están seleccionados, solos o dentro de una selección. Mientras escribes o editas un comentario, Escape sigue cerrándolo o cancelándolo. En una pantalla táctil, la pulsación larga sigue seleccionando texto, y arrastrar no selecciona bloques.
+
+En una lista con viñetas, numerada o de tareas, cada elemento es un bloque con su propio control, que aparece a la izquierda de su lista al pasar el cursor por el elemento; una lista ya no tiene control propio: selecciona sus elementos para actuar sobre todos, ya que el menú del control actúa sobre el elemento o sobre todos los elementos seleccionados. El + del control añade un elemento del mismo tipo debajo, o encima con Alt/Opción-clic, con el menú `/` abierto. Arrastrar el control mueve el elemento, o los elementos seleccionados, a cualquier lista que admita ese tipo de elemento, listas anidadas incluidas: un elemento con viñeta puede ir a una lista numerada, una tarea solo entre tareas, y una lista que se queda vacía así se elimina.
 
 En un teléfono, el editor no muestra tiradores de bloque ni barra de selección, y escribir `@` deja un carácter normal. Mientras un editor tiene el foco, una barra flotante se sitúa encima del teclado y se oculta cuando el teclado se cierra: **Insertar un bloque** (+) lista los bloques de este editor, en las mismas secciones que el menú `/`, e inserta el elegido en el cursor, como `/`; **Mencionar** (@) lista personas, incidencias, objetivos y páginas para mencionar, agrupados por tipo; después vienen **Negrita**, **Cursiva**, **Tachado**, **Código**, **Color** (una hoja para el color del texto o del fondo), **Añadir enlace**, **Reducir sangría** y **Aumentar sangría** en una lista, **Comentar** en una página y **Ocultar teclado**, que se mantiene fijo en el extremo derecho. Una hoja inferior en la que escribes crece hasta ocupar toda la altura de la pantalla, y la línea que escribes se mantiene encima del teclado. Una pulsación larga selecciona texto en un editor, y la barra y sus hojas también funcionan en el cuaderno de tareas. La navegación inferior se oculta mientras un campo de texto tiene el foco, como el título de una página o un comentario. En una pantalla táctil, **Añadir icono** siempre está visible en una página.
 

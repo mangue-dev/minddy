@@ -1,10 +1,17 @@
-import type { IssuePr } from "@/lib/agent-api";
+import type { IssuePr, PullRequestMergeFlow } from "@/lib/agent-api";
 import type { PullRequestReadiness } from "@/lib/pr-readiness";
 
 /** A live pull request's merge readiness, as the Code review page shows it. */
 export interface IssuePrReadiness {
   readiness: PullRequestReadiness | null;
   unavailable: boolean;
+  /** Auto-merge state and merge authority, once the batch has read them. */
+  flow?: PullRequestMergeFlow | null;
+}
+
+function sameFlow(left: PullRequestMergeFlow | null | undefined, right: PullRequestMergeFlow | null | undefined): boolean {
+  return left === right || (!!left && !!right && left.active === right.active &&
+    left.autoMergeAllowed === right.autoMergeAllowed && left.canWrite === right.canWrite);
 }
 
 export interface IssuePrPayload {
@@ -65,13 +72,18 @@ export function createIssuePrStore(initial?: IssuePrPayload) {
       for (const id of changed) notify(id);
     },
     /** Store one readiness batch; only issues whose PR's verdict moved re-render. */
-    updateReadiness(byPrId: Record<string, PullRequestReadiness>, unavailablePrIds: ReadonlySet<string>) {
+    updateReadiness(
+      byPrId: Record<string, PullRequestReadiness>,
+      unavailablePrIds: ReadonlySet<string>,
+      flowByPrId: Readonly<Record<string, PullRequestMergeFlow>> = {},
+    ) {
       const next = new Map<string, IssuePrReadiness>();
       const changedPrs = new Set<string>();
       for (const prId of new Set([...Object.keys(byPrId), ...unavailablePrIds, ...readiness.keys()])) {
         const value: IssuePrReadiness = {
           readiness: byPrId[prId] ?? null,
           unavailable: unavailablePrIds.has(prId),
+          flow: flowByPrId[prId] ?? null,
         };
         const previous = readiness.get(prId);
         if (!value.readiness && !value.unavailable) {
@@ -79,7 +91,10 @@ export function createIssuePrStore(initial?: IssuePrPayload) {
           continue;
         }
         if (previous && previous.unavailable === value.unavailable &&
-          previous.readiness?.state === value.readiness?.state) {
+          previous.readiness?.state === value.readiness?.state &&
+          previous.readiness?.mergeAllowed === value.readiness?.mergeAllowed &&
+          previous.readiness?.preferredMethod === value.readiness?.preferredMethod &&
+          sameFlow(previous.flow, value.flow)) {
           next.set(prId, previous);
         } else {
           next.set(prId, value);

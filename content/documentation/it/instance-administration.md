@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 12,
+  "revision": 13,
+  "sourceRevision": 13,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -53,13 +53,14 @@
       "lib/instance-variables.ts",
       "lib/server/instance-variables.ts",
       "app/api/admin/instance-variables/route.ts",
-      "components/admin/admin-instance-dashboard.tsx"
+      "components/admin/admin-instance-dashboard.tsx",
+      "components/agent/model-combobox.tsx"
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:claude-code (MIN-847 Instance tab section checked against lib/instance-variables.ts, lib/server/instance-variables.ts and app/api/admin/instance-variables/route.ts; figure captured on 2026-10-29 from a disposable local self-hosted instance with its own test administrator, every write blocked, and inspected); agent:claude-code (MIN-829 tabs, accounts, costs, model categories, configuration file and Numo admin tools checked against lib/admin-tabs.ts, lib/ai-model-config.ts, lib/ai-model-config-file.ts, lib/server/admin-model-config.ts, lib/server/finance.ts, lib/admin-costs.ts, lib/server/retention.ts and lib/server/assistant/admin-tools.ts, including admin_get_costs; both figures recaptured on 2026-10-29 with captures/shots/documentation-admin from a local candidate against the preview capture admin, every write blocked, and inspected); agent:claude-code (MIN-798 Smart-fill titles model paragraph checked against lib/ai-model-config.ts, lib/ai-surfaces.ts and lib/server/smart-fill-title.ts: automations group, fallback deepseek/deepseek-v4-flash, not answered by the decision model; no figure changed); agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:claude-code (it MIN-829 sections with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-798 Smart-fill titles model paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "revision": 13,
+    "fact": "agent:claude-code (per-task model pickers show the category's model by name instead of Default model when that model is in the catalog, and choosing it makes the task follow the category again; checked against components/agent/model-combobox.tsx and components/admin/admin-models-dashboard.tsx; not checked in the running app; no figure recaptured, the Models figure may show the former picker wording); agent:claude-code (MIN-847 Instance tab section checked against lib/instance-variables.ts, lib/server/instance-variables.ts and app/api/admin/instance-variables/route.ts; figure captured on 2026-10-29 from a disposable local self-hosted instance with its own test administrator, every write blocked, and inspected); agent:claude-code (MIN-829 tabs, accounts, costs, model categories, configuration file and Numo admin tools checked against lib/admin-tabs.ts, lib/ai-model-config.ts, lib/ai-model-config-file.ts, lib/server/admin-model-config.ts, lib/server/finance.ts, lib/admin-costs.ts, lib/server/retention.ts and lib/server/assistant/admin-tools.ts, including admin_get_costs; both figures recaptured on 2026-10-29 with captures/shots/documentation-admin from a local candidate against the preview capture admin, every write blocked, and inspected); agent:claude-code (MIN-798 Smart-fill titles model paragraph checked against lib/ai-model-config.ts, lib/ai-surfaces.ts and lib/server/smart-fill-title.ts: automations group, fallback deepseek/deepseek-v4-flash, not answered by the decision model; no figure changed); agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:claude-code (it changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-829 sections with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-798 Smart-fill titles model paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -78,7 +79,7 @@
       "src": "/documentation/it/instance-administration-overview.png",
       "alt": "Scheda Account con il numero di account e la ricerca di un account tramite email esatta.",
       "caption": "Account mostra il numero di account e la ricerca per il supporto; l’immagine proviene da un’istanza dimostrativa.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -95,7 +96,7 @@
       "src": "/documentation/it/instance-administration-models.png",
       "alt": "Scheda Modelli con un modello predefinito per categoria e i modelli per attività chiusi.",
       "caption": "Modelli mostra un modello predefinito per categoria; i modelli per attività restano chiusi. Per questa immagine non è stata modificata alcuna impostazione di modello o fornitore.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -112,7 +113,7 @@
       "src": "/documentation/it/instance-administration-instance.png",
       "alt": "Scheda Istanza con l’origine di ogni variabile, una chiave OpenRouter mascherata impostata qui e gli indirizzi degli amministratori presi dal file.",
       "caption": "Istanza mostra da dove viene ogni valore; i segreti mostrano solo gli ultimi caratteri. Questa cattura proviene da un’istanza self-hosted locale usa e getta.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -153,7 +154,7 @@ La console ha tre schede: **Account**, **Costi**, **Modelli** e, dove consentito
 
 ## Scegliere i modelli per categoria {#models}
 
-Ogni scheda di **Modelli** ha un **Modello predefinito** per la sua categoria: **Assistente** (Numo, titoli delle conversazioni, ricerca web), **Automazioni** (Smart Fill e i suoi titoli, Smart Assign, decisioni sulle relazioni, mappatura delle importazioni CSV, suddivisione dei brief, messaggi di commit per le unioni), **Embedding** (embedding di ticket e feedback) e **Feedback e sito pubblico** (analisi dei feedback, riquadro domande delle FAQ). Un’attività segue il modello predefinito della sua categoria finché non le dai un modello proprio in **Modelli per attività**; scegli **Modello predefinito** nel suo selettore perché torni a seguire la categoria. Finché il modello predefinito di una categoria non è impostato, ogni attività mantiene il proprio valore integrato. **Livello di ragionamento**, **Modello di decisione** e le due impostazioni di **Voce** hanno righe proprie. Impostare il modello predefinito di una categoria libera le attività che hanno ancora il valore integrato, come quelle con cui viene creata una nuova istanza; un’attività impostata su un altro modello lo mantiene. **Modelli consigliati** fissa la breve lista con cui si apre ogni selettore di modelli. **Chiavi personali** è chiusa in fondo: riguarda solo i membri che usano la propria chiave del fornitore.
+Ogni scheda di **Modelli** ha un **Modello predefinito** per la sua categoria: **Assistente** (Numo, titoli delle conversazioni, ricerca web), **Automazioni** (Smart Fill e i suoi titoli, Smart Assign, decisioni sulle relazioni, mappatura delle importazioni CSV, suddivisione dei brief, messaggi di commit per le unioni), **Embedding** (embedding di ticket e feedback) e **Feedback e sito pubblico** (analisi dei feedback, riquadro domande delle FAQ). Un’attività segue il modello predefinito della sua categoria finché non le dai un modello proprio in **Modelli per attività**; perché torni a seguire la categoria, scegli nel suo selettore il modello della categoria, mostrato con il suo nome e spuntato finché l’attività lo segue. **Modello predefinito** resta un’opzione solo quando quel modello non è nel catalogo. Finché il modello predefinito di una categoria non è impostato, ogni attività mantiene il proprio valore integrato. **Livello di ragionamento**, **Modello di decisione** e le due impostazioni di **Voce** hanno righe proprie. Impostare il modello predefinito di una categoria libera le attività che hanno ancora il valore integrato, come quelle con cui viene creata una nuova istanza; un’attività impostata su un altro modello lo mantiene. **Modelli consigliati** fissa la breve lista con cui si apre ogni selettore di modelli. **Chiavi personali** è chiusa in fondo: riguarda solo i membri che usano la propria chiave del fornitore.
 
 ## Esportare e importare la configurazione dei modelli {#models-file}
 

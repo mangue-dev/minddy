@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 42,
-  "sourceRevision": 42,
+  "revision": 43,
+  "sourceRevision": 43,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -124,12 +124,13 @@
       "lib/creation-relations.ts",
       "lib/action-menu-search.ts",
       "components/use-issue-menu-actions.tsx",
-      "lib/use-bulk-selection-actions.ts"
+      "lib/use-bulk-selection-actions.ts",
+      "components/relation-chips.tsx"
     ]
   },
   "review": {
-    "revision": 42,
-    "fact": "agent:claude-code (right-clicking a card of a multi-issue selection acts on the selection: combined plan, implement, verify and custom prompts, the identifier list sorted by number, and the relation, objective and due-date pickers (MIN-833), checked against components/use-issue-menu-actions.tsx, components/issue-card.tsx, lib/use-bulk-selection-actions.ts and lib/issue-prompt.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "revision": 43,
+    "fact": "agent:claude-code (remove button with the same confirmation on each relation of a board card's relation chip popover, none for relations inherited through an objective; checked against components/relation-chips.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the card chip popover)",
     "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
@@ -176,7 +177,7 @@
       "src": "/documentation/en/new-issue.png",
       "alt": "Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-21 button.",
       "caption": "Describe the expected result, then choose the useful properties before creating the issue.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -192,7 +193,7 @@
       "src": "/documentation/en/triage-incoming.png",
       "alt": "Incoming demonstration issue AUR-19 with its report, properties and duplicate, Decline and Accept controls.",
       "caption": "Read the incoming report before accepting it, declining it or linking a duplicate.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -209,7 +210,7 @@
       "src": "/documentation/en/issue-statuses.png",
       "alt": "Eight issue statuses in the picker, with backlog currently selected.",
       "caption": "The check marks the current status. Choose the status that reflects the work’s actual state.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -225,7 +226,7 @@
       "src": "/documentation/en/work-resources.png",
       "alt": "Add-link dialog with an example contact URL.",
       "caption": "Review the destination before adding a resource. This example link has not been submitted.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -241,7 +242,7 @@
       "src": "/documentation/en/work-dependencies.png",
       "alt": "The command palette lists the issues that can block this one, with the relation's question in its search field.",
       "caption": "Choose the relation direction before selecting its endpoint. The picker is shown without submitting a relation.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -257,7 +258,7 @@
       "src": "/documentation/en/work-sub-issues.png",
       "alt": "Sub-issue creation field in a demonstration parent issue.",
       "caption": "The inline field creates a child under this parent; a child keeps its own status and discussion.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -273,7 +274,7 @@
       "src": "/documentation/en/work-implementation-plan.png",
       "alt": "Demonstration plan showing two of six work tasks complete.",
       "caption": "The saved demonstration plan separates completed, active and pending steps. Its progress does not prove the fictional code task was executed.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -289,7 +290,7 @@
       "src": "/documentation/en/issue-date-recurrence.png",
       "alt": "Due-date picker in recurring mode with a weekly Sunday preview and optional time.",
       "caption": "Recurring mode previews the weekly cadence. Confirm the first due date before creating the issue.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -305,7 +306,7 @@
       "src": "/documentation/en/import-issues-preview-workflow.png",
       "alt": "CSV preview with two localized demonstration rows and detected column mappings.",
       "caption": "CSV preview with two localized demonstration rows and detected column mappings. No import was submitted; optional AI planning was blocked for the capture.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -322,7 +323,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 42,
+      "revision": 43,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -487,7 +488,7 @@ Terminal statuses done, canceled and duplicate stop an issue from blocking work.
 
 An open issue can inherit a blocker through its open objective. If A blocks objective B, open issues attached to B show A as an inherited blocker, even without a direct A-to-issue relation. The display names the actual blocker and the objective responsible for inheritance. Inspect that objective relation before trying to unlink it from the issue. Closing A, closing B or moving the issue out of B removes that inherited blockage. This mechanism follows objective membership, not the parent/sub-issue hierarchy.
 
-Remove a relation from the relations controls when its meaning no longer applies; a confirmation names the other issue or objective, and only the link goes away. Then verify both the label and the blocked indicator. Marking an issue as a duplicate has lifecycle semantics and points to retained work; use it for duplicated tasks rather than creating an ordinary related link and assuming that closes the duplicate.
+Remove a relation from the relations controls when its meaning no longer applies; a confirmation names the other issue or objective, and only the link goes away. On a board card, a relation type's chip opens the list of those relations, each with a remove button (✕) that asks the same confirmation; relations inherited through an objective have none there. Then verify both the label and the blocked indicator. Marking an issue as a duplicate has lifecycle semantics and points to retained work; use it for duplicated tasks rather than creating an ordinary related link and assuming that closes the duplicate.
 
 If the relation picker cannot find an issue, check project access and the identifier. Do not expose another project's content by pasting a private issue URL into a public feedback reply.
 

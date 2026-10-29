@@ -105,6 +105,7 @@ export const KanbanBoard = memo(function KanbanBoard({
   onAskNumo,
   onSetCategories,
   onAddRelation,
+  onRemoveRelation,
   onMove,
   buildMenuActions,
   currentCycleId,
@@ -140,6 +141,8 @@ export const KanbanBoard = memo(function KanbanBoard({
     targetId: string,
     kinds?: RelationKinds,
   ) => void;
+  /** Removes a relation from a card's relation popover. */
+  onRemoveRelation?: (relationId: string) => void;
   onMove: (
     issueId: string,
     patch: { status?: IssueStatus; position: number },
@@ -593,6 +596,7 @@ export const KanbanBoard = memo(function KanbanBoard({
                       onUpdateIssue={onUpdateIssue}
                       onSetCategories={onSetCategories}
                       onAddRelation={onAddRelation}
+                      onRemoveRelation={onRemoveRelation}
                       onDeleteIssue={onDeleteIssue}
                       buildMenuActions={buildMenuActions}
                       currentCycleId={currentCycleId}

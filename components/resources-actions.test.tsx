@@ -147,6 +147,8 @@ it("sets Remove apart from the other entries with a separator", async () => {
   await render(<ResourcePills resources={[file]} onRemove={vi.fn()} onRename={vi.fn()} />);
   expect(await openMenu("spec.pdf")).toEqual(["Preview", "Rename", "Download", "Remove"]);
   const menu = document.querySelector('[role="menu"]')!;
-  const rows = [...menu.children].map((child) => child.getAttribute("role") === "separator" ? "—" : child.textContent);
+  // The menu's scroll-edge fades are decoration, not rows.
+  const rows = [...menu.children].filter((child) => !child.hasAttribute("data-menu-scroll-fade"))
+    .map((child) => child.getAttribute("role") === "separator" ? "—" : child.textContent);
   expect(rows).toEqual(["Preview", "Rename", "Download", "—", "Remove"]);
 });

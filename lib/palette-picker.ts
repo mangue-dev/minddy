@@ -18,7 +18,7 @@
  * Module-level store, like the palette's own: there is one palette per app.
  */
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { create } from "zustand";
 import { usePaletteStore } from "@/lib/command-palette/store";
 import type { CategoryDefinition, PaletteItem } from "@/lib/command-palette/types";
@@ -155,5 +155,15 @@ export function usePalettePickerMode({
     store.setQuery("");
     store.setCategoryFilter("all");
   }, [key]);
-  return picker;
+  // The picker is withdrawn as soon as it closes, while the palette still
+  // animates out: its last rows stay on screen until the next opening, rather
+  // than the exit frame switching to the regular palette.
+  const [retained, setRetained] = useState(picker);
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open && retained !== picker) setRetained(picker);
+  }
+  if (picker && picker !== retained) setRetained(picker);
+  return picker ?? retained;
 }

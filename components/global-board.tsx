@@ -455,6 +455,13 @@ function GlobalBoardInner() {
       ),
     [addRelation]
   );
+  const handleRemoveRelation = useCallback(
+    (relationId: string, projectId: string) =>
+      void removeRelation(projectId, relationId).catch((err) =>
+        toast.error((err as Error).message)
+      ),
+    [removeRelation]
+  );
 
   const openIssue = openIssueId
     ? scopedIssues.find((i) => i.id === openIssueId) ?? null
@@ -610,6 +617,9 @@ function GlobalBoardInner() {
                 onAddRelation={
                   selectedPhase === "current" ? handleAddRelation : undefined
                 }
+                onRemoveRelation={
+                  selectedPhase === "current" ? handleRemoveRelation : undefined
+                }
                 // Cycle view: no tablet (everything is there), but a selection
                 // must be able to exit the cycle suddenly — only on the
                 // current cycle, exiting a past cycle makes no sense.
@@ -683,6 +693,7 @@ function GlobalBoardInner() {
             onSetCycle={onSetIssueCycle}
             onCreateIssue={handleCreateIssue}
             onAddRelation={handleAddRelation}
+            onRemoveRelation={handleRemoveRelation}
             allIssues={scopedIssues}
             relations={relations}
             {...boardHandlers}

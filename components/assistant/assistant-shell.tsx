@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { NumoIcon } from "@/components/numo-icon";
+import { useTypeaheadTarget } from "@/lib/keyboard/typeahead";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 import {
   Conversation,
@@ -182,6 +183,17 @@ export const AssistantShell = forwardRef<
     setPinned,
   } = useAssistantChatContext();
   const chatInputRef = useRef<ChatInputHandle>(null);
+  const shellRootRef = useRef<HTMLDivElement>(null);
+  // A burst typed in the shell goes to its composer, a single key stays a
+  // shortcut (lib/keyboard/typeahead.ts). The expanded panel owns the screen;
+  // the compact panel and an embedded conversation only take keys pressed
+  // while the focus is inside them.
+  useTypeaheadTarget(visible ? {
+    accepts: (target) =>
+      (isExpanded && !embeddedConversationId) ||
+      (target instanceof Node && !!shellRootRef.current?.contains(target)),
+    type: (text) => chatInputRef.current?.append(text),
+  } : null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -789,7 +801,7 @@ export const AssistantShell = forwardRef<
       </Button>
     </div>
   ) : (
-    <div className="flex h-full overflow-hidden">
+    <div ref={shellRootRef} className="flex h-full overflow-hidden">
       {/* Permanent sidebar — only outside compact mode. */}
       {!compact && (
         <SecondarySidebar

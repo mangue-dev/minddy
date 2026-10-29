@@ -8,7 +8,7 @@ import { pageHref } from "@/lib/pages-navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { documentationPath } from "@/lib/documentation-core.mjs";
 import { ContentToaster } from "@/components/content-toaster";
-import { Add01Icon, AiAutoRotateIcon as CycleIcon, BotIcon, DollarCircleIcon, ServerStack01Icon, UserGroupIcon, Alert01Icon, ArrowLeft01Icon, CircleDotDashedIcon, Clock01Icon as FileClock, Delete02Icon, Download01Icon, File02Icon, GitPullRequestIcon, Home01Icon, InboxIcon, KeyboardIcon, MessageMultiple01Icon, Settings01Icon, StickyNote02Icon, Target01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, AiAutoRotateIcon as CycleIcon, Book02Icon, BotIcon, DollarCircleIcon, ServerStack01Icon, UserGroupIcon, Alert01Icon, ArrowLeft01Icon, CircleDotDashedIcon, Clock01Icon as FileClock, Delete02Icon, Download01Icon, File02Icon, GitPullRequestIcon, Home01Icon, InboxIcon, KeyboardIcon, MessageMultiple01Icon, Settings01Icon, StickyNote02Icon, Target01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
 import {
   startTransition,
   useCallback,
@@ -770,7 +770,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       key: "goto",
       heading: t("goTo"),
       items: [
-        { key: "go-documentation", label: t("documentation"), icon: File02Icon,
+        { key: "go-documentation", label: t("documentation"), icon: Book02Icon,
           keywords: ["documentation", "docs", "help"],
           onSelect: () => window.open(documentationPath(null, locale), "_blank", "noopener,noreferrer") },
         { key: "go-home", label: t("home"), icon: Home01Icon, href: "/home", keys: ["G", "H"], entityType: "navigation", onSelect: () => router.push("/home") },
@@ -1646,8 +1646,12 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // revalidates it when the snapshot has aged (no-op while fresh).
   const handlePaletteOpenChange = useCallback(
     (next: boolean) => {
-      if (next) warmPalette();
-      setPaletteMode("default");
+      // The palette is keyed by its mode: the mode changes only on opening,
+      // so a closing palette keeps its instance and plays its exit animation.
+      if (next) {
+        warmPalette();
+        setPaletteMode("default");
+      }
       setPaletteOpen(next);
       if (!next) return;
       armSearchIndex();
@@ -1669,11 +1673,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   });
   const handlePaletteContentOpenChange = useCallback((next: boolean) => {
     setPaletteOpen(next);
-    if (!next) setPaletteMode("default");
   }, []);
   const handleDestinationSelect = useCallback((href: string) => {
     setPaletteOpen(false);
-    setPaletteMode("default");
     void appTabSession?.create(href);
   }, [appTabSession]);
   // Hovering a destination row is the intent to open it: the same prefetch

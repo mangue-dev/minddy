@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 21,
-  "sourceRevision": 20,
+  "revision": 22,
+  "sourceRevision": 21,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -49,12 +49,17 @@
       "components/pull-requests/pr-image-diff.tsx",
       "components/image-viewer.tsx",
       "components/issue-card.tsx",
-      "lib/palette-picker.ts"
+      "lib/palette-picker.ts",
+      "components/use-issue-menu-actions.tsx",
+      "lib/use-link-issues-to-pull-request.ts",
+      "lib/pr-issue-status.ts",
+      "lib/pr-merge-intent.ts",
+      "components/issue-pr-context.tsx"
     ]
   },
   "review": {
-    "revision": 21,
-    "fact": "agent:claude-code (content pickers moved to the command palette (MIN-844): Link an issue and Link to a pull request pickers checked against lib/palette-picker.ts, components/palette-picker-rows.tsx, components/pull-requests/pr-link-issue.tsx and components/pull-requests/pr-link-target-picker.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show these pickers)",
+    "revision": 22,
+    "fact": "agent:claude-code (card right-click menu: linked pull request entries grouped under a Pull request submenu with View pull request in its own tab, Merge, Enable/Disable auto-merge, Link to a pull request and Unlink from pull request; Link the other issues to #N from a selected card; cards move to the status the pull request implies when linked; auto-merge named in the readiness tooltip; checked against components/use-issue-menu-actions.tsx, lib/use-link-issues-to-pull-request.ts, lib/pr-issue-status.ts, lib/pr-merge-intent.ts and components/issue-pr-context.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the card menu)",
     "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
@@ -79,7 +84,7 @@
       "src": "/documentation/de/review-pull-requests-workflow.png",
       "alt": "Änderungsansicht des offenen Demonstrations-PR mit Diff der Funktion greeting und Hinweis auf fehlende GitHub-Autorisierung.",
       "caption": "Demonstrations-PR, der offen bleibt und nicht gemergt wurde. Der Diff entfernt Leerzeichen um den Namen und verwendet World bei leerem Wert. Diese Instanz kann keine GitHub-Benutzerautorisierung anfordern; der Bereitschaftsstatus verleiht keine Merge-Rechte und belegt keine erfolgreiche Anbieter-CI.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -116,7 +121,9 @@ Inhalt des Prompts, Branch-Vorschlag und Sprachregeln beschreibt [Einen Prompt f
 
 Wenn das Repository mit dem Projekt verknüpft ist, behalte die Ticketkennung im Branch-Namen, im Titel des Pull Requests oder in einer Zeile `Fixes MIN-42`. Minddy hängt den Pull Request dann an das Ticket, und spätere Prompts weisen den Agenten an, den offenen Pull Request auf seinem Branch fortzusetzen. Um ein Ticket von Hand anzuhängen, verwende **Ein Ticket verknüpfen** am Pull Request: Die Befehlspalette öffnet sich mit den Tickets des Projekts, und das gewählte Ticket wird nach einer Bestätigung verknüpft. Die Suche akzeptiert eine Kennung oder Wörter aus dem Titel, und eine Beschreibung listet auch [inhaltlich gefundene](/docs/navigation#search-by-meaning) Tickets des Projekts unter **Inhaltlich verwandt** auf.
 
-Klicke auf einem Board mit der rechten Maustaste auf ein Ticket ohne offenen Pull Request und wähle **Mit einem Pull Request verknüpfen**, um in der Befehlspalette einen der offenen Pull Requests seines Projekts auszuwählen, Entwürfe eingeschlossen. Der Eintrag erscheint nur, wenn dieses Projekt mindestens einen solchen Pull Request zum Verknüpfen hat. Bei mehreren ausgewählten Tickets bietet **Aktionen** dieselbe Auswahl für die gesamte Auswahl an, sowie **Die anderen Tickets mit #N verknüpfen**, wenn einige davon bereits Pull Request N haben. **Mit einem Pull Request verknüpfen** wird nicht angeboten, sobald ein ausgewähltes Ticket einen verknüpften Pull Request hat; **Verknüpfung von N Tickets mit ihren Pull Requests lösen** entfernt nach deiner Bestätigung zuerst alle Verknüpfungen der Auswahl. Verknüpfungen erscheinen sofort auf den Karten, und eine abgelehnte Verknüpfung verschwindet, wenn das Board aktualisiert wird. Eine Karte mit offenem Pull Request zeigt dessen Nummer, nach Status eingefärbt, und seine Merge-Bereitschaft, denselben Indikator wie in **Code-Review**.
+Klicke auf einem Board mit der rechten Maustaste auf ein Ticket ohne offenen Pull Request und wähle **Mit einem Pull Request verknüpfen**, um in der Befehlspalette einen der offenen Pull Requests seines Projekts auszuwählen, Entwürfe eingeschlossen. Der Eintrag erscheint nur, wenn dieses Projekt mindestens einen solchen Pull Request zum Verknüpfen hat. Bei mehreren ausgewählten Tickets bietet **Aktionen** dieselbe Auswahl für die gesamte Auswahl an, sowie **Die anderen Tickets mit #N verknüpfen**, wenn einige davon bereits Pull Request N haben; ein Rechtsklick auf eines der ausgewählten Tickets bietet **Die anderen Tickets mit #N verknüpfen** ebenfalls an. **Mit einem Pull Request verknüpfen** wird nicht angeboten, sobald ein ausgewähltes Ticket einen verknüpften Pull Request hat; **Verknüpfung von N Tickets mit ihren Pull Requests lösen** entfernt nach deiner Bestätigung zuerst alle Verknüpfungen der Auswahl. Verknüpfungen erscheinen sofort auf den Karten, und jede Karte wechselt sofort in den Status, den ihr Pull Request vorgibt, etwa **In Prüfung** bei einem offenen Pull Request; eine abgelehnte Verknüpfung verschwindet, wenn das Board aktualisiert wird. Eine Karte mit offenem Pull Request zeigt dessen Nummer, nach Status eingefärbt, und seine Merge-Bereitschaft, denselben Indikator wie in **Code-Review**; ist Auto-Merge aktiv, ergänzt sein Tooltip den Status um **Auto-Merge**.
+
+Hat ein Ticket einen verknüpften Pull Request, fasst sein Rechtsklickmenü dessen Aktionen im Untermenü **Pull Request** zusammen. **Pull Request anzeigen** öffnet den Pull Request in einem eigenen Tab oder wechselt zu dem Tab, der ihn bereits zeigt. **Zusammenführen** erscheint, wenn der Pull Request offen und zum Merge bereit ist und dein Anbieterkonto in das Repository schreiben kann; es öffnet den Pull Request mit seiner üblichen Merge-Bestätigung, in der du die Methode und die Commit-Nachricht wählst oder **Mit Numo zusammenführen** nutzt. **Auto-Merge aktivieren** erscheint, solange der Pull Request noch nicht zusammengeführt werden kann und das Repository Auto-Merge erlaubt; **Auto-Merge deaktivieren** ersetzt es, sobald Auto-Merge aktiv ist. Ist der verknüpfte Pull Request zusammengeführt oder geschlossen, verknüpft **Mit einem Pull Request verknüpfen** das Ticket mit einem anderen offenen Pull Request des Projekts. **Vom Pull Request lösen** steht abgesetzt und rot ganz unten und entfernt die Verknüpfung nach deiner Bestätigung.
 
 Unter **Kontoeinstellungen → Tickets → Ticket starten** setzt **Ticket oder Aufgabe starten, wenn ich den Prompt kopiere** ein noch nicht begonnenes Ticket oder eine Notizbuchaufgabe auf „In Arbeit“, sobald du deren Prompt kopierst. Lass die Option deaktiviert, wenn du Prompts nur zum Lesen kopieren.
 

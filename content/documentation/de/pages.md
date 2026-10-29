@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 23,
-  "sourceRevision": 21,
+  "revision": 24,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -104,13 +104,14 @@
       "lib/selection-menu-visibility.test.ts",
       "lib/mention-menu.ts",
       "components/pages/block-menu.tsx",
-      "lib/action-menu-search.ts"
+      "lib/action-menu-search.ts",
+      "components/pages/block-drag.ts"
     ]
   },
   "review": {
-    "revision": 23,
-    "fact": "agent:claude-code (block menu search field reaching every action, block types and colors included, with submenu entries shown behind their path such as Turn into › Heading 1 (MIN-845), checked against components/pages/block-menu.tsx, components/issue-context-menu.tsx and lib/action-menu-search.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; equivalent meaning to en revision 21; self-reviewed; agent review, not human acceptance)",
+    "revision": 24,
+    "fact": "agent:claude-code (list items as blocks with their own handle: handle left of the list, + adding an item of the same kind below or above with Alt/Option-click and the / menu open, dragging among lists of the same kind of item including nested lists, emptied lists removed, handle menu acting on the item or the selection; checked against components/pages/block-gutter.tsx, components/pages/block-actions.ts and components/pages/block-drag.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show list item handles)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -146,7 +147,7 @@
       "src": "/documentation/de/page-create-menu.png",
       "alt": "Erstellungsmenü mit Neue Seite und Neue Datenbank.",
       "caption": "Wähle über die Seitenfunktionen des Projekts ein Dokument oder eine Datenbank.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -162,7 +163,7 @@
       "src": "/documentation/de/page-editor.png",
       "alt": "Demoseite mit Überschriften, Absätzen, Aufgaben mit Kontrollkästchen und einer Ticketreferenz.",
       "caption": "Überschriften, Aufgabenblöcke und die Referenz AUR-2 gliedern die Seite. Der Inhalt dient als Demobeispiel.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -179,7 +180,7 @@
       "src": "/documentation/de/page-comments.png",
       "alt": "Seitenaktivität ohne bisherige Einträge und ein leeres Kommentarfeld.",
       "caption": "Lies die Seitenaktivität und verfasse einen Kommentar im Eingabefeld. In diesem Beispiel wurde keiner abgesendet.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -196,7 +197,7 @@
       "src": "/documentation/de/page-file-states.png",
       "alt": "Demoseite mit einem unvollständigen Upload und einer gespeicherten Datei von 67 Byte mit Downloadfunktion.",
       "caption": "Prüfe den tatsächlichen Dateizustand: Der zweite Anhang ist verfügbar, der erste unvollständige Upload nicht.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -212,7 +213,7 @@
       "src": "/documentation/de/page-history-preview.png",
       "alt": "Versionen-Tab mit aufgeklapptem früherem Zustand, Autor, Wiederherstellen und Hinweis auf 30 Tage Aufbewahrung.",
       "caption": "Prüfe einen gespeicherten Zustand in der Vorschau und vergleiche ihn vor dem Wiederherstellen mit der aktuellen Seite.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -228,7 +229,7 @@
       "src": "/documentation/de/page-publish.png",
       "alt": "Veröffentlichungsdialog mit ausgewähltem Privat und Alternativen für Passwort oder Link.",
       "caption": "Privat hält die Seite im Projekt. Prüfe die vorgesehene Zielgruppe vor einer Änderung der Freigabe.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -244,7 +245,7 @@
       "src": "/documentation/de/page-export.png",
       "alt": "Exportmenü des Dokuments mit Markdown (.md) und Drucken / PDF.",
       "caption": "Wähle Markdown zum Herunterladen oder Drucken / PDF für die Druckansicht.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -260,7 +261,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Umbenennen und Entfernen.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -333,6 +334,8 @@ Seiten, Beschreibungen, Kommentare und das Aufgabennotizbuch verwenden denselben
 Umschalt+Eingabetaste beginnt eine neue Zeile im selben Block. Command/Strg+Eingabetaste fügt keinen Zeilenumbruch ein: In einem Kommentar oder einem anderen Eingabebereich sendet es, unabhängig vom Sende-Kürzel in deinen [Einstellungen](/de/dokumentation/accounts#preferences), und wenn du die Eingabetaste als Sende-Kürzel gewählt hast, sendet auch die Eingabetaste.
 
 Um ganze Blöcke auszuwählen, ziehe von einem Block in einen anderen oder ziehe ein Auswahlrechteck von außerhalb des Textes auf: Drücke im Rand daneben oder im leeren Bereich unter der Seite und ziehe dann über die Blöcke. Jeder Block, den das Rechteck berührt, wird ausgewählt; ein Klick dort ohne Ziehen setzt den Cursor weiterhin auf diese Zeile, und Escape bricht das Rechteck ab. Jeder erreichte Block wird mit abgerundeten Ecken in der Farbe von markiertem Text hervorgehoben. Ist nur ein Block ausgewählt, öffnet sich die Auswahlleiste darüber: Ihre Aktionen (**Umwandeln in**, **Farbe**, **Fett** und die anderen Formate, **Kopieren**, **Numo fragen**, **Kommentieren**) gelten für den Block, und nach **Umwandeln in** bleibt er ausgewählt, damit eine weitere Aktion folgen kann. Sind mehrere Blöcke ausgewählt, bleibt die Leiste ausgeblendet: Öffne das Menü am Griff eines ausgewählten Blocks, das auf alle wirkt. Umschalt+Klick auf einen anderen Block oder Umschalt+Aufwärtspfeil und Umschalt+Abwärtspfeil am Rand eines Blocks erweitern die Auswahl um ganze Blöcke. Escape wählt den Block aus, in dem du schreibst, und ein weiteres Escape hebt die Auswahl auf. Command+A unter macOS oder Strg+A unter Windows/Linux markiert zuerst den Text des Blocks, in dem du bist, auch in einem Codeblock, und beim zweiten Drücken alle Blöcke. Sind Blöcke ausgewählt, wählen die Aufwärts- und die Abwärtspfeiltaste den Block darüber oder darunter, Umschalt+Aufwärtspfeil und Umschalt+Abwärtspfeil fügen Blöcke hinzu oder entfernen sie, die Rücktaste oder Entf löscht sie, Command/Strg+C kopiert sie, Command/Strg+X schneidet sie aus, und die Eingabetaste auf einem einzelnen Block setzt den Cursor an sein Ende; Tippen bewirkt nichts. Das Blockmenü wirkt auf alle ausgewählten Blöcke. Tippe in das Suchfeld des Blockmenüs, um jede seiner Aktionen zu erreichen, auch Blocktypen und Farben: Ein Eintrag aus einem Untermenü zeigt seinen Pfad, etwa **Umwandeln in** › **Überschrift 1**. Bilder, Dateien, Codeblöcke, Gleichungen, Teiler, Erwähnungen und Inline-Code zeigen dieselbe Hervorhebung, wenn sie ausgewählt sind, allein oder innerhalb einer Auswahl. Während du einen Kommentar schreibst oder bearbeitest, schließt oder verwirft Escape ihn weiterhin. Auf einem Touchscreen markiert langes Drücken weiterhin Text, und Ziehen wählt keine Blöcke aus.
+
+In einer Aufzählung, nummerierten Liste oder Aufgabenliste ist jeder Eintrag ein Block mit eigenem Griff, der links neben seiner Liste erscheint, wenn du über den Eintrag fährst; eine Liste hat keinen eigenen Griff mehr, also wähle ihre Einträge aus, um auf alle zu wirken, denn das Menü am Griff wirkt auf den Eintrag oder auf alle ausgewählten Einträge. Das + am Griff fügt darunter einen Eintrag derselben Art ein, mit Alt/Option-Klick darüber, und öffnet dabei das `/`-Menü. Ziehen am Griff verschiebt den Eintrag oder die ausgewählten Einträge in jede Liste, die diese Art von Eintrag aufnimmt, verschachtelte Listen eingeschlossen: Ein Aufzählungspunkt kann in eine nummerierte Liste wandern, eine Aufgabe nur zwischen Aufgaben, und eine so geleerte Liste wird entfernt.
 
 Auf dem Smartphone zeigt der Editor weder Blockgriffe noch Auswahlleiste, und ein getipptes `@` bleibt ein normales Zeichen. Solange ein Editor den Fokus hat, schwebt eine Leiste über der Tastatur, die sich beim Schließen der Tastatur ausblendet: **Block einfügen** (+) listet die Blöcke dieses Editors in denselben Abschnitten wie das Menü `/` auf und fügt den gewählten an der Cursorposition ein, wie `/`; **Erwähnen** (@) listet Personen, Tickets, Ziele und Seiten zum Erwähnen nach Typ gruppiert auf; danach folgen **Fett**, **Kursiv**, **Durchgestrichen**, **Code**, **Farbe** (ein Blatt für Text- oder Hintergrundfarbe), **Link hinzufügen**, **Ausrücken** und **Einrücken** in einer Liste, **Kommentieren** auf einer Seite sowie **Tastatur ausblenden**, das fest am rechten Ende bleibt. Ein unteres Blatt, in dem du schreibst, wächst auf die volle Bildschirmhöhe, und die Zeile, die du gerade tippst, bleibt über der Tastatur. Langes Drücken markiert Text in einem Editor, und die Leiste mit ihren Blättern funktioniert auch im Aufgabennotizbuch. Die untere Navigation wird ausgeblendet, solange ein Textfeld den Fokus hat, etwa ein Seitentitel oder ein Kommentar. Auf einem Touchscreen ist **Symbol hinzufügen** auf einer Seite immer sichtbar.
 

@@ -124,7 +124,7 @@ export function BoardLoadingSkeleton({
 function BoardCardSkeleton({ detailed }: { detailed: boolean }) {
   return (
     <div
-      className="flex shrink-0 flex-col gap-2 rounded-xl border border-border/60 bg-card p-3 dark:border-border"
+      className="flex shrink-0 flex-col gap-2 rounded-2xl border border-border/60 bg-card p-3 dark:border-border"
       data-board-skeleton-card
     >
       <div className="flex items-center justify-between gap-2">
@@ -147,7 +147,7 @@ function BoardCardSkeleton({ detailed }: { detailed: boolean }) {
 function BoardCreateIssueSkeleton() {
   return (
     <div
-      className="flex w-full shrink-0 items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-6"
+      className="flex w-full shrink-0 items-center justify-center gap-1.5 rounded-2xl border border-dashed border-border py-6"
       data-board-skeleton-create-issue
     >
       <Skeleton className="size-4 rounded-sm" />

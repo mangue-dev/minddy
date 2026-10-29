@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 22,
+  "revision": 23,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-28",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -58,14 +58,15 @@
       "lib/ai-surfaces.ts",
       "components/billing/usage-segment-ui.tsx",
       "docs/security/project-roles.md",
-      "lib/project-roles.ts"
+      "lib/project-roles.ts",
+      "components/agent/model-combobox.tsx"
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code/MIN-831 (removal of subtitle credits and sign-offs invented on silence, with cleanup on or off, checked against lib/dictation-hallucinations.ts and lib/server/openrouter-transcribe.ts and their tests; earlier evidence retained in git history)",
-    "language": "agent:claude-code/MIN-831 (English source sentence; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-28"
+    "revision": 23,
+    "fact": "agent:claude-code (model pickers show the default's model by name instead of App default when that model is in the catalog, and choosing it keeps following the default; checked against components/agent/model-combobox.tsx and components/settings/account-ai-keys-section.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure changed, the diagram does not show picker labels)",
+    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "scheduled-routines"
@@ -86,7 +87,7 @@
       "src": "/documentation/en/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Connected providers, a provider for each usage, and Numo's provider and model are separate settings.",
       "caption": "Each usage runs on minddy Cloud or a connected provider. Numo's default is saved per provider; a conversation can choose its own provider and model.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -130,7 +131,7 @@ In account AI settings, **Connected providers** lists minddy Cloud, included in 
 
 Below, **Numo**, **Automations**, **Voice dictation** and **Feedback** list their precise usages, such as Numo's conversations, conversation titles and web search, or Smart Fill and speech to text. Each usage chooses its own provider, minddy Cloud or a connected one, and changes alone: you can keep everything on minddy Cloud except Numo's conversations. A usage only offers the providers that can serve it: transcription and search by meaning need a provider with those models, and web search needs minddy Cloud or an OpenRouter key. When a usage runs on one of your keys, its model appears under the provider: keep the provider's preselected model or choose another. Choices apply at once. On an instance without minddy Cloud, a newly connected provider serves every usage that has none yet.
 
-For Numo's **Conversations**, choose the provider, then **App default** or a specific model from that provider. This default is saved for your account and separately for each provider, across reloads and new sessions. In a conversation, the model list next to the microphone opens on the providers when several are available; choose one to see its models. The conversation keeps that provider and model, and conversations following your default pick up later account changes. Already admitted turns retain their frozen provider and model. A saved model that becomes unavailable or exceeds your plan is refused: choose another model or App default. If a conversation's provider is removed, Numo asks you to choose another one instead of switching on its own. Account export/import includes these model preferences, without provider credentials.
+For Numo's **Conversations**, choose the provider, then a model from that provider. The picker shows the app's default model under its own name, checked while you follow it; choosing it keeps your setting following the app default, so later changes to that default still apply. **App default** appears as an option only when that model is not in the catalog. This default is saved for your account and separately for each provider, across reloads and new sessions. In a conversation, the model list next to the microphone opens on the providers when several are available; choose one to see its models. The conversation keeps that provider and model, and conversations following your default pick up later account changes. Already admitted turns retain their frozen provider and model. A saved model that becomes unavailable or exceeds your plan is refused: choose another model or the app's default model. If a conversation's provider is removed, Numo asks you to choose another one instead of switching on its own. Account export/import includes these model preferences, without provider credentials.
 
 An unconfirmed or unreachable key may leave supported general AI calls on managed Minddy usage when managed AI is configured. Your provider bills calls made with its key. Validated personal keys and Minddy-funded work follow the [budget rules below](#consumption).
 
