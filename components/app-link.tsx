@@ -5,6 +5,7 @@ import { useMobileNavigation } from "@/lib/mobile-navigation-context";
 import Link from "next/link";
 import { useRef, type ComponentProps } from "react";
 import { useOptionalAppTabSession } from "@/lib/app-tab-session-context";
+import { beginPendingNavigation } from "@/lib/pending-navigation";
 
 /** Next calls onNavigate only for an unmodified same-window navigation. */
 export default function AppLink({ onClick, onNavigate, ...props }: ComponentProps<typeof Link>) {
@@ -28,6 +29,10 @@ export default function AppLink({ onClick, onNavigate, ...props }: ComponentProp
         if (props.replace) router.replace(href, { scroll: props.scroll });
         else router.push(href, { scroll: props.scroll });
       });
-    } else if (destination.current && session?.reuseDestination(destination.current)) event.preventDefault();
+    } else if (destination.current && session) {
+      if (session.reuseDestination(destination.current)) event.preventDefault();
+      // The desktop shell shows the destination before the router commits it.
+      else beginPendingNavigation(destination.current);
+    }
   }} />;
 }

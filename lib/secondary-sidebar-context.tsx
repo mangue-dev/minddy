@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { usePathname } from "next/navigation";
+import { useDisplayedPathname } from "./pending-navigation";
 import { MobileCollectionStateProvider } from "@/lib/mobile-collection-state";
 
 /**
@@ -105,7 +105,8 @@ export function SecondarySidebarProvider({
 }: {
   children: ReactNode;
 }) {
-  const pathname = usePathname();
+  // A pending destination (MIN-843) sets the sidebar level before it commits.
+  const pathname = useDisplayedPathname();
   const [mobileHost, setMobileHost] = useState<MobileSidebarHost | null>(null);
   const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
   const [slot, setSlot] = useState<HTMLElement | null>(null);

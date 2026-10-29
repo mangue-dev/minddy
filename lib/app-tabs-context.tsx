@@ -20,6 +20,7 @@ import { removeLocalSnapshot, restoreLocalSnapshot } from "./local-snapshots";
 import { createWindowSelectionPersistence } from "./window-selection-persistence";
 import { createRestoredTabStartupAdmission } from "./restored-tab-startup-admission";
 import { INITIAL_ACCOUNT_CACHE_SCOPE, nextAccountCacheScope } from "./account-query-provider";
+import { beginPendingNavigation } from "./pending-navigation";
 
 interface AppTabsValue extends AppTabsSnapshot {
   session: AppTabsSession;
@@ -262,7 +263,11 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: 
       const wikiRoot = current.match(/^\/projects\/[^/]+\/pages(?:\/|$)/)?.[0].replace(/\/$/, "");
       if (session.isRetainedDestination(session.getSnapshot().activeId, href) || isPreparedAppTabDestination(client, href) ||
           (wikiRoot && (next === wikiRoot || next.startsWith(`${wikiRoot}/`)))) window.history.pushState(null, "", href);
-      else router.push(href, { scroll: false });
+      else {
+        // A cold destination waits on the router: the shell shows it now.
+        beginPendingNavigation(href);
+        router.push(href, { scroll: false });
+      }
     };
     session.remember = (id, href) => {
       if (lifetime.active) lifetime.writer.remember(id, href);
