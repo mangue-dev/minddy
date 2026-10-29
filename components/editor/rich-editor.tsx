@@ -19,8 +19,9 @@
 // - `size`: the page typography, or the compact one of panels and comments.
 //
 // What it adds on top, and which does not affect the document:
-// - `BlockRange` (NodeRange without its ⌘A): selection of several blocks with a drag or a ⇧-click,
-//   on which all menu actions operate ⋯ ;
+// - block selection (block-selection.ts): a drag or a ⇧-click across blocks,
+//   Esc, and the ⇧-arrows select whole blocks, as in Notion, and every action
+//   of the ⋯ menu operates on them;
 // - the mention pill (components/markdown-mention.tsx) placed on the node
 //   bare of the schema, and its suggestion “@”;
 // - the “/” menu, connected to the register, and the chrome of the block
@@ -41,7 +42,7 @@ import {
   type JSONContent,
 } from "@tiptap/react";
 import type { AnyExtension } from "@tiptap/core";
-import { BlockRange } from "@/components/editor/block-range";
+import { BlockSelectionExtension } from "@/components/editor/block-selection";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import type { EditorView } from "@tiptap/pm/view";
 import { useTranslations } from "next-intl";
@@ -150,23 +151,28 @@ const PROSE_BASE = cn(
   // attributes rather than tags.
 );
 
+/**
+ * The headings of EVERY editor surface: the page's are the reference — a
+ * clear step between levels, close to Notion's 30 / 24 / 20 px — and a
+ * description or a comment shows a title the size a page shows it.
+ */
+const PROSE_HEADINGS = cn(
+  "[&_h1]:mt-7 [&_h1]:mb-2 [&_h1]:text-[1.875rem] [&_h1]:leading-tight [&_h1]:font-semibold [&_h1]:tracking-tight",
+  "[&_h2]:mt-6 [&_h2]:mb-1.5 [&_h2]:text-2xl [&_h2]:leading-snug [&_h2]:font-semibold [&_h2]:tracking-tight",
+  "[&_h3]:mt-5 [&_h3]:mb-1 [&_h3]:text-xl [&_h3]:leading-snug [&_h3]:font-semibold"
+);
+
 const PROSE: Record<RichEditorSize, string> = {
   page: cn(
     PROSE_BASE,
     "text-base",
-    // A clear step between levels, close to Notion's 30 / 24 / 20 px over a
-    // 16 px body: the former 24 / 20 / 18 read almost alike.
-    "[&_h1]:mt-7 [&_h1]:mb-2 [&_h1]:text-[1.875rem] [&_h1]:leading-tight [&_h1]:font-semibold [&_h1]:tracking-tight",
-    "[&_h2]:mt-6 [&_h2]:mb-1.5 [&_h2]:text-2xl [&_h2]:leading-snug [&_h2]:font-semibold [&_h2]:tracking-tight",
-    "[&_h3]:mt-5 [&_h3]:mb-1 [&_h3]:text-xl [&_h3]:leading-snug [&_h3]:font-semibold",
+    PROSE_HEADINGS,
     "[&_hr]:my-4 [&_hr]:border-border"
   ),
   compact: cn(
     PROSE_BASE,
     "text-sm",
-    "[&_h1]:mt-3 [&_h1]:mb-1 [&_h1]:text-base [&_h1]:font-semibold",
-    "[&_h2]:mt-3 [&_h2]:mb-1 [&_h2]:text-sm [&_h2]:font-semibold",
-    "[&_h3]:mt-2 [&_h3]:mb-1 [&_h3]:text-sm [&_h3]:font-semibold",
+    PROSE_HEADINGS,
     "[&_hr]:my-3 [&_hr]:border-border"
   ),
 };
@@ -350,6 +356,9 @@ export interface RichEditorProps {
    * no editor to build. Read at mount.
    */
   immediateRender?: boolean;
+  /** Esc selects the block around the caret (block-selection.ts). A surface
+   whose Esc cancels it, a comment composer, turns it off. Read at build time. */
+  escapeSelectsBlock?: boolean;
   onFocus?: (editor: Editor) => void;
   onBlur?: (editor: Editor) => void;
   className?: string;
@@ -383,6 +392,7 @@ export function RichEditor({
   find = false,
   autoFocus = false,
   immediateRender = false,
+  escapeSelectsBlock = true,
   onFocus,
   onBlur,
   className,
@@ -390,6 +400,12 @@ export function RichEditor({
 }: RichEditorProps) {
   const t = useTranslations("Pages");
   const tCommon = useTranslations("Common");
+  // The search chip's “Type to search” (components/editor/suggestion-chip.ts),
+  // read at each state by plugins built once.
+  const tPicker = useTranslations("Picker");
+  const searchPlaceholderRef = useRef("");
+  searchPlaceholderRef.current = tPicker("typeToSearch");
+  const readSearchPlaceholder = useMemo(() => () => searchPlaceholderRef.current, []);
 
   // Fixed at mount, like the schema it decides: adding uploads later would
   // need the menu rebuilt, which no surface does.
@@ -474,9 +490,10 @@ export function RichEditor({
         ? MentionSuggest.configure({
             items: () => mentionsRef.current?.items() ?? [],
             onQuery: () => mentionsRef.current?.onQuery?.(),
+            placeholder: readSearchPlaceholder,
           })
         : null,
-    [hasMentions, typedMentions]
+    [hasMentions, typedMentions, readSearchPlaceholder]
   );
   const mentionItems = useMemo(
     () => (hasMentions ? () => mentionsRef.current?.items() ?? [] : undefined),
@@ -495,6 +512,7 @@ export function RichEditor({
   const [fixedSurfaceExtensions] = useState(() => surfaceExtensions ?? []);
   const [fixedNodeExtensions] = useState(() => nodeExtensions);
   const [hasFind] = useState(find);
+  const [selectOnEscape] = useState(escapeSelectsBlock);
 
   const extensions = useMemo(
     () =>
@@ -536,12 +554,12 @@ export function RichEditor({
         // INPUT rule, so nothing in the diagram: the markdown projection sees
         // nothing, and the document bears the real arrow.
         Arrows,
-        BlockRange,
+        BlockSelectionExtension.configure({ selectOnEscape }),
         // The placeholder is US and not @tiptap/extensions: why
         // is written in block-placeholder.ts, and it fits in two words — the
         // nested blocks, and the cursor read one keystroke late.
         BlockPlaceholder.configure({ text: placeholderFor }),
-        PageSlashCommand.configure({ items: () => slashItemsRef.current }),
+        PageSlashCommand.configure({ items: () => slashItemsRef.current, placeholder: readSearchPlaceholder }),
         // Block flashes use decorations: ProseMirror undoes DOM mutations
         // made outside its rendering (see block-flash.ts).
         BlockFlash,
@@ -571,6 +589,7 @@ export function RichEditor({
       fixedSurfaceExtensions,
       fixedNodeExtensions,
       hasFind,
+      selectOnEscape,
     ]
   );
 

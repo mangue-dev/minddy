@@ -2490,6 +2490,9 @@
     "placeholder": "Write, or type '/' for blocks…",
     "slashNoResult": "No matching block",
     "blockParagraph": "Text",
+    "slashGroupBasic": "Basic blocks",
+    "slashGroupLists": "Lists",
+    "slashGroupAdvanced": "Advanced blocks",
     "blockHeading1": "Heading 1",
     "blockHeading2": "Heading 2",
     "blockHeading3": "Heading 3",
@@ -2703,7 +2706,15 @@
     "noRelatedByMeaning": "No issue related by meaning",
     "createNamed": "Create “{name}”",
     "noResults": "No results",
-    "search": "Search…"
+    "search": "Search…",
+    "typeToSearch": "Type to search",
+    "closeMenu": "Close menu",
+    "mentionSectionPeople": "People",
+    "mentionSectionProjects": "Projects",
+    "mentionSectionIssues": "Issues",
+    "mentionSectionObjectives": "Objectives",
+    "mentionSectionPages": "Pages",
+    "mentionSectionResources": "Resources"
   },
   "Plan": {
     "tabDescription": "Description",

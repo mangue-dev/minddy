@@ -17,7 +17,7 @@ import type { MentionLinks } from "@/components/mention-links";
 import type { PageCommentAnchor } from "@/components/pages/page-comment-bubble";
 import type { PagesLookup } from "@/components/pages/pages-lookup";
 import type { BodyCollaboration } from "@/components/pages/page-collaboration";
-import type { PageSlashItem } from "@/components/pages/page-slash-command";
+import { slashSection, type PageSlashItem } from "@/components/pages/page-slash-command";
 import { insertSubpageMention, subpageBlock } from "@/components/pages/blocks/subpage";
 
 export { BLOCK_ID_ATTRIBUTE } from "@/components/pages/blocks";
@@ -70,6 +70,7 @@ export function PageEditor({
     label: t(subpageBlock.labelKey),
     icon: subpageBlock.icon,
     keywords: subpageBlock.slash.keywords,
+    section: slashSection(t, subpageBlock.slash.group),
     run: insertSubpageMention,
   }], [t]);
   return (

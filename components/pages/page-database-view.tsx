@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { Add01Icon, ArrowDown01Icon, ArrowRight01Icon, ArrowUp01Icon, ArrowUpDownIcon, Cancel01Icon, Copy01Icon, Delete02Icon, DragDropVerticalIcon, File02Icon, FilterIcon, Search01Icon, Settings02Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -17,13 +17,19 @@ import {
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetTitle } from "@/components/ui/sheet";
 import { MobileSheetContent } from "@/components/ui/mobile-sheet";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
@@ -58,6 +64,8 @@ import { usePageDatabaseViews } from "@/lib/use-page-database-views";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { useDragAnnouncements } from "@/lib/use-drag-announcements";
 import { DatabaseViewStrip } from "./database-view-strip";
+import { trackRowDrag } from "./database-row-drag";
+import { cn } from "@/lib/utils";
 import { DatabaseFilterEditor, activeFilterCount } from "./database-filter-editor";
 import { matchesDatabaseFilter, type DatabaseViewFilter } from "@/lib/page-database-filters";
 import { displayName } from "@/lib/display-name";
@@ -82,6 +90,11 @@ import {
 
 const horizontalColumnDrag: Modifier = ({ transform }) => ({ ...transform, y: 0 });
 
+/** A row's `+` and handle look like a page block's gutter (block-gutter.tsx):
+    the same faint ink, hover surface and plain cursor until a drag starts. */
+const ROW_GUTTER_BUTTON =
+  "flex size-6 shrink-0 items-center justify-center rounded-md p-0.5 text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
 function SortableDatabaseColumn({ projectId, database, property, disabled, onEdit }: {
   projectId: string; database: PageSummary; property: DatabaseProperty; disabled: boolean;
   onEdit: (property: DatabaseProperty) => void;
@@ -89,7 +102,9 @@ function SortableDatabaseColumn({ projectId, database, property, disabled, onEdi
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({ id: property.id, disabled });
   return <th ref={setNodeRef} scope="col" data-database-column={property.id}
     className="relative overflow-hidden whitespace-nowrap border-b border-border/50 bg-background p-1 font-normal"
-    style={{ transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 1 : undefined }}>
+    // A translation only: dnd-kit's transform also scales the dragged header
+    // to the width of the column under it, which stretched its text.
+    style={{ transform: CSS.Translate.toString(transform), transition, zIndex: isDragging ? 1 : undefined }}>
     <DatabaseColumnName projectId={projectId} database={database} property={property} disabled={disabled}
       dragging={isDragging} onEdit={onEdit} dragHandleProps={{ ...attributes, ...listeners }} />
   </th>;
@@ -138,7 +153,7 @@ function SortablePropertyRow({ property, sortable, children }: {
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
+      style={{ transform: CSS.Translate.toString(transform), transition }}
       className={`relative flex min-h-9 items-center gap-1 rounded-sm bg-popover px-1 hover:bg-muted/50 ${isDragging ? "z-10 shadow-sm" : ""}`}
     >
       <AppTooltip label={t("reorderColumnHint")}>
@@ -161,6 +176,19 @@ function SortablePropertyRow({ property, sortable, children }: {
   );
 }
 
+/** Places a trigger-less popover against another control: the side panel's
+    settings button, which opens it from its menu. */
+function AnchorTo({ anchor }: { anchor: RefObject<HTMLElement | null> }) {
+  return <PopoverAnchor virtualRef={anchor as RefObject<HTMLElement>} />;
+}
+
+/** A popover opened from the settings menu has no trigger to give focus back
+    to: it returns to the settings button instead of the document's body. */
+function returnFocus(event: Event, anchor: RefObject<HTMLElement | null>) {
+  event.preventDefault();
+  anchor.current?.focus();
+}
+
 function PropertySettings({
   projectId,
   database,
@@ -168,6 +196,7 @@ function PropertySettings({
   onToggleVisibility,
   onCreate,
   sheet,
+  anchored,
 }: {
   projectId: string;
   database: PageSummary;
@@ -177,13 +206,17 @@ function PropertySettings({
   /** On a phone: a bottom sheet the toolbar's settings open, without a
       trigger of its own. */
   sheet?: { open: boolean; onOpenChange: (open: boolean) => void };
+  /** In a side panel: a popover the toolbar's settings menu opens, anchored
+      to that menu's button instead of a trigger of its own. */
+  anchored?: { open: boolean; onOpenChange: (open: boolean) => void; anchor: RefObject<HTMLElement | null> };
 }) {
   const t = useTranslations("PageDatabase");
   const { saveSchema, pending } = usePageDatabase(projectId);
   const schema = database.database_schema ?? [];
   const [popoverOpen, setPopoverOpen] = useState(false);
-  const open = sheet ? sheet.open : popoverOpen;
-  const setOpen = sheet ? sheet.onOpenChange : setPopoverOpen;
+  const controlled = sheet ?? anchored;
+  const open = controlled ? controlled.open : popoverOpen;
+  const setOpen = controlled ? controlled.onOpenChange : setPopoverOpen;
   const [manage, setManage] = useState<DatabaseProperty | null>(null);
   const [remove, setRemove] = useState<DatabaseProperty | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
@@ -365,15 +398,20 @@ function PropertySettings({
         </Sheet>
       ) : (
       <Popover open={open} onOpenChange={setOpen}>
-        <AppTooltip label={t("properties")}>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon-sm" aria-label={t("properties")}>
-              <HugeiconsIcon icon={Settings02Icon} className="size-4" />
-            </Button>
-          </PopoverTrigger>
-        </AppTooltip>
+        {anchored ? (
+          <AnchorTo anchor={anchored.anchor} />
+        ) : (
+          <AppTooltip label={t("properties")}>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon-sm" aria-label={t("properties")}>
+                <HugeiconsIcon icon={Settings02Icon} className="size-4" />
+              </Button>
+            </PopoverTrigger>
+          </AppTooltip>
+        )}
         <PopoverContent
           align="end"
+          onCloseAutoFocus={anchored ? (event) => returnFocus(event, anchored.anchor) : undefined}
           className="w-[min(380px,calc(100vw-2rem))] gap-2 rounded-xl p-2 [&_input]:rounded-sm [&_button]:rounded-sm"
         >
           {columnsBody}
@@ -415,10 +453,14 @@ export function PageDatabaseView({
   projectId,
   database,
   onOpen,
+  compact = false,
 }: {
   projectId: string;
   database: PageSummary;
   onOpen: (pageId: string) => void;
+  /** Shown in a side panel: the phone's toolbar (view picker, search and
+      settings) at desktop size, with menus and popovers instead of sheets. */
+  compact?: boolean;
 }) {
   const [createProperty, setCreateProperty] = useState(false);
   const [editProperty, setEditProperty] = useState<DatabaseProperty | null>(
@@ -457,6 +499,12 @@ export function PageDatabaseView({
   // the sort, filter and column sheets.
   const [mobileSearch, setMobileSearch] = useState(false);
   const [mobileSheet, setMobileSheet] = useState<"settings" | "sort" | "filter" | "columns" | null>(null);
+  // The side panel's toolbar: its settings menu sorts in place and opens the
+  // filter or column popover against its button once the menu has closed.
+  const panelToolbar = compact && !mobile;
+  const settingsButton = useRef<HTMLButtonElement>(null);
+  const [panelPopover, setPanelPopover] = useState<"filter" | "columns" | null>(null);
+  const pendingPopover = useRef<"filter" | "columns" | null>(null);
   const [remove, setRemove] = useState<PageSummary[]>([]);
   const [menuEntry, setMenuEntry] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
@@ -623,20 +671,20 @@ export function PageDatabaseView({
   const filterEditor = (
     <DatabaseFilterEditor schema={schema} filter={filters} members={members} onChange={setFilters} />
   );
+  const sortOptions = [
+    { value: "position", label: t("manualOrder") },
+    { value: "title", label: database.database_title_name ?? t("name") },
+    ...schema.map((p) => ({ value: p.id, label: p.name })),
+  ];
+  const sortLabel = sortOptions.find((option) => option.value === sort)?.label ?? t("manualOrder");
+  const sorted = sort !== "position" || descending;
   const sortControls = (
     <>
       <DatabaseSelect
         label={t("sort")}
         value={sort}
         onChange={setSort}
-        options={[
-          { value: "position", label: t("manualOrder") },
-          {
-            value: "title",
-            label: database.database_title_name ?? t("name"),
-          },
-          ...schema.map((p) => ({ value: p.id, label: p.name })),
-        ]}
+        options={sortOptions}
       />
       <DatabaseSelect
         label={t("sortDirection")}
@@ -649,12 +697,16 @@ export function PageDatabaseView({
       />
     </>
   );
-  const propertySettings = (sheet?: { open: boolean; onOpenChange: (open: boolean) => void }) => (
+  const propertySettings = (
+    sheet?: { open: boolean; onOpenChange: (open: boolean) => void },
+    anchored?: { open: boolean; onOpenChange: (open: boolean) => void; anchor: RefObject<HTMLElement | null> },
+  ) => (
     <PropertySettings
       projectId={projectId}
       database={database}
       hidden={hidden}
       sheet={sheet}
+      anchored={anchored}
       onCreate={() => setCreateProperty(true)}
       onToggleVisibility={(id) =>
         updateView({
@@ -665,14 +717,131 @@ export function PageDatabaseView({
       }
     />
   );
+  const searchPopover = (
+    <Popover>
+      <AppTooltip label={t("searchEntries")}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t("searchEntries")}
+            className={query ? "text-primary" : "text-muted-foreground"}
+          >
+            <HugeiconsIcon icon={Search01Icon} className="size-4" />
+          </Button>
+        </PopoverTrigger>
+      </AppTooltip>
+      <PopoverContent
+        align="end"
+        className="w-72 max-w-[calc(100vw-2rem)] gap-2 rounded-xl p-2 [&_input]:rounded-sm [&_button]:rounded-sm"
+      >
+        <Input
+          autoFocus
+          aria-label={t("searchEntries")}
+          placeholder={t("searchEntries")}
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+  const settingsDetail = "ml-auto max-w-32 truncate pl-4 text-xs text-muted-foreground";
+  const panelSettings = (
+    <>
+      <DropdownMenu>
+        <AppTooltip label={t("viewSettings")}>
+          <DropdownMenuTrigger asChild>
+            <Button
+              ref={settingsButton}
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t("viewSettings")}
+              className={filterCount || sorted ? "text-primary" : "text-muted-foreground"}
+            >
+              <HugeiconsIcon icon={Settings02Icon} className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+        </AppTooltip>
+        <DropdownMenuContent
+          align="end"
+          className="w-64"
+          onCloseAutoFocus={(event) => {
+            const next = pendingPopover.current;
+            pendingPopover.current = null;
+            if (!next) return;
+            // Opened only now, so the menu's own focus return does not count
+            // as a move outside the popover and close it at once.
+            event.preventDefault();
+            setPanelPopover(next);
+          }}
+        >
+          <DropdownMenuLabel>{t("viewSettings")}</DropdownMenuLabel>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <HugeiconsIcon icon={ArrowUpDownIcon} className="size-4 text-muted-foreground" />
+              <span className="shrink-0">{t("sort")}</span>
+              <span className={settingsDetail}>{sortLabel}</span>
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-56">
+              <DropdownMenuRadioGroup value={sort} onValueChange={setSort}>
+                {sortOptions.map((option) => (
+                  <DropdownMenuRadioItem key={option.value} value={option.value}>
+                    <span className="truncate">{option.label}</span>
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuRadioGroup
+                value={descending ? "descending" : "ascending"}
+                onValueChange={(next) => setDescending(next === "descending")}
+              >
+                <DropdownMenuRadioItem value="ascending">{t("sortAscending")}</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="descending">{t("sortDescending")}</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+          <DropdownMenuItem onSelect={() => { pendingPopover.current = "filter"; }}>
+            <HugeiconsIcon icon={FilterIcon} className="size-4 text-muted-foreground" />
+            <span className="shrink-0">{t("filter")}</span>
+            <span className={settingsDetail}>{t("filterCount", { count: filterCount })}</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => { pendingPopover.current = "columns"; }}>
+            <HugeiconsIcon icon={Settings02Icon} className="size-4 text-muted-foreground" />
+            <span className="shrink-0">{t("properties")}</span>
+            <span className={settingsDetail}>{t("visibleColumns", { count: visible.length + 1 })}</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <Popover
+        open={panelPopover === "filter"}
+        onOpenChange={(open) => setPanelPopover(open ? "filter" : null)}
+      >
+        <AnchorTo anchor={settingsButton} />
+        <PopoverContent
+          align="end"
+          onCloseAutoFocus={(event) => returnFocus(event, settingsButton)}
+          className="max-h-[min(70vh,36rem)] w-[min(380px,calc(100vw-2rem))] gap-2 overflow-y-auto rounded-xl p-2 [&_input]:rounded-sm [&_button]:rounded-sm"
+        >
+          <div className="px-2 py-1 text-sm font-medium">{t("filter")}</div>
+          {filterEditor}
+        </PopoverContent>
+      </Popover>
+      {propertySettings(undefined, {
+        open: panelPopover === "columns",
+        onOpenChange: (open) => setPanelPopover(open ? "columns" : null),
+        anchor: settingsButton,
+      })}
+    </>
+  );
   return (
     <div className="mt-5 space-y-1">
       <div className="flex items-center gap-0.5">
-        <div className={`mr-auto flex min-w-0 items-center gap-1 ${mobile ? "flex-1" : ""}`}>
+        <div className={`mr-auto flex min-w-0 items-center gap-1 ${mobile || panelToolbar ? "flex-1" : ""}`}>
           <DatabaseViewStrip
             views={databaseViews.views}
             activeId={databaseViews.active?.id ?? null}
             canWrite={canWrite}
+            compact={panelToolbar}
             onSelect={databaseViews.select}
             onCreate={databaseViews.create}
             onRename={databaseViews.rename}
@@ -728,11 +897,19 @@ export function PageDatabaseView({
               <HugeiconsIcon icon={Search01Icon} className="size-5" />
             </Button>
             <Button variant="ghost" size="icon" aria-label={t("viewSettings")}
-              className={`size-11 ${filterCount || sort !== "position" || descending ? "text-primary" : "text-muted-foreground"}`}
+              className={`size-11 ${filterCount || sorted ? "text-primary" : "text-muted-foreground"}`}
               onClick={() => setMobileSheet("settings")}>
               <HugeiconsIcon icon={Settings02Icon} className="size-5" />
             </Button>
             <Button className="ml-1 h-11" onClick={add}>
+              {t("new")}
+            </Button>
+          </>
+        ) : panelToolbar ? (
+          <>
+            {searchPopover}
+            {panelSettings}
+            <Button size="sm" className="ml-2" onClick={add}>
               {t("new")}
             </Button>
           </>
@@ -784,32 +961,7 @@ export function PageDatabaseView({
             {sortControls}
           </PopoverContent>
         </Popover>
-        <Popover>
-          <AppTooltip label={t("searchEntries")}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t("searchEntries")}
-                className={query ? "text-primary" : "text-muted-foreground"}
-              >
-                <HugeiconsIcon icon={Search01Icon} className="size-4" />
-              </Button>
-            </PopoverTrigger>
-          </AppTooltip>
-          <PopoverContent
-            align="end"
-            className="w-72 max-w-[calc(100vw-2rem)] gap-2 rounded-xl p-2 [&_input]:rounded-sm [&_button]:rounded-sm"
-          >
-            <Input
-              autoFocus
-              aria-label={t("searchEntries")}
-              placeholder={t("searchEntries")}
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </PopoverContent>
-        </Popover>
+        {searchPopover}
         {propertySettings()}
         <Button size="sm" className="ml-2" onClick={add}>
           {t("new")}
@@ -840,9 +992,7 @@ export function PageDatabaseView({
               <SheetTitle className="mobile-picker-title truncate">{t("viewSettings")}</SheetTitle>
               {([
                 { key: "sort", icon: ArrowUpDownIcon, label: t("sort"),
-                  detail: sort === "position" ? t("manualOrder")
-                    : sort === "title" ? database.database_title_name ?? t("name")
-                    : schema.find((p) => p.id === sort)?.name ?? t("manualOrder") },
+                  detail: sortLabel },
                 { key: "filter", icon: FilterIcon, label: t("filter"), detail: t("filterCount", { count: filterCount }) },
                 { key: "columns", icon: Settings02Icon, label: t("properties"),
                   detail: t("visibleColumns", { count: visible.length + 1 }) },
@@ -884,7 +1034,7 @@ export function PageDatabaseView({
           void saveSchema(base, reorderDatabaseColumns(schema, String(active.id), String(over.id), before));
         }}>
       <SortableContext items={visible.map((property) => property.id)} strategy={horizontalListSortingStrategy}>
-      <DatabaseTableScroll>
+      <DatabaseTableScroll panel={compact}>
         <table
           className="w-full table-fixed border-separate border-spacing-0 text-sm"
           style={{ minWidth: contentWidth + chromeWidth }}
@@ -996,16 +1146,17 @@ export function PageDatabaseView({
                   {!mobile && (
                   <td className="h-10 w-16 bg-background p-0">
                       <div
-                        className="flex h-10 items-center justify-end gap-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 has-[[data-state=open]]:opacity-100 [@media(hover:none)]:hidden"
+                        // Fades in and out with the hover, like a page block's gutter.
+                        className="flex h-10 items-center justify-end gap-0 pr-1 opacity-0 transition-opacity duration-[120ms] ease-out group-hover:opacity-100 focus-within:opacity-100 has-[[data-state=open]]:opacity-100 motion-reduce:transition-none [@media(hover:none)]:hidden"
                       >
                         <AppTooltip label={t("insertEntryHint")}>
                           <button
                             type="button"
-                            className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                            className={ROW_GUTTER_BUTTON}
                             aria-label={t("insertEntryHint")}
                             onClick={(event) => insert(entry, event.altKey)}
                           >
-                            <HugeiconsIcon icon={Add01Icon} className="size-4" />
+                            <HugeiconsIcon icon={Add01Icon} className="size-5" />
                           </button>
                         </AppTooltip>
                         <DropdownMenu
@@ -1019,30 +1170,39 @@ export function PageDatabaseView({
                               <button
                                 type="button"
                                 aria-label={t("entryActions")}
-                                draggable={manual}
-                                className={`flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
+                                className={cn(ROW_GUTTER_BUTTON, "size-7", isDragging && "cursor-grabbing")}
                                 onPointerDownCapture={(event) => {
                                   if (event.button === 0) event.stopPropagation();
                                 }}
                                 onClick={() => setMenuEntry(entry.id)}
-                                onDragStart={(event) => {
-                                  setIsDragging(true);
-                                  dragging.current = targets.map(
-                                    (target) => target.id,
-                                  );
-                                  event.dataTransfer.effectAllowed = "move";
-                                  event.dataTransfer.setData(
-                                    "text/plain",
-                                    entry.id,
-                                  );
-                                }}
-                                onDragEnd={() => {
-                                  dragging.current = [];
-                                  setIsDragging(false);
-                                  setDropTarget(null);
+                                // The page's gesture (database-row-drag.ts):
+                                // the rows themselves follow the pointer, and
+                                // below the threshold the press stays a click.
+                                onMouseDown={(event) => {
+                                  const table = event.currentTarget.closest("table");
+                                  if (!manual || event.button !== 0 || !table) return;
+                                  event.preventDefault();
+                                  const ids = targets.map((target) => target.id);
+                                  trackRowDrag({
+                                    start: event.nativeEvent,
+                                    table,
+                                    dragged: ids,
+                                    onBegin: () => {
+                                      dragging.current = ids;
+                                      setIsDragging(true);
+                                    },
+                                    onTarget: setDropTarget,
+                                    onDrop: ({ id, above }) => drop(id, above),
+                                    onEnd: () => {
+                                      setIsDragging(false);
+                                      // `drop` reads the dragged ids after this.
+                                      queueMicrotask(() => { dragging.current = []; });
+                                    },
+                                  });
                                 }}
                               >
-                                <HugeiconsIcon icon={DragDropVerticalIcon} className="size-4" />
+                                {/* Filled dots, as on a page's handle. */}
+                                <HugeiconsIcon icon={DragDropVerticalIcon} className="size-6 [&_path]:fill-current" />
                               </button>
                             </DropdownMenuTrigger>
                           </AppTooltip>

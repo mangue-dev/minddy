@@ -72,7 +72,8 @@ async function pressFind() {
   return event;
 }
 
-const field = () => host.querySelector<HTMLInputElement>('input[aria-label="findPlaceholder"]')!;
+// The bar is portaled out of the editor's container (to the body here).
+const field = () => document.body.querySelector<HTMLInputElement>('input[aria-label="findPlaceholder"]')!;
 
 async function type(input: HTMLInputElement, value: string) {
   await act(async () => {
@@ -89,7 +90,7 @@ it("opens on the find shortcut only when the document owns the screen", async ()
   owns.value = false;
   const ignored = await pressFind();
   expect(ignored.defaultPrevented).toBe(false);
-  expect(host.querySelector('[role="search"]')).toBeNull();
+  expect(document.body.querySelector('[role="search"]')).toBeNull();
 
   owns.value = true;
   const taken = await pressFind();
@@ -104,17 +105,17 @@ it("highlights and counts matches, and steps through them", async () => {
 
   expect(editor.view.dom.querySelectorAll(".ProseMirror-search-match, .ProseMirror-active-search-match")).toHaveLength(3);
   expect(editor.view.dom.querySelectorAll(".ProseMirror-active-search-match")).toHaveLength(1);
-  expect(host.textContent).toContain('findCount:{"current":1,"total":3}');
+  expect(document.body.textContent).toContain('findCount:{"current":1,"total":3}');
 
   await act(async () => {
     field().dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
   });
-  expect(host.textContent).toContain('findCount:{"current":2,"total":3}');
+  expect(document.body.textContent).toContain('findCount:{"current":2,"total":3}');
 
   await act(async () => {
-    host.querySelector<HTMLButtonElement>('button[aria-label="findMatchCase"]')!.click();
+    document.body.querySelector<HTMLButtonElement>('button[aria-label="findMatchCase"]')!.click();
   });
-  expect(host.textContent).toContain('findCount:{"current":1,"total":2}');
+  expect(document.body.textContent).toContain('findCount:{"current":1,"total":2}');
   expect(selected()).toBe("alpha");
 });
 
@@ -122,11 +123,11 @@ it("shows an invalid expression and highlights nothing", async () => {
   await render();
   await pressFind();
   await act(async () => {
-    host.querySelector<HTMLButtonElement>('button[aria-label="findRegex"]')!.click();
+    document.body.querySelector<HTMLButtonElement>('button[aria-label="findRegex"]')!.click();
   });
   await type(field(), "(alpha");
   expect(field().getAttribute("aria-invalid")).toBe("true");
-  expect(host.textContent).toContain("findInvalidRegex");
+  expect(document.body.textContent).toContain("findInvalidRegex");
   expect(editor.view.dom.querySelectorAll(".ProseMirror-search-match")).toHaveLength(0);
 });
 
@@ -134,26 +135,26 @@ it("replaces every match with regular-expression groups in one transaction", asy
   await render();
   await pressFind();
   await act(async () => {
-    host.querySelector<HTMLButtonElement>('button[aria-label="findRegex"]')!.click();
-    host.querySelector<HTMLButtonElement>('button[aria-label="findShowReplace"]')!.click();
+    document.body.querySelector<HTMLButtonElement>('button[aria-label="findRegex"]')!.click();
+    document.body.querySelector<HTMLButtonElement>('button[aria-label="findShowReplace"]')!.click();
   });
   await type(field(), "(a)lpha");
-  await type(host.querySelector<HTMLInputElement>('input[aria-label="findReplacePlaceholder"]')!, "$1-");
+  await type(document.body.querySelector<HTMLInputElement>('input[aria-label="findReplacePlaceholder"]')!, "$1-");
   const steps = vi.fn();
   editor.on("update", steps);
   await act(async () => {
-    host.querySelector<HTMLButtonElement>('button[aria-label="findReplaceAll"]')!.click();
+    document.body.querySelector<HTMLButtonElement>('button[aria-label="findReplaceAll"]')!.click();
   });
   // Case-insensitive by default: “Alpha” keeps its own capital through `$1`.
   expect(editor.getText({ blockSeparator: "|" })).toBe("a- beta a-|A- gamma");
   expect(steps).toHaveBeenCalledTimes(1);
-  expect(host.textContent).toContain('findReplaced:{"count":3}');
+  expect(document.body.textContent).toContain('findReplaced:{"count":3}');
 });
 
 it("offers no replace on a read-only document", async () => {
   await render(false);
   await pressFind();
-  expect(host.querySelector('button[aria-label="findShowReplace"]')).toBeNull();
+  expect(document.body.querySelector('button[aria-label="findShowReplace"]')).toBeNull();
 });
 
 it("closes on Escape before a dialog underneath sees it, and clears the highlights", async () => {
@@ -167,7 +168,7 @@ it("closes on Escape before a dialog underneath sees it, and clears the highligh
   });
   document.removeEventListener("keydown", underneath, true);
   expect(underneath).not.toHaveBeenCalled();
-  expect(host.querySelector('[role="search"]')).toBeNull();
+  expect(document.body.querySelector('[role="search"]')).toBeNull();
   expect(editor.view.dom.querySelectorAll(".ProseMirror-search-match, .ProseMirror-active-search-match")).toHaveLength(0);
   expect(selected()).toBe("beta");
 });

@@ -23,6 +23,8 @@ import { AppIcon } from "@/components/icon";
 import { CheckIcon, ColorPickerIcon, Copy01Icon, Delete02Icon, Link02Icon, MessageAdd01Icon, RepeatOne02Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { NumoIcon } from "@/components/numo-icon";
+import { useAskNumoAboutSelection } from "@/lib/use-ask-numo-about-selection";
 import type { Editor } from "@tiptap/core";
 import {
   AlertDialog,
@@ -197,6 +199,16 @@ export function BlockMenu({
   );
   const plain = !subpageId && !mediaOnly;
   const canComment = Boolean(onComment) && count === 1;
+  // The selected blocks' text, as the selection toolbar sends a passage;
+  // absent where Numo is not.
+  const askNumo = useAskNumoAboutSelection();
+  const tBulk = useTranslations("BulkActions");
+  const askAboutBlocks = () => {
+    const range = blockRange(editor);
+    const text = range ? editor.state.doc.textBetween(range.from, range.to, "\n", " ").trim() : "";
+    if (askNumo && text) askNumo({ text });
+    close();
+  };
   // The separator divides the actions from Delete: with nothing above it (an
   // image or a file without a block link), it would underline nothing.
   const hasActionsAbove = plain || !mediaOnly || blockLinks || canComment;
@@ -242,8 +254,12 @@ export function BlockMenu({
     <DropdownMenu open={open} onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
       <DropdownMenuContent
+        // To the LEFT of the handle, in the margin, top-aligned with it: the
+        // menu opens away from the text rather than over it. Radix flips it to
+        // the right when the margin has no room for it.
         align="start"
-        side="bottom"
+        side="left"
+        sideOffset={4}
         className="w-60"
         // Escape and click outside returns the cursor to the block: otherwise, the focus
         // stays on a trigger that disappears on hover, and hits
@@ -350,6 +366,13 @@ export function BlockMenu({
           >
             <HugeiconsIcon icon={MessageAdd01Icon} />
             <span className="truncate">{t("commentSelection")}</span>
+          </DropdownMenuItem>
+        ) : null}
+
+        {askNumo && !mediaOnly ? (
+          <DropdownMenuItem onSelect={askAboutBlocks}>
+            <NumoIcon animated={false} className="size-4" />
+            <span className="truncate">{tBulk("askNumo")}</span>
           </DropdownMenuItem>
         ) : null}
 

@@ -376,6 +376,55 @@ a.markdown-link[data-documentation-citation]::before {
   --mention-chip-l: 0.58; --mention-chip-a: 16%; --mention-chip-a-hover: 26%; --mention-chip-ink-l: 0.45;
 }
 
+/* The search chip of a typed “/”, “@” or “$” (components/editor/suggestion-chip.ts):
+   decorations over the open query, never content. It borrows the pill's
+   radius, takes a background tinted with the text's own ink (the neutral
+   `--mention-chip` is near invisible on the dark page), keeps the size and
+   the ink of the text around it, and stays an inline box: a long query wraps like the
+   words beside it, each line keeping its own rounded piece. An empty query
+   joins its muted “Type to search” widget into one token. */
+/* The chip's room comes from a spread shadow of its own color, not from
+   padding: a shadow takes no place in the line, so the text around the query
+   does not move when the menu opens, nor when it is cancelled. When the line
+   breaks inside the chip or its “Type to search”, every piece keeps its four
+   rounded corners and its spread (`box-decoration-break: clone`).
+   The color is OPAQUE — the text's ink at 8% over the surface the editor
+   sits on — so where the query's and the placeholder's spreads overlap, the
+   two read as one continuous token rather than a darker seam. */
+.ProseMirror {
+  --suggestion-chip-bg: color-mix(in oklab, var(--foreground) 8%, var(--background));
+}
+:is([data-slot="sheet-content"], [data-slot="dialog-content"], [data-slot="side-panel-content"]) .ProseMirror {
+  --suggestion-chip-bg: color-mix(in oklab, var(--foreground) 8%, var(--card));
+}
+.suggestion-chip,
+.suggestion-chip-placeholder {
+  border-radius: 0.3em;
+  background: var(--suggestion-chip-bg);
+  box-shadow: 0 0 0 0.2em var(--suggestion-chip-bg);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.suggestion-chip {
+  overflow-wrap: break-word;
+}
+/* An empty query and its “Type to search” join into one token: the joined
+   sides are square, the outer ones rounded. */
+.suggestion-chip-empty {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+/* Its spread starts where the query's ends: drawn after the query, it would
+   otherwise paint over the end of the “/” or “@”. */
+.suggestion-chip-placeholder {
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  margin-inline-start: 0.2em;
+  color: var(--muted-foreground);
+  pointer-events: none;
+  user-select: none;
+}
+
 /* Fixed shades of mentions. An objective and a project do not have one here:
    they wear their own (the color of the objective, that of the project orb).
    Blue and indigo are those that the pastilles on the ticket and the page had;
@@ -1887,12 +1936,8 @@ pre [data-page-text] [class*="hljs-"] {
   background-color: var(--control);
   text-align: center;
 }
-.ProseMirror[contenteditable="true"] .page-math:hover {
+.ProseMirror[contenteditable="true"] .page-math:hover:not(.ProseMirror-selectednode, .is-inline-selected) {
   background-color: var(--control);
-}
-.page-math.ProseMirror-selectednode {
-  background-color: color-mix(in oklab, var(--primary) 14%, transparent);
-  outline: none;
 }
 .page-math .katex-error,
 .page-math-preview .katex-error {
@@ -2043,6 +2088,46 @@ pre [data-page-text] [class*="hljs-"] {
 .page-editor .drag-handle[style*="visibility: hidden"] {
   opacity: 0;
 }
+/* A block dragged by its handle (components/pages/block-drag.ts): the grab
+   cursor everywhere for the whole gesture, a translucent copy of the blocks
+   under the pointer, and a line where they will land. */
+html.block-dragging,
+html.block-dragging * {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+.block-drag-ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 80;
+  max-height: 14rem;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  background: var(--background);
+  box-shadow: var(--shadow-md, 0 4px 12px rgb(0 0 0 / 0.12));
+  opacity: 0.6;
+  pointer-events: none;
+}
+.block-drag-line {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 80;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--primary);
+  pointer-events: none;
+}
+
+/* Outside its hover zone (the left margin and the left 70% of the text,
+   components/pages/block-gutter.tsx) the gutter stays hidden even while the
+   extension tracks a block: the right part belongs to the comment button. */
+.page-editor[data-hover-zone]:not([data-hover-zone="gutter"]) .drag-handle {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
 @media (prefers-reduced-motion: reduce) {
   .page-editor .drag-handle { transition: none; }
 }
@@ -2076,6 +2161,18 @@ pre [data-page-text] [class*="hljs-"] {
 }
 @media (prefers-reduced-motion: reduce) {
   .page-editor [data-block-comment-button] { transition: none; }
+}
+/* While the comment button is hovered, its block wears the block-selection
+   box (the "Selection boxes" rules below), so the button names its block. */
+.page-editor [data-block-comment-preview] {
+  position: absolute;
+  border-radius: 0.375rem;
+  background-color: var(--selection-block);
+  pointer-events: none;
+  transition: opacity 120ms ease-out;
+}
+.page-editor [data-block-comment-preview][data-shown="false"] {
+  opacity: 0;
 }
 
 /* ─── The disclosure block (MIN-270) ─────────────────────────────────────
@@ -3448,20 +3545,89 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   background-color: color-mix(in oklab, var(--collab-color) 35%, transparent);
 }
 
-/* ─── Block-range selections (MIN-728) ─────────────────────────────────────
-   A drag or a ⇧-click across blocks selects whole blocks (`NodeRange`, see
-   components/editor/block-range.ts). ProseMirror does not draw that selection
-   as text, so its blocks are painted here in the selection color, and the
-   text's own highlight is hidden so the two do not stack. */
-.ProseMirror-noderangeselection *::selection {
-  background: transparent;
+/* ─── Selection boxes (block selection, node selection, atoms) ────────────
+   Everything a selection holds as a whole wears one look on every editor
+   surface (components/editor/block-selection.ts): the text selection's own
+   color (`--selection-block`, app/tokens.css) with slightly rounded corners,
+   so selected blocks read as blocks rather than as highlighted text.
+
+   - A block of a block selection (`.is-block-selected`), a block in a node
+     selection, and a code block or media a text selection covers whole get
+     an overlay painted OVER the block: a code block's or a callout's own
+     background, or an image, cannot hide it. The text highlight under it
+     goes, so the two never stack.
+   - An inline atom (an equation, a mention) or a whole inline-code run in a
+     text selection (`.is-inline-selected`), and a selected inline equation,
+     get an inline rounded background. */
+.ProseMirror .is-block-selected,
+.ProseMirror .ProseMirror-selectednode:not(span) {
+  position: relative;
+  outline: none;
 }
-.ProseMirror-noderangeselection {
+.ProseMirror .is-block-selected::after,
+.ProseMirror .ProseMirror-selectednode:not(span)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 0.375rem;
+  background-color: var(--selection-block);
+  pointer-events: none;
+}
+/* A rounded card keeps its own corners under the box. */
+.ProseMirror :is(.is-block-selected, .ProseMirror-selectednode):has(> [data-node-view-wrapper] > .code-block-node-view)::after {
+  border-radius: 1.5rem;
+}
+.ProseMirror :is(.is-block-selected, .ProseMirror-selectednode):has(> [data-type="callout"])::after {
+  border-radius: 0.75rem;
+}
+/* A list item's marker hangs in the list's indent: the box takes it in. */
+.ProseMirror :is(ul:not([data-type="taskList"]), ol) > li.is-block-selected::after {
+  left: -1.25rem;
+}
+/* A divider is one line tall, and the browser clips its children: the box
+   reaches above and below the line. */
+.ProseMirror hr:is(.is-block-selected, .ProseMirror-selectednode) {
+  overflow: visible;
+}
+.ProseMirror hr:is(.is-block-selected, .ProseMirror-selectednode)::after {
+  inset: -0.375rem 0;
+}
+.ProseMirror .is-block-selected ::selection,
+.ProseMirror .is-block-selected::selection,
+.ProseMirror .is-inline-selected ::selection,
+.ProseMirror .is-inline-selected::selection,
+.ProseMirror.has-block-selection ::selection {
+  background-color: transparent;
+}
+.ProseMirror.has-block-selection {
   caret-color: transparent;
 }
-.ProseMirror-selectednoderange {
+.ProseMirror .is-inline-selected,
+.ProseMirror span.ProseMirror-selectednode {
   border-radius: 0.25rem;
-  background-color: color-mix(in srgb, Highlight 45%, transparent);
+  background-color: var(--selection-block);
+  outline: none;
+}
+/* An inline code's box is its element, padding included; the decoration
+   only wraps its text. */
+.ProseMirror code:has(.is-inline-selected) {
+  background-image: linear-gradient(var(--selection-block), var(--selection-block));
+}
+.ProseMirror code .is-inline-selected,
+.ProseMirror .is-inline-selected:has([style*="--mention-chip"]) {
+  background-color: transparent;
+}
+/* Inside a selected block, only the block's box is painted. */
+.ProseMirror .is-block-selected :is(.is-block-selected, .ProseMirror-selectednode)::after {
+  content: none;
+}
+.ProseMirror .is-block-selected :is(.is-inline-selected, span.ProseMirror-selectednode),
+.ProseMirror .is-block-selected code:has(.is-inline-selected) {
+  background-color: transparent;
+  background-image: none;
+}
+.ProseMirror .is-block-selected .mention-selected [style*="--mention-chip"] {
+  background-image: none;
 }
 
 /* ─── Mentions inside a selection (MIN-734) ────────────────────────────────
@@ -3471,8 +3637,5 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
    the chip inside (the element carrying its tone) is overlaid with the
    selection color, over its own background. */
 .mention-selected [style*="--mention-chip"] {
-  background-image: linear-gradient(
-    color-mix(in srgb, Highlight 55%, transparent),
-    color-mix(in srgb, Highlight 55%, transparent)
-  );
+  background-image: linear-gradient(var(--selection-block), var(--selection-block));
 }

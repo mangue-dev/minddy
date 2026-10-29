@@ -34,13 +34,6 @@ describe("page interface regressions", () => {
     expect(gutter).not.toContain("active:cursor-grabbing");
   });
 
-  it("shows the formatting toolbar only for focused text selections", () => {
-    const bubble = source("components/pages/page-comment-bubble.tsx");
-
-    expect(bubble).toContain("editor.view.hasFocus()");
-    expect(bubble).toContain("selection instanceof TextSelection");
-  });
-
   it("uses app chrome for block comment annotations", () => {
     const badge = source("components/pages/block-comment-badge.tsx");
     const comments = source("components/pages/block-comments.ts");

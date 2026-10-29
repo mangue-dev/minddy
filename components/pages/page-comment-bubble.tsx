@@ -21,13 +21,15 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { ArrowLeft01Icon, ArrowRight01Icon, CheckIcon, CodeSimpleIcon as Code2, Copy01Icon, Link02Icon, MessageAdd01Icon, TextBoldIcon, TextClearIcon, TextItalicIcon, TextStrikethroughIcon, TextUnderlineIcon, Unlink01Icon } from "@hugeicons/core-free-icons";
-import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft01Icon, ArrowRight01Icon, CheckIcon, CodeSimpleIcon as Code2, Copy01Icon, Link02Icon, MessageAdd01Icon, TextBoldIcon, TextClearIcon, TextItalicIcon, TextStrikethroughIcon, TextUnderlineIcon } from "@hugeicons/core-free-icons";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 import type { Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import { useEditorState } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
+import { isBlockSelection } from "@/components/editor/block-selection";
 import { posToDOMRect } from "@tiptap/core";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -83,6 +85,18 @@ export function commentAtCaret(editor: Editor, onComment: (anchor: PageCommentAn
 
 const SELECTION_MENU_DELAY_MS = 300;
 
+/** The block-type submenu: its width, and the grace period that lets the
+    pointer travel from the row to it. */
+const TURN_INTO_WIDTH = 224;
+const TURN_INTO_CLOSE_MS = 150;
+/** The submenu's gap to the card, and its own padding (its first row level
+    with the card's row). */
+const TURN_INTO_GAP = 4;
+const TURN_INTO_INSET = 8;
+
+/** What counts as another menu taking the screen from the card. */
+const OTHER_MENU = '[role="menu"], [role="listbox"], [role="dialog"], [role="alertdialog"]';
+
 /** The selection card's plugin key: a "hide" meta on it closes the card. */
 const SELECTION_MENU_KEY = "selectionMenu";
 
@@ -95,7 +109,10 @@ export function shouldShowSelectionMenu({ editor }: { editor: Editor }): boolean
   return (
     editor.isEditable &&
     editor.view.hasFocus() &&
-    selection instanceof TextSelection &&
+    // Text, or whole blocks (dragged across, Esc, Cmd/Ctrl+A): the card's
+    // formats, colors and "Turn into" apply to every selected block, as in
+    // Notion. A node selection (an image, an equation) has its own controls.
+    (selection instanceof TextSelection || isBlockSelection(selection)) &&
     !empty &&
     !!editor.state.doc.textBetween(from, to, " ").trim()
   );
@@ -123,7 +140,7 @@ function ToolbarButton({
         onMouseDown={(event) => event.preventDefault()}
         onClick={onClick}
         className={cn(
-          "flex size-8 items-center justify-center rounded-md text-foreground/80",
+          "flex size-8 items-center justify-center rounded-md text-foreground",
           "transition-colors hover:bg-control hover:text-foreground",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           active && "bg-control text-foreground",
@@ -230,12 +247,39 @@ export function PageCommentBubble({
   const askNumo = useAskNumoAboutSelection();
   const mod = useModKey();
   const [editLinkOpen, setEditLinkOpen] = useState(false);
-  // The block type and the colors open in place, inside the same card: a
-  // dropdown would take the focus, and the toolbar only shows while the
-  // editor has it.
-  const [panel, setPanel] = useState<"main" | "blocks" | "color">("main");
+  // The colors open in place, inside the same card: a dropdown would take
+  // the focus, and the toolbar only shows while the editor has it. The block
+  // types open as a submenu beside the card, on hover, like a menu's.
+  const [panel, setPanel] = useState<"main" | "color">("main");
+  // Where the submenu stands, in viewport coordinates, while it is open.
+  const [turnInto, setTurnInto] = useState<CSSProperties | null>(null);
+  const turnIntoClose = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const turnIntoRow = useRef<HTMLDivElement>(null);
+  const openTurnInto = (row: HTMLElement) => {
+    if (turnIntoClose.current) clearTimeout(turnIntoClose.current);
+    // Beside the card, on the side that has room for it, level with the row.
+    const card = row.closest(`[${SELECTION_TOOLBAR_ATTR}]`)?.getBoundingClientRect();
+    if (!card) return;
+    const top = row.getBoundingClientRect().top - TURN_INTO_INSET;
+    const room = window.innerWidth - card.right;
+    setTurnInto(
+      room >= TURN_INTO_WIDTH + OVERLAY_COLLISION_PADDING + TURN_INTO_GAP
+        ? { top, left: card.right + TURN_INTO_GAP }
+        : { top, right: window.innerWidth - card.left + TURN_INTO_GAP }
+    );
+  };
+  const closeTurnInto = () => {
+    if (turnIntoClose.current) clearTimeout(turnIntoClose.current);
+    turnIntoClose.current = setTimeout(() => setTurnInto(null), TURN_INTO_CLOSE_MS);
+  };
+  useEffect(() => () => {
+    if (turnIntoClose.current) clearTimeout(turnIntoClose.current);
+  }, []);
   useEffect(() => {
-    const reset = () => setPanel("main");
+    const reset = () => {
+      setPanel("main");
+      setTurnInto(null);
+    };
     editor.on("selectionUpdate", reset);
     editor.on("blur", reset);
     return () => {
@@ -293,6 +337,26 @@ export function PageCommentBubble({
     editor.commands.setTextSelection(to);
   };
 
+  // Another menu opening — the block handle's, a picker, a dialog — takes
+  // the card's place: the card closes, even though the text keeps its
+  // selection. Menus are portaled into <body>, so their arrival is watched
+  // there; a tooltip (the card's own) does not count, nor the card's submenu.
+  useEffect(() => {
+    const opensMenu = (node: globalThis.Node) =>
+      node instanceof Element &&
+      !node.closest(`[${SELECTION_TOOLBAR_ATTR}]`) &&
+      !node.querySelector(`[${SELECTION_TOOLBAR_ATTR}]`) &&
+      (node.matches(OTHER_MENU) || !!node.querySelector(OTHER_MENU));
+    const observer = new MutationObserver((records) => {
+      if (editor.isDestroyed) return;
+      if (records.some((record) => [...record.addedNodes].some(opensMenu))) {
+        editor.view.dispatch(editor.state.tr.setMeta(SELECTION_MENU_KEY, "hide"));
+      }
+    });
+    observer.observe(document.body, { childList: true });
+    return () => observer.disconnect();
+  }, [editor]);
+
   // A click outside the editor ends the selection, like in any text editor:
   // the card would otherwise stay over a passage nobody is working on. A click
   // in the card itself, or in a menu or dialog it opened (the link dialog),
@@ -302,6 +366,11 @@ export function PageCommentBubble({
       if (editor.isDestroyed || editor.state.selection.empty) return;
       const target = event.target instanceof Element ? event.target : null;
       if (!target || editor.view.dom.contains(target)) return;
+      // The editor's own chrome — the block handle and `+`, the comment
+      // button, its margins — is not the outside: the handle acts on the
+      // selected blocks, so pressing it must keep them selected.
+      const root = editor.view.dom.closest(".page-editor");
+      if (root && root.contains(target)) return;
       // A surface the editor does not live in — the card, a menu, a dialog it
       // opened — keeps the selection. The dialog AROUND the editor (the
       // notebook's sheet) is just more of the outside.
@@ -369,6 +438,9 @@ export function PageCommentBubble({
       const target = event.target === document ? document.documentElement : event.target;
       if (!(target instanceof Element) || !target.contains(editor.view.dom)) return;
       scroller = target;
+      // The block-type submenu stands fixed beside the card: it closes
+      // rather than stay behind while the card follows the passage.
+      setTurnInto(null);
       if (!frame) frame = requestAnimationFrame(update);
     };
     document.addEventListener("scroll", onScroll, { capture: true, passive: true });
@@ -426,15 +498,57 @@ export function PageCommentBubble({
           <>
             {blocks.length > 0 && (
               <>
-                <ToolbarRow onClick={() => setPanel("blocks")}>
-                  {current && <AppIcon icon={current.icon} className="size-4 shrink-0 text-muted-foreground" />}
-                  <span className="min-w-0 flex-1 truncate">{current ? t(current.labelKey) : t("turnInto")}</span>
-                  <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0 text-muted-foreground" />
-                </ToolbarRow>
+                <div
+                  ref={turnIntoRow}
+                  className="relative"
+                  onMouseEnter={(event) => openTurnInto(event.currentTarget)}
+                  onMouseLeave={closeTurnInto}
+                >
+                  <ToolbarRow
+                    onClick={() => {
+                      if (!turnInto && turnIntoRow.current) openTurnInto(turnIntoRow.current);
+                    }}
+                    className={cn(turnInto && "bg-control")}
+                  >
+                    {current && <AppIcon icon={current.icon} className="size-4 shrink-0" />}
+                    <span className="min-w-0 flex-1 truncate">{current ? t(current.labelKey) : t("turnInto")}</span>
+                    <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0" />
+                  </ToolbarRow>
+                  {/* Portaled out of the card: the card blurs what is behind
+                      it, and a surface inside it could only blur the card's
+                      own content — the page would show through, unblurred.
+                      React events still reach the wrapper through the portal,
+                      so hovering the submenu keeps it open. */}
+                  {turnInto
+                    ? createPortal(
+                        <div
+                          role="menu"
+                          aria-label={t("turnInto")}
+                          data-floating-surface
+                          {...{ [SELECTION_TOOLBAR_ATTR]: "" }}
+                          onMouseDown={(event) => event.preventDefault()}
+                          className="pointer-events-auto fixed z-[71] flex max-h-72 flex-col overflow-y-auto rounded-xl bg-popover p-2 text-popover-foreground shadow-md ring-1 ring-foreground/10"
+                          style={{ ...turnInto, width: TURN_INTO_WIDTH }}
+                        >
+                          {blocks.map(({ block, active: isCurrent }) => (
+                            <ToolbarRow key={block.id} onClick={() => {
+                              turnBlocksInto(editor, block);
+                              setTurnInto(null);
+                            }}>
+                              <AppIcon icon={block.icon} className="size-4 shrink-0" />
+                              <span className="min-w-0 flex-1 truncate">{t(block.labelKey)}</span>
+                              {isCurrent && <HugeiconsIcon icon={CheckIcon} className="size-3.5 shrink-0" />}
+                            </ToolbarRow>
+                          ))}
+                        </div>,
+                        document.body
+                      )
+                    : null}
+                </div>
                 <Separator />
               </>
             )}
-            <div className="grid grid-cols-6 gap-1 px-1 py-0.5">
+            <div className="grid grid-cols-5 gap-1 px-1 py-0.5">
               <ToolbarButton label={t("color")} onClick={() => setPanel("color")}>
                 <ColorSwatch kind="text" color={active?.text ?? null} />
               </ToolbarButton>
@@ -487,16 +601,6 @@ export function PageCommentBubble({
                   >
                     <HugeiconsIcon icon={Link02Icon} className="size-4" />
                   </ToolbarButton>
-                  {active?.link ? (
-                    <ToolbarButton
-                      label={t("selectionRemoveLink")}
-                      onClick={() =>
-                        editor.chain().focus().extendMarkRange("link").unsetLink().run()
-                      }
-                    >
-                      <HugeiconsIcon icon={Unlink01Icon} className="size-4" />
-                    </ToolbarButton>
-                  ) : null}
                   {editor.schema.nodes[INLINE_MATH_NODE] ? (
                     <ToolbarButton
                       label={t("mathInline")}
@@ -527,39 +631,24 @@ export function PageCommentBubble({
             ) : null}
             {onComment ? (
               <ToolbarRow onClick={comment}>
-                <HugeiconsIcon icon={MessageAdd01Icon} className="size-4 shrink-0 text-muted-foreground" />
+                <HugeiconsIcon icon={MessageAdd01Icon} className="size-4 shrink-0" />
                 <span className="truncate">{t("commentSelection")}</span>
               </ToolbarRow>
             ) : null}
           </>
         ) : (
           <>
-            <ToolbarRow onClick={() => setPanel("main")} className="text-muted-foreground">
+            <ToolbarRow onClick={() => setPanel("main")}>
               <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4 shrink-0" />
-              <span className="truncate">{panel === "blocks" ? t("turnInto") : t("color")}</span>
+              <span className="truncate">{t("color")}</span>
             </ToolbarRow>
             <Separator />
             <div className="max-h-72 overflow-y-auto">
-              {panel === "blocks"
-                ? blocks.map(({ block, active: isCurrent }) => (
-                    <ToolbarRow key={block.id} onClick={() => {
-                      turnBlocksInto(editor, block);
-                      setPanel("main");
-                    }}>
-                      <AppIcon icon={block.icon} className="size-4 shrink-0 text-muted-foreground" />
-                      <span className="min-w-0 flex-1 truncate">{t(block.labelKey)}</span>
-                      {isCurrent && <HugeiconsIcon icon={CheckIcon} className="size-3.5 shrink-0" />}
-                    </ToolbarRow>
-                  ))
-                : (
-                  <>
-                    <div className="px-2 py-1 text-xs text-muted-foreground">{t("colorText")}</div>
-                    {colorRows("text")}
-                    <Separator />
-                    <div className="px-2 py-1 text-xs text-muted-foreground">{t("colorBackground")}</div>
-                    {colorRows("background")}
-                  </>
-                )}
+              <div className="px-2 py-1 text-xs font-medium">{t("colorText")}</div>
+              {colorRows("text")}
+              <Separator />
+              <div className="px-2 py-1 text-xs font-medium">{t("colorBackground")}</div>
+              {colorRows("background")}
             </div>
           </>
         )}

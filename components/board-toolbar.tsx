@@ -1175,7 +1175,7 @@ function useTabSortable(id: string) {
     useSortable({ id });
   return {
     setNodeRef,
-    style: { transform: CSS.Transform.toString(transform), transition },
+    style: { transform: CSS.Translate.toString(transform), transition },
     attributes,
     listeners,
     isDragging,

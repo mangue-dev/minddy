@@ -42,7 +42,7 @@ function ViewPill({ view, active, sortable, onSelect, onContextMenu }: {
     useSortable({ id: view.id, disabled: !sortable });
   return (
     <button type="button" ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
+      style={{ transform: CSS.Translate.toString(transform), transition }}
       {...attributes} {...listeners} onClick={onSelect} onContextMenu={onContextMenu}
       aria-pressed={active}
       className={cn(PILL_CLASS, pillTone(active), isDragging && "opacity-50")}>
@@ -95,11 +95,13 @@ function ViewNameDialog({ open, onOpenChange, title, initialName, onSubmit }: {
  * write access add, rename, delete and drag-reorder them; everyone switches.
  * Without a saved view, the default one stands alone.
  */
-export function DatabaseViewStrip({ views, activeId, canWrite, onSelect, onCreate,
+export function DatabaseViewStrip({ views, activeId, canWrite, compact = false, onSelect, onCreate,
   onRename, onDelete, onMove }: {
   views: SavedDatabaseView[];
   activeId: string | null;
   canWrite: boolean;
+  /** A database shown in a side panel: the phone's picker, at desktop size. */
+  compact?: boolean;
   onSelect: (id: string) => void;
   onCreate: (name: string) => Promise<void>;
   onRename: (id: string, name: string) => Promise<void>;
@@ -171,8 +173,9 @@ export function DatabaseViewStrip({ views, activeId, canWrite, onSelect, onCreat
   );
 
   // A phone has no room for a strip of pills and no right-click: one picker,
-  // like the issue board's, whose menu creates, renames and deletes.
-  if (mobile) {
+  // like the issue board's, whose menu creates, renames and deletes. A side
+  // panel is just as narrow, so it uses the same picker.
+  if (mobile || compact) {
     const actions = canWrite ? [
       ...(views.length < MAX_DATABASE_VIEWS ? [{
         id: "create-view", label: tBoard("newView"),
@@ -196,7 +199,10 @@ export function DatabaseViewStrip({ views, activeId, canWrite, onSelect, onCreat
             : [{ value: "__default__", label: name }]}
           menuActions={actions}
           trigger={
-            <Button variant="ghost" className="-ml-3 h-11 min-w-0 max-w-full justify-start gap-2 px-3 text-base" aria-label={t("views")}>
+            <Button variant="ghost" aria-label={t("views")}
+              className={mobile
+                ? "-ml-3 h-11 min-w-0 max-w-full justify-start gap-2 px-3 text-base"
+                : "-ml-2 h-8 min-w-0 max-w-full justify-start gap-1.5 px-2 text-sm"}>
               <span className="truncate">{name}</span>
               <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 shrink-0" />
             </Button>

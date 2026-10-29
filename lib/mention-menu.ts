@@ -17,21 +17,43 @@ export interface ActiveMentionQuery {
   query: string;
 }
 
-const ACTIVE_MENTION = /(^|[\t \u00a0\r\n])@([^@\r\n]*)$/;
-const DOUBLE_SPACE = /[ \u00a0]{2}/;
+/**
+ * The exit gestures: a space right after the bare trigger, or, once a query
+ * is typed, two spaces in a row — or what macOS makes of them, a period
+ * followed by a space (its "add period with double-space" substitution), at
+ * the end of the query.
+ */
+const QUERY_EXIT = /^[ \u00a0]|[ \u00a0]{2}|\.[ \u00a0]$/;
+
+/** The open query of `trigger` (“@”, “/”) right before the caret, at the
+    start of the text or after a space. */
+function activeTrigger(trigger: string): RegExp {
+  const char = trigger.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+  return new RegExp(`(^|[\\t \\u00a0\\r\\n])${char}([^${char}\\r\\n]*)$`);
+}
+const ACTIVE_MENTION = activeTrigger("@");
 
 /**
  * Reads the active mention immediately before the caret.
  *
- * A single regular or non-breaking space remains part of the query so full
- * names and multi-word titles can be searched. Two consecutive spaces end the
- * mention mode and leave the text untouched.
+ * Once something is typed after the `@`, a single regular or non-breaking
+ * space remains part of the query so full names and multi-word titles can be
+ * searched, and two consecutive spaces end the mention mode. A space right
+ * after a bare `@` ends it at once. Either way the text stays untouched.
  */
 export function findActiveMentionQuery(
   textBeforeCaret: string,
 ): ActiveMentionQuery | null {
-  const match = ACTIVE_MENTION.exec(textBeforeCaret);
-  if (!match || DOUBLE_SPACE.test(match[2])) return null;
+  return findActiveTriggerQuery(textBeforeCaret, "@");
+}
+
+/** The same reading for any trigger: “/” follows the rules of “@”. */
+export function findActiveTriggerQuery(
+  textBeforeCaret: string,
+  trigger: string,
+): ActiveMentionQuery | null {
+  const match = (trigger === "@" ? ACTIVE_MENTION : activeTrigger(trigger)).exec(textBeforeCaret);
+  if (!match || QUERY_EXIT.test(match[2])) return null;
 
   const start = (match.index ?? 0) + match[1].length;
   return {

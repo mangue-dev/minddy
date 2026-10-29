@@ -33,7 +33,7 @@ import { usePagesLookup } from "@/components/pages/pages-lookup";
  * a block that silently disappears from the document would make you doubt what you have
  * written, where a crossed out line says exactly what happened.
  */
-export function SubpageView({ node, selected }: NodeViewProps) {
+export function SubpageView({ node }: NodeViewProps) {
   const t = useTranslations("Pages");
   const lookup = usePagesLookup();
   const pageId = (node.attrs.pageId as string | null) ?? null;
@@ -84,8 +84,9 @@ export function SubpageView({ node, selected }: NodeViewProps) {
       // aligned as on the other blocks.
       className={cx(
         "my-1 flex items-center gap-2 rounded-lg px-2 py-1 leading-relaxed transition-colors",
-        !orphan && "hover:bg-muted",
-        selected && "bg-muted ring-1 ring-ring"
+        !orphan && "hover:bg-muted"
+        // Selected, the editor's selection box (app/globals.css), as on
+        // every other block.
       )}
       contentEditable={false}
     >

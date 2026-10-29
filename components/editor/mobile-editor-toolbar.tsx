@@ -45,7 +45,13 @@ import { Sheet, SheetTitle } from "@/components/ui/sheet";
 import { MobileSheetContent, MobileSheetScrollArea } from "@/components/ui/mobile-sheet";
 import { cn } from "@/lib/utils";
 import { MarkdownLinkEditDialog } from "@/components/markdown-link-menu";
-import { MentionFigure, filterMentions, type MentionOption } from "@/components/mention-suggest";
+import {
+  MentionFigure,
+  filterMentions,
+  sectionedMentions,
+  useMentionSectionLabel,
+  type MentionOption,
+} from "@/components/mention-suggest";
 import { mentionAttrsFromOption } from "@/lib/mention-attributes";
 import { isMentionLinkType } from "@/lib/mention-link";
 import { primeMentionLabel } from "@/lib/mention-resolution";
@@ -58,7 +64,11 @@ import {
   type PageColorKind,
 } from "@/components/pages/blocks";
 import { PageColorName } from "@/components/pages/page-comment-bubble";
-import { filterSlashItems, type PageSlashItem } from "@/components/pages/page-slash-command";
+import {
+  filterSlashItems,
+  sectionedSlashItems,
+  type PageSlashItem,
+} from "@/components/pages/page-slash-command";
 
 /** The island's height, and the gap it keeps around itself. */
 const TOOLBAR_HEIGHT = 44;
@@ -98,6 +108,11 @@ export function revealCaret(editor: Editor) {
   const parent = scrollParent(view.dom as HTMLElement);
   if (parent) parent.scrollBy({ top: delta });
   else window.scrollBy({ top: delta });
+}
+
+/** A section's header in a sheet, as in the “/” and “@” menus. */
+function SheetSectionHeader({ label }: { label: string }) {
+  return <div role="presentation" className="px-3 pb-1 pt-3 text-xs font-medium text-muted-foreground group-first/section:pt-1">{label}</div>;
 }
 
 /** A row of the two sheets: the blocks' list sets the size for both. */
@@ -284,14 +299,16 @@ export function MobileEditorToolbar({
   const close = () => setSheet(null);
   const at = () => Math.min(insertAt.current, editor.state.doc.content.size);
 
-  const blocks = useMemo(
-    () => (sheet === "blocks" ? filterSlashItems(slashItems(), query) : []),
+  // Grouped by the same sections as the “/” and “@” menus of a computer.
+  const blockSections = useMemo(
+    () => sectionedSlashItems(sheet === "blocks" ? filterSlashItems(slashItems(), query) : []).sections,
     [sheet, slashItems, query],
   );
-  const mentions = useMemo(
-    () => (sheet === "mentions" && mentionItems ? filterMentions(mentionItems(), query) : []),
+  const mentionSections = useMemo(
+    () => sectionedMentions(sheet === "mentions" && mentionItems ? filterMentions(mentionItems(), query) : []).sections,
     [sheet, mentionItems, query],
   );
+  const mentionSectionLabel = useMentionSectionLabel();
 
   const pickBlock = (item: PageSlashItem) => {
     close();
@@ -441,11 +458,16 @@ export function MobileEditorToolbar({
             className="h-11"
           />}
           <MobileSheetScrollArea className="max-h-[min(50dvh,calc(var(--mobile-viewport-height,100dvh)-9rem))]">
-            {sheet === "blocks" && blocks.map((item) => (
-              <SheetRow key={item.key} onPick={() => pickBlock(item)}>
-                <AppIcon icon={item.icon} className="size-5 shrink-0 text-muted-foreground" />
-                <span className="truncate">{item.label}</span>
-              </SheetRow>
+            {sheet === "blocks" && blockSections.map((section) => (
+              <div key={section.id ?? "none"} role="group" className="group/section" aria-label={section.items[0]?.section?.label}>
+                {section.items[0]?.section && <SheetSectionHeader label={section.items[0].section.label} />}
+                {section.items.map((item) => (
+                  <SheetRow key={item.key} onPick={() => pickBlock(item)}>
+                    <AppIcon icon={item.icon} className="size-5 shrink-0" />
+                    <span className="truncate">{item.label}</span>
+                  </SheetRow>
+                ))}
+              </div>
             ))}
             {sheet === "color" && (["text", "background"] as const).map((kind) => (
               <div key={kind} className="pb-1">
@@ -462,16 +484,24 @@ export function MobileEditorToolbar({
                 ))}
               </div>
             ))}
-            {sheet === "mentions" && mentions.map((option) => (
-              <SheetRow key={`${option.type}:${option.id}`} onPick={() => pickMention(option)}>
-                <MentionFigure option={option} />
-                <span className="min-w-0 truncate">
-                  {option.label}
-                  {option.detail && <span className="ml-1.5 text-muted-foreground">{option.detail}</span>}
-                </span>
-              </SheetRow>
-            ))}
-            {((sheet === "blocks" && blocks.length === 0) || (sheet === "mentions" && mentions.length === 0)) && (
+            {sheet === "mentions" && mentionSections.map((section) => {
+              const label = section.id === null ? null : mentionSectionLabel(section.id);
+              return (
+                <div key={section.id ?? "none"} role="group" className="group/section" aria-label={label ?? undefined}>
+                  {label && <SheetSectionHeader label={label} />}
+                  {section.items.map((option) => (
+                    <SheetRow key={`${option.type}:${option.id}`} onPick={() => pickMention(option)}>
+                      <MentionFigure option={option} />
+                      <span className="min-w-0 truncate">
+                        {option.label}
+                        {option.detail && <span className="ml-1.5 text-muted-foreground">{option.detail}</span>}
+                      </span>
+                    </SheetRow>
+                  ))}
+                </div>
+              );
+            })}
+            {((sheet === "blocks" && blockSections.length === 0) || (sheet === "mentions" && mentionSections.length === 0)) && (
               <p className="px-3 py-6 text-center text-sm text-muted-foreground">{tPicker("noResults")}</p>
             )}
           </MobileSheetScrollArea>

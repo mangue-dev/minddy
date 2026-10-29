@@ -75,6 +75,9 @@ describe("Numo slash options", () => {
     expect(findActiveComposerMenuQuery("docs/release")).toBeNull();
     expect(findActiveComposerMenuQuery("Use /first/second")).toBeNull();
     expect(findActiveComposerMenuQuery("Use $release  next")).toBeNull();
+    expect(findActiveComposerMenuQuery("Use $release. ")).toBeNull();
+    expect(findActiveComposerMenuQuery("Use / ")).toBeNull();
+    expect(findActiveComposerMenuQuery("Use /release ")?.query).toBe("release ");
   });
 
   it("shows trigger prefixes only on commands and styles skill rows in emerald", () => {

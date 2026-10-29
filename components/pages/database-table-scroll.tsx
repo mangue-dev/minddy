@@ -11,15 +11,27 @@ import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { bindDatabasePageScroll } from "@/lib/database-page-scroll";
 import { bindDatabaseScrollSync } from "@/lib/database-scroll-sync";
+import { cn } from "@/lib/utils";
 
 type ScrollbarGeometry = {
   left: number;
   width: number;
+  /** Distance from the window's bottom edge: the panel's bottom in a panel. */
+  bottom: number;
   contentWidth: number;
   visible: boolean;
 };
 
-export function DatabaseTableScroll({ children }: { children: ReactNode }) {
+export function DatabaseTableScroll({
+  children,
+  panel = false,
+}: {
+  children: ReactNode;
+  /** In a side panel the panel plays the page's part: horizontal gestures
+      anywhere in it scroll the table, and the floating scrollbar keeps to
+      the panel's bottom edge, not the window's (whose page lies beneath). */
+  panel?: boolean;
+}) {
   const t = useTranslations("PageDatabase");
   const id = useId();
   const viewport = useRef<HTMLDivElement>(null);
@@ -29,19 +41,23 @@ export function DatabaseTableScroll({ children }: { children: ReactNode }) {
   useLayoutEffect(() => {
     const container = viewport.current;
     if (!container) return;
-    const unbindPageScroll = bindDatabasePageScroll(container);
+    const scope = panel ? container.closest<HTMLElement>('[data-slot="side-panel-content"]') : null;
+    const unbindPageScroll = bindDatabasePageScroll(container, scope);
     let frame = 0;
     const measure = () => {
       const box = container.getBoundingClientRect();
-      const left = Math.max(0, box.left);
-      const width = Math.max(0, Math.min(window.innerWidth, box.right) - left);
+      const bounds = scope?.getBoundingClientRect() ??
+        { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
+      const left = Math.max(bounds.left, box.left);
+      const width = Math.max(0, Math.min(bounds.right, box.right) - left);
       const next = {
         left,
         width,
+        bottom: Math.max(0, window.innerHeight - bounds.bottom),
         contentWidth: container.scrollWidth,
         visible:
-          box.bottom > 0 &&
-          box.top < window.innerHeight &&
+          box.bottom > bounds.top &&
+          box.top < bounds.bottom &&
           width > 0 &&
           container.scrollWidth > container.clientWidth + 1,
       };
@@ -49,6 +65,7 @@ export function DatabaseTableScroll({ children }: { children: ReactNode }) {
         previous &&
         previous.left === next.left &&
         previous.width === next.width &&
+        previous.bottom === next.bottom &&
         previous.contentWidth === next.contentWidth &&
         previous.visible === next.visible
           ? previous
@@ -74,6 +91,11 @@ export function DatabaseTableScroll({ children }: { children: ReactNode }) {
     if (table) observer.observe(table);
     window.addEventListener("resize", schedule);
     window.addEventListener("scroll", schedule, true);
+    // A side panel slides in with a transform, which no resize reports: the
+    // scrollbar is placed again once its animation ends.
+    const settled = () => schedule();
+    scope?.addEventListener("animationend", settled);
+    scope?.addEventListener("transitionend", settled);
     measure();
     return () => {
       unbindPageScroll();
@@ -81,8 +103,10 @@ export function DatabaseTableScroll({ children }: { children: ReactNode }) {
       observer.disconnect();
       window.removeEventListener("resize", schedule);
       window.removeEventListener("scroll", schedule, true);
+      scope?.removeEventListener("animationend", settled);
+      scope?.removeEventListener("transitionend", settled);
     };
-  }, []);
+  }, [panel]);
 
   useLayoutEffect(() => {
     if (viewport.current && scrollbar.current)
@@ -98,7 +122,13 @@ export function DatabaseTableScroll({ children }: { children: ReactNode }) {
         // too, and the table scrolled vertically by a few pixels for nothing.
         // On a phone the table runs edge to edge; the gutter's reserve on the
         // left is a desktop affair.
-        className="no-scrollbar -mx-6 overflow-x-auto overflow-y-hidden overscroll-x-none [container-type:inline-size] md:-ml-24 md:-mr-10"
+        className={cn(
+          "-mx-6 overflow-x-auto overflow-y-hidden overscroll-x-none [container-type:inline-size]",
+          // A database in the panel is inset by the gutter and selection
+          // columns on the left (page-view.tsx), as on the full page, so its
+          // title and toolbar line up with the Name column.
+          panel ? "no-scrollbar app-desktop:-ml-24 app-desktop:-mr-16" : "no-scrollbar md:-ml-24 md:-mr-10",
+        )}
         data-database-scroll
       >
         {children}
@@ -116,8 +146,12 @@ export function DatabaseTableScroll({ children }: { children: ReactNode }) {
             aria-valuenow={viewport.current?.scrollLeft ?? 0}
             tabIndex={0}
             data-database-scrollbar
-            className="scrollbar-quiet fixed bottom-0 z-30 h-3 overflow-x-auto overflow-y-hidden overscroll-x-none bg-transparent outline-none pointer-coarse:hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-            style={{ left: geometry.left, width: geometry.width }}
+            className={cn(
+              "scrollbar-quiet fixed z-30 h-3 overflow-x-auto overflow-y-hidden overscroll-x-none bg-transparent outline-none pointer-coarse:hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+              // Above the panel, and taking the pointer back under its overlay.
+              panel && "pointer-events-auto z-[60]",
+            )}
+            style={{ left: geometry.left, width: geometry.width, bottom: geometry.bottom }}
             onKeyDown={(event) => {
               const container = viewport.current;
               if (!container) return;

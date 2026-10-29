@@ -622,9 +622,17 @@ html {
 
 /* Selected text takes the accent: a light tint of `--primary` behind text
    that keeps its own color, so contrast stays the text's own on every theme
-   and accent (a black or white accent gives a neutral gray tint). */
+   and accent (a black or white accent gives a neutral gray tint).
+   `--selection-block` is that same tint, for what an editor selects as a
+   whole (selected blocks, an image, an equation: app/globals.css). Declared
+   again under `.dark`, like `--primary-hover`, so it follows the theme's
+   accent wherever the class sits. */
+:root,
+.dark {
+  --selection-block: color-mix(in oklab, var(--primary) 28%, transparent);
+}
 ::selection {
-  background-color: color-mix(in oklab, var(--primary) 28%, transparent);
+  background-color: var(--selection-block);
   color: inherit;
 }
 

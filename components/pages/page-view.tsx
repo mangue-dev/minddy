@@ -1104,7 +1104,7 @@ function PageSurface({
             the chrome is used to place itself there. Title and blocks therefore share the
             same left edge, and the hover margin falls into the reserve instead
             to shift the body under the title. */}
-        <div className={cn("relative mx-auto w-full px-6 py-10", panel ? "max-w-3xl app-desktop:px-16" : page.database_schema != null ? "max-w-none app-desktop:pl-24 app-desktop:pr-10" : "max-w-3xl app-desktop:pl-24 app-desktop:pr-10")}>
+        <div className={cn("relative mx-auto w-full px-6 py-10", panel ? page.database_schema != null ? "max-w-3xl app-desktop:pl-24 app-desktop:pr-16" : "max-w-3xl app-desktop:px-16" : page.database_schema != null ? "max-w-none app-desktop:pl-24 app-desktop:pr-10" : "max-w-3xl app-desktop:pl-24 app-desktop:pr-10")}>
           {page.database_schema != null && canWrite && <DatabaseSetupBanner projectId={projectId} page={summary ?? page} />}
           <PageHeader
             title={title}
@@ -1155,7 +1155,7 @@ function PageSurface({
               <PageDatabaseProperties projectId={projectId} page={summary ?? page} database={byId.get(page.parent_id)!} />
             </fieldset>
           )}
-          {page.database_schema != null ? <PageDatabaseView projectId={projectId} database={summary ?? page} onOpen={(id) => onNavigate ? onNavigate(id, pageId) : openPage(id)} /> : <div ref={bodyRef} className="mt-6">
+          {page.database_schema != null ? <PageDatabaseView projectId={projectId} database={summary ?? page} compact={panel} onOpen={(id) => onNavigate ? onNavigate(id, pageId) : openPage(id)} /> : <div ref={bodyRef} className="mt-6">
             {/* What “assign a task” means when it comes off a page
                 rather than the notebook: the prompt names the page, and the navigation
                 waits for what is pending to be written (MIN-274). */}

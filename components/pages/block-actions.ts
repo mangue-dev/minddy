@@ -22,7 +22,8 @@
 
 import type { Editor, JSONContent } from "@tiptap/core";
 import { Fragment, Slice } from "@tiptap/pm/model";
-import { NodeSelection, TextSelection } from "@tiptap/pm/state";
+import { TextSelection } from "@tiptap/pm/state";
+import { BlockSelection, anchorBlockOf, isBlockSelection } from "@/components/editor/block-selection";
 import {
   BLOCK_ID_ATTRIBUTE,
   type PageBlock,
@@ -81,13 +82,17 @@ export function blockRange(editor: Editor): BlockRange | null {
  * Place the selection on the block that begins at `pos` — what a click on does
  * the handle before opening the menu. Without it, the menu would act where the cursor
  * was hanging around, not on the block we flew over.
+ *
+ * A block selection (components/editor/block-selection.ts), the one a drag
+ * across blocks or Esc makes: the block shows the same selection box, and the
+ * arrows and ⇧-arrows go on from it once the menu closes.
  */
 export function selectBlockAt(editor: Editor, pos: number): boolean {
   const { doc } = editor.state;
   if (pos < 0 || pos > doc.content.size) return false;
   const node = doc.nodeAt(pos);
   if (!node) return false;
-  const selection = NodeSelection.create(doc, pos);
+  const selection = BlockSelection.create(doc, pos, pos);
   editor.view.dispatch(editor.state.tr.setSelection(selection));
   return true;
 }
@@ -119,13 +124,9 @@ export function selectBlockFromHandle(
   if (!node) return false;
 
   if (extend) {
-    const from = Math.max(Math.min(selection.from, pos), 0);
-    const to = Math.min(
-      Math.max(selection.to, pos + node.nodeSize),
-      doc.content.size
-    );
+    const anchor = anchorBlockOf(doc, selection) ?? pos;
     editor.view.dispatch(
-      editor.state.tr.setSelection(TextSelection.create(doc, from, to))
+      editor.state.tr.setSelection(BlockSelection.create(doc, anchor, pos))
     );
     return true;
   }
@@ -372,10 +373,18 @@ function spreadOverBlocks(editor: Editor): boolean {
  */
 export function turnBlocksInto(editor: Editor, block: PageBlock): boolean {
   if (!block.turnInto) return false;
+  // Blocks selected as blocks stay selected as blocks once turned, so the
+  // next action (a color, a format, another type) applies to them all.
+  const asBlocks = isBlockSelection(editor.state.selection);
   if (!spreadOverBlocks(editor)) return false;
   editor.commands.clearNodes();
   spreadOverBlocks(editor);
-  return block.turnInto(editor);
+  const turned = block.turnInto(editor);
+  if (turned && asBlocks && !editor.isDestroyed) {
+    const { doc, selection } = editor.state;
+    editor.view.dispatch(editor.state.tr.setSelection(BlockSelection.between(doc, selection.from, selection.to)));
+  }
+  return turned;
 }
 
 /** Duplicate the selection JUST BELOW her, including children. */

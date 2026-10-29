@@ -3,9 +3,11 @@
 // A page opened from a link anywhere in the app (MIN-777): read in a side
 // panel above the current screen, expanded to the full page on request.
 //
-// The database rule lives here and nowhere else: a database page is a table,
-// not a document to read beside something, so it never stays in the panel.
-// Callers only know an id; the project's page list knows what it is.
+// A database opens here too, with the compact toolbar of
+// components/pages/page-database-view.tsx. What is opened from the panel's own
+// document (a subpage, an entry of its table) replaces it in place, and Back
+// returns along that trail; the pages screen previews entries beside their
+// table instead, but the panel has no second panel to put beside itself.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -52,10 +54,10 @@ export function GlobalPagePanel({
   const t = useTranslations("Pages");
   const openFullPage = useOpenFullPage();
   const { byId, loading } = usePagesQuery(projectId);
-  // A subpage opened from the panel's own document replaces it in place.
-  const [openId, setOpenId] = useState(pageId);
+  // The pages opened from the panel's own document, the shown one last.
+  const [trail, setTrail] = useState([pageId]);
+  const openId = trail[trail.length - 1];
   const page = byId.get(openId);
-  const isDatabase = page?.database_schema != null;
   const flush = useRef<() => Promise<boolean>>(async () => true);
   const registerFlush = useCallback((next: () => Promise<boolean>) => {
     flush.current = next;
@@ -63,14 +65,9 @@ export function GlobalPagePanel({
 
   useEffect(() => {
     if (!open || loading) return;
-    if (isDatabase) {
-      onClose();
-      openFullPage(projectId, openId);
-    } else if (window.location.pathname === pageHref(projectId, openId)) {
-      // The page is already the screen underneath: nothing to open beside it.
-      onClose();
-    }
-  }, [open, loading, isDatabase, projectId, openId, onClose, openFullPage]);
+    // The page is already the screen underneath: nothing to open beside it.
+    if (window.location.pathname === pageHref(projectId, openId)) onClose();
+  }, [open, loading, projectId, openId, onClose]);
 
   // Every way out first saves what was typed in the panel, as the database
   // preview does: a refused write keeps the panel open on its error.
@@ -83,7 +80,12 @@ export function GlobalPagePanel({
     [onClose],
   );
 
-  const showsDocument = !loading && !isDatabase;
+  // Moving within the panel saves first, as leaving it does.
+  const go = useCallback(async (next: (trail: string[]) => string[]) => {
+    if (await flush.current()) setTrail(next);
+  }, []);
+
+  const showsDocument = !loading;
   // The page's menu sits in the panel's header; a trashed page closes it.
   const [menuSlot, setMenuSlot] = useState<HTMLElement | null>(null);
   const panelMenu = useMemo(() => ({ slot: menuSlot, onTrashed: onClose }), [menuSlot, onClose]);
@@ -94,6 +96,7 @@ export function GlobalPagePanel({
       expandLabel={t("expand")}
       onExpand={() => void leave(() => openFullPage(projectId, openId))}
       onClose={() => void leave()}
+      onBack={trail.length > 1 ? () => void go((current) => current.slice(0, -1)) : undefined}
       actionsSlot={showsDocument ? setMenuSlot : undefined}
     >
       {showsDocument ? (
@@ -104,17 +107,8 @@ export function GlobalPagePanel({
           projectId={projectId}
           pageId={openId}
           onNavigationReady={registerFlush}
-          onNavigate={(id, databaseId) => {
-            void (async () => {
-              if (!(await flush.current())) return;
-              // An entry opened from a table, or a database: the full screen.
-              if (databaseId || byId.get(id)?.database_schema != null) {
-                onClose();
-                openFullPage(projectId, id);
-              } else {
-                setOpenId(id);
-              }
-            })();
+          onNavigate={(id) => {
+            if (id !== openId) void go((current) => [...current, id]);
           }}
         />
       ) : (

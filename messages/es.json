@@ -2490,6 +2490,9 @@
     "placeholder": "Escribe o pulsa '/' para ver los bloques…",
     "slashNoResult": "No hay bloques coincidentes",
     "blockParagraph": "Texto",
+    "slashGroupBasic": "Bloques básicos",
+    "slashGroupLists": "Listas",
+    "slashGroupAdvanced": "Bloques avanzados",
     "blockHeading1": "Encabezado 1",
     "blockHeading2": "Encabezado 2",
     "blockHeading3": "Encabezado 3",
@@ -2703,7 +2706,15 @@
     "noRelatedByMeaning": "Ninguna incidencia relacionada por significado",
     "createNamed": "Crear «{name}»",
     "noResults": "No hay resultados",
-    "search": "Buscar…"
+    "search": "Buscar…",
+    "typeToSearch": "Escribe para buscar",
+    "closeMenu": "Cerrar menú",
+    "mentionSectionPeople": "Personas",
+    "mentionSectionProjects": "Proyectos",
+    "mentionSectionIssues": "Incidencias",
+    "mentionSectionObjectives": "Objetivos",
+    "mentionSectionPages": "Páginas",
+    "mentionSectionResources": "Recursos"
   },
   "Plan": {
     "tabDescription": "Descripción",

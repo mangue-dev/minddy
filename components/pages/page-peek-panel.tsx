@@ -7,7 +7,7 @@
 // to the full page, or close back to what was underneath.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, ExpandIcon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, Cancel01Icon, ExpandIcon } from "@hugeicons/core-free-icons";
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ export function PagePeekPanel({
   expandLabel,
   onExpand,
   onClose,
+  onBack,
   actionsSlot,
   children,
 }: {
@@ -29,6 +30,8 @@ export function PagePeekPanel({
   expandLabel: string;
   onExpand: () => void;
   onClose: () => void;
+  /** Returns to the page the shown one was opened from, when there is one. */
+  onBack?: () => void;
   /** Receives the element between Expand and Close where the page puts its
       own menu (PageView's `panelMenu`). */
   actionsSlot?: (element: HTMLElement | null) => void;
@@ -47,6 +50,11 @@ export function PagePeekPanel({
       >
         <div className="flex shrink-0 items-center gap-2 px-4 pt-3">
           <SidePanelTitle className="sr-only">{title}</SidePanelTitle>
+          {onBack ? (
+            <Button variant="ghost" size="icon-sm" aria-label={tCommon("back")} onClick={onBack}>
+              <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
+            </Button>
+          ) : null}
           <div className="flex-1" />
           <Button variant="ghost" size="sm" onClick={onExpand}>
             <HugeiconsIcon icon={ExpandIcon} className="size-3.5" />

@@ -218,13 +218,15 @@ export function blockExtensions(
 
 /* ── The “/” menu ─────────────────────────── ─────────────────────────── */
 
-/** The sections of the catalog, in the sort order of the menu. */
+/** The sections of the catalog, in the sort order of the menu, with the
+    header each one shows in the “/” menu and the phone's block sheet. */
 export const SLASH_GROUPS: ReadonlyArray<{
   group: SlashGroup;
+  labelKey: PageBlock["labelKey"];
 }> = [
-  { group: "basic" },
-  { group: "lists" },
-  { group: "advanced" },
+  { group: "basic", labelKey: "slashGroupBasic" },
+  { group: "lists", labelKey: "slashGroupLists" },
+  { group: "advanced", labelKey: "slashGroupAdvanced" },
 ];
 
 /** The catalog in the order of the “/” menu: group by group, `order` by

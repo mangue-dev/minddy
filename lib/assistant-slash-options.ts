@@ -17,7 +17,9 @@ export interface ActiveComposerMenuQuery extends ComposerMenuTrigger {
 }
 
 const ACTIVE_COMPOSER_MENU = /(^|[\t \u00a0\r\n])([/$])([^/$\r\n]*)$/;
-const DOUBLE_SPACE = /[ \u00a0]{2}/;
+/** The exit gestures of lib/mention-menu.ts: a space after the bare prefix,
+    or two spaces (macOS: a period and a space) once a query is typed. */
+const QUERY_EXIT = /^[ \u00a0]|[ \u00a0]{2}|\.[ \u00a0]$/;
 
 /** Read a command or skill picker trigger from a single-line composer value. */
 export function composerMenuTrigger(text: string): ComposerMenuTrigger | null {
@@ -37,7 +39,7 @@ export function findActiveComposerMenuQuery(
   if (
     query === undefined ||
     (prefix !== "/" && prefix !== "$") ||
-    DOUBLE_SPACE.test(query)
+    QUERY_EXIT.test(query)
   ) {
     return null;
   }

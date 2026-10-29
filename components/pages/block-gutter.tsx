@@ -47,6 +47,7 @@ import { BlockMenu } from "@/components/pages/block-menu";
 import type { PageCommentAnchor } from "@/components/pages/page-comment-bubble";
 import { COMMENTED_BLOCK_CLASS } from "@/components/pages/block-comments";
 import { PAGE_BLOCK_ID_ATTRIBUTE } from "@/lib/pages-mentions";
+import { trackBlockDrag } from "@/components/pages/block-drag";
 import {
   GUTTER_WIDTH,
   blockRange,
@@ -85,6 +86,17 @@ const GUTTER_EDGE_MIN = 8;
     the text. It lives in the column's right reserve (`app-desktop:pr-10`). */
 const COMMENT_BUTTON_SIZE = 24;
 const COMMENT_BUTTON_GAP = 6;
+
+/**
+ * Where the pointer asks for which button. Beside the text, up to
+ * `HOVER_MARGIN` away from it, the left margin shows the gutter and the right
+ * one the comment button; over the text, its left `GUTTER_SHARE` shows the
+ * gutter and the rest the comment button. Never both at once: an editor
+ * without comments shows nothing on the right part.
+ */
+const HOVER_MARGIN = 100;
+const GUTTER_SHARE = 0.7;
+type HoverZone = "gutter" | "comment" | "none";
 
 /** How long the buttons take to fade in beside a newly hovered block. */
 const GUTTER_FADE_MS = 120;
@@ -142,6 +154,32 @@ export function fixedContainingBlockOffset(element: Element | null): { top: numb
   return { top: 0, left: 0 };
 }
 
+/**
+ * How far below a block's top edge its buttons start, so they sit centred on
+ * the block's FIRST LINE — or on a code block's language picker, its first
+ * row. Read from the DOM: it follows the block's typography, insets and
+ * borders without a value written here.
+ */
+function firstLineOffset(dom: HTMLElement): number {
+  const box = styledBox(dom);
+  const languageTrigger = box.querySelector(".code-block-node-language-trigger");
+  if (languageTrigger instanceof HTMLElement) {
+    const blockRect = dom.getBoundingClientRect();
+    const triggerRect = languageTrigger.getBoundingClientRect();
+    return Math.round(triggerRect.top - blockRect.top + (triggerRect.height - BUTTON_SIZE) / 2);
+  }
+  const style = getComputedStyle(box);
+  // Quotes, callouts and other framed blocks carry their own padding or border.
+  const inset = parseFloat(style.paddingTop || "0") + parseFloat(style.borderTopWidth || "0");
+  // `line-height: normal` cannot be read in pixels: the font height is still
+  // much fairer than zero.
+  const parsed = parseFloat(style.lineHeight);
+  const lineHeight = Number.isFinite(parsed) ? parsed : parseFloat(style.fontSize || "0") * 1.5;
+  // The buttons are taller than a line of body text: centred on it, they rise
+  // above the block's top, so the offset may be negative.
+  return Math.round(inset + (lineHeight - BUTTON_SIZE) / 2);
+}
+
 export function BlockGutter({
   editor,
   onComment,
@@ -187,32 +225,58 @@ export function BlockGutter({
 
   // The comment button mirrors the gutter on the RIGHT of the block, in
   // pages only. It is portaled next to the handle, in the drag handle's own
-  // wrapper: leaving the text for it is then not leaving the editor, and the
-  // handle stays. A block that already has comments shows its count badge
-  // there instead, which opens its thread.
+  // wrapper (which scrolls with the document), and placed from the pointer
+  // itself rather than from the handle's hovered block, since it answers in
+  // the right margin too. A block that already has comments shows its count
+  // badge there instead, which opens its thread.
   const commentButton = useRef<HTMLButtonElement>(null);
+  const commentTarget = useRef<Node | null>(null);
+  // While the comment button is hovered, its block is painted as if it were
+  // selected, so the button says which block it comments on. An overlay in
+  // the same wrapper, not a class on the block: ProseMirror owns that DOM.
+  const commentPreview = useRef<HTMLDivElement>(null);
   const [commentHost, setCommentHost] = useState<HTMLElement | null>(null);
   // The last placement asked for, replayed once the button is mounted: the
   // first hover finds the host, and the button only exists after it.
-  const lastComment = useRef<[HTMLElement | null, number, boolean]>([null, 0, false]);
+  const lastComment = useRef<[HTMLElement | null, Node | null]>([null, null]);
   const placeComment = useCallback(
-    (dom: HTMLElement | null, marginTop: number, commented: boolean) => {
+    (dom: HTMLElement | null, node: Node | null) => {
       const button = commentButton.current;
       const handle = gutter.current?.parentElement;
       if (!onComment) return;
-      lastComment.current = [dom, marginTop, commented];
+      lastComment.current = [dom, node];
       if (!commentHost && handle?.parentElement) setCommentHost(handle.parentElement);
       if (!button) return;
       const parent = handle?.offsetParent;
-      if (!dom || commented || !(parent instanceof HTMLElement)) {
+      const commented =
+        !!dom &&
+        (dom.classList.contains(COMMENTED_BLOCK_CLASS) ||
+          styledBox(dom).classList.contains(COMMENTED_BLOCK_CLASS));
+      const preview = commentPreview.current;
+      if (!dom || !node || commented || !(parent instanceof HTMLElement)) {
+        commentTarget.current = null;
         button.dataset.shown = "false";
+        if (preview) preview.dataset.shown = "false";
         return;
       }
+      commentTarget.current = node;
       const block = dom.getBoundingClientRect();
       const frame = parent.getBoundingClientRect();
+      if (preview) {
+        preview.style.top = `${Math.round(block.top - frame.top + parent.scrollTop)}px`;
+        preview.style.left = `${Math.round(block.left - frame.left + parent.scrollLeft)}px`;
+        preview.style.width = `${Math.round(block.width)}px`;
+        preview.style.height = `${Math.round(block.height)}px`;
+      }
+      // Like the gutter, a little further from the text where the pane
+      // leaves the room for it.
+      const room = scrollPane(dom).getBoundingClientRect().right - block.right;
+      const gap =
+        COMMENT_BUTTON_GAP +
+        Math.max(0, Math.min(GUTTER_GAP_EXTRA, room - COMMENT_BUTTON_SIZE - COMMENT_BUTTON_GAP - GUTTER_EDGE_MIN));
       const top =
-        block.top - frame.top + parent.scrollTop + marginTop + (BUTTON_SIZE - COMMENT_BUTTON_SIZE) / 2;
-      const left = block.right - frame.left + parent.scrollLeft + COMMENT_BUTTON_GAP;
+        block.top - frame.top + parent.scrollTop + firstLineOffset(dom) + (BUTTON_SIZE - COMMENT_BUTTON_SIZE) / 2;
+      const left = block.right - frame.left + parent.scrollLeft + Math.floor(gap);
       button.style.top = `${Math.round(top)}px`;
       button.style.left = `${Math.round(left)}px`;
       button.dataset.shown = "true";
@@ -223,14 +287,69 @@ export function BlockGutter({
     if (commentHost) placeComment(...lastComment.current);
   }, [commentHost, placeComment]);
 
+  // The hover zones (HOVER_MARGIN, GUTTER_SHARE): one listener on the
+  // document, as the right margin lies outside the editor. The zone is
+  // written on the editor's root, where app/globals.css hides the gutter
+  // outside its zone; the comment button is placed here.
+  const zone = useRef<HoverZone>("none");
+  useEffect(() => {
+    if (editor.isDestroyed) return;
+    const setZone = (root: HTMLElement, next: HoverZone) => {
+      if (zone.current === next && root.dataset.hoverZone === next) return;
+      zone.current = next;
+      root.dataset.hoverZone = next;
+    };
+    const onMove = (event: MouseEvent) => {
+      if (editor.isDestroyed || menuOpen || dragging) return;
+      const dom = editor.view.dom;
+      const root = dom.closest<HTMLElement>(".page-editor");
+      if (!root) return;
+      const target = event.target instanceof Element ? event.target : null;
+      // On a button itself, its own zone holds.
+      if (target?.closest("[data-block-comment-button]")) return setZone(root, "comment");
+      if (gutter.current && target && gutter.current.contains(target)) return setZone(root, "gutter");
+      const box = dom.getBoundingClientRect();
+      const style = getComputedStyle(dom);
+      const left = box.left + (parseFloat(style.paddingLeft) || 0);
+      const right = box.right - (parseFloat(style.paddingRight) || 0);
+      const { clientX: x, clientY: y } = event;
+      let next: HoverZone = "none";
+      if (y >= box.top && y <= box.bottom) {
+        if (x < left) next = left - x <= HOVER_MARGIN ? "gutter" : "none";
+        else if (x > right) next = x - right <= HOVER_MARGIN ? "comment" : "none";
+        else next = x < left + (right - left) * GUTTER_SHARE ? "gutter" : "comment";
+      }
+      setZone(root, next);
+      if (next !== "comment" || !onComment) {
+        placeComment(null, null);
+        return;
+      }
+      const hit = editor.view.posAtCoords({ left: Math.min(Math.max(x, left + 2), right - 2), top: y });
+      if (!hit) return placeComment(null, null);
+      const $pos = editor.state.doc.resolve(hit.inside >= 0 ? hit.inside : hit.pos);
+      const node = $pos.depth >= 1 ? $pos.node(1) : $pos.nodeAfter;
+      const before = $pos.depth >= 1 ? $pos.before(1) : $pos.pos;
+      const blockDom = node ? editor.view.nodeDOM(before) : null;
+      placeComment(blockDom instanceof HTMLElement ? blockDom : null, node ?? null);
+    };
+    const onLeave = () => {
+      const root = editor.isDestroyed ? null : editor.view.dom.closest<HTMLElement>(".page-editor");
+      if (root) setZone(root, "none");
+      placeComment(null, null);
+    };
+    document.addEventListener("mousemove", onMove, { passive: true });
+    document.documentElement.addEventListener("mouseleave", onLeave);
+    return () => {
+      document.removeEventListener("mousemove", onMove);
+      document.documentElement.removeEventListener("mouseleave", onLeave);
+    };
+  }, [editor, onComment, placeComment, menuOpen, dragging]);
+
   const onNodeChange = useCallback(
     ({ node, pos }: { node: Node | null; pos: number }) => {
       hovered.current = { node, pos };
       const element = gutter.current;
-      if (!element || pos < 0 || editor.isDestroyed) {
-        placeComment(null, 0, false);
-        return;
-      }
+      if (!element || pos < 0 || editor.isDestroyed) return;
       const dom = editor.view.nodeDOM(pos);
       if (!(dom instanceof HTMLElement)) {
         // No measurable block: we RESET to zero rather than leaving the
@@ -238,7 +357,6 @@ export function BlockGutter({
         // block without ever corresponding to the one below.
         element.style.marginTop = "0px";
         element.style.transform = "";
-        placeComment(null, 0, false);
         return;
       }
       // A new block: the buttons fade in beside it rather than jump there.
@@ -264,49 +382,15 @@ export function BlockGutter({
       );
       element.style.paddingRight = `${GUTTER_GAP_MIN + Math.floor(extra)}px`;
       const box = styledBox(dom);
-      const style = getComputedStyle(box);
       const commented =
         dom.classList.contains(COMMENTED_BLOCK_CLASS) ||
         box.classList.contains(COMMENTED_BLOCK_CLASS);
       element.style.transform = commented
         ? `translateX(-${COMMENTED_GUTTER_SHIFT}px)`
         : "";
-      // A code block starts with custom chrome rather than a text line. Center
-      // the gutter on the actual language trigger so changes to the header's
-      // padding, button size, or border radius cannot leave the controls behind.
-      const languageTrigger = box.querySelector(
-        ".code-block-node-language-trigger"
-      );
-      if (languageTrigger instanceof HTMLElement) {
-        const blockRect = dom.getBoundingClientRect();
-        const triggerRect = languageTrigger.getBoundingClientRect();
-        const offset =
-          triggerRect.top -
-          blockRect.top +
-          (triggerRect.height - BUTTON_SIZE) / 2;
-        element.style.marginTop = `${Math.round(offset)}px`;
-        placeComment(dom, Math.round(offset), commented);
-        return;
-      }
-      // Text does not always start at the block's top edge: quotes, callouts,
-      // and other framed blocks carry their own padding or border. Include
-      // those insets so the gutter stays centered on their first line.
-      const inset =
-        parseFloat(style.paddingTop || "0") +
-        parseFloat(style.borderTopWidth || "0");
-      // `line-height: normal` cannot be read in pixels: we fall back on the
-      // font height, which is still much fairer than zero.
-      const parsed = parseFloat(style.lineHeight);
-      const lineHeight = Number.isFinite(parsed)
-        ? parsed
-        : parseFloat(style.fontSize || "0") * 1.5;
-      // The buttons are taller than a line of body text: centred on it, they
-      // rise above the block's top, so the offset may be negative.
-      const offset = inset + (lineHeight - BUTTON_SIZE) / 2;
-      element.style.marginTop = `${Math.round(offset)}px`;
-      placeComment(dom, Math.round(offset), commented);
+      element.style.marginTop = `${firstLineOffset(dom)}px`;
     },
-    [editor, placeComment]
+    [editor]
   );
 
   // While a block is dragged, every place it passes over answers "move":
@@ -429,21 +513,29 @@ export function BlockGutter({
                 // The grab cursor says a drag is under way, not that one is
                 // possible: hovering keeps the plain cursor of a button.
                 className={cn(BUTTON, "size-7", dragging && "cursor-grabbing")}
-                // NO `preventDefault` on the `mousedown`, and that's it
-                // subject: native drag IS the default action of
-                // `mousedown`. The handle lives in a `div[draggable]` placed by
-                // the extension, which listens for `dragstart` on it; A
-                // `preventDefault` on the button that fills it prevented the
-                // browser to initiate the drag, and the handle no longer knew
-                // than click. The selection fears nothing: it lives
-                // in the ProseMirror state, which the loss of DOM focus does not affect
-                // not — it is `selectBlockFromHandle` who reads it and puts it back.
+                // The press is tracked by the page (block-drag.ts), not handed
+                // to the browser's native drag: during a native drag the
+                // browser owns the cursor and shows its text cursor, never
+                // the grab cursor. `preventDefault` keeps the native drag
+                // from starting; below the drag threshold the press stays a
+                // click, which opens the menu.
+                onMouseDown={(event) => {
+                  if (event.button !== 0) return;
+                  const { pos } = hovered.current;
+                  if (pos < 0) return;
+                  event.preventDefault();
+                  trackBlockDrag(editor, pos, event.nativeEvent, setDragging);
+                }}
                 onClick={(event) => {
                   const { pos } = hovered.current;
                   if (pos < 0) return;
                   if (!selectBlockFromHandle(editor, pos, event.shiftKey))
                     return;
-                  openMenuAt(event.currentTarget.getBoundingClientRect());
+                  // Anchored at the gutter's left edge (the `+`), so the menu,
+                  // opening to the left, covers neither button.
+                  const handle = event.currentTarget.getBoundingClientRect();
+                  const first = gutter.current?.querySelector("button")?.getBoundingClientRect();
+                  openMenuAt(first ? new DOMRect(first.left, handle.top, 0, handle.height) : handle);
                 }}
               >
                 {/* Filled dots: the icon draws each as a stroked ring, which leaves a
@@ -461,6 +553,8 @@ export function BlockGutter({
 
       {onComment && commentHost
         ? createPortal(
+            <>
+            <div ref={commentPreview} aria-hidden data-block-comment-preview="" data-shown="false" />
             <Tooltip delayDuration={TOOLTIP_DELAY_MS} disableHoverableContent>
               <TooltipTrigger asChild>
                 <button
@@ -468,12 +562,17 @@ export function BlockGutter({
                   type="button"
                   aria-label={t("commentBlock")}
                   data-block-comment-button=""
+                  onMouseEnter={() => {
+                    if (commentPreview.current) commentPreview.current.dataset.shown = "true";
+                  }}
+                  onMouseLeave={() => {
+                    if (commentPreview.current) commentPreview.current.dataset.shown = "false";
+                  }}
                   data-shown="false"
                   className={cn(BUTTON, "size-6")}
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => {
-                    const { node } = hovered.current;
-                    const blockId = node?.attrs?.[PAGE_BLOCK_ID_ATTRIBUTE];
+                    const blockId = commentTarget.current?.attrs?.[PAGE_BLOCK_ID_ATTRIBUTE];
                     if (typeof blockId === "string" && blockId) onComment({ blockId, startNew: true });
                   }}
                 >
@@ -481,7 +580,8 @@ export function BlockGutter({
                 </button>
               </TooltipTrigger>
               <TooltipContent side="top">{t("commentBlock")}</TooltipContent>
-            </Tooltip>,
+            </Tooltip>
+            </>,
             commentHost
           )
         : null}

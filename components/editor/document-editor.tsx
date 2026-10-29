@@ -346,6 +346,8 @@ export function DocumentEditor({
         extensions={extensions}
         autoFocus={autoFocus}
         immediateRender
+        // A composer's Esc cancels it; it does not select the block first.
+        escapeSelectsBlock={!onEscape}
         contentClassName={contentClassName}
       />
     </div>

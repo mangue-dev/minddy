@@ -1,9 +1,9 @@
 "use client";
 
-// The app-wide page panel (MIN-777): a classic page opened from a mention, a
-// resource, a comment or another in-app link is read beside the current
-// screen instead of replacing it. The panel offers "Expand" to reach the full
-// page; database pages never stay in it (components/global-page-panel.tsx).
+// The app-wide page panel (MIN-777): a page or a database opened from a
+// mention, a resource, a comment or another in-app link is read beside the
+// current screen instead of replacing it. The panel offers "Expand" to reach
+// the full page (components/global-page-panel.tsx).
 
 import {
   createContext,

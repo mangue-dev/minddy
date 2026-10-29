@@ -95,7 +95,7 @@ function CategoryRow({
   return (
     <li
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
+      style={{ transform: CSS.Translate.toString(transform), transition }}
       className={cn(
         "group/category relative flex items-center gap-2 bg-card py-2",
         isDragging && "z-10 shadow-sm"

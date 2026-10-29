@@ -23,7 +23,9 @@ import { NumoFace } from "@/components/numo-face";
 import { filterMentionItems } from "@/lib/mention-menu";
 import { StatusIndicator } from "@/components/issue-indicators";
 import { SemanticSearchingHint, type SemanticSearchStatus } from "@/components/semantic-searching-hint";
-import { MENU_ROW_ACTIVE_CLASS, MENU_ROW_CLASS, MENU_SCROLL_CLASS, MENU_SURFACE_CLASS } from "@/components/ui/menu-surface";
+import { MENU_ROW_ACTIVE_CLASS, MENU_ROW_CLASS } from "@/components/ui/menu-surface";
+import { groupBySection, mentionSection, type MentionSectionId } from "@/lib/suggestion-menu";
+import { SuggestionMenu } from "@/components/editor/suggestion-menu";
 import type { IssueStatus } from "@/lib/issue-constants";
 import type { ObjectiveStatus } from "@/lib/objective-validation";
 
@@ -70,14 +72,36 @@ export interface MentionOption {
   semantic?: boolean;
 }
 
-/** "Related by meaning" divider, shown once before the first semantic option. */
-export function SemanticMentionDivider() {
+/** The options in the order their menu lists them: by section (people,
+    projects, issues, objectives, pages, resources, then issues related by
+    meaning), each section where its first option stands. */
+export function sectionedMentions(options: readonly MentionOption[]) {
+  return groupBySection(options, mentionSection);
+}
+
+/** The header of a mention section, translated. */
+export function useMentionSectionLabel(): (id: string) => string | null {
   const t = useTranslations("Picker");
-  return (
-    <div role="presentation" className="px-2 pb-0.5 pt-1.5 text-xs font-medium text-muted-foreground">
-      {t("relatedByMeaning")}
-    </div>
-  );
+  return (id) => {
+    switch (id as MentionSectionId) {
+      case "people":
+        return t("mentionSectionPeople");
+      case "projects":
+        return t("mentionSectionProjects");
+      case "issues":
+        return t("mentionSectionIssues");
+      case "objectives":
+        return t("mentionSectionObjectives");
+      case "pages":
+        return t("mentionSectionPages");
+      case "resources":
+        return t("mentionSectionResources");
+      case "semantic":
+        return t("relatedByMeaning");
+      default:
+        return null;
+    }
+  };
 }
 
 /** The options that match the query typed after the “@”. */
@@ -210,6 +234,7 @@ export function MentionOptionRow({
       }}
       className={cn(
         MENU_ROW_CLASS,
+        "text-foreground",
         active && MENU_ROW_ACTIVE_CLASS,
       )}
     >
@@ -225,12 +250,15 @@ export function MentionOptionRow({
 }
 
 /** The list anchored ABOVE its composer (Numo's, pasted at the bottom of its
- panel). The description editor anchors his to the caret. */
+ panel). The description editor anchors his to the caret. `options` must be
+ in their sectioned order (`sectionedMentions`): `activeIndex` walks it, and
+ `activeIndex === options.length` is the “Close menu” row. */
 export function MentionSuggestions({
   options,
   activeIndex,
   onPick,
   onHover,
+  onClose,
   className,
   style,
   semanticStatus = null,
@@ -239,70 +267,48 @@ export function MentionSuggestions({
   activeIndex: number;
   onPick: (option: MentionOption) => void;
   onHover: (index: number) => void;
+  /** “Close menu”: closes the list and leaves the typed text as text. */
+  onClose: () => void;
   className?: string;
   style?: React.CSSProperties;
   /** Where the search by meaning stands: a status row closes the list. */
   semanticStatus?: SemanticSearchStatus | null;
 }) {
   const listRef = useRef<HTMLDivElement>(null);
+  const sectionLabel = useMentionSectionLabel();
+  const { sections } = sectionedMentions(options);
 
   useEffect(() => {
-    listRef.current
-      ?.querySelector<HTMLElement>('[aria-selected="true"]')
-      ?.scrollIntoView({ block: "nearest" });
+    const list = listRef.current;
+    if (!list) return;
+    if (activeIndex === 0) {
+      list.scrollTop = 0;
+      return;
+    }
+    list.querySelector<HTMLElement>('[role="option"][aria-selected="true"]')?.scrollIntoView({ block: "nearest" });
   }, [activeIndex, options]);
 
-  if (options.length === 0 && !semanticStatus) return null;
-
   return (
-    <div
-      ref={listRef}
-      role="listbox"
-      data-floating-surface
-      style={style}
-      className={cn(
-        "scrollbar-quiet absolute bottom-full z-50 mb-1 max-h-56 w-64",
-        MENU_SURFACE_CLASS,
-        MENU_SCROLL_CLASS,
-        className,
-      )}
-    >
-      {options.map((option, index) => (
-        <MentionRowWithDivider
-          key={`${option.type}:${option.id}`}
-          options={options}
-          index={index}
-        >
+    <div style={style} className={cn("absolute bottom-full z-50 mb-1 w-64", className)}>
+      <SuggestionMenu
+        sections={sections}
+        sectionLabel={sectionLabel}
+        listRef={listRef}
+        listClassName="max-h-56"
+        closeActive={activeIndex === options.length}
+        onClose={onClose}
+        onCloseHover={() => onHover(options.length)}
+        trailing={semanticStatus && <SemanticSearchingHint status={semanticStatus} />}
+        renderItem={(option, index) => (
           <MentionOptionRow
+            key={`${option.type}:${option.id}`}
             option={option}
             active={index === activeIndex}
             onPick={() => onPick(option)}
             onHover={() => onHover(index)}
           />
-        </MentionRowWithDivider>
-      ))}
-      {semanticStatus && <SemanticSearchingHint status={semanticStatus} />}
+        )}
+      />
     </div>
-  );
-}
-
-/** A row, preceded by the "Related by meaning" divider when it is the first semantic one. */
-export function MentionRowWithDivider({
-  options,
-  index,
-  children,
-}: {
-  options: readonly { semantic?: boolean }[];
-  index: number;
-  children: React.ReactNode;
-}) {
-  // The divider holds the translation: menus without semantic rows (and
-  // their tests) never need the intl context for it.
-  const first = options[index]?.semantic && !options[index - 1]?.semantic;
-  return (
-    <>
-      {first && <SemanticMentionDivider />}
-      {children}
-    </>
   );
 }

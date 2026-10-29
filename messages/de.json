@@ -2490,6 +2490,9 @@
     "placeholder": "Schreiben oder „/“ für Blöcke eingeben…",
     "slashNoResult": "Kein passender Block",
     "blockParagraph": "Text",
+    "slashGroupBasic": "Grundblöcke",
+    "slashGroupLists": "Listen",
+    "slashGroupAdvanced": "Erweiterte Blöcke",
     "blockHeading1": "Überschrift 1",
     "blockHeading2": "Überschrift 2",
     "blockHeading3": "Überschrift 3",
@@ -2703,7 +2706,15 @@
     "noRelatedByMeaning": "Kein inhaltlich verwandtes Ticket",
     "createNamed": "„{name}“ erstellen",
     "noResults": "Keine Ergebnisse",
-    "search": "Suchen…"
+    "search": "Suchen…",
+    "typeToSearch": "Tippe, um zu suchen",
+    "closeMenu": "Menü schließen",
+    "mentionSectionPeople": "Personen",
+    "mentionSectionProjects": "Projekte",
+    "mentionSectionIssues": "Tickets",
+    "mentionSectionObjectives": "Ziele",
+    "mentionSectionPages": "Seiten",
+    "mentionSectionResources": "Ressourcen"
   },
   "Plan": {
     "tabDescription": "Beschreibung",

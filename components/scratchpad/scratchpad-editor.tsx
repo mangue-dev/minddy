@@ -26,7 +26,7 @@ import {
   nodeRank,
   startPendingTasks,
 } from "@/components/scratchpad/start-tasks";
-import type { PageSlashItem } from "@/components/pages/page-slash-command";
+import { slashSection, type PageSlashItem } from "@/components/pages/page-slash-command";
 import { useDictationRecorder } from "@/components/ai-elements/use-dictation-recorder";
 import { DictationPill } from "@/components/ai-elements/dictation-pill";
 import { eventKey } from "@/lib/keyboard/event-key";
@@ -136,6 +136,7 @@ export function ScratchpadEditor({
   uploadScope?: string | null;
 }) {
   const t = useTranslations("Scratchpad");
+  const tPages = useTranslations("Pages");
 
   const editorRef = useRef<Editor | null>(null);
   const mentionsRef = useRef(mentions);
@@ -179,13 +180,15 @@ export function ScratchpadEditor({
         label: t("slashDictate"),
         icon: Mic,
         keywords: ["dictate", "dicter", "voice", "voix", "micro", "vocal", "audio"],
+        // With the tasks it writes, which the notebook lists first.
+        section: slashSection(tPages, "lists"),
         run: (editor, range) => {
           editor.chain().focus().deleteRange(range).run();
           startDictationRef.current();
         },
       },
     ],
-    [t]
+    [t, tPages]
   );
 
   const onChangeRef = useRef(onChange);

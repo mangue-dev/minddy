@@ -236,7 +236,8 @@ neither of the two layers having to reorganize itself. */}
         data-floating-surface-layer="local"
         className={cn(
           "absolute top-0 right-0 w-64",
-          "scrollbar-quiet flex max-h-[70vh] flex-col overflow-y-auto",
+          // `gap-0.5`: the headings breathe apart, as a menu's rows do.
+          "scrollbar-quiet flex max-h-[70vh] flex-col gap-0.5 overflow-y-auto",
           // The surface and padding of the app's dropdown menus
           // (components/ui/dropdown-menu.tsx): 12 px radius, 8 px padding,
           // and rows of the same height and inner radius.
