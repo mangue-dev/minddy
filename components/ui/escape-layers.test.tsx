@@ -6,6 +6,7 @@ import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { Dialog, DialogContent, DialogTitle } from "./dialog";
+import { Sheet, SheetContent, SheetTitle } from "./sheet";
 import { useEscapeLayer } from "@/lib/escape-layers";
 
 vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => false }));
@@ -55,4 +56,19 @@ it("closes the menu first, then the dialog", async () => {
   expect(onOpenChange).not.toHaveBeenCalled();
   await act(() => escape());
   expect(onOpenChange).toHaveBeenCalledWith(false);
+});
+
+it("closes a menu inside a sheet without closing the sheet", async () => {
+  const onOpenChange = vi.fn();
+  await act(() => root.render(
+    <Sheet open onOpenChange={onOpenChange}>
+      <SheetContent>
+        <SheetTitle>Numo</SheetTitle>
+        <Menu />
+      </SheetContent>
+    </Sheet>
+  ));
+  await act(() => escape());
+  expect(document.querySelector("[data-testid=menu]")).toBeNull();
+  expect(onOpenChange).not.toHaveBeenCalled();
 });

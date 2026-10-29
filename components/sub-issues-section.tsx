@@ -109,9 +109,12 @@ export function SubIssuesSection({
       )}
 
       {!readOnly && create && (
+        // The size of a wizard's main button: the section's one action, across its width.
         <SplitButton
           variant="outline"
-          size="sm"
+          size="lg"
+          className="w-full"
+          actionClassName="flex-1"
           onClick={createSubIssue}
           menuLabel={t("moreSubIssueOptions")}
           menuAlign="start"
