@@ -29,12 +29,14 @@ import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { createIssueApi } from "@/lib/issues-api";
 import { createObjectiveOptimistic } from "@/lib/optimistic-objective";
 import {
+  findCachedIssue,
   insertIssueEverywhere,
   issueWrites,
   mergeServerIssue,
   removeIssueEverywhere,
 } from "@/lib/optimistic/issue-writes";
 import { createIssueDeferred } from "@/lib/create-issue-deferred";
+import { issueIdentifier } from "@/lib/issue-constants";
 import { buildOptimisticIssue } from "@/lib/optimistic-issue";
 import { useUndoHistory } from "@/lib/undo/undo-context";
 import { snapshotIssue } from "@/lib/undo/undo-core";
@@ -77,7 +79,7 @@ interface OpenIssueOptions {
   status?: IssueStatus;
   objectiveId?: string | null;
   assigneeId?: string | null;
-  /** Prefills the parent: the new issue is a sub-issue of this one. */
+  /** Prefills a "sub-issue of" relation to this issue, shown in the form. */
   parentId?: string | null;
   /** Opens the already open microphone dialog (global shortcut ⌘⇧D). */
   dictate?: boolean;
@@ -337,6 +339,14 @@ export function CreateProvider({ children }: { children: ReactNode }) {
     [resolveTarget]
   );
 
+  // The pill resolves the parent from the dialog's issues; this label only
+  // stands in while they load.
+  const parentRelationLabel = (projectId: string, issueId: string): string => {
+    const parent = findCachedIssue(queryClient, projectId, issueId);
+    const key = allProjectsRef.current.find((p) => p.id === projectId)?.key;
+    return parent ? `${key ? issueIdentifier(key, parent.number) : `#${parent.number}`} ${parent.title}` : "";
+  };
+
   const openCreateObjective = useCallback(
     (opts?: OpenObjectiveOptions) => {
       const pid = resolveTarget(opts?.projectId, true);
@@ -449,7 +459,10 @@ export function CreateProvider({ children }: { children: ReactNode }) {
           initialStatus={issuePresets.status}
           initialObjectiveId={issuePresets.objectiveId}
           initialAssigneeId={issuePresets.assigneeId}
-          initialParentId={issuePresets.parentId}
+          initialSubIssueOf={issuePresets.parentId ? {
+            id: issuePresets.parentId,
+            label: parentRelationLabel(target, issuePresets.parentId),
+          } : null}
           autoDictate={issueDictate}
           initialDraftId={issueDraftId}
         />

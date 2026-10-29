@@ -6,7 +6,7 @@ import { MobileSheetScrollArea } from "@/components/ui/mobile-sheet";
 
 import { createUuid } from "@/lib/create-uuid";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
@@ -122,6 +122,7 @@ export function CreateIssueDialog({
   initialStatus,
   initialObjectiveId,
   initialAssigneeId,
+  initialSubIssueOf = null,
   initialParentId,
   initialTitle,
   initialDescription,
@@ -157,6 +158,9 @@ export function CreateIssueDialog({
   /** Preset the assignee (when creating from an assignee-filtered board, so
       the new issue doesn't instantly vanish from it). */
   initialAssigneeId?: string | null;
+  /** Preset a visible "sub-issue of" relation (a parent's "Create a
+      sub-issue"), which the form shows and can remove. */
+  initialSubIssueOf?: { id: string; label: string } | null;
   /**
    * Starting content — the form opens already written. It's the promotion
    * of a return in ticket: everything that the return can say (its title, its
@@ -251,11 +255,28 @@ export function CreateIssueDialog({
   const [fields, setFields] = useState(DEFAULTS);
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [relations, setRelations] = useState<PendingRelationInput[]>([]);
+  // The relations a new form starts with: the parent's, when it opened from
+  // its "Create a sub-issue", in the parent's own project only.
+  const seededRelations = useCallback((): PendingRelationInput[] =>
+    initialSubIssueOf && activeProjectId === projectId
+      ? [{ type: "sub_issue_of", target_id: initialSubIssueOf.id, target_type: "issue", target_label: initialSubIssueOf.label }]
+      : [],
+  [initialSubIssueOf, activeProjectId, projectId]);
   // Relations and categories belong to one project: a new target starts empty.
   useEffect(() => {
     setRelations([]);
     setCategoryIds([]);
   }, [activeProjectId]);
+  // Each opening starts from the seed, and so does a change of target project
+  // (the seed only holds in the parent's). Keyed on the parent's id: its label
+  // settling later must not drop relations picked meanwhile.
+  const seededRelationsRef = useRef(seededRelations);
+  seededRelationsRef.current = seededRelations;
+  const subIssueOfId = initialSubIssueOf?.id ?? null;
+  useEffect(() => {
+    if (!open || resuming.current) return;
+    setRelations(seededRelationsRef.current());
+  }, [open, subIssueOfId, activeProjectId, resuming]);
   const [createMore, setCreateMore] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   // Which field picker a keyboard shortcut (S/P/E/A/L/D/O) has opened, if any.
@@ -499,7 +520,8 @@ export function CreateIssueDialog({
     setDraftDocument(null);
     setEditorKey((k) => k + 1);
     uploads.clear();
-    setRelations([]);
+    // "Create more" keeps the parent: the next issue is its sub-issue too.
+    setRelations(seededRelations());
   };
 
   const reset = () => {
