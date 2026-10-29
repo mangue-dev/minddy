@@ -213,6 +213,10 @@ installation › On this computer**; the desktop app refuses to claim a server o
 process. `--keep-backend` deliberately leaves Supabase allocated and is not part
 of the normal desktop flow.
 
+The launcher builds the app again when the version, the app URL or, in a Git
+checkout, the commit changes. Local edits that are not committed keep the
+previous build; `--rebuild` forces a new one.
+
 To reset an evaluation stack, explicitly destroy its local data and bootstrap it
 again:
 

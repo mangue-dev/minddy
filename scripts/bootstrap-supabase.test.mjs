@@ -13,7 +13,7 @@ import {
   parseEnv,
 } from "./bootstrap-supabase.mjs";
 import { EXPECTED_BUCKETS, parseArgs as parseStorageArgs } from "./reconcile-storage-buckets.mjs";
-import { checkLocalConfig, verificationSql } from "./verify-supabase-bootstrap.mjs";
+import { checkLocalConfig, localDatabaseContainer, verificationSql } from "./verify-supabase-bootstrap.mjs";
 import { BASELINE_VERSION } from "./repair-squashed-migration-history.mjs";
 
 test("minimal local mode skips only services that minddy does not require", () => {
@@ -180,4 +180,8 @@ test("a reference bootstrap can read an explicit external environment without en
   assert.equal(options.supabaseUrl, "http://127.0.0.1:8001");
   assert.throws(() => parseArgs(["--local", "--existing-env"]), /requires remote database mode/);
   assert.throws(() => parseArgs(["--env-file", "/etc/minddy/instance.env"]), /must stay inside/);
+});
+
+test("the local verification queries the container named after project_id", () => {
+  assert.equal(localDatabaseContainer(), "supabase_db_minddy");
 });

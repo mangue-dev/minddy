@@ -19,7 +19,7 @@
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review); MIN-798 Smart Fill title model; MIN-829 instance administration",
+    "version": "0.20.0 (MIN-747 release review); MIN-798 Smart Fill title model; MIN-829 instance administration; MIN-847 instance variables",
     "editions": [
       "self-hosted"
     ],
@@ -49,12 +49,16 @@
       "lib/ai-model-config-file.ts",
       "lib/server/admin-model-config.ts",
       "lib/server/model-config.ts",
-      "lib/server/assistant/admin-tools.ts"
+      "lib/server/assistant/admin-tools.ts",
+      "lib/instance-variables.ts",
+      "lib/server/instance-variables.ts",
+      "app/api/admin/instance-variables/route.ts",
+      "components/admin/admin-instance-dashboard.tsx"
     ]
   },
   "review": {
     "revision": 12,
-    "fact": "agent:claude-code (MIN-829 tabs, accounts, costs, model categories, configuration file and Numo admin tools checked against lib/admin-tabs.ts, lib/ai-model-config.ts, lib/ai-model-config-file.ts, lib/server/admin-model-config.ts, lib/server/finance.ts, lib/admin-costs.ts, lib/server/retention.ts and lib/server/assistant/admin-tools.ts, including admin_get_costs; both figures recaptured on 2026-10-29 with captures/shots/documentation-admin from a local candidate against the preview capture admin, every write blocked, and inspected); agent:claude-code (MIN-798 Smart-fill titles model paragraph checked against lib/ai-model-config.ts, lib/ai-surfaces.ts and lib/server/smart-fill-title.ts: automations group, fallback deepseek/deepseek-v4-flash, not answered by the decision model; no figure changed); agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "fact": "agent:claude-code (MIN-847 Instance tab section checked against lib/instance-variables.ts, lib/server/instance-variables.ts and app/api/admin/instance-variables/route.ts; figure captured on 2026-10-29 from a disposable local self-hosted instance with its own test administrator, every write blocked, and inspected); agent:claude-code (MIN-829 tabs, accounts, costs, model categories, configuration file and Numo admin tools checked against lib/admin-tabs.ts, lib/ai-model-config.ts, lib/ai-model-config-file.ts, lib/server/admin-model-config.ts, lib/server/finance.ts, lib/admin-costs.ts, lib/server/retention.ts and lib/server/assistant/admin-tools.ts, including admin_get_costs; both figures recaptured on 2026-10-29 with captures/shots/documentation-admin from a local candidate against the preview capture admin, every write blocked, and inspected); agent:claude-code (MIN-798 Smart-fill titles model paragraph checked against lib/ai-model-config.ts, lib/ai-surfaces.ts and lib/server/smart-fill-title.ts: automations group, fallback deepseek/deepseek-v4-flash, not answered by the decision model; no figure changed); agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
     "language": "agent:claude-code (es MIN-829 sections with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-798 Smart-fill titles model paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
@@ -101,6 +105,23 @@
       "theme": "light",
       "padding": 24,
       "deviceScaleFactor": 2
+    },
+    {
+      "id": "instance-administration-instance",
+      "kind": "screenshot",
+      "src": "/documentation/es/instance-administration-instance.png",
+      "alt": "Pestaña Instancia con el origen de cada variable, una clave de OpenRouter enmascarada definida aquí y las direcciones de administradores del archivo.",
+      "caption": "Instancia muestra de dónde viene cada valor; los secretos solo muestran sus últimos caracteres. Esta captura procede de una instancia autoalojada local desechable.",
+      "revision": 12,
+      "reviewed": true,
+      "capturedAt": "2026-10-29",
+      "viewport": [
+        1488,
+        1148
+      ],
+      "theme": "light",
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -122,7 +143,7 @@ Administrar la instancia es distinto de ser propietario de un proyecto. `ADMIN_E
 
 ## Usar capacidades disponibles {#panels}
 
-La consola tiene tres pestañas: **Cuentas**, **Costes** y **Modelos**. **Costes** queda oculta sin una capacidad gestionada de OpenRouter vinculada. Los enlaces a las antiguas pestañas Resumen, Usuarios y Finanzas abren **Cuentas** o **Costes**. Regalar un plan depende de una facturación configurada o de una anulación existente. Una instancia autoalojada sin proveedores comerciales no obtiene la facturación Cloud por abrir la consola. Los cambios administrativos afectan a toda la instancia, no a un proyecto; compruébalos con cuentas de demostración.
+La consola tiene tres pestañas: **Cuentas**, **Costes**, **Modelos** y, donde se permite, **Instancia**. **Costes** queda oculta sin una capacidad gestionada de OpenRouter vinculada. Los enlaces a las antiguas pestañas Resumen, Usuarios y Finanzas abren **Cuentas** o **Costes**. Regalar un plan depende de una facturación configurada o de una anulación existente. Una instancia autoalojada sin proveedores comerciales no obtiene la facturación Cloud por abrir la consola. Los cambios administrativos afectan a toda la instancia, no a un proyecto; compruébalos con cuentas de demostración.
 
 ## Atender una cuenta {#accounts}
 
@@ -143,6 +164,16 @@ Cada tarjeta de **Modelos** tiene un **Modelo predeterminado** para su categorí
 ## Administrar la instancia con Numo {#numo}
 
 En una conversación de Numo iniciada desde una sesión de administrador, Numo puede leer los costes de IA de la instancia, con las mismas cifras y filtros que **Costes**, leer y cambiar la configuración de modelos, previsualizar y aplicar una importación, incluido un archivo de configuración adjunto a la conversación, encontrar una cuenta por su dirección de correo exacta, leer su plan y su presupuesto de uso de IA, y regalar o retirar un plan. La sesión de administrador se comprueba de nuevo antes de cada una de estas acciones, y Numo te pide confirmar cada cambio antes de hacerlo. Estas herramientas no devuelven actividad, proyectos ni contenido de otra cuenta. Las menciones a @Numo, las rutinas y la ayuda pública de la documentación nunca las reciben.
+
+## Editar las variables de la instancia {#instance-variables}
+
+En una instancia autoalojada cuyo archivo de entorno define `MINDDY_CONFIG_OVERRIDES=1`, la pestaña **Instancia** cambia algunas de sus variables sin editar el archivo: la clave de OpenRouter, las direcciones de administración, el proveedor y los remitentes de correo, tus propias apps de GitHub y GitLab, la analítica, el nombre y la dirección de contacto de la instancia y la publicación de la configuración de modelos. La guía de instalación pregunta si permitirlo, y la app de escritorio lo activa para la instancia que instala en tu ordenador. Solo el archivo lo activa o lo desactiva; Minddy Cloud nunca lo ofrece.
+
+![Pestaña Instancia con el origen de cada variable, una clave de OpenRouter enmascarada definida aquí y las direcciones de administradores del archivo.](/documentation/es/instance-administration-instance.png)
+
+El campo de búsqueda sobre la lista encuentra una variable por su nombre, su etiqueta o su descripción. Un valor guardado en la pestaña sustituye al del archivo, y **Eliminar** recupera el valor del archivo. Cada variable indica de dónde viene su valor; los secretos solo muestran sus últimos caracteres. La mayoría de los cambios se aplican en un minuto; la pestaña indica los que se aplican tras reiniciar la instancia, y la app de escritorio ofrece entonces **Reiniciar ahora**. El acceso a la base de datos, las claves de cifrado, la dirección de la app y los valores fijados al compilar solo se definen en el archivo, así que un valor erróneo en la pestaña nunca te bloquea: elimínalo, o define `MINDDY_CONFIG_OVERRIDES=0` en el archivo para volver a sus valores.
+
+Guardar un secreto o las direcciones de administración pide tu código de dos pasos si no lo has introducido en los últimos minutos, y no puedes eliminar tu propia dirección. Cada cambio aparece en la bandeja de entrada de las demás personas administradoras, incluidas las que lo son por rol, y por correo a todas, tú incluida, si la instancia envía correos. Guardar un valor sin cambios no registra nada. Cada variable conserva sus últimas versiones, con quién la cambió y cuándo; **Restaurar** recupera una. Los valores se guardan en la base de datos, cifrados cuando el cifrado del espacio de trabajo está activado.
 
 ## Elegir el modelo de decisión de IA {#decision-model}
 

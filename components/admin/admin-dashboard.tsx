@@ -1,6 +1,6 @@
 "use client";
 
-import { BotIcon, DollarCircleIcon as CircleDollarSign, UserGroupIcon } from "@hugeicons/core-free-icons";
+import { BotIcon, DollarCircleIcon as CircleDollarSign, ServerStack01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useReducedMotion } from "framer-motion";
@@ -36,6 +36,10 @@ function PanelLoading() {
 
 const AdminAccountsDashboard = dynamic(
   () => import("./admin-accounts-dashboard").then((module) => module.AdminAccountsDashboard),
+  { loading: PanelLoading },
+);
+const AdminInstanceDashboard = dynamic(
+  () => import("./admin-instance-dashboard").then((module) => module.AdminInstanceDashboard),
   { loading: PanelLoading },
 );
 const AdminModelsDashboard = dynamic(
@@ -76,6 +80,7 @@ const ICONS: Record<AdminTab, AppIcon> = {
   accounts: UserGroupIcon,
   costs: CircleDollarSign,
   models: BotIcon,
+  instance: ServerStack01Icon,
 };
 
 /** The content column is wider than the settings column (`max-w-3xl`):
@@ -141,7 +146,11 @@ export function AdminDashboard() {
 
   const rawTab = searchParams.get("tab");
   const requested = resolveAdminTab(rawTab);
-  const visibleTabs = useMemo(() => visibleAdminTabs(openRouterLinked), [openRouterLinked]);
+  const instanceOverrides = capabilities.instanceOverrides;
+  const visibleTabs = useMemo(
+    () => visibleAdminTabs(openRouterLinked, instanceOverrides),
+    [openRouterLinked, instanceOverrides],
+  );
   const active: AdminTab = requested && visibleTabs.includes(requested) ? requested : DEFAULT_TAB;
 
   // A tab value of an earlier release (`finances`, `overview`, `users`) is
@@ -321,6 +330,7 @@ export function AdminDashboard() {
             {active === "accounts" && <AdminAccountsDashboard />}
             {active === "costs" && <AdminCostsDashboard />}
             {active === "models" && <AdminModelsDashboard />}
+            {active === "instance" && <AdminInstanceDashboard />}
           </div>
         </div>
       </div>

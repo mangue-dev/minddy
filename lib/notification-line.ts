@@ -26,6 +26,8 @@ export interface NotificationLabels {
   somePageFallback: string;
   /** `Inbox.someIssueFallback`, already formatted with the word “ticket” / “issue”. */
   someIssueFallback: string;
+  /** `Inbox.instanceConfigTitle` — what an instance-wide notification is about. */
+  instanceConfigTitle: string;
 }
 
 /**
@@ -53,6 +55,8 @@ export function notificationTitle(
   n: MyNotification,
   labels: NotificationLabels
 ): string {
+  // An instance variable (MIN-847): no ticket behind it, so never “a ticket”.
+  if (n.type === "instance_config_changed") return labels.instanceConfigTitle;
   if (n.objective_id) return n.objective_name ?? "";
   if (n.feedback_post_id) return n.feedback_title ?? "";
   // A routine (MIN-185): its title IS the line — it has no ticket

@@ -46,6 +46,7 @@ export function parseArgs(argv) {
     if (arg === "--") continue;
     if (arg === "--mode") options.mode = value();
     else if (arg === "--encryption") options.encryption = encryptionChoice(value());
+    else if (arg === "--config-overrides") options.configOverrides = configOverridesChoice(value());
     else if (arg === "--domain") options.domain = value();
     else if (arg === "--app-url") options.appUrl = value();
     else if (arg === "--admin-email") options.adminEmail = value();
@@ -99,6 +100,10 @@ Options:
   --enable <feature>         Enable application-email or web-push.
                               Repeat for multiple features. Routines are included.
   --encryption enabled|disabled  Encrypt workspace content (default: enabled).
+  --config-overrides enabled|disabled
+                             Let administrators edit instance variables from the
+                             admin dashboard (default: enabled). Only this file
+                             can change the choice later (MINDDY_CONFIG_OVERRIDES).
   --no-forge-relay           Opt out of the managed forge relay: GitHub/GitLab
                               then require operator-owned app credentials, and
                               nothing ever contacts minddy infrastructure.
@@ -325,6 +330,7 @@ export function environmentValues(options, generated = generatedValues(options.c
     // Forge relay opt-out only: the default (empty) keeps the automatic
     // provisioning of the relay identity on first connect.
     ...(options.forgeRelay === false ? { MINDDY_FORGE_RELAY: "0" } : {}),
+    MINDDY_CONFIG_OVERRIDES: options.configOverrides === "disabled" ? "0" : "1",
     MINDDY_SELF_HOST_FEATURES: [...capabilities].join(","),
     EMAIL_PROVIDER: capabilities.has("application-email") ? "resend" : "",
     VAPID_SUBJECT: capabilities.has("web-push") ? `mailto:${adminEmail}` : "",
@@ -397,6 +403,13 @@ export function assertPrerequisites(options, values = {}) {
   }
 }
 
+/** MIN-847: whether the admin dashboard may override instance variables. */
+export function configOverridesChoice(value) {
+  const choice = String(value).trim().toLowerCase();
+  if (choice !== "enabled" && choice !== "disabled") fail("config overrides must be enabled or disabled.");
+  return choice;
+}
+
 async function ask(question, current, validate) {
   const readline = createInterface({ input: process.stdin, output: process.stdout });
   try {
@@ -439,6 +452,13 @@ export async function collectOptions(options) {
   });
   if (options.encryption === undefined) {
     options.encryption = await ask("Workspace encryption (enabled/disabled)", "enabled", encryptionChoice);
+  }
+  if (options.configOverrides === undefined) {
+    options.configOverrides = await ask(
+      "Edit instance variables from the admin dashboard (enabled/disabled)",
+      "enabled",
+      configOverridesChoice,
+    );
   }
   if (options.capabilities.size === 0) {
     const selected = await ask(

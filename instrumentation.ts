@@ -26,6 +26,11 @@ export async function register() {
   });
   if (legacyProfileDiagnostic) console.warn(`[deployment] ${legacyProfileDiagnostic}`);
   getDeploymentEdition();
+  // Instance variables overridden from the admin dashboard (MIN-847), merged
+  // before the checks below so they see the values the app will run on. A
+  // failed read keeps the file values: it never stops the app from starting.
+  const { startInstanceVariables } = await import("@/lib/server/instance-variables");
+  await startInstanceVariables();
   assertRuntimeConfig();
   assertSecretsAreStrong();
 

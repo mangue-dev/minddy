@@ -5875,15 +5875,8 @@
   {
     "file": "lib/server/finance.ts",
     "operation": "rpc",
-    "resource": "get_ai_cost_daily",
-    "line": 108,
-    "storage": false
-  },
-  {
-    "file": "lib/server/finance.ts",
-    "operation": "rpc",
     "resource": "get_ai_cost_breakdown",
-    "line": 109,
+    "line": 43,
     "storage": false
   },
   {
@@ -6888,6 +6881,20 @@
     "storage": false
   },
   {
+    "file": "lib/server/instance-variables.ts",
+    "operation": "rpc",
+    "resource": "get_admin_account",
+    "line": 317,
+    "storage": false
+  },
+  {
+    "file": "lib/server/instance-variables.ts",
+    "operation": "rpc",
+    "resource": "get_role_admin_accounts",
+    "line": 321,
+    "storage": false
+  },
+  {
     "file": "lib/server/integration-auth.ts",
     "operation": "from",
     "resource": "integrations",
@@ -7731,35 +7738,35 @@
     "file": "lib/server/notifications.ts",
     "operation": "from",
     "resource": "notifications",
-    "line": 439,
+    "line": 440,
     "storage": false
   },
   {
     "file": "lib/server/notifications.ts",
     "operation": "from",
     "resource": "notifications",
-    "line": 474,
+    "line": 475,
     "storage": false
   },
   {
     "file": "lib/server/notifications.ts",
     "operation": "from",
     "resource": "notifications",
-    "line": 485,
+    "line": 486,
     "storage": false
   },
   {
     "file": "lib/server/notifications.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 559,
+    "line": 560,
     "storage": false
   },
   {
     "file": "lib/server/notifications.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 560,
+    "line": 561,
     "storage": false
   },
   {
@@ -9530,41 +9537,34 @@
     "file": "lib/server/retention.ts",
     "operation": "from",
     "resource": "notifications",
-    "line": 169,
+    "line": 171,
     "storage": false
   },
   {
     "file": "lib/server/retention.ts",
     "operation": "from",
     "resource": "project_invitations",
-    "line": 180,
+    "line": 182,
     "storage": false
   },
   {
     "file": "lib/server/retention.ts",
     "operation": "from",
     "resource": "oauth_authorization_codes",
-    "line": 191,
+    "line": 193,
     "storage": false
   },
   {
     "file": "lib/server/retention.ts",
     "operation": "from",
     "resource": "feedback_sessions",
-    "line": 202,
+    "line": 204,
     "storage": false
   },
   {
     "file": "lib/server/retention.ts",
     "operation": "from",
     "resource": "feedback_otp_codes",
-    "line": 205,
-    "storage": false
-  },
-  {
-    "file": "lib/server/retention.ts",
-    "operation": "from",
-    "resource": "feedback_users",
     "line": 207,
     "storage": false
   },
@@ -9572,56 +9572,63 @@
     "file": "lib/server/retention.ts",
     "operation": "from",
     "resource": "feedback_users",
-    "line": 212,
+    "line": 209,
+    "storage": false
+  },
+  {
+    "file": "lib/server/retention.ts",
+    "operation": "from",
+    "resource": "feedback_users",
+    "line": 214,
     "storage": false
   },
   {
     "file": "lib/server/retention.ts",
     "operation": "rpc",
     "resource": "purge_dormant_feedback_identities",
-    "line": 226,
+    "line": 228,
     "storage": false
   },
   {
     "file": "lib/server/retention.ts",
     "operation": "from",
     "resource": "stripe_webhook_events",
-    "line": 239,
+    "line": 241,
     "storage": false
   },
   {
     "file": "lib/server/retention.ts",
     "operation": "from",
     "resource": "forge_webhook_deliveries",
-    "line": 251,
+    "line": 253,
     "storage": false
   },
   {
     "file": "lib/server/retention.ts",
     "operation": "from",
     "resource": "page_versions",
-    "line": 271,
+    "line": 273,
     "storage": false
   },
   {
     "file": "lib/server/retention.ts",
     "operation": "from",
     "resource": "page_versions",
-    "line": 281,
+    "line": 283,
     "storage": false
   },
   {
     "file": "lib/server/retention.ts",
     "operation": "from",
     "resource": null,
-    "line": 332,
+    "line": 334,
     "storage": false
   },
   {
     "file": "lib/server/retention.ts",
     "operation": "from",
     "resource": null,
-    "line": 360,
+    "line": 362,
     "storage": false
   },
   {

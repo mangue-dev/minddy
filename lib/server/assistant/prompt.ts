@@ -594,12 +594,14 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
     );
   }
   if (ctx.admin) {
-    const tab = { accounts: "Accounts", costs: "Costs", models: "Models" }[ctx.admin];
+    const tab = { accounts: "Accounts", costs: "Costs", models: "Models", instance: "Instance" }[ctx.admin];
     lines.push(
       `- The user opened Numo from the ${tab} tab of the instance admin dashboard.`,
       ctx.admin === "models"
         ? "When they refer to these settings without another target, they mean the instance AI model configuration: read it with admin_get_instance_models before changing it."
-        : ctx.admin === "accounts"
+        : ctx.admin === "instance"
+          ? "This tab edits the instance's environment variables. You have no tool that reads or changes them: explain what a variable does, and let the user change it in the tab, which asks for a recent second factor."
+          : ctx.admin === "accounts"
           ? "When they ask about an account without another target, they mean account support: find it with admin_find_account by its exact email address."
           : "When they ask about costs without another target, they mean this instance's AI spend: read it with admin_get_costs, using the period and filters they mention.",
       "These admin tools exist only while the session is an administrator one; if they are missing, say the user must reopen Numo from an administrator session with two-factor authentication.",

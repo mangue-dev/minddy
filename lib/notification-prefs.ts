@@ -78,7 +78,7 @@ export function resolveNotificationPrefs(
 /** The pref toggle governing a stored notification type. */
 export function categoryOfNotificationType(
   type: NotificationType
-): NotificationCategory {
+): NotificationCategory | null {
   switch (type) {
     case "assigned":
       return "assigned";
@@ -117,6 +117,10 @@ export function categoryOfNotificationType(
     case "page_agent_edit":
     case "page_comment":
       return "page";
+    // A change of the instance configuration (MIN-847) is a security notice:
+    // no switch can mute it.
+    case "instance_config_changed":
+      return null;
   }
 }
 
@@ -132,7 +136,7 @@ export function categoryOfNotificationType(
 export function categoryOfNotification(n: {
   type: NotificationType;
   routine_id?: string | null;
-}): NotificationCategory {
+}): NotificationCategory | null {
   if (n.routine_id) return "routine";
   return categoryOfNotificationType(n.type);
 }

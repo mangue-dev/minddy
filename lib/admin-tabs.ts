@@ -8,9 +8,9 @@
  * flicker on first paint, and the server re-checks every route anyway.
  */
 
-export type AdminTabId = "accounts" | "costs" | "models";
+export type AdminTabId = "accounts" | "costs" | "models" | "instance";
 
-export const ADMIN_TABS: AdminTabId[] = ["accounts", "costs", "models"];
+export const ADMIN_TABS: AdminTabId[] = ["accounts", "costs", "models", "instance"];
 
 export const DEFAULT_ADMIN_TAB: AdminTabId = "accounts";
 
@@ -37,8 +37,17 @@ export function resolveAdminTab(value: string | null | undefined): AdminTabId | 
  * ledger, so an instance without a linked OpenRouter key has nothing to
  * show there and the tab disappears.
  */
-export function visibleAdminTabs(managedAiConfigured: boolean | null): AdminTabId[] {
-  return ADMIN_TABS.filter((tab) => tab !== "costs" || managedAiConfigured !== false);
+export function visibleAdminTabs(
+  managedAiConfigured: boolean | null,
+  instanceOverrides = false,
+): AdminTabId[] {
+  return ADMIN_TABS.filter(
+    (tab) =>
+      (tab !== "costs" || managedAiConfigured !== false) &&
+      // The Instance tab (MIN-847) exists only where the environment file
+      // lets the admin dashboard override variables: never on Minddy Cloud.
+      (tab !== "instance" || instanceOverrides),
+  );
 }
 
 /**

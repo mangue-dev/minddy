@@ -1090,6 +1090,27 @@ function registerIpc(): void {
     return localAccountSession(root);
   });
 
+  // Restarts the local instance this app runs (MIN-847), so an instance
+  // variable changed in the admin dashboard that needs a restart applies.
+  // Same sender checks as the local session: only the main frame of the
+  // window showing the local instance may ask.
+  ipcMain.handle("minddy:local-runtime:restart", async (event) => {
+    if (
+      !mainWindow ||
+      event.sender !== mainWindow.webContents ||
+      event.senderFrame !== mainWindow.webContents.mainFrame ||
+      !mayReceiveLocalSession(event.senderFrame.url, LOCAL_SELF_HOST_ORIGIN, customServerOrigin)
+    ) {
+      return false;
+    }
+    const root = readLocalRuntimeRoot();
+    if (!root || !ownsLocalRuntime(root)) return false;
+    stopLocalRuntime();
+    await startLocalRuntime(root);
+    mainWindow?.webContents.reload();
+    return true;
+  });
+
   ipcMain.handle("minddy:update:check", () => checkForUpdatesManually());
 
   ipcMain.on("minddy:set-badge", (_event, count: unknown) => {

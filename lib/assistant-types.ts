@@ -248,7 +248,7 @@ export interface AssistantPageContext {
   /** The settings surface the assistant was opened from. */
   settings?: "account" | "project";
   /** The admin dashboard tab the assistant was opened from (MIN-829). */
-  admin?: "accounts" | "costs" | "models";
+  admin?: "accounts" | "costs" | "models" | "instance";
   /**
    * Context PINED by hand from the composer (@ button), as opposed to
    * from the rest of this object, inferred from the page. It survives navigation: it's

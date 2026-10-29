@@ -113,6 +113,7 @@ export function useDesktopNotifications(): void {
       someIssueFallback: t("someIssueFallback", {
         entity: tIssue("entity").toLowerCase(),
       }),
+      instanceConfigTitle: t("instanceConfigTitle"),
     };
     for (const n of fresh.reverse()) {
       const target = notificationTargetPath(n);

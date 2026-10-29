@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 12,
+  "revision": 14,
+  "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-25",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.1 (MIN-788 Supabase self-hosted/v0.8.3)",
     "editions": [
@@ -51,10 +51,10 @@
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 recapture of install-a-server-wizard on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope); agent:claude-code (MIN-781 self-hosting from the desktop app: source review of components/desktop/server-choice.tsx, desktop/src/local-installer.ts and desktop/src/local-account.ts; the introduction now points a private instance on your own computer to the desktop app's built-in installer; no installation run, no screenshot recaptured, existing figures carried forward unchanged)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 figure update; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-788 changed passages; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-781 changed passages on local instances from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-25"
+    "revision": 14,
+    "fact": "agent:claude-code (MIN-847 installer question checked against scripts/self-hosting-install.mjs and lib/desktop/local-installer.ts); agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 recapture of install-a-server-wizard on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope); agent:claude-code (MIN-781 self-hosting from the desktop app: source review of components/desktop/server-choice.tsx, desktop/src/local-installer.ts and desktop/src/local-account.ts; the introduction now points a private instance on your own computer to the desktop app's built-in installer; no installation run, no screenshot recaptured, existing figures carried forward unchanged)",
+    "language": "agent:claude-code (de MIN-847 sentence; self-reviewed; agent review, not human acceptance); agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 figure update; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-788 changed passages; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-781 changed passages on local instances from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "authentication-and-email",
@@ -79,7 +79,7 @@
       "src": "/documentation/de/self-hosted-compatibility-flow.svg",
       "alt": "Diagramm: Annotierter Quelltag. Dateien und SHA256SUMS. Offizielle OCI-Signatur und Digest. Gewähltes Kompatibilitätsprofil.",
       "caption": "Lies die Schritte in dieser Reihenfolge. Annotierter Quelltag. Dateien und `SHA256SUMS`. Offizielle OCI-Signatur und Digest. Gewähltes Kompatibilitätsprofil.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -111,7 +111,7 @@
       "src": "/documentation/de/install-a-server-flow.svg",
       "alt": "Diagramm: Geprüfte Release und geschützte Umgebung. Installer: full-Referenzprofil. Offizielles Supabase, App, Scheduler. Konto-, Datei- und Wiederherstellungsprüfung.",
       "caption": "Lies die Schritte in dieser Reihenfolge. Geprüfte Release und geschützte Umgebung. Installer: full-Referenzprofil. Offizielles Supabase, App, Scheduler. Konto-, Datei- und Wiederherstellungsprüfung.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -143,7 +143,7 @@
       "src": "/documentation/de/install-a-server-wizard.png",
       "alt": "Öffentlicher Installationsassistent mit ausgewähltem Supabase auf demselben Server.",
       "caption": "Das Profil full betreibt Anwendung und Supabase auf deinem Server. In diesem Beispiel bleibt der private Netzwerkzugang auf das LAN beschränkt.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -160,7 +160,7 @@
       "src": "/documentation/de/managed-or-source-installation-flow.svg",
       "alt": "Diagramm: Dein verwaltetes Supabase-Projekt. PostgreSQL, Auth, Storage, Realtime. OCI-Profil ODER Anwendung aus Quelltag. Jobs und Sicherung passend zum Profil.",
       "caption": "Anwendung und Backend müssen zum gewählten Profil passen, einschließlich Zeitplänen und Sicherungsverfahren.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -277,7 +277,7 @@ Beginne mit einem geprüften Tag und dessen unveränderlichem Imagedigest. Unter
 
 ### Installer konfigurieren und starten {#install}
 
-Führe `pnpm self-host:install` im Release-Verzeichnis aus. Wähle managed oder full, Anwendungsorigin und Administratoradresse. Hole für full zuerst den festgelegten Upstream-Checkout. Der Installer erzeugt eine Umgebung mit Modus `0600` und getrennte fehlende Geheimnisse, lädt Images, startet das Profil und führt den idempotenten Bootstrap aus. Bestehende Geheimnisse und Imagebindung bleiben erhalten. Der Installer fragt außerdem, ob Inhalte des Arbeitsbereichs verschlüsselt werden sollen; `--encryption enabled` (Standard) oder `--encryption disabled` beantwortet die Frage nicht interaktiv. Er schreibt `MINDDY_CONTENT_ENCRYPTION_ENABLED` und einen unabhängigen `MINDDY_DATA_ROOT_KEY`. Eine Wiederholung behält die gespeicherte Wahl bei und lehnt eine abweichende ab; lies vor einer Änderung die [Arbeitsbereichsverschlüsselung](/de/dokumentation/workspace-encryption#workspace-encryption). Das Beispiel nutzt `IMAGE` aus der Kompatibilitätsprüfung. Ergänze für echte Auth-E-Mails zunächst `--skip-start`, konfiguriere `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_ADMIN_EMAIL` und `SMTP_SENDER_NAME` in der geschützten Datei und wiederhole dann den Aufruf. Behalte `ENABLE_EMAIL_AUTOCONFIRM=false`. `supabase-mail` ist ein Platzhalter, kein Produktionspostfach.
+Führe `pnpm self-host:install` im Release-Verzeichnis aus. Wähle managed oder full, Anwendungsorigin und Administratoradresse. Hole für full zuerst den festgelegten Upstream-Checkout. Der Installer erzeugt eine Umgebung mit Modus `0600` und getrennte fehlende Geheimnisse, lädt Images, startet das Profil und führt den idempotenten Bootstrap aus. Bestehende Geheimnisse und Imagebindung bleiben erhalten. Der Installer fragt außerdem, ob Inhalte des Arbeitsbereichs verschlüsselt werden sollen; `--encryption enabled` (Standard) oder `--encryption disabled` beantwortet die Frage nicht interaktiv. Er schreibt `MINDDY_CONTENT_ENCRYPTION_ENABLED` und einen unabhängigen `MINDDY_DATA_ROOT_KEY`. Eine Wiederholung behält die gespeicherte Wahl bei und lehnt eine abweichende ab; lies vor einer Änderung die [Arbeitsbereichsverschlüsselung](/de/dokumentation/workspace-encryption#workspace-encryption). Er fragt außerdem, ob Administratoren die Variablen der Instanz im Admin-Dashboard bearbeiten dürfen; `--config-overrides enabled` (Standard) oder `--config-overrides disabled` antwortet ohne Rückfrage und schreibt `MINDDY_CONFIG_OVERRIDES`. Siehe [die Variablen der Instanz bearbeiten](/docs/instance-administration#instance-variables). Das Beispiel nutzt `IMAGE` aus der Kompatibilitätsprüfung. Ergänze für echte Auth-E-Mails zunächst `--skip-start`, konfiguriere `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_ADMIN_EMAIL` und `SMTP_SENDER_NAME` in der geschützten Datei und wiederhole dann den Aufruf. Behalte `ENABLE_EMAIL_AUTOCONFIRM=false`. `supabase-mail` ist ein Platzhalter, kein Produktionspostfach.
 
 
 Vergleiche vor dem Start `MINDDY_RELEASE` und `MINDDY_IMAGE` in der geschützten Datei mit der gewählten Kompatibilitätszeile und dem geprüften Container-Asset. Der Installer übernimmt `MINDDY_RELEASE` aus der Bereitstellungsvorlage der Release, und `--image` ändert nur die Image-Referenz; eine Option `--release` gibt es nicht. Die Vorlage von v0.11.0 nennt zum Beispiel noch 0.10.30. Weicht der Wert von der installierten Release ab, bereite die Datei mit `--skip-start` vor, setze `MINDDY_RELEASE` ausdrücklich auf diese Release und behalte die geprüfte unveränderliche Image-Referenz. Ersetze weder erzeugte Zugangsdaten noch Verschlüsselungsschlüssel.

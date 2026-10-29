@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Activity, DollarCircleIcon as CircleDollarSign, FileExportIcon, FlowIcon as Workflow, KeyRoundIcon as KeyRound, MessageSquareHeartIcon, Mic01Icon as Mic, PieChart, ReceiptText, Search01Icon, Sparkles, StarIcon, UserGroupIcon as Users, VectorSquareIcon } from "@hugeicons/core-free-icons";
+import { Activity, ServerStack01Icon, DollarCircleIcon as CircleDollarSign, FileExportIcon, FlowIcon as Workflow, KeyRoundIcon as KeyRound, MessageSquareHeartIcon, Mic01Icon as Mic, PieChart, ReceiptText, Search01Icon, Sparkles, StarIcon, UserGroupIcon as Users, VectorSquareIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import type { AppIcon } from "@/components/icon";
 import type { MessageKey } from "@/lib/i18n-keys";
@@ -28,6 +28,7 @@ export const ADMIN_SECTIONS = {
   modelsVoice: "models-voice",
   modelsFeedback: "models-feedback",
   modelsByok: "models-byok",
+  instanceVariables: "instance-variables",
 } as const;
 
 export type AdminSectionId =
@@ -78,6 +79,7 @@ export function useAdminSections(): AdminSection[] {
       accounts: t("tabs.accounts"),
       costs: t("tabs.costs"),
       models: t("tabs.models"),
+      instance: t("tabs.instance"),
     };
     const section = (value: Omit<AdminSection, "tabLabel">): AdminSection => ({
       ...value,
@@ -171,6 +173,23 @@ export function useAdminSections(): AdminSection[] {
         keywords: ["recommended_models", "recommended", "picker"],
       }),
       ...modelSections,
+      section({
+        id: ADMIN_SECTIONS.instanceVariables,
+        tab: "instance",
+        icon: ServerStack01Icon,
+        title: t("instance.title"),
+        keywords: [
+          "environment",
+          "variables",
+          ".env",
+          "OPENROUTER_API_KEY",
+          "ADMIN_EMAILS",
+          "EMAIL_PROVIDER",
+          "GITHUB_APP_ID",
+          "GITLAB_OAUTH_CLIENT_ID",
+          "POSTHOG_API_KEY",
+        ],
+      }),
     ];
   }, [t]);
 }

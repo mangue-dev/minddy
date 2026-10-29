@@ -20,6 +20,7 @@ test("the local self-hosting command uses minddy's dedicated port", () => {
     open: true,
     stopBackendOnExit: true,
     prepareOnly: false,
+    rebuild: false,
   });
   assert.equal(DEFAULT_LOCAL_PORT, 6463);
   assert.equal(parseArgs(["--", "--port", "16463"]).port, 16463);
@@ -32,6 +33,7 @@ test("the local launcher opens the right client and owns backend shutdown", () =
     open: false,
     stopBackendOnExit: false,
     prepareOnly: false,
+    rebuild: false,
   });
   assert.deepEqual(browserCommand("http://localhost:6463/signup", "darwin"), {
     command: "open",
@@ -44,6 +46,7 @@ test("the local launcher opens the right client and owns backend shutdown", () =
 test("the desktop installer can prepare the stack without starting the app", () => {
   assert.equal(parseArgs(["--", "--no-open", "--prepare-only"]).prepareOnly, true);
   assert.match(help(), /--prepare-only/);
+  assert.equal(parseArgs(["--rebuild"]).rebuild, true);
 });
 
 test("the local port must be safe for an unprivileged process", () => {
@@ -83,7 +86,7 @@ test("the production build is reused only for the same release and origin", () =
   writeFileSync(buildIdFile, "build-id\n", "utf8");
   writeFileSync(
     stateFile,
-    `${JSON.stringify({ version: "1.2.3", appUrl: "http://localhost:6463" })}\n`,
+    `${JSON.stringify({ version: "1.2.3", appUrl: "http://localhost:6463", revision: "abc123" })}\n`,
     "utf8",
   );
 
@@ -94,8 +97,20 @@ test("the production build is reused only for the same release and origin", () =
         stateFile,
         version: "1.2.3",
         appUrl: "http://localhost:6463",
+        revision: "abc123",
       }),
       true,
+    );
+    // A checkout that pulled new commits under the same version rebuilds.
+    assert.equal(
+      productionBuildIsCurrent({
+        buildIdFile,
+        stateFile,
+        version: "1.2.3",
+        appUrl: "http://localhost:6463",
+        revision: "def456",
+      }),
+      false,
     );
     assert.equal(
       productionBuildIsCurrent({

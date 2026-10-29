@@ -935,7 +935,8 @@
     "contextAdminAccounts": "Admin · Cuentas",
     "contextAdminCosts": "Admin · Costes",
     "contextAdminModels": "Admin · Modelos",
-    "contextAdminTooltip": "Panel de administración de la instancia en contexto"
+    "contextAdminTooltip": "Panel de administración de la instancia en contexto",
+    "contextAdminInstance": "Admin · Instancia"
   },
   "Auth": {
     "callbackFailed": "Este enlace de inicio de sesión ya no es válido. Intenta iniciar sesión de nuevo.",
@@ -1767,7 +1768,9 @@
     "linePageMention": "{actor} te ha mencionado en esta página",
     "linePageAgentEdit": "Numo actualizó esta página",
     "somePageFallback": "Página sin título",
-    "linePageComment": "{actor} ha comentado en esta página"
+    "instanceConfigTitle": "Variables de la instancia",
+    "linePageComment": "{actor} ha comentado en esta página",
+    "lineInstanceConfigChanged": "{actor} ha cambiado una variable de la instancia"
   },
   "NotificationSettings": {
     "title": "Notificaciones de la bandeja de entrada",
@@ -4554,7 +4557,8 @@
     "tabs": {
       "models": "Modelos",
       "accounts": "Cuentas",
-      "costs": "Costes"
+      "costs": "Costes",
+      "instance": "Instancia"
     },
     "billing": {
       "title": "Regalar un plan",
@@ -4889,6 +4893,212 @@
         "newer_version": "Este archivo viene de una versión más reciente de minddy. Actualiza esta instancia y vuelve a importarlo.",
         "invalid_value": "Este archivo contiene un ajuste no válido: {detail}",
         "refused": "Se rechazó {setting}: {detail} No se ha cambiado nada."
+      }
+    },
+    "instance": {
+      "title": "Variables de la instancia",
+      "subtitle": "Configura esta instancia sin editar sus archivos. Un valor definido aquí sustituye al del archivo de configuración; elimínalo para volver al archivo.",
+      "loadError": "No se pudieron cargar las variables de la instancia.",
+      "searchPlaceholder": "Buscar variables…",
+      "clearSearch": "Borrar la búsqueda",
+      "searchEmpty": "Ninguna variable coincide con «{query}».",
+      "themes": {
+        "ai": {
+          "title": "IA",
+          "desc": "La clave del proveedor con la que funcionan las funciones de IA."
+        },
+        "administrators": {
+          "title": "Administración",
+          "desc": "Quién puede abrir este panel. Cada cambio aquí se anuncia a todas las personas administradoras."
+        },
+        "email": {
+          "title": "Correo",
+          "desc": "Los correos que minddy envía por sí mismo. Déjalo vacío si la instancia no envía ninguno."
+        },
+        "forges": {
+          "title": "GitHub y GitLab",
+          "desc": "Tus propias apps de forja, en lugar del relé gestionado o además de él."
+        },
+        "analytics": {
+          "title": "Analítica",
+          "desc": "La analítica de producto, solo para los miembros que la aceptan."
+        },
+        "site": {
+          "title": "Sitio",
+          "desc": "Cómo se presenta la instancia."
+        }
+      },
+      "source": {
+        "database": "Definido aquí",
+        "file": "Del archivo",
+        "both": "Definido aquí · sustituye al archivo",
+        "unset": "Sin definir"
+      },
+      "sourceHelp": {
+        "database": "Definida en esta pestaña. El archivo de configuración no define esta variable.",
+        "file": "Definida en el archivo de configuración. Si la editas aquí, sustituye el valor del archivo sin modificar el archivo.",
+        "both": "Definida en esta pestaña, en lugar del valor del archivo de configuración. Elimínala para volver al valor del archivo.",
+        "unset": "No está definida ni aquí ni en el archivo de configuración: minddy usa su comportamiento predeterminado o deja desactivada la función que la necesita."
+      },
+      "applies": {
+        "live": "Se aplica en un minuto.",
+        "restart": "Se aplica tras reiniciar la instancia."
+      },
+      "fileValue": "Valor del archivo: {value}",
+      "overridesFile": "El archivo de configuración también define esta variable: el valor guardado aquí ocupa su lugar.",
+      "sensitiveNote": "Al guardar se te pedirá tu código de dos pasos si no lo has introducido en los últimos minutos.",
+      "keepOwnAddress": "Tu dirección {email} debe seguir en la lista: sin ella, perderías el acceso a este panel.",
+      "keepOwnAddressRemove": "El archivo de configuración no incluye tu dirección: si eliminas este valor, perderías el acceso a este panel.",
+      "keepOwnAddressRestore": "Esta versión no incluye tu dirección: si la restauras, perderías el acceso a este panel.",
+      "secretPlaceholder": "Introduce el nuevo valor",
+      "choose": "Elegir",
+      "on": "Activado",
+      "off": "Desactivado",
+      "choices": {
+        "EMAIL_PROVIDER": {
+          "resend": "Resend",
+          "console": "Solo registro (desarrollo)"
+        },
+        "MINDDY_FORGE_RELAY": {
+          "0": "Desactivado"
+        }
+      },
+      "edit": "Editar",
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "saved": "Variable guardada",
+      "remove": "Eliminar",
+      "removeTitle": "¿Eliminar el valor de {name}?",
+      "removeDescriptionFile": "El valor del archivo de configuración vuelve a aplicarse.",
+      "removeDescriptionUnset": "La variable quedará sin definir: el archivo de configuración no la define.",
+      "removeConfirm": "Eliminar",
+      "removed": "Valor eliminado",
+      "history": "Historial ({count})",
+      "historyEntry": "{action} por {actor}, {date}",
+      "action": {
+        "set": "Definido",
+        "clear": "Eliminado",
+        "rollback": "Restaurado"
+      },
+      "someone": "una persona administradora",
+      "restore": "Restaurar",
+      "restored": "Versión restaurada",
+      "reauthTitle": "Confirma que eres tú",
+      "reauthDescription": "Introduce el código de tu app de autenticación para cambiar esta variable.",
+      "reauthCode": "Código de autenticación",
+      "reauthConfirm": "Confirmar",
+      "reauthFailed": "Este código no ha funcionado. Prueba el actual.",
+      "reauthNoFactor": "Tu cuenta no tiene app de autenticación.",
+      "restartNeeded": "Algunos cambios se aplican tras reiniciar la instancia. Reinicia el servicio de minddy en su servidor, por ejemplo con docker compose restart minddy.",
+      "restartNeededDesktop": "Algunos cambios se aplican tras reiniciar la instancia.",
+      "restartNow": "Reiniciar ahora",
+      "restartFailed": "No se pudo reiniciar la instancia.",
+      "errors": {
+        "invalid": "Este valor no es válido.",
+        "invalid_email": "Introduce direcciones de correo válidas, separadas por comas.",
+        "invalid_url": "Introduce una dirección http o https completa.",
+        "invalid_choice": "Elige una de las opciones.",
+        "empty": "Introduce un valor o, en su lugar, elimina el valor definido aquí.",
+        "not_overridable": "Esta variable solo se puede definir en el archivo de configuración.",
+        "disabled": "Esta instancia no permite editar las variables desde el panel.",
+        "cannot_remove_self": "Mantén tu propia dirección en la lista: perderías el acceso a este panel.",
+        "no_such_version": "Esta versión ya no existe."
+      },
+      "emailSubject": "Se ha cambiado una variable de la instancia",
+      "emailBody": "{actor} ha cambiado una variable de tu instancia de minddy. Consulta el cambio en el panel de administración: {link}\n\nSi no esperabas este cambio, revisa el historial y protege las cuentas de administración.",
+      "vars": {
+        "OPENROUTER_API_KEY": {
+          "label": "Clave de OpenRouter",
+          "desc": "La clave con la que las funciones de IA de minddy pagan en OpenRouter."
+        },
+        "ADMIN_EMAILS": {
+          "label": "Direcciones de administración",
+          "desc": "Direcciones confirmadas que pueden abrir este panel, separadas por comas. Cada una sigue necesitando la autenticación en dos pasos."
+        },
+        "EMAIL_PROVIDER": {
+          "label": "Proveedor de correo",
+          "desc": "Cómo envía minddy sus propios correos (invitaciones, códigos de sugerencias). Los correos de inicio de sesión pasan por Supabase."
+        },
+        "RESEND_API_KEY": {
+          "label": "Clave de Resend",
+          "desc": "La clave de API de Resend que se usa cuando el proveedor es Resend."
+        },
+        "INVITATION_EMAIL_FROM": {
+          "label": "Remitente de las invitaciones",
+          "desc": "El remitente de los correos de invitación y de administración, por ejemplo minddy <hello@example.com>."
+        },
+        "FEEDBACK_EMAIL_FROM": {
+          "label": "Remitente de las sugerencias",
+          "desc": "El remitente de los códigos de verificación del tablero público de sugerencias."
+        },
+        "GITHUB_APP_ID": {
+          "label": "ID de la app de GitHub",
+          "desc": "El identificador numérico de tu propia app de GitHub."
+        },
+        "GITHUB_APP_SLUG": {
+          "label": "Slug de la app de GitHub",
+          "desc": "El nombre de tu app de GitHub en su URL."
+        },
+        "GITHUB_APP_CLIENT_ID": {
+          "label": "ID de cliente de la app de GitHub",
+          "desc": "El ID de cliente OAuth de tu app de GitHub."
+        },
+        "GITHUB_APP_CLIENT_SECRET": {
+          "label": "Secreto de cliente de la app de GitHub",
+          "desc": "El secreto de cliente OAuth de tu app de GitHub."
+        },
+        "GITHUB_APP_PRIVATE_KEY": {
+          "label": "Clave privada de la app de GitHub",
+          "desc": "La clave privada PEM generada para tu app de GitHub."
+        },
+        "GITHUB_WEBHOOK_SECRET": {
+          "label": "Secreto de los webhooks de GitHub",
+          "desc": "El secreto con el que GitHub firma los webhooks de tu app."
+        },
+        "GITLAB_OAUTH_CLIENT_ID": {
+          "label": "ID de la aplicación de GitLab",
+          "desc": "El ID de tu propia aplicación OAuth de GitLab."
+        },
+        "GITLAB_OAUTH_CLIENT_SECRET": {
+          "label": "Secreto de la aplicación de GitLab",
+          "desc": "El secreto de tu aplicación OAuth de GitLab."
+        },
+        "GITLAB_WEBHOOK_SECRET": {
+          "label": "Secreto de los webhooks de GitLab",
+          "desc": "El token que GitLab envía con los webhooks de tus proyectos."
+        },
+        "MINDDY_FORGE_RELAY": {
+          "label": "Relé de forja gestionado",
+          "desc": "Por defecto, GitHub y GitLab se conectan a través del relé de minddy. Desactívalo para usar solo tus propias apps de arriba."
+        },
+        "POSTHOG_API_KEY": {
+          "label": "Clave de servidor de PostHog",
+          "desc": "La clave de proyecto con la que el servidor de minddy envía sus eventos."
+        },
+        "POSTHOG_HOST": {
+          "label": "Dirección de servidor de PostHog",
+          "desc": "La instancia de PostHog a la que envía el servidor, por ejemplo https://eu.i.posthog.com."
+        },
+        "MINDDY_PUBLIC_POSTHOG_KEY": {
+          "label": "Clave de navegador de PostHog",
+          "desc": "La clave pública que usa la app en el navegador, para los miembros que aceptaron la analítica."
+        },
+        "MINDDY_PUBLIC_POSTHOG_HOST": {
+          "label": "Dirección de navegador de PostHog",
+          "desc": "La dirección de PostHog a la que envía el navegador."
+        },
+        "MINDDY_PUBLIC_SITE_NAME": {
+          "label": "Nombre de la instancia",
+          "desc": "El nombre que aparece en los títulos de las páginas y en los correos."
+        },
+        "MINDDY_PUBLIC_CONTACT_EMAIL": {
+          "label": "Dirección de contacto",
+          "desc": "La dirección que aparece en las páginas públicas para preguntas sobre esta instancia."
+        },
+        "MINDDY_PUBLISH_MODEL_CONFIG": {
+          "label": "Publicar la configuración de modelos",
+          "desc": "Sirve la configuración de modelos de IA de esta instancia en /api/recommended-models para que otras instancias la importen."
+        }
       }
     }
   },

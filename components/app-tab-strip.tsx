@@ -36,6 +36,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useAppTabs } from "@/lib/app-tabs-context";
 import { useProjects } from "@/lib/projects-context";
 import { appTabRoute } from "@/lib/app-tab-location";
+import { DEFAULT_ADMIN_TAB, resolveAdminTab } from "@/lib/admin-tabs";
 import { APP_TAB_MAX_NAME, type AppTab } from "@/lib/app-tabs";
 import { useOpenPullRequestCountQuery } from "@/lib/use-agent-runs";
 import { usePlanGates } from "@/lib/use-billing-query";
@@ -85,6 +86,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
   const nav = useTranslations("Nav");
   const common = useTranslations("Common");
   const tFamily = useTranslations("IssueFamily");
+  const tAdmin = useTranslations("Admin");
   const modKey = useModKey();
   const hrefs = tabs.map((tab) => tab.id === activeId ? session.getActiveHref() ?? tab.href : tab.href);
   const { pageById, objectiveById, prById, routineById, issueById } = useAppTabMetadata(hrefs);
@@ -198,7 +200,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
   const draggedTab = dragged ? tabs.find((tab) => tab.id === dragged) : undefined;
   const describe = (tab: AppTab) => {
     const route = appTabRoute(tab.id === activeId ? session.getActiveHref() ?? tab.href : tab.href);
-    const { section, projectId, objectiveId, familyId, view: viewParam, prId, routineId } = route;
+    const { section, projectId, objectiveId, familyId, view: viewParam, prId, routineId, adminTab } = route;
     const pageId = route.pageId;
     const project = projectId ? projectById.get(projectId) : undefined;
     const objective = objectiveId ? objectiveById.get(objectiveId) : undefined;
@@ -217,7 +219,11 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
       ? `${tFamily("tabTitle", { parent: familyParent.title })} - ${project?.name ?? t("unavailableProject")}`
       : viewParam === "cycle"
         ? t("cycleTab")
-        : null;
+        // The admin dashboard names the tab it is on, like a project tab
+        // names its project: “Instance - Administration”.
+        : section === "admin"
+          ? `${tAdmin(`tabs.${resolveAdminTab(adminTab) ?? DEFAULT_ADMIN_TAB}`)} - ${sectionLabel}`
+          : null;
     const label = tab.custom_name ?? (objective?.name ?? (contentLabel ?? (scopeLabel ?? (projectId ? `${sectionLabel} - ${project?.name ?? t("unavailableProject")}` : sectionLabel))));
     // EXPERIMENT (to revert): composite = project orb + screen icon.
     const composite = Boolean(projectId && project);

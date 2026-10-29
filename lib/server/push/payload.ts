@@ -262,7 +262,9 @@ export function buildPushPayload(
   // reference of the ticket in front: it is she who we recognize at a glance in
   // a system banner, where there is no room for anything else.
   let title: string;
-  if (row.objective_id) {
+  if (row.type === "instance_config_changed") {
+    title = t("instanceConfigTitle");
+  } else if (row.objective_id) {
     const name = ctx.objectives.get(row.objective_id);
     if (!name) return null;
     title = name;

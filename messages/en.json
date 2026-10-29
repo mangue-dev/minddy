@@ -935,7 +935,8 @@
     "contextAdminAccounts": "Admin · Accounts",
     "contextAdminCosts": "Admin · Costs",
     "contextAdminModels": "Admin · Models",
-    "contextAdminTooltip": "Instance admin dashboard in context"
+    "contextAdminTooltip": "Instance admin dashboard in context",
+    "contextAdminInstance": "Admin · Instance"
   },
   "Auth": {
     "callbackFailed": "This sign-in link is no longer valid. Try signing in again.",
@@ -1767,7 +1768,9 @@
     "linePageMention": "{actor} mentioned you in this page",
     "linePageAgentEdit": "Numo updated this page",
     "somePageFallback": "Untitled page",
-    "linePageComment": "{actor} commented on this page"
+    "instanceConfigTitle": "Instance variables",
+    "linePageComment": "{actor} commented on this page",
+    "lineInstanceConfigChanged": "{actor} changed an instance variable"
   },
   "NotificationSettings": {
     "title": "Inbox notifications",
@@ -4554,7 +4557,8 @@
     "tabs": {
       "models": "Models",
       "accounts": "Accounts",
-      "costs": "Costs"
+      "costs": "Costs",
+      "instance": "Instance"
     },
     "billing": {
       "title": "Gift a plan",
@@ -4889,6 +4893,212 @@
         "newer_version": "This file comes from a newer version of minddy. Update this instance, then import it again.",
         "invalid_value": "This file contains an invalid setting: {detail}",
         "refused": "{setting} was refused: {detail} Nothing was changed."
+      }
+    },
+    "instance": {
+      "title": "Instance variables",
+      "subtitle": "Configure this instance without editing its files. A value set here overrides the configuration file; remove it to go back to the file.",
+      "loadError": "Couldn’t load the instance variables.",
+      "searchPlaceholder": "Search variables…",
+      "clearSearch": "Clear search",
+      "searchEmpty": "No variable matches “{query}”.",
+      "themes": {
+        "ai": {
+          "title": "AI",
+          "desc": "The provider key the AI features run on."
+        },
+        "administrators": {
+          "title": "Administrators",
+          "desc": "Who may open this dashboard. Every change here is announced to every administrator."
+        },
+        "email": {
+          "title": "Email",
+          "desc": "The emails minddy sends itself. Leave it unset if the instance sends none."
+        },
+        "forges": {
+          "title": "GitHub and GitLab",
+          "desc": "Your own forge apps, used instead of or alongside the managed relay."
+        },
+        "analytics": {
+          "title": "Analytics",
+          "desc": "Product analytics, only for members who accept them."
+        },
+        "site": {
+          "title": "Site",
+          "desc": "How the instance presents itself."
+        }
+      },
+      "source": {
+        "database": "Set here",
+        "file": "From the file",
+        "both": "Set here · overrides the file",
+        "unset": "Not set"
+      },
+      "sourceHelp": {
+        "database": "Set in this tab. The configuration file does not set this variable.",
+        "file": "Set in the configuration file. Editing it here overrides the file without changing it.",
+        "both": "Set in this tab, in place of the value in the configuration file. Remove it to go back to the file value.",
+        "unset": "Set neither here nor in the configuration file: minddy uses its default behavior, or leaves the feature that needs it off."
+      },
+      "applies": {
+        "live": "Applies within a minute.",
+        "restart": "Applies after the instance restarts."
+      },
+      "fileValue": "File value: {value}",
+      "overridesFile": "The configuration file also sets this variable: the value saved here takes its place.",
+      "sensitiveNote": "Saving it asks for your two-factor code if you haven’t entered it in the last minutes.",
+      "keepOwnAddress": "Your address {email} must stay in the list: without it, you would lose access to this dashboard.",
+      "keepOwnAddressRemove": "The configuration file does not list your address: removing this value would lock you out of this dashboard.",
+      "keepOwnAddressRestore": "This version does not list your address: restoring it would lock you out of this dashboard.",
+      "secretPlaceholder": "Enter the new value",
+      "choose": "Choose",
+      "on": "On",
+      "off": "Off",
+      "choices": {
+        "EMAIL_PROVIDER": {
+          "resend": "Resend",
+          "console": "Log only (development)"
+        },
+        "MINDDY_FORGE_RELAY": {
+          "0": "Off"
+        }
+      },
+      "edit": "Edit",
+      "save": "Save",
+      "cancel": "Cancel",
+      "saved": "Variable saved",
+      "remove": "Remove",
+      "removeTitle": "Remove the value of {name}?",
+      "removeDescriptionFile": "The value from the configuration file applies again.",
+      "removeDescriptionUnset": "The variable becomes unset: the configuration file doesn’t set it.",
+      "removeConfirm": "Remove",
+      "removed": "Value removed",
+      "history": "History ({count})",
+      "historyEntry": "{action} by {actor}, {date}",
+      "action": {
+        "set": "Set",
+        "clear": "Removed",
+        "rollback": "Restored"
+      },
+      "someone": "an administrator",
+      "restore": "Restore",
+      "restored": "Version restored",
+      "reauthTitle": "Confirm it’s you",
+      "reauthDescription": "Enter the code from your authenticator app to change this variable.",
+      "reauthCode": "Authentication code",
+      "reauthConfirm": "Confirm",
+      "reauthFailed": "This code didn’t work. Try the current one.",
+      "reauthNoFactor": "Your account has no authenticator app.",
+      "restartNeeded": "Some changes apply after the instance restarts. Restart the minddy service on its host, for example with docker compose restart minddy.",
+      "restartNeededDesktop": "Some changes apply after the instance restarts.",
+      "restartNow": "Restart now",
+      "restartFailed": "Couldn’t restart the instance.",
+      "errors": {
+        "invalid": "This value isn’t valid.",
+        "invalid_email": "Enter valid email addresses, separated by commas.",
+        "invalid_url": "Enter a full http or https address.",
+        "invalid_choice": "Choose one of the options.",
+        "empty": "Enter a value, or remove the override instead.",
+        "not_overridable": "This variable can only be set in the configuration file.",
+        "disabled": "This instance doesn’t allow editing variables from the dashboard.",
+        "cannot_remove_self": "Keep your own address in the list: you would lose access to this dashboard.",
+        "no_such_version": "This version no longer exists."
+      },
+      "emailSubject": "An instance variable was changed",
+      "emailBody": "{actor} changed a variable of your minddy instance. See what changed in the admin dashboard: {link}\n\nIf you didn’t expect this change, check the history there and secure the administrator accounts.",
+      "vars": {
+        "OPENROUTER_API_KEY": {
+          "label": "OpenRouter key",
+          "desc": "The key minddy's AI features pay with on OpenRouter."
+        },
+        "ADMIN_EMAILS": {
+          "label": "Administrator addresses",
+          "desc": "Confirmed addresses that may open this dashboard, separated by commas. Each one still needs two-factor authentication."
+        },
+        "EMAIL_PROVIDER": {
+          "label": "Email provider",
+          "desc": "How minddy sends its own emails (invitations, feedback codes). Sign-in emails go through Supabase."
+        },
+        "RESEND_API_KEY": {
+          "label": "Resend key",
+          "desc": "The Resend API key used when the provider is Resend."
+        },
+        "INVITATION_EMAIL_FROM": {
+          "label": "Invitation sender",
+          "desc": "The sender of invitation and administration emails, for example minddy <hello@example.com>."
+        },
+        "FEEDBACK_EMAIL_FROM": {
+          "label": "Feedback sender",
+          "desc": "The sender of the verification codes of the public feedback board."
+        },
+        "GITHUB_APP_ID": {
+          "label": "GitHub App ID",
+          "desc": "The numeric ID of your own GitHub App."
+        },
+        "GITHUB_APP_SLUG": {
+          "label": "GitHub App slug",
+          "desc": "The name of your GitHub App in its URL."
+        },
+        "GITHUB_APP_CLIENT_ID": {
+          "label": "GitHub App client ID",
+          "desc": "The OAuth client ID of your GitHub App."
+        },
+        "GITHUB_APP_CLIENT_SECRET": {
+          "label": "GitHub App client secret",
+          "desc": "The OAuth client secret of your GitHub App."
+        },
+        "GITHUB_APP_PRIVATE_KEY": {
+          "label": "GitHub App private key",
+          "desc": "The PEM private key generated for your GitHub App."
+        },
+        "GITHUB_WEBHOOK_SECRET": {
+          "label": "GitHub webhook secret",
+          "desc": "The secret GitHub signs your App's webhooks with."
+        },
+        "GITLAB_OAUTH_CLIENT_ID": {
+          "label": "GitLab application ID",
+          "desc": "The ID of your own GitLab OAuth application."
+        },
+        "GITLAB_OAUTH_CLIENT_SECRET": {
+          "label": "GitLab application secret",
+          "desc": "The secret of your GitLab OAuth application."
+        },
+        "GITLAB_WEBHOOK_SECRET": {
+          "label": "GitLab webhook secret",
+          "desc": "The token GitLab sends with your project hooks."
+        },
+        "MINDDY_FORGE_RELAY": {
+          "label": "Managed forge relay",
+          "desc": "By default GitHub and GitLab connect through minddy's relay. Turn it off to use only your own apps above."
+        },
+        "POSTHOG_API_KEY": {
+          "label": "PostHog server key",
+          "desc": "The project key minddy's server sends its events with."
+        },
+        "POSTHOG_HOST": {
+          "label": "PostHog server address",
+          "desc": "The PostHog instance the server sends to, for example https://eu.i.posthog.com."
+        },
+        "MINDDY_PUBLIC_POSTHOG_KEY": {
+          "label": "PostHog browser key",
+          "desc": "The public key the app uses in the browser, for members who accepted analytics."
+        },
+        "MINDDY_PUBLIC_POSTHOG_HOST": {
+          "label": "PostHog browser address",
+          "desc": "The PostHog address the browser sends to."
+        },
+        "MINDDY_PUBLIC_SITE_NAME": {
+          "label": "Instance name",
+          "desc": "The name shown in page titles and emails."
+        },
+        "MINDDY_PUBLIC_CONTACT_EMAIL": {
+          "label": "Contact address",
+          "desc": "The address shown on public pages for questions about this instance."
+        },
+        "MINDDY_PUBLISH_MODEL_CONFIG": {
+          "label": "Publish the model configuration",
+          "desc": "Serves this instance's AI model configuration at /api/recommended-models for other instances to import."
+        }
       }
     }
   },

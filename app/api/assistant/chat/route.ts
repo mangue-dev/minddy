@@ -199,7 +199,7 @@ function parsePageContext(raw: unknown): AssistantPageContext | null {
         ? obj.settings
         : undefined,
     admin:
-      obj.admin === "accounts" || obj.admin === "costs" || obj.admin === "models"
+      obj.admin === "accounts" || obj.admin === "costs" || obj.admin === "models" || obj.admin === "instance"
         ? obj.admin
         : undefined,
     pinned,

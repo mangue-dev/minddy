@@ -2,7 +2,7 @@
 
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AtIcon, Delete02Icon, GitMergeIcon, GitPullRequestIcon, InboxIcon, Mail01Icon, MailOpen01Icon, Megaphone01Icon, Message01Icon, Settings01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
+import { AtIcon, Delete02Icon, GitMergeIcon, GitPullRequestIcon, InboxIcon, Mail01Icon, MailOpen01Icon, Megaphone01Icon, Message01Icon, ServerStack01Icon, Settings01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "@/components/app-link";
 import { useAppRouter } from "@/lib/use-app-router";
@@ -148,7 +148,9 @@ function RowAvatar({
             : notification.type === "pr_reviewed" ||
                 notification.type === "pr_opened"
               ? GitPullRequestIcon
-              : Message01Icon;
+              : notification.type === "instance_config_changed"
+                ? ServerStack01Icon
+                : Message01Icon;
   return (
     <span
       className={cn(
@@ -202,6 +204,7 @@ export default function InboxContent({
     someIssueFallback: t("someIssueFallback", {
       entity: tIssue("entity").toLowerCase(),
     }),
+    instanceConfigTitle: t("instanceConfigTitle"),
   };
 
   const {

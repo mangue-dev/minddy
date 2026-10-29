@@ -19,7 +19,7 @@
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review); MIN-798 Smart Fill title model; MIN-829 instance administration",
+    "version": "0.20.0 (MIN-747 release review); MIN-798 Smart Fill title model; MIN-829 instance administration; MIN-847 instance variables",
     "editions": [
       "self-hosted"
     ],
@@ -49,12 +49,16 @@
       "lib/ai-model-config-file.ts",
       "lib/server/admin-model-config.ts",
       "lib/server/model-config.ts",
-      "lib/server/assistant/admin-tools.ts"
+      "lib/server/assistant/admin-tools.ts",
+      "lib/instance-variables.ts",
+      "lib/server/instance-variables.ts",
+      "app/api/admin/instance-variables/route.ts",
+      "components/admin/admin-instance-dashboard.tsx"
     ]
   },
   "review": {
     "revision": 12,
-    "fact": "agent:claude-code (MIN-829 tabs, accounts, costs, model categories, configuration file and Numo admin tools checked against lib/admin-tabs.ts, lib/ai-model-config.ts, lib/ai-model-config-file.ts, lib/server/admin-model-config.ts, lib/server/finance.ts, lib/admin-costs.ts, lib/server/retention.ts and lib/server/assistant/admin-tools.ts, including admin_get_costs; both figures recaptured on 2026-10-29 with captures/shots/documentation-admin from a local candidate against the preview capture admin, every write blocked, and inspected); agent:claude-code (MIN-798 Smart-fill titles model paragraph checked against lib/ai-model-config.ts, lib/ai-surfaces.ts and lib/server/smart-fill-title.ts: automations group, fallback deepseek/deepseek-v4-flash, not answered by the decision model; no figure changed); agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "fact": "agent:claude-code (MIN-847 Instance tab section checked against lib/instance-variables.ts, lib/server/instance-variables.ts and app/api/admin/instance-variables/route.ts; figure captured on 2026-10-29 from a disposable local self-hosted instance with its own test administrator, every write blocked, and inspected); agent:claude-code (MIN-829 tabs, accounts, costs, model categories, configuration file and Numo admin tools checked against lib/admin-tabs.ts, lib/ai-model-config.ts, lib/ai-model-config-file.ts, lib/server/admin-model-config.ts, lib/server/finance.ts, lib/admin-costs.ts, lib/server/retention.ts and lib/server/assistant/admin-tools.ts, including admin_get_costs; both figures recaptured on 2026-10-29 with captures/shots/documentation-admin from a local candidate against the preview capture admin, every write blocked, and inspected); agent:claude-code (MIN-798 Smart-fill titles model paragraph checked against lib/ai-model-config.ts, lib/ai-surfaces.ts and lib/server/smart-fill-title.ts: automations group, fallback deepseek/deepseek-v4-flash, not answered by the decision model; no figure changed); agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
     "language": "agent:claude-code (fr MIN-829 sections with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-798 Smart-fill titles model paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
@@ -101,6 +105,23 @@
       "theme": "light",
       "padding": 24,
       "deviceScaleFactor": 2
+    },
+    {
+      "id": "instance-administration-instance",
+      "kind": "screenshot",
+      "src": "/documentation/fr/instance-administration-instance.png",
+      "alt": "Onglet Instance avec la source de chaque variable, une clé OpenRouter masquée définie ici et les adresses des administrateurs issues du fichier.",
+      "caption": "Instance indique d’où vient chaque valeur ; les secrets ne gardent que leurs derniers caractères. Cette capture provient d’une instance auto-hébergée locale jetable.",
+      "revision": 12,
+      "reviewed": true,
+      "capturedAt": "2026-10-29",
+      "viewport": [
+        1488,
+        1148
+      ],
+      "theme": "light",
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -120,7 +141,7 @@ L’administration de l’instance est distincte de la propriété d’un projet
 
 ## Utiliser les capacités présentes {#panels}
 
-La console compte trois onglets : **Comptes**, **Coûts** et **Modèles**. **Coûts** reste masqué sans capacité OpenRouter gérée liée. Les liens vers les anciens onglets Vue d’ensemble, Utilisateurs et Finances ouvrent **Comptes** ou **Coûts**. L’attribution d’un plan dépend d’une facturation configurée ou d’une dérogation existante. Ouvrir la console ne donne pas accès à la facturation Cloud sur une instance auto-hébergée sans fournisseur commercial. Ces changements concernent l’instance entière ; vérifiez-les avec des comptes de démonstration.
+La console compte trois onglets : **Comptes**, **Coûts**, **Modèles** et, là où c’est autorisé, **Instance**. **Coûts** reste masqué sans capacité OpenRouter gérée liée. Les liens vers les anciens onglets Vue d’ensemble, Utilisateurs et Finances ouvrent **Comptes** ou **Coûts**. L’attribution d’un plan dépend d’une facturation configurée ou d’une dérogation existante. Ouvrir la console ne donne pas accès à la facturation Cloud sur une instance auto-hébergée sans fournisseur commercial. Ces changements concernent l’instance entière ; vérifiez-les avec des comptes de démonstration.
 
 ## Assister un compte {#accounts}
 
@@ -141,6 +162,16 @@ Chaque carte de **Modèles** a un **Modèle par défaut** pour sa catégorie : *
 ## Administrer l’instance avec Numo {#numo}
 
 Dans une conversation Numo ouverte depuis une session administrateur, Numo peut lire les coûts IA de l’instance, avec les mêmes chiffres et filtres que **Coûts**, lire et modifier la configuration des modèles, prévisualiser et appliquer un import, y compris un fichier de configuration joint à la conversation, trouver un compte par son adresse email exacte, lire son plan et son budget d’usage IA, et offrir ou retirer un plan. La session administrateur est vérifiée à nouveau avant chacune de ces actions, et Numo vous fait confirmer chaque changement avant de l’effectuer. Ces outils ne renvoient ni l’activité, ni les projets, ni le contenu d’un autre compte. Les mentions @Numo, les routines et l’aide publique de la documentation n’y ont jamais accès.
+
+## Modifier les variables de l’instance {#instance-variables}
+
+Sur une instance auto-hébergée dont le fichier d’environnement définit `MINDDY_CONFIG_OVERRIDES=1`, l’onglet **Instance** modifie certaines de ses variables sans toucher au fichier : la clé OpenRouter, les adresses des administrateurs, le fournisseur et les expéditeurs d’e-mail, vos propres apps GitHub et GitLab, les statistiques, le nom et l’adresse de contact de l’instance, et la publication de la configuration des modèles. Le guide d’installation demande s’il faut l’autoriser, et l’app desktop l’active pour l’instance qu’elle installe sur votre ordinateur. Seul le fichier l’active ou le désactive ; Minddy Cloud ne le propose jamais.
+
+![Onglet Instance avec la source de chaque variable, une clé OpenRouter masquée définie ici et les adresses des administrateurs issues du fichier.](/documentation/fr/instance-administration-instance.png)
+
+Le champ de recherche au-dessus de la liste retrouve une variable par son nom, son libellé ou sa description. Une valeur enregistrée dans l’onglet remplace celle du fichier, et **Retirer** ramène la valeur du fichier. Chaque variable indique d’où vient sa valeur ; les secrets n’affichent que leurs derniers caractères. La plupart des changements s’appliquent en une minute ; l’onglet signale ceux qui s’appliquent après le redémarrage de l’instance, et l’app desktop propose alors **Redémarrer maintenant**. L’accès à la base, les clés de chiffrement, l’adresse de l’app et les valeurs fixées à la compilation ne se définissent que dans le fichier : une mauvaise valeur dans l’onglet ne vous bloque donc jamais. Retirez-la, ou définissez `MINDDY_CONFIG_OVERRIDES=0` dans le fichier pour revenir à ses valeurs.
+
+Enregistrer un secret ou les adresses des administrateurs demande votre code à deux facteurs si vous ne l’avez pas saisi ces dernières minutes, et vous ne pouvez pas retirer votre propre adresse. Chaque changement apparaît dans l’Inbox des autres administrateurs, y compris ceux désignés par rôle, et par e-mail chez tous les administrateurs, vous compris, si l’instance envoie des e-mails. Enregistrer une valeur inchangée n’enregistre rien. Chaque variable garde ses dernières versions, avec qui l’a modifiée et quand ; **Restaurer** en remet une en place. Les valeurs sont stockées dans la base, chiffrées quand le chiffrement de l’espace de travail est activé.
 
 ## Choisir le modèle de décision IA {#decision-model}
 

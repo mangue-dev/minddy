@@ -228,6 +228,10 @@ export type NotificationType =
   /** A routine pass completed without pushing anything — the case where neither the PR
  nor the failure spoke, and the routine therefore said nothing at all. */
   | "routine_done"
+  /** An administrator changed an instance variable from the admin dashboard
+      (MIN-847): sent to every administrator, the actor named, no target —
+      the change itself is read in the Instance tab's history. */
+  | "instance_config_changed"
   /** I was quoted in a wiki PAGE (MIN-278) — the same sentence as in a
  ticket comment, which she already warned about. */
   | "page_mention"

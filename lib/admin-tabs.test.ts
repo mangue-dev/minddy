@@ -16,6 +16,14 @@ describe("visibleAdminTabs", () => {
   });
 });
 
+describe("Instance tab (MIN-847)", () => {
+  it("exists only where the environment file allows the overrides", () => {
+    expect(visibleAdminTabs(true, true)).toEqual(["accounts", "costs", "models", "instance"]);
+    expect(visibleAdminTabs(true, false)).not.toContain("instance");
+    expect(visibleAdminTabs(true)).not.toContain("instance");
+  });
+});
+
 describe("resolveAdminTab (MIN-829)", () => {
   it("sends the spend-guard notification's finances tab to costs", () => {
     expect(resolveAdminTab("finances")).toBe("costs");

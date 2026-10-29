@@ -14,6 +14,8 @@ import type { MessageKey } from "./i18n-keys";
 
 /** The target of a notification, reduced to what decides its destination. */
 export interface NotificationTarget {
+  /** Only the instance-wide notification (MIN-847) is routed by its type. */
+  type?: NotificationType;
   project_id: string | null;
   issue_id: string | null;
   objective_id?: string | null;
@@ -41,6 +43,8 @@ export interface NotificationTarget {
  * a goal notification can carry a context `issue_id`.
  */
 export function notificationTargetPath(n: NotificationTarget): string | null {
+  // An instance variable changed: its history is in the admin dashboard.
+  if (n.type === "instance_config_changed") return "/admin?tab=instance";
   // The routine passes BEFORE the project test: its screen is global (the view
   // routines, all projects combined), so it leads somewhere even if the
   // line has no project.
@@ -112,6 +116,7 @@ export const NOTIFICATION_LINE_KEYS: Record<
   automation_paused: "lineAutomationPaused",
   automation_stopped: "lineAutomationStopped",
   routine_done: "lineRoutineDone",
+  instance_config_changed: "lineInstanceConfigChanged",
   page_mention: "linePageMention",
   page_agent_edit: "linePageAgentEdit",
   page_comment: "linePageComment",

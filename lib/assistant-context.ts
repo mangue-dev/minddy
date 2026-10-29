@@ -175,7 +175,9 @@ export function contextChips(
         ? "contextAdminAccounts"
         : ctx.admin === "costs"
           ? "contextAdminCosts"
-          : "contextAdminModels",
+          : ctx.admin === "instance"
+            ? "contextAdminInstance"
+            : "contextAdminModels",
     );
     chips.push({ key: "admin", kind: "admin", label, tooltip: t("contextAdminTooltip") });
   }

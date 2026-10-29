@@ -19,7 +19,7 @@
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review); MIN-798 Smart Fill title model; MIN-829 instance administration",
+    "version": "0.20.0 (MIN-747 release review); MIN-798 Smart Fill title model; MIN-829 instance administration; MIN-847 instance variables",
     "editions": [
       "self-hosted"
     ],
@@ -49,12 +49,16 @@
       "lib/ai-model-config-file.ts",
       "lib/server/admin-model-config.ts",
       "lib/server/model-config.ts",
-      "lib/server/assistant/admin-tools.ts"
+      "lib/server/assistant/admin-tools.ts",
+      "lib/instance-variables.ts",
+      "lib/server/instance-variables.ts",
+      "app/api/admin/instance-variables/route.ts",
+      "components/admin/admin-instance-dashboard.tsx"
     ]
   },
   "review": {
     "revision": 12,
-    "fact": "agent:claude-code (MIN-829 tabs, accounts, costs, model categories, configuration file and Numo admin tools checked against lib/admin-tabs.ts, lib/ai-model-config.ts, lib/ai-model-config-file.ts, lib/server/admin-model-config.ts, lib/server/finance.ts, lib/admin-costs.ts, lib/server/retention.ts and lib/server/assistant/admin-tools.ts, including admin_get_costs; both figures recaptured on 2026-10-29 with captures/shots/documentation-admin from a local candidate against the preview capture admin, every write blocked, and inspected); agent:claude-code (MIN-798 Smart-fill titles model paragraph checked against lib/ai-model-config.ts, lib/ai-surfaces.ts and lib/server/smart-fill-title.ts: automations group, fallback deepseek/deepseek-v4-flash, not answered by the decision model; no figure changed); agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "fact": "agent:claude-code (MIN-847 Instance tab section checked against lib/instance-variables.ts, lib/server/instance-variables.ts and app/api/admin/instance-variables/route.ts; figure captured on 2026-10-29 from a disposable local self-hosted instance with its own test administrator, every write blocked, and inspected); agent:claude-code (MIN-829 tabs, accounts, costs, model categories, configuration file and Numo admin tools checked against lib/admin-tabs.ts, lib/ai-model-config.ts, lib/ai-model-config-file.ts, lib/server/admin-model-config.ts, lib/server/finance.ts, lib/admin-costs.ts, lib/server/retention.ts and lib/server/assistant/admin-tools.ts, including admin_get_costs; both figures recaptured on 2026-10-29 with captures/shots/documentation-admin from a local candidate against the preview capture admin, every write blocked, and inspected); agent:claude-code (MIN-798 Smart-fill titles model paragraph checked against lib/ai-model-config.ts, lib/ai-surfaces.ts and lib/server/smart-fill-title.ts: automations group, fallback deepseek/deepseek-v4-flash, not answered by the decision model; no figure changed); agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
     "language": "agent:claude-code (de MIN-829 sections with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-798 Smart-fill titles model paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
@@ -101,6 +105,23 @@
       "theme": "light",
       "padding": 24,
       "deviceScaleFactor": 2
+    },
+    {
+      "id": "instance-administration-instance",
+      "kind": "screenshot",
+      "src": "/documentation/de/instance-administration-instance.png",
+      "alt": "Tab Instanz mit der Quelle jeder Variablen, einem hier gesetzten, maskierten OpenRouter-Schlüssel und den Administratoradressen aus der Datei.",
+      "caption": "Instanz zeigt, woher jeder Wert stammt; Geheimnisse zeigen nur ihre letzten Zeichen. Diese Aufnahme stammt von einer lokalen selbst gehosteten Wegwerf-Instanz.",
+      "revision": 12,
+      "reviewed": true,
+      "capturedAt": "2026-10-29",
+      "viewport": [
+        1488,
+        1148
+      ],
+      "theme": "light",
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -120,7 +141,7 @@ Instanzadministration ist von Projekteigentum getrennt. `ADMIN_EMAILS` im Server
 
 ## Vorhandene Funktionen verwenden {#panels}
 
-Die Konsole hat drei Tabs: **Konten**, **Kosten** und **Modelle**. **Kosten** bleibt ohne verknüpfte verwaltete OpenRouter-Funktion ausgeblendet. Links auf die früheren Tabs Übersicht, Nutzer und Finanzen öffnen **Konten** oder **Kosten**. Das Verschenken eines Plans setzt eine konfigurierte Abrechnung oder eine bestehende Überschreibung voraus. Eine selbst gehostete Instanz ohne kommerzielle Anbieter erhält durch das Öffnen der Konsole keine Cloud-Abrechnung. Administrative Änderungen betreffen die ganze Instanz, nicht ein Projekt; prüfe sie mit Demo-Konten.
+Die Konsole hat drei Tabs: **Konten**, **Kosten**, **Modelle** und, wo erlaubt, **Instanz**. **Kosten** bleibt ohne verknüpfte verwaltete OpenRouter-Funktion ausgeblendet. Links auf die früheren Tabs Übersicht, Nutzer und Finanzen öffnen **Konten** oder **Kosten**. Das Verschenken eines Plans setzt eine konfigurierte Abrechnung oder eine bestehende Überschreibung voraus. Eine selbst gehostete Instanz ohne kommerzielle Anbieter erhält durch das Öffnen der Konsole keine Cloud-Abrechnung. Administrative Änderungen betreffen die ganze Instanz, nicht ein Projekt; prüfe sie mit Demo-Konten.
 
 ## Ein Konto betreuen {#accounts}
 
@@ -141,6 +162,16 @@ Jede Karte unter **Modelle** hat ein **Standardmodell** für ihre Kategorie: **A
 ## Die Instanz mit Numo verwalten {#numo}
 
 In einer Numo-Unterhaltung, die aus einer Administratorsitzung gestartet wurde, kann Numo die KI-Kosten der Instanz mit denselben Zahlen und Filtern wie unter **Kosten** lesen, die Modellkonfiguration lesen und ändern, einen Import prüfen und übernehmen, auch eine an die Unterhaltung angehängte Konfigurationsdatei, ein Konto über seine exakte E-Mail-Adresse finden, seinen Plan und sein KI-Nutzungsbudget lesen sowie einen Plan verschenken oder zurücknehmen. Die Administratorsitzung wird vor jeder dieser Aktionen erneut geprüft, und Numo lässt dich jede Änderung bestätigen, bevor es sie ausführt. Diese Werkzeuge liefern weder Aktivität noch Projekte oder Inhalte eines anderen Kontos. @Numo-Erwähnungen, Routinen und die öffentliche Dokumentationshilfe erhalten sie nie.
+
+## Die Variablen der Instanz bearbeiten {#instance-variables}
+
+Auf einer selbst gehosteten Instanz, deren Umgebungsdatei `MINDDY_CONFIG_OVERRIDES=1` setzt, ändert der Tab **Instanz** einige ihrer Variablen, ohne die Datei zu bearbeiten: den OpenRouter-Schlüssel, die Administratoradressen, den E-Mail-Anbieter und die Absender, deine eigenen GitHub- und GitLab-Apps, die Analysen, den Namen und die Kontaktadresse der Instanz sowie die Veröffentlichung der Modellkonfiguration. Die Installationsanleitung fragt, ob das erlaubt sein soll, und die Desktop-App schaltet es für die Instanz ein, die sie auf deinem Computer installiert. Nur die Datei schaltet es ein oder aus; Minddy Cloud bietet es nie an.
+
+![Tab Instanz mit der Quelle jeder Variablen, einem hier gesetzten, maskierten OpenRouter-Schlüssel und den Administratoradressen aus der Datei.](/documentation/de/instance-administration-instance.png)
+
+Das Suchfeld über der Liste findet eine Variable über ihren Namen, ihre Bezeichnung oder ihre Beschreibung. Ein im Tab gespeicherter Wert ersetzt den der Datei, und **Entfernen** bringt den Wert der Datei zurück. Jede Variable zeigt, woher ihr Wert stammt; Geheimnisse zeigen nur ihre letzten Zeichen. Die meisten Änderungen gelten innerhalb einer Minute; der Tab nennt die, die erst nach einem Neustart der Instanz gelten, und die Desktop-App bietet dann **Jetzt neu starten** an. Datenbankzugang, Verschlüsselungsschlüssel, die App-Adresse und beim Build festgelegte Werte lassen sich nur in der Datei setzen, ein falscher Wert im Tab sperrt dich also nie aus: Entferne ihn oder setze `MINDDY_CONFIG_OVERRIDES=0` in der Datei, um zu ihren Werten zurückzukehren.
+
+Beim Speichern eines Geheimnisses oder der Administratoradressen wirst du nach deinem Zwei-Faktor-Code gefragt, wenn du ihn in den letzten Minuten nicht eingegeben hast, und du kannst deine eigene Adresse nicht entfernen. Jede Änderung erscheint im Posteingang der anderen Administratoren, auch derjenigen mit Administratorrolle, und per E-Mail bei allen Administratoren, dich eingeschlossen, wenn die Instanz E-Mails versendet. Ein unveränderter Wert wird nicht erneut gespeichert. Jede Variable behält ihre letzten Versionen mit Autor und Zeitpunkt; **Wiederherstellen** setzt eine davon wieder ein. Die Werte liegen in der Datenbank, verschlüsselt, wenn die Verschlüsselung des Arbeitsbereichs aktiv ist.
 
 ## KI-Entscheidungsmodell wählen {#decision-model}
 

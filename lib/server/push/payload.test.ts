@@ -41,6 +41,7 @@ const ALL_TYPES: readonly NotificationType[] = [
   "page_mention",
   "page_agent_edit",
   "page_comment",
+  "instance_config_changed",
 ];
 
 /** The table above should be COMPLETE: a type added to the product without its
@@ -77,6 +78,17 @@ describe("buildPushPayload", () => {
       expect(payload!.body).not.toContain("{actor}");
       expect(payload!.body.trim()).not.toBe("");
     }
+  });
+
+  it("pushes an instance variable change with its subject, its actor and the admin tab", () => {
+    const ctx = emptyPushContext();
+    ctx.actorNames.set(ACTOR, "Alice");
+    const row = { user_id: "u", project_id: null, type: "instance_config_changed", issue_id: null, actor_id: ACTOR } as NotificationRow;
+    expect(buildPushPayload(ctx, row, "en")).toMatchObject({
+      title: en.Inbox.instanceConfigTitle,
+      body: en.Inbox.lineInstanceConfigChanged.replace("{actor}", "Alice"),
+      url: "/admin?tab=instance",
+    });
   });
 
   it("titre = référence + titre du ticket, destination = le board", () => {

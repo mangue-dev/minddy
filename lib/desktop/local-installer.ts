@@ -203,12 +203,28 @@ export const PREPARE_ARGUMENTS = ["pnpm", "self-host:local", "--", "--no-open", 
  * the account the app manages (`local-account.ts`).
  */
 export function withAdminEmail(envText: string, email: string): string {
-  const line = `ADMIN_EMAILS=${email.trim()}`;
+  return withEnvValue(envText, "ADMIN_EMAILS", email.trim());
+}
+
+/** Sets one `KEY=value` line, in place when the key is already there. */
+function withEnvValue(envText: string, key: string, value: string): string {
+  const line = `${key}=${value}`;
   const lines = envText.length > 0 ? envText.replace(/\n$/, "").split("\n") : [];
-  const index = lines.findIndex((entry) => /^\s*ADMIN_EMAILS\s*=/.test(entry));
+  const index = lines.findIndex((entry) => new RegExp(`^\\s*${key}\\s*=`).test(entry));
   if (index >= 0) lines[index] = line;
   else lines.push(line);
   return `${lines.join("\n")}\n`;
+}
+
+/**
+ * The instance on this computer lets its administrator edit its variables
+ * from the admin dashboard (MIN-847): the person installing it owns the
+ * computer. A value already in the file — `0` written by hand — is kept.
+ */
+export function withConfigOverrides(envText: string): string {
+  return /^\s*MINDDY_CONFIG_OVERRIDES\s*=\s*\S/m.test(envText)
+    ? envText
+    : withEnvValue(envText, "MINDDY_CONFIG_OVERRIDES", "1");
 }
 
 /**

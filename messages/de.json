@@ -935,7 +935,8 @@
     "contextAdminAccounts": "Admin · Konten",
     "contextAdminCosts": "Admin · Kosten",
     "contextAdminModels": "Admin · Modelle",
-    "contextAdminTooltip": "Admin-Dashboard der Instanz im Kontext"
+    "contextAdminTooltip": "Admin-Dashboard der Instanz im Kontext",
+    "contextAdminInstance": "Admin · Instanz"
   },
   "Auth": {
     "callbackFailed": "Dieser Anmeldelink ist nicht mehr gültig. Versuche erneut, dich anzumelden.",
@@ -1767,7 +1768,9 @@
     "linePageMention": "{actor} hat dich auf dieser Seite erwähnt",
     "linePageAgentEdit": "Numo hat diese Seite aktualisiert",
     "somePageFallback": "Unbenannte Seite",
-    "linePageComment": "{actor} hat diese Seite kommentiert"
+    "instanceConfigTitle": "Variablen der Instanz",
+    "linePageComment": "{actor} hat diese Seite kommentiert",
+    "lineInstanceConfigChanged": "{actor} hat eine Variable der Instanz geändert"
   },
   "NotificationSettings": {
     "title": "Posteingangsbenachrichtigungen",
@@ -4554,7 +4557,8 @@
     "tabs": {
       "models": "Modelle",
       "accounts": "Konten",
-      "costs": "Kosten"
+      "costs": "Kosten",
+      "instance": "Instanz"
     },
     "billing": {
       "title": "Einen Plan verschenken",
@@ -4889,6 +4893,212 @@
         "newer_version": "Diese Datei stammt aus einer neueren Version von minddy. Aktualisiere diese Instanz und importiere sie dann erneut.",
         "invalid_value": "Diese Datei enthält eine ungültige Einstellung: {detail}",
         "refused": "{setting} wurde abgelehnt: {detail} Es wurde nichts geändert."
+      }
+    },
+    "instance": {
+      "title": "Variablen der Instanz",
+      "subtitle": "Konfiguriere diese Instanz, ohne ihre Dateien zu bearbeiten. Ein hier gesetzter Wert ersetzt den der Konfigurationsdatei; entferne ihn, um zur Datei zurückzukehren.",
+      "loadError": "Die Variablen der Instanz konnten nicht geladen werden.",
+      "searchPlaceholder": "Variablen suchen…",
+      "clearSearch": "Suche löschen",
+      "searchEmpty": "Keine Variable passt zu „{query}“.",
+      "themes": {
+        "ai": {
+          "title": "KI",
+          "desc": "Der Anbieterschlüssel, mit dem die KI-Funktionen laufen."
+        },
+        "administrators": {
+          "title": "Administratoren",
+          "desc": "Wer dieses Dashboard öffnen darf. Jede Änderung hier wird allen Administratoren angekündigt."
+        },
+        "email": {
+          "title": "E-Mail",
+          "desc": "Die E-Mails, die minddy selbst versendet. Leer lassen, wenn die Instanz keine sendet."
+        },
+        "forges": {
+          "title": "GitHub und GitLab",
+          "desc": "Deine eigenen Forge-Apps, statt des verwalteten Relays oder zusätzlich."
+        },
+        "analytics": {
+          "title": "Analysen",
+          "desc": "Produktanalysen, nur für Mitglieder, die zustimmen."
+        },
+        "site": {
+          "title": "Website",
+          "desc": "Wie sich die Instanz präsentiert."
+        }
+      },
+      "source": {
+        "database": "Hier gesetzt",
+        "file": "Aus der Datei",
+        "both": "Hier gesetzt · ersetzt die Datei",
+        "unset": "Nicht gesetzt"
+      },
+      "sourceHelp": {
+        "database": "In diesem Tab gesetzt. Die Konfigurationsdatei setzt diese Variable nicht.",
+        "file": "In der Konfigurationsdatei gesetzt. Wenn du sie hier bearbeitest, ersetzt das den Wert der Datei, ohne die Datei zu ändern.",
+        "both": "In diesem Tab gesetzt, anstelle des Werts aus der Konfigurationsdatei. Entferne ihn, um zum Wert der Datei zurückzukehren.",
+        "unset": "Weder hier noch in der Konfigurationsdatei gesetzt: minddy nutzt sein Standardverhalten oder lässt die Funktion, die sie braucht, aus."
+      },
+      "applies": {
+        "live": "Gilt innerhalb einer Minute.",
+        "restart": "Gilt nach einem Neustart der Instanz."
+      },
+      "fileValue": "Wert in der Datei: {value}",
+      "overridesFile": "Die Konfigurationsdatei setzt diese Variable ebenfalls: Der hier gespeicherte Wert tritt an ihre Stelle.",
+      "sensitiveNote": "Beim Speichern wirst du nach deinem Zwei-Faktor-Code gefragt, wenn du ihn in den letzten Minuten nicht eingegeben hast.",
+      "keepOwnAddress": "Deine Adresse {email} muss in der Liste bleiben: ohne sie verlierst du den Zugang zu diesem Dashboard.",
+      "keepOwnAddressRemove": "Die Konfigurationsdatei enthält deine Adresse nicht: Wenn du diesen Wert entfernst, verlierst du den Zugang zu diesem Dashboard.",
+      "keepOwnAddressRestore": "Diese Version enthält deine Adresse nicht: Wenn du sie wiederherstellst, verlierst du den Zugang zu diesem Dashboard.",
+      "secretPlaceholder": "Neuen Wert eingeben",
+      "choose": "Auswählen",
+      "on": "An",
+      "off": "Aus",
+      "choices": {
+        "EMAIL_PROVIDER": {
+          "resend": "Resend",
+          "console": "Nur protokollieren (Entwicklung)"
+        },
+        "MINDDY_FORGE_RELAY": {
+          "0": "Aus"
+        }
+      },
+      "edit": "Bearbeiten",
+      "save": "Speichern",
+      "cancel": "Abbrechen",
+      "saved": "Variable gespeichert",
+      "remove": "Entfernen",
+      "removeTitle": "Den Wert von {name} entfernen?",
+      "removeDescriptionFile": "Der Wert aus der Konfigurationsdatei gilt wieder.",
+      "removeDescriptionUnset": "Die Variable ist danach nicht gesetzt: Die Konfigurationsdatei setzt sie nicht.",
+      "removeConfirm": "Entfernen",
+      "removed": "Wert entfernt",
+      "history": "Verlauf ({count})",
+      "historyEntry": "{action} von {actor}, {date}",
+      "action": {
+        "set": "Gesetzt",
+        "clear": "Entfernt",
+        "rollback": "Wiederhergestellt"
+      },
+      "someone": "einem Administrator",
+      "restore": "Wiederherstellen",
+      "restored": "Version wiederhergestellt",
+      "reauthTitle": "Bestätige, dass du es bist",
+      "reauthDescription": "Gib den Code aus deiner Authenticator-App ein, um diese Variable zu ändern.",
+      "reauthCode": "Authentifizierungscode",
+      "reauthConfirm": "Bestätigen",
+      "reauthFailed": "Dieser Code hat nicht funktioniert. Versuche den aktuellen.",
+      "reauthNoFactor": "Dein Konto hat keine Authenticator-App.",
+      "restartNeeded": "Einige Änderungen gelten nach einem Neustart der Instanz. Starte den minddy-Dienst auf seinem Host neu, zum Beispiel mit docker compose restart minddy.",
+      "restartNeededDesktop": "Einige Änderungen gelten nach einem Neustart der Instanz.",
+      "restartNow": "Jetzt neu starten",
+      "restartFailed": "Die Instanz konnte nicht neu gestartet werden.",
+      "errors": {
+        "invalid": "Dieser Wert ist ungültig.",
+        "invalid_email": "Gib gültige E-Mail-Adressen ein, durch Kommas getrennt.",
+        "invalid_url": "Gib eine vollständige http- oder https-Adresse ein.",
+        "invalid_choice": "Wähle eine der Optionen.",
+        "empty": "Gib einen Wert ein oder entferne stattdessen den hier gesetzten Wert.",
+        "not_overridable": "Diese Variable kann nur in der Konfigurationsdatei gesetzt werden.",
+        "disabled": "Diese Instanz erlaubt keine Bearbeitung der Variablen im Dashboard.",
+        "cannot_remove_self": "Behalte deine eigene Adresse in der Liste: Sonst verlierst du den Zugang zu diesem Dashboard.",
+        "no_such_version": "Diese Version existiert nicht mehr."
+      },
+      "emailSubject": "Eine Variable der Instanz wurde geändert",
+      "emailBody": "{actor} hat eine Variable deiner minddy-Instanz geändert. Sieh dir die Änderung im Admin-Dashboard an: {link}\n\nWenn du diese Änderung nicht erwartet hast, prüfe dort den Verlauf und sichere die Administratorkonten.",
+      "vars": {
+        "OPENROUTER_API_KEY": {
+          "label": "OpenRouter-Schlüssel",
+          "desc": "Der Schlüssel, mit dem die KI-Funktionen von minddy bei OpenRouter bezahlen."
+        },
+        "ADMIN_EMAILS": {
+          "label": "Administratoradressen",
+          "desc": "Bestätigte Adressen, die dieses Dashboard öffnen dürfen, durch Kommas getrennt. Jede braucht weiterhin die Zwei-Faktor-Authentifizierung."
+        },
+        "EMAIL_PROVIDER": {
+          "label": "E-Mail-Anbieter",
+          "desc": "Wie minddy seine eigenen E-Mails versendet (Einladungen, Feedback-Codes). Anmelde-E-Mails laufen über Supabase."
+        },
+        "RESEND_API_KEY": {
+          "label": "Resend-Schlüssel",
+          "desc": "Der Resend-API-Schlüssel, wenn der Anbieter Resend ist."
+        },
+        "INVITATION_EMAIL_FROM": {
+          "label": "Absender der Einladungen",
+          "desc": "Der Absender von Einladungs- und Verwaltungs-E-Mails, zum Beispiel minddy <hello@example.com>."
+        },
+        "FEEDBACK_EMAIL_FROM": {
+          "label": "Absender für Feedback",
+          "desc": "Der Absender der Bestätigungscodes des öffentlichen Feedback-Boards."
+        },
+        "GITHUB_APP_ID": {
+          "label": "GitHub-App-ID",
+          "desc": "Die numerische ID deiner eigenen GitHub-App."
+        },
+        "GITHUB_APP_SLUG": {
+          "label": "GitHub-App-Slug",
+          "desc": "Der Name deiner GitHub-App in ihrer URL."
+        },
+        "GITHUB_APP_CLIENT_ID": {
+          "label": "Client-ID der GitHub-App",
+          "desc": "Die OAuth-Client-ID deiner GitHub-App."
+        },
+        "GITHUB_APP_CLIENT_SECRET": {
+          "label": "Client-Geheimnis der GitHub-App",
+          "desc": "Das OAuth-Client-Geheimnis deiner GitHub-App."
+        },
+        "GITHUB_APP_PRIVATE_KEY": {
+          "label": "Privater Schlüssel der GitHub-App",
+          "desc": "Der für deine GitHub-App erzeugte private PEM-Schlüssel."
+        },
+        "GITHUB_WEBHOOK_SECRET": {
+          "label": "GitHub-Webhook-Geheimnis",
+          "desc": "Das Geheimnis, mit dem GitHub die Webhooks deiner App signiert."
+        },
+        "GITLAB_OAUTH_CLIENT_ID": {
+          "label": "GitLab-Anwendungs-ID",
+          "desc": "Die ID deiner eigenen GitLab-OAuth-Anwendung."
+        },
+        "GITLAB_OAUTH_CLIENT_SECRET": {
+          "label": "GitLab-Anwendungsgeheimnis",
+          "desc": "Das Geheimnis deiner GitLab-OAuth-Anwendung."
+        },
+        "GITLAB_WEBHOOK_SECRET": {
+          "label": "GitLab-Webhook-Geheimnis",
+          "desc": "Das Token, das GitLab mit den Webhooks deiner Projekte sendet."
+        },
+        "MINDDY_FORGE_RELAY": {
+          "label": "Verwaltetes Forge-Relay",
+          "desc": "Standardmäßig verbinden sich GitHub und GitLab über das Relay von minddy. Schalte es aus, um nur deine eigenen Apps oben zu nutzen."
+        },
+        "POSTHOG_API_KEY": {
+          "label": "PostHog-Serverschlüssel",
+          "desc": "Der Projektschlüssel, mit dem der Server von minddy seine Ereignisse sendet."
+        },
+        "POSTHOG_HOST": {
+          "label": "PostHog-Serveradresse",
+          "desc": "Die PostHog-Instanz, an die der Server sendet, zum Beispiel https://eu.i.posthog.com."
+        },
+        "MINDDY_PUBLIC_POSTHOG_KEY": {
+          "label": "PostHog-Browserschlüssel",
+          "desc": "Der öffentliche Schlüssel im Browser, für Mitglieder, die Analysen zugestimmt haben."
+        },
+        "MINDDY_PUBLIC_POSTHOG_HOST": {
+          "label": "PostHog-Browseradresse",
+          "desc": "Die PostHog-Adresse, an die der Browser sendet."
+        },
+        "MINDDY_PUBLIC_SITE_NAME": {
+          "label": "Name der Instanz",
+          "desc": "Der Name in Seitentiteln und E-Mails."
+        },
+        "MINDDY_PUBLIC_CONTACT_EMAIL": {
+          "label": "Kontaktadresse",
+          "desc": "Die Adresse auf öffentlichen Seiten für Fragen zu dieser Instanz."
+        },
+        "MINDDY_PUBLISH_MODEL_CONFIG": {
+          "label": "Modellkonfiguration veröffentlichen",
+          "desc": "Stellt die KI-Modellkonfiguration dieser Instanz unter /api/recommended-models bereit, damit andere Instanzen sie importieren."
+        }
       }
     }
   },
