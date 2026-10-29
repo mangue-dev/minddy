@@ -283,4 +283,3 @@ export function activeFilterCount(filter: DatabaseViewFilter): number {
   return filter.conditions.filter((condition) =>
     !databaseFilterNeedsValue(condition.operator) || (condition.value ?? "") !== "").length;
 }
-
