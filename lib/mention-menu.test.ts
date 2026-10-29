@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   filterMentionItems,
   findActiveMentionQuery,
+  findActiveTriggerQuery,
   orderMentionItems,
 } from "@/lib/mention-menu";
 
@@ -97,5 +98,23 @@ describe("issue order in mention menus (MIN-726)", () => {
 
   it("puts the issue whose identifier is typed before every tier", () => {
     expect(filterMentionItems(items, "min-1").map((item) => item.label)[0]).toBe("MIN-1");
+  });
+});
+
+describe("findActiveTriggerQuery", () => {
+  it("reads “/” like “@”: one space stays, two end the query", () => {
+    expect(findActiveTriggerQuery("text /bullet li", "/")?.query).toBe("bullet li");
+    expect(findActiveTriggerQuery("text /bullet  ", "/")).toBeNull();
+    expect(findActiveTriggerQuery("http://example", "/")).toBeNull();
+    // macOS turns a double space into a period and a space.
+    expect(findActiveTriggerQuery("text /bullet. ", "/")).toBeNull();
+    expect(findActiveMentionQuery("Ask @cam. ")).toBeNull();
+  });
+
+  it("ends a bare trigger on its first space, for good", () => {
+    expect(findActiveTriggerQuery("text / ", "/")).toBeNull();
+    expect(findActiveMentionQuery("Ask @\u00a0")).toBeNull();
+    // Typing on after that space does not reopen the query.
+    expect(findActiveMentionQuery("Ask @ cam")).toBeNull();
   });
 });

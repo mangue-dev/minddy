@@ -17,10 +17,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 18,
-  "sourceRevision": 18,
+  "revision": 19,
+  "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -52,14 +52,23 @@
       "components/pages/page-promotion-context.test.tsx",
       "components/pages/database-view-strip.tsx",
       "lib/use-page-database-views.ts",
-      "lib/server/page-database-views.ts"
+      "lib/server/page-database-views.ts",
+      "components/pages/database-table-scroll.tsx",
+      "components/ui/checkbox.tsx",
+      "lib/server/database-view-tools.ts",
+      "lib/page-database-filters.ts",
+      "components/pages/database-filter-editor.tsx",
+      "supabase/migrations/20270109200092_page_database_views_realtime.sql",
+      "components/pages/page-peek-panel.tsx",
+      "components/pages/pages-shell.tsx",
+      "components/global-page-panel.tsx"
     ]
   },
   "review": {
-    "revision": 18,
-    "fact": "agent:/root/min764 (database views section checked against components/pages/database-view-strip.tsx, components/pages/page-database-view.tsx, lib/use-page-database-views.ts and lib/server/page-database-views.ts: named views shared by the project, each with its own sort, filter and hidden columns, managed and reordered by writers, adjusted locally by readers; insertion clears the active view's filter; rest of the article unchanged since the MIN-747 review; no figure changed); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min764 (en changed passages on shared database views with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 19,
+    "fact": "agent:claude-code (column header menu Delete column with confirmation and right-click opening, hover-only row gutter, touch-screen rows without gutter, checkbox tooltips and partial header state, bottom scrollbar hidden on touch screens, view rename/delete by right-click, column reordering by handle in Columns, Numo view tools and no MCP view tools checked against components/pages/database-column-name.tsx, page-database-view.tsx, database-view-strip.tsx, database-table-scroll.tsx, components/ui/checkbox.tsx, lib/server/assistant/tools.ts and lib/server/database-view-tools.ts; several filter conditions with All/Any match, operators per column type, up to 10 conditions, single filters kept, live view updates, default view rename, phone view dropdown, View settings sheets, search field and cell sheets checked against lib/page-database-filters.ts, components/pages/database-filter-editor.tsx, lib/use-page-database-views.ts, supabase/migrations/20270109200092_page_database_views_realtime.sql, components/pages/database-view-strip.tsx, components/pages/page-database-view.tsx and components/pages/database-cell-editor.tsx; Page options in the entry side panel checked against components/pages/page-peek-panel.tsx and components/pages/pages-shell.tsx; the side panel's compact database toolbar (view dropdown, search popover, View settings menu with a Sort by submenu and Filter and Columns popovers, in-panel horizontal scrollbar, entries opened in place with Back) checked against components/pages/page-database-view.tsx, components/pages/database-view-strip.tsx, components/pages/database-table-scroll.tsx, components/global-page-panel.tsx and components/pages/page-peek-panel.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "pages"
@@ -83,7 +92,7 @@
       "src": "/documentation/en/database-setup-cards.png",
       "alt": "Component preview of the new-database cards for Numo setup and importing an existing database.",
       "caption": "New-database suggestions, shown with demonstration data. Choose Numo setup or import, or dismiss the cards to continue manually.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -100,7 +109,7 @@
       "src": "/documentation/en/database-property-types.png",
       "alt": "Database column type picker with a search field, then text, number, selections, dates, people and checkbox.",
       "caption": "Choose a column type that matches the values to store.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -117,7 +126,7 @@
       "src": "/documentation/en/database-entry.png",
       "alt": "Demonstration entry with a text description, duration 2.5, a checked checkbox and an empty selection.",
       "caption": "Open an entry to read its complete text and edit typed values.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -133,7 +142,7 @@
       "src": "/documentation/en/database-conversion-warning.png",
       "alt": "Conversion warning: changing Text to Number clears one incompatible cell, with Cancel and confirmation buttons.",
       "caption": "Review the real incompatible-cell count before confirming a type change. Cancel preserves the current values.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -149,7 +158,7 @@
       "src": "/documentation/en/database-import-review.png",
       "alt": "Import review for a local CSV: two entry pages and two property columns, with the Import database button.",
       "caption": "Review the parsed entries and column count before importing into the empty database.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -165,7 +174,7 @@
       "src": "/documentation/en/database-options.png",
       "alt": "Component preview of Edit options with localized status options, up and down buttons, trash buttons and the deletion explanation.",
       "caption": "Edit option names, colors and order together. The trash button removes an option from the draft; Save applies the changes. Shown with demonstration data.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -182,7 +191,7 @@
       "src": "/documentation/en/database-date-time.png",
       "alt": "Component preview of the date picker with July 24, 2026 selected, Add a time enabled and Time set to 02:00 AM.",
       "caption": "Turn on Add a time to enter an hour. This component preview uses demonstration data and the device time zone.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -249,15 +258,23 @@ Choose a day in Date. To include a time, turn on Add a time and fill Time. The v
 
 An empty entry body displays a placeholder so you can locate the writing area. From a row action or a multi-row selection, duplication asks for confirmation before creating copies. Moving entries to the trash also asks for confirmation and preserves the recoverable trash workflow rather than permanently deleting them.
 
-Open an entry to edit its full page in a floating panel. Extend opens it as a full page after pending document saves finish. If saving fails, the panel stays open so you can resolve it. An empty entry stays in the database until deleted.
+Open an entry to edit its full page in a floating panel. Extend opens it as a full page after pending document saves finish. If saving fails, the panel stays open so you can resolve it. The panel header also has the entry's **Page options** menu (`…`) between **Expand** and close; moving the entry to the trash from there closes the panel and leaves the table in place. An empty entry stays in the database until deleted.
 
-Use row checkboxes for a selection and Shift-click for a range. The handle opens actions and can reorder entries in manual order. The gutter + inserts below an entry; Option/Alt inserts above. Adjacent insertion clears the filter of the active view so the new entry is visible.
+Use row checkboxes for a selection and Shift-click for a range. Each checkbox's tooltip reads **Select** or **Deselect**. The header checkbox (**Select all entries**, or **Deselect all** once every entry is selected) shows a dash while only some entries are selected and a check when all are; clicking it from a partial selection selects every entry. Hover a row to show its gutter: the handle opens actions and can reorder entries in manual order, and the + inserts below the entry; Option/Alt inserts above. Adjacent insertion clears the filters of the active view so the new entry is visible. On a touch screen, rows have no gutter and their checkboxes stay visible: select entries, then use **Duplicate** or **Move to trash** in the selection bar. **Promote to issue** and moving an entry up or down are not available there.
 
 From the handle menu of a single entry, the owner or a Member can choose **Promote to issue** to have Numo turn that entry, its content and its properties into one issue. The entry stays in the database. The action is absent when the menu targets several selected rows; there is no bulk promotion, so promote each entry separately. The [Pages guide](/docs/pages#promote-page-to-issue) describes Numo’s questions and what to do when the entry cannot be saved first.
 
 ### Database views {#database-display}
 
-A database shows its entries through views, listed above the table. Each view keeps its own sort, filter and hidden columns, and every project member sees the same views. The owner or a Member adds a view with **New view** (+), which starts from the view on screen, renames or deletes the active view from its options menu (⋯) with **Rename view** or **Delete view**, and drags views to reorder them. Sort, filter and column changes are saved to the active view for everyone. A database keeps at least one view; before its first change it shows the default **Table** view. Readers switch between views and can adjust one for themselves until they leave the page. Your browser remembers the view you last opened; search is never saved. Manual order is shared with the page tree. Scroll horizontally with a trackpad gesture, Shift plus mouse wheel, touch or the bottom scrollbar. A clipped text preview does not shorten the stored value. Entries with column values can be reordered within their database but cannot be moved outside it.
+A database shows its entries through views, listed above the table. Each view keeps its own sort, filter and hidden columns, and every project member sees the same views. The owner or a Member adds a view with **New view** (+), which starts from the view on screen, right-clicks a view to choose **Rename view** or **Delete view**, and drags views to reorder them. Sort, filter and column changes are saved to the active view for everyone. A database keeps at least one view; before its first change it shows the default **Table** view. Readers switch between views and can adjust one for themselves until they leave the page. Your browser remembers the view you last opened; search is never saved. Manual order is shared with the page tree. Scroll horizontally with a trackpad gesture, Shift plus mouse wheel or the scrollbar at the bottom of the window. A touch screen shows no such scrollbar: swipe the table instead. A clipped text preview does not shorten the stored value. Entries with column values can be reordered within their database but cannot be moved outside it. Numo can list a database's views and, when you ask, create, rename, reorder or delete them (never the last one), or change their sort, filters (combined with all or any) and hidden columns. On a database page, Numo takes “a view” to mean the database's views, not the issue board's. Column order is not part of a view: it belongs to the database schema. minddy MCP clients cannot manage views.
+
+Open **Filter** to build a list of conditions with **Add a filter**; **Remove this filter** deletes one. Each condition picks a column, a condition and a value, and the conditions depend on the column type. Text offers contains, does not contain, is, is not, is empty and is not empty. Number offers is, is not, greater than, less than, is empty and is not empty. Select offers is, is not, is empty and is not empty. Multi-select and People offer contains, does not contain, is empty and is not empty. Date and Created at offer is on, is after, is before, is empty and is not empty. Checkbox matches **Checked** or **Unchecked**. A condition without a value does not filter yet. With two or more conditions, choose **All filters** to keep the entries that match every condition, or **Any filter** for those that match at least one. A view holds up to 10 conditions; a view saved earlier with a single filter keeps it.
+
+Views update live: a view that a teammate or Numo creates or changes appears without reloading the page. Before a database has a saved view, right-click its default view to choose **Rename view**: renaming saves it as a named view with the current settings, and **Delete view** stays unavailable.
+
+On a phone, pick a view from the dropdown above the table; its menu offers **New view**, **Rename view** and **Delete view**. The toolbar shows only search, **View settings** and **New**. **View settings** opens a sheet with **Sort by**, **Filter** and **Columns**, each opening its own sheet. Search opens a field under the toolbar, with a button to close it. The table runs edge to edge, with taller rows and checkboxes that are always visible. Text and number cells open in a bottom sheet with a **Save** button, as selections, people and dates already do.
+
+A database opened in the side panel, from a mention, a backlink, a page attached to an issue or a link in a comment, uses that compact toolbar on a computer too: the view dropdown, whose menu offers **New view**, **Rename view** and **Delete view**, then search, **View settings** and **New**. Search opens a field in a popover. **View settings** opens a menu: **Sort by** lists the columns and the sort direction in a submenu, while **Filter** and **Columns** each open their popover under the button. The table scrolls sideways inside the panel, with its own scrollbar. An entry opened from that table takes its place in the panel; **Back**, at the top left of the panel, returns to the table, and **Expand** opens what the panel shows as a full page.
 
 
 ![Demonstration entry with a text description, duration 2.5, a checked checkbox and an empty selection.](/documentation/en/database-entry.png)
@@ -266,9 +283,9 @@ A database shows its entries through views, listed above the table. Each view ke
 
 Column dragging starts after pointer movement and stays horizontal. The grabbing cursor appears only while dragging; a normal click still opens the column actions. With a column header focused, Enter or Space opens its actions. Press F8 to start keyboard reordering, use Left or Right, then Enter to confirm or Escape to cancel.
 
-Use Columns to show or hide properties with the eye control. Click a header to rename it or drag headers to reorder them; the entry-name column stays first. Select or Multi-select options can be edited from the cell menu or Columns, with names and colors saved together.
+Use Columns to show or hide properties with the eye control, and drag a row's handle in that list to reorder columns. From the keyboard, focus the handle, press Space, move the column with the Up and Down arrows and press Space again to drop it; Escape cancels. Click or right-click a header to open its menu, for example to rename the column, or drag headers to reorder them; the entry-name column stays first. Select or Multi-select options can be edited from the cell menu or Columns, with names and colors saved together.
 
-Hiding a column changes display preferences rather than deleting its values. Deleting a custom column removes its values from every entry and cannot be undone. Read that consequence before confirming deletion.
+Hiding a column changes display preferences rather than deleting its values. To delete a custom column, choose **Delete column** in its header menu or its trash button in Columns; both ask for confirmation. Deletion removes the column's values from every entry and cannot be undone. Read that consequence before confirming deletion.
 
 ### Convert a property type {#convert-column}
 

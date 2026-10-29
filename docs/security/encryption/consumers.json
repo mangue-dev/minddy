@@ -2474,77 +2474,77 @@
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "views",
-    "line": 601,
+    "line": 605,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "views",
-    "line": 624,
+    "line": 628,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 660,
+    "line": 664,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 665,
+    "line": 669,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 682,
+    "line": 686,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 721,
+    "line": 725,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 1154,
+    "line": 1158,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 1229,
+    "line": 1233,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 1278,
+    "line": 1282,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 1725,
+    "line": 1731,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "numo_routine_occurrences",
-    "line": 1897,
+    "line": 1903,
     "storage": false
   },
   {
@@ -2578,29 +2578,36 @@
   {
     "file": "lib/server/assistant/message-context.ts",
     "operation": "from",
+    "resource": "pages",
+    "line": 58,
+    "storage": false
+  },
+  {
+    "file": "lib/server/assistant/message-context.ts",
+    "operation": "from",
     "resource": "pull_requests",
-    "line": 64,
+    "line": 72,
     "storage": false
   },
   {
     "file": "lib/server/assistant/message-context.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 73,
+    "line": 81,
     "storage": false
   },
   {
     "file": "lib/server/assistant/message-context.ts",
     "operation": "from",
     "resource": null,
-    "line": 97,
+    "line": 105,
     "storage": false
   },
   {
     "file": "lib/server/assistant/message-context.ts",
     "operation": "from",
     "resource": "cycles",
-    "line": 107,
+    "line": 115,
     "storage": false
   },
   {
@@ -7402,70 +7409,70 @@
     "file": "lib/server/mcp-oauth.ts",
     "operation": "from",
     "resource": "user_mcp_connections",
-    "line": 119,
+    "line": 133,
     "storage": false
   },
   {
     "file": "lib/server/mcp-oauth.ts",
     "operation": "from",
     "resource": "user_mcp_connections",
-    "line": 138,
+    "line": 152,
     "storage": false
   },
   {
     "file": "lib/server/mcp-oauth.ts",
     "operation": "from",
     "resource": "user_mcp_connections",
-    "line": 149,
+    "line": 163,
     "storage": false
   },
   {
     "file": "lib/server/mcp-oauth.ts",
     "operation": "from",
     "resource": "user_mcp_oauth_attempts",
-    "line": 280,
+    "line": 300,
     "storage": false
   },
   {
     "file": "lib/server/mcp-oauth.ts",
     "operation": "from",
     "resource": "user_mcp_oauth_attempts",
-    "line": 292,
+    "line": 312,
     "storage": false
   },
   {
     "file": "lib/server/mcp-oauth.ts",
     "operation": "from",
     "resource": "user_mcp_oauth_attempts",
-    "line": 308,
+    "line": 328,
     "storage": false
   },
   {
     "file": "lib/server/mcp-oauth.ts",
     "operation": "from",
     "resource": "user_mcp_connections",
-    "line": 319,
+    "line": 339,
     "storage": false
   },
   {
     "file": "lib/server/mcp-setup.ts",
     "operation": "from",
     "resource": "user_mcp_connections",
-    "line": 299,
+    "line": 309,
     "storage": false
   },
   {
     "file": "lib/server/mcp-setup.ts",
     "operation": "from",
     "resource": "user_mcp_oauth_attempts",
-    "line": 355,
+    "line": 365,
     "storage": false
   },
   {
     "file": "lib/server/mcp-setup.ts",
     "operation": "from",
     "resource": "user_mcp_connections",
-    "line": 361,
+    "line": 371,
     "storage": false
   },
   {
@@ -8844,28 +8851,28 @@
     "file": "lib/server/pages-export.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 79,
+    "line": 80,
     "storage": false
   },
   {
     "file": "lib/server/pages-export.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 107,
+    "line": 108,
     "storage": false
   },
   {
     "file": "lib/server/pages-export.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 135,
+    "line": 136,
     "storage": false
   },
   {
     "file": "lib/server/pages-export.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 163,
+    "line": 164,
     "storage": false
   },
   {
@@ -8956,98 +8963,98 @@
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 815,
+    "line": 850,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 897,
+    "line": 932,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 954,
+    "line": 989,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 1067,
+    "line": 1102,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "page_collaboration_heads",
-    "line": 1751,
+    "line": 1786,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "page_collaboration_heads",
-    "line": 1773,
+    "line": 1808,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "page_collaboration_heads",
-    "line": 1926,
+    "line": 1961,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "page_collaboration_heads",
-    "line": 2164,
+    "line": 2199,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 2587,
+    "line": 2622,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 2771,
+    "line": 2806,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 2782,
+    "line": 2817,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 2816,
+    "line": 2851,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "rpc",
     "resource": "discard_blank_page_guarded",
-    "line": 2861,
+    "line": 2896,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "rpc",
     "resource": "restore_page_guarded",
-    "line": 2918,
+    "line": 2953,
     "storage": false
   },
   {

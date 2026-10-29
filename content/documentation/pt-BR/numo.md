@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 21,
+  "revision": 23,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-28",
   "compatibility": {
@@ -57,6 +57,8 @@
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
       "components/assistant/assistant-context-bar.tsx",
+      "lib/use-ask-numo-about-selection.ts",
+      "lib/assistant-selection.ts",
       "lib/server/issue-reads.ts",
       "components/settings/account-settings-page.tsx",
       "lib/settings-sections.ts",
@@ -66,9 +68,9 @@
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code/MIN-826 (step 2 now names the conversation provider, checked against components/assistant/conversation-settings.tsx and the running app on the preview demo account; no figure recaptured, existing figures still match; earlier evidence retained in git history)",
-    "language": "agent:claude-code/MIN-826 (pt-BR translation of the changed passages with catalog UI labels; informal register; self-reviewed; agent review, not human acceptance)",
+    "revision": 23,
+    "fact": "agent:claude-code (new paragraph on asking Numo about a selected passage, checked against lib/use-ask-numo-about-selection.ts, lib/assistant-context.ts and components/assistant/assistant-shell.tsx; not checked in the running app; no figure recaptured, existing figures still match; earlier evidence retained in git history)",
+    "language": "agent:claude-code (pt-BR translation of the added paragraph with catalog UI labels; informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-28"
   },
   "related": [
@@ -100,7 +102,7 @@
       "src": "/documentation/pt-BR/work-with-numo-workflow.png",
       "alt": "Conversa de demonstração Numo com contexto, mudança de prioridade e resposta salva.",
       "caption": "Conversa de demonstração existente, traduzida para exibição. A resposta salva cita AUR-11 e AUR-7; a captura não comprova uma nova execução.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -117,7 +119,7 @@
       "src": "/documentation/pt-BR/numo-permissions-and-approvals-workflow.svg",
       "alt": "Matriz de permissões do Numo para ações do projeto, conexões pessoais e rotinas.",
       "caption": "O acesso ao projeto e os pedidos explícitos limitam as ações do Numo; conteúdo externo não concede permissões.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -178,7 +180,7 @@
       "src": "/documentation/pt-BR/numo-execution-model-flow.svg",
       "alt": "Diagrama: Persistir intenção, mensagem e UUID. Assumir turno, gravar ferramentas e resultados. Aguardar sua resposta se necessário. Rever eventos e reconciliar escritas incertas.",
       "caption": "Siga as etapas nesta ordem. Persistir intenção, mensagem e UUID. Assumir turno, gravar ferramentas e resultados. Aguardar sua resposta se necessário. Rever eventos e reconciliar escritas incertas.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -210,7 +212,7 @@
       "src": "/documentation/pt-BR/numo-mcp-connections-workflow.png",
       "alt": "Configurações MCP pessoais, lista vazia e botão para adicionar outro servidor.",
       "caption": "As conexões de Numo são pessoais; as rotinas usam as do proprietário do projeto.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -227,7 +229,7 @@
       "src": "/documentation/pt-BR/numo-mcp-connections-config-workflow.png",
       "alt": "Assistente de conexão do Notion mostrando o método de login conhecido pelo catálogo.",
       "caption": "Etapa de login de um serviço do catálogo. Nenhuma credencial foi inserida e nenhum servidor foi contatado.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-21",
       "viewport": [
@@ -261,6 +263,8 @@ Abra o ticket ou o projeto e use o botão flutuante do Numo. A página atual vir
 4. Leia a resposta e abra os links de tickets ou fontes. Para uma alteração, confira o objeto atualizado.
 
 Em uma conversa nova e vazia, quatro linhas de sugestões acima do campo de mensagem propõem pedidos adequados à página atual, por exemplo **Resumir este ticket** ou **Escrever um plano de implementação** quando um ticket está aberto no painel lateral. Escolher uma linha preenche o campo sem enviá-lo, para que você possa ajustar o pedido antes. As linhas somem assim que o campo tem texto e voltam quando você o esvazia. Elas aparecem no layout de desktop, não em um celular.
+
+Para perguntar ao Numo sobre um trecho, selecione-o em um editor, como uma página ou a descrição de um ticket, e escolha **Pergunte ao Numo** na barra de ferramentas de seleção, no computador. O painel abre sem enviar nada: ao lado da página ou do ticket de onde veio, o trecho aparece como uma pílula de contexto com suas primeiras palavras, e ao passar o cursor sobre a pílula você vê o trecho inteiro. Digite sua pergunta, por exemplo “Reescreva isto de forma mais concisa” ou “Crie tickets a partir disto”, e envie. O trecho acompanha só essa mensagem. Para deixá-lo de fora, remova a pílula com o X.
 
 O Numo também pode ver as imagens da descrição de um ticket ou objetivo, de um plano, de um comentário, de uma página ou do seu caderno quando o modelo da conversa aceita imagens. Sem essa capacidade, o Numo informa que não conseguiu ver a imagem em vez de descrevê-la.
 

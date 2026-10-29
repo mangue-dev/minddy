@@ -8,6 +8,7 @@
 // plus the actions a surface adds, and places a block with `insertBlock()`.
 // Adding a table block will not require coming back here.
 
+import { OVERLAY_COLLISION_PADDING } from "@/components/ui/menu-surface";
 import {
   forwardRef,
   useEffect,
@@ -19,38 +20,74 @@ import {
 import { AppIcon } from "@/components/icon";
 import { Extension, type Editor, type Range } from "@tiptap/core";
 import { ReactRenderer } from "@tiptap/react";
-import { Suggestion, type SuggestionProps } from "@tiptap/suggestion";
+import { Suggestion, exitSuggestion, type SuggestionProps } from "@tiptap/suggestion";
 import { PluginKey } from "@tiptap/pm/state";
 import { cn } from "@/lib/utils";
-import { MENU_ROW_ACTIVE_CLASS, MENU_ROW_CLASS, MENU_SCROLL_CLASS, MENU_SURFACE_CLASS } from "@/components/ui/menu-surface";
+import { MENU_ROW_ACTIVE_CLASS, MENU_ROW_CLASS } from "@/components/ui/menu-surface";
 import {
+  SLASH_GROUPS,
   insertBlock,
   slashItems,
   type PageBlock,
+  type SlashGroup,
 } from "@/components/pages/blocks";
+import { groupBySection, stepSuggestion } from "@/lib/suggestion-menu";
+import {
+  SuggestionMenu,
+} from "@/components/editor/suggestion-menu";
+import {
+  findSpacedSuggestionMatch,
+  SUGGESTION_CHIP_CLASS,
+  SUGGESTION_CHIP_EMPTY_CLASS,
+  suggestionPlaceholder,
+} from "@/components/editor/suggestion-chip";
+
+/** The section an entry is listed under, with its translated header. */
+export interface PageSlashSection {
+  id: string;
+  label: string;
+}
 
 /** One entry of the menu, once the keys have been translated. The translation
  is done OUTSIDE: the register has no translator.
 
  A BLOCK entry carries its descriptor; a surface ACTION (the notebook's
  dictation, MIN-728) carries what it runs instead. Both filter and render the
- same way, so the menu itself never knows which is which. */
+ same way, so the menu itself never knows which is which. An entry without a
+ `section` (a routine's skills) is listed without a header. */
 export type PageSlashItem =
-  | { key: string; label: string; icon: PageBlock["icon"]; keywords: string[]; block: PageBlock }
   | {
       key: string;
       label: string;
       icon: PageBlock["icon"];
       keywords: string[];
+      section?: PageSlashSection;
+      block: PageBlock;
+    }
+  | {
+      key: string;
+      label: string;
+      icon: PageBlock["icon"];
+      keywords: string[];
+      section?: PageSlashSection;
       block?: undefined;
       run: (editor: Editor, range: Range) => void;
     };
+
+type PagesTranslator = (key: PageBlock["labelKey"]) => string;
+
+/** The section of a registry group, translated: for a surface action listed
+ with the blocks of that group. */
+export function slashSection(t: PagesTranslator, group: SlashGroup): PageSlashSection {
+  const entry = SLASH_GROUPS.find((candidate) => candidate.group === group) ?? SLASH_GROUPS[0];
+  return { id: entry.group, label: t(entry.labelKey) };
+}
 
 /** The translated catalog, in menu order. `t` comes from the calling component
  (namespace `Pages`), typed with its namespace — without it, TypeScript gives up
  (TS2589) and no longer checks any keys. */
 export function pageSlashItems(
-  t: (key: PageBlock["labelKey"]) => string,
+  t: PagesTranslator,
   options?: Parameters<typeof slashItems>[0]
 ): PageSlashItem[] {
   return slashItems(options).map((block) => ({
@@ -59,7 +96,14 @@ export function pageSlashItems(
     label: t(block.labelKey),
     icon: block.icon,
     keywords: block.slash.keywords,
+    section: slashSection(t, block.slash.group),
   }));
+}
+
+/** The entries in the order the menu lists them: section by section, each
+ section where its first entry stands. */
+export function sectionedSlashItems(items: readonly PageSlashItem[]) {
+  return groupBySection(items, (item) => item.section?.id);
 }
 
 /** The menu filter: the TRANSLATED label first, then the aliases — which
@@ -86,14 +130,23 @@ interface SlashMenuRef {
   onKeyDown: (event: KeyboardEvent) => boolean;
 }
 
-type SlashProps = SuggestionProps<PageSlashItem>;
+type SlashProps = SuggestionProps<PageSlashItem> & {
+  /** Closes the menu and leaves the typed text as text. */
+  close: () => void;
+};
 
 const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
   props,
   ref
 ) {
+  // The flat order the keyboard walks: section after section. Index
+  // `items.length` is the “Close menu” row under the list.
+  const { ordered: items, sections } = sectionedSlashItems(props.items);
+  const count = items.length;
   const [selected, setSelected] = useState(0);
-  useEffect(() => setSelected(0), [props.items]);
+  // An empty list highlights no row, so Enter keeps its meaning in the text
+  // during the render before a query with no match closes the menu.
+  useEffect(() => setSelected(props.items.length ? 0 : -1), [props.items]);
 
   /**
  * The keyboard TAKES OVER the mouse.
@@ -124,33 +177,38 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
   // from the fourth ↓: the keyboard continued to work, but we could not
   // could no longer see what we were choosing. `nearest`: we do not recenter a line
   // already visible, which would cause the list to jump with each press.
+  // The first row also brings its section header back into view.
   const listRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    listRef.current
-      ?.querySelector<HTMLElement>(`[data-slash-index="${selected}"]`)
+    const list = listRef.current;
+    if (!list || selected < 0 || selected >= count) return;
+    if (selected === 0) {
+      list.scrollTop = 0;
+      return;
+    }
+    list
+      .querySelector<HTMLElement>(`[data-slash-index="${selected}"]`)
       ?.scrollIntoView({ block: "nearest" });
-  }, [selected]);
+  }, [selected, count]);
 
   const choose = (index: number) => {
-    const item = props.items[index];
+    if (index === count) {
+      props.close();
+      return;
+    }
+    const item = items[index];
     if (item) props.command(item);
   };
 
   useImperativeHandle(ref, () => ({
     onKeyDown: (event) => {
-      const n = props.items.length;
-      if (n === 0) return false;
-      if (event.key === "ArrowUp") {
+      if (event.key === "ArrowUp" || event.key === "ArrowDown") {
         setKeyboard(true);
-        setSelected((s) => (s - 1 + n) % n);
-        return true;
-      }
-      if (event.key === "ArrowDown") {
-        setKeyboard(true);
-        setSelected((s) => (s + 1) % n);
+        setSelected((s) => stepSuggestion(s, count, event.key === "ArrowUp" ? "up" : "down"));
         return true;
       }
       if (event.key === "Enter" || event.key === "Tab") {
+        if (selected < 0) return false;
         choose(selected);
         return true;
       }
@@ -158,53 +216,50 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
     },
   }));
 
-  if (props.items.length === 0) return null;
-
-  const rows: ReactNode[] = props.items.map((item, index) => {
-    const Icon = item.icon;
-    return (
-      <button
-        type="button"
-        key={item.key}
-        data-slash-index={index}
-        onMouseDown={(e) => e.preventDefault()}
-        // `mousemove` with a real movement, not `mouseenter`: a row scrolled
-        // under a still pointer must not take the selection.
-        onMouseMove={(event) => {
-          if (!keyboard && movedPointer(event.nativeEvent)) setSelected(index);
-        }}
-        onClick={() => choose(index)}
-        className={cn(
-          // No color transition: with a held arrow the highlight moves faster
-          // than a fade, which smeared it over several rows.
-          MENU_ROW_CLASS,
-          index === selected ? MENU_ROW_ACTIVE_CLASS : "text-foreground/90",
-          // During keyboard navigation, the mouse no longer paints anything:
-          // two lines lit, that would be two responses to “Enter”.
-          keyboard && "pointer-events-none"
-        )}
-      >
-        <AppIcon icon={Icon} className="size-4 shrink-0 text-muted-foreground" />
-        <span className="truncate">{item.label}</span>
-      </button>
-    );
-  });
-
   return (
-    <div
-      role="listbox"
-      data-floating-surface
-      // The padding moves onto the scroller, so rows scroll right to the
-      // surface's edge and keep its padding once brought into view.
-      className={cn("min-w-52 overflow-hidden", MENU_SURFACE_CLASS, "p-0")}
-    >
-      <div
-        ref={listRef}
-        className={cn("scrollbar-quiet max-h-80 p-2", MENU_SCROLL_CLASS)}
-      >
-        {rows}
-      </div>
-    </div>
+    <SuggestionMenu
+      sections={sections}
+      sectionLabel={(id) => sections.find((section) => section.id === id)?.items[0]?.section?.label ?? null}
+      listRef={listRef}
+      className="w-60"
+      listClassName="max-h-80"
+      quiet={keyboard}
+      closeActive={selected === count}
+      onClose={props.close}
+      onCloseHover={() => {
+        if (!keyboard) setSelected(count);
+      }}
+      closeWhenEmpty={props.query !== "" && !props.loading}
+      renderItem={(item, index): ReactNode => (
+        <button
+          type="button"
+          role="option"
+          aria-selected={index === selected}
+          key={item.key}
+          data-slash-index={index}
+          onMouseDown={(e) => e.preventDefault()}
+          // `mousemove` with a real movement, not `mouseenter`: a row scrolled
+          // under a still pointer must not take the selection.
+          onMouseMove={(event) => {
+            if (!keyboard && movedPointer(event.nativeEvent)) setSelected(index);
+          }}
+          onClick={() => choose(index)}
+          className={cn(
+            // No color transition: with a held arrow the highlight moves faster
+            // than a fade, which smeared it over several rows.
+            MENU_ROW_CLASS,
+            "text-foreground",
+            index === selected && MENU_ROW_ACTIVE_CLASS,
+            // During keyboard navigation, the mouse no longer paints anything:
+            // two lines lit, that would be two responses to “Enter”.
+            keyboard && "pointer-events-none"
+          )}
+        >
+          <AppIcon icon={item.icon} className="size-4 shrink-0" />
+          <span className="truncate">{item.label}</span>
+        </button>
+      )}
+    />
   );
 });
 
@@ -212,10 +267,12 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
  distinguish a click inside it from a click outside it. */
 export const PAGE_SLASH_MENU_ATTR = "data-page-slash-menu";
 
-const EDGE = 8;
+const EDGE = OVERLAY_COLLISION_PADDING;
 const GAP = 6;
 
-export function renderSlashMenu() {
+/** The menu of one suggestion; `pluginKey` is that suggestion's, which
+ “Close menu” exits as Escape does. */
+export function renderSlashMenu(pluginKey: PluginKey) {
   let renderer: ReactRenderer<SlashMenuRef, SlashProps> | null = null;
   let menuEl: HTMLElement | null = null;
   let caretRect: (() => DOMRect | null) | null = null;
@@ -242,8 +299,18 @@ export function renderSlashMenu() {
     requestAnimationFrame(place);
   };
 
+  const withClose = (suggestion: SuggestionProps<PageSlashItem>): SlashProps => ({
+    ...suggestion,
+    close: () => {
+      const { view } = suggestion.editor;
+      exitSuggestion(view, pluginKey);
+      view.focus();
+    },
+  });
+
   return {
-    onStart: (props: SlashProps) => {
+    onStart: (suggestion: SuggestionProps<PageSlashItem>) => {
+      const props = withClose(suggestion);
       renderer = new ReactRenderer(SlashMenu, { props, editor: props.editor });
       menuEl = renderer.element as HTMLElement;
       menuEl.setAttribute(PAGE_SLASH_MENU_ATTR, "");
@@ -256,7 +323,8 @@ export function renderSlashMenu() {
       window.addEventListener("scroll", place, true);
       window.addEventListener("resize", place);
     },
-    onUpdate: (props: SlashProps) => {
+    onUpdate: (suggestion: SuggestionProps<PageSlashItem>) => {
+      const props = withClose(suggestion);
       renderer?.updateProps(props);
       caretRect = () => props.clientRect?.() ?? null;
       reposition();
@@ -283,6 +351,8 @@ export const PageSlashCommand = Extension.create<{
    editor is built (a routine's repository skills) passes a reader, read at
    each "/" — the plugin is built once. */
   items: PageSlashItem[] | (() => PageSlashItem[]);
+  /** The muted “Type to search” after an empty “/”, read at each state. */
+  placeholder?: () => string;
 }>({
   name: "pageSlashCommand",
 
@@ -295,6 +365,7 @@ export const PageSlashCommand = Extension.create<{
       const { items: catalog } = this.options;
       return typeof catalog === "function" ? catalog() : catalog;
     };
+    const pluginKey = new PluginKey("pageSlashCommand");
     return [
       Suggestion<PageSlashItem>({
         // pnpm resolves @tiptap/core twice (same version) — the editor
@@ -307,16 +378,24 @@ export const PageSlashCommand = Extension.create<{
         // during assembly (“Adding different instances of a keyed plugin”). THE
         // two only crossed when opening a page, the only surface to
         // wear both.
-        pluginKey: new PluginKey("pageSlashCommand"),
+        pluginKey,
         char: "/",
-        allowSpaces: false,
+        // One space stays in a typed query, two end it, and a space right
+        // after the bare “/” ends it at once (the text stays): the same rule
+        // as the “@” menu.
+        allowSpaces: true,
+        findSuggestionMatch: findSpacedSuggestionMatch,
+        // The search chip (components/editor/suggestion-chip.ts).
+        decorationClass: SUGGESTION_CHIP_CLASS,
+        decorationEmptyClass: SUGGESTION_CHIP_EMPTY_CLASS,
         items: ({ query }) => filterSlashItems(items(), query),
         command: ({ editor, range, props }) => {
           if (props.block) insertBlock(props.block, editor as unknown as Editor, range as Range);
           else props.run(editor as unknown as Editor, range as Range);
         },
-        render: renderSlashMenu,
+        render: () => renderSlashMenu(pluginKey),
       }),
+      suggestionPlaceholder(pluginKey, "pageSlashCommand", () => this.options.placeholder?.()),
     ];
   },
 });

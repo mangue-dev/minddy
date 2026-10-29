@@ -24,18 +24,14 @@ describe("page interface regressions", () => {
   it("shows a grab cursor only once a block drag actually starts", () => {
     const gutter = source("components/pages/block-gutter.tsx");
 
-    expect(gutter).toContain("onElementDragStart={() => setDragging(true)}");
+    expect(gutter).toContain("setDragging(true);");
+    // A block drag is a move: no "copy" (+) cursor while it passes the text.
+    expect(gutter).toContain('event.dataTransfer.effectAllowed = "move"');
+    expect(gutter).toContain('event.dataTransfer.dropEffect = "move"');
     expect(gutter).toContain("onElementDragEnd={() => setDragging(false)}");
     expect(gutter).toContain('dragging && "cursor-grabbing"');
     expect(gutter).not.toContain('"cursor-grab"');
     expect(gutter).not.toContain("active:cursor-grabbing");
-  });
-
-  it("shows the formatting toolbar only for focused text selections", () => {
-    const bubble = source("components/pages/page-comment-bubble.tsx");
-
-    expect(bubble).toContain("editor.view.hasFocus()");
-    expect(bubble).toContain("selection instanceof TextSelection");
   });
 
   it("uses app chrome for block comment annotations", () => {
@@ -49,7 +45,8 @@ describe("page interface regressions", () => {
     expect(comments).not.toContain(".title =");
     expect(comments).toContain("Decoration.inline(range.from, range.to");
     expect(css).toContain(".page-commented-passage");
-    expect(gutter).toContain("COMMENTED_GUTTER_SHIFT");
+    // A commented block keeps the gutter where every block has it.
+    expect(gutter).not.toContain("COMMENTED_GUTTER_SHIFT");
   });
 
   it("keeps page actions in a fixed header and opens the requested side-panel tab", () => {
@@ -78,7 +75,9 @@ describe("page interface regressions", () => {
     for (const id of [
       "new-subpage",
       "favorite",
-      "copy-for-agent",
+      "copy",
+      "copy-link",
+      "copy-content",
       "promote-to-issue",
       "publish",
       "export",

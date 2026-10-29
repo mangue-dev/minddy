@@ -15,7 +15,7 @@
 // hand, he withdraws for good — a cross.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AiAutoRotateIcon as CycleIcon, File02Icon, Cancel01Icon, FileAttachmentIcon, GitPullRequestIcon, InboxIcon, Layers01Icon, MessageMultiple01Icon, Settings01Icon, Target01Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
+import { AiAutoRotateIcon as CycleIcon, File02Icon, Cancel01Icon, FileAttachmentIcon, GitPullRequestIcon, InboxIcon, Layers01Icon, MessageMultiple01Icon, QuoteDownIcon, Settings01Icon, Target01Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { AppIcon } from "@/components/icon";
@@ -93,6 +93,11 @@ const STYLES: Record<
   settings: {
     icon: Settings01Icon,
     tint: "bg-slate-500/12 text-slate-600 dark:text-slate-400",
+  },
+  // A passage quoted from an editor: the quotation mark says it is text.
+  selection: {
+    icon: QuoteDownIcon,
+    tint: "bg-fuchsia-500/12 text-fuchsia-600 dark:text-fuchsia-400",
   },
   // Member and project never pass through this table: they carry their
   // its own figure (portrait, orb).

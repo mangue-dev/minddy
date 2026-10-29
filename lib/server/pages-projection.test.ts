@@ -39,7 +39,8 @@ const RICH = [
   "",
   "</details>",
   "",
-  "[[page:11111111-1111-4111-8111-111111111111]]",
+  // A subpage, cited with its page mention (the retired block's successor).
+  "[@Spec](mention:page/11111111-1111-4111-8111-111111111111)",
 ].join("\n");
 
 describe("projection de page côté serveur", () => {

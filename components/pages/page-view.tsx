@@ -1,5 +1,6 @@
 "use client";
 
+import { useOptionalPagePanelActions } from "@/lib/page-panel-context";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon, Message01Icon, MoreHorizontalIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
@@ -21,6 +22,7 @@ import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
 import { useAppNavigation } from "@/lib/use-app-router";
 import { useAppTabDeparture } from "@/lib/app-tabs-context";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useFormatter, useTranslations } from "next-intl";
 import {
@@ -250,6 +252,17 @@ function isEmptyDoc(content: unknown): boolean {
  * to catch both by hand, we go back up - exactly what a
  * navigation from one page to another.
  */
+/** Where a page open in the side panel puts its menu: the panel's header
+    owns the slot, and trashing the page closes the panel instead of leaving
+    the screen underneath. */
+export interface PanelMenu {
+  slot: HTMLElement | null;
+  onTrashed: () => void;
+}
+
+/** The side panel's closing animation, before the history unmounts. */
+const HISTORY_CLOSE_MS = 400;
+
 export function PageView({
   projectId,
   pageId,
@@ -257,6 +270,7 @@ export function PageView({
   onNavigationReady,
   active = true,
   panel = false,
+  panelMenu,
 }: {
   projectId: string;
   pageId: string;
@@ -264,6 +278,7 @@ export function PageView({
   onNavigationReady?: (flush: () => Promise<boolean>) => void;
   active?: boolean;
   panel?: boolean;
+  panelMenu?: PanelMenu;
 }) {
   const [reload, setReload] = useState(0);
   return (
@@ -273,6 +288,7 @@ export function PageView({
       pageId={pageId}
       active={active}
       panel={panel}
+      panelMenu={panelMenu}
       onNavigate={onNavigate}
       onNavigationReady={onNavigationReady}
       onRestored={() => setReload((n) => n + 1)}
@@ -288,9 +304,11 @@ function PageSurface({
   onNavigationReady,
   active = true,
   panel = false,
+  panelMenu,
 }: {
   projectId: string;
   pageId: string;
+  panelMenu?: PanelMenu;
   /** A version has just been put back in place: the surface is going back up. */
   onRestored: () => void;
   onNavigate?: (pageId: string, databaseId?: string) => void;
@@ -318,6 +336,7 @@ function PageSurface({
   const { members, loading: membersLoading } = useMembersQuery(projectId, true);
   // Project readers (MIN-693) read the page: no editing, no document writes.
   const { canWrite, canComment } = useProjectCapabilities(projectId);
+  const pagePanel = useOptionalPagePanelActions();
   const present = usePresentOn(pageId);
   // The watch heartbeat: while this surface holds the document open, the
   // server knows someone is reading it and stays quiet about agent writes.
@@ -642,11 +661,15 @@ function PageSurface({
         }
       },
       opened: (id) => {
-        // The block has just been placed in THIS document: we write it BEFORE
-        // leave. Without this `flush`, navigation unmounts the editor with, in
-        // the draft, a block that no one has yet recorded — the
-        // subpage exists, its link in the parent does not.
-        void flushRef.current().finally(() => openPage(id));
+        // The mention has just been placed in THIS document: we write it
+        // BEFORE the subpage opens. Without this `flush`, a navigation unmounts
+        // the editor with, in the draft, a mention no one has recorded yet —
+        // the subpage exists, its link in the parent does not.
+        // The subpage opens in the side panel, beside the page it was written
+        // from, so writing goes on here; the panel's “Expand” reaches the full
+        // page. A page created from the sidebar still opens in full.
+        void flushRef.current().finally(() =>
+          pagePanel ? pagePanel.openPage(projectId, id) : openPage(id));
       },
       duplicate: async (id) => {
         try {
@@ -670,7 +693,7 @@ function PageSurface({
         }
       },
     }),
-    [pagesLoaded, byId, base, createPage, duplicatePage, pageId, restorePage, openPage, t]
+    [pagesLoaded, byId, base, createPage, duplicatePage, pageId, restorePage, openPage, pagePanel, projectId, t]
   );
 
   /* ── Delete block moves page to trash ─────────────────────── */
@@ -747,6 +770,17 @@ function PageSurface({
   // makes one believe a page. The name comes from the MEMBERS of the project, already charged
   // for mentions and presence — never the raw email (lib/display-name).
   const [historyOpen, setHistoryOpen] = useState(false);
+  // Mounted on demand (it may render a second editor), and kept past its
+  // closing so the panel slides out instead of vanishing.
+  const [historyMounted, setHistoryMounted] = useState(false);
+  useEffect(() => {
+    if (historyOpen) {
+      setHistoryMounted(true);
+      return;
+    }
+    const timer = setTimeout(() => setHistoryMounted(false), HISTORY_CLOSE_MS);
+    return () => clearTimeout(timer);
+  }, [historyOpen]);
   const [historyTab, setHistoryTab] = useState<PageHistoryTab>("activity");
   const [historyRequest, setHistoryRequest] = useState(0);
   const openHistory = useCallback((tab: PageHistoryTab) => {
@@ -828,7 +862,9 @@ function PageSurface({
       void (async () => {
         try {
           const trashed = await trashPage(target.id);
-          pushPagesHistory(base);
+          // In the side panel the page underneath stays: only the panel goes.
+          if (panelMenu) panelMenu.onTrashed();
+          else pushPagesHistory(base);
           toast.success(
             trashed > 1
               ? t("trashedWithChildren", { count: trashed })
@@ -839,7 +875,7 @@ function PageSurface({
         }
       })();
     },
-    [base, t, trashPage]
+    [base, t, trashPage, panelMenu]
   );
 
   const documentMenu = usePageDocumentMenu({
@@ -858,44 +894,53 @@ function PageSurface({
     [pageId, title, summary?.favorite, page?.favorite]
   );
 
-  /* ── ⌘⇧L: copy this page for an agent ───────────────────────────── */
+  // The page's menu: in the header of a full page, and in the side panel's
+  // own header (between Expand and Close) when the page is open there.
+  const pageMenu = (
+    <IssueActionsMenu
+      searchable={false}
+      // The key is ONLY displayed there: ⌘⇧L aims at the open page, which is
+      // this one and not the tree line we are flying over.
+      actions={documentMenu.actionsFor(pageRef, { shortcut: true })}
+      trigger={
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="text-muted-foreground hover:text-foreground"
+          aria-label={t("pageOptions")}
+        >
+          <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
+        </Button>
+      }
+    />
+  );
+
+  /* ── ⌘⇧L: copy this page's link ─────────────────────────────────── */
   //
-  // Notion's gesture, and for the same reason: giving the page we read to
-  // someone else is too frequent to go through a menu. That
-  // “someone else” here means, it’s an agent — hence the contact details
-  // MCP next to the URL, and the optional instruction (lib/page-agent-prompt.ts).
+  // Notion's gesture, and for the same reason: handing over the page you are
+  // reading is too frequent to go through a menu. It copies the same link as
+  // the menu's Copy → Copy link.
   //
-  // ⇧ IS MANDATORY, and it is not an aesthetic choice. ⌘L naked fails
-  // never on the page on a Mac: the address bar takes it to the level of
-  // browser, before the document — the `keydown` does not arrive, and there is therefore
-  // nothing at `preventDefault`. Verified in real life on PR 67, after having written it
-  // in ⌘L. The neighborhood is already in ⌘⇧ for the same reason (⌘⇧D, dictation,
-  // lib/create-context.tsx): this is the form that passes.
+  // ⇧ IS MANDATORY, and not for looks: on a Mac the address bar takes a bare
+  // ⌘L at the browser level, before the document, so its `keydown` never
+  // arrives (verified on PR 67). The neighbors use ⌘⇧ for the same reason
+  // (⌘⇧D, dictation, lib/create-context.tsx).
   //
-  // He OPENS the dialog instead of copying, and this is deliberate: the entry of the
-  // menu and shortcut are the same gesture, they should give the same
-  // result. The field takes focus, so ⌘⇧L then ⌘Enter copy without anything
-  // to ask, against the possibility of saying what we want to see done.
+  // It needs no particular focus: the listener sits on `window`, in capture,
+  // and the caret may be in the editor, in the title or nowhere — the page
+  // on screen is the one copied.
   //
-  // It does not require ANY particular focus: it is enough for the page to be
-  // the screen. The listener is on `window`, in capture — the cursor can be
-  // in the editor, in the title or nowhere, it is the displayed page that we
-  // copie.
-  //
-  // `openAgentCopyRef`: the shortcut does not resubscribe on each keystroke in
-  // the title. `pageRef` changes with each character typed, and a `useEffect` which
-  // would depend on it would put an earpiece per letter.
-  const openAgentCopyRef = useRef<() => void>(() => {});
-  openAgentCopyRef.current = () => documentMenu.openAgentCopy(pageRef, "shortcut");
+  // `copyLinkRef`: the listener is not resubscribed on every keystroke in the
+  // title, which renews `pageRef`.
+  const copyLinkRef = useRef<() => void>(() => {});
+  copyLinkRef.current = () => documentMenu.copyLink(pageRef, "shortcut");
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (!active || !matchesModShiftCombo(event, "l")) return;
-      // A dialog already open takes up the screen - this one included: without this
-      // guard, the shortcut while writing the instruction would reopen the
-      // dialog and would erase what was just typed.
+      // A dialog owns the screen: the page behind it is not the one in view.
       if (hasVisibleOpenDialog()) return;
       event.preventDefault();
-      openAgentCopyRef.current();
+      copyLinkRef.current();
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
@@ -1009,7 +1054,8 @@ function PageSurface({
             onNavigate={openPage}
           />
         </div>
-        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+        {/* Desktop-sized icon buttons grow to a finger's size on touch screens. */}
+        <div className="ml-auto flex shrink-0 items-center gap-1.5 pointer-coarse:gap-1">
           <PagePresence userIds={present} members={members} />
           <PageStatus
             state={saveState}
@@ -1037,25 +1083,11 @@ function PageSurface({
             </TooltipTrigger>
             <TooltipContent side="bottom">{t("comments")}</TooltipContent>
           </Tooltip>
-          <IssueActionsMenu
-            searchable={false}
-            // The key is ONLY displayed there: ⌘⇧L aims at the open page, which is
-            // this one and not the tree line we are flying over.
-            actions={documentMenu.actionsFor(pageRef, { shortcut: true })}
-            trigger={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="text-muted-foreground hover:text-foreground"
-                aria-label={t("pageOptions")}
-              >
-                <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
-              </Button>
-            }
-          />
+          {pageMenu}
         </div>
       </AppContentHeader>}
       {documentMenu.dialogs}
+      {panelMenu?.slot ? createPortal(pageMenu, panelMenu.slot) : null}
 
       {/* The table of contents floats at the right edge of the PANEL, therefore out of the
           container that moves by: it stays in its place while we go down
@@ -1072,7 +1104,7 @@ function PageSurface({
             the chrome is used to place itself there. Title and blocks therefore share the
             same left edge, and the hover margin falls into the reserve instead
             to shift the body under the title. */}
-        <div className={cn("relative mx-auto w-full px-6 py-10", panel ? "max-w-3xl app-desktop:px-16" : page.database_schema != null ? "max-w-none app-desktop:pl-24 app-desktop:pr-10" : "max-w-3xl app-desktop:pl-24 app-desktop:pr-10")}>
+        <div className={cn("relative mx-auto w-full px-6 py-10", panel ? page.database_schema != null ? "max-w-3xl app-desktop:pl-24 app-desktop:pr-16" : "max-w-3xl app-desktop:px-16" : page.database_schema != null ? "max-w-none app-desktop:pl-24 app-desktop:pr-10" : "max-w-3xl app-desktop:pl-24 app-desktop:pr-10")}>
           {page.database_schema != null && canWrite && <DatabaseSetupBanner projectId={projectId} page={summary ?? page} />}
           <PageHeader
             title={title}
@@ -1123,7 +1155,7 @@ function PageSurface({
               <PageDatabaseProperties projectId={projectId} page={summary ?? page} database={byId.get(page.parent_id)!} />
             </fieldset>
           )}
-          {page.database_schema != null ? <PageDatabaseView projectId={projectId} database={summary ?? page} onOpen={(id) => onNavigate ? onNavigate(id, pageId) : openPage(id)} /> : <div ref={bodyRef} className="mt-6">
+          {page.database_schema != null ? <PageDatabaseView projectId={projectId} database={summary ?? page} compact={panel} onOpen={(id) => onNavigate ? onNavigate(id, pageId) : openPage(id)} /> : <div ref={bodyRef} className="mt-6">
             {/* What “assign a task” means when it comes off a page
                 rather than the notebook: the prompt names the page, and the navigation
                 waits for what is pending to be written (MIN-274). */}
@@ -1168,8 +1200,9 @@ function PageSurface({
           Saying “this page” when five are gone is trash
           a surprise rather than a trickle. */}
       {/* Activity and versions share one panel. It is mounted only when one of
-          the header shortcuts requests it because it may render a second editor. */}
-      {historyOpen ? (
+          the header shortcuts requests it because it may render a second editor,
+          and unmounted once its closing animation has played. */}
+      {historyOpen || historyMounted ? (
         <PageHistorySheet
           projectId={projectId}
           pageId={pageId}

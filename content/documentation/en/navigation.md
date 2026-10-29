@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 16,
-  "sourceRevision": 16,
+  "revision": 18,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -58,14 +58,17 @@
       "components/settings-shell.tsx",
       "components/settings/account-smart-fill-section.tsx",
       "components/objective-relations-section.tsx",
-      "components/create-issue-dialog.tsx"
+      "components/create-issue-dialog.tsx",
+      "components/app-shell-chrome.tsx",
+      "components/editor/find-bar.tsx",
+      "lib/keyboard/find-shortcut.ts"
     ]
   },
   "review": {
-    "revision": 16,
-    "fact": "agent:/root/min777 (panel paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min777 (en sentence on the page side panel with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 18,
+    "fact": "agent:claude-code (Command/Ctrl+F scope (page or task notebook on screen, the browser's find elsewhere and under another dialog) checked against lib/keyboard/find-shortcut.ts, components/editor/find-bar.tsx and lib/keyboard/shortcuts.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "views",
@@ -86,7 +89,7 @@
       "src": "/documentation/en/work-navigation.png",
       "alt": "Project navigation beside the demonstration issue board.",
       "caption": "Use the project sidebar to switch between issues, objectives, pages and triage.",
-      "revision": 16,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -102,7 +105,7 @@
       "src": "/documentation/en/work-search.png",
       "alt": "Search results for a demonstration issue identifier.",
       "caption": "The palette finds the issue by identifier alongside project pages; opening a result preserves its access rules.",
-      "revision": 16,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -160,7 +163,9 @@ Open the command palette from the navigation search control. Search for a distin
 
 Press Command+K on macOS or Ctrl+K on Windows/Linux to open the command palette; Command/Ctrl+P is an alternative application binding. Outside editable text, ? opens shortcut help and C opens issue creation. On a hovered issue card or its supported detail controls, S opens status, P priority, E effort, A assignee, L categories, D due date and O objective. R adds a relation from the same places, on an objective page and in the new-issue form: choose the relation type, then the other issue or objective. When the card is part of a selection, these keys change every selected issue; assignee, objective, categories and relations only reach the selected issues of that card's project. Shift+C goes to a comment field, ready for typing, with the thread scrolled to its latest message: that of a hovered issue card or of a hovered row in the objectives, feedback, pull requests, pages or triage list, or, with nothing hovered, that of the issue, objective, feedback, pull request or page on screen. A page opens its **Activity** panel for it. Shift+C acts on that one item, even when the card is part of a selection. On an objective page and in the new-objective form, S opens its status, A its lead, D its target date and C its color; there, C does not create an issue. These single-key actions do not intercept typing in an input, textarea or content editor. Navigation sequences such as G then H (Home) and G then I (Inbox) use two successive keys; G then W reaches Pages only in a project context.
 
-To reach a setting, type its name in the command palette or in the filter field at the top of the settings sidebar. Both find every settings card and individual settings such as the language, the theme, each palette, transparency and the two **Starting an issue** switches. Choosing a result opens the right settings tab, scrolls to the card or row and highlights it. Command+T on macOS or Ctrl+T on Windows/Linux opens the new-tab palette; a setting chosen there opens in a new app tab. English and French keywords work whatever the interface language.
+To reach a setting, type its name in the command palette or in the filter field at the top of the settings sidebar. Both find every settings card and individual settings such as the language, the theme, each palette, transparency and the two **Starting an issue** switches. Choosing a result opens the right settings tab, scrolls to the card or row and highlights it. Command+T on macOS or Ctrl+T on Windows/Linux opens the new-tab palette; a setting chosen there opens in a new app tab. Inside a project, it also offers **New page**, which creates a page in that project and opens it in a new tab. English and French keywords work whatever the interface language.
+
+Command+F on macOS or Ctrl+F on Windows/Linux searches the page or the task notebook on screen with minddy's [find and replace bar](/docs/pages#find-and-replace). On other screens, and when another dialog is open over the page, it opens the browser's find.
 
 Use the keyboard shortcuts help to inspect the commands available on your platform. minddy distinguishes application shortcuts, issue-property actions and native desktop tab or window shortcuts. Check where focus is before using a command: typing inside an editor and acting on the surrounding issue are different contexts.
 
@@ -174,7 +179,7 @@ Every issue search lists issues in the same order: the palette, `@` mentions, th
 
 When a query describes the work instead of naming it, issue search also finds issues with a close meaning, even when they use other words. For example, “login fails after a password reset” can find an issue titled “Session lost when the password changes”. This applies to the command palette, `@` mentions in descriptions, pages, comments and the Numo composer, the relation pickers, **Mark as duplicate…** in triage, **Link an issue** on a pull request, Numo's **Add context** → **Issue** menu and **Link to an existing issue** on feedback.
 
-Text matches and exact identifiers always come first and keep their order. Shortly after you stop typing, at most five issues found by meaning are added after them under **Related by meaning**. Until they arrive, a **Searching by meaning…** line shows that the search is still running (in the command palette, only when no text result matches). If none is found, it reads **No issue related by meaning**. An issue already listed is not repeated, and the highlighted row does not move. Each picker keeps its own rules, so only issues it could already offer appear: a relation picker, for example, still offers only issues of the same project that are not linked yet. The command palette searches the projects you can read, up to the 25 most recently updated; its bulk-selection actions do not use search by meaning.
+Text matches and exact identifiers always come first and keep their order. Shortly after you stop typing, at most five issues found by meaning are added after them under **Related by meaning**. Until they arrive, a **Searching by meaning…** line shows that the search is still running (in the command palette, only when no text result matches). If none is found, it reads **No issue related by meaning**; an `@` menu with no text match closes instead. An issue already listed is not repeated, and the highlighted row does not move. Each picker keeps its own rules, so only issues it could already offer appear: a relation picker, for example, still offers only issues of the same project that are not linked yet. The command palette searches the projects you can read, up to the 25 most recently updated; its bulk-selection actions do not use search by meaning.
 
 Search by meaning has these limits:
 

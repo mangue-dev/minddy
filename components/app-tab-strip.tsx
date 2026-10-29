@@ -71,7 +71,14 @@ const RAIL_PAD_RIGHT = 8;
 const RAIL_MARGIN = 16;
 
 export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; onNewTabWarm?: () => void }) {
-  const { tabs, activeId, session, busy, error, loading, loadError, reload } = useAppTabs();
+  const { tabs: sessionTabs, activeId, session, busy, error, loading, loadError, reload } = useAppTabs();
+  // The order a drop asked for, shown in the very render that ends the drag:
+  // the session applies the move through its queue a moment later, and in
+  // between dnd-kit has already reset the tab, which jumped back to its old
+  // place before moving. Bound to the tabs it was computed from, so the
+  // session's next list, reordered by then, simply takes over.
+  const [dropOrder, setDropOrder] = useState<{ base: AppTab[]; tabs: AppTab[] } | null>(null);
+  const tabs = dropOrder && dropOrder.base === sessionTabs ? dropOrder.tabs : sessionTabs;
   const { projects } = useProjects();
   const projectById = useMemo(() => new Map(projects.map((project) => [project.id, project])), [projects]);
   const t = useTranslations("AppTabs");
@@ -181,6 +188,11 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
     const from = group.findIndex((tab) => tab.id === active);
     const to = group.findIndex((tab) => tab.id === over);
     const reordered = arrayMove(group, from, to);
+    let next = 0;
+    setDropOrder({
+      base: sessionTabs,
+      tabs: sessionTabs.map((tab) => (tab.pinned === source.pinned ? reordered[next++] : tab)),
+    });
     void session.move(active, reordered[to + 1]?.id ?? null);
   };
   const draggedTab = dragged ? tabs.find((tab) => tab.id === dragged) : undefined;
@@ -407,7 +419,7 @@ function SortableAppTab({ id, disabled, onKeyDown, children }: {
   const { setNodeRef, transform, transition, isDragging, listeners } = useSortable({ id, disabled });
   return <div ref={setNodeRef} role="presentation" {...listeners} onKeyDown={onKeyDown}
     className={isDragging ? "shrink-0 opacity-40" : "shrink-0"}
-    style={{ transform: CSS.Transform.toString(transform), transition, WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+    style={{ transform: CSS.Translate.toString(transform), transition, WebkitAppRegion: "no-drag" } as React.CSSProperties}>
     {children}
   </div>;
 }

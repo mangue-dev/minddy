@@ -165,8 +165,10 @@ describe("les libellés des blocs", () => {
 
 describe("le menu « / » et « transformer en »", () => {
   it("offrent chacun ce qui les concerne", () => {
-    // The entire catalog is INSERTABLE…
-    expect(slashItems()).toHaveLength(PAGE_BLOCKS.length);
+    // The entire catalog is INSERTABLE, except a retired block, which only
+    // stays to read stored documents (the subpage: it became a mention)…
+    expect(slashItems()).toHaveLength(PAGE_BLOCKS.filter((block) => !block.legacy).length);
+    expect(slashItems().map((block) => block.id)).not.toContain("subpage");
 
     // …but a separator and a subpage do not TRANSFORM: there is no
     // nothing to convert. This is precisely what `turnInto: false` says, and this
@@ -216,10 +218,33 @@ describe("le menu « / » et « transformer en »", () => {
     expect(active.map((item) => item.block.id)).toEqual(["heading2"]);
     editor.destroy();
   });
+
+  it("checks only the list a line belongs to, not “Text” as well", () => {
+    const editor = makeEditor("- a bullet");
+    editor.commands.setTextSelection({ from: 3, to: editor.state.doc.content.size - 2 });
+    expect(turnIntoItems(editor).filter((item) => item.active).map((item) => item.block.id))
+      .toEqual(["bulletList"]);
+    editor.destroy();
+
+    // Nested: the innermost list is the one the line is in.
+    const nested = makeEditor("1. first\n   - inner");
+    nested.commands.setTextSelection(nested.state.doc.content.size - 4);
+    expect(turnIntoItems(nested).filter((item) => item.active).map((item) => item.block.id))
+      .toEqual(["bulletList"]);
+    nested.destroy();
+
+    const plain = makeEditor("Just text");
+    expect(turnIntoItems(plain).filter((item) => item.active).map((item) => item.block.id))
+      .toEqual(["paragraph"]);
+    plain.destroy();
+  });
 });
 
+// A retired block writes what replaced it: its sample does not read back as it.
+const CURRENT_BLOCKS = PAGE_BLOCKS.filter((block) => !block.legacy);
+
 describe("l'aller-retour markdown de chaque bloc", () => {
-  it.each(PAGE_BLOCKS.map((block) => [block.id, block] as const))(
+  it.each(CURRENT_BLOCKS.map((block) => [block.id, block] as const))(
     "%s revient intact",
     (_id, block) => {
       const editor = makeEditor(block.markdown.sample);
@@ -232,7 +257,7 @@ describe("l'aller-retour markdown de chaque bloc", () => {
     // Without that, a sample which does not parse (therefore reread as a simple
     // paragraph) would cross the round trip without flinching and would not prove
     // rien du bloc.
-    for (const block of PAGE_BLOCKS) {
+    for (const block of CURRENT_BLOCKS) {
       if (block.id === "paragraph") continue;
       const editor = makeEditor(block.markdown.sample);
       const names = new Set<string>();

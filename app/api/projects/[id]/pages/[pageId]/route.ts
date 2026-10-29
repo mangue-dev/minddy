@@ -13,7 +13,8 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  const result = await getPage(pageId, auth.user.id, { projectId: id });
+  // The page is opened to be edited: legacy subpage blocks become mentions.
+  const result = await getPage(pageId, auth.user.id, { projectId: id, convertLegacy: true });
   if (!result.ok) {
     return NextResponse.json({ error: t(result.errorKey) }, { status: result.status });
   }

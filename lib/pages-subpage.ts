@@ -18,6 +18,13 @@
  * leaflet or list item. Looking only at the first level would leave
  * behind a block pointing towards the void — precisely what the ticket
  * seeks to prevent.
+ *
+ * Since the subpage became an inline mention, a parent cites its child with a
+ * LINK LINE: a paragraph that holds only the page's mention
+ * (`[@Title](mention:page/<id>)`). The `subpage` block survives only in pages
+ * stored before that change, until their first opening converts them
+ * (`convertSubpageBlocks`). Every helper here reads both forms; a page
+ * mentioned inside a sentence is text and is never removed by the mirror.
  */
 
 import type { PageDocJSON, PageNodeJSON } from "@/lib/pages-merge";
@@ -29,10 +36,94 @@ function childrenOf(node: PageNodeJSON | null | undefined): PageNodeJSON[] {
   return Array.isArray(node?.content) ? (node.content as PageNodeJSON[]) : [];
 }
 
-function pageIdOf(node: PageNodeJSON): string | null {
-  if (node.type !== SUBPAGE_TYPE) return null;
-  const id = node.attrs?.pageId;
+/** A page mention node's target. */
+function mentionedPageId(node: PageNodeJSON): string | null {
+  if (node.type !== "mention" || node.attrs?.mentionType !== "page") return null;
+  const id = node.attrs?.mentionId;
   return typeof id === "string" && id.length > 0 ? id : null;
+}
+
+/** A link line: a paragraph whose only content is one page mention. */
+function linkLinePageId(node: PageNodeJSON): string | null {
+  if (node.type !== "paragraph") return null;
+  const parts = childrenOf(node).filter(
+    (child) => !(child.type === "text" && typeof child.text === "string" && !child.text.trim()),
+  );
+  return parts.length === 1 ? mentionedPageId(parts[0]) : null;
+}
+
+/** The page a block stands for: a legacy subpage block or a link line. */
+function pageIdOf(node: PageNodeJSON): string | null {
+  if (node.type === SUBPAGE_TYPE) {
+    const id = node.attrs?.pageId;
+    return typeof id === "string" && id.length > 0 ? id : null;
+  }
+  return linkLinePageId(node);
+}
+
+/** The attributes of a page mention, as the editor's mention node stores them.
+    The label stays empty: a pill resolves the current title on display, and
+    agents read mentions relabeled for them. */
+export function pageMentionNode(pageId: string, label = ""): PageNodeJSON {
+  return {
+    type: "mention",
+    attrs: {
+      mentionType: "page",
+      mentionId: pageId,
+      mentionLabel: label,
+      seed: null,
+      color: null,
+      icon: null,
+      status: null,
+      legacy: null,
+    },
+  };
+}
+
+/** The link line that cites `pageId`, keeping a block id when one is given. */
+export function pageLinkLine(pageId: string, blockId?: unknown): PageNodeJSON {
+  return {
+    type: "paragraph",
+    ...(typeof blockId === "string" && blockId ? { attrs: { blockId } } : {}),
+    content: [pageMentionNode(pageId)],
+  };
+}
+
+/**
+ * Every legacy `subpage` block of the document turned into a link line, in
+ * place — in a list item or a leaflet too. The block id is kept, so comments
+ * and block links anchored on it still find it. `converted` counts the blocks;
+ * the document is returned untouched when it is zero.
+ */
+export function convertSubpageBlocks(
+  doc: PageDocJSON | null | undefined,
+): { doc: PageDocJSON | null | undefined; converted: number } {
+  if (!doc) return { doc, converted: 0 };
+  let converted = 0;
+  const walk = (nodes: PageNodeJSON[]): PageNodeJSON[] => {
+    let changed = false;
+    const out = nodes.map((node) => {
+      if (node.type === SUBPAGE_TYPE) {
+        converted += 1;
+        changed = true;
+        const id = node.attrs?.pageId;
+        // A block placed before its page existed points nowhere: an empty
+        // paragraph keeps the line without inventing a link.
+        return typeof id === "string" && id
+          ? pageLinkLine(id, node.attrs?.blockId)
+          : { type: "paragraph", ...(node.attrs?.blockId ? { attrs: { blockId: node.attrs.blockId } } : {}) };
+      }
+      const children = childrenOf(node);
+      if (children.length === 0) return node;
+      const next = walk(children);
+      if (next === children) return node;
+      changed = true;
+      return { ...node, content: next };
+    });
+    return changed ? out : nodes;
+  };
+  const content = walk(childrenOf(doc));
+  return converted === 0 ? { doc, converted: 0 } : { doc: { ...doc, content }, converted };
 }
 
 /**
@@ -57,12 +148,25 @@ export function subpageIdsIn(doc: PageDocJSON | null | undefined): string[] {
   return out;
 }
 
-/** Does the document cite this page? */
+/** Does the document cite this page — as a block, a link line or a mention
+    in a sentence? */
 export function hasSubpage(
   doc: PageDocJSON | null | undefined,
   pageId: string
 ): boolean {
-  return subpageIdsIn(doc).includes(pageId);
+  let found = false;
+  const walk = (nodes: PageNodeJSON[]) => {
+    for (const node of nodes) {
+      if (found) return;
+      if (pageIdOf(node) === pageId || mentionedPageId(node) === pageId) {
+        found = true;
+        return;
+      }
+      walk(childrenOf(node));
+    }
+  };
+  walk(childrenOf(doc));
+  return found;
 }
 
 /**
@@ -128,14 +232,17 @@ export function remapSubpages(
 
   const walk = (nodes: PageNodeJSON[]): PageNodeJSON[] =>
     nodes.map((node) => {
-      const id = pageIdOf(node);
-      const next = id ? idMap.get(id) : undefined;
+      // The legacy block names its page in `pageId`, a mention in `mentionId`
+      // — the mention of a copied page inside a sentence follows the copy too.
+      const legacy = node.type === SUBPAGE_TYPE ? pageIdOf(node) : null;
+      const mention = mentionedPageId(node);
+      const next = legacy ? idMap.get(legacy) : mention ? idMap.get(mention) : undefined;
       const children = childrenOf(node);
       const content = children.length > 0 ? walk(children) : null;
       if (!next && !content) return node;
       return {
         ...node,
-        ...(next ? { attrs: { ...node.attrs, pageId: next } } : {}),
+        ...(next ? { attrs: { ...node.attrs, [legacy ? "pageId" : "mentionId"]: next } } : {}),
         ...(content ? { content } : {}),
       };
     });
@@ -144,7 +251,8 @@ export function remapSubpages(
 }
 
 /**
- * Returns a subpage block to the END of the document, if it is no longer there.
+ * Returns the page's link line to the END of the document, if the document no
+ * longer cites it.
  *
  * At the end of the body, and not in its original place: remember the exact position
  * would ask to log the neighborhood of the block at the time of deletion,
@@ -167,7 +275,7 @@ export function appendSubpage(
       ...base,
       content: [
         ...childrenOf(base),
-        { type: SUBPAGE_TYPE, attrs: { pageId } },
+        pageLinkLine(pageId),
       ],
     },
     added: true,

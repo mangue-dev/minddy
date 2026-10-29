@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 18,
-  "sourceRevision": 16,
+  "revision": 20,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -58,14 +58,17 @@
       "components/settings-shell.tsx",
       "components/settings/account-smart-fill-section.tsx",
       "components/objective-relations-section.tsx",
-      "components/create-issue-dialog.tsx"
+      "components/create-issue-dialog.tsx",
+      "components/app-shell-chrome.tsx",
+      "components/editor/find-bar.tsx",
+      "lib/keyboard/find-shortcut.ts"
     ]
   },
   "review": {
-    "revision": 18,
-    "fact": "agent:/root/min777 (panel paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed); agent:claude-code (MIN-762 UI label correction: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of navigation-steps, search-and-shortcuts-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min777 (it sentence on the page side panel with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-762 label edit; self-reviewed; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 20,
+    "fact": "agent:claude-code (Command/Ctrl+F scope (page or task notebook on screen, the browser's find elsewhere and under another dialog) checked against lib/keyboard/find-shortcut.ts, components/editor/find-bar.tsx and lib/keyboard/shortcuts.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (it changed passages with catalog UI labels; equivalent meaning to en revision 18; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "views",
@@ -86,7 +89,7 @@
       "src": "/documentation/it/work-navigation.png",
       "alt": "Navigazione del progetto accanto alla bacheca dei ticket dimostrativi.",
       "caption": "La barra del progetto permette di aprire ticket, obiettivi, pagine e triage.",
-      "revision": 18,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -103,7 +106,7 @@
       "src": "/documentation/it/work-search.png",
       "alt": "Risultati della ricerca dell’identificativo di un ticket dimostrativo.",
       "caption": "La palette trova il ticket tramite identificativo insieme alle pagine del progetto; aprire un risultato conserva le sue regole di accesso.",
-      "revision": 18,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -162,7 +165,9 @@ Apri la palette dei comandi dal controllo di ricerca della navigazione. Cerca un
 
 Premi Command+K su macOS o Ctrl+K su Windows/Linux per aprire la palette dei comandi; Command/Ctrl+P è una scorciatoia alternativa dell’applicazione. Fuori dal testo modificabile, ? apre la guida delle scorciatoie e C la creazione di ticket. Su una scheda di ticket sotto il puntatore o nei suoi controlli di dettaglio supportati, S apre lo stato, P la priorità, E l’impegno, A l’assegnatario, L le categorie, D la scadenza e O l’obiettivo. R aggiunge una relazione dagli stessi punti, nella pagina di un obiettivo e nel modulo di nuovo ticket: scegli il tipo di relazione, poi l’altro ticket o obiettivo. Se la scheda fa parte di una selezione, questi tasti modificano tutti i ticket selezionati; assegnatario, obiettivo, categorie e relazioni valgono solo per i ticket selezionati del progetto di quella scheda. Maiusc+C porta a un campo del commento pronto per scrivere, con la conversazione scorsa fino all’ultimo messaggio: quello di una scheda di ticket sotto il puntatore o di una riga sotto il puntatore nell’elenco di obiettivi, feedback, pull request, pagine o triage, oppure, se non c’è nulla sotto il puntatore, quello del ticket, dell’obiettivo, del feedback, della pull request o della pagina sullo schermo. Una pagina apre per questo il suo pannello **Attività**. Maiusc+C agisce solo su quell’elemento, anche se la scheda fa parte di una selezione. Nella pagina di un obiettivo e nel modulo di nuovo obiettivo, S apre il suo stato, A il responsabile, D la data limite e C il colore; lì, C non crea un ticket. Queste azioni con un solo tasto non intercettano la scrittura in campi, aree di testo o editor di contenuti. Le sequenze di navigazione come G e poi H (Home) o G e poi I (Posta in arrivo) usano due tasti successivi. G e poi W porta a Pagine solo nel contesto di un progetto.
 
-Per raggiungere un’impostazione, digitane il nome nella palette dei comandi o nel campo di filtro in cima alla barra laterale delle impostazioni. Entrambi trovano ogni riquadro di impostazioni e le singole impostazioni, come la lingua, il tema, ogni palette, la trasparenza e i due interruttori di **Avviare un ticket**. Scegliendo un risultato si apre la scheda di impostazioni giusta, la pagina scorre fino al riquadro o alla riga e lo evidenzia. Comando+T su macOS o Ctrl+T su Windows/Linux apre la palette della nuova scheda; un’impostazione scelta lì si apre in una nuova scheda dell’app. Le parole chiave in inglese e in francese funzionano qualunque sia la lingua dell’interfaccia.
+Per raggiungere un’impostazione, digitane il nome nella palette dei comandi o nel campo di filtro in cima alla barra laterale delle impostazioni. Entrambi trovano ogni riquadro di impostazioni e le singole impostazioni, come la lingua, il tema, ogni palette, la trasparenza e i due interruttori di **Avviare un ticket**. Scegliendo un risultato si apre la scheda di impostazioni giusta, la pagina scorre fino al riquadro o alla riga e lo evidenzia. Comando+T su macOS o Ctrl+T su Windows/Linux apre la palette della nuova scheda; un’impostazione scelta lì si apre in una nuova scheda dell’app. Dentro un progetto offre anche **Nuova pagina**, che crea una pagina in quel progetto e la apre in una nuova scheda. Le parole chiave in inglese e in francese funzionano qualunque sia la lingua dell’interfaccia.
+
+Comando+F su macOS o Ctrl+F su Windows/Linux cerca nella pagina o nel taccuino delle attività sullo schermo con la [barra di ricerca e sostituzione](/it/documentazione/pages#find-and-replace) di minddy. Nelle altre schermate, e quando un’altra finestra di dialogo è aperta sopra la pagina, apre la ricerca del browser.
 
 Usa la guida delle scorciatoie per esaminare i comandi disponibili sulla tua piattaforma. minddy distingue scorciatoie dell’applicazione, azioni sulle proprietà dei ticket e scorciatoie native per schede o finestre desktop. Controlla dove si trova il focus prima di usare un comando: scrivere dentro un editor e agire sul ticket circostante sono contesti diversi.
 
@@ -176,7 +181,7 @@ Ogni ricerca di ticket elenca i ticket nello stesso ordine: la palette, le menzi
 
 Quando una ricerca descrive il lavoro invece di nominarlo, la ricerca dei ticket trova anche ticket di significato vicino, anche se usano altre parole. Per esempio, «l’accesso non riesce dopo il ripristino della password» può trovare un ticket intitolato «Sessione persa al cambio della password». Vale per la palette dei comandi, le menzioni `@` nelle descrizioni, nelle pagine, nei commenti e nel compositore di Numo, i selettori delle relazioni, **Segna come duplicato...** nel triage, **Collega un ticket** su una pull request, il menu **Aggiungi contesto** → **Ticket** di Numo e **Collega a un ticket esistente** sui feedback.
 
-Le corrispondenze testuali e gli identificativi esatti vengono sempre per primi e mantengono il loro ordine. Poco dopo che hai smesso di scrivere, al massimo cinque ticket trovati per significato si aggiungono dopo di essi sotto **Correlati per significato**. Finché non arrivano, una riga **Ricerca per significato…** indica che la ricerca è ancora in corso (nella palette dei comandi, solo quando nessun risultato testuale corrisponde). Se non ne trova nessuno, indica **Nessun ticket correlato per significato**. Un ticket già mostrato non viene ripetuto e la riga evidenziata non si sposta. Ogni selettore mantiene le proprie regole, quindi compaiono solo ticket che poteva già proporre: un selettore delle relazioni, per esempio, continua a proporre solo ticket dello stesso progetto non ancora collegati. La palette dei comandi cerca nei progetti che puoi leggere, fino ai 25 aggiornati più di recente; le sue azioni di selezione multipla non usano la ricerca per significato.
+Le corrispondenze testuali e gli identificativi esatti vengono sempre per primi e mantengono il loro ordine. Poco dopo che hai smesso di scrivere, al massimo cinque ticket trovati per significato si aggiungono dopo di essi sotto **Correlati per significato**. Finché non arrivano, una riga **Ricerca per significato…** indica che la ricerca è ancora in corso (nella palette dei comandi, solo quando nessun risultato testuale corrisponde). Se non ne trova nessuno, indica **Nessun ticket correlato per significato**; un menu `@` senza corrispondenze testuali si chiude invece. Un ticket già mostrato non viene ripetuto e la riga evidenziata non si sposta. Ogni selettore mantiene le proprie regole, quindi compaiono solo ticket che poteva già proporre: un selettore delle relazioni, per esempio, continua a proporre solo ticket dello stesso progetto non ancora collegati. La palette dei comandi cerca nei progetti che puoi leggere, fino ai 25 aggiornati più di recente; le sue azioni di selezione multipla non usano la ricerca per significato.
 
 La ricerca per significato ha questi limiti:
 

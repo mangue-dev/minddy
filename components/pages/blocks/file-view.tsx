@@ -38,7 +38,7 @@ import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
  * The download address depends on the form of the `src` — application or URL
  * signed by a published page: cf. `fileDownloadHref` (lib/page-files.ts).
  */
-export function FileView({ node, selected, editor, deleteNode, updateAttributes }: NodeViewProps) {
+export function FileView({ node, editor, deleteNode, updateAttributes }: NodeViewProps) {
   const editable = useEditorEditable(editor);
   const t = useTranslations("Pages");
   const tResources = useTranslations("Resources");
@@ -106,12 +106,9 @@ export function FileView({ node, selected, editor, deleteNode, updateAttributes 
       as="div"
       className={cx(
         "my-1 flex items-center gap-3 rounded-lg border border-border px-3 py-2 transition-colors",
-        src && "hover:bg-muted",
-        // Selected, the line DARKENS and nothing more (MIN-282):
-        // the blue ring doubled a frame that this block already has, and two lines
-        // concentric with two rays reads like a rendering defect. THE
-        // radius, he remains - here he draws a map, he does not crop anything.
-        selected && "bg-muted"
+        src && "hover:bg-muted"
+        // Selected, the line shows the editor's selection box, as every
+        // block does (`.ProseMirror-selectednode`, app/globals.css).
       )}
       contentEditable={false}
     >

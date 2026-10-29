@@ -92,6 +92,22 @@ it("submits on the send shortcut and leaves plain Enter to the editor", async ()
   expect(onSubmit).toHaveBeenCalledOnce();
 });
 
+it("sends on ⌘Enter without a line break, and breaks the line on ⇧Enter", async () => {
+  const onSubmit = vi.fn();
+  const api = await mount({ value: "Hello", onSubmit });
+  const editor = api().editor()!;
+  const dom = editor.view.dom;
+  editor.commands.focus("end");
+
+  dom.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", metaKey: true, bubbles: true, cancelable: true }));
+  expect(onSubmit).toHaveBeenCalledOnce();
+  expect(editor.getJSON().content?.[0]?.content).toEqual([{ type: "text", text: "Hello" }]);
+
+  dom.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, bubbles: true, cancelable: true }));
+  expect(onSubmit).toHaveBeenCalledOnce();
+  expect(editor.getJSON().content?.[0]?.content?.at(-1)).toEqual({ type: "hardBreak" });
+});
+
 it("lets a comment draft be cleared from outside after sending", async () => {
   const { CommentEditor } = await import("./comment-editor");
   let setDraft!: (value: string) => void;

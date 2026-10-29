@@ -13,19 +13,19 @@
  *
  * ## Losses assumed
  *
- * | Ce qui tombe | Pourquoi | Ce qui reste |
+ * | What is dropped | Why | What remains |
  * | --- | --- | --- |
  * | The color of a passage (text and background) | Markdown has no color. The mark is removed when writing rather than copied into `<span>`: a clear loss is better than a tag in the middle of what Numo reads (see blocks/color.ts) | The text, word for word |
  * | The FOLDED state of a leaflet (`open`) | `<details>` carries the attribute, but it is a reading state, specific to the viewer, not content | The summary and the folded body |
  * | The pill of a mention | A mention IS of the text (`@Nom`, `@MIN-42`) — the node is only a habit, restated upon rereading by lib/mention-scan | `@Nom`, literally |
  * | The block ID (`blockId`) | It only makes sense within a document; a markdown from Numo does not carry any | A NEW ID, added during rereading (`stampBlockIds`) |
  * | The title of a subpage | It is never copied into the parent body, by construction: it is resolved on display (see blocks/subpage.ts) | `[[page:<id>]]`, therefore the target |
- * | The WIDTH of an image | `![…](…)` has no attribute. The width is a display setting - how many columns the image occupies -, never the content (see blocks/image.ts) | The image, at its default width |
  * | The WEIGHT and type of a file | A markdown link only carries its text and address. These are two comfort indications, rereadable from `page_files`: the name and the file itself are there | `[nom](url)`, so the file |
+ * | An EMPTY equation | It says nothing; the editor removes one saved empty, and the projection writes none (see blocks/math.ts) | The text around it |
  *
  * These losses apply to a WHOLE replacement. A targeted agent edit (append,
  * passage rewrite) keeps every block whose Markdown it did not change exactly as
- * stored, colors, widths, pills and IDs included (`reconcileBodyBlocks`, MIN-688):
+ * stored, colors, pills and IDs included (`reconcileBodyBlocks`, MIN-688):
  * only the blocks it actually rewrote go through the table above.
  *
  * The LEGEND of an image does NOT fall, and it is a choice: it is the
@@ -34,8 +34,10 @@
  * say losing one each time there and back.
  *
  * Everything else — titles, lists, tasks and their four states, nesting,
- * quote, callout (including its icon and color), code, separator, leaflet,
- * subpage, bold/italic/code/link —
+ * quote, callout (including its icon and color), code, equations (`$latex$`
+ * inline, a `$$` fence for a block; see blocks/math.ts), separator, leaflet,
+ * subpage, bold/italic/code/link, the width of a resized image (its
+ * `"width=60%"` title, see blocks/image.ts) —
  * returns identical, and lib/pages-markdown.test.ts plays it block by block, in
  * BROADCASTING the register: a block added without its projection causes the sequence to fall.
  *
@@ -161,7 +163,7 @@ export function bodyToMarkdown(
  * whose Markdown did NOT change taken back from the previous body.
  *
  * Reparsing Markdown regenerates block IDs and drops what Markdown cannot say
- * (a color, an image width, a mention pill, a folded state — the losses table
+ * (a color, a mention pill, a folded state — the losses table
  * above). Applied as a whole, a one-word edit by Numo would therefore rewrite
  * every block: comments and links anchored on block IDs would lose their
  * target, and a collaborator typing anywhere in the page would see their

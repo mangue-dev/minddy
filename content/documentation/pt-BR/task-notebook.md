@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 9,
+  "revision": 12,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -43,14 +43,20 @@
       "components/editor/comment-editor.tsx",
       "components/scratchpad/scratchpad-editor.tsx",
       "lib/scratchpad-search.ts",
-      "components/command-palette.tsx"
+      "components/command-palette.tsx",
+      "components/editor/mobile-editor-toolbar.tsx",
+      "components/editor/find-bar.tsx",
+      "lib/keyboard/find-shortcut.ts",
+      "components/pages/blocks/math.ts",
+      "components/editor/math-edit-menu.tsx",
+      "components/editor/block-selection.ts"
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of task-notebook-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 12,
+    "fact": "agent:claude-code (Command/Ctrl+F find and replace bar in the open notebook checked against components/scratchpad/scratchpad-editor.tsx, components/editor/find-bar.tsx and lib/keyboard/find-shortcut.ts; equations (the `/` Equation entry, `$$…$$` typed in a line, click to edit the LaTeX with a live preview in a popover or phone sheet, red error, empty save removing it, `$…$` and `$$` fence Markdown with prices kept as text) checked against components/pages/blocks/math.ts, components/editor/math-edit-menu.tsx and lib/pages-math.test.ts; the pointer to block selection (drag, Escape, Command/Ctrl+A) in the shared editor checked against components/editor/block-selection.ts and components/scratchpad/scratchpad-editor.tsx; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the changed controls)",
+    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; equivalent meaning to en revision 11; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "issues",
@@ -68,7 +74,7 @@
       "src": "/documentation/pt-BR/work-task-notebook.png",
       "alt": "Tarefas pessoais de demonstração traduzidas no caderno.",
       "caption": "O caderno acompanha etapas pessoais fora da hierarquia de tickets do projeto. Os status das tarefas de exemplo permanecem iguais.",
-      "revision": 10,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -92,7 +98,7 @@ Abra o caderno de tarefas pelos controles pessoais do aplicativo, ou use Command
 
 Para reencontrar uma tarefa, abra a paleta de comandos com Command+K no macOS ou Ctrl+K no Windows/Linux e digite palavras da tarefa. As tarefas ainda a fazer aparecem em **Caderno de tarefas**, com a sua seção; tarefas concluídas ou canceladas e perguntas não aparecem. Escolha uma para abrir o caderno nessa tarefa. Enquanto você não digitar nada, a paleta não lista as tarefas do caderno.
 
-O caderno usa o mesmo editor das páginas do projeto, com as mesmas alças de bloco: passe o cursor sobre um bloco para arrastá-lo, abrir seu menu ou adicionar um bloco com **+**. Digite `/` para inserir uma tarefa, oferecida primeiro, ou um título, uma lista, uma citação, um **Destaque**, um bloco de código, um **Bloco recolhível** ou um divisor, ou escolha **Ditar uma tarefa** para falar as tarefas em voz alta. O caderno continua salvo em Markdown, então Numo e os agentes conectados leem as mesmas tarefas e estados. Selecione um texto para formatá-lo ou adicionar um link. Cole ou solte uma imagem, ou escolha **Imagem** no menu `/`, para inseri-la em uma nota. Os outros tipos de arquivo ficam nas páginas.
+O caderno usa o mesmo editor das páginas do projeto, com as mesmas alças de bloco: passe o cursor sobre um bloco para arrastá-lo, abrir seu menu ou adicionar um bloco com **+**. Digite `/` para inserir uma tarefa, oferecida primeiro, ou um título, uma lista, uma citação, um **Destaque**, um bloco de código, uma **Equação**, um **Bloco recolhível** ou um divisor, ou escolha **Ditar uma tarefa** para falar as tarefas em voz alta. O caderno continua salvo em Markdown, então Numo e os agentes conectados leem as mesmas tarefas e estados. Selecione um texto para formatá-lo ou adicionar um link. Selecione blocos inteiros como em uma página, arrastando sobre eles, com um retângulo de seleção desenhado ao lado ou abaixo das anotações, com Esc ou com Command/Ctrl+A, como explica o [guia de páginas](/pt-br/documentacao/pages#editor-formatting). Cole ou solte uma imagem, ou escolha **Imagem** no menu `/`, para inseri-la em uma nota. Os outros tipos de arquivo ficam nas páginas. No celular, a barra acima do teclado substitui as alças de bloco, a barra de seleção e o menu `@` digitado; o [guia de páginas](/pt-br/documentacao/pages#editor-formatting) a descreve. Enquanto o caderno está aberto, Command+F no macOS ou Ctrl+F no Windows/Linux abre a mesma [barra de localizar e substituir](/pt-br/documentacao/pages#find-and-replace) de uma página.
 
 O menu **Ações do caderno** (`…`) oferece **Copiar tudo como prompt**, que copia o caderno inteiro para o seu próprio agente de código, e **Remover tarefas concluídas e descartadas**. A remoção pede confirmação, exclui as tarefas concluídas e canceladas junto com os títulos que ficam vazios e mantém as tarefas a fazer ou em andamento. Para copiar menos, use **Copiar seção como prompt** em um título ou **Copiar como prompt** em uma tarefa. Se **Iniciar o ticket ou tarefa quando eu copiar seu prompt** estiver ativado em **Configurações da conta** → **Tickets**, copiar também passa para em andamento as tarefas pendentes copiadas.
 

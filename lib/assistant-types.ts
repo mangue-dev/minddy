@@ -307,6 +307,23 @@ export interface AssistantPageContext {
   pageId?: string;
   pageTitle?: string;
   pageIcon?: string | null;
+  /**
+   * Set by the server, never read from the request: the open page is a
+   * database, so "a view" means one of its saved views, not a board view.
+   */
+  pageIsDatabase?: boolean;
+  /**
+   * A passage the user selected in an editor and handed to Numo ("Ask Numo"
+   * in the selection toolbar). It belongs to the message being written: the
+   * composer drops it once that message is sent. Normalized and capped by
+   * `normalizeSelectionText` on both sides (lib/assistant-selection.ts).
+   */
+  selection?: AssistantSelectionContext;
+}
+
+/** The quoted passage of `AssistantPageContext.selection`. */
+export interface AssistantSelectionContext {
+  text: string;
 }
 
 /** Where a voluntary request entered Numo. This is product context, not an

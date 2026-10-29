@@ -357,11 +357,10 @@ export interface AnalyticsEventProps {
   page_published: { has_password: boolean; with_children: boolean };
   page_unpublished: NoProps;
   page_exported: { format: "md" | "zip" | "pdf" };
-  /** A page copied for an agent: `source` says if the gesture was made via the
- menu ⋯ or by ⌘L — this is what will say if the shortcut has found its audience,
- or if no one has discovered it. `with_instructions` says if the optional
- field was used: if it is never used, the dialog is toll. */
-  page_copied_for_agent: { source: "menu" | "shortcut"; with_instructions: boolean };
+  /** A page's link or Markdown content copied from its Copy menu: `source`
+      says whether the link came from the menu or from ⌘⇧L, which tells if the
+      shortcut found its audience. */
+  page_copied: { what: "content" | "link"; source: "menu" | "shortcut" };
 
   // ── Notifications ──
   notifications_opened: { unread_count: number; surface: "inbox" | "popover" };
@@ -731,7 +730,7 @@ const EVENT_NAMES = [
   "page_published",
   "page_unpublished",
   "page_exported",
-  "page_copied_for_agent",
+  "page_copied",
   // Notifications
   "notifications_opened",
   "notification_clicked",

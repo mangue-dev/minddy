@@ -128,6 +128,16 @@ export interface DocumentEditorProps {
   ariaLabel?: string;
 }
 
+/** An “@” or “/” suggestion menu is open: Enter picks its entry. Tiptap's
+    suggestion plugins keep `{ active }` in their state. */
+export function suggestionMenuOpen(editor: Editor): boolean {
+  return editor.state.plugins.some((plugin) => {
+    const state: unknown = plugin.getState(editor.state);
+    return typeof state === "object" && state !== null && "active" in state &&
+      "range" in state && (state as { active: unknown }).active === true;
+  });
+}
+
 export function DocumentEditor({
   value,
   document,
@@ -267,26 +277,36 @@ export function DocumentEditor({
     });
   }, [editor, apiRef]);
 
-  // The send shortcut, on the DOM in the BUBBLE phase: ProseMirror and the
-  // menus have already had the key — a menu that picks an entry prevents the
-  // event, and this listener lets it go without submitting.
+  // The send shortcut, on the DOM in the CAPTURE phase: ProseMirror's own
+  // Enter (a new paragraph, a list item) would otherwise take the key first,
+  // and plain Enter never sent in the “Enter sends” mode. An open “@” or “/”
+  // menu keeps the key to pick its entry.
+  // Escape stays in the BUBBLE phase, after the menus that close on it.
   useEffect(() => {
     if (!editor || editor.isDestroyed) return;
     return onEditorDom(editor, (dom) => {
-      const onKeyDown = (event: KeyboardEvent) => {
+      const onSend = (event: KeyboardEvent) => {
+        if (event.key !== "Enter" || event.shiftKey || event.isComposing || !submitRef.current) return;
+        if (!isSend(event) || suggestionMenuOpen(editor)) return;
+        // The key lands on this very element, where ProseMirror listens too:
+        // only an immediate stop keeps its Enter from running after the send.
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        submitRef.current();
+      };
+      const onEscape = (event: KeyboardEvent) => {
         if (event.defaultPrevented) return;
         if (event.key === "Escape" && escapeRef.current) {
           event.preventDefault();
           escapeRef.current();
-          return;
         }
-        if (event.key !== "Enter" || event.shiftKey || !submitRef.current) return;
-        if (!isSend(event)) return;
-        event.preventDefault();
-        submitRef.current();
       };
-      dom.addEventListener("keydown", onKeyDown);
-      return () => dom.removeEventListener("keydown", onKeyDown);
+      dom.addEventListener("keydown", onSend, true);
+      dom.addEventListener("keydown", onEscape);
+      return () => {
+        dom.removeEventListener("keydown", onSend, true);
+        dom.removeEventListener("keydown", onEscape);
+      };
     });
   }, [editor, isSend]);
 
@@ -301,7 +321,9 @@ export function DocumentEditor({
     <div
       className={cn("relative cursor-text", className)}
       onMouseDown={(event) => {
-        // Clicking the empty space below the content still focuses the editor.
+        // Clicking the empty space below the content still focuses the editor;
+        // a click in the margin beside a line already placed the caret there.
+        if (event.defaultPrevented) return;
         if (event.target === event.currentTarget && editor && !editor.isDestroyed) editor.commands.focus("end");
       }}
     >
@@ -324,6 +346,8 @@ export function DocumentEditor({
         extensions={extensions}
         autoFocus={autoFocus}
         immediateRender
+        // A composer's Esc cancels it; it does not select the block first.
+        escapeSelectsBlock={!onEscape}
         contentClassName={contentClassName}
       />
     </div>

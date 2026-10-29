@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 18,
-  "sourceRevision": 18,
+  "revision": 20,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -42,7 +42,6 @@
       "components/pages/page-tree.tsx",
       "components/pages/page-editor.tsx",
       "components/pages/page-slash-command.tsx",
-      "components/pages/page-comment-popover.tsx",
       "components/pages/page-presence.tsx",
       "components/pages/page-conflict-banner.tsx",
       "lib/pages-merge.ts",
@@ -70,14 +69,47 @@
       "components/pages/page-promotion-context.tsx",
       "components/pages/page-promotion-context.test.tsx",
       "components/pages/page-database-view.tsx",
-      "lib/server/page-database-views.ts"
+      "lib/server/page-database-views.ts",
+      "components/pages/page-comment-bubble.tsx",
+      "components/editor/mobile-editor-toolbar.tsx",
+      "components/editor/rich-editor.tsx",
+      "components/pages/page-extensions.ts",
+      "components/pages/blocks/image.ts",
+      "lib/pages-markdown.ts",
+      "components/pages/blocks/subpage.ts",
+      "lib/server/pages.ts",
+      "lib/pages-subpage.ts",
+      "lib/pages-export.ts",
+      "components/public-page-body.tsx",
+      "components/pages/page-comment-dialog.tsx",
+      "lib/keyboard/shortcuts.ts",
+      "components/editor/find-bar.tsx",
+      "components/editor/find-replace.ts",
+      "lib/keyboard/find-shortcut.ts",
+      "components/pages/blocks/math.ts",
+      "components/editor/math-edit-menu.tsx",
+      "components/code-block-lowlight.ts",
+      "app/globals.css",
+      "components/pages/page-peek-panel.tsx",
+      "components/global-page-panel.tsx",
+      "components/pages/pages-shell.tsx",
+      "components/pages/block-gutter.tsx",
+      "components/editor/suggestion-menu.tsx",
+      "components/editor/suggestion-chip.ts",
+      "components/editor/suggestion-menu.test.tsx",
+      "components/editor/block-selection.ts",
+      "components/editor/document-editor.tsx",
+      "app/tokens.css",
+      "components/pages/block-actions.ts",
+      "lib/selection-menu-visibility.test.ts",
+      "lib/mention-menu.ts"
     ]
   },
   "review": {
-    "revision": 18,
-    "fact": "agent:/root/min764 (database archive sentence checked against lib/server/database-export.ts and lib/server/page-database-views.ts: saved views are not exported and are copied by duplication; rest of the article unchanged since the previous review; no figure changed); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min764 (fr changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 20,
+    "fact": "agent:claude-code (new find-and-replace section (Command/Ctrl+F on a page on screen, in the side panel and under another dialog, seeded selection, highlights and position count, Enter and Shift+Enter, Match case, Whole word and Regular expression, invalid expressions, Show replace, Replace and Replace all for editors only, `$1` to `$9` and `$&`, plain replacement as typed, undo in one step, Escape, body only) checked against components/editor/find-bar.tsx, components/editor/find-replace.ts, lib/keyboard/find-shortcut.ts, components/editor/rich-editor.tsx and components/pages/page-editor.tsx; equations (the `/` Equation entry, `$$…$$` typed in a line, click to edit the LaTeX with a live preview in a popover or phone sheet, red error, empty save removing it, `$…$` and `$$` fence Markdown with prices kept as text) checked against components/pages/blocks/math.ts, components/editor/math-edit-menu.tsx and lib/pages-math.test.ts; selection toolbar order with Underline, Inline equation, Copy, Ask Numo and Comment, the code-block toolbar and its colors, the toolbar following the scrolled selection, Page options in the side panel, and the Comment on this block hover button checked against components/pages/page-comment-bubble.tsx, components/code-block-lowlight.ts, app/globals.css, components/pages/page-peek-panel.tsx, components/global-page-panel.tsx, components/pages/pages-shell.tsx, components/pages/page-view.tsx and components/pages/block-gutter.tsx; a database opened from a link now stays in the side panel, with entries opened in place and Back returning to the table, checked against components/global-page-panel.tsx and components/pages/page-peek-panel.tsx; the `/` and `@` menus grouped in sections (Basic blocks, Lists, Advanced blocks; people, projects, issues, objectives, pages, resources, Related by meaning), the Close menu row with its esc hint reached by the arrow keys, the search chip with Type to search, a space or Escape closing the menu and leaving the text, and the phone sheets grouped the same way checked against components/editor/suggestion-menu.tsx, components/editor/suggestion-chip.ts, components/pages/page-slash-command.tsx, components/markdown-mention.tsx, components/mention-suggest.tsx and components/editor/mobile-editor-toolbar.tsx; the @ menu keeping spaces in its query and closing with Escape, Close menu or a choice, while a space still closes the / menu, checked against components/markdown-mention.tsx (allowSpaces) and components/editor/suggestion-menu.test.tsx; block selection (a drag across blocks or from the margin beside the text, Shift-click and Shift+Up or Shift+Down past a block's edge, Escape to select the current block and again to clear it, Up and Down to move the selection, Backspace or Delete, Command/Ctrl+C and Command/Ctrl+X, Enter on one block, typing ignored, Command/Ctrl+A selecting the current block's text first and then every block, the block menu acting on every selected block, the rounded highlight in the selected-text color on blocks, images, files, code blocks, equations, dividers, mentions and inline code, Escape kept by comment composers, no block selection by drag on a touch screen) checked against components/editor/block-selection.ts, components/editor/block-selection.test.ts, components/editor/rich-editor.tsx, components/editor/document-editor.tsx, components/pages/block-actions.ts, app/globals.css and app/tokens.css, and in the browser on a page; selection toolbar opening above selected whole blocks, its actions applying to every selected block and blocks staying selected after Turn into checked against components/pages/page-comment-bubble.tsx (shouldShowSelectionMenu), components/pages/block-actions.ts (turnBlocksInto) and lib/selection-menu-visibility.test.ts; both / and @ menus keeping one space in their query and closing on two consecutive spaces, and the Comment on this block button highlighting its block on hover, checked against components/editor/suggestion-chip.ts (findSpacedSuggestionMatch), lib/mention-menu.ts (findActiveTriggerQuery) and components/editor/suggestion-menu.test.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (fr changed passages with catalog UI labels; equivalent meaning to en revision 20; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "notifications-and-inbox",
@@ -112,7 +144,7 @@
       "src": "/documentation/fr/page-create-menu.png",
       "alt": "Menu de création proposant Nouvelle page et Nouvelle base de données.",
       "caption": "Les contrôles des pages du projet permettent de choisir un document ou une base de données.",
-      "revision": 18,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -128,7 +160,7 @@
       "src": "/documentation/fr/page-editor.png",
       "alt": "Page de démonstration avec titres, paragraphes, cases de tâches et mention d’un ticket.",
       "caption": "Les titres, blocs de tâches et la mention AUR-2 structurent la page. Ce contenu est un exemple de démonstration.",
-      "revision": 18,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -144,7 +176,7 @@
       "src": "/documentation/fr/page-comments.png",
       "alt": "Fenêtre d’activité de la page avec modification de démonstration et champ de commentaire vide.",
       "caption": "Lisez l’activité et rédigez un commentaire dans le champ. Aucun commentaire n’a été envoyé dans cet exemple.",
-      "revision": 18,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -160,7 +192,7 @@
       "src": "/documentation/fr/page-file-states.png",
       "alt": "Page de démonstration avec un envoi inachevé et un fichier enregistré de 67 octets proposant Télécharger.",
       "caption": "Vérifiez l’état réel du fichier : la seconde pièce jointe est disponible, contrairement au premier envoi inachevé.",
-      "revision": 18,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -176,7 +208,7 @@
       "src": "/documentation/fr/page-history-preview.png",
       "alt": "Onglet Versions avec un état antérieur déplié, son auteur, Restaurer et l’indication de conservation pendant 30 jours.",
       "caption": "Prévisualisez un état enregistré et comparez-le à la page actuelle avant de le restaurer.",
-      "revision": 18,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -192,7 +224,7 @@
       "src": "/documentation/fr/page-publish.png",
       "alt": "Fenêtre de publication avec Privée sélectionné et options par mot de passe ou lien.",
       "caption": "Privée conserve la page dans le projet. Vérifiez le public souhaité avant de modifier la publication.",
-      "revision": 18,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -208,7 +240,7 @@
       "src": "/documentation/fr/page-export.png",
       "alt": "Menu d’export du document avec Markdown (.md) et Imprimer / PDF.",
       "caption": "Choisissez Markdown pour télécharger le document, ou Imprimer / PDF pour ouvrir la vue imprimable.",
-      "revision": 18,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -224,7 +256,7 @@
       "src": "/documentation/fr/file-preview.png",
       "alt": "Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger, Renommer et Retirer.",
       "caption": "Le lecteur commun place Fermer sous l’aperçu. Le menu Actions du fichier propose Télécharger et, si les droits le permettent, Renommer et Retirer.",
-      "revision": 18,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -255,13 +287,13 @@ Les pages constituent le wiki d’un projet, avec ses documents, ses sous-pages 
 
 Ouvrez les pages d’un projet en tant que propriétaire ou Membre ; les lecteurs peuvent ouvrir les pages mais pas en créer. Le menu + propose une page pour un document ou une base pour une liste structurée. Donnez un titre utile et écrivez la spécification, décision ou procédure à conserver.
 
-Créez des sous-pages pour les documents associés et déplacez-les ou réordonnez-les dans l’arbre. Une page ne peut pas devenir sa propre descendante. Une duplication crée un nouveau contenu plutôt qu’une référence vivante. Examinez la branche dupliquée avant modification ou partage.
+Créez des sous-pages pour les documents associés et déplacez-les ou réordonnez-les dans l’arbre. Une page ne peut pas devenir sa propre descendante. Une duplication crée un nouveau contenu plutôt qu’une référence vivante. Examinez la branche dupliquée avant modification ou partage. Pour créer une sous-page en écrivant, tapez `/` et choisissez **Sous-page** : minddy crée la page enfant sous la page courante, insère sa mention au curseur suivie d’une espace, puis ouvre la nouvelle page dans le panneau latéral, à côté de la page que vous rédigez ; choisissez **Agrandir** pour l’ouvrir en entier. Vous pouvez continuer d’écrire après la mention sur la même ligne, comme après toute mention. Une page créée depuis la barre latérale s’ouvre en entier. Une page plus ancienne peut encore afficher des blocs de sous-page : la première fois qu’une personne autorisée à la modifier l’ouvre, chaque bloc devient une ligne contenant seulement la mention de l’enfant, et les commentaires et liens de bloc continuent de pointer vers elle. L’ouverture par un lecteur ne convertit rien. Lorsque vous dupliquez une page avec ses sous-pages, les mentions des pages copiées pointent vers les copies, y compris dans une phrase.
 
 ### Favoris et suppression {#page-tree}
 
-Ajoutez une page aux favoris pour la faire apparaître en haut de l’arbre du projet. Ces favoris sont partagés dans le projet, contrairement à une note du carnet privé. Liez une page au ticket qui a besoin de son contenu actuel ; le titre de la ressource suit les renommages.
+Ajoutez une page aux favoris pour la faire apparaître en haut de l’arbre du projet. Ces favoris sont partagés dans le projet, contrairement à une note du carnet privé. Liez une page au ticket qui a besoin de son contenu actuel ; le titre de la ressource suit les renommages. Depuis le menu `…` de la page ouverte, **Copier** propose **Copier le lien** et **Copier le contenu de la page**, qui copie le titre et le corps en Markdown (non proposé pour une base). Commande+Maj+L sur macOS ou Ctrl+Maj+L sur Windows/Linux copie le lien de la page ouverte.
 
-La suppression envoie les pages prises en charge à la corbeille. Depuis un menu de page, **Déplacer vers la corbeille** demande d’abord une confirmation qui nomme la page et le nombre de sous-pages emportées ; elles restent restaurables depuis la corbeille pendant 30 jours. Vérifiez la branche avant de supprimer, puis utilisez la récupération lorsque le contenu doit être conservé. Une entrée avec des valeurs de colonnes peut être réordonnée dans sa base, mais pas déplacée à l’extérieur. Si un déplacement est refusé, vérifiez hiérarchie et type d’entrée plutôt que de le forcer.
+La suppression envoie les pages prises en charge à la corbeille. Depuis un menu de page, **Déplacer vers la corbeille** demande d’abord une confirmation qui nomme la page et le nombre de sous-pages emportées ; elles restent restaurables depuis la corbeille pendant 30 jours. Supprimer une mention ne déplace jamais une page vers la corbeille. Déplacer une page enfant vers la corbeille depuis l’arbre retire de la page parente la ligne qui ne contient que sa mention ; restaurer la page rajoute cette ligne à la fin de la parente, sauf si celle-ci la mentionne encore ailleurs. Une mention au sein d’une phrase n’est jamais retirée. Vérifiez la branche avant de supprimer, puis utilisez la récupération lorsque le contenu doit être conservé. Une entrée avec des valeurs de colonnes peut être réordonnée dans sa base, mais pas déplacée à l’extérieur. Si un déplacement est refusé, vérifiez hiérarchie et type d’entrée plutôt que de le forcer.
 
 
 ![Menu de création proposant Nouvelle page et Nouvelle base de données.](/documentation/fr/page-create-menu.png)
@@ -279,14 +311,32 @@ Contrairement à une tâche promue depuis le carnet, la page n’est pas retiré
 
 ## Écrire une page avec blocs et mentions {#page-editor}
 
-Ouvrez la page et modifiez son titre ou son corps en tant que propriétaire ou Membre. Les lecteurs peuvent ouvrir et lire les pages, mais ne peuvent ni les modifier, ni les importer, ni les dupliquer, ni les ajouter aux favoris, ni les publier, ni restaurer une version. Le menu slash et les commandes de mise en forme insèrent titres, texte, listes à puces, numérotées et de tâches, citations, encadrés, blocs de code, séparateurs, dépliants (sections repliables), sous-pages, images et fichiers. Un encadré peut porter une icône emoji et une couleur de palette ; utilisez-les pour distinguer une information, sans faire de la couleur l’unique moyen de comprendre un avertissement.
+Ouvrez la page et modifiez son titre ou son corps en tant que propriétaire ou Membre. Les lecteurs peuvent ouvrir et lire les pages, mais ne peuvent ni les modifier, ni les importer, ni les dupliquer, ni les ajouter aux favoris, ni les publier, ni restaurer une version. Le menu slash et les commandes de mise en forme insèrent titres, texte, listes à puces, numérotées et de tâches, citations, encadrés, blocs de code, équations, séparateurs, dépliants (sections repliables), sous-pages, images et fichiers. Un encadré peut porter une icône emoji et une couleur de palette ; utilisez-les pour distinguer une information, sans faire de la couleur l’unique moyen de comprendre un avertissement. Une **Équation** s’écrit en LaTeX et s’affiche avec KaTeX. Choisissez-la dans le menu `/` pour une équation sur sa propre ligne, ou saisissez du LaTeX entre `$$` dans une phrase, comme `$$x^2$$`, pour une équation dans le texte. Cliquez sur une équation pour modifier son LaTeX avec un aperçu en direct, dans une fenêtre contextuelle sur ordinateur ou un panneau sur téléphone. Un LaTeX impossible à afficher apparaît en rouge avec un message, et enregistrer une équation vide la supprime.
 
-Les mentions relient tickets, objectifs, personnes ou pages. Tapez `@` suivi d’un identifiant, de mots du titre ou d’une courte description ; une requête descriptive liste aussi des tickets trouvés [par le sens](/docs/navigation#search-by-meaning) sous **Liés par le sens**, après les correspondances textuelles. Les liens retour aident à retrouver les pages qui citent celle-ci. Un lien apporte du contexte, sans ouvrir les objets privés d’un autre projet.
+Le menu `/` range les blocs sous **Blocs de base**, **Listes** et **Blocs avancés**, et le menu `@` regroupe par type ce que vous pouvez mentionner, comme **Personnes**, **Tickets** ou **Pages**. Tant qu’un menu est ouvert, le `/` ou le `@` et ce que vous tapez ensuite s’affichent dans le texte sous forme de pastille, avec **Saisissez du texte pour chercher** jusqu’à la première lettre. Les flèches parcourent toutes les sections, et Entrée ou Tab valide le choix. Appuyez sur Échap, tapez deux espaces de suite ou choisissez **Fermer le menu**, en bas du menu, pour le fermer : ce que vous avez tapé reste du texte simple. Une espace tapée juste après le `/` ou le `@` seul ferme aussi le menu. Une fois une recherche saisie, une espace seule en fait partie : `/liste à puces` ou `@Camille Roy` cherche tel que tapé. Le menu se ferme également lorsque la recherche ne donne aucun résultat, sauf si une recherche par le sens est encore en cours.
 
-Un clic sur la mention d’une page, un lien retour, une page jointe à un ticket ou à un objectif, ou un lien vers une page dans un commentaire ou une réponse de Numo ouvre cette page dans un panneau latéral, au-dessus de ce que vous lisiez. Lisez-la ou modifiez-la sur place, choisissez **Agrandir** pour ouvrir la page entière, ou fermez le panneau pour revenir. Une base de données ne s’ouvre pas dans le panneau : elle s’ouvre en page entière.
+Les mentions relient tickets, objectifs, personnes ou pages. Tapez `@` suivi d’un identifiant, d’un nom ou d’un titre, qui peut contenir des espaces simples ; le menu se ferme de la même façon que le menu `/`, ainsi qu’au choix d’un élément. Un mot qui décrit le travail plutôt qu’il ne le nomme liste aussi des tickets trouvés [par le sens](/docs/navigation#search-by-meaning) sous **Liés par le sens**, après les correspondances textuelles. Les liens retour aident à retrouver les pages qui citent celle-ci. Un lien apporte du contexte, sans ouvrir les objets privés d’un autre projet. La mention d’une page qui n’a pas encore de titre affiche **Sans titre**.
+
+Un clic sur la mention d’une page, un lien retour, une page jointe à un ticket ou à un objectif, ou un lien vers une page dans un commentaire ou une réponse de Numo ouvre cette page dans un panneau latéral, au-dessus de ce que vous lisiez. Lisez-la ou modifiez-la sur place, choisissez **Agrandir** pour ouvrir la page entière, ou fermez le panneau pour revenir. Entre **Agrandir** et la fermeture, le menu **Options de la page** (`…`) du panneau propose les mêmes actions que sur la page entière ; déplacer la page vers la corbeille depuis ce menu ferme le panneau et vous laisse sur la page située dessous. Une base de données s’ouvre aussi dans le panneau, avec la barre d’outils compacte décrite dans le [guide des bases de données](/docs/databases#database-display) ; une entrée ouverte depuis son tableau prend sa place, et **Retour**, en haut à gauche du panneau, ramène au tableau.
 
 
 ![Page de démonstration avec titres, paragraphes, cases de tâches et mention d’un ticket.](/documentation/fr/page-editor.png)
+
+### Mettre en forme et écrire sur un téléphone {#editor-formatting}
+
+Les pages, les descriptions, les commentaires et le carnet de tâches partagent le même éditeur. Sélectionnez du texte, ou des blocs entiers comme décrit plus bas, pour ouvrir la barre de sélection. Sa première ligne indique le type du bloc : choisissez-la pour ouvrir **Transformer en** et changer le bloc. Viennent ensuite **Couleur**, pour le texte ou le fond, **Gras**, **Italique**, **Souligné**, **Barré**, **Code**, **Ajouter un lien** (ou **Retirer le lien** sur un lien), **Équation en ligne**, qui transforme le texte sélectionné en équation en ligne ou inversement, **Effacer la mise en forme** et **Copier**, qui copie la sélection. Sur ordinateur, une ligne **Demander à Numo** envoie le passage à Numo, comme le décrit le [guide de Numo](/fr/documentation/numo#work-with-numo), et sur une page une ligne **Commenter** ancre un commentaire sur la sélection. **Transformer en** ne coche que le type du bloc qui contient la sélection. Dans les listes de couleurs, ici comme dans le menu du bloc, chaque couleur apparaît sous son nom, écrit dans cette couleur ou sur ce fond. Cliquer hors de l’éditeur termine la sélection et masque la barre, tout comme choisir **Commenter**. Les infobulles indiquent les raccourcis : Commande+B, Commande+I, Commande+U, Commande+Maj+S et Commande+E sur macOS, ou Ctrl avec les mêmes touches sur Windows/Linux. Dans un éditeur, Commande/Ctrl+B met le texte en gras ; ailleurs, ce raccourci affiche ou masque toujours la barre latérale. Dans un bloc de code, la barre n’affiche que le type du bloc, **Couleur**, **Copier**, **Demander à Numo** et **Commenter** : une couleur de texte remplace la coloration syntaxique du code, une couleur de fond la conserve, et la couleur par défaut la rétablit. Les couleurs de texte et de fond ne sont pas conservées en Markdown. La barre suit le passage sélectionné pendant le défilement de la page et se ferme dès que ce passage sort de l’écran.
+
+Maj+Entrée passe à la ligne dans le même bloc. Commande/Ctrl+Entrée n’insère pas de saut de ligne : dans un commentaire ou un autre champ de rédaction, il envoie, quel que soit le raccourci d’envoi choisi dans vos [préférences](/fr/documentation/accounts#preferences), et si vous avez choisi Entrée comme raccourci d’envoi, Entrée envoie aussi.
+
+Pour sélectionner des blocs entiers, faites glisser la souris d’un bloc à un autre, ou tracez un rectangle de sélection depuis l’extérieur du texte : appuyez dans la marge à côté de celui-ci ou dans l’espace vide sous la page, puis faites glisser sur les blocs. Chaque bloc touché par le rectangle est sélectionné ; un clic à cet endroit sans glisser place toujours le curseur sur la ligne, et Échap annule le rectangle. Chaque bloc atteint est surligné, aux coins arrondis, de la couleur du texte sélectionné. Lorsqu’un seul bloc est sélectionné, la barre de sélection s’ouvre au-dessus : ses actions (**Transformer en**, **Couleur**, **Gras** et les autres mises en forme, **Copier**, **Demander à Numo**, **Commenter**) s’appliquent au bloc, et après **Transformer en** il reste sélectionné pour enchaîner une autre action. Lorsque plusieurs blocs sont sélectionnés, la barre reste masquée : ouvrez le menu de la poignée d’un bloc sélectionné, qui agit sur tous. Maj+clic sur un autre bloc, ou Maj+flèche haut et Maj+flèche bas au bord d’un bloc, étendent la sélection par blocs entiers. Échap sélectionne le bloc dans lequel vous écrivez, et Échap à nouveau efface la sélection. Commande+A sur macOS ou Ctrl+A sur Windows/Linux sélectionne d’abord le texte du bloc où vous êtes, bloc de code compris, et, pressé à nouveau, tous les blocs. Lorsque des blocs sont sélectionnés, les flèches haut et bas sélectionnent le bloc au-dessus ou au-dessous, Maj+flèche haut et Maj+flèche bas ajoutent ou retirent des blocs, Retour arrière ou Suppr les supprime, Commande/Ctrl+C les copie, Commande/Ctrl+X les coupe, et Entrée sur un seul bloc place le curseur à sa fin ; la saisie n’a aucun effet. Le menu du bloc agit sur tous les blocs sélectionnés. Les images, fichiers, blocs de code, équations, séparateurs, mentions et le code en ligne affichent le même surlignage lorsqu’ils sont sélectionnés, seuls ou dans une sélection. Lorsque vous rédigez ou modifiez un commentaire, Échap continue de le fermer ou de l’annuler. Sur un écran tactile, l’appui long sélectionne toujours du texte, et le glissement ne sélectionne pas de blocs.
+
+Sur un téléphone, l’éditeur n’affiche ni poignées de bloc ni barre de sélection, et la saisie de `@` reste un simple caractère. Lorsqu’un éditeur a le focus, une barre flottante se place au-dessus du clavier et se masque quand le clavier se ferme : **Insérer un bloc** (+) liste les blocs de cet éditeur, dans les mêmes sections que le menu `/`, et insère celui choisi au curseur, comme `/` ; **Mentionner** (@) liste les personnes, tickets, objectifs et pages à mentionner, regroupés par type ; viennent ensuite **Gras**, **Italique**, **Barré**, **Code**, **Couleur** (une feuille pour la couleur du texte ou du fond), **Ajouter un lien**, **Diminuer le retrait** et **Augmenter le retrait** dans une liste, **Commenter** sur une page, et **Masquer le clavier**, qui reste fixé à son extrémité droite. Une feuille inférieure dans laquelle vous écrivez s’agrandit sur toute la hauteur de l’écran, et la ligne en cours de saisie reste au-dessus du clavier. Un appui long sélectionne du texte dans un éditeur, et la barre et ses feuilles fonctionnent aussi dans le carnet de tâches. La navigation inférieure se masque tant qu’un champ de texte a le focus, par exemple un titre de page ou un commentaire. Sur un écran tactile, **Ajouter une icône** reste toujours visible sur une page.
+
+### Rechercher et remplacer dans une page {#find-and-replace}
+
+Lorsqu’une page est à l’écran, Commande+F sur macOS ou Ctrl+F sur Windows/Linux ouvre une barre de recherche en haut à droite du document, où que se trouve le curseur ; sur une page ouverte dans le panneau latéral, elle recherche dans cette page. Le texte que vous aviez sélectionné devient la recherche. Chaque résultat est surligné, le résultat courant plus fortement, et la barre indique sa position, par exemple 2 sur 7. Entrée passe au résultat suivant et Maj+Entrée au précédent ; Commande/Ctrl+F à nouveau sélectionne le texte recherché. **Respecter la casse**, **Mot entier** et **Expression régulière** affinent la recherche ; une expression non valide est signalée et ne surligne rien. La recherche porte sur le corps de la page, pas sur son titre.
+
+Si vous pouvez modifier la page, **Afficher le remplacement** ajoute un champ pour le texte de remplacement, avec **Remplacer**, qui remplace le résultat courant et passe au suivant, et **Tout remplacer**. Dans une expression régulière, `$1` à `$9` insèrent les groupes trouvés et `$&` le résultat entier ; une recherche simple insère le texte tel que vous l’avez tapé. Un remplacement est une modification ordinaire : il s’enregistre et parvient aux autres éditeurs comme une saisie, et Commande/Ctrl+Z l’annule, en une seule fois pour **Tout remplacer**. Échap ferme la barre et revient au texte. Le carnet de tâches a la même barre. Ailleurs dans minddy, et lorsqu’une autre boîte de dialogue est ouverte au-dessus de la page, Commande/Ctrl+F ouvre la recherche du navigateur.
 
 ### Enregistrement et portabilité {#editor-save}
 
@@ -294,11 +344,11 @@ Une page s’enregistre pendant la saisie : chaque modification parvient au serv
 
 Si la connexion est coupée, gardez la page ouverte. Les modifications non enregistrées restent sur la page et sont envoyées au retour de la connexion ; celles des autres arrivent en même temps et fusionnent avec les vôtres. minddy n’ouvre une autre page qu’une fois vos modifications enregistrées : tant qu’elles ne peuvent pas être envoyées, il vous garde sur la page et signale l’échec de l’enregistrement. Fermer un onglet du navigateur avec des modifications non enregistrées vous demande d’abord de confirmer ; quitter l’application de bureau ne le demande pas, et ces modifications sont perdues. Si vous perdez l’accès à la page ou le droit de la modifier alors que des modifications ne sont pas enregistrées, minddy les annule et affiche un message. Lorsque le serveur refuse une modification, par exemple un titre de plus de 500 caractères ou un lien dont le protocole n’est pas autorisé, minddy annule cette modification et affiche un message. L’historique aide à inspecter les versions enregistrées.
 
-Les exports Markdown et les lectures par des agents préservent les icônes et couleurs des encadrés dans leur représentation prise en charge. La fidélité du contenu et le traitement des pièces jointes varient selon le format ; vérifiez le résultat avant de remplacer la source. Utilisez des blocs de code pour les commandes littérales et gardez les prérequis et les avertissements autour d’elles.
+Les exports Markdown et les lectures par des agents préservent les icônes et couleurs des encadrés dans leur représentation prise en charge. Une image redimensionnée garde aussi sa largeur, écrite comme titre de l’image (`![alt](src "width=60%")`) : les modifications de Numo, des agents MCP ou du carnet de tâches ne la réinitialisent pas. Les agents lisent et écrivent une mention de page sous la forme `[@Title](mention:page/<id>)` ; l’ancienne forme `[[page:<id>]]` reste acceptée et lue comme la même mention, y compris au sein d’une ligne. Les équations circulent en LaTeX : `$E = mc^2$` au sein d’une ligne, et un bloc entre deux lignes `$$`. Un montant comme `$5` reste du texte. La fidélité du contenu et le traitement des pièces jointes varient selon le format ; vérifiez le résultat avant de remplacer la source. Utilisez des blocs de code pour les commandes littérales et gardez les prérequis et les avertissements autour d’elles.
 
 ## Discuter d’une page et gérer les conflits {#page-comments-and-collaboration}
 
-Ouvrez une page du projet et ses commentaires. Sélectionnez le contenu concerné pour créer un commentaire ancré, expliquez votre question ou votre proposition et mentionnez le membre à solliciter. Un lecteur peut commenter lorsque le propriétaire a activé **Peut commenter** pour lui. Répondez dans le fil pour garder la décision près du contexte. Résolvez-le lorsque la question est effectivement traitée.
+Ouvrez une page du projet et ses commentaires. Sélectionnez le contenu concerné pour créer un commentaire ancré, expliquez votre question ou votre proposition et mentionnez le membre à solliciter. Un lecteur peut commenter lorsque le propriétaire a activé **Peut commenter** pour lui. Répondez dans le fil pour garder la décision près du contexte. Résolvez-le lorsque la question est effectivement traitée. Le fil d’un bloc s’ouvre dans une boîte de dialogue sur ordinateur et dans une feuille inférieure sur téléphone, et non plus à côté du bloc : il montre le passage cité, les discussions existantes avec leurs réponses et un champ pour un nouveau commentaire. Ouvrez-le depuis le badge de commentaire du bloc, **Commenter** dans la barre de sélection ou le menu du bloc. Sur ordinateur, le survol d’un bloc sans commentaire affiche à sa droite un bouton **Commenter ce bloc**, à la hauteur de la poignée du bloc ; un bloc commenté y affiche son badge de commentaire à la place. Le survol de ce bouton met en évidence son bloc comme une sélection. Ce bouton n’apparaît pas sur un téléphone.
 
 Les `avatars` de présence indiquent les personnes qui consultent la page. Pendant qu’une personne modifie la page, son curseur et sa sélection apparaissent dans le corps et dans le titre, dans une couleur qui lui est propre et accompagnés de son nom. Le curseur d’un lecteur n’est pas affiché. Un curseur montre où quelqu’un travaille, pas que son texte est enregistré : l’indicateur d’enregistrement ne reflète que vos propres modifications.
 
@@ -355,7 +405,7 @@ Ouvrez la page en tant que propriétaire ou Membre, puis ses commandes de public
 
 Copiez le lien /p/ après réussite. Si la page a des descendants, examinez l’option d’inclusion des enfants et leur nombre. L’inclusion publie la branche choisie ; l’exclusion laisse leur contenu hors de cette publication. Une base publiée sans ses enfants ne révèle pas automatiquement tous les corps de ses entrées.
 
-Ouvrez le lien dans une session sans votre compte. Testez mot de passe éventuel, contenu, sous-pages souhaitées et téléchargements. Vous vérifiez ainsi la lecture du visiteur plutôt que vos permissions de membre plus larges.
+Ouvrez le lien dans une session sans votre compte. Testez mot de passe éventuel, contenu, sous-pages souhaitées et téléchargements. Une mention d’une page de l’ensemble publié affiche son titre et l’ouvre sous le même lien ; une mention de toute autre page affiche **Sous-page non publiée** et ne s’ouvre pas. Vous vérifiez ainsi la lecture du visiteur plutôt que vos permissions de membre plus larges.
 
 
 ![Fenêtre de publication avec Privée sélectionné et options par mot de passe ou lien.](/documentation/fr/page-publish.png)
@@ -370,7 +420,7 @@ Les liens des utilisateurs restent `noindex` et distincts du manuel officiel ind
 
 Ouvrez le menu du document, puis Exporter. Choisissez Markdown pour une page (.md) ou une branche (.zip), PDF pour ouvrir la vue d’impression, ou l’archive de base lorsque la page est une base de données. Vérifiez le périmètre proposé avant de confirmer : page, branche et archive de base n’ont pas le même contenu.
 
-Ouvrez l’export pour vérifier titres, encadrés, liens et pièces jointes nécessaires au lecteur. L’action PDF ouvre une vue documentaire lisible. Utilisez les commandes d’impression du navigateur pour imprimer ou enregistrer un PDF. Le menu du document ne propose pas d’importation générale ; les imports pris en charge commencent depuis une base vide, selon la [section d’import des bases](/fr/documentation/databases#import-a-database).
+Ouvrez l’export pour vérifier titres, encadrés, liens et pièces jointes nécessaires au lecteur. Dans l’export, les mentions affichent les titres actuels des pages, et les mentions des pages incluses dans l’export deviennent des liens relatifs. L’action PDF ouvre une vue documentaire lisible. Utilisez les commandes d’impression du navigateur pour imprimer ou enregistrer un PDF. Le menu du document ne propose pas d’importation générale ; les imports pris en charge commencent depuis une base vide, selon la [section d’import des bases](/fr/documentation/databases#import-a-database).
 
 
 ![Menu d’export du document avec Markdown (.md) et Imprimer / PDF.](/documentation/fr/page-export.png)

@@ -1,22 +1,21 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, Copy01Icon, Delete02Icon, Download01Icon, File02Icon, FileDownloadIcon, GlobeIcon, PrinterIcon, StarIcon, StarOffIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Copy01Icon, Delete02Icon, Download01Icon, File02Icon, FileDownloadIcon, GlobeIcon, Link01Icon, PrinterIcon, StarIcon, StarOffIcon, TextAlignLeftIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { PagePublishDialog } from "@/components/pages/page-publish-dialog";
-import { PageAgentCopyDialog } from "@/components/pages/page-agent-copy-dialog";
 import { usePromotePage } from "@/components/pages/page-promotion-context";
 import { NumoIcon } from "@/components/numo-icon";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
-import { downloadPageExportApi } from "@/lib/pages-api";
+import { downloadPageExportApi, fetchPageMarkdownApi } from "@/lib/pages-api";
 import { descendantIds } from "@/lib/pages";
-import { buildPageAgentPrompt } from "@/lib/page-agent-prompt";
 import { useModShiftShortcut } from "@/lib/keyboard/use-mod-shortcut";
 import { trackEvent } from "@/lib/analytics";
+import { pageHref } from "@/lib/pages-navigation";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 
 export type PageMenuTarget = {
@@ -45,7 +44,7 @@ export function usePageDocumentMenu({
   onToggleFavorite: (page: PageMenuTarget) => void;
   onTrash: (page: PageMenuTarget) => void;
 }): {
-  /** `shortcut` is only true for the open page targeted by ⌘⇧L. */
+  /** `shortcut` is only true for the open page, whose link ⌘⇧L copies. */
   actionsFor: (
     page: PageMenuTarget,
     options?: { shortcut?: boolean }
@@ -53,11 +52,10 @@ export function usePageDocumentMenu({
   /** Open the publishing dialog without going through the menu — what
  the “public” badge in the header does, which is a shortcut to it. */
   openPublish: (page: { id: string; title: string }) => void;
-  /** Open “Copy for agent” without going through the menu: this is what
- ⌘⇧L does on the opened page. The SAME dialog as the input, and therefore the same
- copy — two paths to a single gesture, not two gestures. */
-  openAgentCopy: (
-    page: { id: string; title: string },
+  /** Copy the page's link without going through the menu: what ⌘⇧L does on
+      the open page, the same copy as the menu's “Copy link”. */
+  copyLink: (
+    page: { id: string },
     source: "menu" | "shortcut"
   ) => void;
   /** To be returned once in the area. */
@@ -76,17 +74,6 @@ export function usePageDocumentMenu({
   const promotePage = usePromotePage(projectId);
   const [target, setTarget] = useState<{ id: string; title: string } | null>(null);
   const [publishOpen, setPublishOpen] = useState(false);
-  // The page targeted by “Copy for agent”, and where the gesture came from —
-  // `source` is only used for measurement, but it must travel with the page:
-  // moment of copying, we no longer know where the opening came from.
-  const [agentCopy, setAgentCopy] = useState<{
-    page: { id: string; title: string };
-    source: "menu" | "shortcut";
-  } | null>(null);
-  // Opening and target are TWO states, as for publication: keep the
-  // page after closing lets the dialog play its output instead of
-  // disappear suddenly.
-  const [agentCopyOpen, setAgentCopyOpen] = useState(false);
   // "Move to trash" from any page menu (tree row, right-click, page header)
   // only names its target here; `onTrash` runs once confirmed (MIN-743).
   const [trashTarget, setTrashTarget] = useState<PageMenuTarget | null>(null);
@@ -126,46 +113,56 @@ export function usePageDocumentMenu({
     [projectId]
   );
 
-  const openAgentCopy = useCallback(
-    (page: { id: string; title: string }, source: "menu" | "shortcut") => {
-      setAgentCopy({ page, source });
-      setAgentCopyOpen(true);
+  /**
+   * The link of a page, from the origin it is copied on (`window.location`
+   * rather than `SITE_URL`): a link copied on a development workstation or in
+   * the desktop app must lead back there.
+   */
+  const copyLink = useCallback(
+    (page: { id: string }, source: "menu" | "shortcut") => {
+      const link = `${window.location.origin}${pageHref(projectId, page.id)}`;
+      void navigator.clipboard.writeText(link).then(
+        () => {
+          trackEvent("page_copied", { what: "link", source });
+          toast.success(t("pageLinkCopied"));
+        },
+        // Clipboard denied (permission, insecure context): say it rather
+        // than suggest the link is copied.
+        () => toast.error(t("copyFailed"))
+      );
     },
-    []
+    [projectId, t]
   );
 
   /**
- * The copy itself, once the dialog has been validated — with or without instructions.
- *
- * The origin is the one from which we copy (`window.location.origin`) and not
- * `SITE_URL`: a link copied from the development workstation must bring back au
- * development position, not in production.
- */
-  const submitAgentCopy = useCallback(
-    async (instructions: string) => {
-      if (!agentCopy) return;
-      const text = buildPageAgentPrompt({
-        origin: window.location.origin,
-        projectId,
-        pageId: agentCopy.page.id,
-        title: agentCopy.page.title,
-        instructions,
-      });
-      try {
-        await navigator.clipboard.writeText(text);
-      } catch {
-        // Clipboard denied (permission, insecure context): say it,
-        // rather than suggesting that the page is copied.
-        toast.error(t("copyFailed"));
-        return;
-      }
-      trackEvent("page_copied_for_agent", {
-        source: agentCopy.source,
-        with_instructions: !!instructions.trim(),
-      });
-      toast.success(t("copiedForAgent"));
+   * The page as Markdown — its title and body, the single-page export. The
+   * export route writes pending collaboration steps first, so the copy holds
+   * what was typed a moment ago. The clipboard item takes the PROMISE of the
+   * text: Safari only grants the clipboard inside the click, and the read
+   * finishes after it.
+   */
+  const copyContent = useCallback(
+    (page: { id: string }) => {
+      const markdown = fetchPageMarkdownApi(projectId, page.id);
+      const written =
+        typeof ClipboardItem === "undefined"
+          ? markdown.then((text) => navigator.clipboard.writeText(text))
+          : navigator.clipboard.write([
+              new ClipboardItem({
+                "text/plain": markdown.then(
+                  (text) => new Blob([text], { type: "text/plain" })
+                ),
+              }),
+            ]);
+      void written.then(
+        () => {
+          trackEvent("page_copied", { what: "content", source: "menu" });
+          toast.success(t("pageContentCopied"));
+        },
+        () => toast.error(t("copyFailed"))
+      );
     },
-    [agentCopy, projectId, t]
+    [projectId, t]
   );
 
   const actionsFor = useCallback(
@@ -210,17 +207,32 @@ export function usePageDocumentMenu({
         );
       }
 
-      const copyForAgent: ContextMenuAction = {
-        id: "copy-for-agent",
-        label: t("copyForAgent"),
-        // What we type while looking for the entry, and which is not in the
-        // wording: the protocol, the name of the agent we have in mind, or the
-        // word that we use for this on a ticket (“prompt”, “link”).
-        keywords: ["mcp", "agent", "link", "lien", "prompt", "claude", "cursor"],
+      const copyChildren: ContextMenuAction[] = [
+        {
+          id: "copy-link",
+          label: t("copyPageLink"),
+          keywords: ["link", "lien", "url", "share", "partager"],
+          icon: <HugeiconsIcon icon={Link01Icon} className="size-4" />,
+          shortcut: options?.shortcut ? modShortcut : undefined,
+          onSelect: () => copyLink(page, "menu"),
+        },
+      ];
+      // A database exports as an archive, not as one Markdown text.
+      if (!isDatabase) {
+        copyChildren.push({
+          id: "copy-content",
+          label: t("copyPageContent"),
+          keywords: ["markdown", "text", "texte", "content", "contenu"],
+          icon: <HugeiconsIcon icon={TextAlignLeftIcon} className="size-4" />,
+          onSelect: () => copyContent(page),
+        });
+      }
+      const copyAction: ContextMenuAction = {
+        id: "copy",
+        label: t("copy"),
         icon: <HugeiconsIcon icon={Copy01Icon} className="size-4" />,
-        shortcut: options?.shortcut ? modShortcut : undefined,
         separatorBefore: canWrite,
-        onSelect: () => openAgentCopy(page, "menu"),
+        children: copyChildren,
       };
       const exportAction: ContextMenuAction = {
         id: "export",
@@ -228,7 +240,7 @@ export function usePageDocumentMenu({
         icon: <HugeiconsIcon icon={Download01Icon} className="size-4" />,
         children: exportChildren,
       };
-      if (!canWrite) return [copyForAgent, exportAction];
+      if (!canWrite) return [copyAction, exportAction];
 
       return [
         {
@@ -247,7 +259,7 @@ export function usePageDocumentMenu({
           ),
           onSelect: () => onToggleFavorite(page),
         },
-        copyForAgent,
+        copyAction,
         {
           // The notebook's gesture, for a whole page (MIN-684).
           id: "promote-to-issue",
@@ -280,7 +292,8 @@ export function usePageDocumentMenu({
       countOf,
       download,
       print,
-      openAgentCopy,
+      copyLink,
+      copyContent,
       promotePage,
       modShortcut,
       onCreateChild,
@@ -303,14 +316,6 @@ export function usePageDocumentMenu({
             descendantCount={countOf(target.id)}
             open={publishOpen}
             onOpenChange={setPublishOpen}
-          />
-        ) : null}
-        {agentCopy ? (
-          <PageAgentCopyDialog
-            open={agentCopyOpen}
-            pageTitle={agentCopy.page.title.trim() || t("untitled")}
-            onOpenChange={setAgentCopyOpen}
-            onSubmit={(instructions) => void submitAgentCopy(instructions)}
           />
         ) : null}
         <ConfirmDeleteDialog
@@ -339,9 +344,6 @@ export function usePageDocumentMenu({
       projectId,
       countOf,
       publishOpen,
-      agentCopy,
-      agentCopyOpen,
-      submitAgentCopy,
       t,
     ]
   );
@@ -353,5 +355,5 @@ export function usePageDocumentMenu({
     setPublishOpen(true);
   }, [canWrite]);
 
-  return { actionsFor, openPublish, openAgentCopy, dialogs };
+  return { actionsFor, openPublish, copyLink, dialogs };
 }

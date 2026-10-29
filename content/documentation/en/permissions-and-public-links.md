@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -39,14 +39,15 @@
       "proxy.ts",
       "content/knowledge/settings-and-data.md",
       "docs/security/project-roles.md",
-      "lib/project-roles.ts"
+      "lib/project-roles.ts",
+      "components/public-page-body.tsx"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 8,
+    "fact": "agent:claude-code (published-page mention sentence checked against components/public-page-body.tsx and app/p/[token]/published-page.tsx: a mention of a page in the published set shows its title and opens under the same link, any other page shows the Sub-page not published label, inert; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed behavior)",
+    "language": "agent:claude-code (en changed sentence with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "pages",
@@ -64,7 +65,7 @@
       "src": "/documentation/en/permissions-and-public-links-flow.svg",
       "alt": "Diagram: Account and project permission checks. Private object or explicit publication. Published set only; signed file access. Revoke link; issued file URLs expire later.",
       "caption": "Publication exposes only selected content; previously issued file links can remain valid after revocation until they expire.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -108,7 +109,7 @@ A role change or removal applies to the next request. Content already delivered 
 
 ## Understand what a publication exposes {#publication}
 
-A published page or shared view uses an opaque bearer link, optionally protected by a password. The owner and members can publish and revoke these links; readers cannot. Anyone with the link and, when required, its password can access the published content. Revoke the link when no longer needed. Public page subpages resolve only inside the published set; excluded child titles are not exposed. Attachments are signed only for published pages while the private bucket and authenticated application routes remain closed. Mentions may remain text without private profile links. A published database includes only entries in its published branch.
+A published page or shared view uses an opaque bearer link, optionally protected by a password. The owner and members can publish and revoke these links; readers cannot. Anyone with the link and, when required, its password can access the published content. Revoke the link when no longer needed. On a published page, a mention of a page in the published set shows its title and opens that page under the same link; a mention of any other page shows **Sub-page not published** and does not open, so excluded titles are not exposed. Attachments are signed only for published pages while the private bucket and authenticated application routes remain closed. Mentions may remain text without private profile links. A published database includes only entries in its published branch.
 
 ## Check sharing and revocation anonymously {#revocation}
 

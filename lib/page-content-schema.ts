@@ -130,6 +130,8 @@ export const PAGE_NODE_ATTRIBUTES: Record<string, readonly string[]> = {
   blockquote: ["blockId"],
   callout: ["blockId", "icon", "color"],
   codeBlock: ["blockId", "language"],
+  blockMath: ["blockId", "latex"],
+  inlineMath: ["latex"],
   horizontalRule: ["blockId"],
   details: ["blockId", "open"],
   detailsSummary: [],

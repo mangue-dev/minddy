@@ -19,6 +19,11 @@ export function RuntimeConfigProvider({
   return <RuntimeConfigContext.Provider value={config}>{children}</RuntimeConfigContext.Provider>;
 }
 
+/** The configuration, or null outside its provider (an isolated test tree). */
+export function useOptionalRuntimeConfig(): PublicRuntimeConfig | null {
+  return useContext(RuntimeConfigContext);
+}
+
 export function useRuntimeConfig(): PublicRuntimeConfig {
   const config = useContext(RuntimeConfigContext);
   if (!config) throw new Error("Runtime configuration is unavailable before RuntimeConfigProvider.");

@@ -17,10 +17,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
-  "sourceRevision": 18,
+  "revision": 20,
+  "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -52,14 +52,23 @@
       "components/pages/page-promotion-context.test.tsx",
       "components/pages/database-view-strip.tsx",
       "lib/use-page-database-views.ts",
-      "lib/server/page-database-views.ts"
+      "lib/server/page-database-views.ts",
+      "components/pages/database-table-scroll.tsx",
+      "components/ui/checkbox.tsx",
+      "lib/server/database-view-tools.ts",
+      "lib/page-database-filters.ts",
+      "components/pages/database-filter-editor.tsx",
+      "supabase/migrations/20270109200092_page_database_views_realtime.sql",
+      "components/pages/page-peek-panel.tsx",
+      "components/pages/pages-shell.tsx",
+      "components/global-page-panel.tsx"
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:/root/min764 (database views section checked against components/pages/database-view-strip.tsx, components/pages/page-database-view.tsx, lib/use-page-database-views.ts and lib/server/page-database-views.ts: named views shared by the project, each with its own sort, filter and hidden columns, managed and reordered by writers, adjusted locally by readers; insertion clears the active view's filter; rest of the article unchanged since the MIN-747 review; no figure changed); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min764 (pt-BR changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 20,
+    "fact": "agent:claude-code (column header menu Delete column with confirmation and right-click opening, hover-only row gutter, touch-screen rows without gutter, checkbox tooltips and partial header state, bottom scrollbar hidden on touch screens, view rename/delete by right-click, column reordering by handle in Columns, Numo view tools and no MCP view tools checked against components/pages/database-column-name.tsx, page-database-view.tsx, database-view-strip.tsx, database-table-scroll.tsx, components/ui/checkbox.tsx, lib/server/assistant/tools.ts and lib/server/database-view-tools.ts; several filter conditions with All/Any match, operators per column type, up to 10 conditions, single filters kept, live view updates, default view rename, phone view dropdown, View settings sheets, search field and cell sheets checked against lib/page-database-filters.ts, components/pages/database-filter-editor.tsx, lib/use-page-database-views.ts, supabase/migrations/20270109200092_page_database_views_realtime.sql, components/pages/database-view-strip.tsx, components/pages/page-database-view.tsx and components/pages/database-cell-editor.tsx; Page options in the entry side panel checked against components/pages/page-peek-panel.tsx and components/pages/pages-shell.tsx; the side panel's compact database toolbar (view dropdown, search popover, View settings menu with a Sort by submenu and Filter and Columns popovers, in-panel horizontal scrollbar, entries opened in place with Back) checked against components/pages/page-database-view.tsx, components/pages/database-view-strip.tsx, components/pages/database-table-scroll.tsx, components/global-page-panel.tsx and components/pages/page-peek-panel.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; equivalent meaning to en revision 19; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "pages"
@@ -83,7 +92,7 @@
       "src": "/documentation/pt-BR/database-setup-cards.png",
       "alt": "Prévia do componente com cartões para configurar uma nova base de dados com Numo ou importar uma existente.",
       "caption": "Sugestões para uma nova base com dados de demonstração. Escolha Numo ou importação, ou feche os cartões para continuar manualmente.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -100,7 +109,7 @@
       "src": "/documentation/pt-BR/database-property-types.png",
       "alt": "Seletor de tipo de coluna com um campo de busca, texto, número, seleções, datas, pessoas e caixa de seleção.",
       "caption": "Escolha um tipo adequado aos valores que serão armazenados.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -117,7 +126,7 @@
       "src": "/documentation/pt-BR/database-entry.png",
       "alt": "Registro de demonstração com descrição, duração 2.5, caixa marcada e seleção vazia.",
       "caption": "Abra um registro para ler o texto completo e editar os valores conforme o tipo.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -133,7 +142,7 @@
       "src": "/documentation/pt-BR/database-conversion-warning.png",
       "alt": "Aviso de conversão: mudar de Texto para Número limpa uma célula incompatível, com botões para cancelar ou confirmar.",
       "caption": "Confira o número real de células incompatíveis antes de confirmar. Cancelar preserva os valores atuais.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -149,7 +158,7 @@
       "src": "/documentation/pt-BR/database-import-review.png",
       "alt": "Revisão de um CSV local: duas páginas de registros e duas colunas, com o botão Importar banco de dados.",
       "caption": "Confira os registros analisados e o número de colunas antes de importar para o banco vazio.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -165,7 +174,7 @@
       "src": "/documentation/pt-BR/database-options.png",
       "alt": "Prévia do componente Editar opções com status em português, setas para cima e para baixo, lixeiras e a explicação da exclusão.",
       "caption": "Edite nomes, cores e ordem das opções em conjunto. A lixeira remove uma opção do rascunho; Salvar aplica as alterações. São exibidos dados de demonstração.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -182,7 +191,7 @@
       "src": "/documentation/pt-BR/database-date-time.png",
       "alt": "Prévia do seletor de data com 24 de julho de 2026 selecionado, Adicione um horário ativado e Hora definida como 02:00 AM.",
       "caption": "Ative Adicione um horário para inserir um horário. Esta prévia do componente usa dados de demonstração e o fuso horário do dispositivo.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -249,15 +258,23 @@ Escolha um dia em Data. Para incluir um horário, ative Adicione um horário e p
 
 O conteúdo de uma entrada vazia mostra um texto indicativo para localizar a área de escrita. A duplicação pelas ações de uma linha ou por uma seleção de várias linhas pede confirmação antes de criar as cópias. Mover as entradas para a lixeira também pede confirmação e permite recuperá-las, sem excluí-las definitivamente.
 
-Abra uma entrada para editar sua página completa em um painel flutuante. “Expandir” abre como página completa depois que os salvamentos pendentes do documento terminarem. Se o salvamento falhar, o painel permanece aberto para resolver. Uma entrada vazia fica no banco até ser excluída.
+Abra uma entrada para editar sua página completa em um painel flutuante. “Expandir” abre como página completa depois que os salvamentos pendentes do documento terminarem. Se o salvamento falhar, o painel permanece aberto para resolver. O cabeçalho do painel também tem o menu **Opções de página** (`…`) da entrada, entre “Expandir” e fechar; mover a entrada para a lixeira por ali fecha o painel e mantém a tabela no lugar. Uma entrada vazia fica no banco até ser excluída.
 
-Use caixas de seleção de linhas para selecionar e Shift-clique para um intervalo. A alça abre ações e pode reordenar entradas em ordem manual. O + na margem insere abaixo de uma entrada; Option/Alt insere acima. A inserção adjacente limpa o filtro da visualização ativa para deixar a nova entrada visível.
+Use caixas de seleção de linhas para selecionar e Shift-clique para um intervalo. A dica de cada caixa indica **Selecionar** ou **Desmarcar**. A caixa do cabeçalho (**Selecionar todas as entradas**, ou **Desmarcar todas** quando todas estão selecionadas) mostra um traço quando só parte das entradas está selecionada e uma marca quando todas estão; clicar nela a partir de uma seleção parcial seleciona todas as entradas. Passe o ponteiro sobre uma linha para mostrar sua margem: a alça abre ações e pode reordenar entradas em ordem manual, e o + insere abaixo da entrada; Option/Alt insere acima. A inserção adjacente limpa os filtros da visualização ativa para deixar a nova entrada visível. Em uma tela sensível ao toque, as linhas não têm margem e suas caixas continuam visíveis: selecione as entradas e use **Duplicar** ou **Mover para a lixeira** na barra de seleção. **Promover a ticket** e mover uma entrada para cima ou para baixo não estão disponíveis ali.
 
 No menu da alça de uma única entrada, o proprietário ou um Membro pode escolher **Promover a ticket** para que o Numo transforme essa entrada, o conteúdo e as propriedades dela em um ticket. A entrada continua no banco de dados. A ação não aparece quando o menu se aplica a várias linhas selecionadas: não há promoção em massa, então promova cada entrada separadamente. O [guia de páginas](/pt-br/documentacao/pages#promote-page-to-issue) descreve as perguntas do Numo e o que fazer quando a entrada não pode ser salva antes.
 
 ### Visualizações do banco de dados {#database-display}
 
-Um banco de dados mostra suas entradas por meio de visualizações, listadas acima da tabela. Cada visualização guarda sua própria ordenação, seu filtro e suas colunas ocultas, e todos os membros do projeto veem as mesmas visualizações. O proprietário ou um Membro adiciona uma visualização com **Nova visualização** (+), que parte da visualização na tela, renomeia ou exclui a visualização ativa pelo menu de opções (⋯) com **Renomear visualização** ou **Excluir visualização**, e arrasta as visualizações para reordená-las. As mudanças de ordenação, filtro e colunas são salvas na visualização ativa para todos. Um banco de dados mantém pelo menos uma visualização; antes da primeira mudança, ele mostra a visualização padrão **Tabela**. Leitores alternam entre visualizações e podem ajustar uma para si até sair da página. Seu navegador lembra a última visualização aberta; a pesquisa nunca é salva. A ordem manual é compartilhada com a árvore de páginas. Role horizontalmente com gesto de trackpad, Shift e roda do mouse, toque ou barra inferior. Uma prévia de texto cortada não encurta o valor armazenado. Entradas com valores de colunas podem ser reordenadas dentro do banco, mas não movidas para fora.
+Um banco de dados mostra suas entradas por meio de visualizações, listadas acima da tabela. Cada visualização guarda sua própria ordenação, seu filtro e suas colunas ocultas, e todos os membros do projeto veem as mesmas visualizações. O proprietário ou um Membro adiciona uma visualização com **Nova visualização** (+), que parte da visualização na tela, clica com o botão direito em uma visualização para escolher **Renomear visualização** ou **Excluir visualização**, e arrasta as visualizações para reordená-las. As mudanças de ordenação, filtro e colunas são salvas na visualização ativa para todos. Um banco de dados mantém pelo menos uma visualização; antes da primeira mudança, ele mostra a visualização padrão **Tabela**. Leitores alternam entre visualizações e podem ajustar uma para si até sair da página. Seu navegador lembra a última visualização aberta; a pesquisa nunca é salva. A ordem manual é compartilhada com a árvore de páginas. Role horizontalmente com gesto de trackpad, Shift e roda do mouse ou a barra de rolagem na parte inferior da janela. Uma tela sensível ao toque não mostra essa barra: deslize a tabela com o dedo. Uma prévia de texto cortada não encurta o valor armazenado. Entradas com valores de colunas podem ser reordenadas dentro do banco, mas não movidas para fora. O Numo pode listar as visualizações de um banco de dados e, quando você pede, criá-las, renomeá-las, reordená-las ou excluí-las (nunca a última), ou mudar sua ordenação, seus filtros (todos ou qualquer um) e suas colunas ocultas. Na página de um banco de dados, o Numo entende “uma visualização” como uma visualização do banco de dados, não do quadro de tickets. A ordem das colunas não faz parte de uma visualização: ela pertence ao esquema do banco de dados. Os clientes do minddy MCP não podem gerenciar visualizações.
+
+Abra **Filtrar** para montar uma lista de condições com **Adicionar um filtro**; **Remover este filtro** apaga uma. Cada condição escolhe uma coluna, uma condição e um valor, e as condições dependem do tipo da coluna. Texto oferece contém, não contém, é, não é, está vazio e não está vazio. Número oferece é, não é, maior que, menor que, está vazio e não está vazio. Seleção oferece é, não é, está vazio e não está vazio. Seleção múltipla e Pessoas oferecem contém, não contém, está vazio e não está vazio. Data e Data de criação oferecem é em, é depois de, é antes de, está vazio e não está vazio. Caixa de seleção corresponde a **Marcada** ou **Desmarcada**. Uma condição sem valor ainda não filtra. Com duas ou mais condições, escolha **Todos os filtros** para manter as entradas que atendem a todas, ou **Qualquer filtro** para as que atendem a pelo menos uma. Uma visualização aceita até 10 condições; uma visualização salva antes com um único filtro o mantém.
+
+As visualizações se atualizam ao vivo: uma visualização que alguém da equipe ou o Numo cria ou altera aparece sem recarregar a página. Enquanto um banco de dados não tiver nenhuma visualização salva, clique com o botão direito na visualização padrão para escolher **Renomear visualização**: renomeá-la a salva como visualização nomeada com as configurações atuais, e **Excluir visualização** continua indisponível.
+
+No celular, escolha uma visualização no menu suspenso acima da tabela; o menu dele oferece **Nova visualização**, **Renomear visualização** e **Excluir visualização**. A barra de ferramentas mostra apenas a pesquisa, **Configurações da visualização** e **Novo**. **Configurações da visualização** abre uma folha com **Ordenar por**, **Filtrar** e **Colunas**, e cada um abre sua própria folha. A pesquisa abre um campo abaixo da barra de ferramentas, com um botão para fechá-lo. A tabela ocupa toda a largura, com linhas mais altas e caixas de seleção sempre visíveis. Células de texto e número abrem em uma folha inferior com um botão **Salvar**, como já fazem seleções, pessoas e datas.
+
+Um banco de dados aberto no painel lateral, por uma menção, uma referência inversa, uma página anexada a um ticket ou um link em um comentário, também usa essa barra de ferramentas compacta no computador: o menu suspenso de visualizações, que oferece **Nova visualização**, **Renomear visualização** e **Excluir visualização**, depois a pesquisa, **Configurações da visualização** e **Novo**. A pesquisa abre um campo em um popover. **Configurações da visualização** abre um menu: **Ordenar por** mostra as colunas e a direção da ordenação em um submenu, enquanto **Filtrar** e **Colunas** abrem cada um seu popover abaixo do botão. A tabela rola na horizontal dentro do painel, com sua própria barra de rolagem. Um registro aberto dessa tabela toma o lugar dela no painel; **Voltar**, no canto superior esquerdo do painel, retorna à tabela, e **Expandir** abre como página inteira o que o painel mostra.
 
 
 ![Registro de demonstração com descrição, duração 2.5, caixa marcada e seleção vazia.](/documentation/pt-BR/database-entry.png)
@@ -266,9 +283,9 @@ Um banco de dados mostra suas entradas por meio de visualizações, listadas aci
 
 O arraste de uma coluna começa após um movimento do ponteiro e permanece horizontal. O cursor de arraste aparece somente enquanto você arrasta; um clique normal continua abrindo as ações da coluna. Com o foco no cabeçalho de uma coluna, Enter ou Espaço abre suas ações. Pressione F8 para iniciar a reordenação, use Esquerda ou Direita e depois Enter para confirmar ou Esc para cancelar.
 
-Em Colunas, use o controle com o ícone de olho para mostrar ou ocultar propriedades. Clique em um cabeçalho para renomeá-lo ou arraste os cabeçalhos para reorganizá-los. A coluna com o nome da entrada permanece na primeira posição. As opções de Seleção ou Seleção múltipla podem ser editadas pelo menu da célula ou em Colunas; os nomes e as cores são salvos juntos.
+Em Colunas, use o controle com o ícone de olho para mostrar ou ocultar propriedades e arraste a alça de uma linha dessa lista para reordenar as colunas. Pelo teclado, coloque o foco na alça, pressione Espaço, mova a coluna com as setas para cima e para baixo e pressione Espaço de novo para soltá-la; Esc cancela. Clique ou clique com o botão direito em um cabeçalho para abrir seu menu, por exemplo para renomear a coluna, ou arraste os cabeçalhos para reorganizá-los. A coluna com o nome da entrada permanece na primeira posição. As opções de Seleção ou Seleção múltipla podem ser editadas pelo menu da célula ou em Colunas; os nomes e as cores são salvos juntos.
 
-Ocultar uma coluna altera as preferências de exibição e preserva seus valores. Excluir uma coluna personalizada remove seus valores de todas as entradas, sem possibilidade de desfazer. Considere essa consequência antes de confirmar a exclusão.
+Ocultar uma coluna altera as preferências de exibição e preserva seus valores. Para excluir uma coluna personalizada, escolha **Excluir coluna** no menu do cabeçalho dela ou o botão de lixeira dela em Colunas; os dois pedem confirmação. A exclusão remove seus valores de todas as entradas, sem possibilidade de desfazer. Considere essa consequência antes de confirmar a exclusão.
 
 ### Converter o tipo de uma propriedade {#convert-column}
 

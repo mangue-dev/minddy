@@ -20,6 +20,7 @@ import { createSafeEmitter } from "@/lib/server/assistant/sse";
 import { parseCommand } from "@/lib/server/assistant/commands";
 import { parseSelectedSkills } from "@/lib/server/assistant/skills";
 import { parseSelfHostingHelpContext } from "@/lib/self-hosting-help-context";
+import { normalizeSelectionText } from "@/lib/assistant-selection";
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
 import { fallbackShortTitle, generateShortTitle } from "@/lib/server/short-title";
 import { encodeConversationTitle, shouldProtectConversationTitle } from
@@ -226,6 +227,14 @@ function parsePageContext(raw: unknown): AssistantPageContext | null {
     pullRequestId: pick("pullRequestId"),
     prHeadRef: pick("prHeadRef"),
     prBaseRef: pick("prBaseRef"),
+    // A quoted editor selection: normalized and capped again here, whatever
+    // the client did. It is only quoted in the prompt, as data.
+    selection: ((): AssistantPageContext["selection"] => {
+      const raw = obj.selection;
+      if (!raw || typeof raw !== "object") return undefined;
+      const text = normalizeSelectionText((raw as Record<string, unknown>).text);
+      return text ? { text } : undefined;
+    })(),
   };
   const hasAnything = Object.values(ctx).some((v) => v !== undefined);
   return hasAnything ? ctx : null;

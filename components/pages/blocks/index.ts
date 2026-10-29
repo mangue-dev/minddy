@@ -46,6 +46,9 @@ import { detailsBlock } from "@/components/pages/blocks/details";
 import { subpageBlock } from "@/components/pages/blocks/subpage";
 import { imageBlock } from "@/components/pages/blocks/image";
 import { fileBlock } from "@/components/pages/blocks/file";
+import { mathBlock } from "@/components/pages/blocks/math";
+
+import { pageColorExtensions } from "@/components/pages/blocks/color";
 
 export type {
   BlockSet,
@@ -81,6 +84,7 @@ export const PAGE_BLOCKS: readonly PageBlock[] = [
   quoteBlock,
   calloutBlock,
   codeBlock,
+  mathBlock,
   dividerBlock,
   detailsBlock,
   subpageBlock,
@@ -203,18 +207,26 @@ export function blockExtensions(
       );
     }
   }
+  // The page's two color marks belong to the catalog: the code block names
+  // them in its schema (blocks/code.ts), so they are mounted with the blocks,
+  // in every set, rather than beside them by each caller.
+  for (const mark of pageColorExtensions()) {
+    if (!seen.has(mark.name)) extensions.push(mark);
+  }
   return extensions;
 }
 
 /* ── The “/” menu ─────────────────────────── ─────────────────────────── */
 
-/** The sections of the catalog, in the sort order of the menu. */
+/** The sections of the catalog, in the sort order of the menu, with the
+    header each one shows in the “/” menu and the phone's block sheet. */
 export const SLASH_GROUPS: ReadonlyArray<{
   group: SlashGroup;
+  labelKey: PageBlock["labelKey"];
 }> = [
-  { group: "basic" },
-  { group: "lists" },
-  { group: "advanced" },
+  { group: "basic", labelKey: "slashGroupBasic" },
+  { group: "lists", labelKey: "slashGroupLists" },
+  { group: "advanced", labelKey: "slashGroupAdvanced" },
 ];
 
 /** The catalog in the order of the “/” menu: group by group, `order` by
@@ -233,7 +245,7 @@ export function slashItems(
     !block.needsUploads || uploads === "all" ||
     (uploads === "images" && block.needsUploads === "image");
   const rank = new Map(SLASH_GROUPS.map(({ group }, index) => [group, index]));
-  return blocksIn(set).filter(offered).sort(
+  return blocksIn(set).filter((block) => offered(block) && !block.legacy).sort(
     (a, b) =>
       (rank.get(a.slash.group) ?? 0) - (rank.get(b.slash.group) ?? 0) ||
       a.slash.order - b.slash.order
@@ -308,7 +320,26 @@ export const PageBlockShortcuts = Extension.create({
 export function turnIntoItems(
   editor: Editor
 ): Array<{ block: PageBlock; active: boolean }> {
-  return slashItems()
-    .filter((block) => block.turnInto !== false)
-    .map((block) => ({ block, active: block.isActive(editor) }));
+  const items = slashItems().filter((block) => block.turnInto !== false);
+  const current = currentTurnIntoBlock(editor, items);
+  return items.map((block) => ({ block, active: block === current }));
+}
+
+/**
+ * The ONE block the selection is in, for the checkmark. `isActive` answers for
+ * every ancestor at once: a line of a bullet list is a paragraph too, so the
+ * list and “Text” were both checked. The innermost wrapper wins (a bullet list
+ * nested in a numbered one is a bullet list), and the paragraph only when it
+ * stands alone.
+ */
+function currentTurnIntoBlock(editor: Editor, items: readonly PageBlock[]): PageBlock | null {
+  const active = items.filter((block) => block.isActive(editor));
+  if (active.length <= 1) return active[0] ?? null;
+  const { $from } = editor.state.selection;
+  for (let depth = $from.depth; depth >= 1; depth -= 1) {
+    const name = $from.node(depth).type.name;
+    const match = active.find((block) => block.id !== "paragraph" && block.nodeName === name);
+    if (match) return match;
+  }
+  return active.find((block) => block.id !== "paragraph") ?? active[0];
 }

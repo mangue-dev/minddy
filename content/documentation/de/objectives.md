@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 20,
-  "sourceRevision": 19,
+  "revision": 21,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-23",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -52,14 +52,15 @@
       "lib/use-resource-mentions.ts",
       "lib/keyboard/shortcuts.ts",
       "lib/objective-order.ts",
-      "components/objective-label.tsx"
+      "components/objective-label.tsx",
+      "components/editor/mobile-editor-toolbar.tsx"
     ]
   },
   "review": {
-    "revision": 20,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of objectives-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-785 objective picker order and status display checked against lib/objective-order.ts and components/objective-label.tsx; no figure changed)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (de picker-order sentence with catalog status labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-23"
+    "revision": 21,
+    "fact": "agent:claude-code (phone keyboard toolbar sentence checked against components/editor/mobile-editor-toolbar.tsx and components/editor/rich-editor.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; equivalent meaning to en revision 20; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "issues",
@@ -80,7 +81,7 @@
       "src": "/documentation/de/reader-objectives.png",
       "alt": "Noch nicht gesendeter Zieldialog im Projekt Aurora mit einem Beispielnamen und der Schaltfläche Ziel erstellen.",
       "caption": "Benenne das Ergebnis, bevor du Verantwortung, Zieldatum und Status festlegst. Dieser Dialog hat kein zweites Ziel erstellt.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -104,7 +105,7 @@ Ein Ziel bündelt die Tickets eines Projekts um ein Ergebnis. Erstelle es und or
 
 Öffne den Zielbereich des Projekts und erstelle ein Ziel. Erstellst du es an einer anderen Stelle der App, wähle sein Projekt unter **Erstellen in** oben links im Formular (auf dem Telefon neben dem Titel **Neues Ziel**); ein Projektwechsel entfernt die für das vorherige Projekt gewählte verantwortliche Person und die Beziehungen. Am Computer öffnet Command/Strg+Umschalt+P dieses Menü, auch während du Namen oder Beschreibung eingibst; sobald du ein Projekt wählst oder das Menü schließt, steht der Cursor wieder genau dort, wo er war. Die Schaltfläche zeigt dieses Kürzel an, das es nur gibt, wenn mehr als ein Projekt zur Wahl steht; auf dem Telefon wird kein Kürzel angezeigt. Benenne das gewünschte Ergebnis, ergänze hilfreichen Kontext und setze die verfügbaren Felder für verantwortliche Person, Zieldatum, Farbe und Status. Am Computer öffnen dieselben Tasten wie bei den Feldern eines Tickets diese Felder, sobald der Cursor Name und Beschreibung verlässt: S den Status, A die verantwortliche Person, D das Zieldatum, R eine Beziehung und C die Farbe; der Tooltip jeder Auswahl zeigt ihre Taste. Ein Ziel gehört zu einem Projekt und ist von einem persönlichen Zyklus über mehrere Projekte zu unterscheiden. Die verantwortliche Person betreut das Ergebnis; ihre Auswahl überträgt nicht das Eigentum am Projekt. Nur der Eigentümer oder ein Mitglied kann ein Ziel verantworten, und eine verantwortliche Person, deren Rolle zu Leser wechselt, wird vom Ziel entfernt.
 
-Die Zielbeschreibung und ihre Kommentare verwenden denselben Editor wie Projektseiten, nur ohne Blockgriffe: Tippe `/`, um Blöcke einzufügen, und `@`, um eine Person, ein Ticket, ein Ziel oder eine Seite zu erwähnen. Das `@`-Menü listet auch die Ressourcen dessen auf, woran du schreibst: das Ticket oder Ziel für seine Beschreibung und seinen Plan, ein Kommentar für seine eigenen Dateien oder ein Erstellungsdialog für die dort hinzugefügten Dateien. Eine Erwähnung einer Ressource von anderswo erscheint als **Nicht verfügbar**. Mehrere Personen können die Beschreibung gleichzeitig bearbeiten; der Cursor jeder Person erscheint mit ihrem Namen und ihrer Farbe. Markiere Text, um ihn zu formatieren oder einen Link hinzuzufügen. Füge ein Bild ein, ziehe es hinein oder wähle **Bild** im `/`-Menü, um es in die Beschreibung einzufügen.
+Die Zielbeschreibung und ihre Kommentare verwenden denselben Editor wie Projektseiten, nur ohne Blockgriffe: Tippe `/`, um Blöcke einzufügen, und `@`, um eine Person, ein Ticket, ein Ziel oder eine Seite zu erwähnen. Das `@`-Menü listet auch die Ressourcen dessen auf, woran du schreibst: das Ticket oder Ziel für seine Beschreibung und seinen Plan, ein Kommentar für seine eigenen Dateien oder ein Erstellungsdialog für die dort hinzugefügten Dateien. Eine Erwähnung einer Ressource von anderswo erscheint als **Nicht verfügbar**. Mehrere Personen können die Beschreibung gleichzeitig bearbeiten; der Cursor jeder Person erscheint mit ihrem Namen und ihrer Farbe. Markiere Text, um ihn zu formatieren oder einen Link hinzuzufügen. Füge ein Bild ein, ziehe es hinein oder wähle **Bild** im `/`-Menü, um es in die Beschreibung einzufügen. Auf dem Smartphone ersetzt die Leiste über der Tastatur die Auswahlleiste und das getippte `@`-Menü; die [Seitenanleitung](/de/dokumentation/pages#editor-formatting) beschreibt sie.
 
 Öffne jedes passende Ticket und wähle das Ziel in seinen Eigenschaften oder verwende die Ticketfunktionen des Ziels. Die Zielauswahl zeigt offene Ziele vor erledigten und abgebrochenen; innerhalb jeder Gruppe stehen die Ziele vorn, die in den letzten 30 Tagen die meisten Tickets erhalten haben. Jedes Ziel zeigt seinen Status und seinen Namen in seiner Farbe. Prüfe, ob die vorgesehene Arbeit beim Ziel erscheint. Nutze dessen Diskussion und Ressourcen für Entscheidungen und Referenzseiten, die für das gesamte Ergebnis gelten.
 

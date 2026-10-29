@@ -535,6 +535,14 @@ export function keysForProjectEvent(
       const pageId = typeof record?.page_id === "string" ? record.page_id : null;
       return pageId ? [active(["page-backlinks", pageId])] : [];
     }
+    // The saved views of a database page (MIN-764): Numo, the MCP or a
+    // teammate may change them. The event carries ids only (the view may be
+    // sealed), so the open database refetches its views. Our own writes come
+    // back too; the refetch returns what the client already holds.
+    case "page_database_views": {
+      const pageId = pageIdOf(change);
+      return pageId ? [active(["page-database-views", projectId, pageId])] : [];
+    }
     // Routine writes may come from Numo, MCP, another tab, or a teammate. The
     // broadcast deliberately carries identifiers only, so refetch the shared
     // list that feeds both the sidebar and the open routine detail.
@@ -660,6 +668,8 @@ export const projectScopeKeys = (projectId: string): QueryKey[] => [
   // a page left open during a cut must find the objections
   // written in the meantime, not those before.
   ["page-comments"],
+  // The saved views of the databases of this project (lib/use-page-database-views.ts).
+  ["page-database-views", projectId],
   // The aggregates this project feeds — missed events while offline would
   // otherwise leave the dashboard and /all stale until their staleTime.
   GLOBAL_BOARD_KEY,

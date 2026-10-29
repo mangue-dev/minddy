@@ -17,10 +17,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
-  "sourceRevision": 18,
+  "revision": 20,
+  "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -52,14 +52,23 @@
       "components/pages/page-promotion-context.test.tsx",
       "components/pages/database-view-strip.tsx",
       "lib/use-page-database-views.ts",
-      "lib/server/page-database-views.ts"
+      "lib/server/page-database-views.ts",
+      "components/pages/database-table-scroll.tsx",
+      "components/ui/checkbox.tsx",
+      "lib/server/database-view-tools.ts",
+      "lib/page-database-filters.ts",
+      "components/pages/database-filter-editor.tsx",
+      "supabase/migrations/20270109200092_page_database_views_realtime.sql",
+      "components/pages/page-peek-panel.tsx",
+      "components/pages/pages-shell.tsx",
+      "components/global-page-panel.tsx"
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:/root/min764 (database views section checked against components/pages/database-view-strip.tsx, components/pages/page-database-view.tsx, lib/use-page-database-views.ts and lib/server/page-database-views.ts: named views shared by the project, each with its own sort, filter and hidden columns, managed and reordered by writers, adjusted locally by readers; insertion clears the active view's filter; rest of the article unchanged since the MIN-747 review; no figure changed); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min764 (es changed passages on shared database views with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 20,
+    "fact": "agent:claude-code (column header menu Delete column with confirmation and right-click opening, hover-only row gutter, touch-screen rows without gutter, checkbox tooltips and partial header state, bottom scrollbar hidden on touch screens, view rename/delete by right-click, column reordering by handle in Columns, Numo view tools and no MCP view tools checked against components/pages/database-column-name.tsx, page-database-view.tsx, database-view-strip.tsx, database-table-scroll.tsx, components/ui/checkbox.tsx, lib/server/assistant/tools.ts and lib/server/database-view-tools.ts; several filter conditions with All/Any match, operators per column type, up to 10 conditions, single filters kept, live view updates, default view rename, phone view dropdown, View settings sheets, search field and cell sheets checked against lib/page-database-filters.ts, components/pages/database-filter-editor.tsx, lib/use-page-database-views.ts, supabase/migrations/20270109200092_page_database_views_realtime.sql, components/pages/database-view-strip.tsx, components/pages/page-database-view.tsx and components/pages/database-cell-editor.tsx; Page options in the entry side panel checked against components/pages/page-peek-panel.tsx and components/pages/pages-shell.tsx; the side panel's compact database toolbar (view dropdown, search popover, View settings menu with a Sort by submenu and Filter and Columns popovers, in-panel horizontal scrollbar, entries opened in place with Back) checked against components/pages/page-database-view.tsx, components/pages/database-view-strip.tsx, components/pages/database-table-scroll.tsx, components/global-page-panel.tsx and components/pages/page-peek-panel.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (es changed passages with catalog UI labels; equivalent meaning to en revision 19; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "pages"
@@ -83,7 +92,7 @@
       "src": "/documentation/es/database-setup-cards.png",
       "alt": "Vista previa del componente con tarjetas para configurar una nueva base de datos con Numo o importar una existente.",
       "caption": "Sugerencias para una nueva base con datos de demostración. Elige Numo o la importación, o cierra las tarjetas para continuar manualmente.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -100,7 +109,7 @@
       "src": "/documentation/es/database-property-types.png",
       "alt": "Selector de tipo de columna con un campo de búsqueda, texto, número, selecciones, fechas, personas y casilla de verificación.",
       "caption": "Elige un tipo que corresponda a los valores que deseas guardar.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -117,7 +126,7 @@
       "src": "/documentation/es/database-entry.png",
       "alt": "Entrada de demostración con descripción, duración 2.5, casilla marcada y selección vacía.",
       "caption": "Abre una entrada para leer el texto completo y editar los valores según su tipo.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -133,7 +142,7 @@
       "src": "/documentation/es/database-conversion-warning.png",
       "alt": "Advertencia de conversión: cambiar de Texto a Número borra una celda incompatible, con botones para cancelar o confirmar.",
       "caption": "Revisa el número real de celdas incompatibles antes de confirmar. Cancelar conserva los valores actuales.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -149,7 +158,7 @@
       "src": "/documentation/es/database-import-review.png",
       "alt": "Revisión de un CSV local: dos páginas de entradas y dos columnas, con el botón Importar base de datos.",
       "caption": "Revisa las entradas analizadas y el número de columnas antes de importar a la base vacía.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -165,7 +174,7 @@
       "src": "/documentation/es/database-options.png",
       "alt": "Vista previa del componente Editar opciones con estados en español, flechas hacia arriba y abajo, papeleras y la explicación de la eliminación.",
       "caption": "Edita juntos los nombres, colores y orden de las opciones. La papelera retira una opción del borrador; Guardar aplica los cambios. Se muestran datos de demostración.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -182,7 +191,7 @@
       "src": "/documentation/es/database-date-time.png",
       "alt": "Vista previa del selector de fecha con el 24 de julio de 2026 seleccionado, Añade una hora activado y Hora en 02:00 AM.",
       "caption": "Activa Añade una hora para introducir una hora. Esta vista previa del componente usa datos de demostración y la zona horaria del dispositivo.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -249,15 +258,23 @@ Elige un día en Fecha. Para incluir una hora, activa Añade una hora y rellena 
 
 El contenido de una entrada vacía muestra un texto indicativo para localizar el área de escritura. La duplicación desde las acciones de una fila o una selección de varias filas pide confirmación antes de crear las copias. Mover las entradas a la papelera también pide confirmación y permite recuperarlas, sin eliminarlas definitivamente.
 
-Abre una entrada para editar su página completa en un panel flotante. «Ampliar» la abre como página completa cuando terminan los guardados pendientes del documento. Si fallan, el panel permanece abierto para resolverlo. Una entrada vacía sigue en la base hasta que la elimines.
+Abre una entrada para editar su página completa en un panel flotante. «Ampliar» la abre como página completa cuando terminan los guardados pendientes del documento. Si fallan, el panel permanece abierto para resolverlo. El encabezado del panel también tiene el menú **Opciones de la página** (`…`) de la entrada, entre «Ampliar» y cerrar; mover la entrada a la papelera desde ahí cierra el panel y deja la tabla en su sitio. Una entrada vacía sigue en la base hasta que la elimines.
 
-Usa las casillas de las filas para seleccionar y Shift-clic para un intervalo. El tirador abre acciones y permite reordenar entradas en orden manual. El + del margen inserta debajo de una entrada; Option/Alt inserta encima. La inserción adyacente quita el filtro de la vista activa para que se vea la nueva entrada.
+Usa las casillas de las filas para seleccionar y Shift-clic para un intervalo. La descripción emergente de cada casilla indica **Seleccionar** o **Deseleccionar**. La casilla del encabezado (**Seleccionar todas las entradas**, o **Deseleccionar todo** cuando todas lo están) muestra un guion mientras solo una parte de las entradas está seleccionada y una marca cuando lo están todas; al hacer clic en ella desde una selección parcial, se seleccionan todas las entradas. Pasa el puntero sobre una fila para mostrar su margen: el tirador abre acciones y permite reordenar entradas en orden manual, y el + inserta debajo de la entrada; Option/Alt inserta encima. La inserción adyacente quita los filtros de la vista activa para que se vea la nueva entrada. En una pantalla táctil, las filas no tienen margen y sus casillas siguen visibles: selecciona las entradas y usa **Duplicar** o **Mover a la papelera** en la barra de selección. **Convertir en incidencia** y mover una entrada hacia arriba o hacia abajo no están disponibles allí.
 
 Desde el menú del tirador de una sola entrada, el propietario o un Miembro puede elegir **Convertir en incidencia** para que Numo convierta esa entrada, su contenido y sus propiedades en una incidencia. La entrada permanece en la base de datos. La acción no aparece cuando el menú se aplica a varias filas seleccionadas: no hay conversión masiva, así que convierte cada entrada por separado. La [guía de páginas](/es/documentacion/pages#promote-page-to-issue) describe las preguntas de Numo y qué hacer si la entrada no se puede guardar antes.
 
 ### Vistas de la base de datos {#database-display}
 
-Una base de datos muestra sus entradas mediante vistas, listadas encima de la tabla. Cada vista conserva su propia ordenación, su filtro y sus columnas ocultas, y todos los miembros del proyecto ven las mismas vistas. El propietario o un Miembro añade una vista con **Nueva vista** (+), que parte de la vista en pantalla, cambia el nombre de la vista activa o la borra desde su menú de opciones (⋯) con **Cambiar el nombre de la vista** o **Eliminar vista**, y arrastra las vistas para reordenarlas. Los cambios de ordenación, filtro y columnas se guardan en la vista activa para todos. Una base de datos conserva al menos una vista; antes de su primer cambio muestra la vista **Tabla** predeterminada. Los lectores cambian de vista y pueden ajustar una para sí mismos hasta que salen de la página. Tu navegador recuerda la última vista abierta; la búsqueda nunca se guarda. El orden manual se comparte con el árbol de páginas. Desplázate horizontalmente con un gesto de trackpad, Shift y rueda del ratón, pantalla táctil o barra inferior. Una vista previa de texto recortada no acorta el valor guardado. Las entradas con valores de columnas se pueden reordenar dentro de su base, pero no mover fuera de ella.
+Una base de datos muestra sus entradas mediante vistas, listadas encima de la tabla. Cada vista conserva su propia ordenación, su filtro y sus columnas ocultas, y todos los miembros del proyecto ven las mismas vistas. El propietario o un Miembro añade una vista con **Nueva vista** (+), que parte de la vista en pantalla, hace clic derecho en una vista para elegir **Cambiar el nombre de la vista** o **Eliminar vista**, y arrastra las vistas para reordenarlas. Los cambios de ordenación, filtro y columnas se guardan en la vista activa para todos. Una base de datos conserva al menos una vista; antes de su primer cambio muestra la vista **Tabla** predeterminada. Los lectores cambian de vista y pueden ajustar una para sí mismos hasta que salen de la página. Tu navegador recuerda la última vista abierta; la búsqueda nunca se guarda. El orden manual se comparte con el árbol de páginas. Desplázate horizontalmente con un gesto de trackpad, Shift y rueda del ratón o la barra de desplazamiento de la parte inferior de la ventana. Una pantalla táctil no muestra esa barra: desliza la tabla con el dedo. Una vista previa de texto recortada no acorta el valor guardado. Las entradas con valores de columnas se pueden reordenar dentro de su base, pero no mover fuera de ella. Numo puede listar las vistas de una base de datos y, cuando se lo pides, crearlas, cambiarles el nombre, reordenarlas o eliminarlas (nunca la última), o cambiar su ordenación, sus filtros (todos o cualquiera) y sus columnas ocultas. En la página de una base de datos, Numo entiende «una vista» como una vista de la base de datos, no del tablero de incidencias. El orden de las columnas no forma parte de una vista: pertenece al esquema de la base de datos. Los clientes de minddy MCP no pueden gestionar las vistas.
+
+Abre **Filtrar** para crear una lista de condiciones con **Añadir un filtro**; **Quitar este filtro** elimina una. Cada condición elige una columna, una condición y un valor, y las condiciones dependen del tipo de columna. Texto ofrece contiene, no contiene, es, no es, está vacío y no está vacío. Número ofrece es, no es, mayor que, menor que, está vacío y no está vacío. Selección ofrece es, no es, está vacío y no está vacío. Selección múltiple y Personas ofrecen contiene, no contiene, está vacío y no está vacío. Fecha y Fecha de creación ofrecen es el, es posterior a, es anterior a, está vacío y no está vacío. Casilla de verificación coincide con **Marcada** o **Sin marcar**. Una condición sin valor todavía no filtra. Con dos o más condiciones, elige **Todos los filtros** para conservar las entradas que cumplen todas, o **Cualquier filtro** para las que cumplen al menos una. Una vista admite hasta 10 condiciones; una vista guardada antes con un solo filtro lo conserva.
+
+Las vistas se actualizan en directo: una vista que crea o cambia un compañero de equipo o Numo aparece sin recargar la página. Mientras una base de datos no tenga ninguna vista guardada, haz clic derecho en su vista predeterminada para elegir **Cambiar el nombre de la vista**: al cambiarle el nombre se guarda como vista con nombre con los ajustes actuales, y **Eliminar vista** sigue sin estar disponible.
+
+En un teléfono, elige una vista en el desplegable encima de la tabla; su menú ofrece **Nueva vista**, **Cambiar el nombre de la vista** y **Eliminar vista**. La barra de herramientas solo muestra la búsqueda, **Ajustes de la vista** y **Nuevo**. **Ajustes de la vista** abre una hoja con **Ordenar por**, **Filtrar** y **Columnas**, y cada una abre su propia hoja. La búsqueda despliega un campo bajo la barra de herramientas, con un botón para cerrarlo. La tabla ocupa todo el ancho, con filas más altas y casillas siempre visibles. Las celdas de texto y número se abren en una hoja inferior con un botón **Guardar**, como ya hacían las selecciones, las personas y las fechas.
+
+Una base de datos abierta en el panel lateral, desde una mención, un enlace inverso, una página adjunta a una incidencia o un enlace en un comentario, también usa esta barra de herramientas compacta en el ordenador: el desplegable de vistas, cuyo menú ofrece **Nueva vista**, **Cambiar el nombre de la vista** y **Eliminar vista**, y después la búsqueda, **Ajustes de la vista** y **Nuevo**. La búsqueda abre un campo en una ventana emergente. **Ajustes de la vista** abre un menú: **Ordenar por** muestra las columnas y el sentido del orden en un submenú, mientras que **Filtrar** y **Columnas** abren cada uno su ventana emergente bajo el botón. La tabla se desplaza en horizontal dentro del panel, con su propia barra de desplazamiento. Una entrada abierta desde esa tabla ocupa su lugar en el panel; **Volver**, arriba a la izquierda del panel, regresa a la tabla, y **Ampliar** abre como página completa lo que muestra el panel.
 
 
 ![Entrada de demostración con descripción, duración 2.5, casilla marcada y selección vacía.](/documentation/es/database-entry.png)
@@ -266,9 +283,9 @@ Una base de datos muestra sus entradas mediante vistas, listadas encima de la ta
 
 El arrastre de una columna empieza después de mover el puntero y se mantiene horizontal. El cursor de agarre aparece solo durante el arrastre; un clic normal sigue abriendo las acciones de la columna. Con el foco en el encabezado de una columna, Intro o Espacio abre sus acciones. Pulsa F8 para iniciar la reordenación, usa Izquierda o Derecha y pulsa Intro para confirmar o Escape para cancelar.
 
-En Columnas, utiliza el control del ojo para mostrar u ocultar propiedades. Haz clic en una cabecera para cambiar su nombre o arrastra las cabeceras para reordenarlas. La columna con el nombre de la entrada permanece en primer lugar. Las opciones de Selección o Selección múltiple se pueden editar desde el menú de la celda o desde Columnas; sus nombres y colores se guardan juntos.
+En Columnas, utiliza el control del ojo para mostrar u ocultar propiedades y arrastra el tirador de una fila de esa lista para reordenar las columnas. Con el teclado, pon el foco en el tirador, pulsa Espacio, mueve la columna con las flechas Arriba y Abajo y vuelve a pulsar Espacio para soltarla; Escape cancela. Haz clic o clic derecho en una cabecera para abrir su menú, por ejemplo para cambiar el nombre de la columna, o arrastra las cabeceras para reordenarlas. La columna con el nombre de la entrada permanece en primer lugar. Las opciones de Selección o Selección múltiple se pueden editar desde el menú de la celda o desde Columnas; sus nombres y colores se guardan juntos.
 
-Ocultar una columna cambia las preferencias de visualización y conserva sus valores. Eliminar una columna personalizada borra sus valores en todas las entradas y no se puede deshacer. Ten presente esta consecuencia antes de confirmar la eliminación.
+Ocultar una columna cambia las preferencias de visualización y conserva sus valores. Para eliminar una columna personalizada, elige **Eliminar columna** en el menú de su cabecera o su botón de papelera en Columnas; ambos piden confirmación. La eliminación borra sus valores en todas las entradas y no se puede deshacer. Ten presente esta consecuencia antes de confirmar la eliminación.
 
 ### Convertir el tipo de una propiedad {#convert-column}
 

@@ -8,7 +8,8 @@
 // objective descriptions, comments and the notebook edit exactly like a page
 // (MIN-728). This file only states what a page is.
 
-import type { MutableRefObject } from "react";
+import { useMemo, type MutableRefObject } from "react";
+import { useTranslations } from "next-intl";
 import type { Editor, JSONContent } from "@tiptap/react";
 import { RichEditor, type RichEditorMentions } from "@/components/editor/rich-editor";
 import type { PageUploads } from "@/components/pages/page-uploads";
@@ -16,6 +17,8 @@ import type { MentionLinks } from "@/components/mention-links";
 import type { PageCommentAnchor } from "@/components/pages/page-comment-bubble";
 import type { PagesLookup } from "@/components/pages/pages-lookup";
 import type { BodyCollaboration } from "@/components/pages/page-collaboration";
+import { slashSection, type PageSlashItem } from "@/components/pages/page-slash-command";
+import { insertSubpageMention, subpageBlock } from "@/components/pages/blocks/subpage";
 
 export { BLOCK_ID_ATTRIBUTE } from "@/components/pages/blocks";
 
@@ -58,13 +61,27 @@ export function PageEditor({
   editable?: boolean;
   className?: string;
 }) {
+  const t = useTranslations("Pages");
+  // “/Subpage” creates the child page and cites it with an inline mention
+  // (blocks/subpage.ts). The engine reads its actions through a ref, so a new
+  // list would not rebuild anything; memoized all the same.
+  const slashActions = useMemo<PageSlashItem[]>(() => [{
+    key: "subpage",
+    label: t(subpageBlock.labelKey),
+    icon: subpageBlock.icon,
+    keywords: subpageBlock.slash.keywords,
+    section: slashSection(t, subpageBlock.slash.group),
+    run: insertSubpageMention,
+  }], [t]);
   return (
     <RichEditor
       initialContent={initialContent}
       onChange={(content) => onChange(content)}
       blocks="page"
       blockChrome
+      marquee
       bottomReserve
+      find
       size="page"
       pages={pages}
       uploads={uploads}
@@ -77,6 +94,7 @@ export function PageEditor({
       onComment={onComment}
       collaboration={collaboration}
       editable={editable}
+      slashActions={editable ? slashActions : undefined}
       className={className}
     />
   );

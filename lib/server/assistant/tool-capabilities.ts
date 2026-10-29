@@ -76,6 +76,7 @@ export const NUMO_TOOL_CAPABILITIES: Record<string, NumoToolCapability> = {
   list_pages: "read",
   search_pages: "read",
   get_page: "read",
+  list_page_database_views: "read",
   // Readers get the board settings without its public URL and token.
   get_feedback_board: "read",
   list_feedback: "read",
@@ -101,6 +102,7 @@ export const NUMO_TOOL_CAPABILITIES: Record<string, NumoToolCapability> = {
   edit_issue_text: "write",
   create_page: "write",
   update_page_database: "write",
+  update_page_database_views: "write",
   update_page: "write",
   append_to_page: "write",
   edit_page_text: "write",

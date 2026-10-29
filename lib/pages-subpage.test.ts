@@ -37,6 +37,9 @@ import {
   hasSubpage,
   remapSubpages,
   removeSubpages,
+  convertSubpageBlocks,
+  pageLinkLine,
+  pageMentionNode,
   subpageIdsIn,
 } from "@/lib/pages-subpage";
 import { selectBlockAt, selectedSubpageId } from "@/components/pages/block-actions";
@@ -126,7 +129,11 @@ describe("appendSubpage", () => {
   it("remet le bloc en FIN de corps", () => {
     const { doc: after, added } = appendSubpage(doc(para("intro")), A);
     expect(added).toBe(true);
-    expect(after.content?.at(-1)).toMatchObject({ type: "subpage", attrs: { pageId: A } });
+    // As a link line: the page's mention alone in a paragraph.
+    expect(after.content?.at(-1)).toMatchObject({
+      type: "paragraph",
+      content: [{ type: "mention", attrs: { mentionType: "page", mentionId: A } }],
+    });
   });
 
   it("ne pose rien si le corps cite déjà la page", () => {
@@ -324,5 +331,53 @@ describe("selectedSubpageId", () => {
     const { editor } = makeEditor(doc(para("intro"), subpage(A)));
     editor.commands.selectAll();
     expect(selectedSubpageId(editor)).toBeNull();
+  });
+});
+
+/* ─── Link lines: the subpage as an inline mention ──────────────────────── */
+
+describe("link lines", () => {
+  const line = (pageId: string) => pageLinkLine(pageId) as JSONContent;
+  const sentence = (pageId: string): JSONContent => ({
+    type: "paragraph",
+    content: [{ type: "text", text: "See " }, pageMentionNode(pageId) as JSONContent, { type: "text", text: " first" }],
+  });
+
+  it("convert every legacy block in place, nested ones too, keeping block ids", () => {
+    const before = doc(
+      para("intro"),
+      { ...subpage(A), attrs: { pageId: A, blockId: "block-a" } },
+      { type: "bulletList", content: [{ type: "listItem", content: [para("item"), subpage(B)] }] },
+    );
+    const { doc: after, converted } = convertSubpageBlocks(before);
+    expect(converted).toBe(2);
+    expect(after?.content?.[1]).toEqual(pageLinkLine(A, "block-a"));
+    expect(after?.content?.[2]?.content?.[0]?.content?.[1]).toEqual(pageLinkLine(B));
+    expect(subpageIdsIn(after)).toEqual([A, B]);
+  });
+
+  it("leave a document without legacy blocks untouched", () => {
+    const before = doc(para("intro"), line(A));
+    expect(convertSubpageBlocks(before)).toEqual({ doc: before, converted: 0 });
+  });
+
+  it("leave the trash mirror a page mentioned inside a sentence", () => {
+    const before = doc(line(A), sentence(A));
+    const { doc: after, removed } = removeSubpages(before, [A]);
+    expect(removed).toBe(1);
+    expect(after?.content).toEqual([sentence(A)]);
+  });
+
+  it("count a sentence's mention as a citation, so a restore adds no second line", () => {
+    const before = doc(sentence(A));
+    expect(hasSubpage(before, A)).toBe(true);
+    expect(appendSubpage(before, A).added).toBe(false);
+  });
+
+  it("follow a duplicated branch, in a sentence too", () => {
+    const remapped = remapSubpages(doc(line(A), sentence(A), sentence(B)), new Map([[A, "copy-a"]]));
+    expect(remapped?.content?.[0]).toEqual(pageLinkLine("copy-a"));
+    expect(remapped?.content?.[1]).toEqual(sentence("copy-a"));
+    expect(remapped?.content?.[2]).toEqual(sentence(B));
   });
 });

@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 38,
-  "sourceRevision": 38,
+  "revision": 39,
+  "sourceRevision": 39,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-27",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles; MIN-809 Smart Fill split button; MIN-813 Smart Fill title on request",
     "editions": [
@@ -118,14 +118,15 @@
       "components/drafts-tray.tsx",
       "lib/use-all-drafts.ts",
       "lib/use-held-draft.ts",
-      "lib/issue-hierarchy.ts"
+      "lib/issue-hierarchy.ts",
+      "components/editor/mobile-editor-toolbar.tsx"
     ]
   },
   "review": {
-    "revision": 38,
-    "fact": "agent:claude-code (MIN-813 Smart-fill title paragraph checked against components/create-issue-dialog.tsx and components/issue-compact-fields.tsx: while Smart-fill writes the title only the description shows, Set manually → Title reveals and focuses the title field, an empty field leaves on blur, switching Smart-fill off shows it; plain placeholders; new-issue figure shows Smart-fill off with the title visible and stays accurate, no figure changed); agent:claude-code (MIN-809 manual-creation paragraph checked against components/issue-compact-fields.tsx and components/create-issue-dialog.tsx: the arrow next to the Smart-fill button lists priority, effort, categories and objective, each with a submenu of values, and the chosen value brings the property back to the form; property keys unchanged; new-issue figure recaptured on 2026-10-27 in six locales from the working tree on the local dev server against the preview demo account, Smart-fill off with its arrow visible, writes blocked, nothing submitted, each image inspected); agent:claude-code (MIN-798 Smart-fill title section and preference bullet checked against lib/smart-fill.ts, lib/server/smart-fill-title.ts, lib/server/create-issue.ts, lib/server/smart-fill-reevaluation.ts, lib/server/update-issue.ts, components/create-issue-dialog.tsx and components/settings/account-smart-fill-section.tsx: on by default under the master switch, description focus, smaller empty title until focused or filled, and placeholders in the form, first-line fallback, ownership released by a manual edit, re-evaluation skipped for an editor who turned titles off; MCP requires a title; no figure changed); agent:claude-code (MIN-804 sub-issues paragraph checked against lib/issue-hierarchy.ts, components/issue-card.tsx, components/relations-section.tsx and the enforce_one_level_subissues trigger: R and the right-click Relations entry offer Parent of / Sub-issue of only where the one-level rule allows, re-parenting moves the issue, a selection uses Sub-issue of; no figure changed); agent:/root/min776 (drafts paragraph checked against components/create-issue-dialog.tsx, components/objective-dialog.tsx and lib/use-held-draft.ts: closing keeps the form, reopening resumes it, two minutes after a close it becomes a draft, another context saves it first, and the split menu offers Save as draft; rest of the article unchanged since the MIN-778 review; no figure changed); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:claude-code (en MIN-813 Smart-fill title paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-809 manual-creation paragraph; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-798 Smart-fill title section with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-804 sub-issues paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:/root/min776 (en drafts paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-27"
+    "revision": 39,
+    "fact": "agent:claude-code (phone keyboard toolbar sentence checked against components/editor/mobile-editor-toolbar.tsx and components/editor/rich-editor.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "feedback",
@@ -170,7 +171,7 @@
       "src": "/documentation/en/new-issue.png",
       "alt": "Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-21 button.",
       "caption": "Describe the expected result, then choose the useful properties before creating the issue.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -186,7 +187,7 @@
       "src": "/documentation/en/triage-incoming.png",
       "alt": "Incoming demonstration issue AUR-19 with its report, properties and duplicate, Decline and Accept controls.",
       "caption": "Read the incoming report before accepting it, declining it or linking a duplicate.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -203,7 +204,7 @@
       "src": "/documentation/en/issue-statuses.png",
       "alt": "Eight issue statuses in the picker, with backlog currently selected.",
       "caption": "The check marks the current status. Choose the status that reflects the work’s actual state.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -219,7 +220,7 @@
       "src": "/documentation/en/work-resources.png",
       "alt": "Add-link dialog with an example contact URL.",
       "caption": "Review the destination before adding a resource. This example link has not been submitted.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -235,7 +236,7 @@
       "src": "/documentation/en/work-dependencies.png",
       "alt": "Search for a blocker by issue identifier.",
       "caption": "Choose the relation direction before selecting its endpoint. The picker is shown without submitting a relation.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -251,7 +252,7 @@
       "src": "/documentation/en/work-sub-issues.png",
       "alt": "Sub-issue creation field in a demonstration parent issue.",
       "caption": "The inline field creates a child under this parent; a child keeps its own status and discussion.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -267,7 +268,7 @@
       "src": "/documentation/en/work-implementation-plan.png",
       "alt": "Demonstration plan showing two of six work tasks complete.",
       "caption": "The saved demonstration plan separates completed, active and pending steps. Its progress does not prove the fictional code task was executed.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -283,7 +284,7 @@
       "src": "/documentation/en/issue-date-recurrence.png",
       "alt": "Due-date picker in recurring mode with a weekly Sunday preview and optional time.",
       "caption": "Recurring mode previews the weekly cadence. Confirm the first due date before creating the issue.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -299,7 +300,7 @@
       "src": "/documentation/en/import-issues-preview-workflow.png",
       "alt": "CSV preview with two localized demonstration rows and detected column mappings.",
       "caption": "CSV preview with two localized demonstration rows and detected column mappings. No import was submitted; optional AI planning was blocked for the capture.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -316,7 +317,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -362,7 +363,7 @@ Closing the form keeps what you wrote: open it again to continue where you left 
 
 ![Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-21 button.](/documentation/en/new-issue.png)
 
-The description, comments and the new-issue dialog use the same editor as project pages, without the block handles. Type `/` to insert a heading, list, task, quote, **Callout**, code block, **Toggle** or divider, and `@` to mention a person, issue, objective or page. The `@` menu also lists the resources attached to what you are writing: the issue or objective for its description and plan, a comment for its own files, or a creation dialog for the files added in it. A mention of a resource attached elsewhere shows as **Unavailable**. Several people can edit the same description at once: each person's caret appears with their name and color, and changes made by Numo or a connected agent appear as they are saved. Numo, connected agents and CSV exports read the text as Markdown, which follows a few seconds after typing stops. Select text to make it bold, italic, struck through or code, or to add a link. Paste or drop an image, or choose **Image** in the `/` menu, to insert it in the description; other kinds of files belong in the issue's resources. A mention points at its target, not at its name: it follows a rename and survives editing and copy-paste into another description, comment, page or the Numo composer. A reader who cannot open the target sees an **Unavailable** mention, without its name or project.
+The description, comments and the new-issue dialog use the same editor as project pages, without the block handles. Type `/` to insert a heading, list, task, quote, **Callout**, code block, **Toggle** or divider, and `@` to mention a person, issue, objective or page. The `@` menu also lists the resources attached to what you are writing: the issue or objective for its description and plan, a comment for its own files, or a creation dialog for the files added in it. A mention of a resource attached elsewhere shows as **Unavailable**. Several people can edit the same description at once: each person's caret appears with their name and color, and changes made by Numo or a connected agent appear as they are saved. Numo, connected agents and CSV exports read the text as Markdown, which follows a few seconds after typing stops. Select text to make it bold, italic, struck through or code, or to add a link. Paste or drop an image, or choose **Image** in the `/` menu, to insert it in the description; other kinds of files belong in the issue's resources. A mention points at its target, not at its name: it follows a rename and survives editing and copy-paste into another description, comment, page or the Numo composer. A reader who cannot open the target sees an **Unavailable** mention, without its name or project. On a phone, the toolbar above the keyboard replaces the selection toolbar and the typed `@` menu; the [Pages guide](/docs/pages#editor-formatting) describes it.
 
 ### Check saving and visibility {#issue-save}
 
@@ -558,7 +559,7 @@ A Numo routine is a different object: it schedules a conversation and can use th
 
 ## Update several issues together {#bulk-issue-actions}
 
-On a board, hold Shift and click each issue card to toggle its selection. With a mouse, you can also drag a selection rectangle from empty board space; Shift, Command or Ctrl makes that gesture additive. The rectangle gesture is not a touch-screen selection mode. Check the selected count and visible identifiers before opening the bulk actions. Selection is a working set for the action, not a saved view and not a permission grant. Open them with **Actions** on the selection bar, or press Command+K on macOS or Ctrl+K on Windows/Linux while issues are selected.
+On a board, hold Shift and click each issue card to toggle its selection. With a mouse, you can also drag a selection rectangle from empty board space; Shift, Command or Ctrl makes that gesture additive. Near an edge the board scrolls, and the cards the rectangle passed over stay selected after they scroll out of view. The rectangle gesture is not a touch-screen selection mode. Check the selected count and visible identifiers before opening the bulk actions. Selection is a working set for the action, not a saved view and not a permission grant. Open them with **Actions** on the selection bar, or press Command+K on macOS or Ctrl+K on Windows/Linux while issues are selected.
 
 Choose Actions in the floating selection bar to open the command palette. Choose status, priority, effort or assignee, set the value and confirm the inline form. The objective action appears only for a selection in one project with available objectives. Other actions, such as adding to or removing from a cycle, linking two issues or sending the selection to Numo, appear when the current board supports them. With a mouse, you can also point at a selected card and press S, P, E, A, L, D, O or R: the picker that opens applies to the whole selection, and for assignee, objective, categories and relations to the selected issues of that card's project. Inspect the affected issues afterward. On a touch-only device without a supported multi-selection gesture, edit each issue through its detail panel.
 

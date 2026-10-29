@@ -36,17 +36,18 @@ import {
   PageBlockShortcuts,
   activePageColor,
   blockExtensions,
-  pageColorExtensions,
   setPageColor,
   type PageBlockId,
 } from "@/components/pages/blocks";
 import { BlockFlash, flashBlockAt } from "@/components/pages/block-flash";
+import { BlockSelection } from "@/components/editor/block-selection";
 import { handleNodeLinkClick } from "@/components/editor-node-link";
 import {
   GUTTER_HOVER,
   GUTTER_WIDTH,
   blockLink,
   blockClipboard,
+  blockMenuAbilities,
   blockRange,
   copyBlocks,
   styledBox,
@@ -76,7 +77,6 @@ function makeEditor(content = "") {
       Document,
       Text,
       ...blockExtensions({ headless: true }),
-      ...pageColorExtensions(),
       PageBlockShortcuts,
       UniqueID.configure({
         attributeName: BLOCK_ID_ATTRIBUTE,
@@ -692,13 +692,13 @@ describe("the gutter hover surface", () => {
   it("stays off where there is no gutter", () => {
     // The rule is conditional on `[data-gutter]`, which the editor engine only
     // sets when the block chrome is shown: a public page, a print, a
-    // description or a comment has no reservation on the left, and the
-    // negative margin there would move the text out of its column.
+    // description, a comment or the phone layout has no reservation on the
+    // left, and the negative margin there would move the text out of its column.
     const editor = readFileSync(
       join(process.cwd(), "components/editor/rich-editor.tsx"),
       "utf8"
     );
-    expect(editor).toContain("const chrome = !!editor && editable && blockChrome;");
+    expect(editor).toContain("const chrome = !!editor && editable && blockChrome && !mobile;");
     expect(editor).toContain('data-gutter={chrome ? "" : undefined}');
   });
 
@@ -999,5 +999,48 @@ describe("le DOM d'une vue de nœud", () => {
 
     link.remove();
     other.remove();
+  });
+});
+
+describe("the block menu offers only what acts on the selected blocks", () => {
+  const abilitiesOf = (html: string, index = 0) => {
+    const editor = makeEditor(html);
+    let pos = 0;
+    editor.state.doc.forEach((_node, offset, at) => {
+      if (at === index) pos = offset;
+    });
+    selectBlockAt(editor, pos);
+    const can = blockMenuAbilities(editor);
+    editor.destroy();
+    return can;
+  };
+
+  it("keeps every action on text blocks", () => {
+    for (const html of ["<p>Text</p>", "<h2>Title</h2>", "<ul><li><p>Item</p></li></ul>", "<blockquote><p>Quote</p></blockquote>"]) {
+      expect(abilitiesOf(html)).toEqual({ turnInto: true, color: true, text: true });
+    }
+  });
+
+  it("drops Turn into, the colors and Numo on a divider and an equation", () => {
+    expect(abilitiesOf("<hr>")).toEqual({ turnInto: false, color: false, text: false });
+    expect(abilitiesOf('<div data-type="block-math" data-latex="x^2"></div>').turnInto).toBe(false);
+    expect(abilitiesOf('<div data-type="block-math" data-latex="x^2"></div>').color).toBe(false);
+  });
+
+  it("keeps every action on a code block, whose code takes the colors", () => {
+    expect(abilitiesOf("<pre><code>const x = 1;</code></pre>")).toEqual({ turnInto: true, color: true, text: true });
+  });
+
+  it("keeps the colors of a callout", () => {
+    expect(abilitiesOf('<div data-type="callout"><p>Note</p></div>').color).toBe(true);
+  });
+
+  it("keeps an action on a mixed selection as soon as one block takes it", () => {
+    const editor = makeEditor("<hr><p>Text</p>");
+    editor.view.dispatch(editor.state.tr.setSelection(
+      BlockSelection.create(editor.state.doc, 0, editor.state.doc.firstChild!.nodeSize)
+    ));
+    expect(blockMenuAbilities(editor)).toEqual({ turnInto: true, color: true, text: true });
+    editor.destroy();
   });
 });

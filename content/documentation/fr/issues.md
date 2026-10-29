@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 38,
-  "sourceRevision": 38,
+  "revision": 39,
+  "sourceRevision": 39,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-27",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles; MIN-809 Smart Fill split button; MIN-813 Smart Fill title on request",
     "editions": [
@@ -118,14 +118,15 @@
       "components/drafts-tray.tsx",
       "lib/use-all-drafts.ts",
       "lib/use-held-draft.ts",
-      "lib/issue-hierarchy.ts"
+      "lib/issue-hierarchy.ts",
+      "components/editor/mobile-editor-toolbar.tsx"
     ]
   },
   "review": {
-    "revision": 38,
-    "fact": "agent:claude-code (MIN-813 Smart-fill title paragraph checked against components/create-issue-dialog.tsx and components/issue-compact-fields.tsx: while Smart-fill writes the title only the description shows, Set manually → Title reveals and focuses the title field, an empty field leaves on blur, switching Smart-fill off shows it; plain placeholders; new-issue figure shows Smart-fill off with the title visible and stays accurate, no figure changed); agent:claude-code (MIN-809 manual-creation paragraph checked against components/issue-compact-fields.tsx and components/create-issue-dialog.tsx: the arrow next to the Smart-fill button lists priority, effort, categories and objective, each with a submenu of values, and the chosen value brings the property back to the form; property keys unchanged; new-issue figure recaptured on 2026-10-27 in six locales from the working tree on the local dev server against the preview demo account, Smart-fill off with its arrow visible, writes blocked, nothing submitted, each image inspected); agent:claude-code (MIN-798 Smart-fill title section and preference bullet checked against lib/smart-fill.ts, lib/server/smart-fill-title.ts, lib/server/create-issue.ts, lib/server/smart-fill-reevaluation.ts, lib/server/update-issue.ts, components/create-issue-dialog.tsx and components/settings/account-smart-fill-section.tsx: on by default under the master switch, description focus, smaller empty title until focused or filled, and placeholders in the form, first-line fallback, ownership released by a manual edit, re-evaluation skipped for an editor who turned titles off; MCP requires a title; no figure changed); agent:claude-code (MIN-804 sub-issues paragraph checked against lib/issue-hierarchy.ts, components/issue-card.tsx, components/relations-section.tsx and the enforce_one_level_subissues trigger: R and the right-click Relations entry offer Parent of / Sub-issue of only where the one-level rule allows, re-parenting moves the issue, a selection uses Sub-issue of; no figure changed); agent:/root/min776 (drafts paragraph checked against components/create-issue-dialog.tsx, components/objective-dialog.tsx and lib/use-held-draft.ts: closing keeps the form, reopening resumes it, two minutes after a close it becomes a draft, another context saves it first, and the split menu offers Save as draft; rest of the article unchanged since the MIN-778 review; no figure changed); agent:claude-code (MIN-762 UI label correction: quoted labels aligned on the corrected fr catalog; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:claude-code (fr MIN-813 Smart-fill title paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-809 manual-creation paragraph; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-798 Smart-fill title section with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-804 sub-issues paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:/root/min776 (fr drafts paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-762 label edit; self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-27"
+    "revision": 39,
+    "fact": "agent:claude-code (phone keyboard toolbar sentence checked against components/editor/mobile-editor-toolbar.tsx and components/editor/rich-editor.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (fr changed passages with catalog UI labels; equivalent meaning to en revision 39; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "feedback",
@@ -170,7 +171,7 @@
       "src": "/documentation/fr/new-issue.png",
       "alt": "Brouillon de ticket non envoyé dans le projet Aurora, avec titre, description, propriétés manuelles et le bouton Créer AUR-21.",
       "caption": "Décrivez le résultat attendu, puis choisissez les propriétés utiles avant de créer le ticket.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -186,7 +187,7 @@
       "src": "/documentation/fr/triage-incoming.png",
       "alt": "Ticket de démonstration AUR-19 reçu dans le triage, avec son signalement, ses propriétés et les commandes Doublon, Refuser et Accepter.",
       "caption": "Lisez le signalement reçu avant de l’accepter, de le refuser ou de le relier à un doublon.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -203,7 +204,7 @@
       "src": "/documentation/fr/issue-statuses.png",
       "alt": "Les huit statuts du ticket dans le sélecteur, avec Backlog sélectionné.",
       "caption": "La coche indique le statut actuel. Choisissez celui qui reflète l’état réel du travail.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -219,7 +220,7 @@
       "src": "/documentation/fr/work-resources.png",
       "alt": "Dialogue d’ajout de lien avec une adresse de contact d’exemple.",
       "caption": "Vérifiez la destination avant d’ajouter la ressource. Ce lien d’exemple n’a pas été envoyé.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -235,7 +236,7 @@
       "src": "/documentation/fr/work-dependencies.png",
       "alt": "Recherche d’un préalable par identifiant de ticket.",
       "caption": "Choisissez le sens de la relation avant sa destination. Aucune relation n’a été envoyée dans ce sélecteur.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -251,7 +252,7 @@
       "src": "/documentation/fr/work-sub-issues.png",
       "alt": "Champ de création d’un sous-ticket dans un parent de démonstration.",
       "caption": "Ce champ crée un enfant sous le parent ; chaque enfant conserve son état et sa discussion.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -267,7 +268,7 @@
       "src": "/documentation/fr/work-implementation-plan.png",
       "alt": "Plan de démonstration avec deux tâches de travail terminées sur six.",
       "caption": "Le plan enregistré distingue les étapes terminées, actives et en attente. Sa progression ne prouve pas l’exécution de la tâche de code fictive.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -283,7 +284,7 @@
       "src": "/documentation/fr/issue-date-recurrence.png",
       "alt": "Sélecteur d’échéance en mode récurrent avec aperçu hebdomadaire le dimanche et heure optionnelle.",
       "caption": "Le mode récurrent prévisualise la cadence hebdomadaire. Confirmez la première échéance avant de créer le ticket.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -299,7 +300,7 @@
       "src": "/documentation/fr/import-issues-preview-workflow.png",
       "alt": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées.",
       "caption": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées. Aucun import n’a été lancé ; la préparation IA optionnelle a été bloquée pour la capture.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -316,7 +317,7 @@
       "src": "/documentation/fr/file-preview.png",
       "alt": "Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger, Renommer et Retirer.",
       "caption": "Le lecteur commun place Fermer sous l’aperçu. Le menu Actions du fichier propose Télécharger et, si les droits le permettent, Renommer et Retirer.",
-      "revision": 38,
+      "revision": 39,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -362,7 +363,7 @@ Fermer le formulaire conserve ce que vous avez écrit : rouvrez-le pour reprendr
 
 ![Brouillon de ticket non envoyé dans le projet Aurora, avec titre, description, propriétés manuelles et le bouton Créer AUR-21.](/documentation/fr/new-issue.png)
 
-La description, les commentaires et la fenêtre de création utilisent le même éditeur que les pages du projet, sans les poignées de bloc. Tapez `/` pour insérer un titre, une liste, une tâche, une citation, un **Encadré**, un bloc de code, un **Dépliant** ou un séparateur, et `@` pour mentionner une personne, un ticket, un objectif ou une page. Le menu `@` propose aussi les ressources jointes à ce que vous rédigez : le ticket ou l’objectif pour sa description et son plan, un commentaire pour ses propres fichiers, ou une fenêtre de création pour les fichiers ajoutés. Une mention d’une ressource jointe ailleurs s’affiche **Indisponible**. Plusieurs personnes peuvent modifier la même description en même temps : le curseur de chacune s’affiche avec son nom et sa couleur, et les modifications de Numo ou d’un agent connecté apparaissent dès leur enregistrement. Numo, les agents connectés et les exports CSV lisent le texte en Markdown, qui suit quelques secondes après la fin de la saisie. Sélectionnez du texte pour le mettre en gras, en italique, barré ou en code, ou pour ajouter un lien. Collez ou déposez une image, ou choisissez **Image** dans le menu `/`, pour l’insérer dans la description ; les autres types de fichiers vont dans les ressources du ticket. Une mention désigne sa cible, et non son nom : elle suit un renommage et résiste aux modifications comme au copier-coller vers une autre description, un commentaire, une page ou le compositeur de Numo. Un lecteur qui ne peut pas ouvrir la cible voit une mention **Indisponible**, sans son nom ni son projet.
+La description, les commentaires et la fenêtre de création utilisent le même éditeur que les pages du projet, sans les poignées de bloc. Tapez `/` pour insérer un titre, une liste, une tâche, une citation, un **Encadré**, un bloc de code, un **Dépliant** ou un séparateur, et `@` pour mentionner une personne, un ticket, un objectif ou une page. Le menu `@` propose aussi les ressources jointes à ce que vous rédigez : le ticket ou l’objectif pour sa description et son plan, un commentaire pour ses propres fichiers, ou une fenêtre de création pour les fichiers ajoutés. Une mention d’une ressource jointe ailleurs s’affiche **Indisponible**. Plusieurs personnes peuvent modifier la même description en même temps : le curseur de chacune s’affiche avec son nom et sa couleur, et les modifications de Numo ou d’un agent connecté apparaissent dès leur enregistrement. Numo, les agents connectés et les exports CSV lisent le texte en Markdown, qui suit quelques secondes après la fin de la saisie. Sélectionnez du texte pour le mettre en gras, en italique, barré ou en code, ou pour ajouter un lien. Collez ou déposez une image, ou choisissez **Image** dans le menu `/`, pour l’insérer dans la description ; les autres types de fichiers vont dans les ressources du ticket. Une mention désigne sa cible, et non son nom : elle suit un renommage et résiste aux modifications comme au copier-coller vers une autre description, un commentaire, une page ou le compositeur de Numo. Un lecteur qui ne peut pas ouvrir la cible voit une mention **Indisponible**, sans son nom ni son projet. Sur un téléphone, la barre au-dessus du clavier remplace la barre de sélection et le menu `@` à la saisie ; le [guide des pages](/fr/documentation/pages#editor-formatting) la décrit.
 
 ### Vérifier l’enregistrement et la visibilité {#issue-save}
 
@@ -558,7 +559,7 @@ Une routine Numo est différente : elle planifie une conversation et peut consom
 
 ## Modifier plusieurs tickets ensemble {#bulk-issue-actions}
 
-Dans un tableau, maintenez Maj et cliquez sur chaque carte pour l’ajouter à la sélection ou l’en retirer. Avec une souris, vous pouvez aussi tracer un rectangle depuis une zone vide du tableau ; Maj, Commande ou Ctrl ajoute cette zone à la sélection existante. Le rectangle n’est pas un mode de sélection tactile. Vérifiez le nombre choisi et les identifiants visibles avant d’ouvrir les actions groupées. La sélection est l’ensemble ciblé par l’action, pas une vue enregistrée ni une autorisation supplémentaire. Ouvrez-les avec **Actions** dans la barre de sélection, ou appuyez sur Commande+K sur macOS ou Ctrl+K sur Windows/Linux pendant que des tickets sont sélectionnés.
+Dans un tableau, maintenez Maj et cliquez sur chaque carte pour l’ajouter à la sélection ou l’en retirer. Avec une souris, vous pouvez aussi tracer un rectangle depuis une zone vide du tableau ; Maj, Commande ou Ctrl ajoute cette zone à la sélection existante. Près d’un bord, le tableau défile, et les cartes que le rectangle a parcourues restent sélectionnées une fois sorties de la vue. Le rectangle n’est pas un mode de sélection tactile. Vérifiez le nombre choisi et les identifiants visibles avant d’ouvrir les actions groupées. La sélection est l’ensemble ciblé par l’action, pas une vue enregistrée ni une autorisation supplémentaire. Ouvrez-les avec **Actions** dans la barre de sélection, ou appuyez sur Commande+K sur macOS ou Ctrl+K sur Windows/Linux pendant que des tickets sont sélectionnés.
 
 Choisissez Actions dans la barre flottante de sélection pour ouvrir la palette de commandes. Choisissez l’état, la priorité, l’effort ou le responsable, définissez la valeur et validez le formulaire intégré. L’action sur l’objectif apparaît seulement pour une sélection appartenant à un projet avec des objectifs disponibles. Les autres actions, comme ajouter ou retirer des tickets du cycle, lier deux tickets ou confier la sélection à Numo, apparaissent selon les capacités du tableau courant. À la souris, vous pouvez aussi pointer une carte sélectionnée et appuyer sur S, P, E, A, L, D, O ou R : le sélecteur qui s’ouvre s’applique à toute la sélection, et pour le responsable, l’objectif, les catégories et les relations aux tickets sélectionnés du projet de cette carte. Inspectez ensuite les tickets concernés. Sur un appareil uniquement tactile sans geste de sélection multiple pris en charge, modifiez les tickets un par un dans leur panneau de détail.
 

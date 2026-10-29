@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 9,
+  "revision": 12,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -43,14 +43,20 @@
       "components/editor/comment-editor.tsx",
       "components/scratchpad/scratchpad-editor.tsx",
       "lib/scratchpad-search.ts",
-      "components/command-palette.tsx"
+      "components/command-palette.tsx",
+      "components/editor/mobile-editor-toolbar.tsx",
+      "components/editor/find-bar.tsx",
+      "lib/keyboard/find-shortcut.ts",
+      "components/pages/blocks/math.ts",
+      "components/editor/math-edit-menu.tsx",
+      "components/editor/block-selection.ts"
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of task-notebook-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 12,
+    "fact": "agent:claude-code (Command/Ctrl+F find and replace bar in the open notebook checked against components/scratchpad/scratchpad-editor.tsx, components/editor/find-bar.tsx and lib/keyboard/find-shortcut.ts; equations (the `/` Equation entry, `$$…$$` typed in a line, click to edit the LaTeX with a live preview in a popover or phone sheet, red error, empty save removing it, `$…$` and `$$` fence Markdown with prices kept as text) checked against components/pages/blocks/math.ts, components/editor/math-edit-menu.tsx and lib/pages-math.test.ts; the pointer to block selection (drag, Escape, Command/Ctrl+A) in the shared editor checked against components/editor/block-selection.ts and components/scratchpad/scratchpad-editor.tsx; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the changed controls)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; equivalent meaning to en revision 11; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "issues",
@@ -68,7 +74,7 @@
       "src": "/documentation/de/work-task-notebook.png",
       "alt": "Übersetzte persönliche Demo-Aufgaben im Notizbuch.",
       "caption": "Das Notizbuch hält persönliche Schritte außerhalb der Tickethierarchie des Projekts fest. Die Zustände der Beispielaufgaben bleiben unverändert.",
-      "revision": 10,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -92,7 +98,7 @@
 
 Um eine Aufgabe wiederzufinden, öffne die Befehlspalette mit Command+K unter macOS beziehungsweise Strg+K unter Windows/Linux und tippe Wörter daraus ein. Noch offene Aufgaben erscheinen unter **Aufgabennotizbuch**, mit ihrem Abschnitt; erledigte und abgebrochene Aufgaben sowie Fragen erscheinen dort nicht. Wähle eine aus, um das Notizbuch bei dieser Aufgabe zu öffnen. Solange du nichts eingibst, listet die Palette keine Aufgaben aus dem Notizbuch auf.
 
-Das Aufgabenheft verwendet denselben Editor wie Projektseiten, mit denselben Blockgriffen: Fahre über einen Block, um ihn zu ziehen, sein Menü zu öffnen oder mit **+** einen Block hinzuzufügen. Tippe `/`, um eine Aufgabe, die zuerst angeboten wird, oder eine Überschrift, Liste, ein Zitat, einen **Hinweis**, einen Codeblock, ein Element **Aufklappbarer Bereich** oder einen Teiler einzufügen, oder wähle **Eine Aufgabe diktieren**, um Aufgaben zu sprechen. Das Heft wird weiterhin als Markdown gespeichert, sodass Numo und verbundene Agenten dieselben Aufgaben und Zustände lesen. Markiere Text, um ihn zu formatieren oder einen Link hinzuzufügen. Füge ein Bild ein, ziehe es hinein oder wähle **Bild** im `/`-Menü, um es in eine Notiz einzufügen. Andere Dateitypen gehören in Seiten.
+Das Aufgabenheft verwendet denselben Editor wie Projektseiten, mit denselben Blockgriffen: Fahre über einen Block, um ihn zu ziehen, sein Menü zu öffnen oder mit **+** einen Block hinzuzufügen. Tippe `/`, um eine Aufgabe, die zuerst angeboten wird, oder eine Überschrift, Liste, ein Zitat, einen **Hinweis**, einen Codeblock, eine **Gleichung**, ein Element **Aufklappbarer Bereich** oder einen Teiler einzufügen, oder wähle **Eine Aufgabe diktieren**, um Aufgaben zu sprechen. Das Heft wird weiterhin als Markdown gespeichert, sodass Numo und verbundene Agenten dieselben Aufgaben und Zustände lesen. Markiere Text, um ihn zu formatieren oder einen Link hinzuzufügen. Ganze Blöcke wählst du wie auf einer Seite aus, indem du über sie ziehst, mit einem Auswahlrechteck, das du neben oder unter den Notizen aufziehst, mit Escape oder mit Command/Strg+A, wie in der [Seitenanleitung](/de/dokumentation/pages#editor-formatting) beschrieben. Füge ein Bild ein, ziehe es hinein oder wähle **Bild** im `/`-Menü, um es in eine Notiz einzufügen. Andere Dateitypen gehören in Seiten. Auf dem Smartphone ersetzt die Leiste über der Tastatur die Blockgriffe, die Auswahlleiste und das getippte `@`-Menü; die [Seitenanleitung](/de/dokumentation/pages#editor-formatting) beschreibt sie. Solange das Notizbuch geöffnet ist, öffnet Command+F unter macOS oder Strg+F unter Windows/Linux dieselbe [Leiste zum Suchen und Ersetzen](/de/dokumentation/pages#find-and-replace) wie auf einer Seite.
 
 Das Menü **Notizbuchaktionen** (`…`) bietet **Alle als Prompt kopieren**, das das ganze Aufgabenheft für deinen eigenen Coding-Agenten kopiert, und **Erledigte und verworfene Aufgaben entfernen**. Das Entfernen verlangt eine Bestätigung, löscht erledigte und abgebrochene Aufgaben samt der Überschriften, die dadurch leer werden, und behält offene oder laufende Aufgaben. Um weniger zu kopieren, verwende bei einer Überschrift **Abschnitt als Prompt kopieren** oder bei einer Aufgabe **Als Prompt kopieren**. Ist **Ticket oder Aufgabe starten, wenn ich den Prompt kopiere** unter **Kontoeinstellungen** → **Tickets** aktiviert, setzt das Kopieren die kopierten offenen Aufgaben außerdem auf „In Bearbeitung“.
 

@@ -4,6 +4,10 @@
  * padding, one row shape and one highlight, so they read as one component.
  */
 
+/** The room every floating surface (popover, dropdown, select, tooltip)
+    keeps from the edges of the screen when it would otherwise touch them. */
+export const OVERLAY_COLLISION_PADDING = 10;
+
 /** Surface: radius, padding, elevation and edge. */
 export const MENU_SURFACE_CLASS = "rounded-xl bg-popover p-2 shadow-md ring-1 ring-foreground/10";
 

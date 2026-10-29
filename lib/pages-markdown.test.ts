@@ -33,15 +33,19 @@ function roundTrip(markdown: string): string {
 
 /* ── The register, block by block ──────────────────── ───────────────────── */
 
+// A retired block (the subpage) writes what replaced it, so it is checked on
+// its own below rather than as a round trip.
+const CURRENT_BLOCKS = PAGE_BLOCKS.filter((block) => !block.legacy);
+
 describe("l'aller-retour de chaque bloc du catalogue", () => {
-  it.each(PAGE_BLOCKS.map((block) => [block.id, block] as const))(
+  it.each(CURRENT_BLOCKS.map((block) => [block.id, block] as const))(
     "%s revient intact",
     (_id, block) => {
       expect(roundTrip(block.markdown.sample)).toBe(block.markdown.sample);
     }
   );
 
-  it.each(PAGE_BLOCKS.map((block) => [block.id, block] as const))(
+  it.each(CURRENT_BLOCKS.map((block) => [block.id, block] as const))(
     "%s produit bien son nœud, et pas un paragraphe",
     (_id, block) => {
       // Without this, a sample that does not PARSE would go through the round trip
@@ -165,25 +169,34 @@ describe("le dépliant", () => {
   });
 });
 
-describe("la sous-page", () => {
+describe("subpages, cited with a page mention", () => {
   const ID = "00000000-0000-4000-8000-000000000000";
+  const mention = `[@](mention:page/${ID})`;
 
-  it("se dit en une ligne que Numo peut écrire", () => {
+  it("reads the [[page:<id>]] agents learned as the page's mention", () => {
     const json = bodyFromMarkdown(`[[page:${ID}]]`);
-    const subpage = findNode(json, "subpage");
-    expect(subpage?.attrs?.pageId).toBe(ID);
-    expect(bodyToMarkdown(json)).toBe(`[[page:${ID}]]`);
+    expect(findNode(json, "subpage")).toBeNull();
+    expect(findNode(json, "mention")?.attrs).toMatchObject({ mentionType: "page", mentionId: ID });
+    expect(bodyToMarkdown(json)).toBe(mention);
   });
 
-  it("ne happe pas un lien markdown ordinaire", () => {
+  it("reads it inside a sentence too, where text goes on after it", () => {
+    expect(roundTrip(`See [[page:${ID}]] for the rest`)).toBe(`See ${mention} for the rest`);
+  });
+
+  it("projects a stored legacy block as the same mention line", () => {
+    const legacy = { type: "doc", content: [
+      { type: "paragraph", content: [{ type: "text", text: "Before" }] },
+      { type: "subpage", attrs: { pageId: ID } },
+      { type: "paragraph", content: [{ type: "text", text: "After" }] },
+    ] };
+    expect(bodyToMarkdown(legacy)).toBe(`Before\n\n${mention}\n\nAfter`);
+  });
+
+  it("leaves an ordinary Markdown link alone", () => {
     const link = "[minddy](https://www.minddy.app)";
     expect(roundTrip(link)).toBe(link);
-    expect(nodeNames(bodyFromMarkdown(link)).has("subpage")).toBe(false);
-  });
-
-  it("survit au milieu d'un texte", () => {
-    const source = `Avant\n\n[[page:${ID}]]\n\nAprès`;
-    expect(roundTrip(source)).toBe(source);
+    expect(nodeNames(bodyFromMarkdown(link)).has("mention")).toBe(false);
   });
 });
 
@@ -287,6 +300,13 @@ describe("un document qui contient tout", () => {
     "const fence = `un backtick dans du code`",
     "```",
     "",
+    // Equations, as a `$$` fence and inline.
+    "$$",
+    "\\frac{a}{b} = c",
+    "$$",
+    "",
+    "An inline equation $a^2 + b^2 = c^2$ beside a price of $5.",
+    "",
     "---",
     "",
     "<details>",
@@ -296,7 +316,8 @@ describe("un document qui contient tout", () => {
     "",
     "</details>",
     "",
-    "[[page:00000000-0000-4000-8000-000000000000]]",
+    // A subpage, cited the way pages cite them now: its mention on a line.
+    "[@Spec](mention:page/00000000-0000-4000-8000-000000000000)",
     "",
     // An image and a file (MIN-280). The file link is that of a
     // PAGE file: this is what separates it from `[lien](https://…)` from the first
@@ -321,7 +342,7 @@ describe("un document qui contient tout", () => {
 
   it("porte réellement tous les nœuds du catalogue", () => {
     const seen = nodeNames(markdownToPage(DOC).content);
-    for (const block of PAGE_BLOCKS) {
+    for (const block of CURRENT_BLOCKS) {
       expect(
         seen.has(block.nodeName),
         `le document composite ne contient pas de « ${block.nodeName} » (${block.id})`
@@ -549,3 +570,20 @@ function withMention(json: unknown, label: string, legacy = false): Record<strin
   );
   return doc as Record<string, unknown>;
 }
+
+describe("the width of a resized image", () => {
+  const src = "/api/attachments/file?path=chat%2Fuser%2Fshot";
+
+  it("travels in the image title and comes back", () => {
+    const markdown = `![A capture](${src} "width=40%")`;
+    expect(roundTrip(markdown)).toBe(markdown);
+    const image = bodyFromMarkdown(markdown).content?.[0];
+    expect(image).toMatchObject({ type: "image", attrs: { src, width: 40 } });
+  });
+
+  it("is not written for a full-width image, and an ordinary title is no width", () => {
+    expect(bodyToMarkdown({ type: "doc", content: [{ type: "image", attrs: { src, alt: "", width: null } }] }))
+      .toBe(`![](${src})`);
+    expect(bodyFromMarkdown(`![](${src} "A tooltip")`).content?.[0]?.attrs?.width).toBeNull();
+  });
+});

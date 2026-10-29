@@ -31,9 +31,8 @@ import {
 } from "@tiptap/react";
 import {
   Suggestion,
-  type SuggestionMatch,
+  exitSuggestion,
   type SuggestionProps,
-  type Trigger,
 } from "@tiptap/suggestion";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
@@ -41,21 +40,28 @@ import { MentionChip, NUMO_MENTION_ID } from "@/components/mention-chip";
 import { mentionStatus, useMentionLinks } from "@/components/mention-links";
 import {
   MentionOptionRow,
-  MentionRowWithDivider,
   filterMentions,
+  sectionedMentions,
+  useMentionSectionLabel,
   type MentionOption,
 } from "@/components/mention-suggest";
 import { useSemanticMentions } from "@/lib/use-semantic-mentions";
 import { SemanticSearchingHint } from "@/components/semantic-searching-hint";
-import { MENU_SCROLL_CLASS, MENU_SURFACE_CLASS } from "@/components/ui/menu-surface";
-import { cn } from "@/lib/utils";
+import { OVERLAY_COLLISION_PADDING } from "@/components/ui/menu-surface";
+import { SuggestionMenu } from "@/components/editor/suggestion-menu";
+import {
+  findSpacedSuggestionMatch,
+  SUGGESTION_CHIP_CLASS,
+  SUGGESTION_CHIP_EMPTY_CLASS,
+  suggestionPlaceholder,
+} from "@/components/editor/suggestion-chip";
+import { stepSuggestion } from "@/lib/suggestion-menu";
 import type { MentionScan } from "@/lib/mention-scan";
 import { MentionNodeBase } from "@/components/mention-node";
 import { TypedMentionChip } from "@/components/typed-mention-chip";
 import { isMentionLinkType } from "@/lib/mention-link";
 import { primeMentionLabel, shownMentionLabel } from "@/lib/mention-resolution";
 import { Fragment, Slice, type Node as ProseMirrorNode } from "@tiptap/pm/model";
-import { findActiveMentionQuery } from "@/lib/mention-menu";
 import {
   mentionAttrsFromOption,
   mentionAttrsFromScanned,
@@ -249,7 +255,10 @@ interface MentionMenuRef {
   onKeyDown: (event: KeyboardEvent) => boolean;
 }
 
-type MentionProps = SuggestionProps<MentionOption>;
+type MentionProps = SuggestionProps<MentionOption> & {
+  /** Closes the menu and leaves the typed text as text. */
+  close: () => void;
+};
 
 const MentionMenu = forwardRef<MentionMenuRef, MentionProps>(function MentionMenu(
   props,
@@ -257,93 +266,80 @@ const MentionMenu = forwardRef<MentionMenuRef, MentionProps>(function MentionMen
 ) {
   const [selected, setSelected] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
+  const sectionLabel = useMentionSectionLabel();
   // Issues found by meaning (MIN-718) are appended HERE, after tiptap's text
   // matches: a late answer extends the list without resetting the selection,
-  // which only follows tiptap's own items.
+  // which only follows tiptap's own items. They keep their own section, last.
   const allOptions = (props.editor.extensionManager.extensions.find((extension) => extension.name === "mentionSuggest")
     ?.options as MentionSuggestOptions | undefined)?.items() ?? [];
-  const { options: items, status: semanticStatus } = useSemanticMentions(props.items, allOptions, props.query);
-  useEffect(() => setSelected(0), [props.items]);
+  const { options, status: semanticStatus } = useSemanticMentions(props.items, allOptions, props.query);
+  // The flat order the keyboard walks, section after section; index
+  // `items.length` is the “Close menu” row.
+  const { ordered: items, sections } = sectionedMentions(options);
+  const count = items.length;
+  useEffect(() => setSelected(props.items.length ? 0 : -1), [props.items]);
   useEffect(() => {
-    listRef.current
-      ?.querySelector<HTMLElement>('[aria-selected="true"]')
-      ?.scrollIntoView({ block: "nearest" });
+    const list = listRef.current;
+    if (!list) return;
+    if (selected === 0) {
+      list.scrollTop = 0;
+      return;
+    }
+    list.querySelector<HTMLElement>('[role="option"][aria-selected="true"]')?.scrollIntoView({ block: "nearest" });
   }, [selected, props.items]);
 
   const choose = (index: number) => {
+    if (index === count) {
+      props.close();
+      return;
+    }
     const item = items[index];
     if (item) props.command(item);
   };
 
   useImperativeHandle(ref, () => ({
     onKeyDown: (event) => {
-      const n = items.length;
-      if (n === 0) return false;
-      if (event.key === "ArrowUp") {
-        setSelected((s) => (s - 1 + n) % n);
-        return true;
-      }
-      if (event.key === "ArrowDown") {
-        setSelected((s) => (s + 1) % n);
+      if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+        setSelected((s) => stepSuggestion(Math.min(s, count), count, event.key === "ArrowUp" ? "up" : "down"));
         return true;
       }
       if (event.key === "Enter" || event.key === "Tab") {
-        choose(selected);
+        if (selected < 0) return false;
+        choose(Math.min(selected, count));
         return true;
       }
       return false;
     },
   }));
 
-  if (items.length === 0 && !semanticStatus) return null;
-
   return (
-    <div
-      ref={listRef}
-      role="listbox"
-      data-floating-surface
-      className={cn("scrollbar-quiet max-h-56 w-72", MENU_SURFACE_CLASS, MENU_SCROLL_CLASS)}
-    >
-      {items.map((option, index) => (
-        <MentionRowWithDivider key={`${option.type}:${option.id}`} options={items} index={index}>
-          <MentionOptionRow
-            option={option}
-            active={index === selected}
-            onPick={() => choose(index)}
-            onHover={() => setSelected(index)}
-          />
-        </MentionRowWithDivider>
-      ))}
-      {semanticStatus && <SemanticSearchingHint status={semanticStatus} />}
-    </div>
+    <SuggestionMenu
+      sections={sections}
+      sectionLabel={sectionLabel}
+      listRef={listRef}
+      className="w-72"
+      listClassName="max-h-64"
+      closeActive={selected === count}
+      onClose={props.close}
+      onCloseHover={() => setSelected(count)}
+      closeWhenEmpty={props.query !== "" && !props.loading && semanticStatus !== "searching"}
+      trailing={semanticStatus && <SemanticSearchingHint status={semanticStatus} />}
+      renderItem={(option, index) => (
+        <MentionOptionRow
+          key={`${option.type}:${option.id}`}
+          option={option}
+          active={index === selected}
+          onPick={() => choose(index)}
+          onHover={() => setSelected(index)}
+        />
+      )}
+    />
   );
 });
 
 /** Viewport breathing room, and the gap between the caret and the menu. */
-const EDGE = 8;
+const EDGE = OVERLAY_COLLISION_PADDING;
 const GAP = 6;
-
-/** Tiptap matcher with single-space queries and a double-space exit gesture. */
-function findMultiwordMentionMatch(config: Trigger): SuggestionMatch {
-  const text = config.$position.nodeBefore?.isText
-    ? config.$position.nodeBefore.text
-    : null;
-  if (!text) return null;
-
-  const active = findActiveMentionQuery(text);
-  if (!active) return null;
-  if (config.startOfLine && active.start !== 0) return null;
-
-  const textFrom = config.$position.pos - text.length;
-  return {
-    range: {
-      from: textFrom + active.start,
-      to: config.$position.pos,
-    },
-    query: active.query,
-    text: text.slice(active.start),
-  };
-}
 
 /**
  * Imperative rendering of the menu, carried to the body of the document and positioned in
@@ -351,7 +347,7 @@ function findMultiwordMentionMatch(config: Trigger): SuggestionMatch {
  * notebook: in a scrolling panel or dialog, a menu in absolute position
  * is cut off by its container.
  */
-function renderMentionMenu() {
+function renderMentionMenu(pluginKey: PluginKey) {
   let renderer: ReactRenderer<MentionMenuRef, MentionProps> | null = null;
   let menuEl: HTMLElement | null = null;
   let caretRect: (() => DOMRect | null) | null = null;
@@ -378,8 +374,18 @@ function renderMentionMenu() {
     requestAnimationFrame(place);
   };
 
+  const withClose = (suggestion: SuggestionProps<MentionOption>): MentionProps => ({
+    ...suggestion,
+    close: () => {
+      const { view } = suggestion.editor;
+      exitSuggestion(view, pluginKey);
+      view.focus();
+    },
+  });
+
   return {
-    onStart: (props: MentionProps) => {
+    onStart: (suggestion: SuggestionProps<MentionOption>) => {
+      const props = withClose(suggestion);
       renderer = new ReactRenderer(MentionMenu, { props, editor: props.editor });
       menuEl = renderer.element as HTMLElement;
       menuEl.style.position = "fixed";
@@ -391,7 +397,8 @@ function renderMentionMenu() {
       window.addEventListener("scroll", place, true);
       window.addEventListener("resize", place);
     },
-    onUpdate: (props: MentionProps) => {
+    onUpdate: (suggestion: SuggestionProps<MentionOption>) => {
+      const props = withClose(suggestion);
       renderer?.updateProps(props);
       caretRect = () => props.clientRect?.() ?? null;
       reposition();
@@ -418,6 +425,8 @@ export interface MentionSuggestOptions {
   /** The first “@” typed — enough to request the list at that moment rather
  than when opening the page. Called without guarantee of uniqueness. */
   onQuery?: () => void;
+  /** The muted “Type to search” after an empty “@”, read at each state. */
+  placeholder?: () => string;
 }
 
 /** The “@” extension of a description. Configured with a list READER. */
@@ -430,20 +439,28 @@ export const MentionSuggest = Extension.create<MentionSuggestOptions>({
 
   addProseMirrorPlugins() {
     const options = this.options;
+    // A KEY to yourself. `Suggestion` sets one by default, the same for everything
+    // the world: the “@” and the “/” menu of a page were found on
+    // the same, and ProseMirror raised during editing (MIN-270).
+    const pluginKey = new PluginKey("mentionSuggest");
     return [
       Suggestion<MentionOption>({
         // pnpm dual @tiptap/core (even 3.27.4) — the Extension editor does not have
         // the same identity as that of @tiptap/suggestion. No effect on
         // execution (same remark as for the “/” menu).
         editor: this.editor as never,
-        // A KEY to yourself. `Suggestion` sets one by default, the same for everything
-        // the world: the “@” and the “/” menu of a page were found on
-        // the same, and ProseMirror raised during editing (MIN-270).
-        pluginKey: new PluginKey("mentionSuggest"),
+        pluginKey,
         char: "@",
-        // One space stays inside the query; a second consecutive space closes it.
+        // One space stays inside a typed query — “@Camille Roy”, “@login
+        // bug” — and two consecutive spaces end it, as Escape and “Close
+        // menu” do; a space right after the bare “@” ends it at once.
+        // A non-breaking space may precede the “@”.
         allowSpaces: true,
-        findSuggestionMatch: findMultiwordMentionMatch,
+        findSuggestionMatch: findSpacedSuggestionMatch,
+        allowedPrefixes: [" ", "\u00a0"],
+        // The search chip (components/editor/suggestion-chip.ts).
+        decorationClass: SUGGESTION_CHIP_CLASS,
+        decorationEmptyClass: SUGGESTION_CHIP_EMPTY_CLASS,
         items: ({ query }) => {
           options.onQuery?.();
           return filterMentions(options.items(), query);
@@ -465,8 +482,9 @@ export const MentionSuggest = Extension.create<MentionSuggestOptions>({
             ])
             .run();
         },
-        render: renderMentionMenu,
+        render: () => renderMentionMenu(pluginKey),
       }),
+      suggestionPlaceholder(pluginKey, "mentionSuggest", () => options.placeholder?.()),
     ];
   },
 });

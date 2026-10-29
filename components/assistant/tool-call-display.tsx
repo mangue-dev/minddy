@@ -350,6 +350,14 @@ const TOOL_META: Record<string, ToolMeta> = {
       return success ? t("pageUpdated") : t("updatePageFailed");
     },
   },
+  list_page_database_views: PAGE_READ_META,
+  update_page_database_views: {
+    icon: Book02Icon,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("updatingPage");
+      return success ? t("pageUpdated") : t("updatePageFailed");
+    },
+  },
   update_page: {
     icon: Book02Icon,
     getLabel: (_args, _result, success, status, t) => {

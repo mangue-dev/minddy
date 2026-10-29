@@ -620,6 +620,22 @@ html {
   }
 }
 
+/* Selected text takes the accent: a light tint of `--primary` behind text
+   that keeps its own color, so contrast stays the text's own on every theme
+   and accent (a black or white accent gives a neutral gray tint).
+   `--selection-block` is that same tint, for what an editor selects as a
+   whole (selected blocks, an image, an equation: app/globals.css). Declared
+   again under `.dark`, like `--primary-hover`, so it follows the theme's
+   accent wherever the class sits. */
+:root,
+.dark {
+  --selection-block: color-mix(in oklab, var(--primary) 28%, transparent);
+}
+::selection {
+  background-color: var(--selection-block);
+  color: inherit;
+}
+
 /* Global user-select: none (outside @layer for higher priority) */
 *:not(input):not(textarea):not([contenteditable="true"]):not(pre):not(code) {
   user-select: none;
@@ -632,12 +648,22 @@ code,
 .select-text {
   user-select: text;
 }
+/* The text INSIDE an editable surface too — its paragraphs, list items and
+   marks are elements the reset above reached. A desktop browser selects in
+   an editing host anyway; a touch screen honors the reset, and long-press
+   selection did nothing in every editor. Atomic pieces the editor marks
+   non-editable (a mention pill, a task's checkbox) keep the reset. */
+[contenteditable="true"] :not([contenteditable="false"], [contenteditable="false"] *) {
+  user-select: text;
+}
 
 /* iOS Safari zooms a focused control whose font-size < 16px. Enforce 16px floor
    on small screens. Excludes checkbox/radio/buttons. */
 @media (max-width: 767px) {
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="button"]):not([type="submit"]),
-  textarea,
+  /* A title field is already 18 px or more: the floor would SHRINK it, and a
+     page title read 16 px on a phone. */
+  textarea:not(.title-field),
   select,
   [contenteditable="true"] {
     font-size: 16px;

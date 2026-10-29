@@ -394,7 +394,7 @@ export function AssistantContextBar({
   disabledKeys: ReadonlySet<string>;
   /** Turns off/on an ambient pill (the eye). */
   onToggle: (key: string) => void;
-  /** Remove a pill pinned to the hand (the cross). */
+  /** Remove a pill pinned by hand or the quoted selection (the cross). */
   onRemove: (key: string) => void;
   onRemoveResource?: (resource: ResourceLike) => void;
   onRemovePending?: (localId: string) => void;
@@ -412,7 +412,7 @@ export function AssistantContextBar({
           radius="md"
           className="shadow-none"
           disabled={disabledKeys.has(chip.key)}
-          {...(chip.pinned
+          {...(chip.pinned || chip.removable
             ? { onRemove: () => onRemove(chip.key) }
             : { onToggle: () => onToggle(chip.key) })}
         />

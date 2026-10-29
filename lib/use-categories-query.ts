@@ -53,15 +53,21 @@ export function useCategoriesQuery(projectId: string | null) {
     async (categoryIds: string[]) => {
       if (!projectId) return;
       const key = categoriesKey(projectId);
-      await queryClient.cancelQueries({ queryKey: key });
+      // The new order is written BEFORE anything is awaited: a drop ends a
+      // drag in this very event, and a list still in its old order for a
+      // moment made the dragged row jump back before moving.
       const previous = queryClient.getQueryData<Category[]>(key);
-      if (previous) {
+      const reordered = previous && (() => {
         const byId = new Map(previous.map((category) => [category.id, category]));
-        queryClient.setQueryData<Category[]>(key, [
+        return [
           ...categoryIds.flatMap((id) => byId.get(id) ?? []),
           ...previous.filter((category) => !categoryIds.includes(category.id)),
-        ]);
-      }
+        ];
+      })();
+      if (reordered) queryClient.setQueryData<Category[]>(key, reordered);
+      await queryClient.cancelQueries({ queryKey: key });
+      // A fetch cancelled on its way back could have restored the old order.
+      if (reordered) queryClient.setQueryData<Category[]>(key, reordered);
       try {
         queryClient.setQueryData<Category[]>(key, await reorderCategoriesApi(projectId, categoryIds));
       } catch (error) {

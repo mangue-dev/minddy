@@ -33,8 +33,8 @@ import type {
  * **3. WIDTH is a percentage of the column, not the pixels.** One page
  * can be read on a laptop screen like a 27-inch one; an image posed to
  * 640 px overflows from one and floats in the middle of the other. The percentage is
- * in both, and it is also the only adjustment that remains just when the column
- * de texte change de largeur.
+ * in both, and it is also the only adjustment that stays right when the text
+ * column changes width. It travels in Markdown as the image's title.
  *
  * `uploadId` is the exception which confirms the rest: the only attribute which has no
  * meaning only here and now. It takes the time to upload — the view reads it
@@ -85,6 +85,21 @@ export function clampImageWidth(value: unknown): number | null {
   return Math.max(IMAGE_MIN_WIDTH, rounded);
 }
 
+/** The width in Markdown: the image's title, `![alt](src "width=60%")`. Plain
+    CommonMark, which other renderers show as a tooltip at worst, so an agent's
+    or the notebook's round trip keeps a resized image at its size. */
+const WIDTH_TITLE = /^width=(\d{1,3})%$/;
+
+export function imageWidthTitle(width: unknown): string | null {
+  const clamped = clampImageWidth(width);
+  return clamped === null ? null : `width=${clamped}%`;
+}
+
+export function widthFromImageTitle(title: string | null): number | null {
+  const match = title ? WIDTH_TITLE.exec(title.trim()) : null;
+  return match ? clampImageWidth(match[1]) : null;
+}
+
 export const PageImage = Node.create({
   name: "image",
   group: "block",
@@ -116,13 +131,15 @@ export const PageImage = Node.create({
       alt: { default: null },
       width: {
         default: null,
-        parseHTML: (element) => clampImageWidth(element.getAttribute("data-width")),
+        parseHTML: (element) =>
+          clampImageWidth(element.getAttribute("data-width")) ??
+          widthFromImageTitle(element.getAttribute("title")),
         renderHTML: (attributes) =>
           attributes.width ? { "data-width": String(attributes.width) } : {},
       },
-      // Hors document : jamais rendu en HTML, donc jamais relu. Un
-      // upload does not survive page reload, and this is very
-      // well — what survives is what has a `src`.
+      // Outside the document: never rendered to HTML, so never read back. An
+      // upload does not survive a page reload, and that is
+      // fine — what survives is what has a `src`.
       uploadId: { default: null, rendered: false },
     };
   },
@@ -197,7 +214,8 @@ export const imageBlock: PageBlock = {
       // than an empty `![](…)`: the markdown is what Numo reads, and an image without
       // address is neither content nor information.
       if (!src) return;
-      state.write(`![${state.esc(alt)}](${src})`);
+      const title = imageWidthTitle(node.attrs.width);
+      state.write(`![${state.esc(alt)}](${src}${title ? ` "${title}"` : ""})`);
       state.closeBlock(node);
     },
   },

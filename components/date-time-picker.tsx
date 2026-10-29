@@ -449,7 +449,6 @@ export function DateTimePicker({
         // recurring ticket): without ceiling, open from the bottom of a panel it
         // was overflowing the top of the window, months and tabs cut. Radix
         // publishes the available height; we stick to it and scroll.
-        collisionPadding={8}
         // Wheel listener mark above — it recognizes the popover
         // to this attribute rather than to a ref, which does not cross the facade.
         data-datetime-picker=""

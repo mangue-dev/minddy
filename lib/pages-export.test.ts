@@ -66,6 +66,16 @@ describe("exportPagesToFiles", () => {
     expect(files[1].markdown).toContain("[Guide](../index.md)");
   });
 
+  it("turns page mentions of exported pages into relative links too", () => {
+    const [root] = exportPagesToFiles([
+      { ...pages[0], markdown: md("root", "See [@](mention:page/kid) and [@Elsewhere](mention:page/other)") },
+      pages[1],
+    ]);
+    expect(root.markdown).toContain("See [📘 Intro](./Intro.md)");
+    // A page outside the archive keeps its mention.
+    expect(root.markdown).toContain("[@Elsewhere](mention:page/other)");
+  });
+
   it("laisse intact un lien vers une page HORS de l'archive", () => {
     const [file] = exportPagesToFiles([
       { id: "solo", parent_id: null, title: "Solo", icon: null, markdown: md("solo", "[[page:ailleurs]]") },

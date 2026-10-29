@@ -26,7 +26,7 @@
 // that it is not — we open a page to READ it.
 //
 // What is NOT here: the wires anchored to a block and still alive. These
-// are read next to their text (components/pages/page-comment-popover.tsx) —
+// are read next to their text (components/pages/page-comment-dialog.tsx) —
 // that's the whole reason for the anchor. A DETACHED thread returns here: its block
 // no longer exists, the page no longer has anywhere to show it, and it carries
 // l'extrait qui dit de quoi il parlait.

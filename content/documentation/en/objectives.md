@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
-  "sourceRevision": 19,
+  "revision": 20,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-23",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -52,14 +52,15 @@
       "lib/use-resource-mentions.ts",
       "lib/keyboard/shortcuts.ts",
       "lib/objective-order.ts",
-      "components/objective-label.tsx"
+      "components/objective-label.tsx",
+      "components/editor/mobile-editor-toolbar.tsx"
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-785 objective picker order and status display checked against lib/objective-order.ts and components/objective-label.tsx; no figure changed)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (en picker-order sentence with catalog status labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-23"
+    "revision": 20,
+    "fact": "agent:claude-code (phone keyboard toolbar sentence checked against components/editor/mobile-editor-toolbar.tsx and components/editor/rich-editor.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "issues",
@@ -80,7 +81,7 @@
       "src": "/documentation/en/reader-objectives.png",
       "alt": "Unsubmitted objective-creation dialog in the Aurora project with a demonstration result name and the Create objective button.",
       "caption": "Name the result before choosing the lead, target date and status. This dialog has not created a second objective.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -103,7 +104,7 @@ An objective groups a project’s issues around an outcome. Create it and attach
 
 Open the project's Objectives destination and create an objective. When you create it from elsewhere in the app, choose its project in **Create in**, at the top left of the form (next to the **New objective** title on a phone); changing it removes the lead and relations chosen for the previous project. On a computer, Command/Ctrl+Shift+P opens that menu, even while you type the name or description; once you choose a project or close the menu, the cursor returns exactly where it was. The pill shows this shortcut, which exists only when more than one project can be chosen; a phone shows no shortcut hint. Name the result you want, add useful context, and set its available lead, target date, color and status fields. On a computer, the same keys as an issue's fields open them once the cursor leaves the name and description: S status, A lead, D target date, R a relation, and C the color; each picker's tooltip shows its key. The lead is the person responsible for the outcome; choosing a lead does not transfer project ownership. Only the owner or a Member can lead an objective, and a lead whose role changes to Reader is removed from it. An objective belongs to a project; it is distinct from a personal cycle spanning several projects.
 
-The objective description and its comments use the same editor as project pages, without the block handles: type `/` to insert blocks and `@` to mention a person, issue, objective or page. The `@` menu also lists the resources attached to what you are writing: the issue or objective for its description and plan, a comment for its own files, or a creation dialog for the files added in it. A mention of a resource attached elsewhere shows as **Unavailable**. Several people can edit the description at once, with each person's caret shown with their name and color. Select text to format it or add a link. Paste or drop an image, or choose **Image** in the `/` menu, to insert it in the description.
+The objective description and its comments use the same editor as project pages, without the block handles: type `/` to insert blocks and `@` to mention a person, issue, objective or page. The `@` menu also lists the resources attached to what you are writing: the issue or objective for its description and plan, a comment for its own files, or a creation dialog for the files added in it. A mention of a resource attached elsewhere shows as **Unavailable**. Several people can edit the description at once, with each person's caret shown with their name and color. Select text to format it or add a link. Paste or drop an image, or choose **Image** in the `/` menu, to insert it in the description. On a phone, the toolbar above the keyboard replaces the selection toolbar and the typed `@` menu; the [Pages guide](/docs/pages#editor-formatting) describes it.
 
 Open each relevant issue and choose the objective in its properties, or use the objective's issue controls. The objective picker lists open objectives before done and canceled ones; within each group, those that received the most issues over the last 30 days come first. Each one shows its status and its name in its color. Check that the intended work appears under the objective. Use its discussion and resources for decisions and reference pages that apply to the whole outcome.
 

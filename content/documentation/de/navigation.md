@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
-  "sourceRevision": 16,
+  "revision": 19,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -58,14 +58,17 @@
       "components/settings-shell.tsx",
       "components/settings/account-smart-fill-section.tsx",
       "components/objective-relations-section.tsx",
-      "components/create-issue-dialog.tsx"
+      "components/create-issue-dialog.tsx",
+      "components/app-shell-chrome.tsx",
+      "components/editor/find-bar.tsx",
+      "lib/keyboard/find-shortcut.ts"
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:/root/min777 (panel paragraph checked against components/global-page-panel.tsx, lib/page-panel-context.tsx, lib/mention-target.ts, components/resources.tsx and components/markdown-link.tsx: classic pages open in a side panel with Expand, databases open as full pages; rest of the article unchanged since the previous review; no figure changed); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of navigation-steps, search-and-shortcuts-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min777 (de sentence on the page side panel with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 19,
+    "fact": "agent:claude-code (Command/Ctrl+F scope (page or task notebook on screen, the browser's find elsewhere and under another dialog) checked against lib/keyboard/find-shortcut.ts, components/editor/find-bar.tsx and lib/keyboard/shortcuts.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; equivalent meaning to en revision 18; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "views",
@@ -86,7 +89,7 @@
       "src": "/documentation/de/work-navigation.png",
       "alt": "Projektnavigation neben dem Demo-Ticketboard.",
       "caption": "Über die Projektseitenleiste erreichst du Tickets, Ziele, Seiten und Triage.",
-      "revision": 17,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -103,7 +106,7 @@
       "src": "/documentation/de/work-search.png",
       "alt": "Suchergebnisse für die Kennung eines Demo-Tickets.",
       "caption": "Die Palette findet das Ticket über seine Kennung neben Projektseiten; beim Öffnen bleiben die Zugriffsregeln bestehen.",
-      "revision": 17,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -162,7 +165,9 @@ Die Desktop-App ergänzt die Anwendung um native Tabs und eine Serverauswahl. Ei
 
 Drücke Command+K unter macOS oder Strg+K unter Windows/Linux, um die Befehlspalette zu öffnen; Command/Strg+P ist ein alternatives Anwendungskürzel. Außerhalb bearbeitbarer Texte öffnet ? die Kürzelhilfe und C die Ticketerstellung. Auf einer Ticketkarte unter dem Mauszeiger oder an den unterstützten Detailfunktionen öffnet S den Status, P die Priorität, E den Aufwand, A die zuständige Person, L die Kategorien, D das Fälligkeitsdatum und O das Ziel. R fügt an denselben Stellen, auf der Seite eines Ziels und im Formular für ein neues Ticket eine Beziehung hinzu: Wähle die Beziehungsart und dann das andere Ticket oder Ziel. Gehört die Karte zu einer Auswahl, ändern diese Tasten alle ausgewählten Tickets; zuständige Person, Ziel, Kategorien und Beziehungen gelten nur für die ausgewählten Tickets aus dem Projekt dieser Karte. Umschalt+C führt zu einem Kommentarfeld, bereit zur Eingabe, mit dem Verlauf bis zur neuesten Nachricht gescrollt: dem einer Ticketkarte unter dem Mauszeiger oder einer Zeile unter dem Mauszeiger in der Liste der Ziele, des Feedbacks, der Pull Requests, der Seiten oder der Triage, oder, wenn nichts unter dem Mauszeiger liegt, dem des angezeigten Tickets, Ziels, Feedbacks, Pull Requests oder der angezeigten Seite. Eine Seite öffnet dafür ihr Panel **Aktivität**. Umschalt+C wirkt nur auf dieses eine Element, auch wenn die Karte zu einer Auswahl gehört. Auf der Seite eines Ziels und im Formular für ein neues Ziel öffnet S seinen Status, A die verantwortliche Person, D sein Zieldatum und C seine Farbe; dort erstellt C kein Ticket. Diese Einzelbuchstaben unterbrechen keine Eingabe in einem Eingabefeld, Textbereich oder Inhaltseditor. Navigationsfolgen wie G, dann H (Startseite) und G, dann I (Posteingang) verwenden zwei nacheinander gedrückte Tasten. G, dann W führt nur innerhalb eines Projekts zu den Seiten.
 
-Um eine Einstellung zu erreichen, gib ihren Namen in der Befehlspalette oder im Filterfeld oben in der Seitenleiste der Einstellungen ein. Beide finden jede Einstellungskarte und einzelne Einstellungen wie Sprache, Design, jede Palette, Transparenz und die beiden Schalter von **Ticket starten**. Ein gewähltes Ergebnis öffnet den passenden Einstellungstab, scrollt zur Karte oder Zeile und hebt sie hervor. Command+T unter macOS oder Strg+T unter Windows/Linux öffnet die Palette für einen neuen Tab; eine dort gewählte Einstellung öffnet sich in einem neuen App-Tab. Englische und französische Suchbegriffe funktionieren unabhängig von der Sprache der Oberfläche.
+Um eine Einstellung zu erreichen, gib ihren Namen in der Befehlspalette oder im Filterfeld oben in der Seitenleiste der Einstellungen ein. Beide finden jede Einstellungskarte und einzelne Einstellungen wie Sprache, Design, jede Palette, Transparenz und die beiden Schalter von **Ticket starten**. Ein gewähltes Ergebnis öffnet den passenden Einstellungstab, scrollt zur Karte oder Zeile und hebt sie hervor. Command+T unter macOS oder Strg+T unter Windows/Linux öffnet die Palette für einen neuen Tab; eine dort gewählte Einstellung öffnet sich in einem neuen App-Tab. In einem Projekt bietet sie außerdem **Neue Seite** an: Damit erstellst du eine Seite in diesem Projekt und öffnest sie in einem neuen Tab. Englische und französische Suchbegriffe funktionieren unabhängig von der Sprache der Oberfläche.
+
+Command+F unter macOS oder Strg+F unter Windows/Linux durchsucht die Seite oder das Aufgabennotizbuch auf dem Bildschirm mit der [Leiste zum Suchen und Ersetzen](/de/dokumentation/pages#find-and-replace) von minddy. Auf anderen Bildschirmen und wenn ein anderer Dialog über der Seite geöffnet ist, öffnet es die Suche des Browsers.
 
 Lies in der Tastenkürzelhilfe die Befehle für deine Plattform. minddy unterscheidet Anwendungskürzel, Aktionen für Ticketeigenschaften und native Desktop-Kürzel für Tabs oder Fenster. Prüfe vor einem Befehl den Fokus: Schreiben im Editor und Handeln am umgebenden Ticket sind verschiedene Kontexte.
 
@@ -176,7 +181,7 @@ Jede Ticketsuche listet Tickets in derselben Reihenfolge: die Befehlspalette, `@
 
 Beschreibt eine Suchanfrage die Arbeit, statt sie zu benennen, findet die Ticketsuche auch inhaltlich ähnliche Tickets, selbst wenn sie andere Wörter verwenden. So kann „Anmeldung scheitert nach dem Zurücksetzen des Passworts“ ein Ticket mit dem Titel „Sitzung geht bei Passwortänderung verloren“ finden. Das gilt für die Befehlspalette, `@`-Erwähnungen in Beschreibungen, Seiten, Kommentaren und im Eingabefeld von Numo, die Beziehungsauswahl, **Als Duplikat markieren…** in der Triage, **Ein Ticket verknüpfen** an einem Pull Request, das Menü **Kontext hinzufügen** → **Ticket** von Numo und **Mit bestehendem Ticket verknüpfen** bei Feedback.
 
-Textübereinstimmungen und exakte Kennungen stehen immer zuerst und behalten ihre Reihenfolge. Kurz nachdem du aufgehört hast zu tippen, werden höchstens fünf inhaltlich gefundene Tickets unter **Inhaltlich verwandt** dahinter angefügt. Bis sie da sind, zeigt die Zeile **Inhaltliche Suche…**, dass die Suche noch läuft (in der Befehlspalette nur, wenn kein Textergebnis passt). Wird keines gefunden, steht dort **Kein inhaltlich verwandtes Ticket**. Ein bereits angezeigtes Ticket wird nicht wiederholt, und die hervorgehobene Zeile verschiebt sich nicht. Jede Auswahl behält ihre eigenen Regeln, daher erscheinen nur Tickets, die sie ohnehin anbieten konnte: Die Beziehungsauswahl bietet zum Beispiel weiterhin nur noch nicht verknüpfte Tickets desselben Projekts an. Die Befehlspalette durchsucht die Projekte, die du lesen kannst, bis zu den 25 zuletzt aktualisierten; ihre Aktionen für Mehrfachauswahl nutzen die inhaltliche Suche nicht.
+Textübereinstimmungen und exakte Kennungen stehen immer zuerst und behalten ihre Reihenfolge. Kurz nachdem du aufgehört hast zu tippen, werden höchstens fünf inhaltlich gefundene Tickets unter **Inhaltlich verwandt** dahinter angefügt. Bis sie da sind, zeigt die Zeile **Inhaltliche Suche…**, dass die Suche noch läuft (in der Befehlspalette nur, wenn kein Textergebnis passt). Wird keines gefunden, steht dort **Kein inhaltlich verwandtes Ticket**; ein Menü `@` ohne Textübereinstimmung schließt sich stattdessen. Ein bereits angezeigtes Ticket wird nicht wiederholt, und die hervorgehobene Zeile verschiebt sich nicht. Jede Auswahl behält ihre eigenen Regeln, daher erscheinen nur Tickets, die sie ohnehin anbieten konnte: Die Beziehungsauswahl bietet zum Beispiel weiterhin nur noch nicht verknüpfte Tickets desselben Projekts an. Die Befehlspalette durchsucht die Projekte, die du lesen kannst, bis zu den 25 zuletzt aktualisierten; ihre Aktionen für Mehrfachauswahl nutzen die inhaltliche Suche nicht.
 
 Für die inhaltliche Suche gelten diese Grenzen:
 

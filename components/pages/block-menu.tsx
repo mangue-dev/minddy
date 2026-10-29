@@ -11,8 +11,9 @@
 // descriptor field.
 //
 // The same for the colors: the palette comes from blocks/color.ts, therefore from
-// that of the product labels, and each pastille is painted with the tokens
-// CSS that will paint the text. A tablet cannot lie about the result.
+// that of the product labels, and each color's NAME is painted with the CSS
+// tokens that will paint the text (PageColorName): the entry cannot lie about
+// the result.
 //
 // Everything related to the document is in block-actions.ts: this component does not
 // only calls, so that the behavior remains testable without an interface.
@@ -22,6 +23,8 @@ import { AppIcon } from "@/components/icon";
 import { CheckIcon, ColorPickerIcon, Copy01Icon, Delete02Icon, Link02Icon, MessageAdd01Icon, RepeatOne02Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { NumoIcon } from "@/components/numo-icon";
+import { useAskNumoAboutSelection } from "@/lib/use-ask-numo-about-selection";
 import type { Editor } from "@tiptap/core";
 import {
   AlertDialog,
@@ -45,12 +48,10 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Kbd } from "@/components/ui/kbd";
 import {
   PAGE_COLORS,
-  PAGE_COLOR_ATTRIBUTE,
   activeCalloutColor,
   activePageColor,
   setCalloutColor,
@@ -60,6 +61,7 @@ import {
   type PageColorKind,
 } from "@/components/pages/blocks";
 import {
+  blockMenuAbilities,
   blockRange,
   blockLink,
   copyBlocks,
@@ -72,31 +74,7 @@ import {
   selectionIsMediaOnly,
   turnBlocksInto,
 } from "@/components/pages/block-actions";
-import type { PageCommentAnchor } from "@/components/pages/page-comment-bubble";
-
-/** The patch of a color, painted with the token it places — the “A”
- for the text, the solid square for the background. */
-function Swatch({
-  kind,
-  color,
-}: {
-  kind: PageColorKind;
-  color: PageColor | null;
-}) {
-  const attribute = color ? { [PAGE_COLOR_ATTRIBUTE[kind]]: color } : {};
-  return (
-    <span
-      {...attribute}
-      aria-hidden
-      className={cn(
-        "flex size-5 shrink-0 items-center justify-center rounded border border-border text-xs font-semibold",
-        !color && "text-muted-foreground"
-      )}
-    >
-      A
-    </span>
-  );
-}
+import { PageColorName, type PageCommentAnchor } from "@/components/pages/page-comment-bubble";
 
 function ColorItems({
   editor,
@@ -126,8 +104,7 @@ function ColorItems({
           onDone();
         }}
       >
-        <Swatch kind={kind} color={null} />
-        <span className="truncate">{t("colorNone")}</span>
+        <span className="min-w-0 flex-1"><PageColorName kind={kind} color={null} label={t("colorNone")} /></span>
         {active === null && <HugeiconsIcon icon={CheckIcon} className="ml-auto size-3" />}
       </DropdownMenuItem>
       {PAGE_COLORS.map((color) => (
@@ -138,8 +115,7 @@ function ColorItems({
             onDone();
           }}
         >
-          <Swatch kind={kind} color={color} />
-          <span className="truncate">{colorName(color)}</span>
+          <span className="min-w-0 flex-1"><PageColorName kind={kind} color={color} label={colorName(color)} /></span>
           {active === color && <HugeiconsIcon icon={CheckIcon} className="ml-auto size-3" />}
         </DropdownMenuItem>
       ))}
@@ -223,10 +199,32 @@ export function BlockMenu({
     useMemo(() => (open ? selectionIsMediaOnly(editor) : false), [open, editor])
   );
   const plain = !subpageId && !mediaOnly;
+  // Beyond those two vocabularies, an action shows only where it can act:
+  // no “Turn into” or colors on a divider or an equation, no Numo where
+  // there is no text (blockMenuAbilities).
+  const can = useHeldWhileClosed(
+    open,
+    useMemo(
+      () => (open ? blockMenuAbilities(editor) : { turnInto: false, color: false, text: false }),
+      [open, editor]
+    )
+  );
+  const showTurnInto = plain && can.turnInto;
+  const showColor = plain && can.color;
   const canComment = Boolean(onComment) && count === 1;
+  // The selected blocks' text, as the selection toolbar sends a passage;
+  // absent where Numo is not.
+  const askNumo = useAskNumoAboutSelection();
+  const tBulk = useTranslations("BulkActions");
+  const askAboutBlocks = () => {
+    const range = blockRange(editor);
+    const text = range ? editor.state.doc.textBetween(range.from, range.to, "\n", " ").trim() : "";
+    if (askNumo && text) askNumo({ text });
+    close();
+  };
   // The separator divides the actions from Delete: with nothing above it (an
   // image or a file without a block link), it would underline nothing.
-  const hasActionsAbove = plain || !mediaOnly || blockLinks || canComment;
+  const hasActionsAbove = showTurnInto || showColor || !mediaOnly || blockLinks || canComment;
 
   const duplicateSubpage = async (pageId: string) => {
     const duplicate = editor.storage.subpage?.duplicate;
@@ -269,8 +267,12 @@ export function BlockMenu({
     <DropdownMenu open={open} onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
       <DropdownMenuContent
+        // To the LEFT of the handle, in the margin, top-aligned with it: the
+        // menu opens away from the text rather than over it. Radix flips it to
+        // the right when the margin has no room for it.
         align="start"
-        side="bottom"
+        side="left"
+        sideOffset={4}
         className="w-60"
         // Escape and click outside returns the cursor to the block: otherwise, the focus
         // stays on a trigger that disappears on hover, and hits
@@ -286,7 +288,7 @@ export function BlockMenu({
           </DropdownMenuLabel>
         )}
 
-        {plain && (
+        {showTurnInto && (
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <HugeiconsIcon icon={RepeatOne02Icon} />
@@ -318,7 +320,7 @@ export function BlockMenu({
         </DropdownMenuSub>
         )}
 
-        {plain && (
+        {showColor && (
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <HugeiconsIcon icon={ColorPickerIcon} />
@@ -340,7 +342,7 @@ export function BlockMenu({
         </DropdownMenuSub>
         )}
 
-        {plain && <DropdownMenuSeparator />}
+        {(showTurnInto || showColor) && <DropdownMenuSeparator />}
 
         {!mediaOnly && (
           <DropdownMenuItem
@@ -377,6 +379,13 @@ export function BlockMenu({
           >
             <HugeiconsIcon icon={MessageAdd01Icon} />
             <span className="truncate">{t("commentSelection")}</span>
+          </DropdownMenuItem>
+        ) : null}
+
+        {askNumo && can.text ? (
+          <DropdownMenuItem onSelect={askAboutBlocks}>
+            <NumoIcon animated={false} className="size-4" />
+            <span className="truncate">{tBulk("askNumo")}</span>
           </DropdownMenuItem>
         ) : null}
 

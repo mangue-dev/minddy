@@ -20,17 +20,19 @@
 import type { AnyExtension, Extensions, NodeViewRenderer } from "@tiptap/core";
 import type { Transaction } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
+import { HardBreak } from "@tiptap/extension-hard-break";
 import { Text } from "@tiptap/extension-text";
 import { MarkdownLinkMark } from "@/components/markdown-link-mark";
 import UniqueID from "@tiptap/extension-unique-id";
 import { Markdown } from "tiptap-markdown";
 import { MentionNodeBase } from "@/components/mention-node";
+import { writeTextEscapingMath } from "@/components/pages/blocks/math";
+import type { MarkdownState } from "@/components/pages/blocks/types";
 import {
   BLOCK_ID_ATTRIBUTE,
   BLOCK_ID_TYPES,
   PageBlockShortcuts,
   blockExtensions,
-  pageColorExtensions,
   type BlockSet,
 } from "@/components/pages/blocks";
 
@@ -102,12 +104,22 @@ export function escapeMarkdownTags(text: string): string {
   return text.replace(/<(?=[A-Za-z/!?])/g, "&lt;");
 }
 
+/** A line break on ⇧↵ only. StarterKit's also binds ⌘↵, and claiming that
+    keystroke stopped every composer from sending with its send shortcut. */
+const ShiftEnterHardBreak = HardBreak.extend({
+  addKeyboardShortcuts() {
+    return { "Shift-Enter": () => this.editor.commands.setHardBreak() };
+  },
+});
+
 const MarkdownText = Text.extend({
   addStorage() {
     return {
       markdown: {
-        serialize(state: { text(text: string): void }, node: { text?: string }) {
-          state.text(escapeMarkdownTags(node.text ?? ""));
+        serialize(state: MarkdownState, node: { text?: string }) {
+          // A literal "$x$" in text is escaped so it does not read back as an
+          // equation (blocks/math.ts); prices never need it.
+          writeTextEscapingMath(state, () => state.text(escapeMarkdownTags(node.text ?? "")));
         },
         parse: {},
       },
@@ -143,12 +155,14 @@ export function pageExtensions(
       orderedList: false,
       listItem: false,
       link: false,
+      hardBreak: false,
       ...(trailingNode ? {} : { trailingNode: false }),
     }),
     MarkdownText,
+    ShiftEnterHardBreak,
     MarkdownLinkMark,
+    // The color marks come with the blocks (blocks/index.ts).
     ...blockExtensions({ headless, nodeViews, extensions, set: blocks }),
-    ...pageColorExtensions(),
     PageBlockShortcuts,
     mention,
     // The stable ID of the blocks, placed on BOTH sides: a page written in markdown

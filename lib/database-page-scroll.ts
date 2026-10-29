@@ -1,6 +1,14 @@
-/** Route horizontal gestures from the whole document to its active database. */
-export function bindDatabasePageScroll(viewport: HTMLElement): () => void {
-  const surface = viewport.ownerDocument;
+/**
+ * Route horizontal gestures from the whole document — or from `scope`, the
+ * side panel a database is shown in — to its active database.
+ */
+export function bindDatabasePageScroll(
+  viewport: HTMLElement,
+  scope?: HTMLElement | null,
+): () => void {
+  // Typed as an element: the document takes the same wheel and touch
+  // listeners, and the union of the two would not accept them.
+  const surface = (scope ?? viewport.ownerDocument) as HTMLElement;
   const overflows = () => viewport.scrollWidth > viewport.clientWidth + 1;
   const scroll = (delta: number) => {
     viewport.scrollLeft = Math.max(

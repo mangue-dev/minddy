@@ -46,7 +46,9 @@ describe("plugin keys for tiptap suggestions", () => {
       const where = path.relative(ROOT, file);
 
       const found = [
-        ...source.matchAll(/pluginKey:\s*new PluginKey\("([^"]+)"\)/g),
+        // Inline, or held in a `pluginKey` constant when the menu also needs
+        // it (“Close menu” exits that suggestion by its key).
+        ...source.matchAll(/(?:pluginKey:\s*|const pluginKey\s*=\s*)new PluginKey\("([^"]+)"\)/g),
       ].map((match) => match[1]);
       const calls = [...source.matchAll(/\bSuggestion(?:<[^>]*>)?\(\{/g)].length;
 

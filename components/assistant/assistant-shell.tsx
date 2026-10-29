@@ -29,6 +29,7 @@ import {
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
 import { useAssistantChatContext } from "@/lib/assistant-chat-context";
+import { useOptionalAssistantPanelActions } from "@/lib/assistant-panel-context";
 import {
   type ChatInputContextAttachments,
   type ChatInputHandle,
@@ -59,6 +60,7 @@ import { AssistantContextBar } from "@/components/assistant/assistant-context-ba
 import {
   applyContextSelection,
   contextChips,
+  SELECTION_CHIP_KEY,
   withPinnedContext,
 } from "@/lib/assistant-context";
 import { useNumoMentionables } from "@/lib/use-numo-mentionables";
@@ -110,6 +112,8 @@ export interface AssistantShellHandle {
   ) => void;
   /** Pre-fill the composer without sending. */
   fill: (text: string) => void;
+  /** Put the caret in the composer without changing its draft. */
+  focus: () => void;
 }
 
 export interface AssistantShellProps {
@@ -258,11 +262,20 @@ export const AssistantShell = forwardRef<
     });
   }, []);
 
+  // The quoted selection lives in the panel's session context, not in the
+  // pins: removing its pill drops it there.
+  const panelActions = useOptionalAssistantPanelActions();
+  const clearSelectionContext = panelActions?.clearSelectionContext;
+
   const removePinned = useCallback((key: string) => {
+    if (key === SELECTION_CHIP_KEY) {
+      clearSelectionContext?.();
+      return;
+    }
     setPinned((prev) =>
       prev.filter((item) => `pinned:${item.kind}:${item.id}` !== key),
     );
-  }, [setPinned]);
+  }, [setPinned, clearSelectionContext]);
 
   const addPinned = useCallback((item: AssistantPinnedContext) => {
     setPinned((prev) =>
@@ -315,6 +328,7 @@ export const AssistantShell = forwardRef<
               ...(opts?.intent ? { intent: opts.intent } : {}),
             }),
       fill: (text) => chatInputRef.current?.fill(text),
+      focus: () => chatInputRef.current?.focus(),
     }),
     [aiAvailability.available, aiAvailability.loading, sendMessage]
   );
@@ -329,16 +343,24 @@ export const AssistantShell = forwardRef<
       intent?: AssistantChatRequest["intent"],
     ) => {
       if (!aiAvailability.loading && !aiAvailability.available) return;
-      sendMessage(effectiveContextRef.current?.projectId ?? null, message, {
-        pageContext: effectiveContextRef.current,
+      const sentContext = effectiveContextRef.current;
+      sendMessage(sentContext?.projectId ?? null, message, {
+        pageContext: sentContext,
         attachments,
         mentions,
         command,
         skills,
         intent,
       });
+      // A quoted selection is asked about once. Unlike the page context, which
+      // keeps riding on follow-ups while the session stays on that page, and
+      // the pins, which the user removes by hand, the selection belongs to
+      // the message written about it: it stays on that message (its badge,
+      // and Numo's history) but is not silently re-sent with unrelated
+      // follow-ups. "Ask Numo" on a new selection attaches it again.
+      if (sentContext?.selection) clearSelectionContext?.();
     },
-    [aiAvailability.available, aiAvailability.loading, sendMessage]
+    [aiAvailability.available, aiAvailability.loading, sendMessage, clearSelectionContext]
   );
 
   const slashCommands = useSlashCommands();

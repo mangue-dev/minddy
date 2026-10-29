@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { applyContextSelection, contextChips } from "./assistant-context";
+import {
+  applyContextSelection,
+  contextChips,
+  SELECTION_CHIP_KEY,
+} from "./assistant-context";
+import { MAX_SELECTION_LENGTH, normalizeSelectionText } from "./assistant-selection";
 import type { AssistantPageContext } from "./assistant-types";
 
 /**
@@ -43,6 +48,7 @@ const everything: AssistantPageContext = {
   viewName: "Une vue",
   cycleId: "c1",
   cycleLabel: "6–19 juil",
+  selection: { text: "A passage selected in the page" },
 };
 
 describe("contextChips — routine", () => {
@@ -193,5 +199,57 @@ describe("contextChips — page icons", () => {
       icon: "🚀",
       pinned: true,
     });
+  });
+});
+
+describe("contextChips — quoted selection", () => {
+  // Renders the values too: the excerpt is the point of this pill.
+  const render = ((key: string, values?: Record<string, string>) =>
+    `${key}:${values?.excerpt ?? values?.text ?? ""}`) as unknown as Parameters<
+    typeof contextChips
+  >[1]["t"];
+
+  it("labels the pill with a one-line excerpt and keeps the passage in its tooltip", () => {
+    const text = "First line of a long passage\nthat continues well beyond the excerpt length";
+    const chip = contextChips(
+      { pageId: "page-1", pageTitle: "Spec", selection: { text } },
+      { t: render },
+    ).find((item) => item.key === SELECTION_CHIP_KEY);
+
+    expect(chip).toMatchObject({ kind: "selection", removable: true });
+    expect(chip?.pinned).toBeUndefined();
+    expect(chip?.label).toBe("contextSelection:First line of a long passage that contin…");
+    expect(chip?.tooltip).toBe(`contextSelectionTooltip:${text}`);
+  });
+
+  it("removes only the selection and keeps the page it was taken from", () => {
+    const ctx: AssistantPageContext = {
+      pageId: "page-1",
+      pageTitle: "Spec",
+      selection: { text: "Passage" },
+    };
+    expect(applyContextSelection(ctx, new Set([SELECTION_CHIP_KEY]))).toEqual({
+      pageId: "page-1",
+      pageTitle: "Spec",
+    });
+  });
+
+  it("shows no pill for a blank selection", () => {
+    const chips = contextChips({ selection: { text: "   " } }, { t });
+    expect(chips.some((chip) => chip.key === SELECTION_CHIP_KEY)).toBe(false);
+  });
+});
+
+describe("normalizeSelectionText", () => {
+  it("caps a long passage with an ellipsis and keeps its line breaks", () => {
+    const text = normalizeSelectionText(`  a\r\nb\u0007 ${"x".repeat(MAX_SELECTION_LENGTH)}`);
+    expect(text?.startsWith("a\nb ")).toBe(true);
+    expect(text?.endsWith("…")).toBe(true);
+    expect(text!.length).toBe(MAX_SELECTION_LENGTH + 1);
+  });
+
+  it("rejects what is not a non-blank string", () => {
+    expect(normalizeSelectionText(42)).toBeNull();
+    expect(normalizeSelectionText(" \n ")).toBeNull();
   });
 });

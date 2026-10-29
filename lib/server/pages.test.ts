@@ -1222,6 +1222,26 @@ describe("le bloc sous-page dans le corps du parent (MIN-272)", () => {
     expect(rowOf(child).parent_block_removed).toBe(true);
   });
 
+  it("converts the legacy blocks into link lines when a writer opens the page", async () => {
+    const parent = await create("Guide");
+    const child = await create("Chapitre", parent);
+    await updatePage({ pageId: parent, actorId: ACTOR, input: { content: bodyCiting(child) } });
+
+    const opened = await getPage(parent, ACTOR, { convertLegacy: true });
+
+    expect(opened.ok).toBe(true);
+    const nodes = bodyOf(parent).content as Array<{ type: string; content?: Array<{ attrs?: Record<string, unknown> }> }>;
+    expect(nodes.map((node) => node.type)).toEqual(["paragraph", "paragraph", "paragraph"]);
+    expect(nodes[1].content?.[0]?.attrs).toMatchObject({ mentionType: "page", mentionId: child });
+    // What the caller opens is the converted body, not the stale one.
+    expect(JSON.stringify(opened.ok && opened.page.content)).not.toContain('"subpage"');
+    // A plain read converts nothing.
+    const plain = await create("Plain");
+    await updatePage({ pageId: plain, actorId: ACTOR, input: { content: bodyCiting(child) } });
+    await getPage(plain, ACTOR);
+    expect(JSON.stringify(rowOf(plain).content)).toContain('"subpage"');
+  });
+
   it("remet le bloc en fin de corps à la restauration", async () => {
     const parent = await create("Guide");
     const child = await create("Chapitre", parent);
@@ -1234,13 +1254,14 @@ describe("le bloc sous-page dans le corps du parent (MIN-272)", () => {
     await trashPage(child, ACTOR);
     await restorePage(child, ACTOR);
 
-    const nodes = bodyOf(parent).content;
+    const nodes = bodyOf(parent).content as Array<{ type: string; content?: Array<{ attrs?: Record<string, unknown> }> }>;
+    // Back as a link line: the child's mention alone in a paragraph.
     expect(nodes.map((node) => node.type)).toEqual([
       "paragraph",
       "paragraph",
-      "subpage",
+      "paragraph",
     ]);
-    expect(nodes[2].attrs?.pageId).toBe(child);
+    expect(nodes[2].content?.[0]?.attrs).toMatchObject({ mentionType: "page", mentionId: child });
     // The brand does not survive: it is the next move to the trash that
     // will say what it is then.
     expect(rowOf(child).parent_block_removed).toBe(false);
@@ -1549,11 +1570,13 @@ describe("le texte de recherche", () => {
       },
     });
     await expectSearchText(root, "intro-durable");
-    expect(searchTextOf(root)).toContain(child);
+    // The legacy block is indexed as the mention it projects to, whose label
+    // the index never stores.
+    expect(searchTextOf(root)).toContain("@…");
 
     await trashPage(child, ACTOR);
     await vi.waitFor(() => {
-      expect(searchTextOf(root) ?? "").not.toContain(child);
+      expect(searchTextOf(root) ?? "").not.toContain("@…");
     });
     expect(searchTextOf(root)).toContain("intro-durable");
   });

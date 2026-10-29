@@ -36,6 +36,7 @@ import {
   MentionFigure,
   MentionSuggestions,
   filterMentions,
+  sectionedMentions,
   type MentionOption,
 } from "@/components/mention-suggest";
 import {
@@ -70,6 +71,7 @@ import {
   findActiveMentionQuery,
 } from "@/lib/mention-menu";
 import { useSemanticMentions } from "@/lib/use-semantic-mentions";
+import { stepSuggestion } from "@/lib/suggestion-menu";
 import { SemanticSearchingHint } from "@/components/semantic-searching-hint";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { assistantDraftHtml } from "@/lib/assistant-composer-draft";
@@ -364,6 +366,8 @@ export interface ChatInputProps {
 
 export interface ChatInputHandle {
   fill: (text: string) => void;
+  /** Put the caret at the end of the composer, leaving its text as it is. */
+  focus: () => void;
 }
 
 export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
@@ -698,19 +702,28 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     );
     // Issues found by meaning (MIN-718): appended last, and the highlight
     // resets on the query only, so a late answer never moves it.
-    const { options: mentionOptions, status: mentionSemanticStatus } = useSemanticMentions(
+    const { options: foundMentionOptions, status: mentionSemanticStatus } = useSemanticMentions(
       mentionTextOptions,
       mentionables ?? [],
       mentionQuery ?? "",
       mentionQuery !== null,
     );
-    // The list also opens on the status row of a search by meaning, so a
-    // description with no text match does not leave the caret silent.
-    const mentionOpen = mentionOptions.length > 0 || mentionSemanticStatus !== null;
-    const activeMention = Math.min(
-      mentionIndex,
-      Math.max(0, mentionOptions.length - 1),
+    // In the order the list shows them, section by section: the keyboard
+    // walks this order, and the index after the last one is “Close menu”.
+    const mentionOptions = useMemo(
+      () => sectionedMentions(foundMentionOptions).ordered,
+      [foundMentionOptions],
     );
+    // The list also stays open while a search by meaning runs, so a
+    // description with no text match does not leave the caret silent; once
+    // it answers with nothing, the list closes like any query with no match.
+    const mentionOpen = mentionOptions.length > 0 || mentionSemanticStatus === "searching";
+    // -1 until the arrows move: the first option then, or nothing at all when
+    // only the status row shows, so Enter keeps its own meaning there.
+    const activeMention =
+      mentionIndex < 0
+        ? mentionOptions.length > 0 ? 0 : -1
+        : Math.min(mentionIndex, mentionOptions.length);
 
     // The passage “we type a mention” ↔ “we type no more” indicates a
     // once to the host (it uses it to load the list at the right time):
@@ -727,7 +740,15 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     }, [readMention, onMentionQuery]);
 
     // The request changes → we start from the first suggestion.
-    useEffect(() => setMentionIndex(0), [mentionQuery]);
+    useEffect(() => setMentionIndex(-1), [mentionQuery]);
+
+    // Escape and “Close menu”: the list closes, the typed “@…” stays text,
+    // and the next character typed reads it again.
+    const closeMentionMenu = useCallback(() => {
+      setMentionQuery(null);
+      mentionActiveRef.current = false;
+      onMentionQuery?.(false);
+    }, [onMentionQuery]);
 
     const insertMention = useCallback(
       (option: MentionOption) => {
@@ -1045,9 +1066,11 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     // boundary. The surface's height follows its content
     // through a transition, which CSS alone cannot do from `auto` to `auto`.
     const composerGridRef = useRef<HTMLDivElement>(null);
+    /** The text area's cap (`max-h-[180px]`): beyond it, the text scrolls. */
+    const COMPOSER_TEXT_MAX_HEIGHT = 180;
     const leadControlsRef = useRef<HTMLDivElement>(null);
     const trailControlsRef = useRef<HTMLDivElement>(null);
-    const surfaceContentRef = useRef<HTMLDivElement>(null);
+    const surfaceTopRef = useRef<HTMLDivElement>(null);
     const [textWraps, setTextWraps] = useState(false);
     const [surfaceHeight, setSurfaceHeight] = useState<number | null>(null);
     const expandedLayout = textWraps;
@@ -1091,8 +1114,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     }, []);
     useEffect(() => {
       const editor = editorRef.current;
-      const content = surfaceContentRef.current;
-      if (!editor || !content) return;
+      const top = surfaceTopRef.current;
+      const grid = composerGridRef.current;
+      if (!editor || !top || !grid) return;
       // Text filled or cleared from outside (dictation, a draft, a send)
       // changes the editor's size without an input event.
       const editorObserver = new ResizeObserver(() => measureComposerLayout());
@@ -1102,8 +1126,15 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       for (const controls of [leadControlsRef.current, trailControlsRef.current]) {
         if (controls) editorObserver.observe(controls);
       }
-      const contentObserver = new ResizeObserver(() => setSurfaceHeight(content.offsetHeight));
-      contentObserver.observe(content);
+      // The natural height, from what keeps its own size whatever height the
+      // surface is animating through: the context row, the text (capped like
+      // its scroll area) and the controls. The grid itself stretches.
+      const contentObserver = new ResizeObserver(() => measureSurfaceRef.current());
+      contentObserver.observe(top);
+      contentObserver.observe(editor);
+      for (const controls of [leadControlsRef.current, trailControlsRef.current]) {
+        if (controls) contentObserver.observe(controls);
+      }
       return () => {
         editorObserver.disconnect();
         contentObserver.disconnect();
@@ -1112,6 +1143,29 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     useLayoutEffect(() => {
       measureComposerLayout();
     }, [expandedLayout, isEmpty, measureComposerLayout]);
+    const measureSurfaceRef = useRef(() => {});
+    measureSurfaceRef.current = () => {
+      const top = surfaceTopRef.current;
+      const editor = editorRef.current;
+      // The text's scroll area, whose paddings frame it.
+      const text = editor?.parentElement;
+      if (!top || !editor || !text) return;
+      const style = getComputedStyle(text);
+      const textHeight = Math.min(
+        COMPOSER_TEXT_MAX_HEIGHT,
+        editor.offsetHeight + (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0),
+      );
+      const controls = Math.max(
+        leadControlsRef.current?.offsetHeight ?? 0,
+        trailControlsRef.current?.offsetHeight ?? 0,
+      );
+      const grid = expandedLayoutRef.current ? textHeight + controls : Math.max(textHeight, controls);
+      setSurfaceHeight(top.offsetHeight + grid);
+    };
+    // The paddings change with the layout: weigh the height again.
+    useLayoutEffect(() => {
+      measureSurfaceRef.current();
+    }, [expandedLayout]);
     // The caret moves when the layout switches and while the height animates:
     // an open menu follows it, then settles once the transition ends.
     useLayoutEffect(() => {
@@ -1249,27 +1303,26 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         // List of mentions open: the arrows and Enter belong to it —
         // otherwise the caret would exit the request (or the message would leave).
         if (mentionOpen) {
-          // Only the status row is showing: Enter keeps its own meaning.
-          const hasOptions = mentionOptions.length > 0;
-          if (hasOptions && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+          // The arrows walk the options and the “Close menu” row under
+          // them, in one cycle (lib/suggestion-menu.ts).
+          if (e.key === "ArrowDown" || e.key === "ArrowUp") {
             e.preventDefault();
-            const n = mentionOptions.length;
-            setMentionIndex((i) => {
-              const from = Math.min(i, n - 1);
-              return e.key === "ArrowDown" ? (from + 1) % n : (from - 1 + n) % n;
-            });
+            setMentionIndex(
+              stepSuggestion(activeMention, mentionOptions.length, e.key === "ArrowUp" ? "up" : "down"),
+            );
             return;
           }
-          if (hasOptions && (e.key === "Enter" || e.key === "Tab")) {
+          // Nothing highlighted (only the status row is showing): Enter
+          // keeps its own meaning.
+          if (activeMention >= 0 && (e.key === "Enter" || e.key === "Tab")) {
             e.preventDefault();
-            insertMention(mentionOptions[activeMention]);
+            if (activeMention === mentionOptions.length) closeMentionMenu();
+            else insertMention(mentionOptions[activeMention]);
             return;
           }
           if (e.key === "Escape") {
             e.preventDefault();
-            setMentionQuery(null);
-            mentionActiveRef.current = false;
-            onMentionQuery?.(false);
+            closeMentionMenu();
             return;
           }
         }
@@ -1293,7 +1346,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         mentionOptions,
         activeMention,
         insertMention,
-        onMentionQuery,
+        closeMentionMenu,
         slashOpen,
         slashOptions,
         activeSlash,
@@ -1478,6 +1531,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           }
           publishDraft();
         },
+        focus() {
+          const el = editorRef.current;
+          if (el) focusContentEditableAtEnd(el);
+        },
       }),
       [publishDraft]
     );
@@ -1623,6 +1680,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             activeIndex={activeMention}
             onPick={insertMention}
             onHover={setMentionIndex}
+            onClose={() => {
+              closeMentionMenu();
+              editorRef.current?.focus();
+            }}
             className="left-3"
             style={menuPlacement("16rem")}
           />
@@ -1657,10 +1718,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             // is a borderless `bg-control` surface (the editor caret is the
             // signal), brand colors are kept for drag feedback only.
             "chat-input-surface relative overflow-hidden rounded-[1.625rem] bg-control",
-            // Content pinned to the bottom: while the height animates, the
-            // controls row never leaves the bottom edge; only the text and
-            // what sits above it move.
-            "flex flex-col justify-end",
+            // The context row is pinned to the top and the controls row to
+            // the bottom: while the height animates, both keep their gutter
+            // to their edge, and only the text between them moves.
+            "flex flex-col",
             "transition-[height,box-shadow] duration-200 ease-out motion-reduce:transition-none",
             drop.dragging && "ring-2 ring-brand/20"
           )}
@@ -1671,7 +1732,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           {...(canAttach ? drop.handlers : {})}
         >
           <DropOverlay show={canAttach && drop.dragging} />
-          <div ref={surfaceContentRef} className="flex shrink-0 flex-col">
+          <div ref={surfaceTopRef} className="shrink-0">
           {/* The host can merge semantic context and attachments into this
           single adaptive row. Concentric nesting: its rounded-md pills sit
           behind a 10px gutter. */}
@@ -1681,20 +1742,26 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               <ScrollableContextRow items={standaloneAttachmentItems} />
             </div>
           )}
+          </div>
+          {/* The grid fills what the context row leaves: the text row takes
+              the height the surface is animating through (its content
+              scrolls), so the text keeps its gutter to the top edge as the
+              controls keep theirs to the bottom one. */}
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div
             ref={composerGridRef}
             className={cn(
-              "grid grid-cols-[auto_minmax(0,1fr)_auto] items-end",
+              "grid min-h-0 flex-1 grid-cols-[auto_minmax(0,1fr)_auto] items-end",
               expandedLayout
-                ? "[grid-template-areas:'text_text_text'_'lead_._trail']"
-                : "[grid-template-areas:'lead_text_trail'] items-center",
+                ? "grid-rows-[minmax(0,1fr)_auto] [grid-template-areas:'text_text_text'_'lead_._trail']"
+                : "grid-rows-[minmax(0,1fr)] [grid-template-areas:'lead_text_trail'] items-center",
             )}
           >
           <div
             ref={textScrollRef}
             {...textScrollProps}
             className={cn(
-              "relative max-h-[180px] overflow-y-auto [grid-area:text]",
+              "relative max-h-[180px] min-h-0 self-stretch overflow-y-auto [grid-area:text]",
               // Compact: one pixel lower than the box's centre, since the font's
               // ascent is taller than its descent and the text otherwise rides
               // above the "+" beside it.

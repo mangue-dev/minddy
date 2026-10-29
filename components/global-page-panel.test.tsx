@@ -28,13 +28,15 @@ vi.mock("@/components/pages/page-view", () => ({
   },
 }));
 vi.mock("@/components/pages/page-peek-panel", () => ({
-  PagePeekPanel: ({ expandLabel, onExpand, onClose, children }: {
+  PagePeekPanel: ({ expandLabel, onExpand, onClose, onBack, children }: {
     expandLabel: string;
     onExpand: () => void;
     onClose: () => void;
+    onBack?: () => void;
     children: ReactNode;
   }) => (
     <div>
+      {onBack ? <button type="button" onClick={onBack}>back</button> : null}
       <button type="button" onClick={onExpand}>{expandLabel}</button>
       <button type="button" onClick={onClose}>close</button>
       {children}
@@ -60,6 +62,7 @@ beforeEach(() => {
     ["doc", { id: "doc", title: "Specification", database_schema: null }],
     ["child", { id: "child", title: "Details", database_schema: null }],
     ["db", { id: "db", title: "Roadmap", database_schema: [] }],
+    ["entry", { id: "entry", title: "Launch", database_schema: null }],
   ]);
   h.pathname = "/projects/p1";
   window.history.replaceState(null, "", "/");
@@ -108,11 +111,38 @@ it("keeps the panel open when the page could not be saved", async () => {
   expect(onClose).not.toHaveBeenCalled();
 });
 
-it("sends a database page to its full screen instead of the panel", async () => {
+const shown = () => host.querySelector("[data-page-id]")?.getAttribute("data-page-id");
+
+it("opens a database from a mention in the panel instead of its full screen", async () => {
   const onClose = await render("db");
-  expect(host.querySelector("[data-page-id]")).toBeNull();
-  expect(onClose).toHaveBeenCalled();
-  expect(h.push).toHaveBeenCalledWith("/projects/p1/pages/db");
+  expect(shown()).toBe("db");
+  expect(onClose).not.toHaveBeenCalled();
+  expect(h.push).not.toHaveBeenCalled();
+  expect(h.navigate).not.toHaveBeenCalled();
+});
+
+it("opens a database entry in the same panel and goes back to its table", async () => {
+  const onClose = await render("db");
+  expect(button("back")).toBeUndefined();
+
+  await act(async () => h.onNavigate?.("entry", "db"));
+  expect(h.flush).toHaveBeenCalledTimes(1);
+  expect(shown()).toBe("entry");
+  expect(onClose).not.toHaveBeenCalled();
+  expect(h.push).not.toHaveBeenCalled();
+
+  await act(async () => button("back").click());
+  expect(h.flush).toHaveBeenCalledTimes(2);
+  expect(shown()).toBe("db");
+  expect(button("back")).toBeUndefined();
+});
+
+it("stays on the entry when it could not be saved before going back", async () => {
+  await render("db");
+  await act(async () => h.onNavigate?.("entry", "db"));
+  h.flush.mockResolvedValueOnce(false);
+  await act(async () => button("back").click());
+  expect(shown()).toBe("entry");
 });
 
 it("uses the pages shell's router when the pages screen is already open", async () => {

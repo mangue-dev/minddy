@@ -54,6 +54,10 @@ import {
   updateDatabaseForAgent,
   type PageToolResult,
 } from "@/lib/server/page-tools";
+import {
+  listDatabaseViewsForAgent,
+  updateDatabaseViewsForAgent,
+} from "@/lib/server/database-view-tools";
 
 /** The names that Numo bears, so that patch refusals refer to tools
  * which exist IN THE CHAT (see IssueTextTools). */
@@ -1408,6 +1412,8 @@ async function executeToolUnlisted(
       case "search_pages":
       case "get_page":
       case "update_page_database":
+      case "list_page_database_views":
+      case "update_page_database_views":
       case "update_page":
       case "append_to_page":
       case "edit_page_text":
@@ -3235,6 +3241,10 @@ async function executePageTool(
       return render(await readPageForAgent({ pageId, projectId, actorId }));
     case "update_page_database":
       return render(await updateDatabaseForAgent({ projectId, pageId, actorId, input: args }));
+    case "list_page_database_views":
+      return render(await listDatabaseViewsForAgent({ projectId, pageId, actorId }));
+    case "update_page_database_views":
+      return render(await updateDatabaseViewsForAgent({ projectId, pageId, actorId, input: args }));
     case "update_page":
       return render(
         await updatePageForAgent({

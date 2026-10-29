@@ -1,5 +1,6 @@
 "use client";
 
+import { OVERLAY_COLLISION_PADDING } from "@/components/ui/menu-surface";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
@@ -9,8 +10,15 @@ import {
   type DatabaseValue,
 } from "@/lib/page-databases";
 import { useArrowField } from "@/lib/use-arrow-field";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
+import { Sheet, SheetTitle } from "@/components/ui/sheet";
+import { MobileSheetContent } from "@/components/ui/mobile-sheet";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
-/** A floating editor occupies the cell's visual position without resizing its row. */
+/** A floating editor occupies the cell's visual position without resizing its
+    row. On a phone it is a bottom sheet instead: a field over a 48 px cell is
+    too small to type into, and the keyboard would cover it. */
 export function DatabaseCellEditor({
   value,
   numeric,
@@ -27,6 +35,8 @@ export function DatabaseCellEditor({
   save: (value: DatabaseValue, expected: DatabaseValue) => Promise<boolean>;
 }) {
   const t = useTranslations("PageDatabase");
+  const tCommon = useTranslations("Common");
+  const mobile = useMobileLayout() === true;
   const trigger = useRef<HTMLButtonElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
   const closing = useRef(false);
@@ -52,7 +62,7 @@ export function DatabaseCellEditor({
     height: 42,
   });
   useLayoutEffect(() => {
-    if (!open) return;
+    if (!open || mobile) return;
     const place = () => {
       const anchor = trigger.current?.getBoundingClientRect();
       const panel = trigger.current?.closest<HTMLElement>("[role=dialog]");
@@ -67,11 +77,11 @@ export function DatabaseCellEditor({
       const y = viewport?.offsetTop ?? 0;
       const width = viewport?.width ?? window.innerWidth;
       const height = viewport?.height ?? window.innerHeight;
-      const leftEdge = Math.max(x, panelBox?.left ?? x) + 8;
-      const rightEdge = Math.min(x + width, panelBox?.right ?? x + width) - 8;
-      const topEdge = Math.max(y, panelBox?.top ?? y) + 8;
+      const leftEdge = Math.max(x, panelBox?.left ?? x) + OVERLAY_COLLISION_PADDING;
+      const rightEdge = Math.min(x + width, panelBox?.right ?? x + width) - OVERLAY_COLLISION_PADDING;
+      const topEdge = Math.max(y, panelBox?.top ?? y) + OVERLAY_COLLISION_PADDING;
       const bottomEdge =
-        Math.min(y + height, panelBox?.bottom ?? y + height) - 8;
+        Math.min(y + height, panelBox?.bottom ?? y + height) - OVERLAY_COLLISION_PADDING;
       const editorWidth = Math.min(
         Math.max(anchor.width + 24, 240),
         rightEdge - leftEdge,
@@ -119,7 +129,7 @@ export function DatabaseCellEditor({
       window.visualViewport?.removeEventListener("resize", place);
       window.visualViewport?.removeEventListener("scroll", place);
     };
-  }, [open, draft]);
+  }, [open, draft, mobile]);
   const commit = (restoreFocus = false) => {
     if (closing.current) return;
     const next = numeric ? parseDatabaseNumber(draft) : draft || null;
@@ -156,7 +166,43 @@ export function DatabaseCellEditor({
           <span className="min-w-0 truncate">{String(value)}</span>
         )}
       </button>
-      {open &&
+      {mobile && (
+        <Sheet open={open} onOpenChange={(next) => { if (!next) { closing.current = true; setOpen(false); } }}>
+          <MobileSheetContent side="bottom" aria-describedby={undefined} className="gap-3 p-4 pt-12">
+            <SheetTitle className="mobile-picker-title truncate">{label}</SheetTitle>
+            <form
+              className="flex flex-col gap-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void commit();
+              }}
+            >
+              <Textarea
+                ref={arrow.ref}
+                aria-label={label}
+                aria-invalid={error}
+                autoFocus
+                inputMode={numeric ? "decimal" : "text"}
+                rows={numeric ? 1 : 3}
+                maxLength={numeric ? 320 : 2000}
+                value={draft}
+                className="min-h-12 text-base"
+                onChange={(event) => {
+                  const next = numeric ? event.target.value : arrow.read(event);
+                  if (!numeric || isDatabaseNumberDraft(next)) {
+                    setDraft(next);
+                    setError(false);
+                    event.target.setCustomValidity("");
+                  }
+                }}
+              />
+              {error && <p role="alert" className="text-sm text-destructive">{t("numberRequired")}</p>}
+              <Button type="submit" className="h-11 w-full">{tCommon("save")}</Button>
+            </form>
+          </MobileSheetContent>
+        </Sheet>
+      )}
+      {open && !mobile &&
         createPortal(
           <textarea
             ref={arrow.ref}

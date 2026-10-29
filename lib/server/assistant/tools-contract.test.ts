@@ -98,6 +98,21 @@ describe("Numo tool contracts", () => {
     );
   });
 
+  it("keeps issue board views and database views apart", () => {
+    // On a database page, "create a view" once produced an issue board view.
+    for (const name of ["list_views", "create_view", "update_view"]) {
+      expect(tool(name)?.function.description).toMatch(/ISSUE BOARD/);
+      expect(tool(name)?.function.description).toMatch(/page_database_views/);
+    }
+    for (const name of ["list_page_database_views", "update_page_database_views"]) {
+      expect(tool(name)?.function.description).toMatch(/database page/);
+      expect(tool(name)?.function.description).toMatch(/une vue/);
+    }
+    expect(tool("update_page_database_views")?.function.parameters.properties).toHaveProperty("filters");
+    expect(tool("update_page_database_views")?.function.parameters.properties)
+      .not.toHaveProperty("filter_property_id");
+  });
+
   it("advertises the owner-only backlog proposal", () => {
     expect(tool("propose_backlog")?.function.description).toMatch(
       /OWNER ONLY/i,

@@ -28,7 +28,7 @@ import {
 import { notifyPageMentions } from "@/lib/server/page-mentions";
 import { copyPageDatabaseViews } from "./page-database-views";
 import { queuePageBodyLinks } from "@/lib/server/page-links";
-import { appendSubpage, remapSubpages, removeSubpages } from "@/lib/pages-subpage";
+import { appendSubpage, convertSubpageBlocks, remapSubpages, removeSubpages } from "@/lib/pages-subpage";
 import { bodyFromMarkdownServer, pageBodyToMarkdownServer, pageCollaborationServer } from "@/lib/server/pages-projection";
 import {
   queueSearchText,
@@ -653,7 +653,15 @@ export async function listPages(
 export async function getPage(
   pageId: string,
   actorId: string,
-  { projectId }: { projectId?: string } = {}
+  {
+    projectId,
+    convertLegacy = false,
+  }: {
+    projectId?: string;
+    /** Opening the page to edit it: its legacy subpage blocks are converted
+        first, when the reader may write (`convertLegacySubpages`). */
+    convertLegacy?: boolean;
+  } = {}
 ): Promise<PageResult<Page>> {
   const service = getServiceClient();
   const allowed = projectId ? access(actorId, projectId) : undefined;
@@ -662,7 +670,34 @@ export async function getPage(
   const page = await loadPage(service, pageId, actorId,
     { projectAccess: projectId && allowed ? { projectId, allowed } : undefined });
   if (!page) return { ok: false, status: 404, errorKey: "pageNotFound" };
+  if (convertLegacy && convertSubpageBlocks(page.content as PageDocJSON | null).converted > 0) {
+    const converted = await convertLegacySubpages(service, page, actorId);
+    if (converted) {
+      const fresh = await loadPage(service, pageId, actorId);
+      if (fresh) return { ok: true, page: fresh };
+    }
+  }
   return { ok: true, page };
+}
+
+/**
+ * Turns the retired subpage blocks of a page into link lines — a paragraph
+ * holding the child's inline mention (lib/pages-subpage.ts) — the first time
+ * someone who may write opens it. Through the operation authority like the
+ * parent mirror below, so an editor already live on the page receives the
+ * change as steps, and without an activity line: it is a format change, not
+ * an edit anybody made. A reader's opening converts nothing; the page renders
+ * its blocks and projects them as mentions until a writer opens it.
+ */
+async function convertLegacySubpages(service: Service, page: Page, actorId: string): Promise<boolean> {
+  if (await pageWriteRefusal(actorId, page.project_id, "pageNotFound")) return false;
+  let converted = false;
+  await syncParentBody(service, page.id, actorId, (doc) => {
+    const result = convertSubpageBlocks(doc);
+    converted = result.converted > 0;
+    return { doc: (result.doc ?? { type: "doc", content: [] }) as PageDocJSON, changed: converted };
+  });
+  return converted;
 }
 
 /**

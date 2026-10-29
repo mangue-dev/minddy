@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-28",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -39,14 +39,15 @@
       "proxy.ts",
       "content/knowledge/settings-and-data.md",
       "docs/security/project-roles.md",
-      "lib/project-roles.ts"
+      "lib/project-roles.ts",
+      "components/public-page-body.tsx"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 8,
+    "fact": "agent:claude-code (published-page mention sentence checked against components/public-page-body.tsx and app/p/[token]/published-page.tsx: a mention of a page in the published set shows its title and opens under the same link, any other page shows the Sub-page not published label, inert; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed behavior)",
+    "language": "agent:claude-code (it changed sentence with catalog UI labels; equivalent meaning to en revision 8; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-28"
   },
   "related": [
     "pages",
@@ -64,7 +65,7 @@
       "src": "/documentation/it/permissions-and-public-links-flow.svg",
       "alt": "Schema: Permessi account e progetto. Oggetto privato o pubblicazione esplicita. Solo insieme pubblicato e file firmati. Revocare link; file scadono successivamente.",
       "caption": "La pubblicazione concede accesso solo al contenuto scelto; la revoca del link non invalida subito gli URL firmati già emessi.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -107,7 +108,7 @@ Un cambio di ruolo o una rimozione si applica alla richiesta successiva. I conte
 
 ## Comprendere cosa viene pubblicato {#publication}
 
-Una pagina pubblicata o una vista condivisa usa un link opaco, eventualmente protetto da password. Il proprietario e i membri possono pubblicare e revocare questi link; i lettori no. Chi possiede il link e, quando richiesta, la password può accedere al contenuto pubblicato. Revoca il link quando non serve più. Le sottopagine vengono risolte solo all’interno dell’insieme pubblicato, senza mostrare i titoli delle pagine escluse. Le URL firmate dei file riguardano solo le pagine incluse; i bucket e le route private rimangono protetti. Le menzioni possono restare testo senza un profilo accessibile. Un database pubblico mostra soltanto le voci del ramo pubblicato.
+Una pagina pubblicata o una vista condivisa usa un link opaco, eventualmente protetto da password. Il proprietario e i membri possono pubblicare e revocare questi link; i lettori no. Chi possiede il link e, quando richiesta, la password può accedere al contenuto pubblicato. Revoca il link quando non serve più. In una pagina pubblicata, una menzione di una pagina dell’insieme pubblicato mostra il suo titolo e apre quella pagina con lo stesso link; una menzione di qualsiasi altra pagina mostra **Sottopagina non pubblicata** e non si apre, senza mostrare i titoli delle pagine escluse. Le URL firmate dei file riguardano solo le pagine incluse; i bucket e le route private rimangono protetti. Le menzioni possono restare testo senza un profilo accessibile. Un database pubblico mostra soltanto le voci del ramo pubblicato.
 
 ## Provare pubblicazione e revoca {#revocation}
 

@@ -53,6 +53,9 @@ export function RoutinePromptField({
   bare?: boolean;
 }) {
   const t = useTranslations("Routines");
+  const tPicker = useTranslations("Picker");
+  const tPickerRef = useRef(tPicker);
+  tPickerRef.current = tPicker;
   const { members } = useMembersQuery(projectId || null, !!projectId);
   const mentionSupport = useDescriptionMentions(projectId || null, members);
   const repositorySkills = useRepositorySkills(
@@ -75,6 +78,7 @@ export function RoutinePromptField({
         editor.chain().focus().deleteRange(range).insertContent(`$${skill.name} `).run();
       },
     })),
+    placeholder: () => tPickerRef.current("typeToSearch"),
   })], []);
 
   // The editor owns its text: only a change from outside (dictation, a

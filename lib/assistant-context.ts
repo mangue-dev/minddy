@@ -10,6 +10,7 @@
 import type { ObjectiveStatus } from "@/lib/objective-validation";
 import type { useTranslations } from "next-intl";
 import { orbSeedOr } from "@/lib/project-orb-colors";
+import { selectionExcerpt } from "@/lib/assistant-selection";
 import type {
   AssistantPageContext,
   AssistantPinnedContext,
@@ -28,7 +29,8 @@ export type AssistantContextKind =
   | "view"
   | "cycle"
   | "settings"
-  | "member";
+  | "member"
+  | "selection";
 
 export interface AssistantContextChip {
   /** Stable identity of the pill — this is what we deselect. */
@@ -54,7 +56,15 @@ export interface AssistantContextChip {
   icon?: string | null;
   /** Hand pinned (@ button) — removeable, where ambient turns off. */
   pinned?: boolean;
+  /**
+   * Removed with a cross like a pin, without being one: the quoted selection
+   * belongs to the message being written, there is nothing to turn back on.
+   */
+  removable?: boolean;
 }
+
+/** Pill key of the quoted selection (`AssistantPageContext.selection`). */
+export const SELECTION_CHIP_KEY = "selection";
 
 /** Pill key of a pinned context. */
 export function pinnedKey(item: AssistantPinnedContext): string {
@@ -216,6 +226,20 @@ export function contextChips(
     chips.push({ key: "cycle", kind: "cycle", label, tooltip: label });
   }
 
+  // The quoted passage reads after what it was taken from (the page, the
+  // issue) and before the pins: an excerpt on the pill, the passage in its
+  // tooltip.
+  const selectionText = ctx?.selection?.text?.trim();
+  if (selectionText) {
+    chips.push({
+      key: SELECTION_CHIP_KEY,
+      kind: "selection",
+      label: t("contextSelection", { excerpt: selectionExcerpt(selectionText) }),
+      tooltip: t("contextSelectionTooltip", { text: selectionText }),
+      removable: true,
+    });
+  }
+
   for (const item of ctx?.pinned ?? []) {
     // Pinned or ambient, a project keeps the same figure: its orb (or its
     // favicon), resolved here as the scope one.
@@ -267,9 +291,10 @@ const FIELDS_BY_KEY: Record<string, (keyof AssistantPageContext)[]> = {
   objective: ["objectiveId", "objectiveName", "objectiveColor"],
   feedback: ["feedbackId", "feedbackTitle"],
   routine: ["routineId", "routineTitle"],
-  page: ["pageId", "pageTitle", "pageIcon"],
+  page: ["pageId", "pageTitle", "pageIcon", "pageIsDatabase"],
   view: ["viewId", "viewName", "onglet"],
   cycle: ["cycleId", "cycleLabel"],
+  [SELECTION_CHIP_KEY]: ["selection"],
 };
 
 /**

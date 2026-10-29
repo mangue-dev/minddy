@@ -4,6 +4,9 @@
    the mode overrides below, so the import can stay with the others. */
 @import "./theme-presets.css";
 @import "streamdown/styles.css";
+/* KaTeX, for the editor's equations (components/pages/blocks/math.ts). Tailwind
+   inlines it and rebases its font URLs onto the package. */
+@import "katex/dist/katex.min.css";
 /* Streamdown (Numo markdown rendering): without these @sources, Tailwind does not generate
    classes used by components and everything renders in unstyled boxes. */
 @source "../node_modules/streamdown/dist/*.js";
@@ -371,6 +374,55 @@ a.markdown-link[data-documentation-citation]::before {
 }
 .dark .mention-on-ink {
   --mention-chip-l: 0.58; --mention-chip-a: 16%; --mention-chip-a-hover: 26%; --mention-chip-ink-l: 0.45;
+}
+
+/* The search chip of a typed “/”, “@” or “$” (components/editor/suggestion-chip.ts):
+   decorations over the open query, never content. It borrows the pill's
+   radius, takes a background tinted with the text's own ink (the neutral
+   `--mention-chip` is near invisible on the dark page), keeps the size and
+   the ink of the text around it, and stays an inline box: a long query wraps like the
+   words beside it, each line keeping its own rounded piece. An empty query
+   joins its muted “Type to search” widget into one token. */
+/* The chip's room comes from a spread shadow of its own color, not from
+   padding: a shadow takes no place in the line, so the text around the query
+   does not move when the menu opens, nor when it is cancelled. When the line
+   breaks inside the chip or its “Type to search”, every piece keeps its four
+   rounded corners and its spread (`box-decoration-break: clone`).
+   The color is OPAQUE — the text's ink at 8% over the surface the editor
+   sits on — so where the query's and the placeholder's spreads overlap, the
+   two read as one continuous token rather than a darker seam. */
+.ProseMirror {
+  --suggestion-chip-bg: color-mix(in oklab, var(--foreground) 8%, var(--background));
+}
+:is([data-slot="sheet-content"], [data-slot="dialog-content"], [data-slot="side-panel-content"]) .ProseMirror {
+  --suggestion-chip-bg: color-mix(in oklab, var(--foreground) 8%, var(--card));
+}
+.suggestion-chip,
+.suggestion-chip-placeholder {
+  border-radius: 0.3em;
+  background: var(--suggestion-chip-bg);
+  box-shadow: 0 0 0 0.2em var(--suggestion-chip-bg);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.suggestion-chip {
+  overflow-wrap: break-word;
+}
+/* An empty query and its “Type to search” join into one token: the joined
+   sides are square, the outer ones rounded. */
+.suggestion-chip-empty {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+/* Its spread starts where the query's ends: drawn after the query, it would
+   otherwise paint over the end of the “/” or “@”. */
+.suggestion-chip-placeholder {
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  margin-inline-start: 0.2em;
+  color: var(--muted-foreground);
+  pointer-events: none;
+  user-select: none;
 }
 
 /* Fixed shades of mentions. An objective and a project do not have one here:
@@ -1202,7 +1254,8 @@ button[data-variant="ghost"] {
       [type="file"],
       [type="image"]
     ),
-  textarea,
+  /* Title fields are larger than the floor: it would only shrink them. */
+  textarea:not(.title-field),
   select {
     font-size: 16px;
   }
@@ -1844,6 +1897,53 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
   background-color: color-mix(in oklab, var(--page-tint) 24%, transparent);
 }
 
+/* In a code block a chosen text color overrides the syntax highlighting: a
+   highlight span inside the color mark takes the mark's color (a mark inside
+   a highlight span colors itself). "Default" sets no mark, so the
+   highlighting stays; a background keeps the token colors. */
+pre [data-page-text] [class*="hljs-"] {
+  color: inherit;
+}
+
+/* Equations (components/pages/blocks/math.ts). KaTeX sets no color, so an
+   equation takes the text color of its theme; its error red is the app's
+   destructive token. A display equation wider than the column scrolls inside
+   its block instead of overflowing the page. */
+.page-math {
+  border-radius: 0.375rem;
+}
+.page-math-inline {
+  padding: 0 0.125rem;
+}
+.page-math-block {
+  margin: 0.5rem 0;
+}
+.page-math-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.25rem 0;
+}
+.page-math-scroll .katex-display,
+.page-math-preview .katex-display {
+  margin: 0;
+}
+.page-math.is-empty {
+  color: var(--muted-foreground);
+  font-size: 0.875em;
+}
+.page-math-block.is-empty {
+  padding: 0.5rem 0.75rem;
+  background-color: var(--control);
+  text-align: center;
+}
+.ProseMirror[contenteditable="true"] .page-math:hover:not(.ProseMirror-selectednode, .is-inline-selected) {
+  background-color: var(--control);
+}
+.page-math .katex-error,
+.page-math-preview .katex-error {
+  color: var(--destructive) !important;
+}
+
 /* A callout carries a palette name, never a fixed color. The same document is
    therefore legible in both themes, and the editor, published page, history,
    and print view all render the same semantic `<aside>`. */
@@ -1922,6 +2022,33 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
   margin: 0;
 }
 
+/* Find and replace (components/editor/find-bar.tsx): every match takes a
+   light tint of the accent behind text that keeps its own color, like the
+   text selection; the current one a stronger tint and an accent outline, so
+   it stands out by shape as well as by color. A black or white accent gives
+   gray tints, still told apart by the outline. */
+.page-editor .ProseMirror .ProseMirror-search-match,
+.page-editor .ProseMirror .ProseMirror-active-search-match {
+  border-radius: 2px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  background-color: color-mix(in oklab, var(--primary) 22%, transparent);
+}
+.page-editor .ProseMirror .ProseMirror-active-search-match {
+  background-color: color-mix(in oklab, var(--primary) 42%, transparent);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+@media (forced-colors: active) {
+  .page-editor .ProseMirror .ProseMirror-search-match,
+  .page-editor .ProseMirror .ProseMirror-active-search-match {
+    background-color: Mark;
+    color: MarkText;
+  }
+  .page-editor .ProseMirror .ProseMirror-active-search-match {
+    outline: 2px solid Highlight;
+  }
+}
+
 /* ─── The GUTTER flies over ITSELF ───────────────────────────────────
    The chrome of a block (the handle and the `+`) appears when hovering over the block, and
    not when hovering over the empty strip to your left — even though that's THERE we're going
@@ -1943,7 +2070,7 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
 
    The two values ​​are the RESERVE column (`GUTTER_HOVER`,
    components/pages/block-actions.ts), not the width of the buttons: these do not
-   hold only the 54 px stuck to the text, but the gutter that we see — and
+   hold only the 66 px stuck to the text, but the gutter that we see — and
    that we aim for — is the entire margin. The first version stopped at
    buttons, and left 42 dead px at the left edge, where the mouse arrives
    when it comes from the sidebar. Not a pixel more either: beyond that, the
@@ -1951,11 +2078,125 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
 
    In mobile layout, the column is only 24px indented: the extended box would overflow
    of the container that passes by. And there's no hovering on a touchscreen. */
+/* The gutter's handle and `+` fade in and out as the pointer moves from block
+   to block. The extension toggles an inline `visibility`; the transition on
+   it holds the buttons visible while their opacity falls, so the fade-out
+   plays too. */
+.page-editor .drag-handle {
+  transition: opacity 120ms ease-out, visibility 120ms ease-out;
+}
+.page-editor .drag-handle[style*="visibility: hidden"] {
+  opacity: 0;
+}
+/* A block dragged by its handle (components/pages/block-drag.ts): the grab
+   cursor everywhere for the whole gesture, a translucent copy of the blocks
+   under the pointer, and a line where they will land. */
+html.block-dragging,
+html.block-dragging * {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+/* The selection rectangle drawn from beside a page's text
+   (components/editor/block-marquee.ts), the board's one. It sits above
+   dialogs, since the task notebook is one, like the dragged blocks' copy.
+   While a rectangle is drawn, here or on a board, the cursor stays the
+   default arrow: neither the text cursor of the margin nor a card's hand. */
+html.marquee-drawing,
+html.marquee-drawing * {
+  cursor: default !important;
+}
+.block-marquee {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 80;
+  border: 1px solid color-mix(in oklab, var(--primary) 70%, transparent);
+  border-radius: 3px;
+  background: color-mix(in oklab, var(--primary) 15%, transparent);
+  pointer-events: none;
+}
+.block-drag-ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 80;
+  max-height: 14rem;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  background: var(--background);
+  box-shadow: var(--shadow-md, 0 4px 12px rgb(0 0 0 / 0.12));
+  opacity: 0.6;
+  pointer-events: none;
+}
+.block-drag-line {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 80;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--primary);
+  pointer-events: none;
+}
+
+/* Outside its hover zone (the left margin and the left 70% of the text,
+   components/pages/block-gutter.tsx) the gutter stays hidden even while the
+   extension tracks a block: the right part belongs to the comment button. */
+.page-editor[data-hover-zone]:not([data-hover-zone="gutter"]) .drag-handle {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-editor .drag-handle { transition: none; }
+}
+
 :root[data-app-layout="desktop"] {
   .page-editor[data-gutter] .ProseMirror {
     padding-left: 96px;
     margin-left: -96px;
   }
+  /* The right reserve of a page column (`app-desktop:pr-10`), where the
+     hovered block's comment button sits. */
+  .page-editor[data-comment-gutter] .ProseMirror {
+    padding-right: 40px;
+    margin-right: -40px;
+  }
+}
+
+/* The comment button on the right of a hovered page block fades with the
+   gutter, and is placed by script in the drag handle's wrapper — which
+   ignores the pointer, so the button takes it back, as the handle does. */
+.page-editor [data-block-comment-button] {
+  position: absolute;
+  z-index: 1;
+  pointer-events: auto;
+  transition: opacity 120ms ease-out, visibility 120ms ease-out;
+}
+.page-editor [data-block-comment-button][data-shown="false"] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-editor [data-block-comment-button] { transition: none; }
+}
+/* While the comment button is hovered, its block wears the block-selection
+   box (the "Selection boxes" rules below), so the button names its block. */
+.page-editor [data-block-comment-preview] {
+  position: absolute;
+  /* Sized to the block by script; the box reaches past it as a selected
+     block's does. */
+  box-sizing: content-box;
+  padding: var(--block-selection-y) var(--block-selection-x);
+  translate: calc(-1 * var(--block-selection-x)) calc(-1 * var(--block-selection-y));
+  border-radius: var(--block-selection-radius);
+  background-color: var(--selection-block);
+  pointer-events: none;
+  transition: opacity 120ms ease-out;
+}
+.page-editor [data-block-comment-preview][data-shown="false"] {
+  opacity: 0;
 }
 
 /* ─── The disclosure block (MIN-270) ─────────────────────────────────────
@@ -2071,82 +2312,83 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
    which made the old version invisible to those who checked the box): we
    remove the beat and HOLD the bottom. It's `flashBlock`
    (components/pages/block-actions.ts) which sets the class and removes it. */
-/* The EDGE of a COMMENTED block (MIN-282) — “there is a discussion here”.
-   Placed by a ProseMirror decoration (components/pages/block-comments.ts), not
-   by a mark: it is not content, it does not start either in the base or in the
-   markdown projection. A line to the left, indenting the text rather than
-   in the gutter, already taken by the handle and the `+`. */
+/* A COMMENTED block (MIN-282) — “there is a discussion here” — in the
+   comments' yellow (the palette's amber). Placed by a ProseMirror decoration
+   (components/pages/block-comments.ts), not by a mark: it is not content, it
+   reaches neither the database nor the Markdown projection. The block keeps
+   its neighbors' layout, and the gutter its place: its badge in the right
+   margin and its passages say it. */
 .page-block-commented {
   position: relative;
-  --page-comment-accent: color-mix(
-    in oklab,
-    var(--page-color-teal) 70%,
-    transparent
-  );
+  /* The tint behind a commented passage, and the badge's ink. */
+  --page-comment-accent: var(--page-ink-amber);
+  --page-comment-ink: var(--page-color-amber);
 }
 
-.page-block-commented::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: -0.75rem;
-  width: 2px;
-  border-radius: 1px;
-  background-color: var(--page-comment-accent);
-}
-
-/* A frozen excerpt is underlined only while the same text still exists in the
-   commented block. Like the edge, this is an editor decoration rather than
-   document content. */
+/* A frozen excerpt is underlined and tinted only while the same text still
+   exists in the commented block. Like the badge, this is an editor
+   decoration rather than document content. */
 .page-commented-passage {
   text-decoration-line: underline;
   text-decoration-color: var(--page-comment-accent);
   text-decoration-thickness: 2px;
   text-underline-offset: 0.2em;
-  text-decoration-skip-ink: auto;
+  /* One unbroken line, drawn over the descenders of y, g or q. */
+  text-decoration-skip-ink: none;
+  border-radius: 0.2em;
+  background-color: color-mix(in oklab, var(--page-comment-accent) 26%, transparent);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 
-/* The PASTILLE of a commented block: the count, and the button that opens the thread.
-   Out of flow, in the RIGHT margin — the left is taken by the handle and the
-   `+`. It therefore does not push anything: a commented block has exactly the same layout.
-   page than its neighbors, and this is what allows it to be placed on all blocks
-   without distorting the document. */
-.page-block-comment-badge {
+/* The BADGE of a commented block: the new-comment button's twin
+   (components/pages/block-gutter.tsx) — the same button, at the same place,
+   with the message count in its corner — and it stays while the pointer is
+   elsewhere. Out of flow, in the RIGHT margin, so a commented block keeps
+   exactly its neighbors' layout; components/pages/block-comments.ts places
+   it, as the gutter places the new-comment button. */
+.page-block-comment-host {
   position: absolute;
-  /* In the RESERVE on the right of the column (`md:pr-10`, 2.5 rem), no
-     beyond: further, the pellet would protrude from the moving container. */
-  right: -1.75rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.125rem;
-  padding: 0.125rem 0.25rem;
-  border-radius: 0.375rem;
-  font-size: 0.6875rem;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--page-color-teal) 85%, var(--foreground));
-  background-color: transparent;
-  transition: background-color 120ms ease;
-  cursor: default;
+  top: 0;
+  left: 0;
+  z-index: 1;
   user-select: none;
 }
 
-.page-block-comment-badge:hover {
-  background-color: color-mix(in oklab, var(--page-color-teal) 16%, transparent);
+.page-block-comment-badge {
+  color: var(--page-comment-ink);
+  cursor: default;
 }
 
-.page-block-comment-badge svg {
-  width: 0.875rem;
+.page-block-comment-badge:hover {
+  color: var(--page-comment-ink);
+  background-color: color-mix(in oklab, var(--page-comment-accent) 18%, transparent);
+}
+
+.page-block-comment-count {
+  position: absolute;
+  top: -0.25rem;
+  right: -0.3125rem;
+  min-width: 0.875rem;
   height: 0.875rem;
+  padding: 0 0.1875rem;
+  border-radius: 999px;
+  font-size: 0.5625rem;
+  font-weight: 600;
+  line-height: 0.875rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--background);
+  background-color: var(--page-comment-ink);
 }
 
 /* Below the width where the right margin exists, the pad returns INTO the stream,
    at the end of the block: better a shift of one line than a button that comes out of
    the screen and you can no longer click. */
 @media (max-width: 48rem) {
-  .page-block-comment-badge {
+  .page-block-comment-host {
     position: static;
+    display: inline-block;
     margin-left: 0.375rem;
     vertical-align: middle;
   }
@@ -2756,6 +2998,23 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
 
+  /* Writing in a sheet: it takes the whole height above the keyboard, so the
+     text being typed has room, and it clears the editor's keyboard toolbar
+     (components/editor/mobile-editor-toolbar.tsx). */
+  /* `:focus-within`, not the editor's own focus: tapping the sheet's send
+     button moves the focus to it, and the sheet must not shrink under the
+     finger before the tap lands. */
+  .mobile-bottom-sheet[data-slot="sheet-content"]:has(.ProseMirror):focus-within,
+  [data-slot="alert-dialog-content"]:has(.ProseMirror):focus-within {
+    height: calc(var(--mobile-viewport-height, 100dvh) - max(1rem, env(safe-area-inset-top)) - var(--mobile-editor-toolbar, 0px));
+    bottom: calc(var(--mobile-keyboard-inset, 0px) + var(--mobile-editor-toolbar, 0px));
+  }
+  .mobile-assistant-sheet[data-slot="sheet-content"]:has(.ProseMirror):focus-within,
+  .mobile-side-panel-sheet[data-slot="sheet-content"]:has(.ProseMirror):focus-within,
+  .creation-sheet[data-slot="sheet-content"]:has(.ProseMirror):focus-within {
+    padding-bottom: var(--mobile-editor-toolbar, 0px);
+  }
+
   .mobile-bottom-sheet[data-slot="sheet-content"] {
     padding-top: 8px;
     border: 0;
@@ -2810,10 +3069,23 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   }
   .mobile-bottom-sheet [data-mobile-sheet-header-actions] { margin: 0; gap: 8px; flex-shrink: 0; }
   .mobile-bottom-sheet [data-mobile-sheet-toolbar] { gap: 8px; }
+  /* Icon buttons in a pane header or a sheet are aimed with a thumb: they
+     grow to 40px, their icon to 20px. `min-*` so a button that is already
+     larger (a sheet's 44px close) keeps its size. */
+  :is(.app-content-header, .mobile-bottom-sheet) :is([data-size="icon-sm"], [data-size="icon"]) {
+    min-width: 40px;
+    min-height: 40px;
+  }
+  :is(.app-content-header, .mobile-bottom-sheet) :is([data-size="icon-sm"], [data-size="icon"]) > svg {
+    width: 20px;
+    height: 20px;
+  }
   .mobile-assistant-sheet .app-content-header > div { padding-right: 60px; }
   .mobile-assistant-sheet .app-content-header button { min-height: 44px; min-width: 44px; }
   [data-property-row] { min-height: 52px; }
-  [data-property-row] :is(button, a[role="button"]) { min-height: 44px; min-width: 44px; justify-content: flex-end; }
+  /* A checkbox is a button too, but it keeps its box: its touch area is its
+     own wider `::after` (components/ui/checkbox.tsx). */
+  [data-property-row] :is(button, a[role="button"]):not([role="checkbox"]) { min-height: 44px; min-width: 44px; justify-content: flex-end; }
   [data-bulk-issue-actions] button { min-height: 44px; min-width: 44px; }
   :is([data-slot="sheet-overlay"], [data-slot="dialog-overlay"], [data-slot="alert-dialog-overlay"]) {
     -webkit-backdrop-filter: blur(4px);
@@ -3015,6 +3287,13 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   }
   [data-mobile-navigation] {
     bottom: var(--mobile-keyboard-inset, 0px);
+  }
+  /* Writing brings the keyboard up: the bottom navigation steps aside for the
+     text (components/mobile-navigation.tsx tracks the focused field), and for
+     the editor's keyboard toolbar (components/editor/mobile-editor-toolbar.tsx). */
+  &[data-mobile-toolbar-open] [data-mobile-navigation],
+  [data-mobile-navigation][data-typing] {
+    display: none;
   }
   .app-content-header > div {
     width: 100%;
@@ -3291,20 +3570,94 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   background-color: color-mix(in oklab, var(--collab-color) 35%, transparent);
 }
 
-/* ─── Block-range selections (MIN-728) ─────────────────────────────────────
-   A drag or a ⇧-click across blocks selects whole blocks (`NodeRange`, see
-   components/editor/block-range.ts). ProseMirror does not draw that selection
-   as text, so its blocks are painted here in the selection color, and the
-   text's own highlight is hidden so the two do not stack. */
-.ProseMirror-noderangeselection *::selection {
-  background: transparent;
+/* ─── Selection boxes (block selection, node selection, atoms) ────────────
+   Everything a selection holds as a whole wears one look on every editor
+   surface (components/editor/block-selection.ts): the text selection's own
+   color (`--selection-block`, app/tokens.css) with slightly rounded corners,
+   so selected blocks read as blocks rather than as highlighted text.
+
+   - A block of a block selection (`.is-block-selected`), a block in a node
+     selection, and a code block or media a text selection covers whole get
+     an overlay painted OVER the block: a code block's or a callout's own
+     background, or an image, cannot hide it. The text highlight under it
+     goes, so the two never stack.
+   - An inline atom (an equation, a mention) or a whole inline-code run in a
+     text selection (`.is-inline-selected`), and a selected inline equation,
+     get an inline rounded background.
+
+   The box reaches OUTSIDE the block by `--block-selection-x` and `-y`, so
+   the text has room inside it without moving: an overlay adds no
+   indentation. The vertical reach stays under half the 8px between two
+   paragraphs, so two selected blocks still read as two. Every block gets
+   the same small corners, a block drawn as a card (a code block, a callout)
+   included: the box frames it rather than echoing its own corners. */
+:root {
+  --block-selection-x: 0.5rem;
+  --block-selection-y: 0.1875rem;
+  --block-selection-radius: 0.3125rem;
 }
-.ProseMirror-noderangeselection {
+.ProseMirror .is-block-selected,
+.ProseMirror .ProseMirror-selectednode:not(span) {
+  position: relative;
+  outline: none;
+}
+.ProseMirror .is-block-selected::after,
+.ProseMirror .ProseMirror-selectednode:not(span)::after {
+  content: "";
+  position: absolute;
+  inset: calc(-1 * var(--block-selection-y)) calc(-1 * var(--block-selection-x));
+  border-radius: var(--block-selection-radius);
+  background-color: var(--selection-block);
+  pointer-events: none;
+}
+/* A list item's marker hangs in the list's indent: the box takes it in. */
+.ProseMirror :is(ul:not([data-type="taskList"]), ol) > li.is-block-selected::after {
+  left: calc(-1.25rem - var(--block-selection-x));
+}
+/* A divider is one line tall, and the browser clips its children: the box
+   reaches above and below the line. */
+.ProseMirror hr:is(.is-block-selected, .ProseMirror-selectednode) {
+  overflow: visible;
+}
+.ProseMirror hr:is(.is-block-selected, .ProseMirror-selectednode)::after {
+  inset: -0.375rem calc(-1 * var(--block-selection-x));
+}
+.ProseMirror .is-block-selected ::selection,
+.ProseMirror .is-block-selected::selection,
+.ProseMirror .is-inline-selected ::selection,
+.ProseMirror .is-inline-selected::selection,
+.ProseMirror.has-block-selection ::selection {
+  background-color: transparent;
+}
+.ProseMirror.has-block-selection {
   caret-color: transparent;
 }
-.ProseMirror-selectednoderange {
+.ProseMirror .is-inline-selected,
+.ProseMirror span.ProseMirror-selectednode {
   border-radius: 0.25rem;
-  background-color: color-mix(in srgb, Highlight 45%, transparent);
+  background-color: var(--selection-block);
+  outline: none;
+}
+/* An inline code's box is its element, padding included; the decoration
+   only wraps its text. */
+.ProseMirror code:has(.is-inline-selected) {
+  background-image: linear-gradient(var(--selection-block), var(--selection-block));
+}
+.ProseMirror code .is-inline-selected,
+.ProseMirror .is-inline-selected:has([style*="--mention-chip"]) {
+  background-color: transparent;
+}
+/* Inside a selected block, only the block's box is painted. */
+.ProseMirror .is-block-selected :is(.is-block-selected, .ProseMirror-selectednode)::after {
+  content: none;
+}
+.ProseMirror .is-block-selected :is(.is-inline-selected, span.ProseMirror-selectednode),
+.ProseMirror .is-block-selected code:has(.is-inline-selected) {
+  background-color: transparent;
+  background-image: none;
+}
+.ProseMirror .is-block-selected .mention-selected [style*="--mention-chip"] {
+  background-image: none;
 }
 
 /* ─── Mentions inside a selection (MIN-734) ────────────────────────────────
@@ -3314,8 +3667,5 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
    the chip inside (the element carrying its tone) is overlaid with the
    selection color, over its own background. */
 .mention-selected [style*="--mention-chip"] {
-  background-image: linear-gradient(
-    color-mix(in srgb, Highlight 55%, transparent),
-    color-mix(in srgb, Highlight 55%, transparent)
-  );
+  background-image: linear-gradient(var(--selection-block), var(--selection-block));
 }

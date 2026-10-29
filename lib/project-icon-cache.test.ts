@@ -8,6 +8,9 @@ import { MentionSuggestions, type MentionOption } from "@/components/mention-sug
 import { isPersistableKey } from "./query-provider";
 import { projectIconQueryKey } from "./use-project-icon";
 
+// The menu's section headers and its "Close menu" row are translated.
+vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
+
 const projectId = "11111111-1111-4111-8111-111111111111";
 const iconUrl = `/api/projects/${projectId}/icon/content?v=1`;
 const nextIconUrl = `/api/projects/${projectId}/icon/content?v=2`;
@@ -23,7 +26,7 @@ function response(content = "first icon") {
 
 function menu(options = [option]) {
   return createElement(MentionSuggestions, {
-    options, activeIndex: 0, onPick: vi.fn(), onHover: vi.fn(),
+    options, activeIndex: 0, onPick: vi.fn(), onHover: vi.fn(), onClose: vi.fn(),
   });
 }
 

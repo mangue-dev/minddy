@@ -115,16 +115,12 @@ export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }
     <NodeViewWrapper
       as="div"
       ref={wrapper}
-      // Neither contour nor rounded corners when the block is selected (MIN-282).
-      //
-      // The ring framed the ENTIRE block, legend included, and its radius cut
-      // what affects the angles — starting with the alternative text, that the
-      // browser draws IN the image box when it doesn't load.
-      //
-      // There is therefore NO more selection mark on the image, and it is
-      // assumed: what designates the block is the gutter when hovered (the handle
-      // and the `+`), as on any other block of the document. Nothing
-      // else in this editor is not painting because it is selected.
+      // No ring and no rounded crop when the block is selected (MIN-282): a
+      // ring framed the caption too, and a radius cut the alternative text the
+      // browser draws inside a broken image. A selected image shows the
+      // editor's selection box instead, painted over the block like on every
+      // other block (`.ProseMirror-selectednode`, `.is-block-selected`,
+      // app/globals.css).
       className="group/image-block my-2 flex flex-col items-start"
       contentEditable={false}
     >

@@ -22,7 +22,8 @@
 
 import type { Editor, JSONContent } from "@tiptap/core";
 import { Fragment, Slice } from "@tiptap/pm/model";
-import { NodeSelection, TextSelection } from "@tiptap/pm/state";
+import { TextSelection } from "@tiptap/pm/state";
+import { BlockSelection, anchorBlockOf, isBlockSelection } from "@/components/editor/block-selection";
 import {
   BLOCK_ID_ATTRIBUTE,
   type PageBlock,
@@ -30,20 +31,20 @@ import {
 import { flashBlockAt } from "@/components/pages/block-flash";
 
 /**
- * The width of the BUTTONS of the gutter, in pixels: two buttons of 24 px,
- * their `gap-0.5` and the `pr-1` which separates them from the block. This is what `BlockGutter`
+ * The width of the BUTTONS of the gutter, in pixels: the 24 px `+`, the
+ * 28 px handle, and the up to 14 px that separate them from the block. This is what `BlockGutter`
  * actually occupies — not the strip that makes it appear, below.
  */
-export const GUTTER_WIDTH = 54;
+export const GUTTER_WIDTH = 66;
 
 /**
  * The width of the HOVERBAND, in pixels: the entire reserve as the column
  * of the document leaves to its left (`md:pl-24`, components/pages/page-view.tsx).
  *
  * This is NOT `GUTTER_WIDTH`, and the difference is what caused the
- * first version: the buttons only occupy the 54 px stuck to the text, but
+ * first version: the buttons only occupy the 66 px stuck to the text, but
  * the gutter we SEE — and therefore the one we aim for — is the entire margin. In
- * limiting it to the buttons, there remained a dead band of 42 px at the left edge,
+ * limiting it to the buttons, there remained a dead band at the left edge,
  * exactly where the mouse arrives when it comes from the sidebar. Measured at
  * browser: stop at 25 px of text, handle comes out; stop at 70 px, nothing.
  *
@@ -81,13 +82,17 @@ export function blockRange(editor: Editor): BlockRange | null {
  * Place the selection on the block that begins at `pos` — what a click on does
  * the handle before opening the menu. Without it, the menu would act where the cursor
  * was hanging around, not on the block we flew over.
+ *
+ * A block selection (components/editor/block-selection.ts), the one a drag
+ * across blocks or Esc makes: the block shows the same selection box, and the
+ * arrows and ⇧-arrows go on from it once the menu closes.
  */
 export function selectBlockAt(editor: Editor, pos: number): boolean {
   const { doc } = editor.state;
   if (pos < 0 || pos > doc.content.size) return false;
   const node = doc.nodeAt(pos);
   if (!node) return false;
-  const selection = NodeSelection.create(doc, pos);
+  const selection = BlockSelection.create(doc, pos, pos);
   editor.view.dispatch(editor.state.tr.setSelection(selection));
   return true;
 }
@@ -119,13 +124,9 @@ export function selectBlockFromHandle(
   if (!node) return false;
 
   if (extend) {
-    const from = Math.max(Math.min(selection.from, pos), 0);
-    const to = Math.min(
-      Math.max(selection.to, pos + node.nodeSize),
-      doc.content.size
-    );
+    const anchor = anchorBlockOf(doc, selection) ?? pos;
     editor.view.dispatch(
-      editor.state.tr.setSelection(TextSelection.create(doc, from, to))
+      editor.state.tr.setSelection(BlockSelection.create(doc, anchor, pos))
     );
     return true;
   }
@@ -372,10 +373,53 @@ function spreadOverBlocks(editor: Editor): boolean {
  */
 export function turnBlocksInto(editor: Editor, block: PageBlock): boolean {
   if (!block.turnInto) return false;
+  // Blocks selected as blocks stay selected as blocks once turned, so the
+  // next action (a color, a format, another type) applies to them all.
+  const asBlocks = isBlockSelection(editor.state.selection);
   if (!spreadOverBlocks(editor)) return false;
   editor.commands.clearNodes();
   spreadOverBlocks(editor);
-  return block.turnInto(editor);
+  const turned = block.turnInto(editor);
+  if (turned && asBlocks && !editor.isDestroyed) {
+    const { doc, selection } = editor.state;
+    editor.view.dispatch(editor.state.tr.setSelection(BlockSelection.between(doc, selection.from, selection.to)));
+  }
+  return turned;
+}
+
+/** What the block menu's actions can act on, in the selected blocks. */
+export interface BlockMenuAbilities {
+  /** A text block to convert: “Turn into” flattens the selection and turns
+      its text blocks, so a divider, an equation, an image, a file or a
+      subpage alone has nothing it could become. */
+  turnInto: boolean;
+  /** Text a color can paint: the colors are marks, which only a text block
+      that accepts them takes. A callout's own color counts. */
+  color: boolean;
+  /** Text to send to Numo: a divider or a media block alone has none. */
+  text: boolean;
+}
+
+/**
+ * Read on the selected blocks, so a mixed selection keeps an action as soon
+ * as one of its blocks can take it — the action then applies where it can.
+ */
+export function blockMenuAbilities(editor: Editor): BlockMenuAbilities {
+  const range = blockRange(editor);
+  if (!range) return { turnInto: false, color: false, text: false };
+  const { doc, schema } = editor.state;
+  const textColor = schema.marks.pageTextColor;
+  let turnInto = false;
+  let color = false;
+  doc.nodesBetween(range.from, range.to, (node) => {
+    if (node.type.name === "callout") color = true;
+    if (!node.isTextblock) return !(turnInto && color);
+    turnInto = true;
+    if (textColor && node.type.allowsMarkType(textColor)) color = true;
+    return false;
+  });
+  const text = doc.textBetween(range.from, range.to, "\n", " ").trim() !== "";
+  return { turnInto, color, text };
 }
 
 /** Duplicate the selection JUST BELOW her, including children. */

@@ -158,7 +158,9 @@ export async function resolveMentionTargets(
     if (!readable(stored)) continue;
     const row = await decodePageProjection(stored, userId);
     const title = typeof row.title === "string" ? row.title.trim() : "";
-    resolution.set(`page:${row.id}`, title || null);
+    // A page the reader may see but nobody titled yet (a subpage just
+    // created): untitled, not unavailable.
+    resolution.set(`page:${row.id}`, title || UNTITLED_PAGE_LABEL);
   }
   for (const stored of resources) {
     if (!allowed.has(String(stored.project_id))) continue;
@@ -189,6 +191,9 @@ export async function resolveMentionTargets(
 
 /** The neutral label of a mention a reader may not see. */
 export const UNAVAILABLE_MENTION_LABEL = "unavailable";
+
+/** The label of a page the reader may see that has no title yet. */
+export const UNTITLED_PAGE_LABEL = "Untitled";
 
 /**
  * A Markdown text as `userId` may read it: each mention carries the target's
