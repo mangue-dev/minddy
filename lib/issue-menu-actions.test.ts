@@ -195,4 +195,58 @@ describe("shared issue menu actions", () => {
     action("open-pr-new-tab").onSelect?.();
     expect(dependencies.create).toHaveBeenCalledWith("/pull-requests?pr=pr");
   });
+
+  // MIN-833: a right-click on a card of a multi-ticket selection.
+  function selection(planned: number) {
+    return {
+      count: 3,
+      planned,
+      onCopyPrompt: vi.fn(),
+      onCustomPrompt: vi.fn(),
+      onCopyIdentifiers: vi.fn(),
+    };
+  }
+
+  it("acts on the whole selection: combined prompts, identifiers and shared fields", () => {
+    const sel = selection(0);
+    // The anchor card already has an objective and a due date: the other
+    // selected tickets may not, so both entries stay offered.
+    const { actions, action, options } = build({
+      issue: { id: "issue", project_id: "project", number: 623, objective_id: "objective", due_date: "2026-10-01" } as Issue,
+      selection: sel,
+    });
+    expect(actions.map((item) => item.id)).toEqual([
+      "copy-selection-prompt", "copy-identifiers", "relations", "set-objective", "set-due-date",
+    ]);
+    expect(action("copy-selection-prompt").children?.map((item) => item.id)).toEqual([
+      "copy-selection-prompt-plan", "copy-selection-prompt-implement",
+      "copy-selection-prompt-verify", "copy-selection-prompt-custom",
+    ]);
+    expect(action("copy-selection-prompt-implement").shortcut).toBe("⇧P");
+    for (const kind of ["plan", "implement", "verify"] as const) {
+      action(`copy-selection-prompt-${kind}`).onSelect?.();
+      expect(sel.onCopyPrompt).toHaveBeenLastCalledWith(kind);
+    }
+    action("copy-selection-prompt-custom").onSelect?.();
+    expect(sel.onCustomPrompt).toHaveBeenCalledOnce();
+    expect(action("copy-selection-prompt-custom").transfersFocus).toBe(true);
+    action("copy-identifiers").onSelect?.();
+    expect(sel.onCopyIdentifiers).toHaveBeenCalledOnce();
+    action("set-due-date").onSelect?.();
+    expect(options.onOpenField).toHaveBeenLastCalledWith("dueDate");
+  });
+
+  it("names the plan entry after the selection's plans", () => {
+    const planLabel = (planned: number) =>
+      build({ selection: selection(planned) }).action("copy-selection-prompt-plan").label;
+    expect(planLabel(0)).toBe("actionWritePlans");
+    expect(planLabel(3)).toBe("actionReviewPlans");
+    expect(planLabel(1)).toBe("actionWriteOrReviewPlans");
+  });
+
+  it("gives a reader of a selection the identifiers only", () => {
+    expect(build({ selection: selection(0), readOnly: true }).actions.map((item) => item.id)).toEqual([
+      "copy-identifiers",
+    ]);
+  });
 });

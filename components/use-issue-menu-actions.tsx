@@ -17,6 +17,22 @@ import type { IssuePr } from "@/lib/agent-api";
 import type { HierarchyRelation, RelationMenuKind } from "@/lib/issue-hierarchy";
 import type { Issue } from "@/lib/types";
 import { DATE_ICON } from "@/components/feature-icons";
+import { promptSubmenu } from "@/components/agent/use-agent-menu-actions";
+import type { MultiIssueAction } from "@/lib/issue-prompt";
+
+/**
+ * The right-clicked card belongs to a selection of several tickets (MIN-833):
+ * the menu then acts on the whole selection.
+ */
+export interface IssueMenuSelection {
+  count: number;
+  /** How many selected tickets already have a plan — names the plan entry. */
+  planned: number;
+  onCopyPrompt: (action: Exclude<MultiIssueAction, "custom">) => void;
+  /** Opens the custom request dialog, whose prompt covers the selection. */
+  onCustomPrompt: () => void;
+  onCopyIdentifiers: () => void;
+}
 
 export interface IssueMenuOptions {
   issue: Issue;
@@ -34,6 +50,8 @@ export interface IssueMenuOptions {
   onLinkPullRequest?: () => void;
   /** Project readers (MIN-693): only navigation survives, never a mutation. */
   readOnly?: boolean;
+  /** Present when the card is part of a multi-ticket selection (MIN-833). */
+  selection?: IssueMenuSelection;
 }
 
 /** One action factory for card context menus and sidebar More menus. */
@@ -50,14 +68,101 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
   const tCommon = useTranslations("Common");
   const tAction = useTranslations("CommandPaletteActions");
   const tPr = useTranslations("PullRequests");
+  const tBulk = useTranslations("BulkActions");
   const appTabs = useOptionalAppTabSession();
   const { isPending, requestUnlink } = usePrUnlinkConfirmation();
 
   return useCallback(({
     issue, projectKey, agentActions, pr, hasObjectives, onSelectRelation, hierarchyRelations = [],
-    onOpenField, extraActions = [], onDelete, onLinkPullRequest, readOnly = false,
+    onOpenField, extraActions = [], onDelete, onLinkPullRequest, readOnly = false, selection,
   }: IssueMenuOptions): ContextMenuAction[] => {
     const identifier = issueIdentifier(projectKey, issue.number);
+    const relationsAction = (): ContextMenuAction[] => onSelectRelation
+      ? [
+          {
+            id: "relations",
+            label: tRel("relations"),
+            keywords: ["relation", "link", "lier", "bloc", "block"],
+            icon: <HugeiconsIcon icon={Link02Icon} className="size-4" />,
+            shortcut: RELATION_SHORTCUT_HINT,
+            children: [...RELATION_TYPES, ...hierarchyRelations].map((type) => ({
+              id: `relation-${type}`,
+              label: tRel(`action_${type}`),
+              keywords: [tRel(type), "relation", "link", "lier"],
+              icon: <RelationIcon relation={type} className="size-4" />,
+              transfersFocus: true,
+              onSelect: () => onSelectRelation(type),
+            })),
+          },
+        ]
+      : [];
+    const objectiveAction: ContextMenuAction = {
+      id: "set-objective",
+      label: t("actionLinkObjective"),
+      keywords: ["objectif", "objective", "goal", "lier", "link"],
+      icon: <HugeiconsIcon icon={Target01Icon} className="size-4" />,
+      shortcut: KEY_FOR_FIELD.objective,
+      transfersFocus: true,
+      onSelect: () => onOpenField("objective"),
+    };
+    const dueDateAction: ContextMenuAction = {
+      id: "set-due-date",
+      label: t("actionSetDueDate"),
+      keywords: [
+        "échéance",
+        "echeance",
+        "date",
+        "due",
+        "deadline",
+        "calendrier",
+        "calendar",
+      ],
+      icon: <HugeiconsIcon icon={DATE_ICON} className="size-4" />,
+      shortcut: KEY_FOR_FIELD.dueDate,
+      transfersFocus: true,
+      onSelect: () => onOpenField("dueDate"),
+    };
+    // A selection (MIN-833): the combined prompts, the identifier list, and
+    // the fields its pickers write to every selected ticket (MIN-795). The
+    // objective and due date stay offered whatever the anchor card holds,
+    // since the other tickets may lack them. Single-ticket entries (pull
+    // request, comment prompt, cycle, trash) are left to the card alone and
+    // to the selection's ⌘K actions.
+    if (selection) {
+      const { count, planned } = selection;
+      const copyIdentifiers: ContextMenuAction = {
+        id: "copy-identifiers",
+        label: tBulk("copyIdentifiers", { count }),
+        keywords: ["copy", "copier", "identifier", "identifiant", "id", "list", "liste"],
+        icon: <HugeiconsIcon icon={Copy01Icon} className="size-4" />,
+        onSelect: selection.onCopyIdentifiers,
+      };
+      const prompts = promptSubmenu({
+        id: "copy-selection-prompt",
+        label: tBulk("copyPrompt"),
+        labels: {
+          plan: planned === 0
+            ? tBulk("actionWritePlans")
+            : planned === count ? tBulk("actionReviewPlans") : tBulk("actionWriteOrReviewPlans"),
+          implement: tBulk("actionImplement"),
+          verify: tBulk("actionVerifyImplementations"),
+          custom: t("actionCustomPrompt"),
+        },
+        onPlan: () => selection.onCopyPrompt("plan"),
+        onImplement: () => selection.onCopyPrompt("implement"),
+        onVerify: () => selection.onCopyPrompt("verify"),
+        onCustom: selection.onCustomPrompt,
+      });
+      // A reader copies identifiers, never prompts — as on one ticket.
+      if (readOnly) return [copyIdentifiers];
+      return [
+        prompts,
+        copyIdentifiers,
+        ...relationsAction(),
+        ...(hasObjectives ? [objectiveAction] : []),
+        dueDateAction,
+      ];
+    }
     const openPr: ContextMenuAction[] = pr
       ? [
           {
@@ -132,59 +237,9 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
         transfersFocus: true,
         onSelect: onLinkPullRequest,
       }] : []),
-      ...(onSelectRelation
-        ? [
-            {
-              id: "relations",
-              label: tRel("relations"),
-              keywords: ["relation", "link", "lier", "bloc", "block"],
-              icon: <HugeiconsIcon icon={Link02Icon} className="size-4" />,
-              shortcut: RELATION_SHORTCUT_HINT,
-              children: [...RELATION_TYPES, ...hierarchyRelations].map((type) => ({
-                id: `relation-${type}`,
-                label: tRel(`action_${type}`),
-                keywords: [tRel(type), "relation", "link", "lier"],
-                icon: <RelationIcon relation={type} className="size-4" />,
-                transfersFocus: true,
-                onSelect: () => onSelectRelation(type),
-              })),
-            },
-          ]
-        : []),
-      ...(!issue.objective_id && hasObjectives
-        ? [
-            {
-              id: "set-objective",
-              label: t("actionLinkObjective"),
-              keywords: ["objectif", "objective", "goal", "lier", "link"],
-              icon: <HugeiconsIcon icon={Target01Icon} className="size-4" />,
-              shortcut: KEY_FOR_FIELD.objective,
-              transfersFocus: true,
-              onSelect: () => onOpenField("objective"),
-            },
-          ]
-        : []),
-      ...(!issue.due_date
-        ? [
-            {
-              id: "set-due-date",
-              label: t("actionSetDueDate"),
-              keywords: [
-                "échéance",
-                "echeance",
-                "date",
-                "due",
-                "deadline",
-                "calendrier",
-                "calendar",
-              ],
-              icon: <HugeiconsIcon icon={DATE_ICON} className="size-4" />,
-              shortcut: KEY_FOR_FIELD.dueDate,
-              transfersFocus: true,
-              onSelect: () => onOpenField("dueDate"),
-            },
-          ]
-        : []),
+      ...relationsAction(),
+      ...(!issue.objective_id && hasObjectives ? [objectiveAction] : []),
+      ...(!issue.due_date ? [dueDateAction] : []),
       ...extraActions,
       ...(onDelete
         ? [
@@ -208,5 +263,5 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
           ]
         : []),
     ];
-  }, [t, tAgent, tRel, tCommon, tAction, tPr, navigate, appTabs, isPending, requestUnlink]);
+  }, [t, tAgent, tRel, tCommon, tAction, tPr, tBulk, navigate, appTabs, isPending, requestUnlink]);
 }

@@ -110,3 +110,39 @@ it("does the same when the rectangle starts on the background beside the columns
 
 it("keeps a card the windowed column unmounts after the scroll took it away", () =>
   scrollDuringGesture("column", true));
+
+it("keeps the selection when a click lands in a portal rendered from the board (MIN-833)", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const onChange = vi.fn();
+  let controls: ReturnType<typeof useMarqueeSelection<HTMLDivElement>>;
+  function Board() {
+    controls = useMarqueeSelection<HTMLDivElement>({ selected: new Set(["a"]), onChange });
+    return createElement("div", { ref: controls.ref, "data-board": "" },
+      createElement(MarqueeOverlay, { overlayRef: controls.overlayRef }));
+  }
+  const host = document.createElement("div");
+  document.body.append(host);
+  // A right-click menu entry: portaled to <body>, a plain div, not a button.
+  const menuItem = document.createElement("div");
+  menuItem.setAttribute("role", "menuitem");
+  document.body.append(menuItem);
+  const root = createRoot(host);
+  try {
+    await act(() => root.render(createElement(Board)));
+    const board = host.querySelector<HTMLElement>("[data-board]")!;
+    board.getBoundingClientRect = () => ({ left: 0, top: 0, right: 500, bottom: 500, width: 500, height: 500 } as DOMRect);
+    Object.defineProperties(board, { clientWidth: { value: 500 }, offsetWidth: { value: 500 }, clientHeight: { value: 500 }, offsetHeight: { value: 500 } });
+    document.elementFromPoint = () => board;
+    const press = (target: HTMLElement) => controls.onPointerDown({ pointerType: "mouse", button: 0, target,
+      clientX: 50, clientY: 50, preventDefault: vi.fn() } as never);
+
+    await act(() => press(menuItem));
+    await act(() => window.dispatchEvent(new MouseEvent("pointerup")));
+    expect(onChange).not.toHaveBeenCalled();
+
+    // A click on the board's own background still closes the selection.
+    await act(() => press(board));
+    await act(() => window.dispatchEvent(new MouseEvent("pointerup")));
+    expect(onChange).toHaveBeenCalledWith(new Set());
+  } finally { await act(() => root.unmount()); host.remove(); menuItem.remove(); }
+});

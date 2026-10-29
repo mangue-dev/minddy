@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 41,
-  "sourceRevision": 41,
+  "revision": 42,
+  "sourceRevision": 42,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles; MIN-809 Smart Fill split button; MIN-813 Smart Fill title on request",
+    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles; MIN-809 Smart Fill split button; MIN-813 Smart Fill title on request; MIN-833 selection right-click menu",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -122,12 +122,14 @@
       "components/editor/mobile-editor-toolbar.tsx",
       "lib/palette-picker.ts",
       "lib/creation-relations.ts",
-      "lib/action-menu-search.ts"
+      "lib/action-menu-search.ts",
+      "components/use-issue-menu-actions.tsx",
+      "lib/use-bulk-selection-actions.ts"
     ]
   },
   "review": {
-    "revision": 41,
-    "fact": "agent:claude-code (searchable card and issue-panel action menus also find submenu entries shown with their path, such as Relations › Mark as blocked by… (MIN-845), checked against components/issue-context-menu.tsx, lib/action-menu-search.ts and lib/issue-context-menu-search.test.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "revision": 42,
+    "fact": "agent:claude-code (right-clicking a card of a multi-issue selection acts on the selection: combined plan, implement, verify and custom prompts, the identifier list sorted by number, and the relation, objective and due-date pickers (MIN-833), checked against components/use-issue-menu-actions.tsx, components/issue-card.tsx, lib/use-bulk-selection-actions.ts and lib/issue-prompt.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
     "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
@@ -174,7 +176,7 @@
       "src": "/documentation/en/new-issue.png",
       "alt": "Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-21 button.",
       "caption": "Describe the expected result, then choose the useful properties before creating the issue.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -190,7 +192,7 @@
       "src": "/documentation/en/triage-incoming.png",
       "alt": "Incoming demonstration issue AUR-19 with its report, properties and duplicate, Decline and Accept controls.",
       "caption": "Read the incoming report before accepting it, declining it or linking a duplicate.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -207,7 +209,7 @@
       "src": "/documentation/en/issue-statuses.png",
       "alt": "Eight issue statuses in the picker, with backlog currently selected.",
       "caption": "The check marks the current status. Choose the status that reflects the work’s actual state.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -223,7 +225,7 @@
       "src": "/documentation/en/work-resources.png",
       "alt": "Add-link dialog with an example contact URL.",
       "caption": "Review the destination before adding a resource. This example link has not been submitted.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -239,7 +241,7 @@
       "src": "/documentation/en/work-dependencies.png",
       "alt": "The command palette lists the issues that can block this one, with the relation's question in its search field.",
       "caption": "Choose the relation direction before selecting its endpoint. The picker is shown without submitting a relation.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -255,7 +257,7 @@
       "src": "/documentation/en/work-sub-issues.png",
       "alt": "Sub-issue creation field in a demonstration parent issue.",
       "caption": "The inline field creates a child under this parent; a child keeps its own status and discussion.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -271,7 +273,7 @@
       "src": "/documentation/en/work-implementation-plan.png",
       "alt": "Demonstration plan showing two of six work tasks complete.",
       "caption": "The saved demonstration plan separates completed, active and pending steps. Its progress does not prove the fictional code task was executed.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -287,7 +289,7 @@
       "src": "/documentation/en/issue-date-recurrence.png",
       "alt": "Due-date picker in recurring mode with a weekly Sunday preview and optional time.",
       "caption": "Recurring mode previews the weekly cadence. Confirm the first due date before creating the issue.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -303,7 +305,7 @@
       "src": "/documentation/en/import-issues-preview-workflow.png",
       "alt": "CSV preview with two localized demonstration rows and detected column mappings.",
       "caption": "CSV preview with two localized demonstration rows and detected column mappings. No import was submitted; optional AI planning was blocked for the capture.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -320,7 +322,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -564,7 +566,7 @@ A Numo routine is a different object: it schedules a conversation and can use th
 
 On a board, hold Shift and click each issue card to toggle its selection. With a mouse, you can also drag a selection rectangle from empty board space; Shift, Command or Ctrl makes that gesture additive. Near an edge the board scrolls, and the cards the rectangle passed over stay selected after they scroll out of view. The rectangle gesture is not a touch-screen selection mode. Check the selected count and visible identifiers before opening the bulk actions. Selection is a working set for the action, not a saved view and not a permission grant. Open them with **Actions** on the selection bar, or press Command+K on macOS or Ctrl+K on Windows/Linux while issues are selected.
 
-Choose Actions in the floating selection bar to open the command palette. Choose status, priority, effort or assignee, set the value and confirm the inline form. The objective action appears only for a selection in one project with available objectives. Other actions, such as adding to or removing from a cycle, linking two issues or sending the selection to Numo, appear when the current board supports them. With a mouse, you can also point at a selected card and press S, P, E, A, L, D, O or R: the picker that opens applies to the whole selection, and for assignee, objective, categories and relations to the selected issues of that card's project. Inspect the affected issues afterward. On a touch-only device without a supported multi-selection gesture, edit each issue through its detail panel.
+Choose Actions in the floating selection bar to open the command palette. Choose status, priority, effort or assignee, set the value and confirm the inline form. The objective action appears only for a selection in one project with available objectives. Other actions, such as adding to or removing from a cycle, linking two issues or sending the selection to Numo, appear when the current board supports them. With a mouse, you can also point at a selected card and press S, P, E, A, L, D, O or R: the picker that opens applies to the whole selection, and for assignee, objective, categories and relations to the selected issues of that card's project. Right-click a selected card to act on the whole selection: **Copy the combined prompt** offers **Generate the plans** (**Review the plans** when every selected issue has one, **Generate or review the plans** when only some do), **Implement the issues**, **Verify the implementations** and **Custom…**, each copying one prompt for every selected issue. **Copy the 3 identifiers**, for three selected issues, copies their identifiers separated by commas, lowest number first. **Relations**, **Link an objective** and **Add a due date** open the same pickers as R, O and D. Inspect the affected issues afterward. On a touch-only device without a supported multi-selection gesture, edit each issue through its detail panel.
 
 ### Partial results and destructive actions {#bulk-results}
 

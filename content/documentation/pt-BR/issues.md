@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 41,
-  "sourceRevision": 41,
+  "revision": 42,
+  "sourceRevision": 42,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles; MIN-809 Smart Fill split button; MIN-813 Smart Fill title on request",
+    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles; MIN-809 Smart Fill split button; MIN-813 Smart Fill title on request; MIN-833 selection right-click menu",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -122,13 +122,15 @@
       "components/editor/mobile-editor-toolbar.tsx",
       "lib/palette-picker.ts",
       "lib/creation-relations.ts",
-      "lib/action-menu-search.ts"
+      "lib/action-menu-search.ts",
+      "components/use-issue-menu-actions.tsx",
+      "lib/use-bulk-selection-actions.ts"
     ]
   },
   "review": {
-    "revision": 41,
-    "fact": "agent:claude-code (searchable card and issue-panel action menus also find submenu entries shown with their path, such as Relations › Mark as blocked by… (MIN-845), checked against components/issue-context-menu.tsx, lib/action-menu-search.ts and lib/issue-context-menu-search.test.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; equivalent meaning to en revision 41; self-reviewed; agent review, not human acceptance)",
+    "revision": 42,
+    "fact": "agent:claude-code (right-clicking a card of a multi-issue selection acts on the selection: combined plan, implement, verify and custom prompts, the identifier list sorted by number, and the relation, objective and due-date pickers (MIN-833), checked against components/use-issue-menu-actions.tsx, components/issue-card.tsx, lib/use-bulk-selection-actions.ts and lib/issue-prompt.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; equivalent meaning to en revision 42; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -175,7 +177,7 @@
       "src": "/documentation/pt-BR/new-issue.png",
       "alt": "Rascunho não enviado no projeto Aurora com título, descrição, propriedades que podem ser escolhidas manualmente e o botão Criar AUR-21.",
       "caption": "Descreva o resultado esperado e escolha as propriedades úteis antes de criar o ticket.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -192,7 +194,7 @@
       "src": "/documentation/pt-BR/triage-incoming.png",
       "alt": "Ticket recebido de demonstração AUR-19 com relato, propriedades e controles de duplicado, Recusar e Aceitar.",
       "caption": "Leia o relato recebido antes de aceitar, recusar ou vincular um duplicado.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -209,7 +211,7 @@
       "src": "/documentation/pt-BR/issue-statuses.png",
       "alt": "Os oito estados do ticket no seletor, com Backlog selecionado.",
       "caption": "A marca indica o estado atual. Escolha o que representa a situação real do trabalho.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -226,7 +228,7 @@
       "src": "/documentation/pt-BR/work-resources.png",
       "alt": "Janela para adicionar um link com um endereço de contato de exemplo.",
       "caption": "Confira o destino antes de adicionar o recurso. Este link de exemplo não foi enviado.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -242,7 +244,7 @@
       "src": "/documentation/pt-BR/work-dependencies.png",
       "alt": "A paleta de comandos lista os tickets que podem bloquear este, com a pergunta da relação no campo de busca.",
       "caption": "Escolha o sentido da relação antes do destino. O seletor é mostrado sem enviar a relação.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -258,7 +260,7 @@
       "src": "/documentation/pt-BR/work-sub-issues.png",
       "alt": "Campo de criação de um subticket em um ticket pai de demonstração.",
       "caption": "O campo cria um filho deste ticket; cada filho mantém seu próprio status e discussão.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -275,7 +277,7 @@
       "src": "/documentation/pt-BR/work-implementation-plan.png",
       "alt": "Plano de demonstração com duas tarefas de trabalho concluídas de seis.",
       "caption": "O plano salvo distingue etapas concluídas, ativas e pendentes. O progresso não comprova a execução da tarefa fictícia de código.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -292,7 +294,7 @@
       "src": "/documentation/pt-BR/issue-date-recurrence.png",
       "alt": "Seletor de prazo no modo recorrente com prévia semanal aos domingos e horário opcional.",
       "caption": "O modo recorrente mostra a frequência semanal. Confirme o primeiro prazo antes de criar o ticket.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -309,7 +311,7 @@
       "src": "/documentation/pt-BR/import-issues-preview-workflow.png",
       "alt": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas.",
       "caption": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas. A importação não foi enviada; o planejamento opcional com IA foi bloqueado para a captura.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -326,7 +328,7 @@
       "src": "/documentation/pt-BR/file-preview.png",
       "alt": "Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar, Renomear e Remover.",
       "caption": "O visualizador compartilhado mantém Fechar abaixo da prévia. O menu Ações do arquivo oferece Baixar e, quando permitido, Renomear e Remover.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -567,7 +569,7 @@ Uma rotina do Numo é um objeto diferente: ela agenda uma conversa e pode usar o
 
 No quadro, mantenha Shift pressionado e clique em cada cartão para adicioná-lo à seleção ou removê-lo dela. Com o mouse, você também pode arrastar um retângulo de seleção a partir de um espaço vazio do quadro. Shift, Command ou Ctrl fazem esse gesto ampliar a seleção existente. Perto de uma borda o quadro rola, e os cartões que o retângulo percorreu continuam selecionados mesmo depois de saírem da vista. O retângulo não é um modo de seleção para telas sensíveis ao toque. Confira a quantidade selecionada e os identificadores visíveis antes de abrir as ações em lote. A seleção é um conjunto de trabalho para a ação, não uma visualização salva nem uma concessão de permissão. Abra-as com **Ações** na barra de seleção ou pressione Command+K no macOS ou Ctrl+K no Windows/Linux enquanto houver tickets selecionados.
 
-Escolha Ações na barra flutuante de seleção para abrir a paleta de comandos. Escolha estado, prioridade, esforço ou responsável, defina o valor e confirme o formulário integrado. A ação de objetivo aparece somente quando a seleção pertence a um único projeto com objetivos disponíveis. Outras ações, como adicionar ou remover do ciclo, vincular dois tickets ou enviar a seleção ao Numo, aparecem quando o quadro atual oferece suporte a elas. Com o mouse, você também pode apontar para um cartão selecionado e pressionar S, P, E, A, L, D, O ou R: o seletor que abre se aplica a toda a seleção e, para responsável, objetivo, categorias e relações, aos tickets selecionados do projeto desse cartão. Confira os tickets afetados depois. Em um dispositivo somente de toque sem um gesto de seleção múltipla compatível, edite cada ticket pelo painel de detalhes.
+Escolha Ações na barra flutuante de seleção para abrir a paleta de comandos. Escolha estado, prioridade, esforço ou responsável, defina o valor e confirme o formulário integrado. A ação de objetivo aparece somente quando a seleção pertence a um único projeto com objetivos disponíveis. Outras ações, como adicionar ou remover do ciclo, vincular dois tickets ou enviar a seleção ao Numo, aparecem quando o quadro atual oferece suporte a elas. Com o mouse, você também pode apontar para um cartão selecionado e pressionar S, P, E, A, L, D, O ou R: o seletor que abre se aplica a toda a seleção e, para responsável, objetivo, categorias e relações, aos tickets selecionados do projeto desse cartão. Clique com o botão direito em um cartão selecionado para agir sobre toda a seleção: **Copiar o prompt combinado** oferece **Gerar os planos** (**Revisar os planos** quando todos os tickets selecionados têm um, **Gerar ou revisar os planos** quando só alguns têm), **Implementar os tickets**, **Verificar as implementações** e **Personalizado…**, e cada opção copia um único prompt para todos os tickets selecionados. **Copiar os 3 identificadores**, com três tickets selecionados, copia os identificadores deles separados por vírgulas, do menor número para o maior. **Relações**, **Vincular um objetivo** e **Adicionar uma data de vencimento** abrem os mesmos seletores que R, O e D. Confira os tickets afetados depois. Em um dispositivo somente de toque sem um gesto de seleção múltipla compatível, edite cada ticket pelo painel de detalhes.
 
 ### Resultados parciais e ações destrutivas {#bulk-results}
 

@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 41,
-  "sourceRevision": 41,
+  "revision": 42,
+  "sourceRevision": 42,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles; MIN-809 Smart Fill split button; MIN-813 Smart Fill title on request",
+    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles; MIN-809 Smart Fill split button; MIN-813 Smart Fill title on request; MIN-833 selection right-click menu",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -122,13 +122,15 @@
       "components/editor/mobile-editor-toolbar.tsx",
       "lib/palette-picker.ts",
       "lib/creation-relations.ts",
-      "lib/action-menu-search.ts"
+      "lib/action-menu-search.ts",
+      "components/use-issue-menu-actions.tsx",
+      "lib/use-bulk-selection-actions.ts"
     ]
   },
   "review": {
-    "revision": 41,
-    "fact": "agent:claude-code (searchable card and issue-panel action menus also find submenu entries shown with their path, such as Relations › Mark as blocked by… (MIN-845), checked against components/issue-context-menu.tsx, lib/action-menu-search.ts and lib/issue-context-menu-search.test.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (es changed passages with catalog UI labels; equivalent meaning to en revision 41; self-reviewed; agent review, not human acceptance)",
+    "revision": 42,
+    "fact": "agent:claude-code (right-clicking a card of a multi-issue selection acts on the selection: combined plan, implement, verify and custom prompts, the identifier list sorted by number, and the relation, objective and due-date pickers (MIN-833), checked against components/use-issue-menu-actions.tsx, components/issue-card.tsx, lib/use-bulk-selection-actions.ts and lib/issue-prompt.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (es changed passages with catalog UI labels; equivalent meaning to en revision 42; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -174,7 +176,7 @@
       "src": "/documentation/es/new-issue.png",
       "alt": "Borrador sin enviar en el proyecto Aurora con título, descripción, propiedades que se pueden elegir manualmente y el botón Crear AUR-21.",
       "caption": "Describe el resultado esperado y elige las propiedades útiles antes de crear el ticket.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -191,7 +193,7 @@
       "src": "/documentation/es/triage-incoming.png",
       "alt": "Incidencia entrante de demostración AUR-19 con informe, propiedades y controles de duplicado, Rechazar y Aceptar.",
       "caption": "Lee el informe recibido antes de aceptarlo, rechazarlo o enlazar un duplicado.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -208,7 +210,7 @@
       "src": "/documentation/es/issue-statuses.png",
       "alt": "Los ocho estados del ticket en el selector, con el estado de backlog seleccionado.",
       "caption": "La marca indica el estado actual. Elige el que corresponda al estado real del trabajo.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -225,7 +227,7 @@
       "src": "/documentation/es/work-resources.png",
       "alt": "Diálogo para añadir un enlace con una dirección de contacto de ejemplo.",
       "caption": "Revisa el destino antes de añadir el recurso. Este enlace de ejemplo no se ha enviado.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -241,7 +243,7 @@
       "src": "/documentation/es/work-dependencies.png",
       "alt": "La paleta de comandos muestra las incidencias que pueden bloquear esta, con la pregunta de la relación en su campo de búsqueda.",
       "caption": "Elige el sentido de la relación antes de su destino. El selector se muestra sin enviar la relación.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -258,7 +260,7 @@
       "src": "/documentation/es/work-sub-issues.png",
       "alt": "Campo para crear una subincidencia en una incidencia principal de demostración.",
       "caption": "El campo crea una hija de esta incidencia; cada hija conserva su estado y conversación.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -275,7 +277,7 @@
       "src": "/documentation/es/work-implementation-plan.png",
       "alt": "Plan de demostración con dos tareas de trabajo completadas de seis.",
       "caption": "El plan guardado distingue pasos completados, activos y pendientes. Su progreso no demuestra que se ejecutara la tarea de código ficticia.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -292,7 +294,7 @@
       "src": "/documentation/es/issue-date-recurrence.png",
       "alt": "Selector de fecha en modo recurrente con vista previa semanal los domingos y hora opcional.",
       "caption": "El modo recurrente muestra la frecuencia semanal. Confirma la primera fecha antes de crear el ticket.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -308,7 +310,7 @@
       "src": "/documentation/es/import-issues-preview-workflow.png",
       "alt": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas.",
       "caption": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas. No se envió la importación; la planificación opcional con IA se bloqueó para la captura.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -325,7 +327,7 @@
       "src": "/documentation/es/file-preview.png",
       "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.",
       "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Cambiar nombre y Eliminar.",
-      "revision": 41,
+      "revision": 42,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -562,7 +564,7 @@ Una rutina de Numo es un objeto distinto: programa una conversación y puede uti
 
 En un tablero, mantén pulsada Mayús y haz clic en cada tarjeta para seleccionarla o quitarla de la selección. Con el ratón, también puedes arrastrar un rectángulo de selección desde un espacio vacío del tablero. Mayús, Command o Ctrl hacen que ese gesto amplíe la selección existente. Cerca de un borde el tablero se desplaza, y las tarjetas que el rectángulo ha recorrido siguen seleccionadas aunque salgan de la vista. El rectángulo no es un modo de selección para pantallas táctiles. Comprueba el número seleccionado y los identificadores visibles antes de abrir las acciones masivas. La selección es un conjunto de trabajo para la acción, no una vista guardada ni una concesión de permisos. Ábrelas con **Acciones** en la barra de selección, o pulsa Comando+K en macOS o Ctrl+K en Windows/Linux mientras haya incidencias seleccionadas.
 
-Elige Acciones en la barra flotante de selección para abrir la paleta de comandos. Elige estado, prioridad, esfuerzo o responsable, establece el valor y confirma el formulario integrado. La acción de objetivo solo aparece cuando la selección pertenece a un único proyecto con objetivos disponibles. Otras acciones, como añadir o quitar del ciclo, enlazar dos incidencias o enviar la selección a Numo, aparecen cuando el tablero actual las admite. Con el ratón, también puedes señalar una tarjeta seleccionada y pulsar S, P, E, A, L, D, O o R: el selector que se abre se aplica a toda la selección y, para el responsable, el objetivo, las categorías y las relaciones, a las incidencias seleccionadas del proyecto de esa tarjeta. Revisa después las incidencias afectadas. En un dispositivo exclusivamente táctil sin un gesto de selección múltiple compatible, edita cada incidencia en su panel de detalle.
+Elige Acciones en la barra flotante de selección para abrir la paleta de comandos. Elige estado, prioridad, esfuerzo o responsable, establece el valor y confirma el formulario integrado. La acción de objetivo solo aparece cuando la selección pertenece a un único proyecto con objetivos disponibles. Otras acciones, como añadir o quitar del ciclo, enlazar dos incidencias o enviar la selección a Numo, aparecen cuando el tablero actual las admite. Con el ratón, también puedes señalar una tarjeta seleccionada y pulsar S, P, E, A, L, D, O o R: el selector que se abre se aplica a toda la selección y, para el responsable, el objetivo, las categorías y las relaciones, a las incidencias seleccionadas del proyecto de esa tarjeta. Haz clic derecho en una tarjeta seleccionada para actuar sobre toda la selección: **Copiar el prompt combinado** ofrece **Generar los planes** (**Revisar los planes** cuando todas las incidencias seleccionadas tienen uno, **Generar o revisar los planes** cuando solo algunas lo tienen), **Implementar las incidencias**, **Verificar las implementaciones** y **Personalizado…**, y cada opción copia un único prompt para todas las incidencias seleccionadas. **Copiar los 3 identificadores**, con tres incidencias seleccionadas, copia sus identificadores separados por comas, del número más bajo al más alto. **Relaciones**, **Vincular un objetivo** y **Añadir una fecha límite** abren los mismos selectores que R, O y D. Revisa después las incidencias afectadas. En un dispositivo exclusivamente táctil sin un gesto de selección múltiple compatible, edita cada incidencia en su panel de detalle.
 
 ### Resultados parciales y acciones destructivas {#bulk-results}
 

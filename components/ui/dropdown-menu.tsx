@@ -21,6 +21,30 @@ const DropdownSubInlineContext = React.createContext<{
   setOpen: (open: boolean) => void
 } | null>(null)
 
+// A closed menu stays mounted for its exit animation. Radix still reacts to
+// the pointer there: it focuses the item the pointer moves over and the menu
+// when the pointer leaves an item, which happens as soon as the surface an
+// item opened (a picker at the pointer) appears under a resting mouse. That
+// focus leaves the new surface, and a popover then closes on its own. A
+// prevented event skips Radix's handler, so a closing menu takes no focus.
+type PointerHandler = React.PointerEventHandler<HTMLDivElement> | undefined
+
+function inertWhileClosing(handler: PointerHandler): React.PointerEventHandler<HTMLDivElement> {
+  return (event) => {
+    handler?.(event)
+    if (event.currentTarget.closest('[role="menu"]')?.getAttribute("data-state") === "closed") {
+      event.preventDefault()
+    }
+  }
+}
+
+function closingMenuGuards({ onPointerMove, onPointerLeave }: { onPointerMove?: PointerHandler; onPointerLeave?: PointerHandler }) {
+  return {
+    onPointerMove: inertWhileClosing(onPointerMove),
+    onPointerLeave: inertWhileClosing(onPointerLeave),
+  }
+}
+
 // `modal={false}` by default: the modal mode locks scroll on <body> and marks
 // the rest of the page aria-hidden / pointer-events-none, which breaks scrolling
 // behind the menu and layout (scrollbar-gone jump). Pass modal to opt back in.
@@ -107,6 +131,7 @@ function DropdownMenuItem({
         className
       )}
       {...props}
+      {...closingMenuGuards(props)}
     />
   )
 }
@@ -130,6 +155,7 @@ function DropdownMenuCheckboxItem({
       )}
       checked={checked}
       {...props}
+      {...closingMenuGuards(props)}
     >
       <span
         className="pointer-events-none absolute right-2 flex items-center justify-center"
@@ -172,6 +198,7 @@ function DropdownMenuRadioItem({
         className
       )}
       {...props}
+      {...closingMenuGuards(props)}
     >
       <span
         className="pointer-events-none absolute right-2 flex items-center justify-center"
@@ -313,6 +340,7 @@ function DropdownMenuSubTrigger({
       data-inset={inset}
       className={cn(SUB_TRIGGER_CLASS, className)}
       {...props}
+      {...closingMenuGuards(props)}
     >
       {children}
       <ChevronRightIcon className="ml-auto" />
