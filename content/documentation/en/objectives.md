@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 21,
-  "sourceRevision": 21,
+  "revision": 22,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -55,13 +55,16 @@
       "components/objective-label.tsx",
       "components/editor/mobile-editor-toolbar.tsx",
       "lib/palette-picker.ts",
-      "components/palette-picker-rows.tsx"
+      "components/palette-picker-rows.tsx",
+      "app/(app)/projects/[id]/page.tsx",
+      "components/objectives/objectives-page.tsx",
+      "components/app-sidebar.tsx"
     ]
   },
   "review": {
-    "revision": 21,
-    "fact": "agent:claude-code (content pickers moved to the command palette (MIN-844): objective relation picker checked against lib/palette-picker.ts, components/palette-picker-rows.tsx and components/objective-relations-section.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the picker)",
-    "language": "agent:claude-code (en changed passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 22,
+    "fact": "agent:claude-code (desktop sidebar staying on the objectives list with the shown objective highlighted while a project board shows one objective's issues, and switching objectives from that list; checked against app/(app)/projects/[id]/page.tsx, components/objectives/objectives-page.tsx and components/app-sidebar.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the objective board sidebar)",
+    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -83,7 +86,7 @@
       "src": "/documentation/en/reader-objectives.png",
       "alt": "Unsubmitted objective-creation dialog in the Aurora project with a demonstration result name and the Create objective button.",
       "caption": "Name the result before choosing the lead, target date and status. This dialog has not created a second objective.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -114,7 +117,7 @@ Open each relevant issue and choose the objective in its properties, or use the 
 
 ### Read progress before closing {#objective-progress}
 
-Review completed and active issues alongside the objective's progress. A progress indicator summarizes attached work; it cannot determine whether a product outcome is acceptable. Inspect missing tasks and canceled or duplicate work before marking the objective complete. The objective's board shows open work first: select **Done** and **Canceled** in its **Status** filter to review closed issues there.
+Review completed and active issues alongside the objective's progress. A progress indicator summarizes attached work; it cannot determine whether a product outcome is acceptable. Inspect missing tasks and canceled or duplicate work before marking the objective complete. The objective's board shows open work first: select **Done** and **Canceled** in its **Status** filter to review closed issues there. On a computer, while the board shows one objective's issues, the sidebar stays on the objectives list, under the **Objectives** back row, with that objective highlighted; choose another objective in that list to switch the board to it.
 
 Use the objective lifecycle to distinguish planned, underway, completed and canceled outcomes. A target date is a goal, while a forecast is an estimate based on activity. If the objective appears empty, check issue membership and view filters instead of recreating it. Deleting an objective uses the recoverable trash workflow rather than being an ordinary status change.
 

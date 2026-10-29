@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
-  "sourceRevision": 16,
+  "revision": 18,
+  "sourceRevision": 17,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-25",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -66,14 +66,15 @@
       "components/desktop/server-choice-entry.tsx",
       "lib/desktop/server-choice.ts",
       "desktop/src/menu.ts",
-      "components/auth/auth-chrome.tsx"
+      "components/auth/auth-chrome.tsx",
+      "lib/desktop/window-material.ts"
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; 3 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (MIN-762 recapture of web-and-mobile-workflow, devices-and-notifications-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-781 self-hosting from the desktop app: source review of components/desktop/server-choice.tsx, components/auth/auth-chrome.tsx, desktop/src/main.ts, desktop/src/menu.ts and lib/desktop/server-choice.ts; no desktop walkthrough, no screenshot recaptured)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (de MIN-762 figure update; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-781 translation on self-hosting from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-25"
+    "revision": 18,
+    "fact": "agent:claude-code (desktop window opaque in full screen even with Desktop app transparency on, transparency restored on leaving full screen; checked against desktop/src/main.ts and lib/desktop/window-material.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show window transparency)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "issues"
@@ -98,7 +99,7 @@
       "src": "/documentation/de/web-and-mobile-workflow.png",
       "alt": "Mobiles Ticketpanel mit lokalisiertem Titel, Beschreibung, Eigenschaften und Kommentarfeld.",
       "caption": "Auf einem schmalen Bildschirm erscheinen Ticketdetails in einem angepassten Panel. Schließe es über die Schaltfläche, um zum Projekt zurückzukehren; Numo bleibt über seine schwebende Schaltfläche erreichbar.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -115,7 +116,7 @@
       "src": "/documentation/de/install-the-pwa-workflow.png",
       "alt": "Illustrierte Safari-Installationsanleitung von minddy: Teilen, zum Home-Bildschirm hinzufügen und bestätigen.",
       "caption": "Die öffentliche Anleitung illustriert die drei Safari-Schritte und die aktivierte Option Als Web-App öffnen. Die Abbildungen sind von minddy dargestellte Anleitungen und keine Aufnahmen einer abgeschlossenen iOS-Installation.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -132,7 +133,7 @@
       "src": "/documentation/de/devices-and-notifications-workflow.png",
       "alt": "Push-Einstellungen mit gesperrter Browserberechtigung und ohne registriertes Gerät.",
       "caption": "Dieser Browser blockiert Benachrichtigungen. Erlaube sie in den Website-Einstellungen, bevor du das Gerät registrierst.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -149,7 +150,7 @@
       "src": "/documentation/de/devices-and-notifications-registered.png",
       "alt": "Aktives, für das Konto registriertes Browser-Gerät mit dem tatsächlichen Datum des letzten Versands.",
       "caption": "Für das Konto ist ein aktives Browser-Gerät registriert. Die Liste zeigt das Registrierungsdatum und den letzten Versand. Ob ein Banner erscheint, hängt weiterhin von der Browserberechtigung und den Betriebssystemeinstellungen ab.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -166,7 +167,7 @@
       "src": "/documentation/de/desktop-renderer-recovery.png",
       "alt": "Lokale Wiederherstellungsseite nach einem erzwungenen Renderer-Absturz mit Reload window und Check server settings.",
       "caption": "Wiederherstellungsseite in der macOS-Entwicklungsapp mit isoliertem Profil und Demonstrationsserver. Die native Oberfläche verwendet in allen Sprachen englische Beschriftungen.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -226,7 +227,7 @@ Beim ersten Start öffnet die App die Registrierungsseite von minddy Cloud, auf 
 
 Um den Server später zu wechseln, wähle **Connect to a Server…** im nativen Menü minddy (das native Menü ist englisch; unter Windows und Linux blendet Alt die Menüleiste ein), **Ändern…** neben **Verbundener Server** unter **Kontoeinstellungen** → **Einstellungen** → **Desktop-App** oder **minddy selbst hosten** unten auf den Anmelde- und Registrierungsseiten. Jeder Weg bringt das App-Fenster zu **minddy selbst hosten**; ist ein selbst gehosteter Server verbunden, kehrst du unter **Bestehende Installation verwenden** mit **minddy Cloud verwenden** zu Cloud zurück. Der Pfad oben auf der Seite führt zu jedem Schritt zurück, und das minddy-Logo führt zurück in die App. Dieser Bildschirm ist in die Desktop-App eingebaut und öffnet sich ohne Internetverbindung. Prüfe das Ziel vor der Anmeldung: Jedes Konto gehört zu seiner Instanz. OAuth verwendet den Systembrowser und kehrt anschließend zur Desktop-App zurück.
 
-Unter macOS und Windows 11 zeigen Seitenleiste, Tabs und Fensterränder deinen Desktop verschwommen hinter dem deckenden Inhalt. Damit das Fenster auf diesem Gerät deckend bleibt, schalte **Transparenz der Desktop-App** unter **Kontoeinstellungen** → **Einstellungen** → [Aussehen](/docs/accounts#preferences) aus.
+Unter macOS und Windows 11 zeigen Seitenleiste, Tabs und Fensterränder deinen Desktop verschwommen hinter dem deckenden Inhalt. Ein Fenster im Vollbildmodus bleibt deckend; die Transparenz kehrt zurück, sobald es den Vollbildmodus verlässt. Damit das Fenster auf diesem Gerät deckend bleibt, schalte **Transparenz der Desktop-App** unter **Kontoeinstellungen** → **Einstellungen** → [Aussehen](/docs/accounts#preferences) aus.
 
 ### Tabs, Schließen und Updates {#desktop-app-operation}
 

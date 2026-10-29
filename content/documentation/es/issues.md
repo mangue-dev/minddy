@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 43,
-  "sourceRevision": 43,
+  "revision": 44,
+  "sourceRevision": 44,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -125,12 +125,14 @@
       "lib/action-menu-search.ts",
       "components/use-issue-menu-actions.tsx",
       "lib/use-bulk-selection-actions.ts",
-      "components/relation-chips.tsx"
+      "components/relation-chips.tsx",
+      "components/sub-issues-section.tsx",
+      "lib/create-context.tsx"
     ]
   },
   "review": {
-    "revision": 43,
-    "fact": "agent:claude-code (remove button with the same confirmation on each relation of a board card's relation chip popover, none for relations inherited through an objective; checked against components/relation-chips.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the card chip popover)",
+    "revision": 44,
+    "fact": "agent:claude-code (inline sub-issue field replaced by the Create a sub-issue split button, which opens the issue creation dialog with the parent set, and its Ask Numo to split the issue menu entry, hidden from Readers, checked against components/sub-issues-section.tsx, lib/create-context.tsx and the IssueUI catalog entries; remove button with the same confirmation on each relation of a board card relation chip popover, none for relations inherited through an objective, checked against components/relation-chips.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the sub-issues figure still shows the former inline field)",
     "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
@@ -177,7 +179,7 @@
       "src": "/documentation/es/new-issue.png",
       "alt": "Borrador sin enviar en el proyecto Aurora con título, descripción, propiedades que se pueden elegir manualmente y el botón Crear AUR-21.",
       "caption": "Describe el resultado esperado y elige las propiedades útiles antes de crear el ticket.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -194,7 +196,7 @@
       "src": "/documentation/es/triage-incoming.png",
       "alt": "Incidencia entrante de demostración AUR-19 con informe, propiedades y controles de duplicado, Rechazar y Aceptar.",
       "caption": "Lee el informe recibido antes de aceptarlo, rechazarlo o enlazar un duplicado.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -211,7 +213,7 @@
       "src": "/documentation/es/issue-statuses.png",
       "alt": "Los ocho estados del ticket en el selector, con el estado de backlog seleccionado.",
       "caption": "La marca indica el estado actual. Elige el que corresponda al estado real del trabajo.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -228,7 +230,7 @@
       "src": "/documentation/es/work-resources.png",
       "alt": "Diálogo para añadir un enlace con una dirección de contacto de ejemplo.",
       "caption": "Revisa el destino antes de añadir el recurso. Este enlace de ejemplo no se ha enviado.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -244,7 +246,7 @@
       "src": "/documentation/es/work-dependencies.png",
       "alt": "La paleta de comandos muestra las incidencias que pueden bloquear esta, con la pregunta de la relación en su campo de búsqueda.",
       "caption": "Elige el sentido de la relación antes de su destino. El selector se muestra sin enviar la relación.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -261,7 +263,7 @@
       "src": "/documentation/es/work-sub-issues.png",
       "alt": "Campo para crear una subincidencia en una incidencia principal de demostración.",
       "caption": "El campo crea una hija de esta incidencia; cada hija conserva su estado y conversación.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -278,7 +280,7 @@
       "src": "/documentation/es/work-implementation-plan.png",
       "alt": "Plan de demostración con dos tareas de trabajo completadas de seis.",
       "caption": "El plan guardado distingue pasos completados, activos y pendientes. Su progreso no demuestra que se ejecutara la tarea de código ficticia.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -295,7 +297,7 @@
       "src": "/documentation/es/issue-date-recurrence.png",
       "alt": "Selector de fecha en modo recurrente con vista previa semanal los domingos y hora opcional.",
       "caption": "El modo recurrente muestra la frecuencia semanal. Confirma la primera fecha antes de crear el ticket.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -311,7 +313,7 @@
       "src": "/documentation/es/import-issues-preview-workflow.png",
       "alt": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas.",
       "caption": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas. No se envió la importación; la planificación opcional con IA se bloqueó para la captura.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -328,7 +330,7 @@
       "src": "/documentation/es/file-preview.png",
       "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.",
       "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Cambiar nombre y Eliminar.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -502,7 +504,7 @@ La indexación y las decisiones de relación usan IA. Cuentan en la parte **Auto
 
 ## Dividir una incidencia en subincidencias {#sub-issues}
 
-Abre la incidencia principal y usa sus controles de subincidencias para crear partes menores del trabajo. Asigna un resultado distinto a cada hija. Comprueba su proyecto, propiedades e identificador de la principal después de crearla; la jerarquía debe facilitar el seguimiento, no sustituir la descripción de lo que cada hija debe lograr.
+En el panel lateral de la incidencia principal, elige **Crear una subincidencia** para abrir el diálogo de creación de incidencias con esta incidencia ya definida como principal. La flecha de al lado (**Más opciones de subincidencia**) ofrece **Pedir a Numo que divida la incidencia**, que pide a Numo leer la incidencia con su plan y sus comentarios y crear una subincidencia por cada parte de trabajo independiente; revisa las subincidencias que crea. Un Lector no ve este botón. Asigna un resultado distinto a cada hija. Comprueba su proyecto, propiedades e identificador de la principal después de crearla; la jerarquía debe facilitar el seguimiento, no sustituir la descripción de lo que cada hija debe lograr.
 
 Para vincular incidencias que ya existen, pulsa R sobre una tarjeta bajo el puntero o en el panel de la incidencia, o abre **Relaciones** desde el clic derecho de una tarjeta. **Principal de** muestra las incidencias que pueden convertirse en subincidencia de esta; **Subincidencia de** muestra las incidencias de primer nivel que pueden convertirse en su principal. Cada lista solo ofrece lo que permite la regla de un único nivel: una subincidencia no tiene la entrada **Principal de**, y una incidencia que ya tiene subincidencias no tiene la entrada **Subincidencia de**. Elegir una incidencia que ya tiene otra principal la mueve bajo la nueva. Desde una selección de tarjetas, **Subincidencia de** coloca bajo la principal elegida cada incidencia seleccionada que cumpla la regla. En el formulario de nueva incidencia, **Relaciones** ofrece las mismas dos entradas: **Subincidencia de** crea la incidencia bajo la principal elegida, y **Principal de** coloca debajo las incidencias elegidas una vez creada. Una incidencia nueva tiene una principal o subincidencias, no ambas. Al escribir en el campo de búsqueda del clic derecho de una tarjeta o del menú `…` del panel de la incidencia también encuentras las entradas de sus submenús, cada una con su ruta, por ejemplo **Relaciones** › **Marcar como bloqueada por…**.
 

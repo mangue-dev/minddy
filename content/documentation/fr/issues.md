@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 43,
-  "sourceRevision": 43,
+  "revision": 44,
+  "sourceRevision": 44,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -125,12 +125,14 @@
       "lib/action-menu-search.ts",
       "components/use-issue-menu-actions.tsx",
       "lib/use-bulk-selection-actions.ts",
-      "components/relation-chips.tsx"
+      "components/relation-chips.tsx",
+      "components/sub-issues-section.tsx",
+      "lib/create-context.tsx"
     ]
   },
   "review": {
-    "revision": 43,
-    "fact": "agent:claude-code (remove button with the same confirmation on each relation of a board card's relation chip popover, none for relations inherited through an objective; checked against components/relation-chips.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the card chip popover)",
+    "revision": 44,
+    "fact": "agent:claude-code (inline sub-issue field replaced by the Create a sub-issue split button, which opens the issue creation dialog with the parent set, and its Ask Numo to split the issue menu entry, hidden from Readers, checked against components/sub-issues-section.tsx, lib/create-context.tsx and the IssueUI catalog entries; remove button with the same confirmation on each relation of a board card relation chip popover, none for relations inherited through an objective, checked against components/relation-chips.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the sub-issues figure still shows the former inline field)",
     "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
@@ -177,7 +179,7 @@
       "src": "/documentation/fr/new-issue.png",
       "alt": "Brouillon de ticket non envoyé dans le projet Aurora, avec titre, description, propriétés manuelles et le bouton Créer AUR-21.",
       "caption": "Décrivez le résultat attendu, puis choisissez les propriétés utiles avant de créer le ticket.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -193,7 +195,7 @@
       "src": "/documentation/fr/triage-incoming.png",
       "alt": "Ticket de démonstration AUR-19 reçu dans le triage, avec son signalement, ses propriétés et les commandes Doublon, Refuser et Accepter.",
       "caption": "Lisez le signalement reçu avant de l’accepter, de le refuser ou de le relier à un doublon.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -210,7 +212,7 @@
       "src": "/documentation/fr/issue-statuses.png",
       "alt": "Les huit statuts du ticket dans le sélecteur, avec Backlog sélectionné.",
       "caption": "La coche indique le statut actuel. Choisissez celui qui reflète l’état réel du travail.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -226,7 +228,7 @@
       "src": "/documentation/fr/work-resources.png",
       "alt": "Dialogue d’ajout de lien avec une adresse de contact d’exemple.",
       "caption": "Vérifiez la destination avant d’ajouter la ressource. Ce lien d’exemple n’a pas été envoyé.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -242,7 +244,7 @@
       "src": "/documentation/fr/work-dependencies.png",
       "alt": "La palette de commandes liste les tickets qui peuvent bloquer celui-ci, avec la question de la relation dans son champ de recherche.",
       "caption": "Choisissez le sens de la relation avant sa destination. Aucune relation n’a été envoyée dans ce sélecteur.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -258,7 +260,7 @@
       "src": "/documentation/fr/work-sub-issues.png",
       "alt": "Champ de création d’un sous-ticket dans un parent de démonstration.",
       "caption": "Ce champ crée un enfant sous le parent ; chaque enfant conserve son état et sa discussion.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -274,7 +276,7 @@
       "src": "/documentation/fr/work-implementation-plan.png",
       "alt": "Plan de démonstration avec deux tâches de travail terminées sur six.",
       "caption": "Le plan enregistré distingue les étapes terminées, actives et en attente. Sa progression ne prouve pas l’exécution de la tâche de code fictive.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -290,7 +292,7 @@
       "src": "/documentation/fr/issue-date-recurrence.png",
       "alt": "Sélecteur d’échéance en mode récurrent avec aperçu hebdomadaire le dimanche et heure optionnelle.",
       "caption": "Le mode récurrent prévisualise la cadence hebdomadaire. Confirmez la première échéance avant de créer le ticket.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -306,7 +308,7 @@
       "src": "/documentation/fr/import-issues-preview-workflow.png",
       "alt": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées.",
       "caption": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées. Aucun import n’a été lancé ; la préparation IA optionnelle a été bloquée pour la capture.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -323,7 +325,7 @@
       "src": "/documentation/fr/file-preview.png",
       "alt": "Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger, Renommer et Retirer.",
       "caption": "Le lecteur commun place Fermer sous l’aperçu. Le menu Actions du fichier propose Télécharger et, si les droits le permettent, Renommer et Retirer.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -504,7 +506,7 @@ L’indexation et les décisions de relation utilisent l’IA. Elles comptent da
 
 ## Découper un ticket en sous-tickets {#sub-issues}
 
-Ouvrez le ticket parent et ses commandes de sous-tickets pour créer les parties du travail. Donnez à chaque enfant un résultat distinct. Après création, vérifiez projet, propriétés et identifiant du parent. La hiérarchie facilite le suivi ; elle ne remplace pas la description du résultat de chaque tâche.
+Dans le panneau latéral du ticket parent, choisissez **Créer un sous-ticket** pour ouvrir la fenêtre de création de ticket avec ce ticket déjà défini comme parent. Le chevron à côté (**Autres options de sous-ticket**) propose **Demander à Numo de découper le ticket**, qui demande à Numo de lire le ticket avec son plan et ses commentaires, puis de créer un sous-ticket par partie de travail indépendante ; relisez les sous-tickets créés. Un Lecteur ne voit pas ce bouton. Donnez à chaque enfant un résultat distinct. Après création, vérifiez projet, propriétés et identifiant du parent. La hiérarchie facilite le suivi ; elle ne remplace pas la description du résultat de chaque tâche.
 
 Pour rattacher des tickets existants, appuyez sur R sur une carte survolée ou dans le panneau du ticket, ou ouvrez **Relations** depuis le clic droit d’une carte. **Parent de** liste les tickets qui peuvent devenir un sous-ticket de celui-ci ; **Sous-ticket de** liste les tickets de premier niveau qui peuvent devenir son parent. Chaque liste ne propose que ce que permet la règle d’un seul niveau : un sous-ticket n’a pas d’entrée **Parent de**, et un ticket qui a déjà des sous-tickets n’a pas d’entrée **Sous-ticket de**. Choisir un ticket qui a déjà un autre parent le déplace sous le nouveau. Depuis une sélection de cartes, **Sous-ticket de** place chaque ticket sélectionné éligible sous le parent choisi. Dans le formulaire de nouveau ticket, **Relations** propose les deux mêmes entrées : **Sous-ticket de** crée le ticket sous le parent choisi, et **Parent de** place les tickets choisis sous lui une fois créé. Un nouveau ticket prend un parent ou des sous-tickets, pas les deux. La saisie dans le champ de recherche du clic droit d’une carte ou du menu `…` du panneau du ticket trouve aussi les entrées de ses sous-menus, chacune affichée avec son chemin, par exemple **Relations** › **Marquer comme bloqué par…**.
 

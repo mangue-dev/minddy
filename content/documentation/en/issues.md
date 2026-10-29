@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 43,
-  "sourceRevision": 43,
+  "revision": 44,
+  "sourceRevision": 44,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -125,12 +125,14 @@
       "lib/action-menu-search.ts",
       "components/use-issue-menu-actions.tsx",
       "lib/use-bulk-selection-actions.ts",
-      "components/relation-chips.tsx"
+      "components/relation-chips.tsx",
+      "components/sub-issues-section.tsx",
+      "lib/create-context.tsx"
     ]
   },
   "review": {
-    "revision": 43,
-    "fact": "agent:claude-code (remove button with the same confirmation on each relation of a board card's relation chip popover, none for relations inherited through an objective; checked against components/relation-chips.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the card chip popover)",
+    "revision": 44,
+    "fact": "agent:claude-code (inline sub-issue field replaced by the Create a sub-issue split button, which opens the issue creation dialog with the parent set, and its Ask Numo to split the issue menu entry, hidden from Readers, checked against components/sub-issues-section.tsx, lib/create-context.tsx and the IssueUI catalog entries; remove button with the same confirmation on each relation of a board card relation chip popover, none for relations inherited through an objective, checked against components/relation-chips.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the sub-issues figure still shows the former inline field)",
     "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
@@ -177,7 +179,7 @@
       "src": "/documentation/en/new-issue.png",
       "alt": "Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-21 button.",
       "caption": "Describe the expected result, then choose the useful properties before creating the issue.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -193,7 +195,7 @@
       "src": "/documentation/en/triage-incoming.png",
       "alt": "Incoming demonstration issue AUR-19 with its report, properties and duplicate, Decline and Accept controls.",
       "caption": "Read the incoming report before accepting it, declining it or linking a duplicate.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -210,7 +212,7 @@
       "src": "/documentation/en/issue-statuses.png",
       "alt": "Eight issue statuses in the picker, with backlog currently selected.",
       "caption": "The check marks the current status. Choose the status that reflects the work’s actual state.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -226,7 +228,7 @@
       "src": "/documentation/en/work-resources.png",
       "alt": "Add-link dialog with an example contact URL.",
       "caption": "Review the destination before adding a resource. This example link has not been submitted.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -242,7 +244,7 @@
       "src": "/documentation/en/work-dependencies.png",
       "alt": "The command palette lists the issues that can block this one, with the relation's question in its search field.",
       "caption": "Choose the relation direction before selecting its endpoint. The picker is shown without submitting a relation.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -258,7 +260,7 @@
       "src": "/documentation/en/work-sub-issues.png",
       "alt": "Sub-issue creation field in a demonstration parent issue.",
       "caption": "The inline field creates a child under this parent; a child keeps its own status and discussion.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -274,7 +276,7 @@
       "src": "/documentation/en/work-implementation-plan.png",
       "alt": "Demonstration plan showing two of six work tasks complete.",
       "caption": "The saved demonstration plan separates completed, active and pending steps. Its progress does not prove the fictional code task was executed.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -290,7 +292,7 @@
       "src": "/documentation/en/issue-date-recurrence.png",
       "alt": "Due-date picker in recurring mode with a weekly Sunday preview and optional time.",
       "caption": "Recurring mode previews the weekly cadence. Confirm the first due date before creating the issue.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -306,7 +308,7 @@
       "src": "/documentation/en/import-issues-preview-workflow.png",
       "alt": "CSV preview with two localized demonstration rows and detected column mappings.",
       "caption": "CSV preview with two localized demonstration rows and detected column mappings. No import was submitted; optional AI planning was blocked for the capture.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -323,7 +325,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -504,7 +506,7 @@ Indexing and relation decisions use AI. They count toward the **Automations** sh
 
 ## Split an issue into sub-issues {#sub-issues}
 
-Open the parent issue and use its sub-issue controls to create smaller pieces of work. Give each child a distinct outcome. Inspect its project, properties and parent identifier after creation; a hierarchy should make the task easier to track, not replace the description of what each child must achieve.
+In the parent issue's side panel, choose **Create a sub-issue** to open the issue creation dialog with this issue already set as parent. The chevron beside it (**More sub-issue options**) offers **Ask Numo to split the issue**, which asks Numo to read the issue with its plan and comments and create one sub-issue per independent piece of work; review the sub-issues it creates. A Reader does not see this button. Give each child a distinct outcome. Inspect its project, properties and parent identifier after creation; a hierarchy should make the task easier to track, not replace the description of what each child must achieve.
 
 To attach issues that already exist, press R on a hovered card or in the issue panel, or open **Relations** from a card's right-click menu. **Parent of** lists the issues that can become a sub-issue of this one; **Sub-issue of** lists the top-level issues that can become its parent. Each list only offers what the one-level rule allows: a sub-issue has no **Parent of** entry, and an issue that already has sub-issues has no **Sub-issue of** entry. Choosing an issue that already has another parent moves it under the new one. From a selection of cards, **Sub-issue of** places every eligible selected issue under the chosen parent. In the new-issue form, **Relations** offers the same two entries: **Sub-issue of** creates the issue under the chosen parent, and **Parent of** places the chosen issues under it once it is created. A new issue takes one parent or sub-issues, not both. Typing in the search field of a card's right-click menu or of the issue panel's `…` menu also finds the entries of its submenus, each shown with its path, such as **Relations** › **Mark as blocked by…**.
 

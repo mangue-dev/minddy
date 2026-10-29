@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
-  "sourceRevision": 16,
+  "revision": 18,
+  "sourceRevision": 17,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-25",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -66,14 +66,15 @@
       "components/desktop/server-choice-entry.tsx",
       "lib/desktop/server-choice.ts",
       "desktop/src/menu.ts",
-      "components/auth/auth-chrome.tsx"
+      "components/auth/auth-chrome.tsx",
+      "lib/desktop/window-material.ts"
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; 3 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of web-and-mobile-workflow, devices-and-notifications-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-781 self-hosting from the desktop app: source review of components/desktop/server-choice.tsx, components/auth/auth-chrome.tsx, desktop/src/main.ts, desktop/src/menu.ts and lib/desktop/server-choice.ts; no desktop walkthrough, no screenshot recaptured)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-781 translation on self-hosting from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-25"
+    "revision": 18,
+    "fact": "agent:claude-code (desktop window opaque in full screen even with Desktop app transparency on, transparency restored on leaving full screen; checked against desktop/src/main.ts and lib/desktop/window-material.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show window transparency)",
+    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "issues"
@@ -98,7 +99,7 @@
       "src": "/documentation/es/web-and-mobile-workflow.png",
       "alt": "Panel móvil de una incidencia con título, descripción, propiedades y campo de comentario.",
       "caption": "En una pantalla estrecha, los detalles de la incidencia ocupan un panel adaptable. Usa el botón de cierre para volver al proyecto; Numo sigue disponible mediante su botón flotante.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -115,7 +116,7 @@
       "src": "/documentation/es/install-the-pwa-workflow.png",
       "alt": "Guía ilustrada de instalación en Safari de minddy: Compartir, Añadir a pantalla de inicio y confirmar.",
       "caption": "La guía pública ilustra los tres pasos de Safari y la opción Abrir como app web que debe permanecer activada. Son ilustraciones didácticas mostradas por minddy, no capturas de una instalación de iOS realizada.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -132,7 +133,7 @@
       "src": "/documentation/es/devices-and-notifications-workflow.png",
       "alt": "Ajustes push con permiso bloqueado en el navegador y ningún dispositivo registrado.",
       "caption": "Este navegador bloquea las notificaciones. Restablece el permiso del sitio antes de registrar este dispositivo.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -149,7 +150,7 @@
       "src": "/documentation/es/devices-and-notifications-registered.png",
       "alt": "Dispositivo de navegador registrado y activo en la cuenta, con la fecha real del último envío.",
       "caption": "La cuenta tiene un dispositivo de navegador registrado y activo. La lista muestra las fechas de registro y del último envío. La aparición de una notificación sigue dependiendo del permiso del navegador y de los ajustes del sistema operativo.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -166,7 +167,7 @@
       "src": "/documentation/es/desktop-renderer-recovery.png",
       "alt": "Página local de recuperación tras un fallo forzado del proceso de renderizado, con los controles Reload window y Check server settings.",
       "caption": "Página de recuperación en la aplicación de desarrollo para macOS, con un perfil aislado y un servidor de demostración. La interfaz nativa utiliza etiquetas en inglés en todos los idiomas.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -226,7 +227,7 @@ En el primer inicio, la aplicación abre la pantalla de registro de minddy Cloud
 
 Para cambiar de servidor más adelante, elige **Connect to a Server…** en el menú nativo minddy (el menú nativo está en inglés; en Windows y Linux, pulsa Alt para mostrar la barra de menús), **Cambiar…** junto a **Servidor conectado** en **Ajustes de cuenta** → **Preferencias** → **Aplicación de escritorio**, o **Autoalojar minddy** en la parte inferior de las pantallas de inicio de sesión y registro. Cada opción lleva la ventana de la aplicación a **Autoalojar minddy**; si hay un servidor autoalojado conectado, **Usar minddy Cloud**, en **Usar una instalación existente**, vuelve a Cloud. La ruta en la parte superior de la página lleva de vuelta a cada paso, y el logo de minddy regresa a la aplicación. Esta pantalla está integrada en la app de escritorio y se abre sin conexión a Internet. Comprueba el destino antes de iniciar sesión: cada cuenta pertenece a su instancia. OAuth utiliza el navegador del sistema y vuelve después a la aplicación de escritorio.
 
-En macOS y Windows 11, la barra lateral, las pestañas y los bordes de la ventana dejan ver tu escritorio, difuminado, detrás del contenido opaco. Para mantener la ventana opaca en este dispositivo, desactiva **Transparencia de la aplicación de escritorio** en **Ajustes de cuenta** → **Preferencias** → [Apariencia](/docs/accounts#preferences).
+En macOS y Windows 11, la barra lateral, las pestañas y los bordes de la ventana dejan ver tu escritorio, difuminado, detrás del contenido opaco. Una ventana a pantalla completa sigue opaca, y la transparencia vuelve cuando sale de la pantalla completa. Para mantener la ventana opaca en este dispositivo, desactiva **Transparencia de la aplicación de escritorio** en **Ajustes de cuenta** → **Preferencias** → [Apariencia](/docs/accounts#preferences).
 
 ### Pestañas, cierre y actualizaciones {#desktop-app-operation}
 

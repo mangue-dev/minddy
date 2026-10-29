@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 16,
-  "sourceRevision": 16,
+  "revision": 17,
+  "sourceRevision": 17,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-25",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -66,14 +66,15 @@
       "components/desktop/server-choice-entry.tsx",
       "lib/desktop/server-choice.ts",
       "desktop/src/menu.ts",
-      "components/auth/auth-chrome.tsx"
+      "components/auth/auth-chrome.tsx",
+      "lib/desktop/window-material.ts"
     ]
   },
   "review": {
-    "revision": 16,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; 3 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-781 self-hosting from the desktop app: source review of components/desktop/server-choice.tsx, components/auth/auth-chrome.tsx, desktop/src/main.ts, desktop/src/menu.ts and lib/desktop/server-choice.ts; no desktop walkthrough, no screenshot recaptured)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-781 translation on self-hosting from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-25"
+    "revision": 17,
+    "fact": "agent:claude-code (desktop window opaque in full screen even with Desktop app transparency on, transparency restored on leaving full screen; checked against desktop/src/main.ts and lib/desktop/window-material.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show window transparency)",
+    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "issues"
@@ -98,7 +99,7 @@
       "src": "/documentation/fr/web-and-mobile-workflow.png",
       "alt": "Panneau mobile d’un ticket avec titre, description, propriétés et zone de commentaire.",
       "caption": "Sur un écran étroit, les détails du ticket occupent un panneau adaptatif. Utilisez le bouton de fermeture pour revenir au projet ; Numo reste accessible par son bouton flottant.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -115,7 +116,7 @@
       "src": "/documentation/fr/install-the-pwa-workflow.png",
       "alt": "Guide Safari illustré de minddy : Partager, Sur l’écran d’accueil puis confirmer.",
       "caption": "Le guide public illustre les trois étapes Safari et le maintien de l’option Ouvrir comme app web. Il s’agit d’illustrations pédagogiques affichées par minddy, pas de captures d’une installation iOS effectuée.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -132,7 +133,7 @@
       "src": "/documentation/fr/devices-and-notifications-workflow.png",
       "alt": "Réglages push indiquant un blocage du navigateur et aucun appareil inscrit.",
       "caption": "Ce navigateur bloque les notifications. Rétablissez l’autorisation du site avant d’inscrire cet appareil.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -149,7 +150,7 @@
       "src": "/documentation/fr/devices-and-notifications-registered.png",
       "alt": "Appareil navigateur enregistré et actif sur le compte, avec la date réelle du dernier envoi.",
       "caption": "Le compte possède un appareil navigateur enregistré et actif. La liste indique les dates d’inscription et du dernier envoi. La permission du navigateur et les réglages du système restent nécessaires pour afficher une bannière.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -166,7 +167,7 @@
       "src": "/documentation/fr/desktop-renderer-recovery.png",
       "alt": "Page locale de récupération après un crash forcé du moteur de rendu, avec les commandes Reload window et Check server settings.",
       "caption": "Page de récupération dans l’application de développement macOS, avec un profil isolé et un serveur de démonstration. Le shell natif utilise des libellés anglais dans toutes les langues.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -226,7 +227,7 @@ Au premier lancement, l’application ouvre l’écran d’inscription de minddy
 
 Pour changer de serveur plus tard, choisissez **Connect to a Server…** dans le menu natif minddy (ce menu natif est en anglais ; sous Windows et Linux, appuyez sur Alt pour afficher la barre de menus), **Changer…** à côté de **Serveur connecté** dans **Paramètres du compte** → **Préférences** → **Application de bureau**, ou **Auto-héberger minddy** en bas des écrans de connexion et d’inscription. Chacun amène la fenêtre de l’application sur **Auto-héberger minddy** ; lorsqu’un serveur auto-hébergé est connecté, **Utiliser minddy Cloud**, dans **Utiliser une installation existante**, ramène à Cloud. Le chemin en haut de la page ramène à chaque étape, et le logo minddy ramène à l’application. Cet écran est intégré à l’app de bureau et s’ouvre sans connexion Internet. Vérifiez la destination avant de vous connecter : chaque compte appartient à son instance. OAuth utilise le navigateur système puis revient à l’application desktop.
 
-Sous macOS et Windows 11, la barre latérale, les onglets et les bords de la fenêtre laissent voir votre bureau, flouté, derrière le contenu opaque. Pour garder la fenêtre opaque sur cet appareil, désactivez **Transparence de l’app de bureau** dans **Paramètres du compte** → **Préférences** → [Apparence](/docs/accounts#preferences).
+Sous macOS et Windows 11, la barre latérale, les onglets et les bords de la fenêtre laissent voir votre bureau, flouté, derrière le contenu opaque. Une fenêtre en plein écran reste opaque, et la transparence revient quand elle quitte le plein écran. Pour garder la fenêtre opaque sur cet appareil, désactivez **Transparence de l’app de bureau** dans **Paramètres du compte** → **Préférences** → [Apparence](/docs/accounts#preferences).
 
 ### Onglets, fermeture et mises à jour {#desktop-app-operation}
 

@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 21,
+  "revision": 23,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -55,13 +55,16 @@
       "components/objective-label.tsx",
       "components/editor/mobile-editor-toolbar.tsx",
       "lib/palette-picker.ts",
-      "components/palette-picker-rows.tsx"
+      "components/palette-picker-rows.tsx",
+      "app/(app)/projects/[id]/page.tsx",
+      "components/objectives/objectives-page.tsx",
+      "components/app-sidebar.tsx"
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (content pickers moved to the command palette (MIN-844): objective relation picker checked against lib/palette-picker.ts, components/palette-picker-rows.tsx and components/objective-relations-section.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the picker)",
-    "language": "agent:claude-code (es changed passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 23,
+    "fact": "agent:claude-code (desktop sidebar staying on the objectives list with the shown objective highlighted while a project board shows one objective's issues, and switching objectives from that list; checked against app/(app)/projects/[id]/page.tsx, components/objectives/objectives-page.tsx and components/app-sidebar.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the objective board sidebar)",
+    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -83,7 +86,7 @@
       "src": "/documentation/es/reader-objectives.png",
       "alt": "Diálogo de creación de objetivo sin enviar en el proyecto Aurora con un nombre de resultado de ejemplo y el botón Crear objetivo.",
       "caption": "Nombra el resultado antes de elegir responsable, fecha objetivo y estado. Este diálogo no ha creado un segundo objetivo.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -115,7 +118,7 @@ Abre cada incidencia relevante y elige el objetivo en sus propiedades, o utiliza
 
 ### Leer el progreso antes de cerrar {#objective-progress}
 
-Revisa las incidencias completadas y activas junto con el progreso del objetivo. Un indicador resume el trabajo vinculado; no puede determinar si un resultado del producto es aceptable. Revisa tareas que falten y trabajo cancelado o duplicado antes de marcar el objetivo como completado. El tablero del objetivo muestra primero el trabajo abierto: selecciona **Hecha** y **Cancelada** en su filtro **Estado** para revisar ahí las incidencias cerradas.
+Revisa las incidencias completadas y activas junto con el progreso del objetivo. Un indicador resume el trabajo vinculado; no puede determinar si un resultado del producto es aceptable. Revisa tareas que falten y trabajo cancelado o duplicado antes de marcar el objetivo como completado. El tablero del objetivo muestra primero el trabajo abierto: selecciona **Hecha** y **Cancelada** en su filtro **Estado** para revisar ahí las incidencias cerradas. En un ordenador, mientras el tablero muestra las incidencias de un objetivo, la barra lateral se queda en la lista de objetivos, bajo la fila de retorno **Objetivos**, con ese objetivo resaltado; elige otro objetivo en esa lista para cambiar el tablero a él.
 
 Utiliza el ciclo de vida del objetivo para distinguir resultados planificados, en marcha, completados y cancelados. Una fecha objetivo es una meta, mientras que una previsión es una estimación basada en actividad. Si el objetivo parece vacío, comprueba la vinculación de incidencias y los filtros en lugar de recrearlo. Eliminar un objetivo utiliza la papelera recuperable y no es un cambio de estado ordinario.
 
