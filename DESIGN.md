@@ -98,8 +98,11 @@ where `lib/theme-presets.test.ts` measures their contrast.
   on mobile.
 - **Touch.** Under a coarse pointer, controls get a 44px hit area through the
   helpers in `components/ui/touch-target.ts` without changing how they look.
-  Rows use `COARSE_ROW`. Hover-only affordances must also be reachable on
-  touch (shown permanently or through a menu).
+  Rows use `COARSE_ROW`. Hover effects belong to a fine pointer: `hover:`
+  (and `group-hover:`) only apply under `(hover: hover) and (pointer: fine)`,
+  and a hand-written `:hover` rule sits inside that media query. Hover-only
+  affordances must also be reachable on touch: add `touch:opacity-100` to an
+  `opacity-0 group-hover:opacity-100` control, or move it into a menu.
 - **Safe areas and the mobile nav.** Respect the device insets the shell
   already pads, and keep fixed content above the mobile nav with
   `--mobile-nav-clearance` or `.dock-above-nav`.

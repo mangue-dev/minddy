@@ -16,6 +16,7 @@ import { CheckIcon } from "@hugeicons/core-free-icons"
 
 function Command({
   className,
+  onPointerMoveCapture,
   ...props
 }: React.ComponentProps<typeof CommandPrimitive>) {
   return (
@@ -25,6 +26,14 @@ function Command({
         "flex size-full flex-col overflow-hidden rounded-xl! bg-popover p-1 text-popover-foreground",
         className
       )}
+      // cmdk moves its highlighted row on `pointermove` for every pointer
+      // type, so a finger tapping or scrolling a list lit rows like a hover
+      // (MIN-836). Only a mouse moves it, as in Radix menus; a tap still
+      // selects through the item's click.
+      onPointerMoveCapture={(event) => {
+        onPointerMoveCapture?.(event)
+        if (event.pointerType !== "mouse") event.stopPropagation()
+      }}
       {...props}
     />
   )

@@ -259,35 +259,102 @@ describe("other touch pitfalls", () => {
     expect(css).not.toMatch(/^(html|body)\s*\{[^}]*overscroll-behavior/m);
   });
 
-  it("keeps Tailwind's `hover:` variants away from touch", () => {
-    // This eliminates the need to override hundreds of `hover:` utilities in
-    // the app one by one — only handwritten `:hover` rules remain to be covered.
-    // If a Tailwind update regressed, hover would remain stuck after every tap,
-    // everywhere.
-    // We aim for the DEFINITION of the variant in the bundle, not a string of the
-    // compiled sheet: `i.static("hover", …)` wraps `&:hover` in
-    // `@media (hover: hover)`. That wrapper exempts us from overriding hundreds
-    // of `hover:` utilities in the repository one by one.
-    const tw = readFileSync(
-      join(REPO, "node_modules/tailwindcss/dist/lib.js"),
-      "utf8",
+  it("keeps `hover:` to a fine pointer and reveals hover-only controls on touch", async () => {
+    // MIN-836. Tailwind's own `hover:` only checks `(hover: hover)`, which some
+    // phones report with a coarse pointer: app/globals.css redefines it, and
+    // its `touch:` complement shows what only a hover would reveal. Compiled
+    // from the real definitions, so a rewrite of either is checked by outcome.
+    const css = read(GLOBALS);
+    const variant = (name: string) => {
+      const start = css.indexOf(`@custom-variant ${name} {`);
+      expect(start).toBeGreaterThanOrEqual(0);
+      let depth = 0;
+      for (let i = css.indexOf("{", start); i < css.length; i++) {
+        if (css[i] === "{") depth++;
+        if (css[i] === "}" && --depth === 0) return css.slice(start, i + 1);
+      }
+      throw new Error(`unterminated @custom-variant ${name}`);
+    };
+    const { compile } = await import("tailwindcss");
+    const compiler = await compile(
+      `${variant("hover")}\n${variant("touch")}\n@tailwind utilities;`,
+      {},
     );
-    expect(tw).toContain('H("&:hover",[B("@media","(hover: hover)"');
+    const out = compiler.build([
+      "hover:opacity-100",
+      "group-hover/row:opacity-100",
+      "touch:opacity-100",
+    ]);
+    const fine = out.split("@media (hover: hover) and (pointer: fine)");
+    expect(fine).toHaveLength(2);
+    expect(fine[1].split("@media")[0]).toContain(".hover\\:opacity-100:hover");
+    expect(fine[1].split("@media")[0]).toContain(":where(.group\\/row):hover");
+    expect(out).toMatch(
+      /@media \(hover: none\), \(pointer: coarse\) \{\s*\.touch\\:opacity-100 \{/,
+    );
   });
 
-  it("neutralizes hand-written `:hover` rules under a finger", () => {
-    const css = read(GLOBALS);
-    // Every `:hover` rule in this file that paints something must have a
-    // counterpart under `@media (hover: none)`, or it remains stuck after a tap.
-    expect(css).toContain("@media (hover: none)");
-    for (const selector of [
-      ".page-editor .page-details-toggle:hover",
-      ".page-block-comment-badge:hover",
-      ".scratchpad-editor .ProseMirror .scratchpad-section-copy:hover",
-    ]) {
-      // Twice: the original rule, and its neutralization.
-      expect(css.split(selector).length - 1).toBeGreaterThanOrEqual(2);
+  it("keeps hand-written `:hover` rules to a fine pointer", () => {
+    // A `:hover` written by hand in a stylesheet is not a Tailwind variant:
+    // it sits inside the same media query, or it stays stuck after a tap.
+    // Scrollbar thumbs are exempt: touch browsers draw no scrollbar to hover.
+    // The blocks are walked by hand: `postcss` is not a direct dependency, so
+    // pnpm does not install it where this test could import it.
+    for (const path of [GLOBALS, TOKENS]) {
+      const css = read(path).replace(/\/\*[\s\S]*?\*\//g, (comment) => " ".repeat(comment.length));
+      const loose: string[] = [];
+      const open: { header: string; start: number }[] = [];
+      let statement = 0;
+      for (let i = 0; i < css.length; i++) {
+        if (css[i] === "{") {
+          open.push({ header: css.slice(statement, i).trim(), start: i });
+          statement = i + 1;
+        } else if (css[i] === "}") {
+          const block = open.pop();
+          statement = i + 1;
+          if (!block?.header.includes(":hover")) continue;
+          if (/scrollbar/.test(block.header + css.slice(block.start, i))) continue;
+          const guarded = open.some(({ header }) =>
+            header === "@media (hover: hover) and (pointer: fine)" ||
+            // The mobile layout resets a hover rather than painting one.
+            header === ':root[data-app-layout="mobile"]',
+          );
+          if (!guarded) loose.push(block.header);
+        } else if (css[i] === ";") {
+          statement = i + 1;
+        }
+      }
+      expect(open, path).toEqual([]);
+      expect(loose, path).toEqual([]);
     }
+  });
+
+  it("never hides a control behind a hover alone", () => {
+    // `opacity-0 … group-hover:opacity-100` leaves a control out of reach on a
+    // touch screen. Each reveal carries a `touch:` counterpart, or is
+    // decoration listed here.
+    const decorative = new Set([
+      "components/sidebar-onboarding.tsx", // a trailing arrow on a link row
+      "components/project-icon-picker.tsx", // a veil over a preview the row taps
+      "components/pages/page-toc.tsx", // focus opens the panel on touch
+    ]);
+    const files = execSync(
+      "git ls-files 'app/*.tsx' 'components/*.tsx'",
+      { cwd: REPO, encoding: "utf8" },
+    ).split("\n").filter((file) => file && !file.endsWith(".test.tsx") && !decorative.has(file));
+    const offenders: string[] = [];
+    for (const file of files) {
+      const lines = read(join(REPO, file)).split("\n");
+      lines.forEach((line, index) => {
+        if (!/(^|[\s"'`])group-hover(\/[\w-]+)?:opacity-100/.test(line)) return;
+        // A class list may span a few lines of a `cn(…)` call.
+        const around = lines.slice(Math.max(0, index - 4), index + 5).join("\n");
+        if (/(^|[\s"'`:])opacity-0([\s"'`]|$)/m.test(around) && !/touch:/.test(around)) {
+          offenders.push(`${file}:${index + 1}`);
+        }
+      });
+    }
+    expect(offenders).toEqual([]);
   });
 
   it("keeps the status bar on the actual theme, with colors that follow the tokens", () => {

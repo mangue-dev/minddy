@@ -494,7 +494,7 @@ function PageRow({
       <div data-sidebar-page-row-actions
         className={cn(
           "flex shrink-0 items-center opacity-0 transition-opacity",
-          "group-hover/page:opacity-100 group-focus-within/page:opacity-100",
+          "group-hover/page:opacity-100 group-focus-within/page:opacity-100 touch:opacity-100",
           // The ⋯ only appears on hover: otherwise it would disappear under the
           // menu that he himself has just opened, the mouse having left the line.
           menuOpen && "opacity-100"

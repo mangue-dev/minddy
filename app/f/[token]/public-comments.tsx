@@ -480,7 +480,7 @@ function IconAction({
           aria-label={label}
           onClick={onClick}
           className={cn(
-            "shrink-0 rounded-md p-1 text-muted-foreground opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100",
+            "shrink-0 rounded-md p-1 text-muted-foreground opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 touch:opacity-100",
             className
           )}
         >

@@ -399,7 +399,7 @@ export function ThreadComment({
           variant="ghost"
           size="icon-sm"
           aria-label={t(isDescription ? "descriptionMoreActions" : "commentMoreActions")}
-          className="-my-1 size-7 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+          className="-my-1 size-7 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 touch:opacity-100"
         >
           <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
         </Button>

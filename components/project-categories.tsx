@@ -148,7 +148,7 @@ function CategoryRow({
         aria-label={t("deleteAria", { name: category.name })}
         onClick={onDelete}
         // Shown on hover and focus with a pointer; always there on touch.
-        className="shrink-0 text-muted-foreground hover:text-destructive pointer-fine:opacity-0 pointer-fine:group-hover/category:opacity-100 pointer-fine:focus-visible:opacity-100"
+        className="shrink-0 text-muted-foreground hover:text-destructive opacity-0 group-hover/category:opacity-100 focus-visible:opacity-100 touch:opacity-100"
       >
         <HugeiconsIcon icon={Delete02Icon} />
       </Button>

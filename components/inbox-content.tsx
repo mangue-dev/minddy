@@ -558,7 +558,7 @@ export default function InboxContent({
                             </span>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <span className="hidden shrink-0 text-xs tabular-nums text-muted-foreground transition-opacity sm:block group-hover:opacity-0 group-focus-within:opacity-0">
+                                <span className="hidden shrink-0 text-xs tabular-nums text-muted-foreground transition-opacity sm:block touch:hidden group-hover:opacity-0 group-focus-within:opacity-0">
                                   {timeAgo(notification.created_at)}
                                 </span>
                               </TooltipTrigger>
@@ -567,7 +567,7 @@ export default function InboxContent({
                               </TooltipContent>
                             </Tooltip>
                           </button>
-                          <span className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+                          <span className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 touch:opacity-100">
                             {unread ? (
                               <ActionTooltip label={t("markOneRead")}>
                                 <IconButton

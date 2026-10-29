@@ -1780,7 +1780,7 @@ function FeedbackDetail({
                 variant="ghost"
                 size="icon-sm"
                 aria-label={t("unlinkIssue")}
-                className="size-6 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/linked:opacity-100 focus-visible:opacity-100"
+                className="size-6 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/linked:opacity-100 focus-visible:opacity-100 touch:opacity-100"
                 onClick={() => setUnlinkOpen(true)}
               >
                 <HugeiconsIcon icon={Cancel01Icon} />

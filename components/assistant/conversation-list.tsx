@@ -327,7 +327,7 @@ export function ConversationList({
               type="button"
               variant="ghost"
               size="icon-sm"
-              className="mr-1 size-7 shrink-0 app-desktop:opacity-0 app-desktop:group-hover:opacity-100 app-desktop:group-focus-within:opacity-100"
+              className="mr-1 size-7 shrink-0 app-desktop:opacity-0 app-desktop:group-hover:opacity-100 app-desktop:group-focus-within:opacity-100 touch:opacity-100"
               aria-label={t("conversationActions")}
             >
               <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />

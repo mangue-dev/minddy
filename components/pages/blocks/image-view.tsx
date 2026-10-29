@@ -201,7 +201,7 @@ export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }
               onPointerDown={startResize}
               className={cx(
                 "absolute top-1/2 right-1 h-10 w-1.5 -translate-y-1/2 cursor-ew-resize touch-none rounded-full bg-foreground/40 opacity-0 transition-opacity",
-                "group-hover/image:opacity-100",
+                "group-hover/image:opacity-100 touch:opacity-100",
                 dragging && "opacity-100"
               )}
             />
@@ -258,7 +258,7 @@ export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }
           className={cx(
             "mt-1 w-full bg-transparent text-sm text-muted-foreground outline-none placeholder:text-muted-foreground/60",
             !alt &&
-              "opacity-0 transition-opacity group-hover/image-block:opacity-100 focus:opacity-100 pointer-coarse:opacity-100"
+              "opacity-0 transition-opacity group-hover/image-block:opacity-100 focus:opacity-100 touch:opacity-100"
           )}
           style={{ maxWidth: width ? `${width}%` : "100%" }}
         />

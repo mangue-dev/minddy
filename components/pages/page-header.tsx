@@ -137,7 +137,7 @@ export function PageHeader({
                 "group-hover/header:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100",
                 // A touch screen has no hover to reveal it: always shown, at a
                 // touch target's height.
-                "[@media(hover:none)]:opacity-100 pointer-coarse:min-h-9 pointer-coarse:px-2 pointer-coarse:text-sm",
+                "touch:opacity-100 pointer-coarse:min-h-9 pointer-coarse:px-2 pointer-coarse:text-sm",
                 "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               )}
             >

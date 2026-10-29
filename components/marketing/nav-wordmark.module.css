@@ -10,7 +10,7 @@
 }
 
 /* One timeline preserves each letter's position when hover reverses mid-flight. */
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .brand:hover {
     --minddy-wordmark-progress: 1;
   }

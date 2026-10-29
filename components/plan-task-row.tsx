@@ -85,7 +85,7 @@ export function TaskRow({
             variant="ghost"
             size="icon-sm"
             aria-label={t("taskMenuAria")}
-            className="-my-0.5 size-6 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover/task:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+            className="-my-0.5 size-6 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover/task:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 touch:opacity-100"
           >
             <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
           </Button>
