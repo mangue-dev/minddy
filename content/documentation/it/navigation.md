@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 21,
-  "sourceRevision": 19,
+  "revision": 22,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -64,12 +64,14 @@
       "lib/keyboard/find-shortcut.ts",
       "lib/palette-workspace-groups.ts",
       "components/inbox-content.tsx",
-      "lib/inbox-launcher.ts"
+      "lib/inbox-launcher.ts",
+      "lib/palette-picker.ts",
+      "components/palette-picker-rows.tsx"
     ]
   },
   "review": {
-    "revision": 21,
-    "fact": "agent:claude-code (palette search of routines, pull requests, views and inbox notifications (MIN-846) checked against lib/palette-workspace-groups.ts, components/app-shell-chrome.tsx, components/inbox-content.tsx and lib/inbox-launcher.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the new rows)",
+    "revision": 22,
+    "fact": "agent:claude-code (content pickers moved to the command palette (MIN-844): new paragraph on picking what to link in the palette checked against lib/palette-picker.ts, components/palette-picker-rows.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show a picker)",
     "language": "agent:claude-code (it new paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
@@ -92,7 +94,7 @@
       "src": "/documentation/it/work-navigation.png",
       "alt": "Navigazione del progetto accanto alla bacheca dei ticket dimostrativi.",
       "caption": "La barra del progetto permette di aprire ticket, obiettivi, pagine e triage.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -109,7 +111,7 @@
       "src": "/documentation/it/work-search.png",
       "alt": "Risultati della ricerca dell’identificativo di un ticket dimostrativo.",
       "caption": "La palette trova il ticket tramite identificativo insieme alle pagine del progetto; aprire un risultato conserva le sue regole di accesso.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -167,6 +169,8 @@ L’app desktop aggiunge schede native e un selettore di server intorno all’ap
 Apri la palette dei comandi dal controllo di ricerca della navigazione. Cerca un titolo distintivo o un identificativo di ticket e scegli un risultato. I risultati sono limitati al lavoro accessibile al tuo account; conoscere un identificativo non concede accesso a un altro progetto. Il comando Documentazione apre il manuale pubblico nella lingua attuale.
 
 Appena digiti, la palette trova anche routine, pull request, viste e notifiche della **Posta in arrivo**; non compaiono nell’elenco mostrato prima della digitazione. Routine e pull request compaiono se il tuo piano le include, e le pull request coprono le 100 aggiornate più di recente nei tuoi repository collegati. Le viste coprono **Tutti i ticket** e il progetto in cui ti trovi. Scegliere una routine, una pull request o una vista la apre. Scegliere una notifica apre la **Posta in arrivo** sulla scheda che la elenca, **Non lette** o **Tutte**, scorre fino a essa e la evidenzia per un istante; resta non letta finché non la apri. I progetti che hai nascosto restano fuori da questi risultati.
+
+Anche ciò che colleghi si sceglie nella palette. Aggiungere una relazione, collegare un ticket a una pull request o una pull request a un ticket e allegare una pagina come risorsa la aprono solo sugli elementi che puoi scegliere, e il suo campo di ricerca indica cosa stai scegliendo. Per una relazione, scegli prima il tipo nel menu; la palette mostra poi i ticket e gli obiettivi che possono riceverla. Scegliere un elemento lo collega; Esc chiude la palette senza collegare nulla.
 
 Premi Command+K su macOS o Ctrl+K su Windows/Linux per aprire la palette dei comandi; Command/Ctrl+P è una scorciatoia alternativa dell’applicazione. Fuori dal testo modificabile, ? apre la guida delle scorciatoie e C la creazione di ticket. Su una scheda di ticket sotto il puntatore o nei suoi controlli di dettaglio supportati, S apre lo stato, P la priorità, E l’impegno, A l’assegnatario, L le categorie, D la scadenza e O l’obiettivo. R aggiunge una relazione dagli stessi punti, nella pagina di un obiettivo e nel modulo di nuovo ticket: scegli il tipo di relazione, poi l’altro ticket o obiettivo. Se la scheda fa parte di una selezione, questi tasti modificano tutti i ticket selezionati; assegnatario, obiettivo, categorie e relazioni valgono solo per i ticket selezionati del progetto di quella scheda. Maiusc+C porta a un campo del commento pronto per scrivere, con la conversazione scorsa fino all’ultimo messaggio: quello di una scheda di ticket sotto il puntatore o di una riga sotto il puntatore nell’elenco di obiettivi, feedback, pull request, pagine o triage, oppure, se non c’è nulla sotto il puntatore, quello del ticket, dell’obiettivo, del feedback, della pull request o della pagina sullo schermo. Una pagina apre per questo il suo pannello **Attività**. Maiusc+C agisce solo su quell’elemento, anche se la scheda fa parte di una selezione. Nella pagina di un obiettivo e nel modulo di nuovo obiettivo, S apre il suo stato, A il responsabile, D la data limite e C il colore; lì, C non crea un ticket. Queste azioni con un solo tasto non intercettano la scrittura in campi, aree di testo o editor di contenuti. Le sequenze di navigazione come G e poi H (Home) o G e poi I (Posta in arrivo) usano due tasti successivi. G e poi W porta a Pagine solo nel contesto di un progetto.
 

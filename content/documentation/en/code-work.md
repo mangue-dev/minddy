@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
-  "sourceRevision": 19,
+  "revision": 20,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -48,14 +48,15 @@
       "components/markdown-image.tsx",
       "components/pull-requests/pr-image-diff.tsx",
       "components/image-viewer.tsx",
-      "components/issue-card.tsx"
+      "components/issue-card.tsx",
+      "lib/palette-picker.ts"
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 20,
+    "fact": "agent:claude-code (content pickers moved to the command palette (MIN-844): Link an issue and Link to a pull request pickers checked against lib/palette-picker.ts, components/palette-picker-rows.tsx, components/pull-requests/pr-link-issue.tsx and components/pull-requests/pr-link-target-picker.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show these pickers)",
+    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "issues",
@@ -78,7 +79,7 @@
       "src": "/documentation/en/review-pull-requests-workflow.png",
       "alt": "Changes tab of the open demonstration PR, with the greeting function diff and an unavailable GitHub authorization notice.",
       "caption": "Demonstration PR that remains open and unmerged. Its diff trims the name and uses World for an empty value. This instance cannot request user GitHub authorization; the readiness label does not grant merge permission or prove successful provider CI.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -113,9 +114,9 @@ The prompt contents, branch suggestion and language rules are described in [Copy
 
 ### Keep the work linked to the issue {#link-work}
 
-When the repository is linked to the project, keep the issue identifier in the branch name, the pull request title or a `Fixes MIN-42` line. Minddy then attaches the pull request to the issue, and later prompts tell the agent to continue the open pull request on its branch. To attach an issue by hand, use **Link an issue** on the pull request. Its search accepts an identifier or title words, and a description also lists issues of the project found [by meaning](/docs/navigation#search-by-meaning) under **Related by meaning**.
+When the repository is linked to the project, keep the issue identifier in the branch name, the pull request title or a `Fixes MIN-42` line. Minddy then attaches the pull request to the issue, and later prompts tell the agent to continue the open pull request on its branch. To attach an issue by hand, use **Link an issue** on the pull request: the command palette opens on the project's issues, and the one you choose is linked once you confirm. Its search accepts an identifier or title words, and a description also lists issues of the project found [by meaning](/docs/navigation#search-by-meaning) under **Related by meaning**.
 
-From a board, right-click an issue without an open pull request and choose **Link to a pull request** to pick one of its project's open pull requests, drafts included. The entry appears only when that project has at least one such pull request to link to. With several issues selected, **Actions** offers the same choice for the whole selection, and **Link the other issues to #N** when some of them already have pull request N. **Link to a pull request** is not offered once a selected issue has any linked pull request; **Unlink N issues from their pull requests** removes every link of the selection first, after you confirm. Links show on the cards immediately, and a refused link is put back when the board refreshes. A card with an open pull request shows its number, coloured by state, and its merge readiness, the same indicator as on **Code review**.
+From a board, right-click an issue without an open pull request and choose **Link to a pull request** to pick, in the command palette, one of its project's open pull requests, drafts included. The entry appears only when that project has at least one such pull request to link to. With several issues selected, **Actions** offers the same choice for the whole selection, and **Link the other issues to #N** when some of them already have pull request N. **Link to a pull request** is not offered once a selected issue has any linked pull request; **Unlink N issues from their pull requests** removes every link of the selection first, after you confirm. Links show on the cards immediately, and a refused link is put back when the board refreshes. A card with an open pull request shows its number, coloured by state, and its merge readiness, the same indicator as on **Code review**.
 
 In **Account settings → Issues → Starting an issue**, **Start the issue or task when I copy its prompt** moves an issue or notebook task that has not started yet into progress when you copy its prompt. Leave it off if you copy prompts only to read them.
 

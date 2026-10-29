@@ -1,24 +1,28 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, Link02Icon } from "@hugeicons/core-free-icons";
-import { CommandGroup, CommandItem } from "@/components/ui/command";
-import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
+import { RelationIcon } from "@/components/issue-indicators";
+import { useRelationPalettePicker } from "@/components/palette-picker-rows";
 import { SearchMenu } from "@/components/search-menu";
-import { RelationIcon, StatusIndicator } from "@/components/issue-indicators";
-import { RelationObjectiveLabel } from "@/components/relation-objective-label";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { useOrderedObjectives } from "@/lib/use-ordered-objectives";
-import { SemanticIssueGroup } from "@/components/semantic-issue-group";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { issueIdentifier } from "@/lib/issue-constants";
-import { issueTierKeyword, orderIssuesForSearch } from "@/lib/issue-search-order";
+import { orderIssuesForSearch } from "@/lib/issue-search-order";
 import { RELATION_TYPES } from "@/lib/relation-constants";
+import {
+  HIERARCHY_RELATIONS,
+  hierarchyCandidates,
+  isHierarchyRelation,
+  type RelationMenuKind,
+} from "@/lib/issue-hierarchy";
 import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
-import type { IssueRelationType, PendingRelationInput } from "@/lib/types";
+import type { PendingRelationInput } from "@/lib/types";
 
 type CreationRelationsProps = {
   projectId: string;
@@ -30,12 +34,17 @@ type CreationRelationsProps = {
 };
 
 type CreationRelationsCompactProps = CreationRelationsProps & {
-  /** Controlled popover, so a dialog's R shortcut can open it (MIN-749). */
+  /** Controlled picker, so a dialog's R shortcut can open it (MIN-749). */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   /** Key badge next to the tooltip, where the dialog handles that key. */
   shortcutHint?: string;
+  /** A new issue also offers Parent of / Sub-issue of (MIN-844). */
+  hierarchy?: boolean;
 };
+
+/** Stands for the issue being created in the one-level nesting rules. */
+const NEW_ISSUE_ID = "new-issue";
 
 /** Draft-only picker: no relation is written until creation succeeds. */
 export function CreationRelationsCompact({
@@ -48,9 +57,9 @@ export function CreationRelationsCompact({
   open: openProp,
   onOpenChange,
   shortcutHint,
+  hierarchy = false,
 }: CreationRelationsCompactProps) {
   const t = useTranslations("Relations");
-  const tCommon = useTranslations("Common");
   const [ownOpen, setOwnOpen] = useState(false);
   const open = openProp ?? ownOpen;
   const openRef = useRef(open);
@@ -59,8 +68,11 @@ export function CreationRelationsCompact({
     setOwnOpen(next);
     if (next !== openRef.current) onOpenChange?.(next);
   };
-  const [step, setStep] = useState<IssueRelationType | null>(null);
-  const [query, setQuery] = useState("");
+  const [step, setStep] = useState<RelationMenuKind | null>(null);
+  // The type chosen in the dropdown, handed to the palette once the dropdown
+  // has closed: opened earlier, the palette would lose its focus to the
+  // dropdown's exit.
+  const [chosen, setChosen] = useState<RelationMenuKind | null>(null);
   const { issues, loading: issuesLoading } = useIssuesQuery(
     active && open ? projectId : null,
   );
@@ -73,7 +85,7 @@ export function CreationRelationsCompact({
   const resetPicker = () => {
     setOpen(false);
     setStep(null);
-    setQuery("");
+    setChosen(null);
   };
   // Reset on a new dialog or project, not on mount: R mounts this picker
   // already open while Smart Fill hides it (MIN-749).
@@ -84,7 +96,7 @@ export function CreationRelationsCompact({
     scopeRef.current = scope;
     setOpen(false);
     setStep(null);
-    setQuery("");
+    setChosen(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs on a scope change only; `setOpen` reads the latest state through a ref.
   }, [scope]);
 
@@ -92,17 +104,29 @@ export function CreationRelationsCompact({
     value.some((r) =>
       r.type === step && r.target_id === id && r.target_type === type,
     );
+  // The hierarchy entries the new issue may still take, under the one-level
+  // rule (MIN-804): it gets one parent, or sub-issues, never both.
+  const chosenParent = value.some((r) => r.type === "sub_issue_of");
+  const chosenChildren = value.some((r) => r.type === "parent_of");
+  const hierarchyTypes = hierarchy
+    ? HIERARCHY_RELATIONS.filter((kind) => (kind === "parent_of" ? !chosenParent : !chosenParent && !chosenChildren))
+    : [];
   // Work under way first, triage last (MIN-726).
-  const issueCandidates = orderIssuesForSearch(
-    issues.filter(
-      (i) => i.project_id === projectId && !linked(i.id, "issue"),
-    ),
-    (i) => i.status,
-  );
-  const objectiveCandidates = orderedObjectives.filter(
-    (o) => o.project_id === projectId && o.status !== "done" &&
-      o.status !== "canceled" && !linked(o.id, "objective"),
-  );
+  const issueCandidates = useMemo(() => {
+    const taken = new Set(value.filter((r) => r.type === step && r.target_type === "issue").map((r) => r.target_id));
+    const projectIssues = issues.filter((i) => i.project_id === projectId && !taken.has(i.id));
+    const eligible = isHierarchyRelation(step)
+      ? hierarchyCandidates(step, [{ id: NEW_ISSUE_ID, project_id: projectId, parent_id: null }], projectIssues)
+      : projectIssues;
+    return orderIssuesForSearch(eligible, (i) => i.status);
+  }, [issues, projectId, value, step]);
+  const objectiveCandidates = useMemo(() => {
+    const taken = new Set(value.filter((r) => r.type === step && r.target_type === "objective").map((r) => r.target_id));
+    return orderedObjectives.filter(
+      (o) => o.project_id === projectId && o.status !== "done" &&
+        o.status !== "canceled" && !taken.has(o.id),
+    );
+  }, [orderedObjectives, projectId, value, step]);
   const select = (
     target_id: string,
     target_type: "issue" | "objective",
@@ -114,23 +138,44 @@ export function CreationRelationsCompact({
   };
   const loading = issuesLoading || objectivesLoading;
 
+  // Two steps, both "open" for the dialog (it keeps the control shown while
+  // Smart Fill would hide it): the type dropdown, then the ⌘K palette on the
+  // targets (MIN-844), above the dialog. Nothing is written until the
+  // creation succeeds.
+  useRelationPalettePicker(open && active && step ? {
+    scope: `creation-relations:${projectId}`,
+    step,
+    issues: issueCandidates,
+    objectives: objectiveCandidates,
+    projectKey,
+    projectId,
+    loading,
+    onPickIssue: (_type, issueId, issue) => {
+      select(issueId, "issue", `${issueIdentifier(projectKey, issue.number)} ${issue.title}`);
+    },
+    onPickObjective: (_type, objectiveId, objective) => {
+      select(objectiveId, "objective", objective.name);
+    },
+    onClose: resetPicker,
+  } : null);
+
   // A body portal avoids dialog clipping; the modal popover owns its scroll lock.
   return (
     <SearchMenu
-      open={open && active}
+      open={open && active && step === null && chosen === null}
       onOpenChange={(next) => {
         if (next) setOpen(true);
-        else resetPicker();
+        else if (step === null && chosen === null) resetPicker();
       }}
       tooltip={t("addRelationAria")}
       shortcutHint={shortcutHint}
-      searchValue={query}
-      onSearchValueChange={setQuery}
-      searchPlaceholder={step ? t("searchTarget") : undefined}
-      focusKey={step}
-      contentClassName="w-80"
       modal
-      hideEmpty={step !== null && loading}
+      onCloseAutoFocus={(event) => {
+        if (chosen === null) return;
+        event.preventDefault();
+        setStep(chosen);
+        setChosen(null);
+      }}
       trigger={
         <button
           type="button"
@@ -146,84 +191,19 @@ export function CreationRelationsCompact({
         </button>
       }
     >
-      {step === null ? (
-        <CommandGroup heading={t("relations")}>
-          {RELATION_TYPES.map((type) => (
-            <CommandItem
-              key={type}
-              value={type}
-              keywords={[t(`action_${type}`)]}
-              onSelect={() => {
-                setStep(type);
-                setQuery("");
-              }}
-            >
-              <RelationIcon relation={type} className="size-4" />
-              <span>{t(type)}</span>
-            </CommandItem>
-          ))}
-        </CommandGroup>
-      ) : (
-        <>
-          {loading && (
-            <div role="status" className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
-              <Spinner className="size-4" />{tCommon("loading")}
-            </div>
-          )}
-          <CommandGroup heading={t(`pick_${step}`)}>
-            {issueCandidates.map((issue) => {
-              const identifier = issueIdentifier(projectKey, issue.number);
-              return (
-                <CommandItem
-                  key={issue.id}
-                  value={issue.id}
-                  keywords={[identifier, issue.title, issueTierKeyword(issue.status)]}
-                  onSelect={() => select(issue.id, "issue", `${identifier} ${issue.title}`)}
-                >
-                  <StatusIndicator status={issue.status} className="size-4" />
-                  <span className="shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">{identifier}</span>
-                  <span className="truncate">{issue.title}</span>
-                </CommandItem>
-              );
-            })}
-          </CommandGroup>
-          {objectiveCandidates.length > 0 && (
-            <CommandGroup heading={t("objectives")}>
-              {objectiveCandidates.map((objective) => (
-                <CommandItem
-                  key={objective.id}
-                  value={objective.id}
-                  keywords={[objective.name]}
-                  onSelect={() => select(objective.id, "objective", objective.name)}
-                >
-                  <RelationObjectiveLabel objective={objective} />
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          )}
-          {/* Same eligible candidates, found by meaning (MIN-718). */}
-          <SemanticIssueGroup
-            projectId={projectId}
-            candidates={issueCandidates}
-            idOf={(issue) => issue.id}
-            statusOf={(issue) => issue.status}
-            textOf={(issue) => ({ value: issue.id, keywords: [issueIdentifier(projectKey, issue.number), issue.title] })}
-            onSelect={(issue) => {
-              const identifier = issueIdentifier(projectKey, issue.number);
-              select(issue.id, "issue", `${identifier} ${issue.title}`);
-            }}
-            renderItem={(candidate) => (
-                  <>
-                    <StatusIndicator status={candidate.status} className="size-4" />
-                    <span className="shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
-                      {issueIdentifier(projectKey, candidate.number)}
-                    </span>
-                    <span className="truncate">{candidate.title}</span>
-                  </>
-                )}
-          />
-        </>
-      )}
+      <CommandGroup heading={t("relations")}>
+        {[...RELATION_TYPES, ...hierarchyTypes].map((type) => (
+          <CommandItem
+            key={type}
+            value={type}
+            keywords={[t(`action_${type}`)]}
+            onSelect={() => setChosen(type)}
+          >
+            <RelationIcon relation={type} className="size-4" />
+            <span>{t(type)}</span>
+          </CommandItem>
+        ))}
+      </CommandGroup>
     </SearchMenu>
   );
 }

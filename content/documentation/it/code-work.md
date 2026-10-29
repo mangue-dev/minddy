@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 20,
-  "sourceRevision": 19,
+  "revision": 21,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -48,14 +48,15 @@
       "components/markdown-image.tsx",
       "components/pull-requests/pr-image-diff.tsx",
       "components/image-viewer.tsx",
-      "components/issue-card.tsx"
+      "components/issue-card.tsx",
+      "lib/palette-picker.ts"
     ]
   },
   "review": {
-    "revision": 20,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 21,
+    "fact": "agent:claude-code (content pickers moved to the command palette (MIN-844): Link an issue and Link to a pull request pickers checked against lib/palette-picker.ts, components/palette-picker-rows.tsx, components/pull-requests/pr-link-issue.tsx and components/pull-requests/pr-link-target-picker.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show these pickers)",
+    "language": "agent:claude-code (it changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "issues",
@@ -78,7 +79,7 @@
       "src": "/documentation/it/review-pull-requests-workflow.png",
       "alt": "Scheda Modifiche della PR dimostrativa aperta, con il diff di greeting e l’avviso di autorizzazione GitHub non disponibile.",
       "caption": "PR dimostrativa che rimane aperta, non unita. Il diff rimuove gli spazi intorno al nome e usa World quando il valore è vuoto. Questa istanza non può richiedere l’autorizzazione dell’utente su GitHub: lo stato di disponibilità non concede il permesso di unione né dimostra che la CI del fornitore sia riuscita.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -113,9 +114,9 @@ Il contenuto del prompt, il nome di branch suggerito e le regole di lingua sono 
 
 ### Mantenere il lavoro collegato al ticket {#link-work}
 
-Quando il repository è collegato al progetto, inserisci l’identificatore del ticket nel nome del branch, nel titolo della pull request o in una riga `Fixes MIN-42`. Minddy collega allora la pull request al ticket, e i prompt successivi chiedono all’agente di proseguire la pull request aperta sul suo branch. Per collegare un ticket a mano, usa **Collega un ticket** sulla pull request. La sua ricerca accetta un identificatore o parole del titolo, e una descrizione mostra anche ticket del progetto trovati [per significato](/docs/navigation#search-by-meaning) sotto **Correlati per significato**.
+Quando il repository è collegato al progetto, inserisci l’identificatore del ticket nel nome del branch, nel titolo della pull request o in una riga `Fixes MIN-42`. Minddy collega allora la pull request al ticket, e i prompt successivi chiedono all’agente di proseguire la pull request aperta sul suo branch. Per collegare un ticket a mano, usa **Collega un ticket** sulla pull request: la palette dei comandi si apre sui ticket del progetto e quello scelto viene collegato dopo la conferma. La sua ricerca accetta un identificatore o parole del titolo, e una descrizione mostra anche ticket del progetto trovati [per significato](/docs/navigation#search-by-meaning) sotto **Correlati per significato**.
 
-Da una board, fai clic con il tasto destro su un ticket senza pull request aperta e scegli **Collega a una pull request** per selezionare una delle pull request aperte del suo progetto, bozze comprese. La voce compare solo quando quel progetto ha almeno una pull request da collegare. Con più ticket selezionati, **Azioni** offre la stessa scelta per l’intera selezione, e **Collega gli altri ticket a #N** quando alcuni hanno già la pull request N. **Collega a una pull request** non viene più proposto appena un ticket selezionato ha una pull request collegata; **Scollega N ticket dalle loro pull request** rimuove prima tutti i collegamenti della selezione, dopo la tua conferma. I collegamenti compaiono subito sulle schede, e un collegamento rifiutato scompare quando la board si aggiorna. Una scheda con una pull request aperta mostra il suo numero, colorato in base allo stato, e il suo stato di unione, lo stesso indicatore di **Revisione del codice**.
+Da una board, fai clic con il tasto destro su un ticket senza pull request aperta e scegli **Collega a una pull request** per selezionare nella palette dei comandi una delle pull request aperte del suo progetto, bozze comprese. La voce compare solo quando quel progetto ha almeno una pull request da collegare. Con più ticket selezionati, **Azioni** offre la stessa scelta per l’intera selezione, e **Collega gli altri ticket a #N** quando alcuni hanno già la pull request N. **Collega a una pull request** non viene più proposto appena un ticket selezionato ha una pull request collegata; **Scollega N ticket dalle loro pull request** rimuove prima tutti i collegamenti della selezione, dopo la tua conferma. I collegamenti compaiono subito sulle schede, e un collegamento rifiutato scompare quando la board si aggiorna. Una scheda con una pull request aperta mostra il suo numero, colorato in base allo stato, e il suo stato di unione, lo stesso indicatore di **Revisione del codice**.
 
 In **Impostazioni account → Ticket → Avviare un ticket**, **Avvia il ticket o l'attività quando ne copio il prompt** porta in corso un ticket o un’attività del taccuino non ancora avviati quando ne copi il prompt. Lascia l’opzione disattivata se copi i prompt solo per leggerli.
 

@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 39,
-  "sourceRevision": 39,
+  "revision": 40,
+  "sourceRevision": 40,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-28",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles; MIN-809 Smart Fill split button; MIN-813 Smart Fill title on request",
     "editions": [
@@ -99,7 +99,7 @@
       "components/settings/account-preferences-section.tsx",
       "lib/issue-semantic-query.ts",
       "lib/server/issue-semantic-search.ts",
-      "components/relation-target-picker.tsx",
+      "components/palette-picker-rows.tsx",
       "components/editor/rich-editor.tsx",
       "components/editor/document-editor.tsx",
       "components/editor/comment-editor.tsx",
@@ -119,14 +119,16 @@
       "lib/use-all-drafts.ts",
       "lib/use-held-draft.ts",
       "lib/issue-hierarchy.ts",
-      "components/editor/mobile-editor-toolbar.tsx"
+      "components/editor/mobile-editor-toolbar.tsx",
+      "lib/palette-picker.ts",
+      "lib/creation-relations.ts"
     ]
   },
   "review": {
-    "revision": 39,
-    "fact": "agent:claude-code (phone keyboard toolbar sentence checked against components/editor/mobile-editor-toolbar.tsx and components/editor/rich-editor.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "revision": 40,
+    "fact": "agent:claude-code (content pickers moved to the command palette (MIN-844): relation targets and page resource pickers, plus Parent of / Sub-issue of in the new-issue form, checked against lib/palette-picker.ts, components/palette-picker-rows.tsx, components/relations-section.tsx, components/creation-relations.tsx, lib/creation-relations.ts and components/resources.tsx; rest of the article unchanged since the previous review; issue-dependencies-steps recaptured in the palette)",
     "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-28"
+    "date": "2026-10-29"
   },
   "related": [
     "feedback",
@@ -171,7 +173,7 @@
       "src": "/documentation/en/new-issue.png",
       "alt": "Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-21 button.",
       "caption": "Describe the expected result, then choose the useful properties before creating the issue.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -187,7 +189,7 @@
       "src": "/documentation/en/triage-incoming.png",
       "alt": "Incoming demonstration issue AUR-19 with its report, properties and duplicate, Decline and Accept controls.",
       "caption": "Read the incoming report before accepting it, declining it or linking a duplicate.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -204,7 +206,7 @@
       "src": "/documentation/en/issue-statuses.png",
       "alt": "Eight issue statuses in the picker, with backlog currently selected.",
       "caption": "The check marks the current status. Choose the status that reflects the work’s actual state.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -220,7 +222,7 @@
       "src": "/documentation/en/work-resources.png",
       "alt": "Add-link dialog with an example contact URL.",
       "caption": "Review the destination before adding a resource. This example link has not been submitted.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -234,14 +236,14 @@
       "id": "issue-dependencies-steps",
       "kind": "screenshot",
       "src": "/documentation/en/work-dependencies.png",
-      "alt": "Search for a blocker by issue identifier.",
+      "alt": "The command palette lists the issues that can block this one, with the relation's question in its search field.",
       "caption": "Choose the relation direction before selecting its endpoint. The picker is shown without submitting a relation.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-29",
       "viewport": [
-        368,
-        184
+        788,
+        506
       ],
       "theme": "light",
       "padding": 24
@@ -252,7 +254,7 @@
       "src": "/documentation/en/work-sub-issues.png",
       "alt": "Sub-issue creation field in a demonstration parent issue.",
       "caption": "The inline field creates a child under this parent; a child keeps its own status and discussion.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -268,7 +270,7 @@
       "src": "/documentation/en/work-implementation-plan.png",
       "alt": "Demonstration plan showing two of six work tasks complete.",
       "caption": "The saved demonstration plan separates completed, active and pending steps. Its progress does not prove the fictional code task was executed.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -284,7 +286,7 @@
       "src": "/documentation/en/issue-date-recurrence.png",
       "alt": "Due-date picker in recurring mode with a weekly Sunday preview and optional time.",
       "caption": "Recurring mode previews the weekly cadence. Confirm the first due date before creating the issue.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -300,7 +302,7 @@
       "src": "/documentation/en/import-issues-preview-workflow.png",
       "alt": "CSV preview with two localized demonstration rows and detected column mappings.",
       "caption": "CSV preview with two localized demonstration rows and detected column mappings. No import was submitted; optional AI planning was blocked for the capture.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -317,7 +319,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -454,7 +456,7 @@ Check filters if an issue disappears after closing it. Reopen the issue by ident
 
 Open the issue's discussion timeline to add a comment. Explain a decision, question or verification result so another member can understand what changed. Use mentions when you need a person or linked object in context; notifications still depend on the recipient's preferences and device delivery. A reader can comment only when the owner turned on **Can comment** for them. They can then reply, mention people, attach files to their own comments, and edit or delete their own comments.
 
-Attach a relevant project page, file or link through the resources controls. A linked page is a live resource: its title follows page renaming and its content can evolve. A file is a stored attachment rather than a guarantee that an external URL remains available. To write a page that does not exist yet, choose **Page**, then **New page** at the bottom of the list; typing a title in the search first gives it that title. The page is created in the project, attached to the issue and opened in a side panel, where **Expand** opens the full page.
+Attach a relevant project page, file or link through the resources controls. A linked page is a live resource: its title follows page renaming and its content can evolve. A file is a stored attachment rather than a guarantee that an external URL remains available. **Page** opens the command palette on the project's pages, in sidebar order; choose one to attach it. To write a page that does not exist yet, choose **New page** at the bottom of the list; typing a title in the search first gives it that title. The page is created in the project, attached to the issue and opened in a side panel, where **Expand** opens the full page.
 
 Resources appear as cards: the image itself or the file type's icon, the name and the size. A link shows its page's preview image when the site provides one, otherwise its favicon. Click or right-click a card to open its menu: Preview, Open link or Open page, then Rename, Download and Remove when they apply. Preview opens a supported file across the whole window. Images, PDF files, Markdown (`.md`), plain text (`.txt`, `.text`), CSV files and supported audio or video use the same reader. Markdown is formatted, text stays literal, and CSV opens as a scrollable table. Use Close or Escape to return to the issue. The File actions (`…`) menu offers Download and, when you can change this resource, Rename and Remove. Clicking a file mention in a text opens the same reader. Minddy asks for confirmation before removing a resource, which then detaches from this context. A page resource keeps its page's title and cannot be renamed. Unsupported formats keep their download action. **Open page** reads the page in a side panel, where **Expand** opens the full page; a database opens as a full page directly.
 
@@ -470,11 +472,11 @@ Check that an uploaded resource appears and can be opened after the operation. I
 
 ## Link dependencies and related issues {#issue-dependencies}
 
-Open an issue's relations controls and find the other issue by title or identifier. Outside a text field, R opens the relation type choice from a hovered card or the issue panel. A descriptive query also lists, after the text matches, issues of the same project found [by meaning](/docs/navigation#search-by-meaning) under **Related by meaning**. Choose a blocking relation when one task must finish before another can proceed. If A blocks B, A is the prerequisite and B is blocked by A. A related relation adds context without imposing that order.
+Open an issue's relations controls and find the other issue by title or identifier. Outside a text field, R opens the relation type choice from a hovered card or the issue panel. Once the type is chosen, the other end is picked in the [command palette](/docs/navigation#search-and-shortcuts), which lists only the issues and objectives that can take that relation. A descriptive query also lists, after the text matches, issues of the same project found [by meaning](/docs/navigation#search-by-meaning) under **Related by meaning**. Choose a blocking relation when one task must finish before another can proceed. If A blocks B, A is the prerequisite and B is blocked by A. A related relation adds context without imposing that order.
 
 Read both issue identifiers and the displayed direction before confirming. For example, “Prepare the endpoint” blocks “Connect the client”, rather than the reverse. A dependency does not make either issue a sub-issue, and a parent-child relation is not a substitute for a blocking relation.
 
-![Search for a blocker by issue identifier.](/documentation/en/work-dependencies.png)
+![The command palette lists the issues that can block this one, with the relation's question in its search field.](/documentation/en/work-dependencies.png)
 
 ### Resolved and inherited blockers {#blocker-state}
 
@@ -500,7 +502,7 @@ Indexing and relation decisions use AI. They count toward the **Automations** sh
 
 Open the parent issue and use its sub-issue controls to create smaller pieces of work. Give each child a distinct outcome. Inspect its project, properties and parent identifier after creation; a hierarchy should make the task easier to track, not replace the description of what each child must achieve.
 
-To attach issues that already exist, press R on a hovered card or in the issue panel, or open **Relations** from a card's right-click menu. **Parent of** lists the issues that can become a sub-issue of this one; **Sub-issue of** lists the top-level issues that can become its parent. Each list only offers what the one-level rule allows: a sub-issue has no **Parent of** entry, and an issue that already has sub-issues has no **Sub-issue of** entry. Choosing an issue that already has another parent moves it under the new one. From a selection of cards, **Sub-issue of** places every eligible selected issue under the chosen parent.
+To attach issues that already exist, press R on a hovered card or in the issue panel, or open **Relations** from a card's right-click menu. **Parent of** lists the issues that can become a sub-issue of this one; **Sub-issue of** lists the top-level issues that can become its parent. Each list only offers what the one-level rule allows: a sub-issue has no **Parent of** entry, and an issue that already has sub-issues has no **Sub-issue of** entry. Choosing an issue that already has another parent moves it under the new one. From a selection of cards, **Sub-issue of** places every eligible selected issue under the chosen parent. In the new-issue form, **Relations** offers the same two entries: **Sub-issue of** creates the issue under the chosen parent, and **Parent of** places the chosen issues under it once it is created. A new issue takes one parent or sub-issues, not both.
 
 The hierarchy permits one level: a parent must be a top-level issue in the same project, and a sub-issue cannot itself have children. When no objective is explicitly chosen during creation, the child inherits the parent’s objective; inspect the resulting properties rather than assuming that later parent edits propagate.
 

@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 21,
-  "sourceRevision": 20,
+  "revision": 22,
+  "sourceRevision": 21,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-28",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -53,14 +53,16 @@
       "lib/keyboard/shortcuts.ts",
       "lib/objective-order.ts",
       "components/objective-label.tsx",
-      "components/editor/mobile-editor-toolbar.tsx"
+      "components/editor/mobile-editor-toolbar.tsx",
+      "lib/palette-picker.ts",
+      "components/palette-picker-rows.tsx"
     ]
   },
   "review": {
-    "revision": 21,
-    "fact": "agent:claude-code (phone keyboard toolbar sentence checked against components/editor/mobile-editor-toolbar.tsx and components/editor/rich-editor.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (it changed passages with catalog UI labels; equivalent meaning to en revision 20; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-28"
+    "revision": 22,
+    "fact": "agent:claude-code (content pickers moved to the command palette (MIN-844): objective relation picker checked against lib/palette-picker.ts, components/palette-picker-rows.tsx and components/objective-relations-section.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the picker)",
+    "language": "agent:claude-code (it changed passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "issues",
@@ -81,7 +83,7 @@
       "src": "/documentation/it/reader-objectives.png",
       "alt": "Finestra di creazione obiettivo non inviata nel progetto Aurora con un nome di risultato d’esempio e il pulsante Crea obiettivo.",
       "caption": "Definisci il risultato prima di scegliere responsabile, data limite e stato. Questa finestra non ha creato un secondo obiettivo.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -119,7 +121,7 @@ Usa il ciclo di vita dell’obiettivo per distinguere risultati pianificati, in 
 
 ## Interpretare dipendenze e andamento degli obiettivi {#objective-dependencies-and-momentum}
 
-Apri l’obiettivo e le sue relazioni. Nella pagina dell’obiettivo, fuori da un campo di testo, R apre la scelta del tipo di relazione. Controlla quale risultato dipende da un altro e leggi le relazioni di blocco tra ticket quando spiegano il vincolo. L’organizzazione padre-figlio, un collegamento correlato e una dipendenza di blocco rispondono a domande diverse; controlla la direzione prima di cambiare una relazione.
+Apri l’obiettivo e le sue relazioni. Nella pagina dell’obiettivo, fuori da un campo di testo, R apre la scelta del tipo di relazione. Scelto il tipo, il ticket o l’obiettivo si sceglie nella palette dei comandi, come su un ticket. Controlla quale risultato dipende da un altro e leggi le relazioni di blocco tra ticket quando spiegano il vincolo. L’organizzazione padre-figlio, un collegamento correlato e una dipendenza di blocco rispondono a domande diverse; controlla la direzione prima di cambiare una relazione.
 
 Una relazione di blocco può collegare un ticket o un altro obiettivo a questo obiettivo, all’interno dello stesso progetto. I suoi ticket aperti ereditano il blocco irrisolto: la relazione mostrata identifica sia il prerequisito effettivo sia l’obiettivo che lo trasmette. Non viene salvata una nuova relazione diretta su ogni ticket. Chiudere il prerequisito o l’obiettivo bloccato, oppure rimuovere un ticket da quell’obiettivo, elimina il relativo blocco ereditato. Risolvi il prerequisito effettivo o correggi una relazione superata. Cambiare solo la data obiettivo non completa i ticket che lo bloccano.
 

@@ -29,6 +29,14 @@ function initializer(file: string, name: string) {
   return node.initializer!.getText(root);
 }
 
+/** A pick handler of the panel menu's relation picker (MIN-844), evaluated in `scope`. */
+function pickHandler(name: "onPickIssue" | "onPickObjective", scope: Record<string, unknown>) {
+  const root = source("components/issue-side-panel.tsx");
+  const picker = find(root, (node) => ts.isJsxSelfClosingElement(node) && node.tagName.getText(root) === "RelationPalettePicker") as ts.JsxSelfClosingElement;
+  const attribute = picker.attributes.properties.find((node) => ts.isJsxAttribute(node) && node.name.getText(root) === name) as ts.JsxAttribute;
+  return evaluate<(type: string, targetId: string) => void>((attribute.initializer as ts.JsxExpression).expression!.getText(root), scope);
+}
+
 function evaluate<T>(expression: string, scope: Record<string, unknown>): T {
   const compiled = ts.transpileModule(`const result = ${expression};`, {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
@@ -121,19 +129,14 @@ describe("sidebar menu relation targets", () => {
   });
 
   it("forwards the selected relation endpoint kind from the menu picker", () => {
-    const root = source("components/issue-side-panel.tsx");
-    const picker = find(root, (node) => ts.isJsxSelfClosingElement(node) && node.tagName.getText(root) === "RelationTargetPicker") as ts.JsxSelfClosingElement;
-    const attribute = picker.attributes.properties.find((node) => ts.isJsxAttribute(node) && node.name.getText(root) === "onSelect") as ts.JsxAttribute;
-    const expression = (attribute.initializer as ts.JsxExpression).expression!;
     const onAddRelation = vi.fn();
     const setRelationType = vi.fn();
-    const handler = evaluate<(id: string, kind: string) => void>(expression.getText(root), {
-      issue: { id: "source" }, relationType: "blocked_by", onAddRelation, setRelationType,
-      isHierarchyRelation, setParentLink: vi.fn(),
-    });
-    handler("target", "objective");
+    const scope = { issue: { id: "source" }, onAddRelation, setRelationType, isHierarchyRelation, setParentLink: vi.fn() };
+    pickHandler("onPickObjective", scope)("blocked_by", "target");
     expect(onAddRelation).toHaveBeenCalledWith("source", "blocked_by", "target", { targetType: "objective" });
     expect(setRelationType).toHaveBeenCalledWith(null);
+    pickHandler("onPickIssue", scope)("blocks", "other");
+    expect(onAddRelation).toHaveBeenLastCalledWith("source", "blocks", "other", { targetType: "issue" });
   });
 
   it("routes the parent / sub-issue entries to a parent write, issues only (MIN-804)", () => {
@@ -146,15 +149,9 @@ describe("sidebar menu relation targets", () => {
       .map((target) => target.id)).toEqual(["other"]);
     expect(evaluate<unknown[]>(initializer("components/issue-side-panel.tsx", "relationObjectiveCandidates"), scope)).toEqual([]);
 
-    const root = source("components/issue-side-panel.tsx");
-    const picker = find(root, (node) => ts.isJsxSelfClosingElement(node) && node.tagName.getText(root) === "RelationTargetPicker") as ts.JsxSelfClosingElement;
-    const attribute = picker.attributes.properties.find((node) => ts.isJsxAttribute(node) && node.name.getText(root) === "onSelect") as ts.JsxAttribute;
     const onAddRelation = vi.fn();
     const setParentLink = vi.fn();
-    const handler = evaluate<(id: string, kind: string) => void>((attribute.initializer as ts.JsxExpression).expression!.getText(root), {
-      issue, relationType: "parent_of", onAddRelation, setRelationType: vi.fn(), isHierarchyRelation, setParentLink,
-    });
-    handler("child", "issue");
+    pickHandler("onPickIssue", { issue, onAddRelation, setRelationType: vi.fn(), isHierarchyRelation, setParentLink })("parent_of", "child");
     expect(setParentLink).toHaveBeenCalledWith("parent_of", "child");
     expect(onAddRelation).not.toHaveBeenCalled();
   });

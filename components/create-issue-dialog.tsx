@@ -1039,6 +1039,7 @@ export function CreateIssueDialog({
                       open={openPicker === "relation"}
                       onOpenChange={(o) => setOpenPicker(o ? "relation" : null)}
                       shortcutHint={RELATION_SHORTCUT_HINT}
+                      hierarchy
                     />
                   </CreationProperty>
                 )}

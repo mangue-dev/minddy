@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 20,
-  "sourceRevision": 20,
+  "revision": 21,
+  "sourceRevision": 21,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-28",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -53,14 +53,16 @@
       "lib/keyboard/shortcuts.ts",
       "lib/objective-order.ts",
       "components/objective-label.tsx",
-      "components/editor/mobile-editor-toolbar.tsx"
+      "components/editor/mobile-editor-toolbar.tsx",
+      "lib/palette-picker.ts",
+      "components/palette-picker-rows.tsx"
     ]
   },
   "review": {
-    "revision": 20,
-    "fact": "agent:claude-code (phone keyboard toolbar sentence checked against components/editor/mobile-editor-toolbar.tsx and components/editor/rich-editor.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (fr changed passages with catalog UI labels; equivalent meaning to en revision 20; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-28"
+    "revision": 21,
+    "fact": "agent:claude-code (content pickers moved to the command palette (MIN-844): objective relation picker checked against lib/palette-picker.ts, components/palette-picker-rows.tsx and components/objective-relations-section.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the picker)",
+    "language": "agent:claude-code (fr changed passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "issues",
@@ -81,7 +83,7 @@
       "src": "/documentation/fr/reader-objectives.png",
       "alt": "Dialogue de création d’objectif non envoyé dans le projet Aurora, avec un nom de résultat d’exemple et le bouton Créer l’objectif.",
       "caption": "Nommez le résultat avant de choisir le responsable, la date cible et l’état. Ce dialogue n’a pas créé un deuxième objectif.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -118,7 +120,7 @@ Le cycle de vie distingue résultats prévus, en cours, terminés et annulés. U
 
 ## Interpréter les dépendances et la dynamique d’un objectif {#objective-dependencies-and-momentum}
 
-Ouvrez les relations de l’objectif. Sur la page de l’objectif, hors d’un champ de texte, R ouvre le choix du type de relation. Vérifiez quel résultat dépend d’un autre et consultez les dépendances de tickets qui expliquent une contrainte. Hiérarchie, association et blocage répondent à des questions différentes ; inspectez le sens avant de modifier la relation.
+Ouvrez les relations de l’objectif. Sur la page de l’objectif, hors d’un champ de texte, R ouvre le choix du type de relation. Une fois le type choisi, le ticket ou l’objectif se choisit dans la palette de commandes, comme sur un ticket. Vérifiez quel résultat dépend d’un autre et consultez les dépendances de tickets qui expliquent une contrainte. Hiérarchie, association et blocage répondent à des questions différentes ; inspectez le sens avant de modifier la relation.
 
 Une relation de blocage peut relier un ticket ou un autre objectif à cet objectif, dans le même projet. Ses tickets membres ouverts héritent du blocage non résolu : l’affichage identifie le vrai préalable et l’objectif qui le transmet. Ce n’est pas une nouvelle relation directe enregistrée sur chaque ticket. Clôturer le ticket ou l’objectif bloquant, ou l’objectif bloqué, ou retirer un ticket de cet objectif, supprime le blocage hérité correspondant. Résolvez le vrai préalable ou corrigez une relation obsolète. Modifier la date cible d’un objectif ne termine pas ses tickets bloquants.
 

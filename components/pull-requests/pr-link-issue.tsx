@@ -1,21 +1,18 @@
 "use client";
 
-import { SemanticIssueGroup } from "@/components/semantic-issue-group";
-import { issueTierKeyword, orderIssuesForSearch } from "@/lib/issue-search-order";
+import { orderIssuesForSearch } from "@/lib/issue-search-order";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Link02Icon } from "@hugeicons/core-free-icons";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import type { PickerOption } from "@/components/search-select";
-import { SearchMenu } from "@/components/search-menu";
-import { StatusIndicator } from "@/components/issue-indicators";
+import { PickerLoading, issuePickerRow } from "@/components/palette-picker-rows";
+import { usePalettePicker, type PalettePickerRequest } from "@/lib/palette-picker";
 import { globalBoardQueryFn } from "@/lib/global-board-api";
 import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
 import { issueIdentifier } from "@/lib/issue-constants";
@@ -24,7 +21,10 @@ import { linkPullRequestIssueApi } from "@/lib/agent-api";
 import type { PullRequestListItem } from "@/lib/agent-api";
 import type { GlobalBoardResponse } from "@/lib/types";
 
-/** Add an issue from the repository project and explain the resulting status. */
+/**
+ * Add an issue from the repository project and explain the resulting status.
+ * The issue is picked in the ⌘K palette (MIN-844), then confirmed here.
+ */
 export function PrLinkIssue({
   prId,
   prState,
@@ -34,13 +34,10 @@ export function PrLinkIssue({
   linkedIssueIds = [],
   open: controlledOpen,
   onOpenChange,
-  position,
   triggerClassName,
 }: {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  /** Anchor the picker to the overflow action when its inline trigger is hidden. */
-  position?: { x: number; y: number };
   triggerClassName?: string;
   linkedIssueIds?: string[];
   prId: string;
@@ -71,23 +68,39 @@ export function PrLinkIssue({
   });
 
   const issues = (data?.issues ?? []) as GlobalBoardResponse["issues"];
-  const options = useMemo<PickerOption[]>(() => {
-    // Work under way first — a PR almost always targets a live issue — then
-    // open issues; triage and closed ones last, still selectable (MIN-726).
+  // Work under way first — a PR almost always targets a live issue — then
+  // open issues; triage and closed ones last, still selectable (MIN-726).
+  // Callers rebuild the linked list on every render: compared by content.
+  const linkedKey = linkedIssueIds.join(",");
+  const candidates = useMemo(() => {
+    const linked = new Set(linkedKey ? linkedKey.split(",") : []);
     return orderIssuesForSearch(
-      issues.filter((i) => i.project_id === projectId && !linkedIssueIds.includes(i.id)),
+      issues.filter((i) => i.project_id === projectId && !linked.has(i.id)),
       (i) => i.status,
-    )
-      .map((i) => {
-        const identifier = issueIdentifier(projectKey, i.number);
-        return {
-          value: i.id,
-          label: `${identifier}  ${i.title}`,
-          keywords: [identifier, i.title, issueTierKeyword(i.status)],
-          icon: <StatusIndicator status={i.status} className="size-4" />,
-        };
-      });
-  }, [issues, projectId, projectKey, linkedIssueIds]);
+    );
+  }, [issues, projectId, linkedKey]);
+  const setOpenRef = useRef(setOpen);
+  setOpenRef.current = setOpen;
+  const request = useMemo<PalettePickerRequest | null>(() => {
+    if (!open) return null;
+    return {
+      key: `pull-request-link-issue:${prId}`,
+      placeholder: t("linkIssueSearchPlaceholder"),
+      categories: [{ id: "pull-request-issues", label: t("linkIssue") }],
+      items: candidates.map((issue) =>
+        issuePickerRow(issue, projectKey, "pull-request-issues", () => {
+          setPending({ id: issue.id, identifier: issueIdentifier(projectKey, issue.number) });
+          setOpenRef.current(false);
+        })),
+      // Same eligible issues, found by meaning (MIN-718).
+      semanticProjectId: projectId,
+      status: isPending
+        ? <PickerLoading label={t("linkIssueLoading")} />
+        : candidates.length === 0 ? t("linkIssueEmpty") : undefined,
+      onClose: () => setOpenRef.current(false),
+    };
+  }, [open, prId, candidates, projectKey, projectId, isPending, t]);
+  usePalettePicker(request);
 
   const nextStatus = issueStatusForPrState(prState);
 
@@ -110,63 +123,16 @@ export function PrLinkIssue({
 
   return (
     <>
-      <SearchMenu
-        open={open}
-        onOpenChange={setOpen}
-        position={position}
-        align={position ? "end" : "start"}
-        searchPlaceholder={t("linkIssueSearchPlaceholder")}
-        emptyText={open && isPending ? t("linkIssueLoading") : t("linkIssueEmpty")}
-        trigger={
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn("h-6 gap-1 px-1.5 font-sans text-xs font-normal text-muted-foreground hover:bg-muted hover:text-foreground", triggerClassName)}
-          >
-            <HugeiconsIcon icon={Link02Icon} className="size-3.5" />
-            {t(linkedIssueIds.length > 0 ? "linkAnotherIssue" : "linkIssue")}
-          </Button>
-        }
+      <Button
+        variant="ghost"
+        size="sm"
+        aria-haspopup="dialog"
+        onClick={() => setOpen(true)}
+        className={cn("h-6 gap-1 px-1.5 font-sans text-xs font-normal text-muted-foreground hover:bg-muted hover:text-foreground", triggerClassName)}
       >
-        <CommandGroup>
-          {options.map((option) => (
-            <CommandItem
-              key={option.value}
-              value={option.value}
-              keywords={[option.label, ...(option.keywords ?? [])]}
-              onSelect={() => {
-                const issue = issues.find((candidate) => candidate.id === option.value);
-                if (!issue) return;
-                setPending({ id: issue.id, identifier: issueIdentifier(projectKey, issue.number) });
-                setOpen(false);
-              }}
-            >
-              {option.icon}
-              <span className="truncate">{option.label}</span>
-            </CommandItem>
-          ))}
-        </CommandGroup>
-        {/* Same eligible issues, found by meaning (MIN-718). */}
-        <SemanticIssueGroup
-          projectId={projectId}
-          candidates={options}
-          idOf={(option) => option.value}
-          statusOf={(option) => issues.find((candidate) => candidate.id === option.value)?.status}
-          textOf={(option) => ({ value: option.value, keywords: [option.label, ...(option.keywords ?? [])] })}
-          onSelect={(option) => {
-            const issue = issues.find((candidate) => candidate.id === option.value);
-            if (!issue) return;
-            setPending({ id: issue.id, identifier: issueIdentifier(projectKey, issue.number) });
-            setOpen(false);
-          }}
-          renderItem={(option) => (
-            <>
-              {option.icon}
-              <span className="truncate">{option.label}</span>
-            </>
-          )}
-        />
-      </SearchMenu>
+        <HugeiconsIcon icon={Link02Icon} className="size-3.5" />
+        {t(linkedIssueIds.length > 0 ? "linkAnotherIssue" : "linkIssue")}
+      </Button>
 
       {/* Confirm the status change before linking. */}
       <Dialog

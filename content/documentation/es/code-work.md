@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 20,
-  "sourceRevision": 19,
+  "revision": 21,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -48,14 +48,15 @@
       "components/markdown-image.tsx",
       "components/pull-requests/pr-image-diff.tsx",
       "components/image-viewer.tsx",
-      "components/issue-card.tsx"
+      "components/issue-card.tsx",
+      "lib/palette-picker.ts"
     ]
   },
   "review": {
-    "revision": 20,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 21,
+    "fact": "agent:claude-code (content pickers moved to the command palette (MIN-844): Link an issue and Link to a pull request pickers checked against lib/palette-picker.ts, components/palette-picker-rows.tsx, components/pull-requests/pr-link-issue.tsx and components/pull-requests/pr-link-target-picker.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show these pickers)",
+    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "issues",
@@ -78,7 +79,7 @@
       "src": "/documentation/es/review-pull-requests-workflow.png",
       "alt": "Pestaña Cambios de la PR de demostración abierta, con las diferencias de greeting y un aviso de autorización de GitHub no disponible.",
       "caption": "PR de demostración que sigue abierta, sin fusionar. Las diferencias eliminan los espacios alrededor del nombre y usan World para un valor vacío. Esta instancia no puede solicitar autorización de usuario de GitHub; la indicación de disponibilidad no concede permisos para fusionar ni demuestra que la CI del proveedor haya pasado.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -113,9 +114,9 @@ El contenido del prompt, la rama sugerida y las reglas de idioma se describen en
 
 ### Mantener el trabajo vinculado a la incidencia {#link-work}
 
-Cuando el repositorio está vinculado al proyecto, mantén el identificador de la incidencia en el nombre de la rama, en el título de la pull request o en una línea `Fixes MIN-42`. Minddy vincula entonces la pull request a la incidencia, y los prompts siguientes indican al agente que continúe la pull request abierta en su rama. Para vincular una incidencia a mano, usa **Vincular una incidencia** en la pull request. Su búsqueda acepta un identificador o palabras del título, y una descripción también muestra incidencias del proyecto encontradas [por el sentido](/docs/navigation#search-by-meaning) bajo **Relacionadas por significado**.
+Cuando el repositorio está vinculado al proyecto, mantén el identificador de la incidencia en el nombre de la rama, en el título de la pull request o en una línea `Fixes MIN-42`. Minddy vincula entonces la pull request a la incidencia, y los prompts siguientes indican al agente que continúe la pull request abierta en su rama. Para vincular una incidencia a mano, usa **Vincular una incidencia** en la pull request: la paleta de comandos se abre con las incidencias del proyecto y la elegida se vincula tras confirmar. Su búsqueda acepta un identificador o palabras del título, y una descripción también muestra incidencias del proyecto encontradas [por el sentido](/docs/navigation#search-by-meaning) bajo **Relacionadas por significado**.
 
-Desde un tablero, haz clic derecho en una incidencia sin pull request abierta y elige **Vincular a una pull request** para escoger una de las pull requests abiertas de su proyecto, incluidos los borradores. La opción solo aparece cuando ese proyecto tiene al menos una pull request que vincular. Con varias incidencias seleccionadas, **Acciones** ofrece la misma opción para toda la selección, y **Vincular las demás incidencias a #N** cuando algunas ya tienen la pull request N. **Vincular a una pull request** deja de ofrecerse en cuanto una incidencia seleccionada tiene alguna pull request vinculada; **Desvincular N incidencias de sus pull requests** quita primero todos los vínculos de la selección, después de que lo confirmes. Los vínculos aparecen al instante en las tarjetas, y un vínculo rechazado desaparece cuando el tablero se actualiza. Una tarjeta con una pull request abierta muestra su número, coloreado según su estado, y su preparación para la fusión, el mismo indicador que en **Revisión de código**.
+Desde un tablero, haz clic derecho en una incidencia sin pull request abierta y elige **Vincular a una pull request** para escoger en la paleta de comandos una de las pull requests abiertas de su proyecto, incluidos los borradores. La opción solo aparece cuando ese proyecto tiene al menos una pull request que vincular. Con varias incidencias seleccionadas, **Acciones** ofrece la misma opción para toda la selección, y **Vincular las demás incidencias a #N** cuando algunas ya tienen la pull request N. **Vincular a una pull request** deja de ofrecerse en cuanto una incidencia seleccionada tiene alguna pull request vinculada; **Desvincular N incidencias de sus pull requests** quita primero todos los vínculos de la selección, después de que lo confirmes. Los vínculos aparecen al instante en las tarjetas, y un vínculo rechazado desaparece cuando el tablero se actualiza. Una tarjeta con una pull request abierta muestra su número, coloreado según su estado, y su preparación para la fusión, el mismo indicador que en **Revisión de código**.
 
 En **Ajustes de la cuenta → Incidencias → Iniciar una incidencia**, **Iniciar la incidencia o la tarea cuando copio su prompt** pasa a «En curso» una incidencia o una tarea del cuaderno que aún no ha empezado cuando copias su prompt. Déjalo desactivado si solo copias prompts para leerlos.
 

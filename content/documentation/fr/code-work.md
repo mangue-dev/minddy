@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
-  "sourceRevision": 19,
+  "revision": 20,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -48,14 +48,15 @@
       "components/markdown-image.tsx",
       "components/pull-requests/pr-image-diff.tsx",
       "components/image-viewer.tsx",
-      "components/issue-card.tsx"
+      "components/issue-card.tsx",
+      "lib/palette-picker.ts"
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 20,
+    "fact": "agent:claude-code (content pickers moved to the command palette (MIN-844): Link an issue and Link to a pull request pickers checked against lib/palette-picker.ts, components/palette-picker-rows.tsx, components/pull-requests/pr-link-issue.tsx and components/pull-requests/pr-link-target-picker.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show these pickers)",
+    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "issues",
@@ -78,7 +79,7 @@
       "src": "/documentation/fr/review-pull-requests-workflow.png",
       "alt": "Onglet Changements de la PR de démonstration ouverte, avec le diff de greeting et un avis d’autorisation GitHub indisponible.",
       "caption": "PR de démonstration qui reste ouverte, sans fusion. Le diff supprime les espaces autour du nom et utilise World pour une valeur vide. Cette instance ne peut pas demander l’autorisation utilisateur GitHub ; le libellé de disponibilité ne donne pas le droit de fusionner et ne prouve pas que la CI du fournisseur a réussi.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -113,9 +114,9 @@ Le contenu du prompt, la suggestion de branche et les règles de langue sont dé
 
 ### Garder le travail lié au ticket {#link-work}
 
-Lorsque le dépôt est lié au projet, conservez l’identifiant du ticket dans le nom de branche, le titre de la pull request ou une ligne `Fixes MIN-42`. Minddy rattache alors la pull request au ticket, et les prompts suivants demandent à l’agent de poursuivre la pull request ouverte sur sa branche. Pour rattacher un ticket à la main, utilisez **Lier un ticket** sur la pull request. Sa recherche accepte un identifiant ou des mots du titre, et une description liste aussi des tickets du projet trouvés [par le sens](/docs/navigation#search-by-meaning) sous **Liés par le sens**.
+Lorsque le dépôt est lié au projet, conservez l’identifiant du ticket dans le nom de branche, le titre de la pull request ou une ligne `Fixes MIN-42`. Minddy rattache alors la pull request au ticket, et les prompts suivants demandent à l’agent de poursuivre la pull request ouverte sur sa branche. Pour rattacher un ticket à la main, utilisez **Lier un ticket** sur la pull request : la palette de commandes s’ouvre sur les tickets du projet, et le ticket choisi est lié après confirmation. Sa recherche accepte un identifiant ou des mots du titre, et une description liste aussi des tickets du projet trouvés [par le sens](/docs/navigation#search-by-meaning) sous **Liés par le sens**.
 
-Depuis un board, faites un clic droit sur un ticket sans pull request ouverte et choisissez **Lier à une pull request** pour choisir l’une des pull requests ouvertes de son projet, brouillons compris. L’entrée n’apparaît que si ce projet en a au moins une à lier. Avec plusieurs tickets sélectionnés, **Actions** propose le même choix pour toute la sélection, ainsi que **Lier les autres tickets à #N** quand certains ont déjà la pull request N. **Lier à une pull request** n’est plus proposé dès qu’un ticket sélectionné a une pull request liée ; **Délier N tickets de leurs pull requests** retire d’abord tous les liens de la sélection, après votre confirmation. Les liens s’affichent tout de suite sur les cartes, et un lien refusé disparaît au rafraîchissement du board. Une carte avec une pull request ouverte affiche son numéro, coloré selon son état, et son état de fusion, le même indicateur que dans **Code review**.
+Depuis un board, faites un clic droit sur un ticket sans pull request ouverte et choisissez **Lier à une pull request** pour choisir dans la palette de commandes l’une des pull requests ouvertes de son projet, brouillons compris. L’entrée n’apparaît que si ce projet en a au moins une à lier. Avec plusieurs tickets sélectionnés, **Actions** propose le même choix pour toute la sélection, ainsi que **Lier les autres tickets à #N** quand certains ont déjà la pull request N. **Lier à une pull request** n’est plus proposé dès qu’un ticket sélectionné a une pull request liée ; **Délier N tickets de leurs pull requests** retire d’abord tous les liens de la sélection, après votre confirmation. Les liens s’affichent tout de suite sur les cartes, et un lien refusé disparaît au rafraîchissement du board. Une carte avec une pull request ouverte affiche son numéro, coloré selon son état, et son état de fusion, le même indicateur que dans **Code review**.
 
 Dans **Paramètres du compte → Tickets → Démarrer un ticket**, **Démarrer le ticket ou la tâche quand je copie son prompt** passe en cours un ticket ou une tâche de carnet pas encore démarré lorsque vous copiez son prompt. Laissez cette option désactivée si vous copiez des prompts uniquement pour les lire.
 

@@ -69,6 +69,7 @@ import { ObjectiveStatusIndicator, StatusIndicator, PriorityIndicator } from "@/
 import { OBJECTIVE_TEXT, objectiveTextStyle } from "@/components/objective-label";
 import { useBulkActions } from "@/lib/bulk-actions-context";
 import { useBulkPaletteMode } from "@/lib/use-bulk-palette-mode";
+import { usePalettePickerMode } from "@/lib/palette-picker";
 import { displayName } from "@/lib/display-name";
 import { fetchIssueApi, updateIssueApi } from "@/lib/issues-api";
 import { setIssueCategoriesApi } from "@/lib/categories-api";
@@ -298,7 +299,13 @@ export function CommandPalette({
   // configurable fields open the inline form (the “submenu”, like
   // “Change the theme”).
   const { request: bulkRequest } = useBulkActions();
-  const showBulk = useBulkPaletteMode({ open, destinationOnly, onOpenChange });
+  const bulkMode = useBulkPaletteMode({ open, destinationOnly, onOpenChange });
+
+  // Content picker (MIN-844): a surface asked the palette to pick what it
+  // links (lib/palette-picker.ts). Its rows, groups and placeholder replace
+  // everything else, bulk mode included, until the palette closes.
+  const picker = usePalettePickerMode({ open, destinationOnly, onOpenChange });
+  const showBulk = bulkMode && !picker;
 
   // One warmup attempt per destination while the palette stays mounted:
   // repeated hovers and keyboard passes over the same row cost nothing.
@@ -1363,16 +1370,24 @@ export function CommandPalette({
   // search index (and its access rules) does. Not in bulk mode, nor in the
   // new-tab destination launcher.
   const tPicker = useTranslations("Picker");
-  const semanticEnabled = open && !showBulk && !destinationOnly;
+  // A picker searches by meaning among its own issue rows, when it asks to.
+  const semanticEnabled = open && (picker
+    ? picker.semanticProjectId !== undefined
+    : !showBulk && !destinationOnly);
+  const semanticSource = picker ? picker.items : searchItems;
   // Subscribed only while it can be used; the categories and supplemental
   // results below are memoized, so a keystroke re-renders this host without
-  // handing the palette new props (which would rescore every item).
-  const paletteQuery = usePaletteStore((state) => (semanticEnabled ? state.query : ""));
-  const { ids: semanticIds, pending: semanticPending, answered: semanticAnswered } = useSemanticIssueSearch(paletteQuery, { projectId: null, enabled: semanticEnabled });
+  // handing the palette new props (which would rescore every item). A
+  // picker's creation row is titled with the query, so it subscribes too.
+  const paletteQuery = usePaletteStore((state) => (semanticEnabled || picker?.create ? state.query : ""));
+  const { ids: semanticIds, pending: semanticPending, answered: semanticAnswered } = useSemanticIssueSearch(
+    semanticEnabled ? paletteQuery : "",
+    { projectId: picker?.semanticProjectId ?? null, enabled: semanticEnabled },
+  );
   const semanticItems = useMemo(() => {
     if (!semanticEnabled || semanticIds.length === 0) return [];
     const issueRows = new Map(
-      searchItems.filter((item) => item.entityType === "issue").map((item) => [item.id, item])
+      semanticSource.filter((item) => item.entityType === "issue").map((item) => [item.id, item])
     );
     return semanticExtras(
       semanticIds.map((id) => `issue-${id}`),
@@ -1381,15 +1396,38 @@ export function CommandPalette({
     ).map((item) => ({ ...item, filterCategory: SEMANTIC_CATEGORY }))
       // Same order as the text rows, by similarity within a tier (MIN-726).
       .sort((a, b) => (a.searchTier ?? 1) - (b.searchTier ?? 1));
-  }, [semanticEnabled, semanticIds, searchItems]);
+  }, [semanticEnabled, semanticIds, semanticSource]);
+
+  // The picker's creation row (a new page titled with the query): a plain row
+  // while nothing is typed, then appended after the matches, which it never
+  // has to compete with.
+  const pickerCreate = picker?.create;
+  const pickerCreateQuery = pickerCreate ? paletteQuery.trim() : "";
+  const pickerCreateItem = useMemo<CpPaletteItem | null>(() => {
+    if (!pickerCreate) return null;
+    return {
+      id: pickerCreate.id,
+      title: pickerCreate.label(pickerCreateQuery),
+      icon: pickerCreate.icon,
+      filterCategory: pickerCreate.category,
+      execute: () => pickerCreate.onCreate(pickerCreateQuery),
+    };
+  }, [pickerCreate, pickerCreateQuery]);
 
   // In bulk mode, the palette displays the selection options instead of the
   // normal content (navigation, creation, etc.).
-  const paletteItems = showBulk ? bulkItems : searchItems;
+  const pickerItems = useMemo(
+    () => picker
+      ? [...picker.items, ...(pickerCreateItem && !pickerCreateQuery ? [pickerCreateItem] : [])]
+      : null,
+    [picker, pickerCreateItem, pickerCreateQuery],
+  );
+  const paletteItems = pickerItems ?? (showBulk ? bulkItems : searchItems);
   const semanticLabel = tPicker("relatedByMeaning");
   const hasSemanticItems = semanticItems.length > 0;
   const paletteCategories = useMemo(() => {
     const semanticCategory = { id: SEMANTIC_CATEGORY, label: semanticLabel };
+    if (picker) return [...picker.categories, semanticCategory];
     if (showBulk) return bulkCategories;
     if (navigationSearch) {
       return [
@@ -1398,9 +1436,16 @@ export function CommandPalette({
       ];
     }
     return [...categories, semanticCategory];
-  }, [showBulk, bulkCategories, navigationSearch, categories, searchItems, hasSemanticItems, semanticLabel]);
+  }, [picker, showBulk, bulkCategories, navigationSearch, categories, searchItems, hasSemanticItems, semanticLabel]);
   const supplemental = useMemo(
-    () => (showBulk ? undefined : {
+    () => picker ? {
+      items: [...semanticItems, ...(pickerCreateItem && pickerCreateQuery ? [pickerCreateItem] : [])],
+      status: semanticPending
+        ? <SemanticSearchingHint />
+        : picker.status ?? (semanticAnswered && semanticItems.length === 0 && !pickerCreateItem
+          ? <SemanticSearchingHint status="none" />
+          : undefined),
+    } : showBulk ? undefined : {
       items: semanticItems,
       categories: ["issues"],
       status: semanticPending
@@ -1408,14 +1453,16 @@ export function CommandPalette({
         : semanticAnswered && semanticItems.length === 0
           ? <SemanticSearchingHint status="none" />
           : undefined,
-    }),
-    [showBulk, semanticItems, semanticPending, semanticAnswered],
+    },
+    [picker, pickerCreateItem, pickerCreateQuery, showBulk, semanticItems, semanticPending, semanticAnswered],
   );
 
   // The placeholder follows the mode: the new-tab launcher asks for a
   // destination, bulk mode names the selection it acts on, and the usual
   // generic line applies otherwise (host override of the shell's own string).
+  const pickerPlaceholder = picker?.placeholder;
   const paletteStrings = useMemo<PaletteStrings | undefined>(() => {
+    if (pickerPlaceholder) return { "search.placeholder": pickerPlaceholder };
     if (mobile && !showBulk) {
       return { "search.placeholder": tNav("searchPlaceholder") };
     }
@@ -1428,7 +1475,7 @@ export function CommandPalette({
       return { "search.placeholder": tAction("newTabSearchPlaceholder") };
     }
     return undefined;
-  }, [showBulk, bulkRequest, destinationOnly, mobile, tNav, tAction]);
+  }, [pickerPlaceholder, showBulk, bulkRequest, destinationOnly, mobile, tNav, tAction]);
 
   return (
     <CommandPaletteShell
@@ -1437,13 +1484,16 @@ export function CommandPalette({
       items={paletteItems}
       supplemental={supplemental}
       categories={paletteCategories}
-      providers={navigationSearch && !showBulk ? [] : providers}
+      providers={picker || (navigationSearch && !showBulk) ? [] : providers}
       locale={locale}
       strings={paletteStrings}
       // The page project is a BOOST of relevance, not a filter: its
       // tickets and objectives go up, those of other projects remain there.
       actionContext={currentProjectId ? { contextId: currentProjectId } : undefined}
-      storagePrefix={destinationOnly ? "minddy-cp-destinations" : "minddy-cp"}
+      // A picker keeps its own usage ranks and no query history: what was
+      // linked before says nothing about the next link.
+      storagePrefix={picker ? "minddy-cp-picker" : destinationOnly ? "minddy-cp-destinations" : "minddy-cp"}
+      history={!picker}
       actionsShortcutKey=";"
       onToast={(message, type) => {
         if (type === "error") toast.error(message);
@@ -1451,7 +1501,7 @@ export function CommandPalette({
         else toast(message);
       }}
       onHoverPrefetch={handleHoverPrefetch}
-      quickAi={navigationSearch ? undefined : {
+      quickAi={navigationSearch || picker ? undefined : {
         icon: <NumoActionIcon className="size-4" />,
         onSelect: (query) => {
           // Filled query → auto-sent to Numo; empty query → the panel just

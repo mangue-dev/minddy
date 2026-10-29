@@ -40,7 +40,7 @@ import { CustomPromptDialog } from "@/components/agent/custom-prompt-dialog";
 import { IssueActionsMenu } from "@/components/issue-context-menu";
 import { useIssueMenuActions } from "@/components/use-issue-menu-actions";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
-import { RelationTargetPicker } from "@/components/relation-target-picker";
+import { RelationPalettePicker } from "@/components/palette-picker-rows";
 import {
   HIERARCHY_RELATIONS,
   hierarchyAvailable,
@@ -1325,19 +1325,28 @@ export function IssueSidePanel({
             </Tabs>
           </SidePanelBody>
 
-          <RelationTargetPicker
-            position={open && relationType ? menuPointerRef.current : null}
-            relation={relationType}
-            issues={relationCandidates}
-            objectives={relationObjectiveCandidates}
-            projectKey={projectKey}
-            onClose={() => setRelationType(null)}
-            onSelect={(targetId, targetType) => {
-              if (relationType && isHierarchyRelation(relationType)) setParentLink(relationType, targetId);
-              else if (relationType) onAddRelation(issue.id, relationType, targetId, { targetType });
-              setRelationType(null);
-            }}
-          />
+          {/* The panel menu's Relations entry: the ⌘K palette on the
+              targets of the chosen type (MIN-844). */}
+          {open && relationType ? (
+            <RelationPalettePicker
+              scope={`panel-menu-relations:${issue.id}`}
+              step={relationType}
+              issues={relationCandidates}
+              objectives={relationObjectiveCandidates}
+              projectKey={projectKey}
+              projectId={issue.project_id}
+              onPickIssue={(type, targetId) => {
+                if (isHierarchyRelation(type)) setParentLink(type, targetId);
+                else onAddRelation(issue.id, type, targetId, { targetType: "issue" });
+                setRelationType(null);
+              }}
+              onPickObjective={(type, objectiveId) => {
+                if (!isHierarchyRelation(type)) onAddRelation(issue.id, type, objectiveId, { targetType: "objective" });
+                setRelationType(null);
+              }}
+              onClose={() => setRelationType(null)}
+            />
+          ) : null}
 
           <IssueShortcutMenu
             state={menuState}

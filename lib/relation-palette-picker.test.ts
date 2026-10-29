@@ -1,10 +1,9 @@
 import { readFileSync } from "node:fs";
-import { issueTierKeyword } from "@/lib/issue-search-order";
 import { resolve } from "node:path";
 import * as React from "react";
 import ts from "typescript-api";
 import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
-import { RelationTargetPicker } from "@/components/relation-target-picker";
+import { relationPickerRequest, type RelationPickerLabels, type RelationPickerOptions } from "@/components/palette-picker-rows";
 import type { IssueCard } from "@/components/issue-card";
 import type { KanbanBoard } from "@/components/kanban-board";
 import type { KanbanColumn } from "@/components/kanban-column";
@@ -19,26 +18,17 @@ import { hasDirectRelation } from "./issue-shortcut-targets";
 import { hierarchyCandidates, hierarchyPatches, isHierarchyRelation } from "./issue-hierarchy";
 import en from "@/messages/en.json";
 
-vi.mock("next-intl", () => ({
-  useTranslations: () => (key: keyof typeof en.Relations) => en.Relations[key],
-}));
-vi.mock("@/components/ui/command", async (importOriginal) => ({
-  ...(await importOriginal<Record<string, unknown>>()),
-  CommandGroup: "group",
-  CommandItem: "item",
-}));
-vi.mock("@/components/command-anchor", () => ({ CommandAnchor: "anchor" }));
-// Picker order has its own suite (lib/objective-order.test.ts); these tests
-// render without a QueryClient, so the hook keeps the fixture order.
-vi.mock("@/lib/use-ordered-objectives", () => ({ useOrderedObjectives: <T,>(objectives: T[]) => objectives }));
 vi.mock("@/components/issue-indicators", () => ({
-  StatusIndicator: "issue-status", ObjectiveStatusIndicator: "objective-status",
+  StatusIndicator: "issue-status", ObjectiveStatusIndicator: "objective-status", RelationIcon: "relation-icon",
 }));
 
 beforeEach(() => vi.stubGlobal("React", React));
 afterEach(() => vi.unstubAllGlobals());
 
-type PickerProps = React.ComponentProps<typeof RelationTargetPicker>;
+type PickIssue = RelationPickerOptions["onPickIssue"];
+type PickObjective = RelationPickerOptions["onPickObjective"];
+/** A choice in the card's relation picker: an issue or an objective row. */
+type CardSelect = (targetId: string, kind: "issue" | "objective") => void;
 type CardAdd = NonNullable<React.ComponentProps<typeof IssueCard>["onAddRelation"]>;
 type ProjectAdd = React.ComponentProps<typeof KanbanBoard>["onAddRelation"];
 type ProjectColumnAdd = React.ComponentProps<typeof KanbanColumn>["onAddRelation"];
@@ -81,16 +71,23 @@ function evaluate<T>(expression: string, scope: Record<string, unknown>): T {
   return new Function(...Object.keys(scope), `${compiled}\nreturn result;`)(...Object.values(scope)) as T;
 }
 
-function elements(node: React.ReactNode): React.ReactElement<Record<string, unknown>>[] {
-  return React.Children.toArray(node).flatMap((child) => {
-    if (!React.isValidElement<Record<string, unknown>>(child)) return [];
-    // The objective rows render from a child component of the picker: expand
-    // it, as the picker is called as a plain function here.
-    if (typeof child.type === "function" && child.type.name === "ObjectiveTargetItems") {
-      return elements((child.type as (props: Record<string, unknown>) => React.ReactNode)(child.props));
-    }
-    return [child, ...elements(child.props.children as React.ReactNode)];
-  });
+const labels: RelationPickerLabels = {
+  issues: en.Issue.entityPlural,
+  objectives: en.Relations.objectives,
+  loading: en.Common.loading,
+  pick: (type) => en.Relations[`pick_${type}`],
+};
+
+/** The card's request for `relation`, wired to its own pick handlers. */
+function cardRequest(relation: RelationMenuKind, select: CardSelect, extra: Partial<RelationPickerOptions> = {}) {
+  return relationPickerRequest({
+    scope: "card", step: relation, projectKey: "MIN", projectId: issue.project_id,
+    ...candidates(relation),
+    onPickIssue: (_type, targetId) => select(targetId, "issue"),
+    onPickObjective: (_type, objectiveId) => select(objectiveId, "objective"),
+    onClose: vi.fn(),
+    ...extra,
+  }, labels);
 }
 
 const issue = { id: "issue", project_id: "project", number: 1, title: "Source", status: "todo" } as Issue;
@@ -119,8 +116,8 @@ function candidates(
   const relationObjectiveCandidates = evaluate<Objective[]>(initializer("issue-card.tsx", "relationObjectiveCandidates"), scope);
   const values = { relationCandidates, relationObjectiveCandidates };
   return {
-    issues: evaluate<Issue[]>(prop("issue-card.tsx", "RelationTargetPicker", "issues"), values),
-    objectives: evaluate<Objective[]>(prop("issue-card.tsx", "RelationTargetPicker", "objectives"), values),
+    issues: evaluate<Issue[]>(prop("issue-card.tsx", "RelationPalettePicker", "issues"), values),
+    objectives: evaluate<Objective[]>(prop("issue-card.tsx", "RelationPalettePicker", "objectives"), values),
   };
 }
 
@@ -131,17 +128,23 @@ function cardSelection(
   relationsById: Record<string, ChipRelation[]> = {},
   setParentFromTargets = vi.fn(),
 ) {
-  const setRelationType = vi.fn();
+  const closeRelationPicker = vi.fn();
   const addRelationFromTargets = evaluate(initializer("issue-card.tsx", "addRelationFromTargets"), {
     onAddRelation, hasDirectRelation,
     linked: (run: () => void) => run(),
     relationTargets: () => targets,
     relationsOf: (id: string) => relationsById[id],
   });
-  const onSelect = evaluate<PickerProps["onSelect"]>(prop("issue-card.tsx", "RelationTargetPicker", "onSelect"), {
-    issue, relationType, addRelationFromTargets, setRelationType, isHierarchyRelation, setParentFromTargets,
-  });
-  return { onSelect, setRelationType };
+  const scope = { addRelationFromTargets, closeRelationPicker, isHierarchyRelation, setParentFromTargets };
+  const pickIssue = evaluate<PickIssue>(prop("issue-card.tsx", "RelationPalettePicker", "onPickIssue"), scope);
+  const pickObjective = evaluate<PickObjective>(prop("issue-card.tsx", "RelationPalettePicker", "onPickObjective"), scope);
+  // The card only shows targets once a relation is chosen.
+  const onSelect: CardSelect = (targetId, kind) => {
+    if (!relationType) return;
+    if (kind === "issue") pickIssue(relationType, targetId, other);
+    else pickObjective(relationType, targetId, objective);
+  };
+  return { onSelect, closeRelationPicker };
 }
 
 function projectHandler(onAddRelation: ProjectAdd): CardAdd {
@@ -160,7 +163,7 @@ function globalHandler(onAddRelation: GlobalAdd): CardAdd {
   return evaluate<CardAdd>(prop("global-kanban-column.tsx", "IssueCard", "onAddRelation"), { bound });
 }
 
-describe("card relation target picker", () => {
+describe("card relation picker (MIN-844)", () => {
   it("preserves endpoint kinds in every callback contract", () => {
     expectTypeOf<Parameters<CardAdd>[3]>().toEqualTypeOf<RelationKinds | undefined>();
     expectTypeOf<Parameters<ProjectAdd>[3]>().toEqualTypeOf<RelationKinds | undefined>();
@@ -183,26 +186,33 @@ describe("card relation target picker", () => {
     }
   });
 
-  it.each(types)("sends actual issue and objective picker selections through both boards for %s", (relation) => {
+  it.each(types)("sends actual issue and objective palette rows through both boards for %s", (relation) => {
     for (const board of ["project", "global"] as const) {
       const add = vi.fn();
       const handler = board === "project" ? projectHandler(add) : globalHandler(add);
-      const { onSelect, setRelationType } = cardSelection(relation, handler);
-      const onClose = vi.fn();
-      const tree = RelationTargetPicker({ position: { x: 10, y: 20 }, relation, ...candidates(relation), projectKey: "MIN", onSelect, onClose });
-      const nodes = elements(tree);
-      expect(nodes.some((node) => node.props.heading === en.Relations.objectives)).toBe(true);
-      expect(nodes.some((node) => node.props.heading === en.Relations[relation])).toBe(true);
-      for (const [target, kind, keywords] of [[other.id, "issue", ["MIN-2", other.title, issueTierKeyword(other.status)]], [objective.id, "objective", [objective.name]]] as const) {
-        const item = nodes.find((node) => node.props.value === target)!;
-        expect(item.props.keywords).toEqual(keywords);
-        (item.props.onSelect as () => void)();
+      const { onSelect, closeRelationPicker } = cardSelection(relation, handler);
+      const request = cardRequest(relation, onSelect);
+      // The placeholder asks the question; the rows are grouped by kind.
+      expect(request.placeholder).toBe(en.Relations[`pick_${relation}`]);
+      expect(request.categories.map((category) => category.label)).toEqual([en.Issue.entityPlural, en.Relations.objectives]);
+      expect(request.semanticProjectId).toBe(issue.project_id);
+      for (const [rowId, target, kind] of [[`issue-${other.id}`, other.id, "issue"], [`objective-${objective.id}`, objective.id, "objective"]] as const) {
+        const row = request.items.find((item) => item.id === rowId)!;
+        if (kind === "issue") {
+          expect(row).toMatchObject({ title: other.title, contextLabel: "MIN-2", exactKeywords: ["MIN-2", "2"], entityType: "issue" });
+        } else {
+          expect(row).toMatchObject({ title: objective.name, entityType: "objective" });
+        }
+        expect(row.execute?.()).not.toBe(false);
         const expected = [issue.id, relation, target, ...(board === "global" ? [issue.project_id] : []), { targetType: kind }];
         expect(add).toHaveBeenLastCalledWith(...expected);
-        expect(setRelationType).toHaveBeenLastCalledWith(null);
       }
-      expect(onClose).toHaveBeenCalledTimes(2);
+      expect(closeRelationPicker).toHaveBeenCalledTimes(2);
     }
+  });
+
+  it("names the relation in each step's key, so a new type clears the query", () => {
+    expect(cardRequest("blocks", vi.fn()).key).not.toBe(cardRequest("related", vi.fn()).key);
   });
 
   it("offers a target while one selected ticket can still gain it, never a selected ticket (MIN-795)", () => {
@@ -252,14 +262,14 @@ describe("card relation target picker", () => {
     expect(writes).toHaveBeenCalledWith(other.id, { parent_id: issue.id });
   });
 
-  it("stays closed without a position or relation and handles no objectives", () => {
-    const props: PickerProps = { position: null, relation: "related", issues: [other], objectives: [], projectKey: "MIN", onClose: vi.fn(), onSelect: vi.fn() };
-    expect(RelationTargetPicker(props)).toBeNull();
-    expect(RelationTargetPicker({ ...props, position: { x: 0, y: 0 }, relation: null })).toBeNull();
+  it("lists no target before a relation is chosen and handles no objectives", () => {
     expect(candidates(null)).toEqual({ issues: [], objectives: [] });
-    const nodes = elements(RelationTargetPicker({ ...props, position: { x: 0, y: 0 } }));
-    expect(nodes.some((node) => node.props.heading === en.Relations.objectives)).toBe(false);
-    expect(nodes.some((node) => node.props.value === other.id)).toBe(true);
+    const request = relationPickerRequest({
+      scope: "card", step: "related", issues: [other], objectives: [], projectKey: "MIN", projectId: null,
+      onPickIssue: vi.fn(), onPickObjective: vi.fn(), onClose: vi.fn(),
+    }, labels);
+    expect(request.items.map((item) => item.id)).toEqual([`issue-${other.id}`]);
+    expect(request.semanticProjectId).toBeNull();
     const add = vi.fn();
     cardSelection(null, add).onSelect(objective.id, "objective");
     expect(add).not.toHaveBeenCalled();

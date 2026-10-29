@@ -4,15 +4,15 @@
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, AttachmentIcon, Cancel01Icon, Delete02Icon, Download01Icon, Edit04Icon, File02Icon, Link02Icon, LinkSquare02Icon, ViewIcon } from "@hugeicons/core-free-icons";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "@/components/app-link";
 import { isPlainNavigationClick } from "@/components/editor-node-link";
 import { useOptionalPagePanelActions } from "@/lib/page-panel-context";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { CommandEmpty, CommandGroup, CommandItem, CommandSeparator } from "@/components/ui/command";
-import { SearchMenu } from "@/components/search-menu";
+import { PickerLoading, pagePickerRow } from "@/components/palette-picker-rows";
+import { usePalettePicker, type PalettePickerRequest } from "@/lib/palette-picker";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -176,11 +176,10 @@ export function AddResourceButton({
   const t = useTranslations("Resources");
   const inputRef = useRef<HTMLInputElement>(null);
   const [linkOpen, setLinkOpen] = useState(false);
-  // The page picker hangs under this button once the menu has closed: the
-  // anchor point is read from the trigger at that moment.
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  // The page picker opens in the ⌘K palette once the menu has closed
+  // (MIN-844), so the menu does not hand focus back to its trigger over it.
   const pagePendingRef = useRef(false);
-  const [pageAnchor, setPageAnchor] = useState<{ x: number; y: number } | null>(null);
+  const [pagePickerOpen, setPagePickerOpen] = useState(false);
   const pages = !!onPage && !!projectId;
   const createContextPage = useCreateContextPage();
 
@@ -202,7 +201,6 @@ export function AddResourceButton({
           <TooltipTrigger asChild>
             <DropdownMenuTrigger asChild>
               <Button
-                ref={triggerRef}
                 type="button"
                 variant="ghost"
                 size="icon-sm"
@@ -225,8 +223,7 @@ export function AddResourceButton({
             // to the trigger, whose refocus would read as an outside click.
             pagePendingRef.current = false;
             event.preventDefault();
-            const rect = triggerRef.current?.getBoundingClientRect();
-            if (rect) setPageAnchor({ x: rect.right, y: rect.bottom + 4 });
+            setPagePickerOpen(true);
           }}
         >
           <DropdownMenuItem onSelect={() => inputRef.current?.click()}>
@@ -246,10 +243,9 @@ export function AddResourceButton({
         </DropdownMenuContent>
       </DropdownMenu>
       <AddLinkDialog open={linkOpen} onOpenChange={setLinkOpen} onSubmit={onLink} />
-      {pages && (
-        <PagePickerMenu
-          anchor={pageAnchor}
-          onClose={() => setPageAnchor(null)}
+      {pages && pagePickerOpen && (
+        <PagePalettePicker
+          onClose={() => setPagePickerOpen(false)}
           projectId={projectId as string}
           onSelect={onPage as (page: PickedPage) => void}
           onCreate={(title) =>
@@ -304,139 +300,66 @@ export interface PickedPage {
 
 /**
  * "Choose a page": the project's wiki tree, flat in its display order, in the
- * same searchable dropdown as the app's other pickers (the relation picker's
- * issue search, for one) — a popover under the "+" on desktop, a bottom sheet
- * on phones.
+ * ⌘K palette (MIN-844) — like every content picker, its placeholder says what
+ * is being picked.
  *
  * The tree comes from the project cache ([use-pages-query](../lib/use-pages-query.ts)),
  * the one that the sidebar, the breadcrumbs and the subpage block already read: a
  * page renamed elsewhere is searched here under its new name, without another
- * request. The cache is only requested when the menu OPENS (the options mount
- * with it) — the sidebar of a ticket does not have to load the wiki to display
- * a button.
+ * request. Mounted only while the picker is open, so the sidebar of a ticket
+ * does not have to load the wiki to display a button.
  *
- * Its last line creates a page instead (MIN-778), titled with the search text
+ * FLAT list: pages scroll in sidebar order, without nesting. What we're doing
+ * here is CHOOSING a page, not finding our way in the tree — and a list
+ * filtered by typing loses the hierarchy from the first character anyway.
+ *
+ * Its last row creates a page instead (MIN-778), titled with the search text
  * when there is one.
  */
-function PagePickerMenu({
-  anchor,
+function PagePalettePicker({
   onClose,
   projectId,
   onSelect,
   onCreate,
 }: {
-  anchor: { x: number; y: number } | null;
   onClose: () => void;
   projectId: string;
   onSelect: (page: PickedPage) => void;
   onCreate: (title: string) => void;
-}) {
+}): null {
   const t = useTranslations("Resources");
-  const [query, setQuery] = useState("");
-  const close = () => {
-    setQuery("");
-    onClose();
-  };
-  const title = query.trim();
-  return (
-    <SearchMenu
-      open={anchor !== null}
-      onOpenChange={(next) => {
-        if (!next) close();
-      }}
-      position={anchor}
-      align="end"
-      modal
-      hideEmpty
-      searchPlaceholder={t("pageSearchPlaceholder")}
-      searchValue={query}
-      onSearchValueChange={setQuery}
-      contentClassName="w-72"
-    >
-      {anchor && (
-        <>
-          <PageOptions
-            projectId={projectId}
-            onSelect={(page) => {
-              close();
-              onSelect(page);
-            }}
-          />
-          {/* forceMount on the group and the item: cmdk would hide both
-              exactly when the search matches no page, which is when this
-              line matters most. */}
-          <CommandSeparator alwaysRender className="my-1" />
-          <CommandGroup forceMount>
-            <CommandItem
-              forceMount
-              value="__new_page__"
-              onSelect={() => {
-                close();
-                onCreate(title);
-              }}
-            >
-              <HugeiconsIcon icon={Add01Icon} className="size-4 shrink-0 text-muted-foreground" />
-              <span className="truncate">
-                {title ? t("newPageNamed", { title }) : t("newPage")}
-              </span>
-            </CommandItem>
-          </CommandGroup>
-        </>
-      )}
-    </SearchMenu>
-  );
-}
-
-/**
- * The list itself — separated so that the request only starts once the
- * menu is opened (the hook is only mounted then).
- *
- * FLAT list: pages scroll in sidebar order, but without
- * nesting removal. What we're doing here is CHOOSING a page, not finding your way to
- * in the tree — and a list that you filter by typing loses the
- * hierarchy from the first character anyway, leaving only a meaningless offset.
- */
-function PageOptions({
-  projectId,
-  onSelect,
-}: {
-  projectId: string;
-  onSelect: (page: PickedPage) => void;
-}) {
-  const t = useTranslations("Resources");
+  const tCommon = useTranslations("Common");
   const { tree, loading } = usePagesQuery(projectId);
-  const rows = flattenPageTree(tree);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-6">
-        <Spinner className="size-4" />
-      </div>
-    );
-  }
-
-  return (
-    <CommandGroup>
-      {/* Only an empty wiki says so: a search that matches nothing is
-          answered by the creation line below. */}
-      {rows.length === 0 && <CommandEmpty>{t("noPages")}</CommandEmpty>}
-      {rows.map((page) => (
-        <CommandItem
-          key={page.id}
-          value={page.id}
-          keywords={[page.title]}
-          onSelect={() =>
-            onSelect({ id: page.id, title: page.title, icon: page.icon })
-          }
-        >
-          <span className="w-4 shrink-0 text-center">
-            {page.icon ?? <HugeiconsIcon icon={File02Icon} className="inline size-3.5 opacity-70" />}
-          </span>
-          <span className="truncate">{page.title.trim() || t("untitledPage")}</span>
-        </CommandItem>
-      ))}
-    </CommandGroup>
-  );
+  const handlers = useRef({ onClose, onSelect, onCreate });
+  handlers.current = { onClose, onSelect, onCreate };
+  const request = useMemo<PalettePickerRequest>(() => {
+    const rows = flattenPageTree(tree);
+    return {
+      key: `resource-page:${projectId}`,
+      placeholder: t("pageSearchPlaceholder"),
+      categories: [
+        { id: "resource-pages", label: t("addPage") },
+        { id: "resource-new-page", label: t("newPage") },
+      ],
+      items: rows.map((page) =>
+        pagePickerRow(page, t("untitledPage"), "resource-pages", () => {
+          handlers.current.onSelect({ id: page.id, title: page.title, icon: page.icon });
+        })),
+      // Only an empty wiki says so: a search that matches nothing is answered
+      // by the creation row.
+      status: loading ? <PickerLoading label={tCommon("loading")} /> : rows.length === 0 ? t("noPages") : undefined,
+      create: {
+        id: "resource-new-page",
+        category: "resource-new-page",
+        icon: <HugeiconsIcon icon={Add01Icon} className="size-4" />,
+        label: (title) => (title ? t("newPageNamed", { title }) : t("newPage")),
+        onCreate: (title) => handlers.current.onCreate(title),
+      },
+      onClose: () => handlers.current.onClose(),
+    };
+  }, [projectId, tree, loading, t, tCommon]);
+  usePalettePicker(request);
+  return null;
 }
 
 /**

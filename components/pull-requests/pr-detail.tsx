@@ -746,21 +746,18 @@ export function PrDetail({
   }, [pr]);
   const [editingTitle, setEditingTitle] = useState(false);
   const [linkIssueOpen, setLinkIssueOpen] = useState(false);
-  const [linkIssuePosition, setLinkIssuePosition] = useState<{ x: number; y: number }>();
+  // The overflow entry opens the issue picker once its menu has closed.
+  const [linkIssuePending, setLinkIssuePending] = useState(false);
   const [readinessOpen, setReadinessOpen] = useState(false);
   const [readinessPosition, setReadinessPosition] = useState<{ x: number; y: number }>();
   const moreActionsRef = useRef<HTMLButtonElement>(null);
-  const openLinkIssueFromMenu = () => {
-    const bounds = moreActionsRef.current?.getBoundingClientRect();
-    if (!bounds) return;
-    setLinkIssuePosition({ x: bounds.right, y: bounds.bottom });
-  };
+  const openLinkIssueFromMenu = () => setLinkIssuePending(true);
   const openReadinessFromMenu = () => {
     const bounds = moreActionsRef.current?.getBoundingClientRect();
     if (bounds) setReadinessPosition({ x: bounds.right, y: bounds.bottom });
   };
   const onMoreCloseAutoFocus = (event: Event) => {
-    if (linkIssuePosition) {
+    if (linkIssuePending) {
       event.preventDefault();
       setLinkIssueOpen(true);
     } else if (readinessPosition) {
@@ -1518,12 +1515,11 @@ export function PrDetail({
               open={linkIssueOpen}
               onOpenChange={(open) => {
                 setLinkIssueOpen(open);
-                if (!open && linkIssuePosition) {
-                  setLinkIssuePosition(undefined);
+                if (!open && linkIssuePending) {
+                  setLinkIssuePending(false);
                   moreActionsRef.current?.focus();
                 }
               }}
-              position={linkIssuePosition}
               triggerClassName="hidden"
               prId={item.prId}
               linkedIssueIds={linkedIssues(item).map((issue) => issue.id)}

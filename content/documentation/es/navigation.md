@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 20,
-  "sourceRevision": 19,
+  "revision": 21,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -64,12 +64,14 @@
       "lib/keyboard/find-shortcut.ts",
       "lib/palette-workspace-groups.ts",
       "components/inbox-content.tsx",
-      "lib/inbox-launcher.ts"
+      "lib/inbox-launcher.ts",
+      "lib/palette-picker.ts",
+      "components/palette-picker-rows.tsx"
     ]
   },
   "review": {
-    "revision": 20,
-    "fact": "agent:claude-code (palette search of routines, pull requests, views and inbox notifications (MIN-846) checked against lib/palette-workspace-groups.ts, components/app-shell-chrome.tsx, components/inbox-content.tsx and lib/inbox-launcher.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the new rows)",
+    "revision": 21,
+    "fact": "agent:claude-code (content pickers moved to the command palette (MIN-844): new paragraph on picking what to link in the palette checked against lib/palette-picker.ts, components/palette-picker-rows.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show a picker)",
     "language": "agent:claude-code (es new paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
@@ -92,7 +94,7 @@
       "src": "/documentation/es/work-navigation.png",
       "alt": "Navegación del proyecto junto al tablero de incidencias de demostración.",
       "caption": "La barra del proyecto da acceso a incidencias, objetivos, páginas y clasificación de entradas.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -109,7 +111,7 @@
       "src": "/documentation/es/work-search.png",
       "alt": "Resultados de búsqueda del identificador de una incidencia de demostración.",
       "caption": "La paleta encuentra la incidencia por identificador junto a las páginas del proyecto; abrir un resultado conserva sus reglas de acceso.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -167,6 +169,8 @@ La aplicación de escritorio añade pestañas nativas y un selector de servidor 
 Abre la paleta de comandos desde el control de búsqueda de la navegación. Busca un título distintivo o un identificador de incidencia y elige un resultado. Los resultados se limitan al trabajo al que tu cuenta puede acceder; conocer un identificador no da acceso a otro proyecto. El comando Documentación abre el manual público en tu idioma actual.
 
 En cuanto escribes, la paleta también encuentra rutinas, pull requests, vistas y notificaciones de la **Bandeja de entrada**; no aparecen en la lista que se muestra antes de escribir. Las rutinas y las pull requests aparecen si tu plan las incluye, y las pull requests abarcan las 100 actualizadas más recientemente en tus repositorios vinculados. Las vistas abarcan **Todas las incidencias** y el proyecto en el que estás. Elegir una rutina, una pull request o una vista la abre. Elegir una notificación abre la **Bandeja de entrada** en la pestaña que la lista, **Sin leer** o **Todos**, se desplaza hasta ella y la resalta un momento; sigue sin leer hasta que la abras. Los proyectos que ocultaste quedan fuera de estos resultados.
+
+Lo que vinculas también se elige en la paleta. Añadir una relación, vincular una incidencia a una pull request o una pull request a una incidencia y adjuntar una página como recurso la abren solo con los elementos que puedes elegir, y su campo de búsqueda indica qué estás eligiendo. Para una relación, elige primero su tipo en el menú; la paleta muestra después las incidencias y objetivos que la admiten. Elegir un elemento lo vincula; Escape cierra la paleta sin vincular nada.
 
 Pulsa Command+K en macOS o Ctrl+K en Windows/Linux para abrir la paleta de comandos; Command/Ctrl+P es un atajo alternativo de la aplicación. Fuera del texto editable, ? abre la ayuda de atajos y C la creación de incidencias. Sobre una tarjeta de incidencia bajo el puntero o en sus controles de detalle compatibles, S abre el estado, P la prioridad, E el esfuerzo, A el responsable, L las categorías, D la fecha límite y O el objetivo. R añade una relación desde esos mismos lugares, en la página de un objetivo y en el formulario de nueva incidencia: elige el tipo de relación y después la otra incidencia u objetivo. Si la tarjeta forma parte de una selección, estas teclas cambian todas las incidencias seleccionadas; el responsable, el objetivo, las categorías y las relaciones solo se aplican a las incidencias seleccionadas del proyecto de esa tarjeta. Mayús+C lleva a un campo de comentario listo para escribir, con el hilo desplazado hasta su último mensaje: el de una tarjeta de incidencia bajo el puntero o de una fila bajo el puntero en la lista de objetivos, sugerencias, pull requests, páginas o clasificación, o, si no hay nada bajo el puntero, el de la incidencia, el objetivo, la sugerencia, la pull request o la página en pantalla. Una página abre para ello su panel **Actividad**. Mayús+C solo actúa sobre ese elemento, aunque la tarjeta forme parte de una selección. En la página de un objetivo y en el formulario de nuevo objetivo, S abre su estado, A su responsable, D su fecha objetivo y C su color; ahí, C no crea una incidencia. Estas acciones de una sola tecla no interceptan la escritura en campos, áreas de texto ni editores de contenido. Las secuencias de navegación como G y después H (Inicio) o G y después I (Bandeja de entrada) usan dos teclas sucesivas. G y después W lleva a Páginas solo dentro de un proyecto.
 

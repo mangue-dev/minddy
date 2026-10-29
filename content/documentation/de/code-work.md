@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 20,
-  "sourceRevision": 19,
+  "revision": 21,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -48,14 +48,15 @@
       "components/markdown-image.tsx",
       "components/pull-requests/pr-image-diff.tsx",
       "components/image-viewer.tsx",
-      "components/issue-card.tsx"
+      "components/issue-card.tsx",
+      "lib/palette-picker.ts"
     ]
   },
   "review": {
-    "revision": 20,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 21,
+    "fact": "agent:claude-code (content pickers moved to the command palette (MIN-844): Link an issue and Link to a pull request pickers checked against lib/palette-picker.ts, components/palette-picker-rows.tsx, components/pull-requests/pr-link-issue.tsx and components/pull-requests/pr-link-target-picker.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show these pickers)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "issues",
@@ -78,7 +79,7 @@
       "src": "/documentation/de/review-pull-requests-workflow.png",
       "alt": "Änderungsansicht des offenen Demonstrations-PR mit Diff der Funktion greeting und Hinweis auf fehlende GitHub-Autorisierung.",
       "caption": "Demonstrations-PR, der offen bleibt und nicht gemergt wurde. Der Diff entfernt Leerzeichen um den Namen und verwendet World bei leerem Wert. Diese Instanz kann keine GitHub-Benutzerautorisierung anfordern; der Bereitschaftsstatus verleiht keine Merge-Rechte und belegt keine erfolgreiche Anbieter-CI.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -113,9 +114,9 @@ Inhalt des Prompts, Branch-Vorschlag und Sprachregeln beschreibt [Einen Prompt f
 
 ### Die Arbeit mit dem Ticket verknüpft halten {#link-work}
 
-Wenn das Repository mit dem Projekt verknüpft ist, behalte die Ticketkennung im Branch-Namen, im Titel des Pull Requests oder in einer Zeile `Fixes MIN-42`. Minddy hängt den Pull Request dann an das Ticket, und spätere Prompts weisen den Agenten an, den offenen Pull Request auf seinem Branch fortzusetzen. Um ein Ticket von Hand anzuhängen, verwende **Ein Ticket verknüpfen** am Pull Request. Die Suche akzeptiert eine Kennung oder Wörter aus dem Titel, und eine Beschreibung listet auch [inhaltlich gefundene](/docs/navigation#search-by-meaning) Tickets des Projekts unter **Inhaltlich verwandt** auf.
+Wenn das Repository mit dem Projekt verknüpft ist, behalte die Ticketkennung im Branch-Namen, im Titel des Pull Requests oder in einer Zeile `Fixes MIN-42`. Minddy hängt den Pull Request dann an das Ticket, und spätere Prompts weisen den Agenten an, den offenen Pull Request auf seinem Branch fortzusetzen. Um ein Ticket von Hand anzuhängen, verwende **Ein Ticket verknüpfen** am Pull Request: Die Befehlspalette öffnet sich mit den Tickets des Projekts, und das gewählte Ticket wird nach einer Bestätigung verknüpft. Die Suche akzeptiert eine Kennung oder Wörter aus dem Titel, und eine Beschreibung listet auch [inhaltlich gefundene](/docs/navigation#search-by-meaning) Tickets des Projekts unter **Inhaltlich verwandt** auf.
 
-Klicke auf einem Board mit der rechten Maustaste auf ein Ticket ohne offenen Pull Request und wähle **Mit einem Pull Request verknüpfen**, um einen der offenen Pull Requests seines Projekts auszuwählen, Entwürfe eingeschlossen. Der Eintrag erscheint nur, wenn dieses Projekt mindestens einen solchen Pull Request zum Verknüpfen hat. Bei mehreren ausgewählten Tickets bietet **Aktionen** dieselbe Auswahl für die gesamte Auswahl an, sowie **Die anderen Tickets mit #N verknüpfen**, wenn einige davon bereits Pull Request N haben. **Mit einem Pull Request verknüpfen** wird nicht angeboten, sobald ein ausgewähltes Ticket einen verknüpften Pull Request hat; **Verknüpfung von N Tickets mit ihren Pull Requests lösen** entfernt nach deiner Bestätigung zuerst alle Verknüpfungen der Auswahl. Verknüpfungen erscheinen sofort auf den Karten, und eine abgelehnte Verknüpfung verschwindet, wenn das Board aktualisiert wird. Eine Karte mit offenem Pull Request zeigt dessen Nummer, nach Status eingefärbt, und seine Merge-Bereitschaft, denselben Indikator wie in **Code-Review**.
+Klicke auf einem Board mit der rechten Maustaste auf ein Ticket ohne offenen Pull Request und wähle **Mit einem Pull Request verknüpfen**, um in der Befehlspalette einen der offenen Pull Requests seines Projekts auszuwählen, Entwürfe eingeschlossen. Der Eintrag erscheint nur, wenn dieses Projekt mindestens einen solchen Pull Request zum Verknüpfen hat. Bei mehreren ausgewählten Tickets bietet **Aktionen** dieselbe Auswahl für die gesamte Auswahl an, sowie **Die anderen Tickets mit #N verknüpfen**, wenn einige davon bereits Pull Request N haben. **Mit einem Pull Request verknüpfen** wird nicht angeboten, sobald ein ausgewähltes Ticket einen verknüpften Pull Request hat; **Verknüpfung von N Tickets mit ihren Pull Requests lösen** entfernt nach deiner Bestätigung zuerst alle Verknüpfungen der Auswahl. Verknüpfungen erscheinen sofort auf den Karten, und eine abgelehnte Verknüpfung verschwindet, wenn das Board aktualisiert wird. Eine Karte mit offenem Pull Request zeigt dessen Nummer, nach Status eingefärbt, und seine Merge-Bereitschaft, denselben Indikator wie in **Code-Review**.
 
 Unter **Kontoeinstellungen → Tickets → Ticket starten** setzt **Ticket oder Aufgabe starten, wenn ich den Prompt kopiere** ein noch nicht begonnenes Ticket oder eine Notizbuchaufgabe auf „In Arbeit“, sobald du deren Prompt kopierst. Lass die Option deaktiviert, wenn du Prompts nur zum Lesen kopieren.
 

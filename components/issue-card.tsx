@@ -43,7 +43,7 @@ import {
   EffortIndicator,
 } from "@/components/issue-indicators";
 import { RelationChips, type ChipRelation } from "@/components/relation-chips";
-import { RelationTargetPicker } from "@/components/relation-target-picker";
+import { RelationPalettePicker } from "@/components/palette-picker-rows";
 import {
   HIERARCHY_RELATIONS,
   hierarchyAvailable,
@@ -52,7 +52,7 @@ import {
   isHierarchyRelation,
   type RelationMenuKind,
 } from "@/lib/issue-hierarchy";
-import { LinkablePullRequestsProbe, PrLinkTargetPicker } from "@/components/pull-requests/pr-link-target-picker";
+import { LinkablePullRequestsProbe, PullRequestPalettePicker } from "@/components/pull-requests/pr-link-target-picker";
 import { useLinkIssuesToPullRequest } from "@/lib/use-link-issues-to-pull-request";
 import type { RelationKinds } from "@/lib/use-issue-relations-query";
 import { useIssueSelection } from "@/lib/issue-selection-context";
@@ -1152,16 +1152,20 @@ const IssueCardContent = memo(function IssueCardContent({
   // Remembered position of the last right-click: the relation picker opens in
   // the same place as the menu that just closed.
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
-  // Relation being added (type chosen) → opens the target picker.
+  // The pull request picker, in the ⌘K palette (MIN-844).
   const [linkPrOpen, setLinkPrOpen] = useState(false);
   // Whether the project has an open pull request to link to; read only while
   // the menu is open, null until known.
   const [hasLinkablePr, setHasLinkablePr] = useState<boolean | null>(null);
   const linkIssuesToPullRequest = useLinkIssuesToPullRequest();
+  // Relation being added (type chosen) → the ⌘K palette lists its targets
+  // (MIN-844). The type comes from the right-click Relations entry, or from
+  // the dropdown that R opens on the hovered card (MIN-749).
   const [relationType, setRelationType] = useState<RelationMenuKind | null>(
     null,
   );
-  // R on the hovered card (MIN-749): where its relation-type menu opens.
+  const closeRelationPicker = () => setRelationType(null);
+  // R on the hovered card: where its relation-type dropdown opens.
   const [relationTypeAt, setRelationTypeAt] = useState<{ x: number; y: number } | null>(null);
   // Confirmation before trash (the “Move to trash” entry).
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -1578,39 +1582,46 @@ const IssueCardContent = memo(function IssueCardContent({
       {menuPosition && canWrite ? (
         <LinkablePullRequestsProbe projectId={issue.project_id} onChange={setHasLinkablePr} />
       ) : null}
-      <PrLinkTargetPicker
-        position={linkPrOpen ? pointerRef.current : null}
-        projectId={issue.project_id}
-        onClose={() => setLinkPrOpen(false)}
-        onSelect={(target) => {
-          void linkIssuesToPullRequest([issue.id], {
-            prId: target.prId, prNumber: target.pr_number, state: target.pr_state,
-          });
-        }}
-      />
+      {linkPrOpen ? (
+        <PullRequestPalettePicker
+          projectId={issue.project_id}
+          subject={identifier}
+          onClose={() => setLinkPrOpen(false)}
+          onSelect={(target) => {
+            setLinkPrOpen(false);
+            void linkIssuesToPullRequest([issue.id], {
+              prId: target.prId, prNumber: target.pr_number, state: target.pr_state,
+            });
+          }}
+        />
+      ) : null}
       <RelationTypePicker
         position={relationTypeAt}
         targetCount={relationTypeAt ? relationTargets().length : 1}
         hierarchy={relationTypeAt ? hierarchyRelations() : undefined}
         onClose={() => setRelationTypeAt(null)}
-        onSelect={(type) => {
-          pointerRef.current = relationTypeAt;
-          setRelationType(type);
-        }}
+        onSelect={setRelationType}
       />
-      <RelationTargetPicker
-        position={relationType ? pointerRef.current : null}
-        relation={relationType}
-        issues={relationCandidates}
-        objectives={relationObjectiveCandidates}
-        projectKey={projectKey}
-        onClose={() => setRelationType(null)}
-        onSelect={(targetId, targetType) => {
-          if (relationType && isHierarchyRelation(relationType)) setParentFromTargets(relationType, targetId);
-          else if (relationType) addRelationFromTargets(relationType, targetId, { targetType });
-          setRelationType(null);
-        }}
-      />
+      {relationType ? (
+        <RelationPalettePicker
+          scope={`card-relations:${issue.id}`}
+          step={relationType}
+          issues={relationCandidates}
+          objectives={relationObjectiveCandidates}
+          projectKey={projectKey}
+          projectId={issue.project_id}
+          onPickIssue={(type, targetId) => {
+            if (isHierarchyRelation(type)) setParentFromTargets(type, targetId);
+            else addRelationFromTargets(type, targetId, { targetType: "issue" });
+            closeRelationPicker();
+          }}
+          onPickObjective={(type, objectiveId) => {
+            if (!isHierarchyRelation(type)) addRelationFromTargets(type, objectiveId, { targetType: "objective" });
+            closeRelationPicker();
+          }}
+          onClose={closeRelationPicker}
+        />
+      ) : null}
       <CustomPromptDialog
         open={customPromptOpen}
         onOpenChange={setCustomPromptOpen}

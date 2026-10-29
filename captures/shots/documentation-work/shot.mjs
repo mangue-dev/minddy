@@ -5,7 +5,8 @@ import { openPage, shoot, CAPTURE, CAPTURE_LOCALES } from '../../lib/browser.mjs
 import { captureDocumentationControl, settleDocumentationPage } from '../../lib/documentation-frame.mjs';
 import { catalog } from '../../lib/messages.mjs';
 import { demoProse, translateDemo } from '../../lib/demo-prose.mjs';
-const project='6cd36606-c297-4920-8ce3-31b5f3697be8';
+// The preview and production demo worlds give Aurora different ids.
+const project=process.env.DOC_CAPTURE_PROJECT??'6cd36606-c297-4920-8ce3-31b5f3697be8';
 if(!['localhost','127.0.0.1'].includes(new URL(CAPTURE.baseUrl).hostname))throw new Error('Use a local candidate for documentation captures.');
 const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
 const captureDate=new Date().toISOString().slice(0,10);
@@ -28,7 +29,9 @@ async function issue(p){await p.getByText('AUR-2',{exact:true}).first().click();
 const screens=[
  ['navigation',base,null,p=>p.locator('body')],
  ['bulk-actions',base,async(p,m)=>{for(const key of ['AUR-2','AUR-3'])await p.getByText(key,{exact:true}).first().click({modifiers:['Shift']});await p.getByRole('button',{name:m.BulkActions.actions,exact:true}).click();},p=>p.getByRole('dialog')],
- ['dependencies',base,async(p,m)=>{await issue(p);await p.getByRole('button',{name:m.Relations.addRelationAria,exact:true}).click();await p.getByText(m.Relations.blocked_by,{exact:true}).click();await p.getByPlaceholder(m.Relations.searchTarget,{exact:true}).fill('AUR-3');await p.getByRole('option',{name:/AUR-3/}).first().waitFor();},p=>p.locator('[data-radix-popper-content-wrapper]').last()],
+ // The relation type is a dropdown; its targets open in the command palette
+ // (MIN-844), with the relation's question as placeholder, left visible on purpose.
+ ['dependencies',base,async(p,m)=>{await issue(p);await p.getByRole('button',{name:m.Relations.addRelationAria,exact:true}).click();await p.locator('[data-radix-popper-content-wrapper]').last().getByText(m.Relations.blocked_by,{exact:true}).click();await p.getByPlaceholder(m.Relations.pick_blocked_by,{exact:true}).waitFor();await p.getByText('AUR-3',{exact:true}).last().waitFor();},(p,m)=>p.getByRole('dialog').filter({has:p.getByPlaceholder(m.Relations.pick_blocked_by,{exact:true})})],
  ['sub-issues',base,async(p,m)=>{await issue(p);await p.getByPlaceholder(m.IssueUI.addSubIssuePlaceholder,{exact:true}).click();},p=>p.getByRole('dialog').first()],
  ['implementation-plan',base,async p=>{await issue(p);await p.getByRole('dialog').first().getByRole('tab').nth(1).click();await p.getByRole('dialog').first().getByRole('tabpanel').getByText('2/6',{exact:true}).first().waitFor();},p=>p.getByRole('dialog').first()],
  ['resources',base,async(p,m)=>{await issue(p);await p.getByRole('button',{name:m.Resources.add,exact:true}).click();await p.getByText(m.Resources.addLink,{exact:true}).last().click();await p.getByPlaceholder(m.Resources.linkPlaceholder,{exact:true}).fill('https://example.org/contact');},p=>p.getByRole('dialog').last()],

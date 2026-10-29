@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 21,
-  "sourceRevision": 20,
+  "revision": 22,
+  "sourceRevision": 21,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-28",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -53,14 +53,16 @@
       "lib/keyboard/shortcuts.ts",
       "lib/objective-order.ts",
       "components/objective-label.tsx",
-      "components/editor/mobile-editor-toolbar.tsx"
+      "components/editor/mobile-editor-toolbar.tsx",
+      "lib/palette-picker.ts",
+      "components/palette-picker-rows.tsx"
     ]
   },
   "review": {
-    "revision": 21,
-    "fact": "agent:claude-code (phone keyboard toolbar sentence checked against components/editor/mobile-editor-toolbar.tsx and components/editor/rich-editor.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (es changed passages with catalog UI labels; equivalent meaning to en revision 20; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-28"
+    "revision": 22,
+    "fact": "agent:claude-code (content pickers moved to the command palette (MIN-844): objective relation picker checked against lib/palette-picker.ts, components/palette-picker-rows.tsx and components/objective-relations-section.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the picker)",
+    "language": "agent:claude-code (es changed passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "issues",
@@ -81,7 +83,7 @@
       "src": "/documentation/es/reader-objectives.png",
       "alt": "Diálogo de creación de objetivo sin enviar en el proyecto Aurora con un nombre de resultado de ejemplo y el botón Crear objetivo.",
       "caption": "Nombra el resultado antes de elegir responsable, fecha objetivo y estado. Este diálogo no ha creado un segundo objetivo.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -119,7 +121,7 @@ Utiliza el ciclo de vida del objetivo para distinguir resultados planificados, e
 
 ## Interpretar dependencias y ritmo de los objetivos {#objective-dependencies-and-momentum}
 
-Abre el objetivo y sus relaciones. En la página del objetivo, fuera de un campo de texto, R abre la elección del tipo de relación. Comprueba qué resultado depende de otro y lee las relaciones de bloqueo entre incidencias cuando expliquen la restricción. La organización entre principal e hijas, un vínculo y una dependencia de bloqueo responden a preguntas distintas; comprueba la dirección antes de cambiar una relación.
+Abre el objetivo y sus relaciones. En la página del objetivo, fuera de un campo de texto, R abre la elección del tipo de relación. Una vez elegido el tipo, la incidencia o el objetivo se elige en la paleta de comandos, como en una incidencia. Comprueba qué resultado depende de otro y lee las relaciones de bloqueo entre incidencias cuando expliquen la restricción. La organización entre principal e hijas, un vínculo y una dependencia de bloqueo responden a preguntas distintas; comprueba la dirección antes de cambiar una relación.
 
 Una relación de bloqueo puede conectar una incidencia u otro objetivo con este objetivo dentro del mismo proyecto. Sus incidencias abiertas heredan el bloqueo pendiente: la relación mostrada identifica tanto el requisito real como el objetivo que lo transmite. No se almacena una nueva relación directa en cada incidencia. Cerrar el requisito o el objetivo bloqueado, o retirar una incidencia de ese objetivo, elimina el bloqueo heredado correspondiente. Resuelve el requisito real o corrige una relación obsoleta. Cambiar únicamente la fecha objetivo no completa las incidencias que lo bloquean.
 

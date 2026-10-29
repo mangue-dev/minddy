@@ -2,8 +2,9 @@
 
 // A searchable cmdk popover anchored at an arbitrary viewport position (the
 // mouse pointer) instead of a trigger element. Used by the keyboard field
-// shortcuts (issue-field-shortcuts.tsx) and the relation target picker
-// (relation-target-picker.tsx). Thin wrapper over the shared SearchMenu shell
+// shortcuts (issue-field-shortcuts.tsx), R's relation-type menu included; the
+// content a relation links opens in the ⌘K palette (MIN-844). Thin wrapper
+// over the shared SearchMenu shell
 // in position-anchored mode, so it looks identical to every other searchable
 // dropdown in the app.
 
