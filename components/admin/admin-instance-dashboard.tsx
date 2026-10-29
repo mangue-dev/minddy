@@ -570,7 +570,6 @@ function ReauthDialog({ request, onClose }: { request: { retry: () => Promise<vo
           autoComplete="one-time-code"
           maxLength={6}
           aria-label={t("instance.reauthCode")}
-          placeholder="123456"
           onKeyDown={(event) => {
             if (event.key === "Enter" && code.trim().length === 6) void confirm();
           }}

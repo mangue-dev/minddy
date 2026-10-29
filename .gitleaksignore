@@ -3,3 +3,10 @@
 # address, in the brand guide and in an earlier comment of this file.
 945af58a268922c86bb8d64cedace5cf577868d3:docs/brand.md:minddy-personal-email-marker:216
 95be3c593ed51aea653baa31561cca9066a75f5c:.gitleaksignore:minddy-personal-email-marker:2
+# MIN-847: synthetic test fixtures of the instance-variable tests, replaced by
+# non-matching values in the next commit: an OpenRouter-looking key and a
+# one-letter-off address on an unreserved domain.
+6e2f10bee0507543bd59ff171e9778b24a710575:components/admin/admin-instance-dashboard.test.tsx:minddy-personal-email-marker:165
+6e2f10bee0507543bd59ff171e9778b24a710575:lib/server/instance-variables.test.ts:generic-api-key:66
+6e2f10bee0507543bd59ff171e9778b24a710575:lib/server/instance-variables.test.ts:generic-api-key:78
+6e2f10bee0507543bd59ff171e9778b24a710575:lib/server/instance-variables.test.ts:generic-api-key:118

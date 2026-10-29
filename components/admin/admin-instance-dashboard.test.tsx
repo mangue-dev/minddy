@@ -162,7 +162,7 @@ describe("Instance tab (MIN-847)", () => {
     const input = document.querySelector('[role="dialog"] input') as HTMLInputElement;
     expect(input.value).toBe("me@example.com,ops@example.com");
     // One letter off one's own address is enough to lock oneself out.
-    await type(input, "me@example.co,ops@example.com");
+    await type(input, "m@example.com,ops@example.com");
     expect(document.querySelector('[role="alert"]')?.textContent).toContain("me@example.com");
     expect(button("Save", document.querySelector('[role="dialog"]')!).disabled).toBe(true);
     await flush(() => input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })));

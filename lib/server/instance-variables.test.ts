@@ -63,8 +63,8 @@ describe("instance variable overrides", () => {
   it("lets the database value win over the file, and the file come back on removal", async () => {
     const layer = await load();
     await layer.hydrateInstanceVariables();
-    expect(await layer.setInstanceVariable("OPENROUTER_API_KEY", "db-key-0123456789", ACTOR)).toMatchObject({ ok: true });
-    expect(process.env.OPENROUTER_API_KEY).toBe("db-key-0123456789");
+    expect(await layer.setInstanceVariable("OPENROUTER_API_KEY", "db-key-aaaaaaaa6789", ACTOR)).toMatchObject({ ok: true });
+    expect(process.env.OPENROUTER_API_KEY).toBe("db-key-aaaaaaaa6789");
     expect(await layer.clearInstanceVariable("OPENROUTER_API_KEY", ACTOR)).toMatchObject({ ok: true });
     expect(process.env.OPENROUTER_API_KEY).toBe("file-key");
   });
@@ -75,7 +75,7 @@ describe("instance variable overrides", () => {
     const layer = await load();
     await layer.hydrateInstanceVariables();
     expect(process.env.OPENROUTER_API_KEY).toBe("file-key");
-    expect(await layer.setInstanceVariable("OPENROUTER_API_KEY", "x-0123456789", ACTOR)).toMatchObject({ ok: false, reason: "disabled" });
+    expect(await layer.setInstanceVariable("OPENROUTER_API_KEY", "x-aaaaaaaa", ACTOR)).toMatchObject({ ok: false, reason: "disabled" });
   });
 
   it("never exists on Minddy Cloud, whatever the file says", async () => {
@@ -115,7 +115,7 @@ describe("instance variable overrides", () => {
 
   it("lists sources and hides secrets, history included", async () => {
     const layer = await load();
-    await layer.setInstanceVariable("OPENROUTER_API_KEY", "db-key-0123456789", ACTOR);
+    await layer.setInstanceVariable("OPENROUTER_API_KEY", "db-key-aaaaaaaa6789", ACTOR);
     await layer.setInstanceVariable("MINDDY_PUBLIC_SITE_NAME", "Acme tickets", ACTOR);
     const views = await layer.listInstanceVariables();
     const key = views.find((view) => view.key === "OPENROUTER_API_KEY")!;
