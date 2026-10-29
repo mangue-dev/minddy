@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 20,
-  "sourceRevision": 20,
+  "revision": 21,
+  "sourceRevision": 21,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-28",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -102,14 +102,16 @@
       "app/tokens.css",
       "components/pages/block-actions.ts",
       "lib/selection-menu-visibility.test.ts",
-      "lib/mention-menu.ts"
+      "lib/mention-menu.ts",
+      "components/pages/block-menu.tsx",
+      "lib/action-menu-search.ts"
     ]
   },
   "review": {
-    "revision": 20,
-    "fact": "agent:claude-code (new find-and-replace section (Command/Ctrl+F on a page on screen, in the side panel and under another dialog, seeded selection, highlights and position count, Enter and Shift+Enter, Match case, Whole word and Regular expression, invalid expressions, Show replace, Replace and Replace all for editors only, `$1` to `$9` and `$&`, plain replacement as typed, undo in one step, Escape, body only) checked against components/editor/find-bar.tsx, components/editor/find-replace.ts, lib/keyboard/find-shortcut.ts, components/editor/rich-editor.tsx and components/pages/page-editor.tsx; equations (the `/` Equation entry, `$$…$$` typed in a line, click to edit the LaTeX with a live preview in a popover or phone sheet, red error, empty save removing it, `$…$` and `$$` fence Markdown with prices kept as text) checked against components/pages/blocks/math.ts, components/editor/math-edit-menu.tsx and lib/pages-math.test.ts; selection toolbar order with Underline, Inline equation, Copy, Ask Numo and Comment, the code-block toolbar and its colors, the toolbar following the scrolled selection, Page options in the side panel, and the Comment on this block hover button checked against components/pages/page-comment-bubble.tsx, components/code-block-lowlight.ts, app/globals.css, components/pages/page-peek-panel.tsx, components/global-page-panel.tsx, components/pages/pages-shell.tsx, components/pages/page-view.tsx and components/pages/block-gutter.tsx; a database opened from a link now stays in the side panel, with entries opened in place and Back returning to the table, checked against components/global-page-panel.tsx and components/pages/page-peek-panel.tsx; the `/` and `@` menus grouped in sections (Basic blocks, Lists, Advanced blocks; people, projects, issues, objectives, pages, resources, Related by meaning), the Close menu row with its esc hint reached by the arrow keys, the search chip with Type to search, a space or Escape closing the menu and leaving the text, and the phone sheets grouped the same way checked against components/editor/suggestion-menu.tsx, components/editor/suggestion-chip.ts, components/pages/page-slash-command.tsx, components/markdown-mention.tsx, components/mention-suggest.tsx and components/editor/mobile-editor-toolbar.tsx; the @ menu keeping spaces in its query and closing with Escape, Close menu or a choice, while a space still closes the / menu, checked against components/markdown-mention.tsx (allowSpaces) and components/editor/suggestion-menu.test.tsx; block selection (a drag across blocks or from the margin beside the text, Shift-click and Shift+Up or Shift+Down past a block's edge, Escape to select the current block and again to clear it, Up and Down to move the selection, Backspace or Delete, Command/Ctrl+C and Command/Ctrl+X, Enter on one block, typing ignored, Command/Ctrl+A selecting the current block's text first and then every block, the block menu acting on every selected block, the rounded highlight in the selected-text color on blocks, images, files, code blocks, equations, dividers, mentions and inline code, Escape kept by comment composers, no block selection by drag on a touch screen) checked against components/editor/block-selection.ts, components/editor/block-selection.test.ts, components/editor/rich-editor.tsx, components/editor/document-editor.tsx, components/pages/block-actions.ts, app/globals.css and app/tokens.css, and in the browser on a page; selection toolbar opening above selected whole blocks, its actions applying to every selected block and blocks staying selected after Turn into checked against components/pages/page-comment-bubble.tsx (shouldShowSelectionMenu), components/pages/block-actions.ts (turnBlocksInto) and lib/selection-menu-visibility.test.ts; both / and @ menus keeping one space in their query and closing on two consecutive spaces, and the Comment on this block button highlighting its block on hover, checked against components/editor/suggestion-chip.ts (findSpacedSuggestionMatch), lib/mention-menu.ts (findActiveTriggerQuery) and components/editor/suggestion-menu.test.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "revision": 21,
+    "fact": "agent:claude-code (block menu search field reaching every action, block types and colors included, with submenu entries shown behind their path such as Turn into › Heading 1 (MIN-845), checked against components/pages/block-menu.tsx, components/issue-context-menu.tsx and lib/action-menu-search.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
     "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-28"
+    "date": "2026-10-29"
   },
   "related": [
     "notifications-and-inbox",
@@ -144,7 +146,7 @@
       "src": "/documentation/en/page-create-menu.png",
       "alt": "Page creation menu offering New page and New database.",
       "caption": "Use the project page controls to choose a document or a database.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -160,7 +162,7 @@
       "src": "/documentation/en/page-editor.png",
       "alt": "Demonstration page with headings, paragraphs, task checkboxes and an issue mention.",
       "caption": "Headings, task blocks and the AUR-2 mention keep the page structured. This is demonstration content.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -176,7 +178,7 @@
       "src": "/documentation/en/page-comments.png",
       "alt": "Page activity dialog with a demonstration edit event and an empty comment composer.",
       "caption": "Read page activity and write a comment in the composer. No comment has been submitted in this example.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -192,7 +194,7 @@
       "src": "/documentation/en/page-file-states.png",
       "alt": "Demo page with an unfinished upload and a saved 67-byte file offering Download.",
       "caption": "Check the actual file state: the second attachment is available, while the first unfinished upload is not.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -208,7 +210,7 @@
       "src": "/documentation/en/page-history-preview.png",
       "alt": "Versions tab with an expanded earlier state, its author, Restore and the 30-day retention notice.",
       "caption": "Preview a saved state and compare it with the current page before restoring.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -224,7 +226,7 @@
       "src": "/documentation/en/page-publish.png",
       "alt": "Page publication dialog with Private selected and password or bearer-link alternatives.",
       "caption": "Private keeps the page within the project. Review the intended audience before changing publication.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -240,7 +242,7 @@
       "src": "/documentation/en/page-export.png",
       "alt": "Document export menu with Markdown (.md) and Print / PDF.",
       "caption": "Choose Markdown to download the document, or Print / PDF to open the printable view.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -256,7 +258,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -328,7 +330,7 @@ Pages, descriptions, comments and the task notebook share the same editor. Selec
 
 Shift+Enter starts a new line inside the same block. Command/Ctrl+Enter does not insert a line break: in a comment or another composer it sends, whichever send shortcut you chose in your [preferences](/docs/accounts#preferences), and if you chose Enter as the send shortcut, Enter sends too.
 
-To select whole blocks, drag from one block into another, or draw a selection rectangle from outside the text: press in the margin beside it or in the empty space below the page, then drag over the blocks. Every block the rectangle touches is selected; a click there without dragging still puts the cursor on that line, and Escape cancels the rectangle. Every block the drag reaches is highlighted with rounded corners, in the color of selected text. When a single block is selected, the selection toolbar opens above it: its actions (**Turn into**, **Color**, **Bold** and the other formats, **Copy**, **Ask Numo**, **Comment**) apply to the block, and after **Turn into** it stays selected so another action can follow. With several blocks selected, the toolbar stays hidden: open the menu of a selected block's handle, which acts on all of them. Shift-click another block, or press Shift+Up or Shift+Down at the edge of a block, to extend the selection by whole blocks. Escape selects the block you are writing in, and Escape again clears the selection. Command+A on macOS or Ctrl+A on Windows/Linux first selects the text of the block you are in, a code block included, and pressed again selects every block. With blocks selected, the Up and Down arrows select the block above or below, Shift+Up and Shift+Down add or remove blocks, Backspace or Delete deletes them, Command/Ctrl+C copies them, Command/Ctrl+X cuts them, and Enter on a single block puts the cursor at its end; typing does nothing. The block menu acts on every selected block. Images, files, code blocks, equations, dividers, mentions and inline code show the same highlight when they are selected, on their own or within a selection. While you write or edit a comment, Escape keeps closing or canceling it. On a touch screen, long-press still selects text, and a drag does not select blocks.
+To select whole blocks, drag from one block into another, or draw a selection rectangle from outside the text: press in the margin beside it or in the empty space below the page, then drag over the blocks. Every block the rectangle touches is selected; a click there without dragging still puts the cursor on that line, and Escape cancels the rectangle. Every block the drag reaches is highlighted with rounded corners, in the color of selected text. When a single block is selected, the selection toolbar opens above it: its actions (**Turn into**, **Color**, **Bold** and the other formats, **Copy**, **Ask Numo**, **Comment**) apply to the block, and after **Turn into** it stays selected so another action can follow. With several blocks selected, the toolbar stays hidden: open the menu of a selected block's handle, which acts on all of them. Shift-click another block, or press Shift+Up or Shift+Down at the edge of a block, to extend the selection by whole blocks. Escape selects the block you are writing in, and Escape again clears the selection. Command+A on macOS or Ctrl+A on Windows/Linux first selects the text of the block you are in, a code block included, and pressed again selects every block. With blocks selected, the Up and Down arrows select the block above or below, Shift+Up and Shift+Down add or remove blocks, Backspace or Delete deletes them, Command/Ctrl+C copies them, Command/Ctrl+X cuts them, and Enter on a single block puts the cursor at its end; typing does nothing. The block menu acts on every selected block. Type in the block menu's search field to reach any of its actions, block types and colors included: an entry from a submenu shows its path, such as **Turn into** › **Heading 1**. Images, files, code blocks, equations, dividers, mentions and inline code show the same highlight when they are selected, on their own or within a selection. While you write or edit a comment, Escape keeps closing or canceling it. On a touch screen, long-press still selects text, and a drag does not select blocks.
 
 On a phone, the editor shows no block handles or selection toolbar, and typing `@` leaves a plain character. While an editor has focus, a floating toolbar sits above the keyboard and hides when the keyboard closes: **Insert a block** (+) lists this editor's blocks, in the same sections as the `/` menu, and inserts the chosen one at the cursor, like `/`; **Mention** (@) lists people, issues, objectives and pages to mention, grouped by type; then come **Bold**, **Italic**, **Strikethrough**, **Code**, **Color** (a sheet for the text or background color), **Add link**, **Outdent** and **Indent** in a list, **Comment** on a page, and **Hide keyboard**, which stays pinned at the right end. A bottom sheet you type in grows to the full screen height, and the line you are typing stays above the keyboard. Long-press selects text in an editor, and the toolbar and its sheets also work in the task notebook. The bottom navigation hides while any text field has focus, such as a page title or a comment. On a touch screen, **Add icon** is always visible on a page.
 

@@ -14,10 +14,11 @@ import { actionMenuItems } from "@/lib/visible-overlays";
 // An action carrying `children` becomes a side flyout submenu
 // (inline accordion on mobile, managed by the dropdown-menu primitive).
 //
-// Search (when enabled) filters top level entries
-// (label + keywords), like the old cmdk version. Filtering keeps the focus
-// in the field; ↓ goes down the list, Enter triggers the first entry,
-// Close escape.
+// Search (when enabled) filters entries at every level (label + keywords):
+// a submenu entry that matches is listed as its own row, behind the path of
+// the branches holding it (Relations › Blocked by, MIN-845). Filtering keeps
+// the focus in the field; ↓ goes down the list, Enter triggers the first
+// entry, Escape closes.
 
 import * as React from "react";
 import { createPortal } from "react-dom";
@@ -33,8 +34,10 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ChevronRightIcon } from "lucide-react";
 import { Kbd } from "@/components/ui/kbd";
 import { DropdownSearchRow, searchInputClass } from "@/components/search-menu";
+import { searchActionTree } from "@/lib/action-menu-search";
 
 export interface ContextMenuAction {
   id: string;
@@ -59,33 +62,125 @@ export interface ContextMenuAction {
   onSelect?: () => void;
 }
 
-/** The entry matches the search if its label or one of its keywords contains it. */
-function actionMatches(action: ContextMenuAction, query: string): boolean {
-  if (!query) return true;
-  const haystack = [action.label, ...(action.keywords ?? [])]
-    .join(" ")
-    .toLowerCase();
-  return haystack.includes(query);
+/**
+ * The label of a search result found inside a submenu: the branches leading
+ * to it, muted and separated by a chevron, then the entry itself.
+ */
+export function ActionPathLabel({ path, label }: { path: readonly string[]; label: React.ReactNode }) {
+  return (
+    <span className="flex min-w-0 items-center gap-1">
+      {path.map((part, i) => (
+        <React.Fragment key={i}>
+          <span className="max-w-28 shrink-0 truncate text-muted-foreground">{part}</span>
+          <ChevronRightIcon aria-hidden className="size-3 text-muted-foreground" />
+        </React.Fragment>
+      ))}
+      <span className="truncate">{label}</span>
+    </span>
+  );
 }
 
-/** Sheet: a clickable item, possibly with a shortcut on the right. */
+/**
+ * Search state shared by the searchable dropdowns (this action menu and the
+ * page block menu): the query, reset on close, the focus placed in the field
+ * on open, and the field's keyboard contract.
+ */
+export function useActionMenuSearch(open: boolean, searchable = true) {
+  const [query, setQuery] = React.useState("");
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  // Start from an empty search each time you close; when opening, place the
+  // focus on the search (Radix focuses on the first item by default; we
+  // takes over after him via an rAF).
+  React.useEffect(() => {
+    if (!open) {
+      setQuery("");
+      return;
+    }
+    if (!searchable) return;
+    const id = requestAnimationFrame(() => inputRef.current?.focus());
+    return () => cancelAnimationFrame(id);
+  }, [open, searchable]);
+
+  // Search remains inside this menu, even if an inactive board retains another
+  // open portaled menu earlier in the document.
+  const items = () => actionMenuItems(inputRef.current);
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") return; // let Radix close the menu
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      e.stopPropagation();
+      items()[0]?.focus();
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      e.stopPropagation();
+      const els = items();
+      els[els.length - 1]?.focus();
+      return;
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      e.stopPropagation();
+      items()[0]?.click();
+      return;
+    }
+    // Prevents typing (letters, Backspace, space, etc.) from triggering the
+    // Radix typeahead: only the search field receives it.
+    e.stopPropagation();
+  };
+
+  return { query: searchable ? query : "", setQuery, inputRef, onKeyDown };
+}
+
+/** The search row at the top of a searchable dropdown, followed by its separator. */
+export function ActionMenuSearchField({ search }: { search: ReturnType<typeof useActionMenuSearch> }) {
+  const t = useTranslations("Picker");
+  return (
+    <>
+      <DropdownSearchRow>
+        <input
+          ref={search.inputRef}
+          value={search.query}
+          onChange={(e) => search.setQuery(e.target.value)}
+          onKeyDown={search.onKeyDown}
+          placeholder={t("search")}
+          className={searchInputClass}
+          aria-label={t("search")}
+        />
+      </DropdownSearchRow>
+      <DropdownMenuSeparator />
+    </>
+  );
+}
+
+/** Sheet: a clickable item, possibly with a shortcut on the right. A search
+ *  result found in a submenu carries its `path`. */
 function LeafItem({
   action,
+  path = [],
+  disabled = action.disabled,
   onActionSelect,
 }: {
   action: ContextMenuAction;
+  path?: readonly string[];
+  disabled?: boolean;
   onActionSelect?: (action: ContextMenuAction) => void;
 }) {
   return (
     <DropdownMenuItem
       variant={action.variant}
-      disabled={action.disabled}
+      disabled={disabled}
       onSelect={() =>
         onActionSelect ? onActionSelect(action) : action.onSelect?.()
       }
     >
       {action.icon}
-      <span className="truncate">{action.label}</span>
+      {path.length > 0
+        ? <ActionPathLabel path={path} label={action.label} />
+        : <span className="truncate">{action.label}</span>}
       {action.shortcut && (
         <DropdownMenuShortcut>
           <Kbd size="sm">{action.shortcut}</Kbd>
@@ -144,85 +239,26 @@ function ActionMenuBody({
   onActionSelect?: (action: ContextMenuAction) => void;
 }) {
   const t = useTranslations("Picker");
-  const [query, setQuery] = React.useState("");
-  const inputRef = React.useRef<HTMLInputElement>(null);
-
-  // Start from an empty search each time you close; when opening, place the
-  // focus on the search (Radix focuses on the first item by default; we
-  // takes over after him via an rAF).
-  React.useEffect(() => {
-    if (!open) {
-      setQuery("");
-      return;
-    }
-    if (!searchable) return;
-    const id = requestAnimationFrame(() => inputRef.current?.focus());
-    return () => cancelAnimationFrame(id);
-  }, [open, searchable]);
-
-  const q = searchable ? query.trim().toLowerCase() : "";
-  const visible = actions.filter((a) => actionMatches(a, q));
-
-  // Search remains inside this menu, even if an inactive board retains another
-  // open portaled menu earlier in the document.
-  const items = () => actionMenuItems(inputRef.current);
-
-  const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Escape") return; // let Radix close the menu
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      e.stopPropagation();
-      items()[0]?.focus();
-      return;
-    }
-    if (e.key === "ArrowUp") {
-      e.preventDefault();
-      e.stopPropagation();
-      const els = items();
-      els[els.length - 1]?.focus();
-      return;
-    }
-    if (e.key === "Enter") {
-      e.preventDefault();
-      e.stopPropagation();
-      items()[0]?.click();
-      return;
-    }
-    // Prevents typing (letters, Backspace, space, etc.) from triggering the
-    // Radix typeahead: only the search field receives it.
-    e.stopPropagation();
-  };
+  const search = useActionMenuSearch(open, searchable);
+  const visible = searchActionTree(actions, search.query);
 
   return (
     <>
-      {searchable && (
-        <>
-          <DropdownSearchRow>
-            <input
-              ref={inputRef}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={onInputKeyDown}
-              placeholder={t("search")}
-              className={searchInputClass}
-              aria-label={t("search")}
-            />
-          </DropdownSearchRow>
-          <DropdownMenuSeparator />
-        </>
-      )}
+      {searchable && <ActionMenuSearchField search={search} />}
       {visible.length === 0 ? (
         <div className="px-2.5 py-1.5 text-sm text-muted-foreground">
           {t("noResults")}
         </div>
       ) : (
-        visible.map((action, i) => (
-          <React.Fragment key={action.id}>
+        visible.map(({ action, path, disabled }, i) => (
+          <React.Fragment key={[...path, action.id].join("/")}>
             {/* A separator at the top of the list (previous group entirely
  filtered) would be an orphan bar: we only make it between two visible
- entries. */}
-            {action.separatorBefore && i > 0 && <DropdownMenuSeparator />}
-            <ActionNode action={action} onActionSelect={onActionSelect} />
+ entries. A nested match sits with its branch's group. */}
+            {action.separatorBefore && path.length === 0 && i > 0 && <DropdownMenuSeparator />}
+            {path.length > 0
+              ? <LeafItem action={action} path={path} disabled={disabled} onActionSelect={onActionSelect} />
+              : <ActionNode action={action} onActionSelect={onActionSelect} />}
           </React.Fragment>
         ))
       )}

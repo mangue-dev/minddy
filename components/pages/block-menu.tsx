@@ -21,6 +21,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { CheckIcon, ColorPickerIcon, Copy01Icon, Delete02Icon, Link02Icon, MessageAdd01Icon, RepeatOne02Icon } from "@hugeicons/core-free-icons";
+import * as React from "react";
 import { useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { NumoIcon } from "@/components/numo-icon";
@@ -75,6 +76,41 @@ import {
   turnBlocksInto,
 } from "@/components/pages/block-actions";
 import { PageColorName, type PageCommentAnchor } from "@/components/pages/page-comment-bubble";
+import { ActionMenuSearchField, ActionPathLabel, useActionMenuSearch } from "@/components/issue-context-menu";
+import { searchActionTree } from "@/lib/action-menu-search";
+
+/** The color a kind currently has, and how to set it: a callout's background
+ *  is the callout's own color. */
+function colorChoice(editor: Editor, kind: PageColorKind) {
+  const calloutColor =
+    kind === "background" ? activeCalloutColor(editor) : undefined;
+  const active =
+    calloutColor === undefined ? activePageColor(editor, kind) : calloutColor;
+  const setColor = (color: PageColor | null) =>
+    calloutColor === undefined
+      ? setPageColor(editor, kind, color)
+      : setCalloutColor(editor, color);
+  return { active, setColor };
+}
+
+/**
+ * An entry of the menu as its search sees it (MIN-845). A top-level entry
+ * carries the very element the menu shows (`node`); a nested one is drawn as
+ * a flat result row behind its path (Turn into › Heading 1).
+ */
+interface BlockMenuEntry {
+  id: string;
+  label: string;
+  keywords?: string[];
+  node?: React.ReactNode;
+  icon?: React.ReactNode;
+  /** Painted label (a color's name in its color); `label` stays the text searched. */
+  labelNode?: React.ReactNode;
+  checked?: boolean;
+  shortcut?: string;
+  children?: BlockMenuEntry[];
+  onSelect?: () => void;
+}
 
 function ColorItems({
   editor,
@@ -87,14 +123,7 @@ function ColorItems({
 }) {
   const t = useTranslations("Pages");
   const colorName = useTranslations("Categories.colors");
-  const calloutColor =
-    kind === "background" ? activeCalloutColor(editor) : undefined;
-  const active =
-    calloutColor === undefined ? activePageColor(editor, kind) : calloutColor;
-  const setColor = (color: PageColor | null) =>
-    calloutColor === undefined
-      ? setPageColor(editor, kind, color)
-      : setCalloutColor(editor, color);
+  const { active, setColor } = colorChoice(editor, kind);
 
   return (
     <>
@@ -216,6 +245,8 @@ export function BlockMenu({
   // absent where Numo is not.
   const askNumo = useAskNumoAboutSelection();
   const tBulk = useTranslations("BulkActions");
+  const tPicker = useTranslations("Picker");
+  const colorName = useTranslations("Categories.colors");
   const askAboutBlocks = () => {
     const range = blockRange(editor);
     const text = range ? editor.state.doc.textBetween(range.from, range.to, "\n", " ").trim() : "";
@@ -262,6 +293,180 @@ export function BlockMenu({
     toast.success(t("blockLinkCopied"));
   };
 
+  const turnInto = (block: (typeof items)[number]["block"]) => {
+    turnBlocksInto(editor, block);
+    close();
+  };
+  const copyOrDuplicate = () => {
+    if (subpageId) void duplicateSubpage(subpageId);
+    else void copySelection();
+    close();
+  };
+  const copyLinkAndClose = () => {
+    void copyLink();
+    close();
+  };
+  const commentBlock = () => {
+    const blockId = selectedBlockId(editor);
+    if (blockId && onComment) onComment({ blockId, startNew: true });
+    close();
+  };
+  const deleteSelection = () => {
+    if (subpageId) {
+      deleteBlocks(editor);
+      closeAndFocus();
+      return;
+    }
+    const range = blockRange(editor);
+    if (range) setPendingDelete({ range, count: Math.max(1, count) });
+    close();
+  };
+
+  const turnIntoNode = (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger>
+        <HugeiconsIcon icon={RepeatOne02Icon} />
+        <span className="truncate">{t("turnInto")}</span>
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent className="w-56">
+        {items.map(({ block, active }) => {
+          const Icon = block.icon;
+          return (
+            <DropdownMenuItem key={block.id} onSelect={() => turnInto(block)}>
+              <AppIcon icon={Icon} />
+              <span className="truncate">{t(block.labelKey)}</span>
+              {active && <HugeiconsIcon icon={CheckIcon} className="size-3" />}
+              {block.shortcut && (
+                <DropdownMenuShortcut>
+                  <Kbd size="sm">{block.shortcut.display}</Kbd>
+                </DropdownMenuShortcut>
+              )}
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
+  );
+
+  const backgroundLabel = activeCalloutColor(editor) === undefined
+    ? t("colorBackground")
+    : t("calloutColor");
+  const colorNode = (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger>
+        <HugeiconsIcon icon={ColorPickerIcon} />
+        <span className="truncate">{t("color")}</span>
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent className="max-h-80 w-52 overflow-y-auto">
+        <DropdownMenuLabel className="text-xs text-muted-foreground">
+          {t("colorText")}
+        </DropdownMenuLabel>
+        <ColorItems editor={editor} kind="text" onDone={close} />
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel className="text-xs text-muted-foreground">
+          {backgroundLabel}
+        </DropdownMenuLabel>
+        <ColorItems editor={editor} kind="background" onDone={close} />
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
+  );
+
+  const copyNode = (
+    <DropdownMenuItem onSelect={copyOrDuplicate}>
+      <HugeiconsIcon icon={Copy01Icon} />
+      <span className="truncate">{t(subpageId ? "duplicateBlock" : "copyBlock")}</span>
+    </DropdownMenuItem>
+  );
+  const linkNode = (
+    <DropdownMenuItem onSelect={copyLinkAndClose}>
+      <HugeiconsIcon icon={Link02Icon} />
+      <span className="truncate">{t("copyBlockLink")}</span>
+    </DropdownMenuItem>
+  );
+  const commentNode = (
+    <DropdownMenuItem onSelect={commentBlock}>
+      <HugeiconsIcon icon={MessageAdd01Icon} />
+      <span className="truncate">{t("commentSelection")}</span>
+    </DropdownMenuItem>
+  );
+  const askNumoNode = (
+    <DropdownMenuItem onSelect={askAboutBlocks}>
+      <NumoIcon animated={false} className="size-4" />
+      <span className="truncate">{tBulk("askNumo")}</span>
+    </DropdownMenuItem>
+  );
+  const deleteNode = (
+    <DropdownMenuItem variant="destructive" onSelect={deleteSelection}>
+      <HugeiconsIcon icon={Delete02Icon} />
+      {/* On a subpage, the gesture does not delete a block: it places a
+ PAGE in the trash, with its descendants. The wording is that of
+ the sidebar, word for word — it's the same gesture, it should not
+ have two names depending on where it is triggered from. */}
+      <span className="truncate">
+        {subpageId ? t("deletePage") : t("deleteBlock")}
+      </span>
+    </DropdownMenuItem>
+  );
+
+  // Typing searches every level: a block type or a color is one row away,
+  // behind the path of the submenu that holds it.
+  const search = useActionMenuSearch(open);
+  const colorEntries = (kind: PageColorKind, heading: string): BlockMenuEntry => {
+    const { active, setColor } = colorChoice(editor, kind);
+    const choose = (color: PageColor | null) => () => {
+      setColor(color);
+      close();
+    };
+    return {
+      id: `color-${kind}`,
+      label: heading,
+      children: [
+        {
+          id: `${kind}:none`,
+          label: t("colorNone"),
+          labelNode: <PageColorName kind={kind} color={null} label={t("colorNone")} />,
+          checked: active === null,
+          onSelect: choose(null),
+        },
+        ...PAGE_COLORS.map((color) => ({
+          id: `${kind}:${color}`,
+          label: colorName(color),
+          labelNode: <PageColorName kind={kind} color={color} label={colorName(color)} />,
+          checked: active === color,
+          onSelect: choose(color),
+        })),
+      ],
+    };
+  };
+  const entries = (): BlockMenuEntry[] => [
+    ...(showTurnInto ? [{
+      id: "turn-into",
+      label: t("turnInto"),
+      node: turnIntoNode,
+      children: items.map(({ block, active }) => ({
+        id: block.id,
+        label: t(block.labelKey),
+        keywords: block.slash.keywords,
+        icon: <AppIcon icon={block.icon} />,
+        checked: active,
+        shortcut: block.shortcut?.display,
+        onSelect: () => turnInto(block),
+      })),
+    }] : []),
+    ...(showColor ? [{
+      id: "color",
+      label: t("color"),
+      node: colorNode,
+      children: [colorEntries("text", t("colorText")), colorEntries("background", backgroundLabel)],
+    }] : []),
+    ...(!mediaOnly ? [{ id: "copy", label: t(subpageId ? "duplicateBlock" : "copyBlock"), node: copyNode }] : []),
+    ...(blockLinks ? [{ id: "link", label: t("copyBlockLink"), node: linkNode }] : []),
+    ...(canComment ? [{ id: "comment", label: t("commentSelection"), node: commentNode }] : []),
+    ...(askNumo && can.text ? [{ id: "ask-numo", label: tBulk("askNumo"), node: askNumoNode }] : []),
+    { id: "delete", label: subpageId ? t("deletePage") : t("deleteBlock"), node: deleteNode },
+  ];
+  const results = search.query.trim() ? searchActionTree(entries(), search.query) : null;
+
   return (
     <>
     <DropdownMenu open={open} onOpenChange={onOpenChange}>
@@ -273,7 +478,9 @@ export function BlockMenu({
         align="start"
         side="left"
         sideOffset={4}
-        className="w-60"
+        // Search results carry their path (Turn into › Heading 1): the menu
+        // widens while it lists them rather than cutting the entry's name.
+        className={results ? "w-72" : "w-60"}
         // Escape and click outside returns the cursor to the block: otherwise, the focus
         // stays on a trigger that disappears on hover, and hits
         // suivante se perd.
@@ -282,137 +489,46 @@ export function BlockMenu({
           focusBlockRange(editor, blockRange(editor));
         }}
       >
+        <ActionMenuSearchField search={search} />
+
         {count > 1 && (
           <DropdownMenuLabel className="text-xs text-muted-foreground">
             {t("blocksSelected", { count })}
           </DropdownMenuLabel>
         )}
 
-        {showTurnInto && (
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
-            <HugeiconsIcon icon={RepeatOne02Icon} />
-            <span className="truncate">{t("turnInto")}</span>
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="w-56">
-            {items.map(({ block, active }) => {
-              const Icon = block.icon;
-              return (
-                <DropdownMenuItem
-                  key={block.id}
-                  onSelect={() => {
-                    turnBlocksInto(editor, block);
-                    close();
-                  }}
-                >
-                  <AppIcon icon={Icon} />
-                  <span className="truncate">{t(block.labelKey)}</span>
-                  {active && <HugeiconsIcon icon={CheckIcon} className="size-3" />}
-                  {block.shortcut && (
-                    <DropdownMenuShortcut>
-                      <Kbd size="sm">{block.shortcut.display}</Kbd>
-                    </DropdownMenuShortcut>
-                  )}
-                </DropdownMenuItem>
-              );
-            })}
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
+        {results ? (
+          results.length === 0 ? (
+            <div className="px-2.5 py-1.5 text-sm text-muted-foreground">
+              {tPicker("noResults")}
+            </div>
+          ) : results.map(({ action: entry, path }) => path.length === 0 ? (
+            <React.Fragment key={entry.id}>{entry.node}</React.Fragment>
+          ) : (
+            <DropdownMenuItem key={[...path, entry.id].join("/")} onSelect={entry.onSelect}>
+              {entry.icon}
+              <ActionPathLabel path={path} label={entry.labelNode ?? entry.label} />
+              {entry.checked && <HugeiconsIcon icon={CheckIcon} className="ml-auto size-3" />}
+              {entry.shortcut && (
+                <DropdownMenuShortcut>
+                  <Kbd size="sm">{entry.shortcut}</Kbd>
+                </DropdownMenuShortcut>
+              )}
+            </DropdownMenuItem>
+          ))
+        ) : (
+          <>
+            {showTurnInto && turnIntoNode}
+            {showColor && colorNode}
+            {(showTurnInto || showColor) && <DropdownMenuSeparator />}
+            {!mediaOnly && copyNode}
+            {blockLinks && linkNode}
+            {canComment && commentNode}
+            {askNumo && can.text ? askNumoNode : null}
+            {hasActionsAbove && <DropdownMenuSeparator />}
+            {deleteNode}
+          </>
         )}
-
-        {showColor && (
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
-            <HugeiconsIcon icon={ColorPickerIcon} />
-            <span className="truncate">{t("color")}</span>
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="max-h-80 w-52 overflow-y-auto">
-            <DropdownMenuLabel className="text-xs text-muted-foreground">
-              {t("colorText")}
-            </DropdownMenuLabel>
-            <ColorItems editor={editor} kind="text" onDone={close} />
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-xs text-muted-foreground">
-              {activeCalloutColor(editor) === undefined
-                ? t("colorBackground")
-                : t("calloutColor")}
-            </DropdownMenuLabel>
-            <ColorItems editor={editor} kind="background" onDone={close} />
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
-        )}
-
-        {(showTurnInto || showColor) && <DropdownMenuSeparator />}
-
-        {!mediaOnly && (
-          <DropdownMenuItem
-            onSelect={() => {
-              if (subpageId) void duplicateSubpage(subpageId);
-              else void copySelection();
-              close();
-            }}
-          >
-            <HugeiconsIcon icon={Copy01Icon} />
-            <span className="truncate">{t(subpageId ? "duplicateBlock" : "copyBlock")}</span>
-          </DropdownMenuItem>
-        )}
-
-        {blockLinks && (
-          <DropdownMenuItem
-            onSelect={() => {
-              void copyLink();
-              close();
-            }}
-          >
-            <HugeiconsIcon icon={Link02Icon} />
-            <span className="truncate">{t("copyBlockLink")}</span>
-          </DropdownMenuItem>
-        )}
-
-        {onComment && canComment ? (
-          <DropdownMenuItem
-            onSelect={() => {
-              const blockId = selectedBlockId(editor);
-              if (blockId) onComment({ blockId, startNew: true });
-              close();
-            }}
-          >
-            <HugeiconsIcon icon={MessageAdd01Icon} />
-            <span className="truncate">{t("commentSelection")}</span>
-          </DropdownMenuItem>
-        ) : null}
-
-        {askNumo && can.text ? (
-          <DropdownMenuItem onSelect={askAboutBlocks}>
-            <NumoIcon animated={false} className="size-4" />
-            <span className="truncate">{tBulk("askNumo")}</span>
-          </DropdownMenuItem>
-        ) : null}
-
-        {hasActionsAbove && <DropdownMenuSeparator />}
-
-        <DropdownMenuItem
-          variant="destructive"
-          onSelect={() => {
-            if (subpageId) {
-              deleteBlocks(editor);
-              closeAndFocus();
-              return;
-            }
-            const range = blockRange(editor);
-            if (range) setPendingDelete({ range, count: Math.max(1, count) });
-            close();
-          }}
-        >
-          <HugeiconsIcon icon={Delete02Icon} />
-          {/* On a subpage, the gesture does not delete a block: it places a
- PAGE in the trash, with its descendants. The wording is that of
- the sidebar, word for word — it's the same gesture, it should not
- have two names depending on where it is triggered from. */}
-          <span className="truncate">
-            {subpageId ? t("deletePage") : t("deleteBlock")}
-          </span>
-        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
 

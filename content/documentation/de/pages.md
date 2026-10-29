@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 20,
+  "revision": 23,
+  "sourceRevision": 21,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-28",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -102,14 +102,16 @@
       "app/tokens.css",
       "components/pages/block-actions.ts",
       "lib/selection-menu-visibility.test.ts",
-      "lib/mention-menu.ts"
+      "lib/mention-menu.ts",
+      "components/pages/block-menu.tsx",
+      "lib/action-menu-search.ts"
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (new find-and-replace section (Command/Ctrl+F on a page on screen, in the side panel and under another dialog, seeded selection, highlights and position count, Enter and Shift+Enter, Match case, Whole word and Regular expression, invalid expressions, Show replace, Replace and Replace all for editors only, `$1` to `$9` and `$&`, plain replacement as typed, undo in one step, Escape, body only) checked against components/editor/find-bar.tsx, components/editor/find-replace.ts, lib/keyboard/find-shortcut.ts, components/editor/rich-editor.tsx and components/pages/page-editor.tsx; equations (the `/` Equation entry, `$$…$$` typed in a line, click to edit the LaTeX with a live preview in a popover or phone sheet, red error, empty save removing it, `$…$` and `$$` fence Markdown with prices kept as text) checked against components/pages/blocks/math.ts, components/editor/math-edit-menu.tsx and lib/pages-math.test.ts; selection toolbar order with Underline, Inline equation, Copy, Ask Numo and Comment, the code-block toolbar and its colors, the toolbar following the scrolled selection, Page options in the side panel, and the Comment on this block hover button checked against components/pages/page-comment-bubble.tsx, components/code-block-lowlight.ts, app/globals.css, components/pages/page-peek-panel.tsx, components/global-page-panel.tsx, components/pages/pages-shell.tsx, components/pages/page-view.tsx and components/pages/block-gutter.tsx; a database opened from a link now stays in the side panel, with entries opened in place and Back returning to the table, checked against components/global-page-panel.tsx and components/pages/page-peek-panel.tsx; the `/` and `@` menus grouped in sections (Basic blocks, Lists, Advanced blocks; people, projects, issues, objectives, pages, resources, Related by meaning), the Close menu row with its esc hint reached by the arrow keys, the search chip with Type to search, a space or Escape closing the menu and leaving the text, and the phone sheets grouped the same way checked against components/editor/suggestion-menu.tsx, components/editor/suggestion-chip.ts, components/pages/page-slash-command.tsx, components/markdown-mention.tsx, components/mention-suggest.tsx and components/editor/mobile-editor-toolbar.tsx; the @ menu keeping spaces in its query and closing with Escape, Close menu or a choice, while a space still closes the / menu, checked against components/markdown-mention.tsx (allowSpaces) and components/editor/suggestion-menu.test.tsx; block selection (a drag across blocks or from the margin beside the text, Shift-click and Shift+Up or Shift+Down past a block's edge, Escape to select the current block and again to clear it, Up and Down to move the selection, Backspace or Delete, Command/Ctrl+C and Command/Ctrl+X, Enter on one block, typing ignored, Command/Ctrl+A selecting the current block's text first and then every block, the block menu acting on every selected block, the rounded highlight in the selected-text color on blocks, images, files, code blocks, equations, dividers, mentions and inline code, Escape kept by comment composers, no block selection by drag on a touch screen) checked against components/editor/block-selection.ts, components/editor/block-selection.test.ts, components/editor/rich-editor.tsx, components/editor/document-editor.tsx, components/pages/block-actions.ts, app/globals.css and app/tokens.css, and in the browser on a page; selection toolbar opening above selected whole blocks, its actions applying to every selected block and blocks staying selected after Turn into checked against components/pages/page-comment-bubble.tsx (shouldShowSelectionMenu), components/pages/block-actions.ts (turnBlocksInto) and lib/selection-menu-visibility.test.ts; both / and @ menus keeping one space in their query and closing on two consecutive spaces, and the Comment on this block button highlighting its block on hover, checked against components/editor/suggestion-chip.ts (findSpacedSuggestionMatch), lib/mention-menu.ts (findActiveTriggerQuery) and components/editor/suggestion-menu.test.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; equivalent meaning to en revision 20; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-28"
+    "revision": 23,
+    "fact": "agent:claude-code (block menu search field reaching every action, block types and colors included, with submenu entries shown behind their path such as Turn into › Heading 1 (MIN-845), checked against components/pages/block-menu.tsx, components/issue-context-menu.tsx and lib/action-menu-search.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; equivalent meaning to en revision 21; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "notifications-and-inbox",
@@ -144,7 +146,7 @@
       "src": "/documentation/de/page-create-menu.png",
       "alt": "Erstellungsmenü mit Neue Seite und Neue Datenbank.",
       "caption": "Wähle über die Seitenfunktionen des Projekts ein Dokument oder eine Datenbank.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -160,7 +162,7 @@
       "src": "/documentation/de/page-editor.png",
       "alt": "Demoseite mit Überschriften, Absätzen, Aufgaben mit Kontrollkästchen und einer Ticketreferenz.",
       "caption": "Überschriften, Aufgabenblöcke und die Referenz AUR-2 gliedern die Seite. Der Inhalt dient als Demobeispiel.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -177,7 +179,7 @@
       "src": "/documentation/de/page-comments.png",
       "alt": "Seitenaktivität ohne bisherige Einträge und ein leeres Kommentarfeld.",
       "caption": "Lies die Seitenaktivität und verfasse einen Kommentar im Eingabefeld. In diesem Beispiel wurde keiner abgesendet.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -194,7 +196,7 @@
       "src": "/documentation/de/page-file-states.png",
       "alt": "Demoseite mit einem unvollständigen Upload und einer gespeicherten Datei von 67 Byte mit Downloadfunktion.",
       "caption": "Prüfe den tatsächlichen Dateizustand: Der zweite Anhang ist verfügbar, der erste unvollständige Upload nicht.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -210,7 +212,7 @@
       "src": "/documentation/de/page-history-preview.png",
       "alt": "Versionen-Tab mit aufgeklapptem früherem Zustand, Autor, Wiederherstellen und Hinweis auf 30 Tage Aufbewahrung.",
       "caption": "Prüfe einen gespeicherten Zustand in der Vorschau und vergleiche ihn vor dem Wiederherstellen mit der aktuellen Seite.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -226,7 +228,7 @@
       "src": "/documentation/de/page-publish.png",
       "alt": "Veröffentlichungsdialog mit ausgewähltem Privat und Alternativen für Passwort oder Link.",
       "caption": "Privat hält die Seite im Projekt. Prüfe die vorgesehene Zielgruppe vor einer Änderung der Freigabe.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -242,7 +244,7 @@
       "src": "/documentation/de/page-export.png",
       "alt": "Exportmenü des Dokuments mit Markdown (.md) und Drucken / PDF.",
       "caption": "Wähle Markdown zum Herunterladen oder Drucken / PDF für die Druckansicht.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -258,7 +260,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Umbenennen und Entfernen.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -330,7 +332,7 @@ Seiten, Beschreibungen, Kommentare und das Aufgabennotizbuch verwenden denselben
 
 Umschalt+Eingabetaste beginnt eine neue Zeile im selben Block. Command/Strg+Eingabetaste fügt keinen Zeilenumbruch ein: In einem Kommentar oder einem anderen Eingabebereich sendet es, unabhängig vom Sende-Kürzel in deinen [Einstellungen](/de/dokumentation/accounts#preferences), und wenn du die Eingabetaste als Sende-Kürzel gewählt hast, sendet auch die Eingabetaste.
 
-Um ganze Blöcke auszuwählen, ziehe von einem Block in einen anderen oder ziehe ein Auswahlrechteck von außerhalb des Textes auf: Drücke im Rand daneben oder im leeren Bereich unter der Seite und ziehe dann über die Blöcke. Jeder Block, den das Rechteck berührt, wird ausgewählt; ein Klick dort ohne Ziehen setzt den Cursor weiterhin auf diese Zeile, und Escape bricht das Rechteck ab. Jeder erreichte Block wird mit abgerundeten Ecken in der Farbe von markiertem Text hervorgehoben. Ist nur ein Block ausgewählt, öffnet sich die Auswahlleiste darüber: Ihre Aktionen (**Umwandeln in**, **Farbe**, **Fett** und die anderen Formate, **Kopieren**, **Numo fragen**, **Kommentieren**) gelten für den Block, und nach **Umwandeln in** bleibt er ausgewählt, damit eine weitere Aktion folgen kann. Sind mehrere Blöcke ausgewählt, bleibt die Leiste ausgeblendet: Öffne das Menü am Griff eines ausgewählten Blocks, das auf alle wirkt. Umschalt+Klick auf einen anderen Block oder Umschalt+Aufwärtspfeil und Umschalt+Abwärtspfeil am Rand eines Blocks erweitern die Auswahl um ganze Blöcke. Escape wählt den Block aus, in dem du schreibst, und ein weiteres Escape hebt die Auswahl auf. Command+A unter macOS oder Strg+A unter Windows/Linux markiert zuerst den Text des Blocks, in dem du bist, auch in einem Codeblock, und beim zweiten Drücken alle Blöcke. Sind Blöcke ausgewählt, wählen die Aufwärts- und die Abwärtspfeiltaste den Block darüber oder darunter, Umschalt+Aufwärtspfeil und Umschalt+Abwärtspfeil fügen Blöcke hinzu oder entfernen sie, die Rücktaste oder Entf löscht sie, Command/Strg+C kopiert sie, Command/Strg+X schneidet sie aus, und die Eingabetaste auf einem einzelnen Block setzt den Cursor an sein Ende; Tippen bewirkt nichts. Das Blockmenü wirkt auf alle ausgewählten Blöcke. Bilder, Dateien, Codeblöcke, Gleichungen, Teiler, Erwähnungen und Inline-Code zeigen dieselbe Hervorhebung, wenn sie ausgewählt sind, allein oder innerhalb einer Auswahl. Während du einen Kommentar schreibst oder bearbeitest, schließt oder verwirft Escape ihn weiterhin. Auf einem Touchscreen markiert langes Drücken weiterhin Text, und Ziehen wählt keine Blöcke aus.
+Um ganze Blöcke auszuwählen, ziehe von einem Block in einen anderen oder ziehe ein Auswahlrechteck von außerhalb des Textes auf: Drücke im Rand daneben oder im leeren Bereich unter der Seite und ziehe dann über die Blöcke. Jeder Block, den das Rechteck berührt, wird ausgewählt; ein Klick dort ohne Ziehen setzt den Cursor weiterhin auf diese Zeile, und Escape bricht das Rechteck ab. Jeder erreichte Block wird mit abgerundeten Ecken in der Farbe von markiertem Text hervorgehoben. Ist nur ein Block ausgewählt, öffnet sich die Auswahlleiste darüber: Ihre Aktionen (**Umwandeln in**, **Farbe**, **Fett** und die anderen Formate, **Kopieren**, **Numo fragen**, **Kommentieren**) gelten für den Block, und nach **Umwandeln in** bleibt er ausgewählt, damit eine weitere Aktion folgen kann. Sind mehrere Blöcke ausgewählt, bleibt die Leiste ausgeblendet: Öffne das Menü am Griff eines ausgewählten Blocks, das auf alle wirkt. Umschalt+Klick auf einen anderen Block oder Umschalt+Aufwärtspfeil und Umschalt+Abwärtspfeil am Rand eines Blocks erweitern die Auswahl um ganze Blöcke. Escape wählt den Block aus, in dem du schreibst, und ein weiteres Escape hebt die Auswahl auf. Command+A unter macOS oder Strg+A unter Windows/Linux markiert zuerst den Text des Blocks, in dem du bist, auch in einem Codeblock, und beim zweiten Drücken alle Blöcke. Sind Blöcke ausgewählt, wählen die Aufwärts- und die Abwärtspfeiltaste den Block darüber oder darunter, Umschalt+Aufwärtspfeil und Umschalt+Abwärtspfeil fügen Blöcke hinzu oder entfernen sie, die Rücktaste oder Entf löscht sie, Command/Strg+C kopiert sie, Command/Strg+X schneidet sie aus, und die Eingabetaste auf einem einzelnen Block setzt den Cursor an sein Ende; Tippen bewirkt nichts. Das Blockmenü wirkt auf alle ausgewählten Blöcke. Tippe in das Suchfeld des Blockmenüs, um jede seiner Aktionen zu erreichen, auch Blocktypen und Farben: Ein Eintrag aus einem Untermenü zeigt seinen Pfad, etwa **Umwandeln in** › **Überschrift 1**. Bilder, Dateien, Codeblöcke, Gleichungen, Teiler, Erwähnungen und Inline-Code zeigen dieselbe Hervorhebung, wenn sie ausgewählt sind, allein oder innerhalb einer Auswahl. Während du einen Kommentar schreibst oder bearbeitest, schließt oder verwirft Escape ihn weiterhin. Auf einem Touchscreen markiert langes Drücken weiterhin Text, und Ziehen wählt keine Blöcke aus.
 
 Auf dem Smartphone zeigt der Editor weder Blockgriffe noch Auswahlleiste, und ein getipptes `@` bleibt ein normales Zeichen. Solange ein Editor den Fokus hat, schwebt eine Leiste über der Tastatur, die sich beim Schließen der Tastatur ausblendet: **Block einfügen** (+) listet die Blöcke dieses Editors in denselben Abschnitten wie das Menü `/` auf und fügt den gewählten an der Cursorposition ein, wie `/`; **Erwähnen** (@) listet Personen, Tickets, Ziele und Seiten zum Erwähnen nach Typ gruppiert auf; danach folgen **Fett**, **Kursiv**, **Durchgestrichen**, **Code**, **Farbe** (ein Blatt für Text- oder Hintergrundfarbe), **Link hinzufügen**, **Ausrücken** und **Einrücken** in einer Liste, **Kommentieren** auf einer Seite sowie **Tastatur ausblenden**, das fest am rechten Ende bleibt. Ein unteres Blatt, in dem du schreibst, wächst auf die volle Bildschirmhöhe, und die Zeile, die du gerade tippst, bleibt über der Tastatur. Langes Drücken markiert Text in einem Editor, und die Leiste mit ihren Blättern funktioniert auch im Aufgabennotizbuch. Die untere Navigation wird ausgeblendet, solange ein Textfeld den Fokus hat, etwa ein Seitentitel oder ein Kommentar. Auf einem Touchscreen ist **Symbol hinzufügen** auf einer Seite immer sichtbar.
 

@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 40,
-  "sourceRevision": 40,
+  "revision": 41,
+  "sourceRevision": 41,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -121,12 +121,13 @@
       "lib/issue-hierarchy.ts",
       "components/editor/mobile-editor-toolbar.tsx",
       "lib/palette-picker.ts",
-      "lib/creation-relations.ts"
+      "lib/creation-relations.ts",
+      "lib/action-menu-search.ts"
     ]
   },
   "review": {
-    "revision": 40,
-    "fact": "agent:claude-code (content pickers moved to the command palette (MIN-844): relation targets and page resource pickers, plus Parent of / Sub-issue of in the new-issue form, checked against lib/palette-picker.ts, components/palette-picker-rows.tsx, components/relations-section.tsx, components/creation-relations.tsx, lib/creation-relations.ts and components/resources.tsx; rest of the article unchanged since the previous review; issue-dependencies-steps recaptured in the palette)",
+    "revision": 41,
+    "fact": "agent:claude-code (searchable card and issue-panel action menus also find submenu entries shown with their path, such as Relations › Mark as blocked by… (MIN-845), checked against components/issue-context-menu.tsx, lib/action-menu-search.ts and lib/issue-context-menu-search.test.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
     "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
@@ -173,7 +174,7 @@
       "src": "/documentation/en/new-issue.png",
       "alt": "Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-21 button.",
       "caption": "Describe the expected result, then choose the useful properties before creating the issue.",
-      "revision": 40,
+      "revision": 41,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -189,7 +190,7 @@
       "src": "/documentation/en/triage-incoming.png",
       "alt": "Incoming demonstration issue AUR-19 with its report, properties and duplicate, Decline and Accept controls.",
       "caption": "Read the incoming report before accepting it, declining it or linking a duplicate.",
-      "revision": 40,
+      "revision": 41,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -206,7 +207,7 @@
       "src": "/documentation/en/issue-statuses.png",
       "alt": "Eight issue statuses in the picker, with backlog currently selected.",
       "caption": "The check marks the current status. Choose the status that reflects the work’s actual state.",
-      "revision": 40,
+      "revision": 41,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -222,7 +223,7 @@
       "src": "/documentation/en/work-resources.png",
       "alt": "Add-link dialog with an example contact URL.",
       "caption": "Review the destination before adding a resource. This example link has not been submitted.",
-      "revision": 40,
+      "revision": 41,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -238,7 +239,7 @@
       "src": "/documentation/en/work-dependencies.png",
       "alt": "The command palette lists the issues that can block this one, with the relation's question in its search field.",
       "caption": "Choose the relation direction before selecting its endpoint. The picker is shown without submitting a relation.",
-      "revision": 40,
+      "revision": 41,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -254,7 +255,7 @@
       "src": "/documentation/en/work-sub-issues.png",
       "alt": "Sub-issue creation field in a demonstration parent issue.",
       "caption": "The inline field creates a child under this parent; a child keeps its own status and discussion.",
-      "revision": 40,
+      "revision": 41,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -270,7 +271,7 @@
       "src": "/documentation/en/work-implementation-plan.png",
       "alt": "Demonstration plan showing two of six work tasks complete.",
       "caption": "The saved demonstration plan separates completed, active and pending steps. Its progress does not prove the fictional code task was executed.",
-      "revision": 40,
+      "revision": 41,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -286,7 +287,7 @@
       "src": "/documentation/en/issue-date-recurrence.png",
       "alt": "Due-date picker in recurring mode with a weekly Sunday preview and optional time.",
       "caption": "Recurring mode previews the weekly cadence. Confirm the first due date before creating the issue.",
-      "revision": 40,
+      "revision": 41,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -302,7 +303,7 @@
       "src": "/documentation/en/import-issues-preview-workflow.png",
       "alt": "CSV preview with two localized demonstration rows and detected column mappings.",
       "caption": "CSV preview with two localized demonstration rows and detected column mappings. No import was submitted; optional AI planning was blocked for the capture.",
-      "revision": 40,
+      "revision": 41,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -319,7 +320,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 40,
+      "revision": 41,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -502,7 +503,7 @@ Indexing and relation decisions use AI. They count toward the **Automations** sh
 
 Open the parent issue and use its sub-issue controls to create smaller pieces of work. Give each child a distinct outcome. Inspect its project, properties and parent identifier after creation; a hierarchy should make the task easier to track, not replace the description of what each child must achieve.
 
-To attach issues that already exist, press R on a hovered card or in the issue panel, or open **Relations** from a card's right-click menu. **Parent of** lists the issues that can become a sub-issue of this one; **Sub-issue of** lists the top-level issues that can become its parent. Each list only offers what the one-level rule allows: a sub-issue has no **Parent of** entry, and an issue that already has sub-issues has no **Sub-issue of** entry. Choosing an issue that already has another parent moves it under the new one. From a selection of cards, **Sub-issue of** places every eligible selected issue under the chosen parent. In the new-issue form, **Relations** offers the same two entries: **Sub-issue of** creates the issue under the chosen parent, and **Parent of** places the chosen issues under it once it is created. A new issue takes one parent or sub-issues, not both.
+To attach issues that already exist, press R on a hovered card or in the issue panel, or open **Relations** from a card's right-click menu. **Parent of** lists the issues that can become a sub-issue of this one; **Sub-issue of** lists the top-level issues that can become its parent. Each list only offers what the one-level rule allows: a sub-issue has no **Parent of** entry, and an issue that already has sub-issues has no **Sub-issue of** entry. Choosing an issue that already has another parent moves it under the new one. From a selection of cards, **Sub-issue of** places every eligible selected issue under the chosen parent. In the new-issue form, **Relations** offers the same two entries: **Sub-issue of** creates the issue under the chosen parent, and **Parent of** places the chosen issues under it once it is created. A new issue takes one parent or sub-issues, not both. Typing in the search field of a card's right-click menu or of the issue panel's `…` menu also finds the entries of its submenus, each shown with its path, such as **Relations** › **Mark as blocked by…**.
 
 The hierarchy permits one level: a parent must be a top-level issue in the same project, and a sub-issue cannot itself have children. When no objective is explicitly chosen during creation, the child inherits the parent’s objective; inspect the resulting properties rather than assuming that later parent edits propagate.
 
