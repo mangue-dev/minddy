@@ -4,19 +4,17 @@
 // table — label left, a link button right — with the issue's relations grouped
 // by type just under it, each removable.
 //
-// Adding is two steps in ONE popover: the link button opens the list of relation
-// types, and picking one advances the SAME popover to the searchable list of
-// candidate ends. Since MIN-513 the candidates mix tickets and objectives — a
-// relation can block through an objective, or link one. Since MIN-804 the
-// type list also sets the hierarchy (parent of, sub-issue of), whose second
-// step lists tickets only.
+// Adding is two steps: the link button opens a dropdown of relation types,
+// and picking one opens the ⌘K palette on the candidate ends (MIN-844) — the
+// palette lists content, never the type. Since MIN-513 the candidates mix tickets
+// and objectives — a relation can block through an objective, or link one.
+// Since MIN-804 the type list also sets the hierarchy (parent of, sub-issue
+// of), whose second step lists tickets only.
 //
-// (The board's right-click menu and the MCP tool are the other entry points;
-// the menu chains two overlays instead, which it can afford — there's no Dialog
-// around a card.)
+// (The board's card shortcut, its right-click menu and the MCP tool are the
+// other entry points.)
 
 import { TruncatedText } from "@/components/ui/truncated-text";
-import { SemanticIssueGroup } from "@/components/semantic-issue-group";
 import {
   Tooltip,
   TooltipContent,
@@ -29,7 +27,7 @@ import {
   MessageMultiple01Icon,
   Target01Icon,
 } from "@hugeicons/core-free-icons";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useAppRouter } from "@/lib/use-app-router";
 import { useQuery } from "@tanstack/react-query";
 import { RelationObjectiveLabel } from "@/components/relation-objective-label";
@@ -37,11 +35,10 @@ import { useOrderedObjectives } from "@/lib/use-ordered-objectives";
 import { useTranslations } from "next-intl";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Button } from "@/components/ui/button";
-import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { issueIdentifier } from "@/lib/issue-constants";
-import { issueTierKeyword, orderIssuesForSearch } from "@/lib/issue-search-order";
+import { orderIssuesForSearch } from "@/lib/issue-search-order";
 import { RELATION_PRIORITY, RELATION_TYPES } from "@/lib/relation-constants";
 import {
   HIERARCHY_RELATIONS,
@@ -58,7 +55,9 @@ import {
 import { ObjectiveStatusIndicator, RelationIcon, StatusIndicator } from "@/components/issue-indicators";
 import { PropertyRow, TRIGGER } from "@/components/issue-property-fields";
 import { RELATION_SHORTCUT_HINT } from "@/components/issue-field-shortcuts";
+import { useRelationPalettePicker } from "@/components/palette-picker-rows";
 import { SearchMenu } from "@/components/search-menu";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
 import type { ChipRelation } from "@/components/relation-chips";
 import type {
   Issue,
@@ -104,7 +103,7 @@ export function RelationsSection({
   onSetParent?: (kind: HierarchyRelation, targetId: string) => void;
   /** Project readers: relations are listed without add or remove controls. */
   readOnly?: boolean;
-  /** Controlled add popover, so the panel's R shortcut can open it (MIN-749). */
+  /** Controlled type dropdown, so the panel's R shortcut can open it (MIN-749). */
   addOpen?: boolean;
   onAddOpenChange?: (open: boolean) => void;
 }) {
@@ -133,12 +132,8 @@ export function RelationsSection({
     },
   });
   const feedback = feedbackData?.feedback ?? [];
-  // Current step of the popover: null = choose the type, otherwise = choose the target
-  // of this type. The search is controlled to come up empty at each step —
-  // otherwise “block” (typed to filter the types) would then filter the
-  // tickets and would not show any.
+  // The type chosen in the dropdown: the palette then lists its targets.
   const [step, setStep] = useState<RelationMenuKind | null>(null);
-  const [query, setQuery] = useState("");
 
   const issueById = useMemo(
     () => new Map(allIssues.map((i) => [i.id, i])),
@@ -195,16 +190,32 @@ export function RelationsSection({
     ? HIERARCHY_RELATIONS.filter((kind) => hierarchyAvailable(kind, [issue], allIssues))
     : [];
 
-  const close = () => {
-    setOpen(false);
-    setStep(null);
-    setQuery("");
-  };
-  const pickIssue = (kind: RelationMenuKind, targetId: string) => {
-    if (isHierarchyRelation(kind)) onSetParent?.(kind, targetId);
-    else onAddRelation(issue.id, kind, targetId);
-    close();
-  };
+  const close = () => setStep(null);
+  // The type chosen in the dropdown, handed to the palette once the dropdown
+  // has closed: opened earlier, the palette would lose its focus to the
+  // dropdown's exit.
+  const pendingStep = useRef<RelationMenuKind | null>(null);
+
+  useRelationPalettePicker(step && !readOnly ? {
+    scope: `issue-relations:${issue.id}`,
+    step,
+    issues: candidates,
+    objectives: objectiveCandidates,
+    projectKey,
+    projectId: issue.project_id,
+    onPickIssue: (kind, targetId) => {
+      if (isHierarchyRelation(kind)) onSetParent?.(kind, targetId);
+      else onAddRelation(issue.id, kind, targetId);
+      close();
+    },
+    onPickObjective: (kind, objectiveId) => {
+      if (!isHierarchyRelation(kind)) {
+        onAddRelation(issue.id, kind, objectiveId, { targetType: "objective" });
+      }
+      close();
+    },
+    onClose: close,
+  } : null);
 
   return (
     <>
@@ -212,23 +223,17 @@ export function RelationsSection({
       <PropertyRow label={t("relations")}>
         <SearchMenu
           open={open}
-          onOpenChange={(next) => {
-            setOpen(next);
-            if (!next) {
-              setStep(null);
-              setQuery("");
-            }
-          }}
+          onOpenChange={setOpen}
           align="end"
           tooltip={t("addRelationAria")}
           shortcutHint={RELATION_SHORTCUT_HINT}
-          searchValue={query}
-          onSearchValueChange={setQuery}
-          searchPlaceholder={step ? t("searchTarget") : undefined}
-          focusKey={step}
-          // Wider than the default w-60: in step 2 we choose a ticket
-          // by its title, and 240px cut it by a third. Stay in the panel.
-          contentClassName="w-80"
+          onCloseAutoFocus={(event) => {
+            const chosen = pendingStep.current;
+            if (!chosen) return;
+            pendingStep.current = null;
+            event.preventDefault();
+            setStep(chosen);
+          }}
           trigger={
             <button
               type="button"
@@ -239,96 +244,25 @@ export function RelationsSection({
             </button>
           }
         >
-          {step === null ? (
-            // SHORT labels (“Block”, “Blocked by”, “Linked to”): those of
-            // the section, and those of the group headers just below. There
-            // “Mark as blocking…” formulation is that of the right click
-            // a card, where the entry must be announced as an action; here
-            // the header already says "Relationships", and the next step continues on
-            // “Block which ticket?” ". It remains searchable via keywords.
-            <CommandGroup heading={t("relations")}>
-              {[...RELATION_TYPES, ...hierarchy].map((type) => (
-                <CommandItem
-                  key={type}
-                  value={type}
-                  keywords={[t(`action_${type}`)]}
-                  onSelect={() => {
-                    setStep(type);
-                    setQuery("");
-                  }}
-                >
-                  <RelationIcon relation={type} className="size-4" />
-                  <span className="truncate">{t(type)}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          ) : (
-            <>
-              <CommandGroup heading={t(`pick_${step}`)}>
-                {candidates.map((candidate) => {
-                  const id = issueIdentifier(projectKey, candidate.number);
-                  return (
-                    <CommandItem
-                      key={candidate.id}
-                      value={candidate.id}
-                      keywords={[id, candidate.title, issueTierKeyword(candidate.status)]}
-                      onSelect={() => pickIssue(step, candidate.id)}
-                    >
-                      <StatusIndicator
-                        status={candidate.status}
-                        className="size-4"
-                      />
-                      <span className="shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
-                        {id}
-                      </span>
-                      <span className="truncate">{candidate.title}</span>
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
-              {objectiveCandidates.length > 0 && (
-                <CommandGroup heading={t("objectives")}>
-                  {objectiveCandidates.map((objective) => (
-                    <CommandItem
-                      key={objective.id}
-                      value={objective.id}
-                      keywords={[objective.name]}
-                      onSelect={() => {
-                        if (isHierarchyRelation(step)) return;
-                        onAddRelation(issue.id, step, objective.id, {
-                          targetType: "objective",
-                        });
-                        close();
-                      }}
-                    >
-                      <RelationObjectiveLabel objective={objective} />
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-              {/* Same eligible candidates, found by meaning (MIN-718). */}
-              <SemanticIssueGroup
-                projectId={issue.project_id}
-                candidates={candidates}
-                idOf={(candidate) => candidate.id}
-                statusOf={(candidate) => candidate.status}
-                textOf={(candidate) => ({
-                  value: candidate.id,
-                  keywords: [issueIdentifier(projectKey, candidate.number), candidate.title],
-                })}
-                onSelect={(candidate) => pickIssue(step, candidate.id)}
-                renderItem={(candidate) => (
-                  <>
-                    <StatusIndicator status={candidate.status} className="size-4" />
-                    <span className="shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
-                      {issueIdentifier(projectKey, candidate.number)}
-                    </span>
-                    <span className="truncate">{candidate.title}</span>
-                  </>
-                )}
-              />
-            </>
-          )}
+          {/* SHORT labels (“Blocks”, “Blocked by”, “Related”): those of the
+              section and of the group headers just below. The right-click
+              wording (“Mark as blocking…”) stays searchable as keywords. */}
+          <CommandGroup heading={t("relations")}>
+            {[...RELATION_TYPES, ...hierarchy].map((type) => (
+              <CommandItem
+                key={type}
+                value={type}
+                keywords={[t(`action_${type}`)]}
+                onSelect={() => {
+                  pendingStep.current = type;
+                  setOpen(false);
+                }}
+              >
+                <RelationIcon relation={type} className="size-4" />
+                <span className="truncate">{t(type)}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
         </SearchMenu>
       </PropertyRow>
       )}

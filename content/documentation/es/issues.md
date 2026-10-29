@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 39,
-  "sourceRevision": 39,
+  "revision": 40,
+  "sourceRevision": 40,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-28",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles; MIN-809 Smart Fill split button; MIN-813 Smart Fill title on request",
     "editions": [
@@ -99,7 +99,7 @@
       "components/settings/account-preferences-section.tsx",
       "lib/issue-semantic-query.ts",
       "lib/server/issue-semantic-search.ts",
-      "components/relation-target-picker.tsx",
+      "components/palette-picker-rows.tsx",
       "components/editor/rich-editor.tsx",
       "components/editor/document-editor.tsx",
       "components/editor/comment-editor.tsx",
@@ -119,14 +119,16 @@
       "lib/use-all-drafts.ts",
       "lib/use-held-draft.ts",
       "lib/issue-hierarchy.ts",
-      "components/editor/mobile-editor-toolbar.tsx"
+      "components/editor/mobile-editor-toolbar.tsx",
+      "lib/palette-picker.ts",
+      "lib/creation-relations.ts"
     ]
   },
   "review": {
-    "revision": 39,
-    "fact": "agent:claude-code (phone keyboard toolbar sentence checked against components/editor/mobile-editor-toolbar.tsx and components/editor/rich-editor.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (es changed passages with catalog UI labels; equivalent meaning to en revision 39; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-28"
+    "revision": 40,
+    "fact": "agent:claude-code (content pickers moved to the command palette (MIN-844): relation targets and page resource pickers, plus Parent of / Sub-issue of in the new-issue form, checked against lib/palette-picker.ts, components/palette-picker-rows.tsx, components/relations-section.tsx, components/creation-relations.tsx, lib/creation-relations.ts and components/resources.tsx; rest of the article unchanged since the previous review; issue-dependencies-steps recaptured in the palette)",
+    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "feedback",
@@ -171,7 +173,7 @@
       "src": "/documentation/es/new-issue.png",
       "alt": "Borrador sin enviar en el proyecto Aurora con título, descripción, propiedades que se pueden elegir manualmente y el botón Crear AUR-21.",
       "caption": "Describe el resultado esperado y elige las propiedades útiles antes de crear el ticket.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -188,7 +190,7 @@
       "src": "/documentation/es/triage-incoming.png",
       "alt": "Incidencia entrante de demostración AUR-19 con informe, propiedades y controles de duplicado, Rechazar y Aceptar.",
       "caption": "Lee el informe recibido antes de aceptarlo, rechazarlo o enlazar un duplicado.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -205,7 +207,7 @@
       "src": "/documentation/es/issue-statuses.png",
       "alt": "Los ocho estados del ticket en el selector, con el estado de backlog seleccionado.",
       "caption": "La marca indica el estado actual. Elige el que corresponda al estado real del trabajo.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -222,7 +224,7 @@
       "src": "/documentation/es/work-resources.png",
       "alt": "Diálogo para añadir un enlace con una dirección de contacto de ejemplo.",
       "caption": "Revisa el destino antes de añadir el recurso. Este enlace de ejemplo no se ha enviado.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -236,14 +238,14 @@
       "id": "issue-dependencies-steps",
       "kind": "screenshot",
       "src": "/documentation/es/work-dependencies.png",
-      "alt": "Búsqueda de una incidencia bloqueante por identificador.",
+      "alt": "La paleta de comandos muestra las incidencias que pueden bloquear esta, con la pregunta de la relación en su campo de búsqueda.",
       "caption": "Elige el sentido de la relación antes de su destino. El selector se muestra sin enviar la relación.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
-      "capturedAt": "2026-10-22",
+      "capturedAt": "2026-10-29",
       "viewport": [
-        368,
-        184
+        788,
+        506
       ],
       "theme": "light",
       "padding": 24,
@@ -255,7 +257,7 @@
       "src": "/documentation/es/work-sub-issues.png",
       "alt": "Campo para crear una subincidencia en una incidencia principal de demostración.",
       "caption": "El campo crea una hija de esta incidencia; cada hija conserva su estado y conversación.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -272,7 +274,7 @@
       "src": "/documentation/es/work-implementation-plan.png",
       "alt": "Plan de demostración con dos tareas de trabajo completadas de seis.",
       "caption": "El plan guardado distingue pasos completados, activos y pendientes. Su progreso no demuestra que se ejecutara la tarea de código ficticia.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -289,7 +291,7 @@
       "src": "/documentation/es/issue-date-recurrence.png",
       "alt": "Selector de fecha en modo recurrente con vista previa semanal los domingos y hora opcional.",
       "caption": "El modo recurrente muestra la frecuencia semanal. Confirma la primera fecha antes de crear el ticket.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -305,7 +307,7 @@
       "src": "/documentation/es/import-issues-preview-workflow.png",
       "alt": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas.",
       "caption": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas. No se envió la importación; la planificación opcional con IA se bloqueó para la captura.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -322,7 +324,7 @@
       "src": "/documentation/es/file-preview.png",
       "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.",
       "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Cambiar nombre y Eliminar.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -452,7 +454,7 @@ Comprueba los filtros si una incidencia desaparece después de cerrarla. Ábrela
 
 Abre la cronología de discusión de la incidencia para añadir un comentario. Explica una decisión, pregunta o resultado de verificación para que otro miembro comprenda qué cambió. Usa menciones cuando necesites una persona o un objeto vinculado en el contexto; las notificaciones siguen dependiendo de las preferencias del destinatario y de la entrega en su dispositivo. Un lector solo puede comentar si el propietario le ha activado **Puede comentar**. Entonces puede responder, mencionar a personas, adjuntar archivos a sus propios comentarios, y editar o eliminar sus propios comentarios.
 
-Adjunta una página relevante del proyecto, un archivo o un enlace mediante los controles de recursos. Una página vinculada es un recurso actualizado: su título sigue los cambios de nombre y su contenido puede evolucionar. Un archivo es un adjunto almacenado, no una garantía de que una URL externa seguirá disponible. Para redactar una página que aún no existe, elige **Página** y luego **Nueva página** al final de la lista; un título escrito antes en la búsqueda se convierte en su título. La página se crea en el proyecto, se adjunta a la incidencia y se abre en un panel lateral, donde **Ampliar** abre la página completa.
+Adjunta una página relevante del proyecto, un archivo o un enlace mediante los controles de recursos. Una página vinculada es un recurso actualizado: su título sigue los cambios de nombre y su contenido puede evolucionar. Un archivo es un adjunto almacenado, no una garantía de que una URL externa seguirá disponible. **Página** abre la paleta de comandos con las páginas del proyecto, en el orden de la barra lateral; elige una para adjuntarla. Para redactar una página que aún no existe, elige **Nueva página** al final de la lista; un título escrito antes en la búsqueda se convierte en su título. La página se crea en el proyecto, se adjunta a la incidencia y se abre en un panel lateral, donde **Ampliar** abre la página completa.
 
 Los recursos aparecen como tarjetas: la propia imagen o el icono del tipo de archivo, el nombre y el tamaño. Un enlace muestra la imagen de vista previa de su página cuando el sitio la ofrece; si no, su favicon. Haz clic o clic derecho en una tarjeta para abrir su menú: Vista previa, Abrir enlace o Abrir la página, y después Cambiar nombre, Descargar y Eliminar cuando correspondan. Vista previa abre un archivo compatible en toda la ventana. Las imágenes, los PDF, Markdown (`.md`), el texto sin formato (`.txt`, `.text`), los CSV y los formatos de audio o vídeo compatibles usan el mismo visor. Markdown se muestra con formato, el texto se mantiene literal y el CSV se abre como una tabla desplazable. Usa Cerrar o Escape para volver al ticket. El menú Acciones del archivo (`…`) ofrece Descargar y, si puedes modificar ese recurso, Cambiar nombre y Eliminar. Al hacer clic en la mención de un archivo en un texto se abre el mismo visor. Minddy pide confirmación antes de quitar un recurso, que entonces se desvincula de este contexto. Un recurso de página conserva el título de su página y no se puede renombrar. Los formatos no compatibles conservan su acción de descarga. **Abrir la página** la muestra en un panel lateral, donde **Ampliar** abre la página completa; una base de datos se abre directamente como página completa.
 
@@ -468,11 +470,11 @@ Comprueba que un recurso cargado aparezca y pueda abrirse después de la operaci
 
 ## Enlazar dependencias e incidencias relacionadas {#issue-dependencies}
 
-Abre los controles de relaciones de una incidencia y busca la otra por título o identificador. Fuera de un campo de texto, R abre la elección del tipo de relación desde una tarjeta bajo el puntero o el panel de la incidencia. Una búsqueda descriptiva también muestra, después de las coincidencias de texto, incidencias del mismo proyecto encontradas [por el sentido](/docs/navigation#search-by-meaning) bajo **Relacionadas por significado**. Elige una relación de bloqueo cuando una tarea deba terminar antes de que otra pueda avanzar. Si A bloquea B, A es el requisito previo y B está bloqueada por A. Una relación de vínculo añade contexto sin imponer ese orden.
+Abre los controles de relaciones de una incidencia y busca la otra por título o identificador. Fuera de un campo de texto, R abre la elección del tipo de relación desde una tarjeta bajo el puntero o el panel de la incidencia. Una vez elegido el tipo, el otro extremo se elige en la [paleta de comandos](/docs/navigation#search-and-shortcuts), que solo muestra las incidencias y objetivos que admiten esa relación. Una búsqueda descriptiva también muestra, después de las coincidencias de texto, incidencias del mismo proyecto encontradas [por el sentido](/docs/navigation#search-by-meaning) bajo **Relacionadas por significado**. Elige una relación de bloqueo cuando una tarea deba terminar antes de que otra pueda avanzar. Si A bloquea B, A es el requisito previo y B está bloqueada por A. Una relación de vínculo añade contexto sin imponer ese orden.
 
 Lee los dos identificadores y la dirección mostrada antes de confirmar. Por ejemplo, «Preparar el punto de acceso» bloquea «Conectar el cliente», y no al revés. Una dependencia no convierte ninguna de las incidencias en subincidencia; una relación de padre e hija no sustituye a una relación de bloqueo.
 
-![Búsqueda de una incidencia bloqueante por identificador.](/documentation/es/work-dependencies.png)
+![La paleta de comandos muestra las incidencias que pueden bloquear esta, con la pregunta de la relación en su campo de búsqueda.](/documentation/es/work-dependencies.png)
 
 ### Bloqueos resueltos y heredados {#blocker-state}
 
@@ -498,7 +500,7 @@ La indexación y las decisiones de relación usan IA. Cuentan en la parte **Auto
 
 Abre la incidencia principal y usa sus controles de subincidencias para crear partes menores del trabajo. Asigna un resultado distinto a cada hija. Comprueba su proyecto, propiedades e identificador de la principal después de crearla; la jerarquía debe facilitar el seguimiento, no sustituir la descripción de lo que cada hija debe lograr.
 
-Para vincular incidencias que ya existen, pulsa R sobre una tarjeta bajo el puntero o en el panel de la incidencia, o abre **Relaciones** desde el clic derecho de una tarjeta. **Principal de** muestra las incidencias que pueden convertirse en subincidencia de esta; **Subincidencia de** muestra las incidencias de primer nivel que pueden convertirse en su principal. Cada lista solo ofrece lo que permite la regla de un único nivel: una subincidencia no tiene la entrada **Principal de**, y una incidencia que ya tiene subincidencias no tiene la entrada **Subincidencia de**. Elegir una incidencia que ya tiene otra principal la mueve bajo la nueva. Desde una selección de tarjetas, **Subincidencia de** coloca bajo la principal elegida cada incidencia seleccionada que cumpla la regla.
+Para vincular incidencias que ya existen, pulsa R sobre una tarjeta bajo el puntero o en el panel de la incidencia, o abre **Relaciones** desde el clic derecho de una tarjeta. **Principal de** muestra las incidencias que pueden convertirse en subincidencia de esta; **Subincidencia de** muestra las incidencias de primer nivel que pueden convertirse en su principal. Cada lista solo ofrece lo que permite la regla de un único nivel: una subincidencia no tiene la entrada **Principal de**, y una incidencia que ya tiene subincidencias no tiene la entrada **Subincidencia de**. Elegir una incidencia que ya tiene otra principal la mueve bajo la nueva. Desde una selección de tarjetas, **Subincidencia de** coloca bajo la principal elegida cada incidencia seleccionada que cumpla la regla. En el formulario de nueva incidencia, **Relaciones** ofrece las mismas dos entradas: **Subincidencia de** crea la incidencia bajo la principal elegida, y **Principal de** coloca debajo las incidencias elegidas una vez creada. Una incidencia nueva tiene una principal o subincidencias, no ambas.
 
 La jerarquía admite un nivel: la incidencia principal debe ser una incidencia de nivel superior del mismo proyecto y una subincidencia no puede tener hijas. Si no eliges expresamente un objetivo al crearla, la hija hereda el objetivo de la principal. Comprueba las propiedades resultantes en lugar de suponer que los cambios posteriores de la principal se propagan.
 

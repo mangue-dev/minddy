@@ -2,6 +2,7 @@
 
 import { toast } from "sonner";
 import { addIssueRelationApi } from "./issue-relations-api";
+import { updateIssueApi } from "./issues-api";
 import type { PendingRelationInput, RelationEndpointType } from "./types";
 
 /** All creation paths, including deferred Smart Fill, save links after the POST.
@@ -16,6 +17,16 @@ export async function saveCreationRelations(
 ): Promise<void> {
   for (const relation of relations) {
     try {
+      // A hierarchy link is a parent change, not a stored relation (MIN-804):
+      // the target becomes this issue's sub-issue, or its parent.
+      if (relation.type === "parent_of") {
+        await updateIssueApi(relation.target_id, { parent_id: sourceId });
+        continue;
+      }
+      if (relation.type === "sub_issue_of") {
+        await updateIssueApi(sourceId, { parent_id: relation.target_id });
+        continue;
+      }
       await addIssueRelationApi(projectId, {
         source_id: sourceId,
         source_type: sourceType,

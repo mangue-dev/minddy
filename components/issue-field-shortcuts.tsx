@@ -523,8 +523,8 @@ export function IssueShortcutMenu({
 
 /**
  * The relation-type step of R on a hovered card (MIN-749), at the cursor. The
- * card then opens `RelationTargetPicker` at the same point for the target —
- * the same two overlays as its right-click Relations entry.
+ * card then opens the ⌘K palette on the targets of the chosen type (MIN-844),
+ * as its right-click Relations entry does.
  */
 export function RelationTypePicker({
   position,

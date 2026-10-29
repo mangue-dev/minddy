@@ -7,8 +7,9 @@
 // ISSUE (what does the board's dependency mean for the goal) or with another
 // OBJECTIVE ("don't launch B until A lands").
 //
-// Adding is the same two steps in ONE popover as on a ticket: pick the type,
-// then the target among the project's open issues and other objectives.
+// Adding is the same two steps as on a ticket: pick the type in a dropdown,
+// then the target in the ⌘K palette (MIN-844), among the project's open
+// issues and other objectives.
 
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -17,16 +18,14 @@ import { useAppRouter } from "@/lib/use-app-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { RelationObjectiveLabel } from "@/components/relation-objective-label";
 import { useOrderedObjectives } from "@/lib/use-ordered-objectives";
-import { SemanticIssueGroup } from "@/components/semantic-issue-group";
 import { useTranslations } from "next-intl";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Button } from "@/components/ui/button";
-import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { issueIdentifier } from "@/lib/issue-constants";
-import { issueTierKeyword, orderIssuesForSearch } from "@/lib/issue-search-order";
+import { orderIssuesForSearch } from "@/lib/issue-search-order";
 import {
   RELATION_PRIORITY,
   RELATION_TYPES,
@@ -35,8 +34,10 @@ import {
 import { useIssueRelationsQuery } from "@/lib/use-issue-relations-query";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { RelationIcon, StatusIndicator } from "@/components/issue-indicators";
-import { PropertyRow, TRIGGER } from "@/components/issue-property-fields";
+import { useRelationPalettePicker } from "@/components/palette-picker-rows";
 import { SearchMenu } from "@/components/search-menu";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
+import { PropertyRow, TRIGGER } from "@/components/issue-property-fields";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { RELATION_SHORTCUT_HINT, RELATION_SHORTCUT_KEY } from "@/components/issue-field-shortcuts";
 import { isTypingTarget } from "@/lib/keyboard/keyboard-context";
@@ -74,7 +75,6 @@ export function ObjectiveRelationsSection({
   const [open, setOpen] = useState(false);
   const [boardOpen, setBoardOpen] = useState(false);
   const [step, setStep] = useState<IssueRelationType | null>(null);
-  const [query, setQuery] = useState("");
 
   // R opens the add popover on the objective page (MIN-749), with the rules of
   // the card shortcuts: no modifier, never while typing in a field, never under
@@ -150,11 +150,34 @@ export function ObjectiveRelationsSection({
     [resolved],
   );
 
-  const close = () => {
-    setOpen(false);
-    setStep(null);
-    setQuery("");
-  };
+  const close = () => setStep(null);
+  // The type chosen in the dropdown, handed to the palette once the dropdown
+  // has closed: opened earlier, the palette would lose its focus to the
+  // dropdown's exit.
+  const pendingStep = useRef<IssueRelationType | null>(null);
+
+  useRelationPalettePicker(step && canWrite ? {
+    scope: `objective-relations:${objective.id}`,
+    step,
+    issues: issueCandidates,
+    objectives: objectiveCandidates,
+    projectKey,
+    projectId,
+    onPickIssue: (_type, issueId) => {
+      void addRelation(objective.id, step, issueId, {
+        sourceType: "objective",
+      }).catch((err) => toast.error((err as Error).message));
+      close();
+    },
+    onPickObjective: (_type, objectiveId) => {
+      void addRelation(objective.id, step, objectiveId, {
+        sourceType: "objective",
+        targetType: "objective",
+      }).catch((err) => toast.error((err as Error).message));
+      close();
+    },
+    onClose: close,
+  } : null);
 
   const content = (
     <>
@@ -162,21 +185,17 @@ export function ObjectiveRelationsSection({
       <PropertyRow label={t("relations")}>
         <SearchMenu
           open={open}
-          onOpenChange={(next) => {
-            setOpen(next);
-            if (!next) {
-              setStep(null);
-              setQuery("");
-            }
-          }}
+          onOpenChange={setOpen}
           align="end"
           tooltip={t("addRelationAria")}
           shortcutHint={RELATION_SHORTCUT_HINT}
-          searchValue={query}
-          onSearchValueChange={setQuery}
-          searchPlaceholder={step ? t("searchTarget") : undefined}
-          focusKey={step}
-          contentClassName="w-80"
+          onCloseAutoFocus={(event) => {
+            const chosen = pendingStep.current;
+            if (!chosen) return;
+            pendingStep.current = null;
+            event.preventDefault();
+            setStep(chosen);
+          }}
           trigger={
             <button
               type="button"
@@ -187,100 +206,22 @@ export function ObjectiveRelationsSection({
             </button>
           }
         >
-          {step === null ? (
-            <CommandGroup heading={t("relations")}>
-              {RELATION_TYPES.map((type) => (
-                <CommandItem
-                  key={type}
-                  value={type}
-                  keywords={[t(`action_${type}`)]}
-                  onSelect={() => {
-                    setStep(type);
-                    setQuery("");
-                  }}
-                >
-                  <RelationIcon relation={type} className="size-4" />
-                  <span className="truncate">{t(type)}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          ) : (
-            <>
-              <CommandGroup heading={t(`pick_${step}`)}>
-                {issueCandidates.map((candidate) => {
-                  const id = issueIdentifier(projectKey, candidate.number);
-                  return (
-                    <CommandItem
-                      key={candidate.id}
-                      value={candidate.id}
-                      keywords={[id, candidate.title, issueTierKeyword(candidate.status)]}
-                      onSelect={() => {
-                        void addRelation(objective.id, step, candidate.id, {
-                          sourceType: "objective",
-                        }).catch((err) => toast.error((err as Error).message));
-                        close();
-                      }}
-                    >
-                      <StatusIndicator
-                        status={candidate.status}
-                        className="size-4"
-                      />
-                      <span className="shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
-                        {id}
-                      </span>
-                      <span className="truncate">{candidate.title}</span>
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
-              {objectiveCandidates.length > 0 && (
-                <CommandGroup heading={t("objectives")}>
-                  {objectiveCandidates.map((candidate) => (
-                    <CommandItem
-                      key={candidate.id}
-                      value={candidate.id}
-                      keywords={[candidate.name]}
-                      onSelect={() => {
-                        void addRelation(objective.id, step, candidate.id, {
-                          sourceType: "objective",
-                          targetType: "objective",
-                        }).catch((err) => toast.error((err as Error).message));
-                        close();
-                      }}
-                    >
-                      <RelationObjectiveLabel objective={candidate} />
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-              {/* Same eligible issues, found by meaning (MIN-718). */}
-              <SemanticIssueGroup
-                projectId={projectId}
-                candidates={issueCandidates}
-                idOf={(candidate) => candidate.id}
-                statusOf={(candidate) => candidate.status}
-                textOf={(candidate) => ({
-                  value: candidate.id,
-                  keywords: [issueIdentifier(projectKey, candidate.number), candidate.title],
-                })}
-                onSelect={(candidate) => {
-                  void addRelation(objective.id, step, candidate.id, {
-                    sourceType: "objective",
-                  }).catch((err) => toast.error((err as Error).message));
-                  close();
+          <CommandGroup heading={t("relations")}>
+            {RELATION_TYPES.map((type) => (
+              <CommandItem
+                key={type}
+                value={type}
+                keywords={[t(`action_${type}`)]}
+                onSelect={() => {
+                  pendingStep.current = type;
+                  setOpen(false);
                 }}
-                renderItem={(candidate) => (
-                  <>
-                    <StatusIndicator status={candidate.status} className="size-4" />
-                    <span className="shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
-                      {issueIdentifier(projectKey, candidate.number)}
-                    </span>
-                    <span className="truncate">{candidate.title}</span>
-                  </>
-                )}
-              />
-            </>
-          )}
+              >
+                <RelationIcon relation={type} className="size-4" />
+                <span className="truncate">{t(type)}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
         </SearchMenu>
       </PropertyRow>
       )}

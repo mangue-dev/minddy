@@ -25,14 +25,22 @@ vi.mock("next-intl", () => ({ useTranslations: (namespace: string) =>
 }));
 vi.mock("@hugeicons/react", () => ({ HugeiconsIcon: () => null }));
 vi.mock("@/components/ui/app-tooltip", () => ({ AppTooltip: ({ children }: { children: React.ReactNode }) => children }));
-vi.mock("@/components/search-menu", () => ({ SearchMenu: ({ open, onOpenChange, trigger, children, searchValue, onSearchValueChange, container, modal }: {
+// Closing runs the close-autofocus handler, as the real popover does once its
+// exit ends: the relation type hands over to the palette there.
+vi.mock("@/components/search-menu", () => ({ SearchMenu: function SearchMenu({ open, onOpenChange, trigger, children, searchValue, onSearchValueChange, container, modal, onCloseAutoFocus }: {
   open: boolean; onOpenChange: (value: boolean) => void; trigger: React.ReactElement; children: React.ReactNode;
   searchValue: string; onSearchValueChange: (value: string) => void;
-  container?: HTMLElement | null; modal?: boolean;
-}) => React.createElement("div", { "data-picker": true },
-  React.cloneElement(trigger, { onClick: () => onOpenChange(!open) } as React.HTMLAttributes<HTMLElement>),
-  open && createPortal(React.createElement("div", { "data-modal": modal }, React.createElement("input", { "aria-label": "Search relations", value: searchValue, onChange: (e: React.ChangeEvent<HTMLInputElement>) => onSearchValueChange(e.target.value) }), children), container ?? document.body)),
-}));
+  container?: HTMLElement | null; modal?: boolean; onCloseAutoFocus?: (event: Event) => void;
+}) {
+  const wasOpen = React.useRef(open);
+  React.useEffect(() => {
+    if (wasOpen.current && !open) onCloseAutoFocus?.(new Event("focus", { cancelable: true }));
+    wasOpen.current = open;
+  });
+  return React.createElement("div", { "data-picker": true },
+    React.cloneElement(trigger, { onClick: () => onOpenChange(!open) } as React.HTMLAttributes<HTMLElement>),
+    open && createPortal(React.createElement("div", { "data-modal": modal }, React.createElement("input", { "aria-label": "Search relations", value: searchValue, onChange: (e: React.ChangeEvent<HTMLInputElement>) => onSearchValueChange(e.target.value) }), children), container ?? document.body));
+} }));
 // Stubs for the UI primitives the component under test renders.
 const uiStubs = vi.hoisted(() => {
   let value: Promise<Record<string, unknown>> | undefined;
@@ -177,6 +185,11 @@ vi.mock("@/components/send-shortcut", () => ({ SendShortcutTooltip: ({ children 
 import { CreateIssueDialog } from "@/components/create-issue-dialog";
 import { ObjectiveDialog } from "@/components/objective-dialog";
 import { CreationRelationsCompact } from "@/components/creation-relations";
+import { PICKER_SEARCH_LABEL, PalettePickerTestHost } from "@/test/palette-picker-host";
+
+// A relation's targets open in the ⌘K palette (MIN-844), stood in for here.
+const withPalette = (element: React.ReactElement) =>
+  React.createElement(React.Fragment, null, element, React.createElement(PalettePickerTestHost));
 
 let root: Root;
 let host: HTMLDivElement;
@@ -229,9 +242,9 @@ async function mountDialog(kind: "issue" | "objective", withProjectMenu = true) 
   let projects = [project, otherProject];
   // The draft the drafts tray asks the dialog to restore (MIN-753).
   let initialDraftId: string | null = null;
-  const render = () => root.render(kind === "issue"
+  const render = () => root.render(withPalette(kind === "issue"
     ? React.createElement(CreateIssueDialog, { open, onOpenChange, projectId: project.id, projects, members: [], categories: [], objectives: [], onCreate: create, onCreateInProject: createOther, initialDraftId })
-    : React.createElement(ObjectiveDialog, { open, onOpenChange, projectId: project.id, projectKey: project.key, projects: withProjectMenu ? [project, otherProject] : [], members: [], onCreate: create, onCreateInProject: createOther, onUpdate: vi.fn(), initialDraftId }));
+    : React.createElement(ObjectiveDialog, { open, onOpenChange, projectId: project.id, projectKey: project.key, projects: withProjectMenu ? [project, otherProject] : [], members: [], onCreate: create, onCreateInProject: createOther, onUpdate: vi.fn(), initialDraftId })));
   const onOpenChange = (next: boolean) => { open = next; render(); };
   await act(render);
   return {
@@ -277,7 +290,7 @@ describe("creation relation controls", () => {
     expect(dialog.create).toHaveBeenCalledTimes(2);
   });
 
-  it.each(["issue", "objective"] as const)("portals the modal %s relation menu outside the clipping dialog after reopening", async (kind) => {
+  it.each(["issue", "objective"] as const)("portals the modal %s relation type menu outside the clipping dialog, then picks the target in the palette, after reopening", async (kind) => {
     // Smart Fill owns relations while it is on (MIN-717): pick them by hand.
     if (kind === "issue") fixture.smartFillCreated = false;
     const dialog = await mountDialog(kind);
@@ -287,7 +300,15 @@ describe("creation relation controls", () => {
       expect(input).not.toBeNull();
       expect(input.closest("[data-dialog-content]")).toBeNull();
       expect(input.parentElement?.getAttribute("data-modal")).toBe("true");
-      await click(en.Relations.addRelationAria);
+      // The type is never a palette step (MIN-844): only its targets are.
+      expect(document.querySelector("[data-palette-picker]")).toBeNull();
+      await click(en.Relations.blocks);
+      expect(document.querySelector('[aria-label="Search relations"]')).toBeNull();
+      const search = document.querySelector<HTMLInputElement>(`[aria-label="${PICKER_SEARCH_LABEL}"]`)!;
+      expect(search.closest("[data-dialog-content]")).toBeNull();
+      expect(search.placeholder).toBe(en.Relations.pick_blocks);
+      await click("Close picker");
+      expect(document.querySelector("[data-palette-picker]")).toBeNull();
       await click("Close creation");
       await dialog.reopen();
     }
@@ -341,6 +362,35 @@ describe("creation relation controls", () => {
     await typeTitle("Issue with a chosen relation");
     await act(async () => { host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
     expect(dialog.create).toHaveBeenCalledWith(expect.objectContaining({ smart_fill: true, relations: [expect.objectContaining({ target_id: objective.id })] }));
+  });
+
+  it("offers Parent of and Sub-issue of in the new-issue form only, with one parent at most (MIN-844)", async () => {
+    fixture.smartFillCreated = false;
+    const dialog = await mountDialog("issue");
+    await click(en.Relations.addRelationAria);
+    expect(document.body.textContent).toContain(en.Relations.parent_of);
+    await click(en.Relations.sub_issue_of);
+    // Issues only: an objective is never a parent.
+    expect(document.body.textContent).not.toContain("Target objective");
+    await click("MIN-12Target issue");
+    expect(host.querySelector(`[aria-label="${en.Relations.sub_issue_of}: MIN-12"]`)).not.toBeNull();
+    // With a parent chosen, neither hierarchy entry is offered again.
+    await click(en.Relations.addRelationAria);
+    expect(document.body.textContent).not.toContain(en.Relations.sub_issue_of);
+    expect(document.body.textContent).not.toContain(en.Relations.parent_of);
+    await click(en.Relations.addRelationAria);
+    await typeTitle("Child issue");
+    await act(async () => { host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
+    expect(dialog.create).toHaveBeenCalledWith(expect.objectContaining({
+      relations: [expect.objectContaining({ type: "sub_issue_of", target_id: issue.id })],
+    }));
+  });
+
+  it("keeps the hierarchy entries out of the new-objective form", async () => {
+    await mountDialog("objective");
+    await click(en.Relations.addRelationAria);
+    expect(document.body.textContent).not.toContain(en.Relations.parent_of);
+    expect(document.body.textContent).not.toContain(en.Relations.sub_issue_of);
   });
 
   it.each(["issue", "objective"] as const)("keeps %s selections when creation is rejected", async (kind) => {
@@ -539,17 +589,17 @@ describe("creation relation controls", () => {
   it("filters duplicate selections by direction and does not fetch candidates while closed", async () => {
     const selection: PendingRelationInput = { type: "blocks", target_id: issue.id, target_type: "issue", target_label: "MIN-12 Target issue" };
     const props = { projectId: project.id, projectKey: project.key, active: true, value: [selection], onChange: vi.fn() };
-    await act(() => root.render(React.createElement(CreationRelationsCompact, props)));
+    await act(() => root.render(withPalette(React.createElement(CreationRelationsCompact, props))));
     expect(fixture.queryProjects.every((project) => project === null)).toBe(true);
     await click(en.Relations.addRelationAria);
     await click(en.Relations.blocks);
     expect(document.body.textContent).not.toContain("Target issue");
-    await click(en.Relations.addRelationAria);
+    await click("Close picker");
     await click(en.Relations.addRelationAria);
     await click(en.Relations.related);
     expect(document.body.textContent).toContain("Target issue");
-    await act(() => root.render(React.createElement(CreationRelationsCompact, { ...props, active: false })));
-    await act(() => root.render(React.createElement(CreationRelationsCompact, props)));
+    await act(() => root.render(withPalette(React.createElement(CreationRelationsCompact, { ...props, active: false }))));
+    await act(() => root.render(withPalette(React.createElement(CreationRelationsCompact, props))));
     await click(en.Relations.addRelationAria);
     expect(document.body.textContent).toContain(en.Relations.blocked_by);
   });

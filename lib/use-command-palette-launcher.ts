@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useAnalytics } from "@/lib/use-analytics";
 import { useBulkActions } from "@/lib/bulk-actions-context";
 import { commandPaletteShortcut } from "@/lib/command-palette-shortcut";
+import { usePalettePickerStore } from "@/lib/palette-picker";
 
 /**
  * Keep palette launch gestures in the eager shell while the full search and
@@ -21,6 +22,8 @@ export function useCommandPaletteLauncher({
 }) {
   const { track } = useAnalytics();
   const { openSignal, openSelectionActions } = useBulkActions();
+  // A content picker (MIN-844) opens the palette even before its code loads.
+  const pickerSignal = usePalettePickerStore((state) => state.openSignal);
   const openRef = useRef(open);
 
   useEffect(() => {
@@ -54,4 +57,12 @@ export function useCommandPaletteLauncher({
   useEffect(() => {
     if (openSignal > 0) onOpenChange(true);
   }, [openSignal, onOpenChange]);
+
+  // Handled once per picker: a new `onOpenChange` must not reopen it.
+  const handledPickerSignal = useRef(pickerSignal);
+  useEffect(() => {
+    if (pickerSignal === handledPickerSignal.current) return;
+    handledPickerSignal.current = pickerSignal;
+    onOpenChange(true);
+  }, [pickerSignal, onOpenChange]);
 }

@@ -20,6 +20,7 @@ import {
 } from "react";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { DismissableLayer, FocusScope } from "radix-ui/internal";
 import { PaletteConfigProvider, buildCategoryOrder, type ResolvedPaletteConfig } from "./config";
 import { createTranslate, type PaletteStrings } from "./i18n";
 import { CheckIcon } from "./icons";
@@ -375,6 +376,20 @@ export function CommandPalette({
         onClick={closing ? undefined : handleOverlayClick}
         inert={closing}
       >
+        {/* Above a modal dialog (the issue panel, a creation form), the
+            palette must be its top layer (MIN-844). Its focus scope pauses
+            that dialog's trap, which would otherwise pull the focus back from
+            the search field; it is not trapped itself, as the actions popover
+            lives in a portal. The search bar focuses itself, and closing
+            leaves the focus to whatever the chosen row opened, as before. As
+            the top dismissable layer, it keeps Escape from also closing the
+            dialog: the palette's own keys still handle it. */}
+        <FocusScope.Root
+          asChild
+          onMountAutoFocus={(event) => event.preventDefault()}
+          onUnmountAutoFocus={(event) => event.preventDefault()}
+        >
+        <DismissableLayer.Root asChild>
         <div
           className={`desktop-palette-surface ${styles.palette} ${isSuccess ? styles.paletteSuccess : ""} ${closing ? styles.paletteClosing : ""}`}
           role="dialog"
@@ -393,6 +408,8 @@ export function CommandPalette({
           {/* Hide content during success animation */}
           {!isSuccess && renderView()}
         </div>
+        </DismissableLayer.Root>
+        </FocusScope.Root>
       </div>
     </PaletteConfigProvider>
   );

@@ -59,6 +59,21 @@ describe("relations selected during creation", () => {
     });
   });
 
+  it("creates a picked sub-issue parent with the issue and applies a picked child after it (MIN-844)", async () => {
+    request.mockResolvedValueOnce(json({ id: "new-issue" }));
+    await createIssueApi("project", { title: "New issue", relations: [
+      { type: "sub_issue_of", target_id: "parent", target_type: "issue", target_label: "MIN-1 Parent" },
+      { type: "parent_of", target_id: "child", target_type: "issue", target_label: "MIN-2 Child" },
+      relations[2],
+    ] });
+    // The parent rides the creation, where the server checks the nesting.
+    expect(JSON.parse(request.mock.calls[0][1].body)).toMatchObject({ title: "New issue", parent_id: "parent" });
+    expect(request.mock.calls.slice(1).map(([url, options]) => [url, options.method, JSON.parse(options.body)])).toEqual([
+      ["/api/issues/child", "PATCH", { parent_id: "new-issue" }],
+      ["/api/projects/project/issue-relations", "POST", expect.objectContaining({ source_id: "new-issue", type: "related" })],
+    ]);
+  });
+
   it.each(["issue", "objective"] as const)("does not save links when %s creation fails", async (sourceType) => {
     request.mockResolvedValueOnce(json({ error: "Creation rejected" }, 400));
     const creation = sourceType === "issue"

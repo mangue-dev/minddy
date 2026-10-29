@@ -1172,7 +1172,9 @@ export interface CreateIssueRelationInput {
 
 /** A client-side relation selection, saved after the new entity exists. */
 export interface PendingRelationInput {
-  type: IssueRelationType;
+  /** A stored relation, or a hierarchy link of a new issue (MIN-844): the
+      issue becomes a sub-issue of the target, or the target its sub-issue. */
+  type: IssueRelationType | "parent_of" | "sub_issue_of";
   target_id: string;
   target_type: RelationEndpointType;
   /** Display snapshot for drafts whose target was renamed or removed. */

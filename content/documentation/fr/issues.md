@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 39,
-  "sourceRevision": 39,
+  "revision": 40,
+  "sourceRevision": 40,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-28",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles; MIN-809 Smart Fill split button; MIN-813 Smart Fill title on request",
     "editions": [
@@ -99,7 +99,7 @@
       "components/settings/account-preferences-section.tsx",
       "lib/issue-semantic-query.ts",
       "lib/server/issue-semantic-search.ts",
-      "components/relation-target-picker.tsx",
+      "components/palette-picker-rows.tsx",
       "components/editor/rich-editor.tsx",
       "components/editor/document-editor.tsx",
       "components/editor/comment-editor.tsx",
@@ -119,14 +119,16 @@
       "lib/use-all-drafts.ts",
       "lib/use-held-draft.ts",
       "lib/issue-hierarchy.ts",
-      "components/editor/mobile-editor-toolbar.tsx"
+      "components/editor/mobile-editor-toolbar.tsx",
+      "lib/palette-picker.ts",
+      "lib/creation-relations.ts"
     ]
   },
   "review": {
-    "revision": 39,
-    "fact": "agent:claude-code (phone keyboard toolbar sentence checked against components/editor/mobile-editor-toolbar.tsx and components/editor/rich-editor.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (fr changed passages with catalog UI labels; equivalent meaning to en revision 39; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-28"
+    "revision": 40,
+    "fact": "agent:claude-code (content pickers moved to the command palette (MIN-844): relation targets and page resource pickers, plus Parent of / Sub-issue of in the new-issue form, checked against lib/palette-picker.ts, components/palette-picker-rows.tsx, components/relations-section.tsx, components/creation-relations.tsx, lib/creation-relations.ts and components/resources.tsx; rest of the article unchanged since the previous review; issue-dependencies-steps recaptured in the palette)",
+    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "feedback",
@@ -171,7 +173,7 @@
       "src": "/documentation/fr/new-issue.png",
       "alt": "Brouillon de ticket non envoyé dans le projet Aurora, avec titre, description, propriétés manuelles et le bouton Créer AUR-21.",
       "caption": "Décrivez le résultat attendu, puis choisissez les propriétés utiles avant de créer le ticket.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -187,7 +189,7 @@
       "src": "/documentation/fr/triage-incoming.png",
       "alt": "Ticket de démonstration AUR-19 reçu dans le triage, avec son signalement, ses propriétés et les commandes Doublon, Refuser et Accepter.",
       "caption": "Lisez le signalement reçu avant de l’accepter, de le refuser ou de le relier à un doublon.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -204,7 +206,7 @@
       "src": "/documentation/fr/issue-statuses.png",
       "alt": "Les huit statuts du ticket dans le sélecteur, avec Backlog sélectionné.",
       "caption": "La coche indique le statut actuel. Choisissez celui qui reflète l’état réel du travail.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -220,7 +222,7 @@
       "src": "/documentation/fr/work-resources.png",
       "alt": "Dialogue d’ajout de lien avec une adresse de contact d’exemple.",
       "caption": "Vérifiez la destination avant d’ajouter la ressource. Ce lien d’exemple n’a pas été envoyé.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -234,14 +236,14 @@
       "id": "issue-dependencies-steps",
       "kind": "screenshot",
       "src": "/documentation/fr/work-dependencies.png",
-      "alt": "Recherche d’un préalable par identifiant de ticket.",
+      "alt": "La palette de commandes liste les tickets qui peuvent bloquer celui-ci, avec la question de la relation dans son champ de recherche.",
       "caption": "Choisissez le sens de la relation avant sa destination. Aucune relation n’a été envoyée dans ce sélecteur.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-10-29",
       "viewport": [
-        368,
-        184
+        788,
+        506
       ],
       "theme": "light",
       "padding": 24
@@ -252,7 +254,7 @@
       "src": "/documentation/fr/work-sub-issues.png",
       "alt": "Champ de création d’un sous-ticket dans un parent de démonstration.",
       "caption": "Ce champ crée un enfant sous le parent ; chaque enfant conserve son état et sa discussion.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -268,7 +270,7 @@
       "src": "/documentation/fr/work-implementation-plan.png",
       "alt": "Plan de démonstration avec deux tâches de travail terminées sur six.",
       "caption": "Le plan enregistré distingue les étapes terminées, actives et en attente. Sa progression ne prouve pas l’exécution de la tâche de code fictive.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -284,7 +286,7 @@
       "src": "/documentation/fr/issue-date-recurrence.png",
       "alt": "Sélecteur d’échéance en mode récurrent avec aperçu hebdomadaire le dimanche et heure optionnelle.",
       "caption": "Le mode récurrent prévisualise la cadence hebdomadaire. Confirmez la première échéance avant de créer le ticket.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -300,7 +302,7 @@
       "src": "/documentation/fr/import-issues-preview-workflow.png",
       "alt": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées.",
       "caption": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées. Aucun import n’a été lancé ; la préparation IA optionnelle a été bloquée pour la capture.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -317,7 +319,7 @@
       "src": "/documentation/fr/file-preview.png",
       "alt": "Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger, Renommer et Retirer.",
       "caption": "Le lecteur commun place Fermer sous l’aperçu. Le menu Actions du fichier propose Télécharger et, si les droits le permettent, Renommer et Retirer.",
-      "revision": 39,
+      "revision": 40,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -454,7 +456,7 @@ Vérifiez les filtres si un ticket disparaît après clôture. Ouvrez-le par ide
 
 Ouvrez le fil du ticket pour ajouter un commentaire. Expliquez une décision, posez une question ou décrivez un résultat de vérification pour qu’un autre membre comprenne le changement. Les mentions ajoutent une personne ou un objet au contexte ; les notifications dépendent toujours des préférences et de la livraison sur ses appareils. Un lecteur ne peut commenter que si le propriétaire a activé **Peut commenter** pour lui. Il peut alors répondre, mentionner des personnes, joindre des fichiers à ses propres commentaires, et modifier ou supprimer ses propres commentaires.
 
-Joignez une page du projet, un fichier ou un lien depuis les ressources. Une page liée est une ressource vivante : son titre suit les renommages et son contenu évolue. Un fichier est une pièce jointe stockée, pas la garantie qu’une URL externe restera disponible. Pour rédiger une page qui n’existe pas encore, choisissez **Page**, puis **Nouvelle page** en bas de la liste ; un titre tapé d’abord dans la recherche devient son titre. La page est créée dans le projet, jointe au ticket et ouverte dans un panneau latéral, où **Agrandir** ouvre la page entière.
+Joignez une page du projet, un fichier ou un lien depuis les ressources. Une page liée est une ressource vivante : son titre suit les renommages et son contenu évolue. Un fichier est une pièce jointe stockée, pas la garantie qu’une URL externe restera disponible. **Page** ouvre la palette de commandes sur les pages du projet, dans l’ordre de la barre latérale ; choisissez-en une pour la joindre. Pour rédiger une page qui n’existe pas encore, choisissez **Nouvelle page** en bas de la liste ; un titre tapé d’abord dans la recherche devient son titre. La page est créée dans le projet, jointe au ticket et ouverte dans un panneau latéral, où **Agrandir** ouvre la page entière.
 
 Les ressources s’affichent en cartes : l’image elle-même ou l’icône du type de fichier, le nom et le poids. Un lien affiche l’image d’aperçu de sa page quand le site en fournit une, sinon son favicon. Cliquez ou faites un clic droit sur une carte pour ouvrir son menu : Aperçu, Ouvrir le lien ou Ouvrir la page, puis Renommer, Télécharger et Retirer quand ils s’appliquent. Aperçu ouvre un fichier pris en charge sur toute la fenêtre. Images, PDF, Markdown (`.md`), texte brut (`.txt`, `.text`), CSV et formats audio ou vidéo compatibles utilisent le même lecteur. Le Markdown est mis en forme, le texte reste littéral et le CSV s’ouvre dans un tableau défilant. Utilisez Fermer ou Échap pour revenir au ticket. Le menu Actions du fichier (`…`) propose Télécharger et, si vous pouvez modifier cette ressource, Renommer et Retirer. Un clic sur la mention d’un fichier dans un texte ouvre le même lecteur. Minddy demande une confirmation avant de retirer une ressource, qui est alors détachée de ce contexte. Une ressource page garde le titre de sa page et ne se renomme pas. Les formats non pris en charge conservent leur action de téléchargement. **Ouvrir la page** l’affiche dans un panneau latéral, où **Agrandir** ouvre la page entière ; une base de données s’ouvre directement en page entière.
 
@@ -470,11 +472,11 @@ Après envoi, vérifiez que la ressource apparaît et s’ouvre. En cas d’éch
 
 ## Lier dépendances et tickets associés {#issue-dependencies}
 
-Ouvrez les relations du ticket et recherchez l’autre par titre ou identifiant. Hors d’un champ de texte, R ouvre le choix du type de relation depuis une carte survolée ou le panneau du ticket. Une requête descriptive liste aussi, après les correspondances textuelles, des tickets du même projet trouvés [par le sens](/docs/navigation#search-by-meaning) sous **Liés par le sens**. Choisissez une relation de blocage lorsqu’une tâche doit finir avant qu’une autre puisse avancer. Si A bloque B, A est le préalable et B est bloqué par A. Une relation associée ajoute du contexte sans imposer cet ordre.
+Ouvrez les relations du ticket et recherchez l’autre par titre ou identifiant. Hors d’un champ de texte, R ouvre le choix du type de relation depuis une carte survolée ou le panneau du ticket. Une fois le type choisi, l’autre extrémité se choisit dans la [palette de commandes](/docs/navigation#search-and-shortcuts), qui ne liste que les tickets et objectifs pouvant prendre cette relation. Une requête descriptive liste aussi, après les correspondances textuelles, des tickets du même projet trouvés [par le sens](/docs/navigation#search-by-meaning) sous **Liés par le sens**. Choisissez une relation de blocage lorsqu’une tâche doit finir avant qu’une autre puisse avancer. Si A bloque B, A est le préalable et B est bloqué par A. Une relation associée ajoute du contexte sans imposer cet ordre.
 
 Lisez les deux identifiants et le sens affiché avant de confirmer. Par exemple, « Préparer le point d’accès » bloque « Connecter le client », pas l’inverse. Une dépendance ne transforme pas un ticket en sous-ticket, et la relation parent-enfant ne remplace pas un blocage.
 
-![Recherche d’un préalable par identifiant de ticket.](/documentation/fr/work-dependencies.png)
+![La palette de commandes liste les tickets qui peuvent bloquer celui-ci, avec la question de la relation dans son champ de recherche.](/documentation/fr/work-dependencies.png)
 
 ### Blocages résolus ou hérités {#blocker-state}
 
@@ -500,7 +502,7 @@ L’indexation et les décisions de relation utilisent l’IA. Elles comptent da
 
 Ouvrez le ticket parent et ses commandes de sous-tickets pour créer les parties du travail. Donnez à chaque enfant un résultat distinct. Après création, vérifiez projet, propriétés et identifiant du parent. La hiérarchie facilite le suivi ; elle ne remplace pas la description du résultat de chaque tâche.
 
-Pour rattacher des tickets existants, appuyez sur R sur une carte survolée ou dans le panneau du ticket, ou ouvrez **Relations** depuis le clic droit d’une carte. **Parent de** liste les tickets qui peuvent devenir un sous-ticket de celui-ci ; **Sous-ticket de** liste les tickets de premier niveau qui peuvent devenir son parent. Chaque liste ne propose que ce que permet la règle d’un seul niveau : un sous-ticket n’a pas d’entrée **Parent de**, et un ticket qui a déjà des sous-tickets n’a pas d’entrée **Sous-ticket de**. Choisir un ticket qui a déjà un autre parent le déplace sous le nouveau. Depuis une sélection de cartes, **Sous-ticket de** place chaque ticket sélectionné éligible sous le parent choisi.
+Pour rattacher des tickets existants, appuyez sur R sur une carte survolée ou dans le panneau du ticket, ou ouvrez **Relations** depuis le clic droit d’une carte. **Parent de** liste les tickets qui peuvent devenir un sous-ticket de celui-ci ; **Sous-ticket de** liste les tickets de premier niveau qui peuvent devenir son parent. Chaque liste ne propose que ce que permet la règle d’un seul niveau : un sous-ticket n’a pas d’entrée **Parent de**, et un ticket qui a déjà des sous-tickets n’a pas d’entrée **Sous-ticket de**. Choisir un ticket qui a déjà un autre parent le déplace sous le nouveau. Depuis une sélection de cartes, **Sous-ticket de** place chaque ticket sélectionné éligible sous le parent choisi. Dans le formulaire de nouveau ticket, **Relations** propose les deux mêmes entrées : **Sous-ticket de** crée le ticket sous le parent choisi, et **Parent de** place les tickets choisis sous lui une fois créé. Un nouveau ticket prend un parent ou des sous-tickets, pas les deux.
 
 La hiérarchie accepte un seul niveau : le parent doit être un ticket de premier niveau du même projet et un sous-ticket ne peut pas avoir ses propres enfants. Sans objectif explicitement choisi à la création, l’enfant hérite de celui du parent ; vérifiez les propriétés obtenues plutôt que de supposer que les modifications ultérieures du parent se propagent.
 

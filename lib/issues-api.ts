@@ -95,7 +95,11 @@ export async function createIssueApi(
   projectId: string,
   input: CreateIssueInput
 ): Promise<Issue> {
-  const { relations, ...payload } = input;
+  const { relations, ...fields } = input;
+  // "Sub-issue of" picked at creation is the new issue's parent: sent with it,
+  // so the server checks the nesting and inherits the parent's objective.
+  const parent = fields.parent_id ? undefined : relations?.find((relation) => relation.type === "sub_issue_of");
+  const payload = parent ? { ...fields, parent_id: parent.target_id } : fields;
   const issue = await parseJson<Issue>(
     await fetch(`/api/projects/${projectId}/issues`, {
       method: "POST",
@@ -109,7 +113,7 @@ export async function createIssueApi(
   // serves as the default project for the dialog when the route does not designate any. After
   // success only — a rejected creation does not move the defect.
   rememberCreateProject(projectId);
-  await saveCreationRelations(projectId, issue.id, "issue", relations);
+  await saveCreationRelations(projectId, issue.id, "issue", relations?.filter((relation) => relation !== parent));
   return issue;
 }
 

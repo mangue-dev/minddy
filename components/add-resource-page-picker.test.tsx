@@ -3,6 +3,7 @@ import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { PalettePickerTestHost } from "@/test/palette-picker-host";
 import { AddResourceButton } from "./resources";
 
 // The Radix menu is reduced to what the picker relies on: selecting an item
@@ -25,16 +26,6 @@ vi.mock("@/components/ui/tooltip", () => ({
   TooltipContent: () => null,
   useTooltipScope: () => ({ provided: false, insideTrigger: false }),
 }));
-vi.mock("@/components/search-menu", () => ({
-  SearchMenu: ({ open, position, searchPlaceholder, searchValue, onSearchValueChange, children }: { open: boolean; position: { x: number; y: number } | null; searchPlaceholder: string; searchValue?: string; onSearchValueChange?: (value: string) => void; children: ReactNode }) =>
-    open ? <div data-search-menu data-x={position?.x} data-y={position?.y}><input placeholder={searchPlaceholder} value={searchValue} onChange={(e) => onSearchValueChange?.(e.target.value)} />{children}</div> : null,
-}));
-vi.mock("@/components/ui/command", () => ({
-  CommandGroup: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  CommandEmpty: () => null,
-  CommandSeparator: () => null,
-  CommandItem: ({ children, onSelect }: { children: ReactNode; onSelect: () => void }) => <button type="button" onClick={onSelect}>{children}</button>,
-}));
 const pages = vi.hoisted(() => ({ create: vi.fn() }));
 vi.mock("@/lib/use-pages-query", () => ({ usePagesQuery: () => ({ tree: [], loading: false }), useCreatePage: () => pages.create }));
 vi.mock("@/lib/pages", () => ({ flattenPageTree: () => [{ id: "spec", title: "Specification", icon: null }] }));
@@ -44,8 +35,9 @@ const toastError = vi.hoisted(() => vi.fn());
 vi.mock("sonner", () => ({ toast: { error: toastError } }));
 
 const messages = {
-  Resources: { add: "Add", addFile: "File", addLink: "Link", addPage: "Page", pageSearchPlaceholder: "Search a page…", noPages: "No pages", untitledPage: "Untitled", newPage: "New page", newPageNamed: "New page “{title}”" },
+  Resources: { add: "Add", addFile: "File", addLink: "Link", addPage: "Page", pageSearchPlaceholder: "Search a page to add…", noPages: "No pages", untitledPage: "Untitled", newPage: "New page", newPageNamed: "New page “{title}”" },
   Pages: { createFailed: "Could not create the page." },
+  Common: { loading: "Loading…" },
 };
 let root: Root;
 let host: HTMLDivElement;
@@ -67,27 +59,36 @@ afterEach(async () => {
 
 const button = (label: string) => [...host.querySelectorAll("button")].find((b) => b.textContent === label || b.getAttribute("aria-label") === label)!;
 
-it("opens the page search as a dropdown under the add button instead of a dialog", async () => {
+const PICKER = "[data-palette-picker]";
+
+it("opens the page search in the palette, with a placeholder that says what it is for (MIN-844)", async () => {
   const onPage = vi.fn();
   await act(() => root.render(
     <NextIntlClientProvider locale="en" messages={messages}>
       <AddResourceButton onFiles={vi.fn()} onLink={vi.fn()} onPage={onPage} projectId="project" />
+      <PalettePickerTestHost />
     </NextIntlClientProvider>,
   ));
-  button("Add").getBoundingClientRect = () => new DOMRect(100, 50, 28, 28);
-  expect(host.querySelector("[data-search-menu]")).toBeNull();
+  expect(host.querySelector(PICKER)).toBeNull();
 
   await act(() => button("Page").click());
-  const picker = host.querySelector("[data-search-menu]")!;
-  // Hung under the button's right edge, like the menu it replaces.
-  expect(picker.getAttribute("data-x")).toBe("128");
-  expect(picker.getAttribute("data-y")).toBe("82");
-  expect(picker.querySelector('input[placeholder="Search a page…"]')).not.toBeNull();
-  expect(document.querySelector('[role="dialog"]')).toBeNull();
+  const picker = host.querySelector(PICKER)!;
+  expect(picker.querySelector('input[placeholder="Search a page to add…"]')).not.toBeNull();
 
   await act(() => button("Specification").click());
   expect(onPage).toHaveBeenCalledWith({ id: "spec", title: "Specification", icon: null });
-  expect(host.querySelector("[data-search-menu]")).toBeNull();
+  expect(host.querySelector(PICKER)).toBeNull();
+});
+
+it("forgets the picker when the palette closes without a choice", async () => {
+  const onPage = vi.fn();
+  await openPicker(onPage);
+  await act(() => button("Close picker").click());
+  expect(host.querySelector(PICKER)).toBeNull();
+  // Reopening shows it again: the surface reset its own state.
+  await act(() => button("Page").click());
+  expect(host.querySelector(PICKER)).not.toBeNull();
+  expect(onPage).not.toHaveBeenCalled();
 });
 
 it("leaves the trigger's focus alone for the file and link items", async () => {
@@ -99,7 +100,7 @@ it("leaves the trigger's focus alone for the file and link items", async () => {
   const preventDefault = vi.fn();
   menu.closeAutoFocus?.({ preventDefault });
   expect(preventDefault).not.toHaveBeenCalled();
-  expect(host.querySelector("[data-search-menu]")).toBeNull();
+  expect(host.querySelector(PICKER)).toBeNull();
 });
 
 /** A creation whose server answer the test settles by hand. */
@@ -118,13 +119,14 @@ async function openPicker(onPage: (page: { id: string; title: string; icon: stri
   await act(() => root.render(
     <NextIntlClientProvider locale="en" messages={messages}>
       <AddResourceButton onFiles={vi.fn()} onLink={vi.fn()} onPage={onPage} projectId="project" />
+      <PalettePickerTestHost />
     </NextIntlClientProvider>,
   ));
   await act(() => button("Page").click());
 }
 
 function typeSearch(value: string) {
-  const input = host.querySelector<HTMLInputElement>("[data-search-menu] input")!;
+  const input = host.querySelector<HTMLInputElement>(`${PICKER} input`)!;
   const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
   setter.call(input, value);
   input.dispatchEvent(new Event("input", { bubbles: true }));
@@ -140,7 +142,7 @@ it("creates a page titled by the search, opens it in the panel, then cites it on
 
   expect(pages.create).toHaveBeenCalledWith("project", { title: "Launch notes" });
   expect(panel.openPage).toHaveBeenCalledWith("project", "fresh");
-  expect(host.querySelector("[data-search-menu]")).toBeNull();
+  expect(host.querySelector(PICKER)).toBeNull();
   // The resource row needs the page on the server: nothing is cited before.
   expect(onPage).not.toHaveBeenCalled();
 
