@@ -3001,11 +3001,15 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
          an edge and a slight lift; unselected tabs take a firmer tint. */
       --app-tab-background: color-mix(in oklab, var(--foreground) 7%, transparent);
       & :is(.app-tab[data-active], .sidebar-row-active) {
-        background-color: var(--background);
         box-shadow:
           0 0 0 1px color-mix(in oklab, var(--foreground) 12%, transparent),
           0 1px 3px color-mix(in oklab, var(--foreground) 10%, transparent);
       }
+    }
+    /* The selected sidebar row wears the selected tab's own color, in both
+       themes, so the chrome shows one selection. */
+    & .app-workspace .sidebar-row-active {
+      background-color: var(--app-tab-active-background);
     }
     & .sidebar-nav-panel[data-floating="true"] {
       background: var(--desktop-sidebar-solid);

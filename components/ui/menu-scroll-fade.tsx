@@ -5,8 +5,8 @@ import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 
-/** The ramp of a menu's edge fade, as tall as a row and a half. */
-export const MENU_FADE = "2.5rem";
+/** The ramp of a menu's edge fade (24px, the overlay's `h-6`). */
+export const MENU_FADE = "1.5rem";
 
 /**
  * The scroll-edge fade of a menu: drawn over the rows as sticky children of
@@ -52,7 +52,7 @@ function MenuScrollFadeEdge({ edge, visible }: { edge: "start" | "end"; visible:
     >
       <div
         className={cn(
-          "absolute flex h-10 justify-center from-popover from-25% to-transparent text-muted-foreground transition-opacity duration-150 motion-reduce:transition-none",
+          "absolute flex h-6 justify-center from-popover to-transparent text-muted-foreground transition-opacity duration-150 motion-reduce:transition-none",
           edge === "start" ? "items-start bg-gradient-to-b" : "items-end bg-gradient-to-t",
           visible ? "opacity-100" : "opacity-0",
         )}
