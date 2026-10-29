@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 20,
-  "sourceRevision": 20,
+  "revision": 21,
+  "sourceRevision": 21,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -66,13 +66,15 @@
       "components/inbox-content.tsx",
       "lib/inbox-launcher.ts",
       "lib/palette-picker.ts",
-      "components/palette-picker-rows.tsx"
+      "components/palette-picker-rows.tsx",
+      "components/mobile-navigation.tsx",
+      "components/mobile-nav-actions.tsx"
     ]
   },
   "review": {
-    "revision": 20,
-    "fact": "agent:claude-code (content pickers moved to the command palette (MIN-844): new paragraph on picking what to link in the palette checked against lib/palette-picker.ts, components/palette-picker-rows.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show a picker)",
-    "language": "agent:claude-code (en new paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 21,
+    "fact": "agent:claude-code (mobile bottom bar reordered (MIN-837): new sentence on the bar order and Home in the drawer checked against components/mobile-navigation.tsx, components/mobile-nav-actions.tsx and the drawer sections of components/app-shell-chrome.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures show the desktop layout)",
+    "language": "agent:claude-code (en new sentence with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -94,7 +96,7 @@
       "src": "/documentation/en/work-navigation.png",
       "alt": "Project navigation beside the demonstration issue board.",
       "caption": "Use the project sidebar to switch between issues, objectives, pages and triage.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -110,7 +112,7 @@
       "src": "/documentation/en/work-search.png",
       "alt": "Search results for a demonstration issue identifier.",
       "caption": "The palette finds the issue by identifier alongside project pages; opening a result preserves its access rules.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -156,7 +158,7 @@ The action applies to the row you clicked, even when another project or item is 
 
 An issue opens in a detail panel so the underlying board remains available. A page opened from a mention or a link opens the same way, in a side panel with **Expand** to reach the full page. Numo opens from its floating button in a shared conversation panel. Inbox opens as a navigation popover with notifications and invitations. Older dedicated Inbox and Numo links lead to the current entry points; they do not establish separate current screens.
 
-On mobile, open the navigation drawer to choose the same destinations. A loading bar at the top indicates that navigation is in progress, including while pending page saves finish. Panels use the available screen width, so close or return from the current panel to see the list again. Use visible buttons when a keyboard shortcut is unavailable.
+On mobile, open the navigation drawer to choose the same destinations. The bar at the bottom of the screen holds, from left to right, the navigation drawer, Numo, search, the task notebook and **New**; **Home** is in the drawer. A loading bar at the top indicates that navigation is in progress, including while pending page saves finish. Panels use the available screen width, so close or return from the current panel to see the list again. Use visible buttons when a keyboard shortcut is unavailable.
 
 ### Desktop tabs {#tabs}
 
