@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 21,
-  "sourceRevision": 20,
+  "revision": 22,
+  "sourceRevision": 21,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -66,13 +66,15 @@
       "components/inbox-content.tsx",
       "lib/inbox-launcher.ts",
       "lib/palette-picker.ts",
-      "components/palette-picker-rows.tsx"
+      "components/palette-picker-rows.tsx",
+      "components/mobile-navigation.tsx",
+      "components/mobile-nav-actions.tsx"
     ]
   },
   "review": {
-    "revision": 21,
-    "fact": "agent:claude-code (content pickers moved to the command palette (MIN-844): new paragraph on picking what to link in the palette checked against lib/palette-picker.ts, components/palette-picker-rows.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show a picker)",
-    "language": "agent:claude-code (pt-BR new paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 22,
+    "fact": "agent:claude-code (mobile bottom bar reordered (MIN-837): new sentence on the bar order and Home in the drawer checked against components/mobile-navigation.tsx, components/mobile-nav-actions.tsx and the drawer sections of components/app-shell-chrome.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures show the desktop layout)",
+    "language": "agent:claude-code (pt-BR new sentence with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -94,7 +96,7 @@
       "src": "/documentation/pt-BR/work-navigation.png",
       "alt": "Navegação do projeto ao lado do quadro de tickets de demonstração.",
       "caption": "A barra do projeto dá acesso aos tickets, objetivos, páginas e triagem.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -111,7 +113,7 @@
       "src": "/documentation/pt-BR/work-search.png",
       "alt": "Resultados de busca do identificador de um ticket de demonstração.",
       "caption": "A paleta encontra o ticket pelo identificador junto às páginas do projeto; abrir um resultado preserva suas regras de acesso.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -158,7 +160,7 @@ A ação se aplica à linha em que você clicou, mesmo quando outro projeto ou i
 
 Um ticket abre em um painel de detalhes para manter o quadro disponível ao fundo. Uma página aberta por uma menção ou um link abre da mesma forma, em um painel lateral com **Expandir** para chegar à página inteira. O Numo abre pelo botão flutuante em um painel de conversa compartilhado. A caixa de entrada abre como um painel popover da navegação com notificações e convites. Os antigos links para telas da caixa de entrada e do Numo levam aos pontos de acesso atuais; essas telas separadas não existem mais.
 
-No celular, abra o menu lateral de navegação para escolher os mesmos destinos. Uma barra de carregamento na parte superior indica que a navegação está em andamento, inclusive enquanto os salvamentos pendentes da página são concluídos. Os painéis usam a largura disponível, então feche ou volte do painel atual para ver a lista novamente. Use os botões visíveis quando um atalho de teclado não estiver disponível.
+No celular, abra o menu lateral de navegação para escolher os mesmos destinos. A barra na parte inferior da tela reúne, da esquerda para a direita, o menu lateral de navegação, o Numo, a pesquisa, o caderno de tarefas e **Novo**; a **Página inicial** fica no menu lateral. Uma barra de carregamento na parte superior indica que a navegação está em andamento, inclusive enquanto os salvamentos pendentes da página são concluídos. Os painéis usam a largura disponível, então feche ou volte do painel atual para ver a lista novamente. Use os botões visíveis quando um atalho de teclado não estiver disponível.
 
 ### Abas do desktop {#tabs}
 

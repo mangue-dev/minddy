@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 21,
-  "sourceRevision": 20,
+  "revision": 22,
+  "sourceRevision": 21,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -66,13 +66,15 @@
       "components/inbox-content.tsx",
       "lib/inbox-launcher.ts",
       "lib/palette-picker.ts",
-      "components/palette-picker-rows.tsx"
+      "components/palette-picker-rows.tsx",
+      "components/mobile-navigation.tsx",
+      "components/mobile-nav-actions.tsx"
     ]
   },
   "review": {
-    "revision": 21,
-    "fact": "agent:claude-code (content pickers moved to the command palette (MIN-844): new paragraph on picking what to link in the palette checked against lib/palette-picker.ts, components/palette-picker-rows.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show a picker)",
-    "language": "agent:claude-code (es new paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 22,
+    "fact": "agent:claude-code (mobile bottom bar reordered (MIN-837): new sentence on the bar order and Home in the drawer checked against components/mobile-navigation.tsx, components/mobile-nav-actions.tsx and the drawer sections of components/app-shell-chrome.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures show the desktop layout)",
+    "language": "agent:claude-code (es new sentence with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -94,7 +96,7 @@
       "src": "/documentation/es/work-navigation.png",
       "alt": "Navegación del proyecto junto al tablero de incidencias de demostración.",
       "caption": "La barra del proyecto da acceso a incidencias, objetivos, páginas y clasificación de entradas.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -111,7 +113,7 @@
       "src": "/documentation/es/work-search.png",
       "alt": "Resultados de búsqueda del identificador de una incidencia de demostración.",
       "caption": "La paleta encuentra la incidencia por identificador junto a las páginas del proyecto; abrir un resultado conserva sus reglas de acceso.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -158,7 +160,7 @@ La acción se aplica a la fila en la que hiciste clic, aunque haya otro proyecto
 
 Una incidencia se abre en un panel de detalle para mantener disponible el tablero que hay debajo. Una página abierta desde una mención o un enlace se abre del mismo modo, en un panel lateral con **Ampliar** para llegar a la página completa. Numo se abre desde su botón flotante en un panel de conversación compartido. La bandeja de entrada se abre como un panel emergente de navegación con notificaciones e invitaciones. Los antiguos enlaces a pantallas propias de la bandeja de entrada y Numo llevan a los accesos actuales; no representan pantallas independientes actuales.
 
-En el móvil, abre el menú lateral de navegación para elegir los mismos destinos. Una barra de carga en la parte superior indica que la navegación está en curso, también mientras terminan los guardados pendientes de la página. Los paneles usan el ancho disponible, así que ciérralos o vuelve desde el panel actual para ver de nuevo la lista. Utiliza los botones visibles cuando no haya un atajo de teclado disponible.
+En el móvil, abre el menú lateral de navegación para elegir los mismos destinos. La barra inferior de la pantalla reúne, de izquierda a derecha, el menú lateral de navegación, Numo, la búsqueda, el cuaderno de tareas y **Nuevo**; **Inicio** está en el menú lateral. Una barra de carga en la parte superior indica que la navegación está en curso, también mientras terminan los guardados pendientes de la página. Los paneles usan el ancho disponible, así que ciérralos o vuelve desde el panel actual para ver de nuevo la lista. Utiliza los botones visibles cuando no haya un atajo de teclado disponible.
 
 ### Pestañas de escritorio {#tabs}
 

@@ -21,7 +21,11 @@ vi.mock("./app-sidebar", () => ({
     ? <a key={item.key} href={item.href} onClick={(event) => { event.preventDefault(); navigation.visit(item.href); }}>{item.label}</a>
     : <button key={item.key} data-mobile-menu-branch={item.browseKey} onClick={item.onClick}><svg />{item.label}</button>)}</section>),
 }));
-vi.mock("./mobile-nav-actions", () => ({ MobileNavActions: () => null }));
+vi.mock("./mobile-nav-actions", () => ({
+  MobileNumoButton: () => <button aria-label="Numo" />,
+  MobileNotebookButton: () => <button aria-label="Task notebook" />,
+  MobileCreateButton: () => <button aria-label="New" />,
+}));
 vi.mock("@/components/icon", () => ({ AppIcon: (props: { className?: string }) => <svg aria-hidden className={props.className} /> }));
 vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => navigation.mobile }));
 const activeElement = <T extends HTMLElement>(selector: string) => [...document.querySelectorAll<T>(selector)].find((node) => !node.closest("[inert]"))!;
@@ -152,4 +156,13 @@ it("keeps route-owned portal controls mounted while browsing other levels and sh
   expect(activeElement<HTMLElement>("[data-test-header]").querySelectorAll('input:not([inert] input)')).toHaveLength(1);
   expect(document.activeElement).toBe(document.querySelector('[role="dialog"] aside'));
   expect(navigation.visit).not.toHaveBeenCalled();
+});
+
+it("orders the bottom bar as sidebar, Numo, search, task notebook and New, without a Home link", async () => {
+  await act(() => root.render(<NextIntlClientProvider locale="en" messages={{ Nav: { goTo: "Go to", home: "Home", searchPlaceholder: "Search" }, Common: { back: "Back", close: "Close", clearFilter: "Clear filter" }, Settings: { filterPlaceholder: "Filter {count} items" } }}>
+    <MobileNavigation sections={[]} onSearch={() => {}} />
+  </NextIntlClientProvider>));
+  const bar = container.querySelector("[data-mobile-navigation]")!;
+  expect([...bar.querySelectorAll("a, button")].map((control) => control.getAttribute("aria-label")))
+    .toEqual(["Go to", "Numo", "Search", "Task notebook", "New"]);
 });

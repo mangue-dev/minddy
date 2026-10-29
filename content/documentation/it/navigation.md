@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 20,
+  "revision": 23,
+  "sourceRevision": 21,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -66,13 +66,15 @@
       "components/inbox-content.tsx",
       "lib/inbox-launcher.ts",
       "lib/palette-picker.ts",
-      "components/palette-picker-rows.tsx"
+      "components/palette-picker-rows.tsx",
+      "components/mobile-navigation.tsx",
+      "components/mobile-nav-actions.tsx"
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (content pickers moved to the command palette (MIN-844): new paragraph on picking what to link in the palette checked against lib/palette-picker.ts, components/palette-picker-rows.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show a picker)",
-    "language": "agent:claude-code (it new paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 23,
+    "fact": "agent:claude-code (mobile bottom bar reordered (MIN-837): new sentence on the bar order and Home in the drawer checked against components/mobile-navigation.tsx, components/mobile-nav-actions.tsx and the drawer sections of components/app-shell-chrome.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures show the desktop layout)",
+    "language": "agent:claude-code (it new sentence with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -94,7 +96,7 @@
       "src": "/documentation/it/work-navigation.png",
       "alt": "Navigazione del progetto accanto alla bacheca dei ticket dimostrativi.",
       "caption": "La barra del progetto permette di aprire ticket, obiettivi, pagine e triage.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -111,7 +113,7 @@
       "src": "/documentation/it/work-search.png",
       "alt": "Risultati della ricerca dell’identificativo di un ticket dimostrativo.",
       "caption": "La palette trova il ticket tramite identificativo insieme alle pagine del progetto; aprire un risultato conserva le sue regole di accesso.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -158,7 +160,7 @@ L’azione si applica alla riga su cui hai fatto clic, anche quando è aperto un
 
 Un ticket si apre in un pannello di dettaglio, lasciando disponibile il tabellone sottostante. Una pagina aperta da una menzione o da un collegamento si apre allo stesso modo, in un pannello laterale con **Espandi** per raggiungere la pagina intera. Numo si apre dal pulsante flottante in un pannello di conversazione condiviso. La posta in arrivo si apre come pannello a comparsa della navigazione, con notifiche e inviti. I vecchi collegamenti alle schermate dedicate della posta in arrivo e di Numo portano ai punti di accesso attuali; non indicano schermate separate ancora presenti.
 
-Sul telefono, apri il menu laterale di navigazione per scegliere le stesse destinazioni. Una barra di caricamento in alto indica che la navigazione è in corso, anche mentre vengono completati i salvataggi della pagina in sospeso. I pannelli usano la larghezza disponibile: chiudi il pannello attuale o torna indietro per rivedere l’elenco. Usa i pulsanti visibili quando una scorciatoia da tastiera non è disponibile.
+Sul telefono, apri il menu laterale di navigazione per scegliere le stesse destinazioni. La barra in fondo allo schermo riunisce, da sinistra a destra, il menu laterale di navigazione, Numo, la ricerca, il taccuino delle attività e **Nuovo**; **Home** si trova nel menu laterale. Una barra di caricamento in alto indica che la navigazione è in corso, anche mentre vengono completati i salvataggi della pagina in sospeso. I pannelli usano la larghezza disponibile: chiudi il pannello attuale o torna indietro per rivedere l’elenco. Usa i pulsanti visibili quando una scorciatoia da tastiera non è disponibile.
 
 ### Schede desktop {#tabs}
 

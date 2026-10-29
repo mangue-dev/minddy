@@ -3,7 +3,7 @@
 import { useRef, useState, useLayoutEffect, useCallback, useEffect, useId, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Home01Icon, LayoutAlignLeftIcon, Search01Icon } from "@hugeicons/core-free-icons";
+import { LayoutAlignLeftIcon, Search01Icon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "framer-motion";
@@ -11,8 +11,7 @@ import { transitions } from "@/lib/motion";
 import { SidebarPanelTransition } from "./sidebar-panel-transition";
 import { SecondarySidebarHeader } from "@/components/secondary-sidebar";
 import { matchesFilter } from "@/components/sidebar-filter-field";
-import Link from "@/components/app-link";
-import { MobileNavActions } from "./mobile-nav-actions";
+import { MobileCreateButton, MobileNotebookButton, MobileNumoButton } from "./mobile-nav-actions";
 import { MobileSidebarReveal } from "./mobile-sidebar-reveal";
 import { SidebarFrame, SidebarRows, SidebarTopBand, SidebarBackRow, ProjectContextRow, type SidebarBackBadge } from "./app-sidebar";
 import { MobileSheetScrollArea } from "./ui/mobile-sheet";
@@ -91,10 +90,11 @@ export function MobileNavigation({ sections, initialPanel, initialPanels, projec
   return <>
     <nav aria-label="Navigation" data-mobile-navigation data-typing={typing ? "" : undefined} className="fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[max(1rem,env(safe-area-inset-bottom))] app-desktop:hidden">
       <div className="grid h-12 w-[min(100%-2rem,320px)] grid-cols-5 grid-rows-1 items-center rounded-full border border-border bg-background shadow-lg">
-        <Link href="/home" aria-label={t("home")} aria-current={pathname === "/home" ? "page" : undefined} className="flex h-full min-w-0 items-center justify-center rounded-full focus-visible:ring-2 focus-visible:ring-ring"><AppIcon icon={Home01Icon} className="size-[22px]" /></Link>
         <button ref={menuTrigger} data-mobile-menu-trigger type="button" aria-label={t("goTo")} aria-haspopup="dialog" aria-expanded={menuOpen} onClick={() => onOpenChange(true)} className="flex h-full min-w-0 items-center justify-center rounded-full outline-none focus-visible:bg-muted"><AppIcon icon={LayoutAlignLeftIcon} className="size-[22px]" /></button>
+        <MobileNumoButton />
         <button type="button" aria-label={t("searchPlaceholder")} onClick={onSearch} className="flex h-full min-w-0 items-center justify-center rounded-full focus-visible:ring-2 focus-visible:ring-ring"><AppIcon icon={Search01Icon} className="size-[22px]" /></button>
-        <MobileNavActions />
+        <MobileNotebookButton />
+        <MobileCreateButton />
       </div>
     </nav>
     <MobileSidebarReveal open={menuOpen} onOpenChange={onOpenChange} trigger={menuTrigger} focusTarget={focusTarget} label={t("goTo")}>

@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 21,
-  "sourceRevision": 20,
+  "revision": 22,
+  "sourceRevision": 21,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -66,13 +66,15 @@
       "components/inbox-content.tsx",
       "lib/inbox-launcher.ts",
       "lib/palette-picker.ts",
-      "components/palette-picker-rows.tsx"
+      "components/palette-picker-rows.tsx",
+      "components/mobile-navigation.tsx",
+      "components/mobile-nav-actions.tsx"
     ]
   },
   "review": {
-    "revision": 21,
-    "fact": "agent:claude-code (content pickers moved to the command palette (MIN-844): new paragraph on picking what to link in the palette checked against lib/palette-picker.ts, components/palette-picker-rows.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show a picker)",
-    "language": "agent:claude-code (de new paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 22,
+    "fact": "agent:claude-code (mobile bottom bar reordered (MIN-837): new sentence on the bar order and Home in the drawer checked against components/mobile-navigation.tsx, components/mobile-nav-actions.tsx and the drawer sections of components/app-shell-chrome.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures show the desktop layout)",
+    "language": "agent:claude-code (de new sentence with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -94,7 +96,7 @@
       "src": "/documentation/de/work-navigation.png",
       "alt": "Projektnavigation neben dem Demo-Ticketboard.",
       "caption": "Über die Projektseitenleiste erreichst du Tickets, Ziele, Seiten und Triage.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -111,7 +113,7 @@
       "src": "/documentation/de/work-search.png",
       "alt": "Suchergebnisse für die Kennung eines Demo-Tickets.",
       "caption": "Die Palette findet das Ticket über seine Kennung neben Projektseiten; beim Öffnen bleiben die Zugriffsregeln bestehen.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -158,7 +160,7 @@ Die Aktion gilt für die Zeile, auf die du geklickt hast, auch wenn gerade ein a
 
 Ein Ticket öffnet sich in einem Detailpanel, damit das darunterliegende Board verfügbar bleibt. Eine Seite, die über eine Erwähnung oder einen Link geöffnet wird, erscheint ebenso in einem Seitenpanel; **Vergrößern** führt zur ganzen Seite. Numo öffnet über seine schwebende Schaltfläche ein gemeinsames Gesprächspanel. Der Posteingang öffnet sich als Navigations-Popover mit Benachrichtigungen und Einladungen. Ältere eigene Posteingangs- und Numo-Links führen zu den aktuellen Einstiegspunkten; sie bezeichnen keine gesonderten aktuellen Bildschirme.
 
-Öffne auf dem Smartphone die Navigationsleiste, um dieselben Ziele auszuwählen. Eine Ladeleiste am oberen Rand zeigt die laufende Navigation an, auch während ausstehende Seitenspeicherungen abgeschlossen werden. Panels nutzen die verfügbare Bildschirmbreite. Schließe das aktuelle Panel oder gehe zurück, um wieder die Liste zu sehen. Verwende sichtbare Schaltflächen, wenn ein Tastenkürzel nicht verfügbar ist.
+Öffne auf dem Smartphone die Navigationsleiste, um dieselben Ziele auszuwählen. Unten am Bildschirm stehen von links nach rechts die Schaltflächen für die Navigationsleiste, Numo, die Suche, das Aufgabennotizbuch und **Neu**; die **Startseite** erreichst du über die Navigationsleiste. Eine Ladeleiste am oberen Rand zeigt die laufende Navigation an, auch während ausstehende Seitenspeicherungen abgeschlossen werden. Panels nutzen die verfügbare Bildschirmbreite. Schließe das aktuelle Panel oder gehe zurück, um wieder die Liste zu sehen. Verwende sichtbare Schaltflächen, wenn ein Tastenkürzel nicht verfügbar ist.
 
 ### Desktop-Tabs {#tabs}
 
