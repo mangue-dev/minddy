@@ -1,18 +1,20 @@
 "use client";
 
 import * as React from "react";
+import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 
-/** The ramp of a menu's edge fade: shorter than a page's, menus are short. */
-export const MENU_FADE = "1.5rem";
+/** The ramp of a menu's edge fade, as tall as a row and a half. */
+export const MENU_FADE = "2.5rem";
 
 /**
- * The scroll-edge fade of a menu whose surface is itself the scroller
- * (dropdown menus): a mask would also fade the surface's background and ring,
- * so the fades are drawn over the rows instead, as sticky children, and only
- * on an edge that hides rows. Spread `scrollProps` on the scroller and render
- * `start` first and `end` last among its children.
+ * The scroll-edge fade of a menu: drawn over the rows as sticky children of
+ * the scroller (a mask on a surface that is itself the scroller would also
+ * fade its background and ring), only on an edge that hides rows, with a
+ * chevron at that edge saying more rows wait there. Spread `ref` and
+ * `onScroll` on the scroller and render `start` first and `end` last among
+ * its children.
  */
 export function useMenuScrollFade<T extends HTMLElement>() {
   const { ref, scrollProps, edges } = useScrollFade<T>("y", MENU_FADE);
@@ -50,8 +52,8 @@ function MenuScrollFadeEdge({ edge, visible }: { edge: "start" | "end"; visible:
     >
       <div
         className={cn(
-          "absolute h-6 from-popover to-transparent transition-opacity duration-150 motion-reduce:transition-none",
-          edge === "start" ? "bg-gradient-to-b" : "bg-gradient-to-t",
+          "absolute flex h-10 justify-center from-popover from-25% to-transparent text-muted-foreground transition-opacity duration-150 motion-reduce:transition-none",
+          edge === "start" ? "items-start bg-gradient-to-b" : "items-end bg-gradient-to-t",
           visible ? "opacity-100" : "opacity-0",
         )}
         style={{
@@ -59,7 +61,11 @@ function MenuScrollFadeEdge({ edge, visible }: { edge: "start" | "end"; visible:
           right: -inset.right,
           [edge === "start" ? "top" : "bottom"]: -inset.edge,
         }}
-      />
+      >
+        {edge === "start"
+          ? <ChevronUpIcon className="mt-0.5 size-3.5" />
+          : <ChevronDownIcon className="mb-0.5 size-3.5" />}
+      </div>
     </div>
   );
 }

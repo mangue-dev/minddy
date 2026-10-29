@@ -2995,7 +2995,16 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
        same step, so the selected and hovered rows keep their contrast on any
        desktop. Dark mode already reads well against its denser veil. */
     &:not(.dark) .app-workspace {
-      --sidebar-accent: color-mix(in oklab, var(--foreground) 9%, transparent);
+      --sidebar-accent: color-mix(in oklab, var(--foreground) 12%, transparent);
+      /* Tabs: the selected one keeps the opaque page white, which hardly
+         differs from a light veil, so the others take a firmer tint and the
+         selected one an edge and a slight lift. */
+      --app-tab-background: color-mix(in oklab, var(--foreground) 7%, transparent);
+      & .app-tab[data-active] {
+        box-shadow:
+          0 0 0 1px color-mix(in oklab, var(--foreground) 12%, transparent),
+          0 1px 3px color-mix(in oklab, var(--foreground) 10%, transparent);
+      }
     }
     & .sidebar-nav-panel[data-floating="true"] {
       background: var(--desktop-sidebar-solid);

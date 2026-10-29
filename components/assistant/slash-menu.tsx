@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { MENU_ROW_ACTIVE_CLASS, MENU_ROW_CLASS, MENU_SCROLL_CLASS, MENU_SURFACE_CLASS } from "@/components/ui/menu-surface";
 import type { AssistantCommandId } from "@/lib/assistant-types";
 import type { RepositorySkillSummary } from "@/lib/repository-skills";
+import { useMenuScrollFade } from "@/components/ui/menu-scroll-fade";
 
 export { filterSlashOptions } from "@/lib/assistant-slash-options";
 
@@ -94,10 +95,14 @@ export function SlashMenu({
   className?: string;
   style?: CSSProperties;
 }) {
+  // Rows hidden past an edge fade out there, under a chevron.
+  const fade = useMenuScrollFade<HTMLDivElement>();
   if (options.length === 0) return null;
 
   return (
     <div
+      ref={fade.ref}
+      onScroll={fade.onScroll}
       style={style}
       data-floating-surface
       className={cn(
@@ -107,6 +112,7 @@ export function SlashMenu({
         className,
       )}
     >
+      {fade.start}
       {options.map((option, index) => (
         <button
           key={option.id}
@@ -155,6 +161,7 @@ export function SlashMenu({
           </span>
         </button>
       ))}
+      {fade.end}
     </div>
   );
 }

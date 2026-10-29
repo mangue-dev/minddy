@@ -36,7 +36,7 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, co
     return () => observer.disconnect();
   }, [label, tab.pinned]);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
-  return <div role="presentation" className={cn(
+  return <div role="presentation" data-active={active || undefined} className={cn(
     "app-tab group relative flex h-[34px] shrink-0 items-center rounded-md text-sm",
     tab.pinned ? (compositeIcon ? "w-[52px]" : "w-[34px]") : "w-[200px]",
     active
